@@ -1,6 +1,10 @@
 import time
 import torch
+import transformers
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
+transformers.logging.set_verbosity_error()
+transformers.logging.disable_progress_bar()
 
 model_id = "meta-llama/Llama-3.2-1B"
 PROMPT = "Hello, world!"
@@ -9,6 +13,7 @@ WARMUP_RUNS = 2
 TIMED_RUNS = 5
 
 tokenizer = AutoTokenizer.from_pretrained(model_id)
+tokenizer.pad_token_id = tokenizer.eos_token_id
 
 # Determine which implementations to benchmark
 IMPLEMENTATIONS = ["eager", "sdpa"]
