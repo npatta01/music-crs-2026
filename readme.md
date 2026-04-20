@@ -59,11 +59,16 @@ The system operates on a **two-stage pipeline**:
 ### Installation
 
 ```bash
+# Required
 uv venv .venv --python=3.10
 source .venv/bin/activate
 uv pip install -e .
-uv pip install flash-attn --no-build-isolation # for fast llm inference
+
+# Optional — faster LLM inference (requires CUDA toolkit + compatible gcc)
+uv pip install flash-attn --no-build-isolation
 ```
+
+> **Note:** The default configs use `attn_implementation: "sdpa"` (PyTorch built-in, no extra install needed). If you successfully install `flash-attn`, you can switch to `attn_implementation: "sdpa"` in your config for a small speed boost.
 
 ### Run Inference on the Development Set
 
@@ -126,7 +131,7 @@ corpus_types:
   - "release_date"
 cache_dir: "./cache"
 device: "cuda"
-attn_implementation: "flash_attention_2"
+attn_implementation: "sdpa"
 ```
 
 Then run with your config:
