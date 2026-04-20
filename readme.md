@@ -68,6 +68,16 @@ uv pip install -e .
 uv pip install flash-attn --no-build-isolation
 ```
 
+### Hugging Face Authentication
+
+The datasets and models are hosted on Hugging Face. Log in before running inference:
+
+```bash
+uvx hf auth login
+```
+
+> **Note:** You will need a Hugging Face account with access to the [TalkPlay Data Challenge](https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge) collection.
+
 > **Note:** The default configs use `attn_implementation: "sdpa"` (PyTorch built-in, no extra install needed). If you successfully install `flash-attn`, you can switch to `attn_implementation: "sdpa"` in your config for a small speed boost.
 
 ### Run Inference on the Development Set

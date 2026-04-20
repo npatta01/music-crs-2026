@@ -5,3 +5,5 @@ __pycache__/
 uv.lock
 inference/
 .DS_Store
+evaluator/exp/*
+submission/
