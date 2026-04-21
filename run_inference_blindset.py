@@ -81,9 +81,11 @@ def main(args):
         cache_dir=config.cache_dir,
         device=config.device,
         attn_implementation=config.attn_implementation,
-        dtype=torch.bfloat16
+        dtype=getattr(torch, config.get("dtype", "bfloat16"))
     )
     db = load_dataset(config.test_dataset_name, split="test")
+    if args.max_sessions is not None:
+        db = db.select(range(min(args.max_sessions, len(db))))
     # Prepare all batch data at once
     batch_data, metadata = [], []
     for item in db:
@@ -146,6 +148,12 @@ if __name__ == "__main__":
         type=str,
         default="./exp/inference",
         help="Base directory for saving results (currently not used, results saved to exp/inference/)"
+    )
+    parser.add_argument(
+        "--max_sessions",
+        type=int,
+        default=None,
+        help="Cap the number of sessions to process (useful for local testing)"
     )
     args = parser.parse_args()
     main(args)

@@ -7,3 +7,4 @@ inference/
 .DS_Store
 evaluator/exp/*
 submission/
+data/local_eval_split.json

@@ -81,9 +81,15 @@ def main(args):
         cache_dir=config.cache_dir,
         device=config.device,
         attn_implementation=config.attn_implementation,
-        dtype=torch.bfloat16
+        dtype=getattr(torch, config.get("dtype", "bfloat16"))
     )
     db = load_dataset(config.test_dataset_name, split="test")
+    if args.session_ids_file is not None:
+        with open(args.session_ids_file) as f:
+            keep = set(json.load(f)["session_ids"])
+        db = db.filter(lambda x: x["session_id"] in keep)
+    elif args.max_sessions is not None:
+        db = db.select(range(min(args.max_sessions, len(db))))
     # Prepare all batch data at once
     batch_data, metadata = [], []
     for item in db:
@@ -139,6 +145,18 @@ if __name__ == "__main__":
         type=str,
         default="./exp/inference",
         help="Base directory for saving results (currently not used, results saved to exp/inference/)"
+    )
+    parser.add_argument(
+        "--max_sessions",
+        type=int,
+        default=None,
+        help="Cap the number of sessions to process (useful for local testing)"
+    )
+    parser.add_argument(
+        "--session_ids_file",
+        type=str,
+        default=None,
+        help="Path to JSON file with session_ids list (e.g. data/local_eval_split.json); takes priority over --max_sessions"
     )
     args = parser.parse_args()
     main(args)
