@@ -82,20 +82,80 @@ Return dict keys: `user_id`, `user_query`, `retrieval_items` (list[str], 20 ids)
 
 ## Retrieval Modules
 
+### Corpus document format (shared by BM25 and BERT)
+
+Both modules call `_stringify_metadata()` to convert each track into a text document for indexing:
+
+```
+track_name: With Rainy Eyes
+artist_name: Emancipator
+album_name: Soon It Will Be Cold Enough
+release_date: 2006-12-06
+```
+
+Fields included = `corpus_types` from the YAML config (default: `track_name`, `artist_name`, `album_name`, `release_date`). List-valued fields are joined with `", "`. The index name / cache key is the underscore-joined `corpus_types` string (e.g. `track_name_artist_name_album_name_release_date`).
+
+### Query format
+
+The retrieval query is the **full conversation history** up to and including the current user turn, formatted as:
+
+```
+user: I want something chill and relaxing
+assistant: Here are some ambient tracks...
+user: maybe something with piano?
+```
+
+Each turn is `role: content`, joined by `\n`. This is built in `CRS_BASELINE.chat()` / `batch_chat()` before calling the retrieval module.
+
+---
+
 ### BM25 (`mcrs/retrieval_modules/bm25.py`)
-- Sparse keyword matching using the `bm25s` library
-- Index built from concatenated `corpus_types` fields for all 47,071 tracks
-- Index cached to `cache/bm25/{corpus_name}/`
-- **Devset NDCG@10: 0.0627** — best baseline
+
+**Indexing:**
+- Tokenizes each track's corpus document with `bm25s.tokenize(corpus)`
+- Saves index to `cache/bm25/{corpus_name}/` (BM25 model + `track_ids.json`)
+
+**Querying:**
+- Lowercases the query: `bm25s.tokenize([query.lower()])`
+- Returns top-k track IDs by BM25 score
+
+**Devset NDCG@10: 0.0627** — best baseline
 
 ### BERT (`mcrs/retrieval_modules/bert.py`)
-- Model: `bert-base-uncased`
-- Mean-pooling over token embeddings (masked), then L2-normalize
-- Similarity: cosine (dot product of normalized vectors)
-- Embeddings cached to `cache/bert/{corpus_name}/embeddings.pt`
-- **Devset NDCG@10: 0.0048**
 
-Both expose the same interface:
+**Indexing:**
+- Model: `bert-base-uncased`
+- Tokenizes each document: `max_length=128`, padding + truncation
+- Mean-pools token embeddings over non-padding tokens (masked mean)
+- L2-normalizes each embedding: `F.normalize(pooled, p=2, dim=1)`
+- Saves `embeddings.pt` [47071, 768] + `track_ids.json` to `cache/bert/{corpus_name}/`
+- Embedding batch size: 32
+
+**Querying:**
+- Embeds the query string the same way (tokenize → mean-pool → L2-normalize)
+- Scores all tracks: `scores = embeddings @ query_emb` (dot product = cosine sim because both are L2-normalized)
+- Returns top-k track IDs by score
+
+**Devset NDCG@10: 0.0048**
+
+---
+
+### LLM context string (Stage 2 input)
+
+After retrieval, `MusicCatalogDB.id_to_metadata()` formats the top-1 track for the LLM — different format from the corpus document:
+
+```
+track_id: 97f5eeec-..., track_name: with rainy eyes, artist_name: emancipator, album_name: soon it will be cold enough, release_date: 2006-12-06
+```
+
+Comma-separated, all values lowercased.
+
+---
+
+### Interface
+
+Both retrievers expose the same API:
+
 ```python
 retrieval.text_to_item_retrieval(query: str, topk: int = 20) -> list[str]
 retrieval.batch_text_to_item_retrieval(queries: list[str], topk: int = 20) -> list[list[str]]
