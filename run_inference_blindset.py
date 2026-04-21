@@ -81,7 +81,7 @@ def main(args):
         cache_dir=config.cache_dir,
         device=config.device,
         attn_implementation=config.attn_implementation,
-        dtype=torch.bfloat16
+        dtype=getattr(torch, config.get("dtype", "bfloat16"))
     )
     db = load_dataset(config.test_dataset_name, split="test")
     # Prepare all batch data at once
