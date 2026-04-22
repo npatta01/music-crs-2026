@@ -28,6 +28,17 @@ dependencies = [
     "transformers>=4.46.3",
 ]
 
+[project.optional-dependencies]
+notebooks = [
+    "ipywidgets>=8.0",
+    "jupyterlab>=4.0",
+    "matplotlib>=3.7",
+    "streamlit>=1.35",
+]
+
+[project.scripts]
+music-dashboard = "mcrs.dashboard:main"
+
 [tool.setuptools]
 packages = ["mcrs"]
 
