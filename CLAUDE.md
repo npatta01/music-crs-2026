@@ -10,6 +10,7 @@ Challenge: https://nlp4musa.github.io/music-crs-challenge/
 - [Baseline Architecture](docs/architectures/baseline.md) — pipeline, retrieval modules, LLM module, config
 - [Evaluation](docs/evaluation.md) — metrics, devset leaderboard
 - [Mac / Local Dev](docs/mac_dev.md) — local testing on Apple Silicon
+- [Modal Setup](docs/modal_setup.md) — cloud GPU authentication and smoke test
 
 ## Setup
 
