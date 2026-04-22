@@ -80,6 +80,17 @@ uvx hf auth login
 
 > **Note:** The default configs use `attn_implementation: "sdpa"` (PyTorch built-in, no extra install needed). If you successfully install `flash-attn`, you can switch to `attn_implementation: "sdpa"` in your config for a small speed boost.
 
+### Modal Authentication (for cloud GPU runs)
+
+```bash
+# Authenticate (opens browser)
+uv run python -m modal setup
+
+# Verify setup
+uv run modal run other/modal_get_started.py
+# Expected: "This code is running on a remote worker! the square is 1764"
+```
+
 ### Run Inference on the Development Set
 
 **⚠️ Note: During inference, the recommender system must always retrieve candidates from the entire track catalog. Do not filter, subset, or restrict tracks using `track_split_types` or any other mechanism!**
