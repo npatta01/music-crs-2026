@@ -39,6 +39,7 @@ class CRS_BASELINE:
         device="cuda",
         attn_implementation="eager",
         dtype=torch.bfloat16,
+        retrieval_topk: int = 20,
     ):
         """Initialize the CRS baseline components.
 
@@ -64,6 +65,7 @@ class CRS_BASELINE:
         self.device = device
         self.dtype = dtype
         self.attn_implementation = attn_implementation
+        self.retrieval_topk = retrieval_topk
         self.lm = load_lm_module(self.lm_type, self.device, self.attn_implementation, self.dtype)
         self.retrieval = load_retrieval_module(self.retrieval_type, self.item_db_name, self.track_split_types, self.corpus_types, self.cache_dir)
         self.item_db = MusicCatalogDB(self.item_db_name, self.track_split_types, self.corpus_types)
@@ -117,7 +119,7 @@ class CRS_BASELINE:
         system_prompt = self._get_system_prompt(user_id)
         # stage1. retrieval
         retrieval_input = "\n".join([f"{conversation['role']}: {conversation['content']}" for conversation in self.session_memory])
-        retrieval_items = self.retrieval.text_to_item_retrieval(retrieval_input, topk=20)
+        retrieval_items = self.retrieval.text_to_item_retrieval(retrieval_input, topk=self.retrieval_topk)
         recommend_item = self.item_db.id_to_metadata(retrieval_items[0])
         # stage2. response generation
         response = self.lm.response_generation(system_prompt, self.session_memory, recommend_item)
@@ -162,10 +164,10 @@ class CRS_BASELINE:
 
         # Stage 1: Batch retrieval
         if hasattr(self.retrieval, 'batch_text_to_item_retrieval'):
-            batch_retrieval_items = self.retrieval.batch_text_to_item_retrieval(retrieval_inputs, topk=20)
+            batch_retrieval_items = self.retrieval.batch_text_to_item_retrieval(retrieval_inputs, topk=self.retrieval_topk)
         else:
             # Fallback to sequential retrieval if batch method not available
-            batch_retrieval_items = [self.retrieval.text_to_item_retrieval(inp, topk=20) for inp in retrieval_inputs]
+            batch_retrieval_items = [self.retrieval.text_to_item_retrieval(inp, topk=self.retrieval_topk) for inp in retrieval_inputs]
 
         recommend_items = [self.item_db.id_to_metadata(items[0]) for items in batch_retrieval_items]
 

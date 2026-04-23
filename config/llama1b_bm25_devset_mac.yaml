@@ -16,3 +16,4 @@ cache_dir: "./cache"
 device: "mps"
 attn_implementation: "eager"
 dtype: "float32"
+retrieval_topk: 100
