@@ -75,17 +75,48 @@ def load_predictions(filepath: str):
 
 
 # ─────────────────────────────────────────────
-# Metric helpers (shared with eval_devset.py)
+# Metric helpers
+#
+# Note: the *canonical* numbers for leaderboard-comparison live in the
+# `evaluator/` submodule (nlp4musa/music-crs-evaluator fork). This app
+# computes the same per-turn metrics inline for interactive exploration.
 # ─────────────────────────────────────────────
 
-from eval_devset import (
-    ndcg_at_k as _ndcg_at_k,
-    recall_at_k as _recall_at_k,
-    reciprocal_rank as _rr,
-    rank_of as _rank_of,
-    distinct_n as _distinct_n,
-    KS as _KS,
-)
+_KS = [1, 5, 10, 20, 50, 100]
+
+
+def _ndcg_at_k(predicted, gt, k):
+    for rank, tid in enumerate(predicted[:k], start=1):
+        if tid == gt:
+            return 1.0 / math.log2(rank + 1)
+    return 0.0
+
+
+def _recall_at_k(predicted, gt, k):
+    return 1 if gt in predicted[:k] else 0
+
+
+def _rank_of(predicted, gt):
+    for rank, tid in enumerate(predicted, start=1):
+        if tid == gt:
+            return rank
+    return None
+
+
+def _rr(predicted, gt, max_k=None):
+    r = _rank_of(predicted if max_k is None else predicted[:max_k], gt)
+    return 1.0 / r if r else 0.0
+
+
+def _distinct_n(texts, n):
+    total = 0
+    seen = set()
+    for t in texts:
+        tokens = t.split()
+        for i in range(len(tokens) - n + 1):
+            seen.add(tuple(tokens[i:i + n]))
+            total += 1
+    return len(seen) / total if total else 0.0
 
 
 def ndcg_at_k(predicted_ids, gt_id, k):

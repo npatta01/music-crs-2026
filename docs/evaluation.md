@@ -1,30 +1,21 @@
 # Evaluation
 
-Official evaluator repo: https://github.com/nlp4musa/music-crs-evaluator
-(Used for leaderboard scoring on the blind set; operates over the submission
-top-20.)
-
-For dev-set iteration we ship a **richer offline evaluator** locally so
-dev-set numbers are a reliable proxy for final-set performance, including
-signals the official evaluator doesn't expose (whether the GT was retrieved
-at all, where it ranked, per-turn behavior, etc.).
-
----
-
-## Offline dev-set eval
+Evaluator lives in the `evaluator/` git submodule
+(fork of https://github.com/nlp4musa/music-crs-evaluator with
+`--session_ids_file` support and extended dev-set metrics).
 
 ```bash
-# 1) Run inference with a deeper candidate pool (configs in config/*_devset.yaml
-#    already set retrieval_topk: 100).
-python run_inference_devset.py --tid llama1b_bm25_devset --batch_size 16
-
-# 2) Compute full metric sweep — writes exp/eval/devset/{tid}.json and prints
-#    a grouped report to stdout.
-python eval_devset.py --tid llama1b_bm25_devset
+git submodule update --init evaluator
+cd evaluator
+python make_ground_truth.py                      # once
+# Predictions are read from ./exp/inference/devset/<tid>.json
+# (symlink or copy from the main repo's exp/inference/devset/).
+python evaluate_devset.py --tid llama1b_bm25_devset
 ```
 
-The streamlit explorer surfaces the same metrics:
-`streamlit run streamlit_app.py`.
+This writes `evaluator/exp/scores/devset/<tid>.json` and prints a grouped
+report. The streamlit explorer in the main repo recomputes the same metrics
+inline for interactive exploration.
 
 ---
 
