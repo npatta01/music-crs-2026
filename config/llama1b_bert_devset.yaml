@@ -15,3 +15,4 @@ corpus_types:
 cache_dir: "./cache"
 device: "cuda"
 attn_implementation: "sdpa"
+retrieval_topk: 100
