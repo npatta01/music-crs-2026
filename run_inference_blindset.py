@@ -115,8 +115,9 @@ def main(args):
                 "predicted_track_ids": result['retrieval_items'],
                 "predicted_response": result["response"]
             })
-    os.makedirs(f"exp/inference/{args.eval_dataset}", exist_ok=True)
-    with open(f"exp/inference/{args.eval_dataset}/{args.tid}.json", "w", encoding="utf-8") as f:
+    exp_dir = os.environ.get("EXP_DIR", "exp")
+    os.makedirs(f"{exp_dir}/inference/{args.eval_dataset}", exist_ok=True)
+    with open(f"{exp_dir}/inference/{args.eval_dataset}/{args.tid}.json", "w", encoding="utf-8") as f:
         json.dump(inference_results, f, ensure_ascii=False)
 
 if __name__ == "__main__":
