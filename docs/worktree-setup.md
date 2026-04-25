@@ -1,6 +1,6 @@
 # Worktree Resource Sharing
 
-Tracked in [#2](https://github.com/nlp4musa/music-crs-baselines/issues/2).
+Tracked in [#10](https://github.com/npatta01/music-conversational-music-recomender-2026/issues/10).
 Implemented in f57fddc on `main`.
 
 ## Problem
