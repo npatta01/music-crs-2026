@@ -96,8 +96,8 @@ Pull a predictions file or scores file from the volume to your local `exp/` dire
 
 ```bash
 # Download inference predictions
-music-download --tid llama1b_bm25_devset
+python modal/download_results.py --tid llama1b_bm25_devset
 
 # Download evaluation scores
-music-download --tid llama1b_bm25_devset --type scores
+python modal/download_results.py --tid llama1b_bm25_devset --type scores
 ```

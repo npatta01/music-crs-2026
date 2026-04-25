@@ -39,7 +39,6 @@ notebooks = [
 
 [project.scripts]
 music-dashboard = "mcrs.dashboard:main"
-music-download = "modal.download_results:main"
 
 [tool.setuptools]
 packages = ["mcrs", "modal"]
