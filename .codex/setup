@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Codex setup script — runs automatically at the start of each new worktree thread.
+# See: https://developers.openai.com/codex/app/local-environments
+set -euo pipefail
+
+bash scripts/setup-worktree.sh
