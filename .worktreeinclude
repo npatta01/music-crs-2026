@@ -1,8 +1,0 @@
-# Files/dirs copied (Claude Code Desktop) or symlinked (CLI/Codex) from the
-# main repo into new worktrees on creation.
-#
-# Rules:
-#   - Only include read-only resources (symlinks write back to main repo)
-#   - Omit large directories like .venv — uv sync rebuilds them fast
-data/
-.env
