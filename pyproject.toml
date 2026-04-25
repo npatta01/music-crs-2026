@@ -23,6 +23,7 @@ dependencies = [
     "modal>=1.4.2",
     "omegaconf>=2.3.0",
     "psutil>=7.2.2",
+    "python-dotenv>=1.2.2",
     "streamlit>=1.56.0",
     "torch>=2.9.1,<2.10",
     "torchaudio",
@@ -63,4 +64,3 @@ flash-attn = { url = "https://github.com/Dao-AILab/flash-attention/releases/down
 name = "pytorch-cu128"
 url = "https://download.pytorch.org/whl/cu128"
 explicit = true
-
