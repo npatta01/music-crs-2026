@@ -29,7 +29,7 @@ class LLAMA_MODEL:
         token_inputs = self.tokenizer(chat_history, return_tensors="pt")
         input_ids = token_inputs.input_ids.to(self.device)
         attention_mask = token_inputs.attention_mask.to(self.device)
-        with torch.no_grad():
+        with torch.inference_mode():
             outputs = self.lm.generate(input_ids, attention_mask=attention_mask, max_new_tokens=max_new_tokens)
         generated_text = self.tokenizer.batch_decode(outputs[:,input_ids.shape[1]:], skip_special_tokens=True)[0]
         return generated_text
@@ -60,7 +60,7 @@ class LLAMA_MODEL:
         input_ids = token_inputs.input_ids.to(self.device)
         attention_mask = token_inputs.attention_mask.to(self.device)
 
-        with torch.no_grad():
+        with torch.inference_mode():
             outputs = self.lm.generate(
                 input_ids,
                 attention_mask=attention_mask,

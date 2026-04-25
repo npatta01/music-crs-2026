@@ -13,7 +13,7 @@ Usage:
     modal run modal/app.py::run_inference --num-sessions 5
 
     # Full devset
-    modal run modal/app.py::run_inference --tid llama1b_bm25_devset --batch-size 16
+    modal run modal/app.py::run_inference --tid llama1b_bm25_devset --batch-size 64
 
     # Blindset
     modal run modal/app.py::run_inference_blindset --tid llama1b_bm25_blindset_A
@@ -27,14 +27,37 @@ from pathlib import Path
 import modal
 from omegaconf import OmegaConf
 
+
+def _config_path() -> Path:
+    """Find modal/config.yaml locally and when Modal imports this file as /root/app.py."""
+    candidates = [
+        Path(__file__).parent / "config.yaml",
+        Path.cwd() / "modal" / "config.yaml",
+        Path("/app/modal/config.yaml"),
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    raise FileNotFoundError(
+        "Could not find modal/config.yaml. Checked: "
+        + ", ".join(str(path) for path in candidates)
+    )
+
+
+ENV_SECRET = modal.Secret.from_dotenv(__file__)
+
+
 # Load config from modal/config.yaml
-_cfg = OmegaConf.load(Path(__file__).parent / "config.yaml")
+_cfg = OmegaConf.load(_config_path())
 
 APP_NAME = _cfg.app_name
 HF_CACHE_VOLUME = _cfg.volumes.hf_cache
 RESULTS_VOLUME = _cfg.volumes.results
 HF_CACHE_DIR = _cfg.container.hf_cache_dir
 EXP_DIR = _cfg.container.exp_dir
+INFERENCE_GPU = list(_cfg.inference.gpu)
+DEVSET_BATCH_SIZE = int(_cfg.inference.devset_batch_size)
+BLINDSET_BATCH_SIZE = int(_cfg.inference.blindset_batch_size)
 
 app = modal.App(APP_NAME)
 
@@ -47,9 +70,10 @@ results_vol = modal.Volume.from_name(RESULTS_VOLUME, create_if_missing=True)
 image = (
     modal.Image.debian_slim(python_version="3.12")
     .uv_sync(".")
-    .copy_local_dir(
+    .add_local_dir(
         ".",
         "/app",
+        copy=True,
         ignore=[".*", "__pycache__", "*.pyc", ".venv", "exp", "cache", "submission*"],
     )
     .run_commands("pip install -r /app/evaluator/requirments.txt")
@@ -64,9 +88,9 @@ _VOLUME_MOUNTS = {
 
 @app.function(
     image=image,
-    gpu=modal.gpu.A10G(),
+    gpu=INFERENCE_GPU,
     volumes=_VOLUME_MOUNTS,
-    secrets=[modal.Secret.from_dotenv()],
+    secrets=[ENV_SECRET],
     timeout=7200,
 )
 def _inference_devset(tid: str, batch_size: int, num_sessions: int):
@@ -91,9 +115,9 @@ def _inference_devset(tid: str, batch_size: int, num_sessions: int):
 
 @app.function(
     image=image,
-    gpu=modal.gpu.A10G(),
+    gpu=INFERENCE_GPU,
     volumes=_VOLUME_MOUNTS,
-    secrets=[modal.Secret.from_dotenv()],
+    secrets=[ENV_SECRET],
     timeout=7200,
 )
 def _inference_blindset(tid: str, batch_size: int, eval_dataset: str):
@@ -117,7 +141,7 @@ def _inference_blindset(tid: str, batch_size: int, eval_dataset: str):
 @app.function(
     image=image,
     volumes=_VOLUME_MOUNTS,
-    secrets=[modal.Secret.from_dotenv()],
+    secrets=[ENV_SECRET],
     timeout=3600,
 )
 def _evaluate(tid: str, split: str):
@@ -163,20 +187,20 @@ def _evaluate(tid: str, split: str):
 @app.local_entrypoint()
 def run_inference(
     tid: str = "llama1b_bm25_devset",
-    batch_size: int = 16,
+    batch_size: int = DEVSET_BATCH_SIZE,
     num_sessions: int = 0,
 ):
-    """Run devset inference on A10G GPU."""
+    """Run devset inference on the configured fast GPU fallback policy."""
     _inference_devset.remote(tid=tid, batch_size=batch_size, num_sessions=num_sessions)
 
 
 @app.local_entrypoint()
 def run_inference_blindset(
     tid: str = "llama1b_bm25_blindset_A",
-    batch_size: int = 16,
+    batch_size: int = BLINDSET_BATCH_SIZE,
     eval_dataset: str = "blindset_A",
 ):
-    """Run blindset inference on A10G GPU."""
+    """Run blindset inference on the configured fast GPU fallback policy."""
     _inference_blindset.remote(tid=tid, batch_size=batch_size, eval_dataset=eval_dataset)
 
 
