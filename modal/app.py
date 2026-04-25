@@ -41,23 +41,19 @@ app = modal.App(APP_NAME)
 hf_cache_vol = modal.Volume.from_name(HF_CACHE_VOLUME, create_if_missing=True)
 results_vol = modal.Volume.from_name(RESULTS_VOLUME, create_if_missing=True)
 
-# Build image from pyproject.toml + uv.lock for reproducible installs
+# Build image: uv_sync reads pyproject.toml + uv.lock for reproducible installs.
+# Source files are copied separately (uv_sync uses --no-install-project).
+# Evaluator submodule deps installed on top.
 image = (
     modal.Image.debian_slim(python_version="3.12")
-    .run_commands("pip install uv")
-    .copy_local_file("pyproject.toml", "/app/pyproject.toml")
-    .copy_local_file("uv.lock", "/app/uv.lock")
-    .run_commands(
-        # Export locked deps to requirements format, then install into system Python
-        "cd /app && uv export --frozen --no-dev -o /tmp/requirements.txt"
-        " && uv pip install --system -r /tmp/requirements.txt"
-    )
+    .uv_sync(".")
     .copy_local_dir(
         ".",
         "/app",
-        ignore=[".*", "__pycache__", "*.pyc", ".venv", "exp", "cache", "submission*", "evaluator"],
+        ignore=[".*", "__pycache__", "*.pyc", ".venv", "exp", "cache", "submission*"],
     )
-    .run_commands("cd /app && pip install -e . --no-deps --quiet")
+    .run_commands("pip install -r /app/evaluator/requirments.txt")
+    .env({"PYTHONPATH": "/app"})
 )
 
 _VOLUME_MOUNTS = {
@@ -125,16 +121,40 @@ def _inference_blindset(tid: str, batch_size: int, eval_dataset: str):
     timeout=3600,
 )
 def _evaluate(tid: str, split: str):
+    """
+    Evaluate predictions using the evaluator submodule (evaluator/).
+
+    The evaluator scripts use relative exp/ paths. Running them with
+    cwd=/root means exp/ resolves to /root/exp = the results volume mount.
+    PYTHONPATH includes /app/evaluator so the metrics module is importable.
+    """
     import subprocess
     import sys
 
-    cmd = [
-        sys.executable, "/app/run_evaluate.py",
-        "--tid", tid,
-        "--split", split,
-        "--exp_dir", EXP_DIR,
-    ]
-    result = subprocess.run(cmd, cwd="/app")
+    cwd = str(Path(EXP_DIR).parent)  # /root — so exp/ → /root/exp (volume)
+    env = {"PYTHONPATH": "/app/evaluator"}
+
+    # Step 1: generate ground truth if not already cached in the volume
+    gt_path = Path(EXP_DIR) / "ground_truth" / "devset.json"
+    if not gt_path.exists():
+        print("Generating ground truth...")
+        result = subprocess.run(
+            [sys.executable, "/app/evaluator/make_ground_truth.py"],
+            cwd=cwd, env={**__import__("os").environ, **env},
+        )
+        if result.returncode != 0:
+            raise RuntimeError(f"make_ground_truth failed (exit {result.returncode})")
+        results_vol.commit()
+
+    # Step 2: score predictions
+    result = subprocess.run(
+        [
+            sys.executable, "/app/evaluator/evaluate_devset.py",
+            "--tid", tid,
+            "--eval_dataset", split,
+        ],
+        cwd=cwd, env={**__import__("os").environ, **env},
+    )
     if result.returncode != 0:
         raise RuntimeError(f"Evaluation failed (exit {result.returncode})")
     results_vol.commit()
@@ -165,5 +185,5 @@ def run_evaluate(
     tid: str = "llama1b_bm25_devset",
     split: str = "devset",
 ):
-    """Score predictions from the results volume (CPU)."""
+    """Score predictions using the evaluator submodule (CPU)."""
     _evaluate.remote(tid=tid, split=split)

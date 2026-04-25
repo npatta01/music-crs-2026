@@ -75,10 +75,17 @@ modal run modal/app.py::run_evaluate --tid llama1b_bm25_devset
 
 Prints NDCG@1/10/20 and catalog diversity. Scores are written to the `music-crs-results` volume at `scores/devset/{tid}.json`.
 
-You can also run evaluation locally against a downloaded predictions file:
+You can also run evaluation locally using the evaluator submodule directly:
 
 ```bash
-python run_evaluate.py --tid llama1b_bm25_devset
+# First initialise the submodule if you haven't already
+git submodule update --init evaluator
+
+# Generate ground truth once
+python evaluator/make_ground_truth.py
+
+# Score predictions
+python evaluator/evaluate_devset.py --tid llama1b_bm25_devset
 ```
 
 ---
