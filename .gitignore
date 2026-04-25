@@ -2,7 +2,6 @@
 cache/
 __pycache__/
 *.egg-info/
-uv.lock
 inference/
 .DS_Store
 evaluator/exp/*

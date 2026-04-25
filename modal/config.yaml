@@ -1,0 +1,9 @@
+app_name: "music-crs"
+
+volumes:
+  hf_cache: "music-crs-hf-cache"
+  results: "music-crs-results"
+
+container:
+  hf_cache_dir: "/root/.cache/huggingface"
+  exp_dir: "/root/exp"

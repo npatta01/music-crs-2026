@@ -31,22 +31,13 @@ the square is 1764
 
 ### One-time setup
 
-**1. Create persistent volumes**
-
-```bash
-modal volume create music-crs-hf-cache   # HF model weights (Llama, BERT)
-modal volume create music-crs-results    # Inference outputs + scores
-```
-
-**2. Add HF token to `.env`**
-
-Create a `.env` file in the project root (already in `.gitignore`):
+Add your HF token to a `.env` file in the project root (already in `.gitignore`):
 
 ```
 HF_TOKEN=hf_...
 ```
 
-Modal reads this automatically via `modal.Secret.from_dotenv()` — no manual `hf auth login` inside the container.
+Modal reads this automatically via `modal.Secret.from_dotenv()`. Volumes are created automatically on first run — no manual setup needed. Volume names and container paths are configured in `modal/config.yaml`.
 
 ---
 
@@ -64,7 +55,13 @@ modal run modal/app.py::run_inference --num-sessions 5
 modal run modal/app.py::run_inference --tid llama1b_bm25_devset --batch-size 16
 ```
 
-The second run will skip re-downloading model weights — HF cache is persisted in the `music-crs-hf-cache` volume.
+**Blindset (submission)**
+
+```bash
+modal run modal/app.py::run_inference_blindset --tid llama1b_bm25_blindset_A
+```
+
+The second run skips re-downloading model weights — HF model cache is persisted in the `music-crs-hf-cache` volume.
 
 ---
 
@@ -76,7 +73,13 @@ After inference completes, score the predictions on CPU:
 modal run modal/app.py::run_evaluate --tid llama1b_bm25_devset
 ```
 
-Prints NDCG@1/10/20 and catalog diversity. Scores are also written to the `music-crs-results` volume at `scores/devset/{tid}.json`.
+Prints NDCG@1/10/20 and catalog diversity. Scores are written to the `music-crs-results` volume at `scores/devset/{tid}.json`.
+
+You can also run evaluation locally against a downloaded predictions file:
+
+```bash
+python run_evaluate.py --tid llama1b_bm25_devset
+```
 
 ---
 
@@ -86,8 +89,8 @@ Pull a predictions file or scores file from the volume to your local `exp/` dire
 
 ```bash
 # Download inference predictions
-python modal/download_results.py --tid llama1b_bm25_devset
+music-download --tid llama1b_bm25_devset
 
 # Download evaluation scores
-python modal/download_results.py --tid llama1b_bm25_devset --type scores
+music-download --tid llama1b_bm25_devset --type scores
 ```

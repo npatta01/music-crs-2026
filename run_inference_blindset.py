@@ -115,9 +115,8 @@ def main(args):
                 "predicted_track_ids": result['retrieval_items'],
                 "predicted_response": result["response"]
             })
-    exp_dir = os.environ.get("EXP_DIR", "exp")
-    os.makedirs(f"{exp_dir}/inference/{args.eval_dataset}", exist_ok=True)
-    with open(f"{exp_dir}/inference/{args.eval_dataset}/{args.tid}.json", "w", encoding="utf-8") as f:
+    os.makedirs(f"{args.exp_dir}/inference/{args.eval_dataset}", exist_ok=True)
+    with open(f"{args.exp_dir}/inference/{args.eval_dataset}/{args.tid}.json", "w", encoding="utf-8") as f:
         json.dump(inference_results, f, ensure_ascii=False)
 
 if __name__ == "__main__":
@@ -143,10 +142,10 @@ if __name__ == "__main__":
         help="Number of queries to process in parallel. Reduce if encountering GPU memory issues."
     )
     parser.add_argument(
-        "--save_path",
+        "--exp_dir",
         type=str,
-        default="./exp/inference",
-        help="Base directory for saving results (currently not used, results saved to exp/inference/)"
+        default="exp",
+        help="Base directory for saving results (default: ./exp)"
     )
     args = parser.parse_args()
     main(args)

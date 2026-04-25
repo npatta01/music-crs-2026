@@ -1,9 +1,9 @@
 """
 Modal cloud pipeline for Music CRS.
 
-Volumes (create once):
-    modal volume create music-crs-hf-cache
-    modal volume create music-crs-results
+Config: modal/config.yaml (volume names, container paths)
+
+Volumes are created automatically on first run — no manual setup needed.
 
 Secret (.env in project root):
     HF_TOKEN=hf_...
@@ -15,43 +15,65 @@ Usage:
     # Full devset
     modal run modal/app.py::run_inference --tid llama1b_bm25_devset --batch-size 16
 
+    # Blindset
+    modal run modal/app.py::run_inference_blindset --tid llama1b_bm25_blindset_A
+
     # Evaluate (after inference)
     modal run modal/app.py::run_evaluate --tid llama1b_bm25_devset
 """
 
-import os
+from pathlib import Path
+
 import modal
+from omegaconf import OmegaConf
 
-app = modal.App("music-crs")
+# Load config from modal/config.yaml
+_cfg = OmegaConf.load(Path(__file__).parent / "config.yaml")
 
-hf_cache_vol = modal.Volume.from_name("music-crs-hf-cache", create_if_missing=True)
-results_vol = modal.Volume.from_name("music-crs-results", create_if_missing=True)
+APP_NAME = _cfg.app_name
+HF_CACHE_VOLUME = _cfg.volumes.hf_cache
+RESULTS_VOLUME = _cfg.volumes.results
+HF_CACHE_DIR = _cfg.container.hf_cache_dir
+EXP_DIR = _cfg.container.exp_dir
 
+app = modal.App(APP_NAME)
+
+hf_cache_vol = modal.Volume.from_name(HF_CACHE_VOLUME, create_if_missing=True)
+results_vol = modal.Volume.from_name(RESULTS_VOLUME, create_if_missing=True)
+
+# Build image from pyproject.toml + uv.lock for reproducible installs
 image = (
     modal.Image.debian_slim(python_version="3.12")
-    .pip_install("uv")
+    .run_commands("pip install uv")
+    .copy_local_file("pyproject.toml", "/app/pyproject.toml")
+    .copy_local_file("uv.lock", "/app/uv.lock")
+    .run_commands(
+        # Export locked deps to requirements format, then install into system Python
+        "cd /app && uv export --frozen --no-dev -o /tmp/requirements.txt"
+        " && uv pip install --system -r /tmp/requirements.txt"
+    )
     .copy_local_dir(
         ".",
         "/app",
         ignore=[".*", "__pycache__", "*.pyc", ".venv", "exp", "cache", "submission*", "evaluator"],
     )
-    .run_commands("cd /app && uv pip install --system -e .")
+    .run_commands("cd /app && pip install -e . --no-deps --quiet")
 )
 
-EXP_DIR = "/root/exp"
+_VOLUME_MOUNTS = {
+    HF_CACHE_DIR: hf_cache_vol,
+    EXP_DIR: results_vol,
+}
 
 
 @app.function(
     image=image,
     gpu=modal.gpu.A10G(),
-    volumes={
-        "/root/.cache/huggingface": hf_cache_vol,
-        EXP_DIR: results_vol,
-    },
+    volumes=_VOLUME_MOUNTS,
     secrets=[modal.Secret.from_dotenv()],
     timeout=7200,
 )
-def _inference(tid: str, batch_size: int, num_sessions: int):
+def _inference_devset(tid: str, batch_size: int, num_sessions: int):
     import subprocess
     import sys
 
@@ -59,90 +81,63 @@ def _inference(tid: str, batch_size: int, num_sessions: int):
         sys.executable, "/app/run_inference_devset.py",
         "--tid", tid,
         "--batch_size", str(batch_size),
+        "--exp_dir", EXP_DIR,
     ]
     if num_sessions > 0:
         cmd += ["--num_sessions", str(num_sessions)]
 
-    env = os.environ.copy()
-    env["EXP_DIR"] = EXP_DIR
-
-    result = subprocess.run(cmd, cwd="/app", env=env)
+    result = subprocess.run(cmd, cwd="/app")
     if result.returncode != 0:
-        raise RuntimeError(f"Inference failed with exit code {result.returncode}")
-
+        raise RuntimeError(f"Inference failed (exit {result.returncode})")
     results_vol.commit()
-    print(f"Results saved to volume at inference/devset/{tid}.json")
+    print(f"Results saved to volume: inference/devset/{tid}.json")
 
 
 @app.function(
     image=image,
-    volumes={
-        "/root/.cache/huggingface": hf_cache_vol,
-        EXP_DIR: results_vol,
-    },
+    gpu=modal.gpu.A10G(),
+    volumes=_VOLUME_MOUNTS,
+    secrets=[modal.Secret.from_dotenv()],
+    timeout=7200,
+)
+def _inference_blindset(tid: str, batch_size: int, eval_dataset: str):
+    import subprocess
+    import sys
+
+    cmd = [
+        sys.executable, "/app/run_inference_blindset.py",
+        "--tid", tid,
+        "--batch_size", str(batch_size),
+        "--eval_dataset", eval_dataset,
+        "--exp_dir", EXP_DIR,
+    ]
+    result = subprocess.run(cmd, cwd="/app")
+    if result.returncode != 0:
+        raise RuntimeError(f"Inference failed (exit {result.returncode})")
+    results_vol.commit()
+    print(f"Results saved to volume: inference/{eval_dataset}/{tid}.json")
+
+
+@app.function(
+    image=image,
+    volumes=_VOLUME_MOUNTS,
     secrets=[modal.Secret.from_dotenv()],
     timeout=3600,
 )
-def _evaluate(tid: str, split: str) -> dict:
-    import json
-    import math
+def _evaluate(tid: str, split: str):
+    import subprocess
+    import sys
 
-    import numpy as np
-    from datasets import load_dataset
-
-    pred_path = f"{EXP_DIR}/inference/{split}/{tid}.json"
-    with open(pred_path) as f:
-        raw = json.load(f)
-    predictions = {(p["session_id"], p["turn_number"]): p["predicted_track_ids"] for p in raw}
-    print(f"Loaded {len(raw):,} predictions from {pred_path}")
-
-    hf_split = "test" if split == "devset" else split
-    conv_ds = load_dataset("talkpl-ai/TalkPlayData-Challenge-Dataset", split=hf_split)
-    ground_truth = {
-        (s["session_id"], t["turn_number"]): t["content"]
-        for s in conv_ds
-        for t in s["conversations"]
-        if t["role"] == "music"
-    }
-
-    tracks_ds = load_dataset("talkpl-ai/TalkPlayData-Challenge-Track-Metadata", split="all_tracks")
-    total_tracks = len(tracks_ds)
-
-    def ndcg_at_k(predicted, gt, k):
-        if not gt or not predicted:
-            return 0.0
-        for rank, track_id in enumerate(predicted[:k], start=1):
-            if track_id == gt:
-                return 1.0 / math.log2(rank + 1)
-        return 0.0
-
-    ndcg1_scores, ndcg10_scores, ndcg20_scores = [], [], []
-    all_predicted_ids = set()
-
-    for (sid, turn), ptids in predictions.items():
-        gt = ground_truth.get((sid, turn))
-        ndcg1_scores.append(ndcg_at_k(ptids, gt, 1))
-        ndcg10_scores.append(ndcg_at_k(ptids, gt, 10))
-        ndcg20_scores.append(ndcg_at_k(ptids, gt, 20))
-        all_predicted_ids.update(ptids)
-
-    scores = {
-        "tid": tid,
-        "split": split,
-        "n_predictions": len(predictions),
-        "NDCG@1": float(np.mean(ndcg1_scores)),
-        "NDCG@10": float(np.mean(ndcg10_scores)),
-        "NDCG@20": float(np.mean(ndcg20_scores)),
-        "catalog_diversity": len(all_predicted_ids) / total_tracks,
-    }
-
-    scores_path = f"{EXP_DIR}/scores/{split}/{tid}.json"
-    os.makedirs(os.path.dirname(scores_path), exist_ok=True)
-    with open(scores_path, "w") as f:
-        json.dump(scores, f, indent=2)
-
+    cmd = [
+        sys.executable, "/app/run_evaluate.py",
+        "--tid", tid,
+        "--split", split,
+        "--exp_dir", EXP_DIR,
+    ]
+    result = subprocess.run(cmd, cwd="/app")
+    if result.returncode != 0:
+        raise RuntimeError(f"Evaluation failed (exit {result.returncode})")
     results_vol.commit()
-    return scores
 
 
 @app.local_entrypoint()
@@ -151,7 +146,18 @@ def run_inference(
     batch_size: int = 16,
     num_sessions: int = 0,
 ):
-    _inference.remote(tid=tid, batch_size=batch_size, num_sessions=num_sessions)
+    """Run devset inference on A10G GPU."""
+    _inference_devset.remote(tid=tid, batch_size=batch_size, num_sessions=num_sessions)
+
+
+@app.local_entrypoint()
+def run_inference_blindset(
+    tid: str = "llama1b_bm25_blindset_A",
+    batch_size: int = 16,
+    eval_dataset: str = "blindset_A",
+):
+    """Run blindset inference on A10G GPU."""
+    _inference_blindset.remote(tid=tid, batch_size=batch_size, eval_dataset=eval_dataset)
 
 
 @app.local_entrypoint()
@@ -159,8 +165,5 @@ def run_evaluate(
     tid: str = "llama1b_bm25_devset",
     split: str = "devset",
 ):
-    scores = _evaluate.remote(tid=tid, split=split)
-    print(f"\n--- Results for {tid} ({split}) ---")
-    for k, v in scores.items():
-        print(f"  {k}: {v:.4f}" if isinstance(v, float) else f"  {k}: {v}")
-    print(f"\nScores saved to volume at scores/{split}/{tid}.json")
+    """Score predictions from the results volume (CPU)."""
+    _evaluate.remote(tid=tid, split=split)
