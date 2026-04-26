@@ -1,0 +1,20 @@
+app_name: "music-crs"
+
+volumes:
+  hf_cache: "music-crs-hf-cache"
+  results: "music-crs-results"
+
+container:
+  hf_cache_dir: "/root/.cache/huggingface"
+  exp_dir: "/root/exp"
+
+inference:
+  gpu:
+    - "H200"
+    - "H100"
+    - "L40S"
+    - "A100-80GB"
+    - "A100-40GB"
+    - "A10"
+  devset_batch_size: 64
+  blindset_batch_size: 64

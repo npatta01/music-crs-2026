@@ -88,6 +88,11 @@ def main(args):
         with open(args.session_ids_file) as f:
             keep = set(json.load(f)["session_ids"])
         db = db.filter(lambda x: x["session_id"] in keep)
+    if args.num_sessions > 0:
+        import random
+        n = min(args.num_sessions, len(db))
+        db = db.select(random.sample(range(len(db)), n))
+        print(f"Running on {n} randomly sampled sessions.")
     # Prepare all batch data at once
     batch_data, metadata = [], []
     for item in db:
@@ -118,8 +123,8 @@ def main(args):
                 "predicted_track_ids": result['retrieval_items'],
                 "predicted_response": result["response"]
             })
-    os.makedirs("exp/inference/devset", exist_ok=True)
-    with open(f"exp/inference/devset/{args.tid}.json", "w", encoding="utf-8") as f:
+    os.makedirs(f"{args.exp_dir}/inference/devset", exist_ok=True)
+    with open(f"{args.exp_dir}/inference/devset/{args.tid}.json", "w", encoding="utf-8") as f:
         json.dump(inference_results, f, ensure_ascii=False)
 
 if __name__ == "__main__":
@@ -139,16 +144,22 @@ if __name__ == "__main__":
         help="Number of queries to process in parallel. Reduce if encountering GPU memory issues."
     )
     parser.add_argument(
-        "--save_path",
-        type=str,
-        default="./exp/inference",
-        help="Base directory for saving results (currently not used, results saved to exp/inference/)"
-    )
-    parser.add_argument(
         "--session_ids_file",
         type=str,
         default=None,
         help="Path to JSON file with session_ids list (e.g. data/local_eval_split.json)"
+    )
+    parser.add_argument(
+        "--num_sessions",
+        type=int,
+        default=0,
+        help="Randomly sample N sessions for a quick smoke test (0 = all sessions)"
+    )
+    parser.add_argument(
+        "--exp_dir",
+        type=str,
+        default="exp",
+        help="Base directory for saving results (default: ./exp)"
     )
     args = parser.parse_args()
     main(args)
