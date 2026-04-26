@@ -76,21 +76,59 @@ def load_predictions(filepath: str):
 
 # ─────────────────────────────────────────────
 # Metric helpers
+#
+# Note: the *canonical* numbers for leaderboard-comparison live in the
+# `evaluator/` submodule (nlp4musa/music-crs-evaluator fork). This app
+# computes the same per-turn metrics inline for interactive exploration.
 # ─────────────────────────────────────────────
+
+_KS = [1, 5, 10, 20, 50, 100]
+
+
+def _ndcg_at_k(predicted, gt, k):
+    for rank, tid in enumerate(predicted[:k], start=1):
+        if tid == gt:
+            return 1.0 / math.log2(rank + 1)
+    return 0.0
+
+
+def _recall_at_k(predicted, gt, k):
+    return 1 if gt in predicted[:k] else 0
+
+
+def _rank_of(predicted, gt):
+    for rank, tid in enumerate(predicted, start=1):
+        if tid == gt:
+            return rank
+    return None
+
+
+def _rr(predicted, gt, max_k=None):
+    r = _rank_of(predicted if max_k is None else predicted[:max_k], gt)
+    return 1.0 / r if r else 0.0
+
+
+def _distinct_n(texts, n):
+    total = 0
+    seen = set()
+    for t in texts:
+        tokens = t.split()
+        for i in range(len(tokens) - n + 1):
+            seen.add(tuple(tokens[i:i + n]))
+            total += 1
+    return len(seen) / total if total else 0.0
+
 
 def ndcg_at_k(predicted_ids, gt_id, k):
     if not gt_id or not predicted_ids:
         return 0.0
-    for rank, tid in enumerate(predicted_ids[:k], start=1):
-        if tid == gt_id:
-            return 1.0 / math.log2(rank + 1)
-    return 0.0
+    return _ndcg_at_k(predicted_ids, gt_id, k)
 
 
 def hit_at_k(predicted_ids, gt_id, k):
     if not gt_id or not predicted_ids:
         return 0
-    return int(gt_id in predicted_ids[:k])
+    return _recall_at_k(predicted_ids, gt_id, k)
 
 
 # ─────────────────────────────────────────────
@@ -161,30 +199,67 @@ def render_conversation(session, target_turn=None, track_meta=None):
 # ─────────────────────────────────────────────
 
 def compute_aggregate_metrics(predictions, ground_truth, track_meta):
-    ndcg1, ndcg10, ndcg20 = [], [], []
-    hit1, hit10, hit20 = [], [], []
-    all_ids = set()
-    for (sid, turn), pred in predictions.items():
-        gt = ground_truth.get((sid, turn))
+    """Full metric sweep matching eval_devset.py. Metrics at k beyond the
+    per-turn prediction depth simply saturate at the achievable value."""
+    from collections import defaultdict
+    ndcg = {k: [] for k in _KS}
+    recall = {k: [] for k in _KS}
+    rr_all, rr_100 = [], []
+    ranks_found = []
+    per_turn = defaultdict(lambda: {"ndcg20": [], "recall20": [], "recall100": []})
+    all_ids_20, all_ids_100 = set(), set()
+    responses = []
+    max_depth = 0
+
+    for (sid, tn), pred in predictions.items():
+        gt = ground_truth.get((sid, tn))
         ptids = pred.get("predicted_track_ids", [])
-        ndcg1.append(ndcg_at_k(ptids, gt, 1))
-        ndcg10.append(ndcg_at_k(ptids, gt, 10))
-        ndcg20.append(ndcg_at_k(ptids, gt, 20))
-        hit1.append(hit_at_k(ptids, gt, 1))
-        hit10.append(hit_at_k(ptids, gt, 10))
-        hit20.append(hit_at_k(ptids, gt, 20))
-        all_ids.update(ptids)
-    return {
-        "NDCG@1": np.mean(ndcg1),
-        "NDCG@10": np.mean(ndcg10),
-        "NDCG@20": np.mean(ndcg20),
-        "Hit@1": np.mean(hit1),
-        "Hit@10": np.mean(hit10),
-        "Hit@20": np.mean(hit20),
-        "Catalog Diversity": len(all_ids) / len(track_meta),
-        "_ndcg10_list": ndcg10,
-        "_hit20_list": hit20,
+        max_depth = max(max_depth, len(ptids))
+        responses.append(pred.get("predicted_response") or "")
+        if not gt or not ptids:
+            continue
+        for k in _KS:
+            ndcg[k].append(_ndcg_at_k(ptids, gt, k))
+            recall[k].append(_recall_at_k(ptids, gt, k))
+        rr_all.append(_rr(ptids, gt))
+        rr_100.append(_rr(ptids, gt, max_k=100))
+        r = _rank_of(ptids, gt)
+        if r:
+            ranks_found.append(r)
+        per_turn[tn]["ndcg20"].append(_ndcg_at_k(ptids, gt, 20))
+        per_turn[tn]["recall20"].append(_recall_at_k(ptids, gt, 20))
+        per_turn[tn]["recall100"].append(_recall_at_k(ptids, gt, 100))
+        all_ids_20.update(ptids[:20])
+        all_ids_100.update(ptids[:100])
+
+    mean = lambda xs: float(np.mean(xs)) if xs else 0.0
+    out = {
+        "_max_depth": max_depth,
+        "_ndcg10_list": ndcg[10],
+        "_hit20_list": recall[20],
+        "_ranks_found": ranks_found,
     }
+    for k in _KS:
+        out[f"NDCG@{k}"] = mean(ndcg[k])
+        out[f"Recall@{k}"] = mean(recall[k])
+    out["MRR"] = mean(rr_all)
+    out["MRR@100"] = mean(rr_100)
+    out["Mean Rank (found)"] = mean(ranks_found) if ranks_found else 0.0
+    out["Median Rank (found)"] = float(np.median(ranks_found)) if ranks_found else 0.0
+    out["Catalog Diversity @20"] = len(all_ids_20) / len(track_meta) if track_meta else 0.0
+    out["Catalog Diversity @100"] = len(all_ids_100) / len(track_meta) if track_meta else 0.0
+    out["Distinct-1"] = _distinct_n(responses, 1)
+    out["Distinct-2"] = _distinct_n(responses, 2)
+    out["_per_turn"] = {
+        tn: {
+            "n": len(v["ndcg20"]),
+            "NDCG@20": mean(v["ndcg20"]),
+            "Recall@20": mean(v["recall20"]),
+            "Recall@100": mean(v["recall100"]),
+        }
+        for tn, v in sorted(per_turn.items())
+    }
+    return out
 
 
 # ─────────────────────────────────────────────
@@ -279,9 +354,43 @@ if is_devset and show_agg:
     st.subheader("📊 Aggregate Metrics")
     metrics = compute_aggregate_metrics(predictions, ground_truth, track_meta)
 
-    cols = st.columns(7)
-    for col, key in zip(cols, ["NDCG@1", "NDCG@10", "NDCG@20", "Hit@1", "Hit@10", "Hit@20", "Catalog Diversity"]):
-        col.metric(key, f"{metrics[key]:.4f}")
+    st.caption(
+        f"Max prediction depth in file: **{metrics['_max_depth']}**. "
+        "Metrics at k beyond this depth saturate — rerun inference with "
+        "`retrieval_topk: 100` in the config to get meaningful Recall@50/100."
+    )
+
+    st.markdown("**Ranking quality**")
+    rcols = st.columns(len(_KS) + 2)
+    for col, k in zip(rcols, _KS):
+        col.metric(f"NDCG@{k}", f"{metrics[f'NDCG@{k}']:.4f}")
+    rcols[-2].metric("MRR", f"{metrics['MRR']:.4f}")
+    rcols[-1].metric("MRR@100", f"{metrics['MRR@100']:.4f}")
+
+    st.markdown("**Retrieval coverage** — *is the GT even in the pool?*")
+    ccols = st.columns(len(_KS) + 2)
+    for col, k in zip(ccols, _KS):
+        col.metric(f"Recall@{k}", f"{metrics[f'Recall@{k}']:.4f}")
+    ccols[-2].metric("Mean Rank (found)", f"{metrics['Mean Rank (found)']:.1f}")
+    ccols[-1].metric("Median Rank (found)", f"{metrics['Median Rank (found)']:.1f}")
+
+    st.markdown("**Diversity**")
+    dcols = st.columns(4)
+    dcols[0].metric("Catalog @20", f"{metrics['Catalog Diversity @20']:.4f}")
+    dcols[1].metric("Catalog @100", f"{metrics['Catalog Diversity @100']:.4f}")
+    dcols[2].metric("Distinct-1", f"{metrics['Distinct-1']:.4f}")
+    dcols[3].metric("Distinct-2", f"{metrics['Distinct-2']:.4f}")
+
+    with st.expander("Per-turn breakdown (NDCG@20 / Recall@20 / Recall@100)"):
+        pt = metrics["_per_turn"]
+        df_pt = pd.DataFrame([
+            {"Turn": tn, "n": v["n"], "NDCG@20": v["NDCG@20"],
+             "Recall@20": v["Recall@20"], "Recall@100": v["Recall@100"]}
+            for tn, v in pt.items()
+        ])
+        st.dataframe(df_pt.style.format({
+            "NDCG@20": "{:.4f}", "Recall@20": "{:.4f}", "Recall@100": "{:.4f}",
+        }), hide_index=True, use_container_width=True)
 
     with st.expander("NDCG@10 distribution across all turns"):
         import matplotlib.pyplot as plt
@@ -334,28 +443,28 @@ with right_col:
     # Dev set: metrics + ground truth
     if is_devset:
         if gt_id and ptids:
-            n1  = ndcg_at_k(ptids, gt_id, 1)
-            n10 = ndcg_at_k(ptids, gt_id, 10)
-            n20 = ndcg_at_k(ptids, gt_id, 20)
-            h1  = hit_at_k(ptids, gt_id, 1)
-            h10 = hit_at_k(ptids, gt_id, 10)
-            h20 = hit_at_k(ptids, gt_id, 20)
             rank_in_pred = ptids.index(gt_id) + 1 if gt_id in ptids else None
+            pool_depth = len(ptids)
 
             st.subheader(f"📈 Turn {selected_turn} Metrics")
             mc = st.columns(6)
-            mc[0].metric("NDCG@1",  f"{n1:.4f}")
-            mc[1].metric("NDCG@10", f"{n10:.4f}")
-            mc[2].metric("NDCG@20", f"{n20:.4f}")
-            mc[3].metric("Hit@1",   str(h1))
-            mc[4].metric("Hit@10",  str(h10))
-            mc[5].metric("Hit@20",  str(h20))
+            mc[0].metric("NDCG@1",  f"{ndcg_at_k(ptids, gt_id, 1):.4f}")
+            mc[1].metric("NDCG@10", f"{ndcg_at_k(ptids, gt_id, 10):.4f}")
+            mc[2].metric("NDCG@20", f"{ndcg_at_k(ptids, gt_id, 20):.4f}")
+            mc[3].metric("Recall@20",  str(hit_at_k(ptids, gt_id, 20)))
+            mc[4].metric("Recall@100", str(hit_at_k(ptids, gt_id, 100)))
+            mc[5].metric("GT Rank", str(rank_in_pred) if rank_in_pred else "—")
 
             st.subheader("⭐ Ground Truth Song")
-            if rank_in_pred:
-                st.success(f"Found at rank {rank_in_pred} in the top-20!")
+            if rank_in_pred is None:
+                st.error(f"Not found in the top-{pool_depth} pool.")
+            elif rank_in_pred <= 20:
+                st.success(f"Found at rank {rank_in_pred} (submission top-20).")
             else:
-                st.error("Not found in the top-20 predictions.")
+                st.warning(
+                    f"Found at rank {rank_in_pred} — outside submission top-20 "
+                    f"but inside the top-{pool_depth} pool."
+                )
             render_track_card(gt_id, track_meta, highlight=True)
 
         elif not ptids:
@@ -371,14 +480,17 @@ with right_col:
             unsafe_allow_html=True,
         )
 
-    # Top-20 predicted tracks
-    st.subheader(f"🎶 Top-20 Predicted Tracks")
+    # Top-20 predicted tracks (may have deeper pool; show only top-20 here)
+    depth = len(ptids)
+    st.subheader(f"🎶 Top-20 Predicted Tracks"
+                 + (f" (pool depth: {depth})" if depth > 20 else ""))
+    display_ptids = ptids[:20]
     if not ptids:
         st.info("No predictions found for this turn.")
     else:
         # Build a DataFrame for display
         rows = []
-        for rank, tid in enumerate(ptids, 1):
+        for rank, tid in enumerate(display_ptids, 1):
             info = track_info(tid, track_meta)
             is_gt = (tid == gt_id)
             rows.append({
