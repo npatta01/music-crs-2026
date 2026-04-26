@@ -2,8 +2,12 @@
   "hooks": {
     "WorktreeCreate": [
       {
-        "type": "command",
-        "command": "bash scripts/on-worktree-create.sh"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/on-worktree-create.sh"
+          }
+        ]
       }
     ]
   }
