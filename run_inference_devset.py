@@ -39,7 +39,6 @@ def chat_history_parser(conversations, music_crs, target_turn_number):
         current_role = turn_data['role']
         current_content = turn_data['content']
         if turn_data['role'] == "music":
-            current_role = "assistant"
             current_content = music_crs.item_db.id_to_metadata(turn_data['content'])
         chat_history.append({
             "role": current_role,
