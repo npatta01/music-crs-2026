@@ -124,6 +124,29 @@ Rewrite-based QU experiments may also emit sidecars alongside the prediction fil
 - `exp/inference/devset/{tid}_rewrite_audit.jsonl`
 - `exp/inference/devset/{tid}_rewrite_stats.json`
 
+To pull Modal-run artifacts back to your machine, use the bulk downloader:
+
+```bash
+# Download one run (predictions, traces, and scores if present)
+python modal/download_results.py --tid llama1b_bm25_devset
+
+# Sync all missing artifacts from the Modal volume into evaluator/exp/
+python modal/download_results.py
+
+# Preview planned downloads and byte counts
+python modal/download_results.py --dry-run --verbose
+```
+
+If you are using Codex with this repo, the `download-artifacts` skill wraps the same workflow and defaults to syncing into `evaluator/exp`.
+
+The downloader defaults to `evaluator/exp/` and mirrors any available remote:
+
+- `inference/<split>/<tid>.json`
+- `inference/<split>/<tid>_rewrite_audit.jsonl`
+- `inference/<split>/<tid>_rewrite_stats.json`
+- `scores/<split>/<tid>.json`
+- `ground_truth/...`
+
 ### Run Inference on Blind Sets (for submission)
 
 ```bash
