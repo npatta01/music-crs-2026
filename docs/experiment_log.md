@@ -89,15 +89,16 @@ Runs:
 - `dense_qwen3_embedding_8b_devset`
 
 Key metrics:
-- Comparison baseline: `bm25_devset_retrieval_only_with_tag_list` = `NDCG@20 0.0970`, `Hit@20 0.2640`, `Hit@1000 0.6311`, `NDCG@1000 0.1522`.
-- Best non-Qwen dense run: `dense_e5_base_v2_devset` = `NDCG@20 0.0906`, `Hit@20 0.2310`, `Hit@1000 0.5520`, `NDCG@1000 0.1375`.
-- Dense runner-up: `dense_qwen3_embedding_4b_devset` = `NDCG@20 0.0994`, `Hit@20 0.2479`, `Hit@1000 0.6803`, `NDCG@1000 0.1630`.
-- Best dense run: `dense_qwen3_embedding_8b_devset` = `NDCG@20 0.1025`, `Hit@20 0.2652`, `Hit@1000 0.6934`, `NDCG@1000 0.1658`.
+- Comparison baseline: `bm25_devset_retrieval_only_with_tag_list` = `NDCG@20 0.0970`, `Hit@20 0.2640`, `Hit@100 0.4305`, `Hit@200 0.4919`, `Hit@500 0.5714`, `Hit@1000 0.6311`, `NDCG@1000 0.1522`.
+- Best non-Qwen dense run: `dense_e5_base_v2_devset` = `NDCG@20 0.0906`, `Hit@20 0.2310`, `Hit@100 0.3593`, `Hit@200 0.4113`, `Hit@500 0.4825`, `Hit@1000 0.5520`, `NDCG@1000 0.1375`.
+- Dense runner-up: `dense_qwen3_embedding_4b_devset` = `NDCG@20 0.0994`, `Hit@20 0.2479`, `Hit@100 0.4250`, `Hit@200 0.4965`, `Hit@500 0.5996`, `Hit@1000 0.6803`, `NDCG@1000 0.1630`.
+- Best dense run: `dense_qwen3_embedding_8b_devset` = `NDCG@20 0.1025`, `Hit@20 0.2652`, `Hit@100 0.4435`, `Hit@200 0.5120`, `Hit@500 0.6130`, `Hit@1000 0.6934`, `NDCG@1000 0.1658`.
 
 Takeaways:
 - Dense retrieval is promising, but only the Qwen family clearly changed the frontier in this wave.
 - `dense_qwen3_embedding_8b_devset` is the first dense run to beat `bm25_devset_retrieval_only_with_tag_list` on all three primary comparison metrics, plus the `NDCG@1000` headroom diagnostic.
 - `dense_qwen3_embedding_4b_devset` already surpassed the sparse comparison on `NDCG@20` and `Hit@1000`, but still trailed slightly on `Hit@20`; the 8B model closed that final gap.
+- The deeper coverage story matters too: Qwen 8B beats the sparse baseline not just at `Hit@1000`, but also at `Hit@100`, `Hit@200`, and `Hit@500`, which makes the dense gain more robust than a single-cutoff win.
 - Scaling helped substantially for Qwen (`0.6B -> 4B -> 8B`), helped modestly for BGE, and did not help for E5 where the base model slightly beat the large model.
 - Even before reranking, the Qwen dense runs materially improved deep-pool coverage, which makes them strong candidates for a next-stage reranker or hybrid sparse+dense stack.
 
