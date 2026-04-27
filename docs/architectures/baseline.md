@@ -11,6 +11,17 @@ User Query + Chat History
         │
         ▼
 ┌───────────────────────────────────────────┐
+│  Stage 0: Query Understanding             │
+│                                           │
+│  Passthrough / deterministic QU /         │
+│  llm_rewrite                              │
+│  (mcrs/qu_modules/)                       │
+│                                           │
+│  Returns retrieval query text             │
+└───────────────────────────────────────────┘
+        │
+        ▼
+┌───────────────────────────────────────────┐
 │  Stage 1: Retrieval                        │
 │                                            │
 │  BM25  (mcrs/retrieval_modules/bm25.py)   │  ← sparse keyword matching
@@ -57,6 +68,8 @@ User Query + Chat History
 crs = CRS_BASELINE(
     lm_type="meta-llama/Llama-3.2-1B-Instruct",
     retrieval_type="bm25",          # or "bert"
+    qu_type="passthrough",          # or "llm_rewrite", etc.
+    qu_kwargs={},                   # optional QU backend settings
     item_db_name="talkpl-ai/TalkPlayData-Challenge-Track-Metadata",
     user_db_name="talkpl-ai/TalkPlayData-Challenge-User-Metadata",
     track_split_types=["all_tracks"],
@@ -97,7 +110,7 @@ Fields included = `corpus_types` from the YAML config (default: `track_name`, `a
 
 ### Query format
 
-The retrieval query is the **full conversation history** up to and including the current user turn, formatted as:
+By default, the retrieval query is the **full conversation history** up to and including the current user turn, formatted as:
 
 ```
 user: I want something chill and relaxing
@@ -106,6 +119,31 @@ user: maybe something with piano?
 ```
 
 Each turn is `role: content`, joined by `\n`. This is built in `CRS_BASELINE.chat()` / `batch_chat()` before calling the retrieval module.
+
+### Query-understanding modules (`mcrs/qu_modules/`)
+
+QU runs between the conversation state and retrieval. The default backend is `passthrough`, which returns the formatted conversation text unchanged. Existing deterministic variants (`last_user_turn`, `user_turns_only`, `last_2_user_turns`, `last_3_user_turns`, `no_music_history`) still return plain text queries.
+
+`llm_rewrite` is a retrieval-facing backend for query-rewrite experiments. It:
+
+- starts from the same passthrough conversation text
+- prompts a small instruction model to emit exactly one `QUERY:` line
+- falls back to the raw passthrough query if generation or parsing fails
+- writes optional sidecars for audit and aggregate stats when `audit_path` / `stats_path` are configured
+
+Supported `qu_kwargs`:
+
+```yaml
+qu_type: "llm_rewrite"
+qu_kwargs:
+  model_name: "HuggingFaceTB/SmolLM2-1.7B-Instruct"
+  prompt_name: "preserve_entities_v1"
+  max_new_tokens: 96
+  audit_path: "./exp/inference/devset/<tid>_rewrite_audit.jsonl"
+  stats_path: "./exp/inference/devset/<tid>_rewrite_stats.json"
+```
+
+`<tid>` placeholders in `qu_kwargs` paths are expanded by the inference scripts before the CRS is instantiated.
 
 ---
 
@@ -180,6 +218,8 @@ lm.batch_response_generation(sys_prompts, chat_histories, recommend_items, max_n
 
 New LLM backends: implement these two methods and register in `mcrs/lm_modules/__init__.py`.
 
+For retrieval-only experiments, you can still use an LLM-backed QU with `lm_type: "dummy"`. In that setup, the response generator is disabled while the QU backend still loads its own rewrite model.
+
 ---
 
 ## System Prompts (`mcrs/system_prompts/`)
@@ -221,6 +261,7 @@ Key YAML fields:
 ```yaml
 lm_type: "meta-llama/Llama-3.2-1B-Instruct"
 retrieval_type: "bm25"            # bm25 | bert
+qu_type: "passthrough"            # passthrough | deterministic QU | llm_rewrite
 corpus_types:                     # fields used for retrieval index
   - "track_name"
   - "artist_name"
@@ -230,6 +271,16 @@ track_split_types:
   - "all_tracks"                  # REQUIRED — never change this
 device: "cuda"
 attn_implementation: "sdpa"       # eager | sdpa | flash_attention_2
+```
+
+Wave 3 rewrite experiments use the sparse control corpus:
+
+```yaml
+corpus_types:
+  - "track_name"
+  - "artist_name"
+  - "album_name"
+  - "tag_list"
 ```
 
 ---

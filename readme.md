@@ -63,6 +63,7 @@ The system operates on a **two-stage pipeline**:
 uv venv .venv --python=3.10
 source .venv/bin/activate
 uv pip install -e .
+uv pip install -e ".[dev]"   # optional, for pytest-based local verification
 
 # Optional — faster LLM inference (requires CUDA toolkit + compatible gcc)
 uv pip install flash-attn --no-build-isolation
@@ -118,6 +119,11 @@ python run_inference_devset.py --tid llama1b_bert_devset --batch_size 16
 
 Results are saved to `exp/inference/{tid}.json`.
 
+Rewrite-based QU experiments may also emit sidecars alongside the prediction file:
+
+- `exp/inference/devset/{tid}_rewrite_audit.jsonl`
+- `exp/inference/devset/{tid}_rewrite_stats.json`
+
 ### Run Inference on Blind Sets (for submission)
 
 ```bash
@@ -138,6 +144,7 @@ Create a config file in `config/`:
 # config/my_model.yaml
 lm_type: "Qwen/Qwen3-4B" # change llama to qwen3
 retrieval_type: "bm25"
+qu_type: "passthrough"
 test_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Dataset"
 item_db_name: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
 user_db_name: "talkpl-ai/TalkPlayData-Challenge-User-Metadata"
@@ -159,6 +166,25 @@ Then run with your config:
 
 ```bash
 python run_inference_devset.py --tid my_model
+```
+
+For retrieval-only Wave 3 rewrite experiments, use `lm_type: "dummy"` and move the rewrite model into `qu_kwargs`:
+
+```yaml
+lm_type: "dummy"
+retrieval_type: "bm25"
+qu_type: "llm_rewrite"
+qu_kwargs:
+  model_name: "HuggingFaceTB/SmolLM2-1.7B-Instruct"
+  prompt_name: "preserve_entities_v1"
+  max_new_tokens: 96
+  audit_path: "./exp/inference/devset/<tid>_rewrite_audit.jsonl"
+  stats_path: "./exp/inference/devset/<tid>_rewrite_stats.json"
+corpus_types:
+  - "track_name"
+  - "artist_name"
+  - "album_name"
+  - "tag_list"
 ```
 
 ---

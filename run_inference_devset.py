@@ -10,43 +10,8 @@ import argparse
 from mcrs import load_crs_baseline
 from datasets import load_dataset
 from tqdm import tqdm
-from typing import List, Dict, Any, Tuple
-import pandas as pd
 from omegaconf import OmegaConf
-
-def chat_history_parser(conversations, music_crs, target_turn_number):
-    """
-    Parse conversation history up to a target turn.
-
-    Args:
-        conversations (List[Dict]): List of conversation turn dictionaries containing:
-            - turn_number: Turn index (1-8)
-            - role: Speaker role ('user', 'assistant', 'music')
-            - content: Message content or track ID
-        music_crs: CRS baseline instance (used to convert track IDs to metadata)
-        target_turn_number (int): The turn to predict (history excludes this turn)
-
-    Returns:
-        Tuple[List[Dict], str]:
-            - chat_history: List of previous messages formatted as [{"role": ..., "content": ...}]
-            - user_query: The user query at the target turn
-    """
-    df_conversation = pd.DataFrame(conversations)
-    df_history = df_conversation[df_conversation['turn_number'] < target_turn_number]
-    chat_history = []
-    for turn_data in df_history.to_dict(orient="records"):
-        turn_number = turn_data['turn_number']
-        current_role = turn_data['role']
-        current_content = turn_data['content']
-        if turn_data['role'] == "music":
-            current_content = music_crs.item_db.id_to_metadata(turn_data['content'])
-        chat_history.append({
-            "role": current_role,
-            "content": current_content
-        })
-    df_current_turn = df_conversation[df_conversation['turn_number'] == target_turn_number]
-    user_query = df_current_turn.iloc[0]['content']
-    return chat_history, user_query
+from mcrs.inference_utils import chat_history_parser, resolve_qu_kwargs_placeholders
 
 def main(args):
     """
@@ -73,10 +38,22 @@ def main(args):
         if os.path.exists(cache_dir):
             print(f"Clearing cache directory: {cache_dir}")
             shutil.rmtree(cache_dir)
+    raw_qu_kwargs = config.get("qu_kwargs")
+    if raw_qu_kwargs is None:
+        qu_kwargs = {}
+    elif OmegaConf.is_config(raw_qu_kwargs):
+        qu_kwargs = OmegaConf.to_container(raw_qu_kwargs, resolve=True) or {}
+    else:
+        qu_kwargs = dict(raw_qu_kwargs)
     music_crs = load_crs_baseline(
         lm_type=config.lm_type,
         retrieval_type=config.retrieval_type,
         qu_type=config.get("qu_type", "passthrough"),
+        qu_kwargs=resolve_qu_kwargs_placeholders(
+            qu_kwargs,
+            args.tid,
+            args.exp_dir,
+        ),
         item_db_name=config.item_db_name,
         user_db_name=config.user_db_name,
         track_split_types=config.track_split_types,

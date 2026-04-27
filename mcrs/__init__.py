@@ -15,5 +15,21 @@ def load_crs_baseline(
     attn_implementation="eager",
     dtype=torch.bfloat16,
     retrieval_topk: int = 20,
+    qu_kwargs=None,
 ):
-    return CRS_BASELINE(lm_type, retrieval_type, qu_type, item_db_name, user_db_name, track_split_types, user_split_types, corpus_types, cache_dir, device, attn_implementation, dtype, retrieval_topk)
+    return CRS_BASELINE(
+        lm_type,
+        retrieval_type,
+        qu_type,
+        item_db_name,
+        user_db_name,
+        track_split_types,
+        user_split_types,
+        corpus_types,
+        cache_dir,
+        device,
+        attn_implementation,
+        dtype,
+        retrieval_topk,
+        qu_kwargs,
+    )
