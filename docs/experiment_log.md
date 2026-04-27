@@ -149,6 +149,20 @@ Phase 2 prompt runs completed so far:
   - `Hit@200 0.3978`
   - `Hit@1000 0.5185`
   - `MRR 0.0640`
+- `bm25_qu_llmrewrite_qwen3_4b_catalog_terms_v2_devset`
+  - `NDCG@20 0.1055`
+  - `Hit@20 0.2451`
+  - `Hit@100 0.4096`
+  - `Hit@200 0.4767`
+  - `Hit@1000 0.6281`
+  - `MRR 0.0713`
+- `bm25_qu_llmrewrite_qwen3_4b_carryover_guard_v3_devset`
+  - `NDCG@20 0.1049`
+  - `Hit@20 0.2468`
+  - `Hit@100 0.4087`
+  - `Hit@200 0.4685`
+  - `Hit@1000 0.6164`
+  - `MRR 0.0700`
 
 Takeaways:
 - The sparse control is strong, but multiple rewrite models beat it on ranking quality. The best completed run so far is `Gemma-4-E2B + carryover_guard_v3`, which improves `NDCG@20` from `0.0972 -> 0.1092`.
@@ -156,6 +170,7 @@ Takeaways:
 - Among preserve-only Phase 1 runs, the current ranking is `Qwen3-4B` first, `Gemma-4-E2B` second, and `Qwen2.5-3B` third.
 - The best prompt outcome so far is not the baseline preserve prompt. Both completed Gemma prompt variants outperform `Gemma preserve_entities_v1`, which is a strong sign that prompt choice matters materially for rewrite quality.
 - `Qwen2.5-3B` did not reproduce that same prompt lift. `catalog_terms_v2` stayed narrowly above its preserve baseline on `NDCG@20` (`0.1008` vs `0.1001`) but remained below it on `MRR`, while `carryover_guard_v3` regressed on both ranking quality and coverage.
+- `Qwen3-4B` also did not beat its preserve baseline. Both prompt variants stayed below `Qwen3 preserve_entities_v1` on `NDCG@20`, and `catalog_terms_v2` was the better of the two while remaining roughly tied on deeper coverage.
 - Rewrites do not move as one family on coverage. `Gemma carryover_guard_v3` currently leads on `NDCG@20`, but `SmolLM2 catalog_terms_v2` is stronger on `Hit@20`, `Hit@100`, `Hit@200`, and `Hit@1000` than any completed rewrite run except the sparse control.
 - `meta-llama/Llama-3.2-3B-Instruct` was operationally blocked in Modal by gated-model access, so the planned fallback replacement `Qwen/Qwen2.5-3B-Instruct` was used instead.
 
@@ -170,10 +185,11 @@ Linked reports:
 - `experiments/bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset.md`
 - `experiments/bm25_qu_llmrewrite_qwen25_3b_catalog_terms_v2_devset.md`
 - `experiments/bm25_qu_llmrewrite_qwen25_3b_carryover_guard_v3_devset.md`
+- `experiments/bm25_qu_llmrewrite_qwen3_4b_catalog_terms_v2_devset.md`
+- `experiments/bm25_qu_llmrewrite_qwen3_4b_carryover_guard_v3_devset.md`
 
 Next step:
-- Finish the remaining official Phase 2 runs for `Qwen3-4B`.
-- Once those land, finalize the Wave 3 winner by the fixed rule: `NDCG@20`, then `Hit@20`, then rewrite latency, then fallback rate, while explicitly reporting `Hit@100`, `Hit@200`, and `Hit@1000` alongside the winner so deeper coverage tradeoffs stay visible.
+- Finalize the Wave 3 winner by the fixed rule: `NDCG@20`, then `Hit@20`, then rewrite latency, then fallback rate, while explicitly reporting `Hit@100`, `Hit@200`, and `Hit@1000` alongside the winner so deeper coverage tradeoffs stay visible.
 
 Status:
-- In progress
+- Done
