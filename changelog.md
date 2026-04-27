@@ -1,5 +1,8 @@
 # Changes
 
+04/27/2026:
+document BM25 metadata wave findings and add repo-level experiment log
+
 04/20/2026: 
 prepare submission
 
