@@ -82,7 +82,9 @@ def load_predictions(filepath: str):
 # computes the same per-turn metrics inline for interactive exploration.
 # ─────────────────────────────────────────────
 
-_KS = [1, 5, 10, 20, 50, 100]
+_KS = [1, 5, 10, 20, 50, 100, 200, 500, 1000]
+_MRR_KS = [100, 200, 500, 1000]
+_REQUIRED_DIAGNOSTIC_DEPTH = max(_KS)
 
 
 def _ndcg_at_k(predicted, gt, k):
@@ -129,6 +131,27 @@ def hit_at_k(predicted_ids, gt_id, k):
     if not gt_id or not predicted_ids:
         return 0
     return _recall_at_k(predicted_ids, gt_id, k)
+
+
+def validate_prediction_depths(predictions):
+    too_shallow = [
+        (sid, tn, len(pred.get("predicted_track_ids", [])))
+        for (sid, tn), pred in predictions.items()
+        if len(pred.get("predicted_track_ids", [])) < _REQUIRED_DIAGNOSTIC_DEPTH
+    ]
+    if not too_shallow:
+        return
+
+    examples = ", ".join(
+        f"{sid}/turn-{tn} ({depth})"
+        for sid, tn, depth in too_shallow[:3]
+    )
+    raise ValueError(
+        "Aggregate diagnostics require at least "
+        f"{_REQUIRED_DIAGNOSTIC_DEPTH} candidates per turn. "
+        f"{len(too_shallow)} rows are too shallow; examples: {examples}. "
+        "Rerun devset inference with `retrieval_topk: 1000`."
+    )
 
 
 # ─────────────────────────────────────────────
@@ -199,12 +222,13 @@ def render_conversation(session, target_turn=None, track_meta=None):
 # ─────────────────────────────────────────────
 
 def compute_aggregate_metrics(predictions, ground_truth, track_meta):
-    """Full metric sweep matching eval_devset.py. Metrics at k beyond the
-    per-turn prediction depth simply saturate at the achievable value."""
+    """Full metric sweep matching evaluator/evaluate_devset.py."""
     from collections import defaultdict
+    validate_prediction_depths(predictions)
     ndcg = {k: [] for k in _KS}
     recall = {k: [] for k in _KS}
-    rr_all, rr_100 = [], []
+    rr_all = []
+    rr_at_k = {k: [] for k in _MRR_KS}
     ranks_found = []
     per_turn = defaultdict(lambda: {"ndcg20": [], "recall20": [], "recall100": []})
     all_ids_20, all_ids_100 = set(), set()
@@ -222,7 +246,8 @@ def compute_aggregate_metrics(predictions, ground_truth, track_meta):
             ndcg[k].append(_ndcg_at_k(ptids, gt, k))
             recall[k].append(_recall_at_k(ptids, gt, k))
         rr_all.append(_rr(ptids, gt))
-        rr_100.append(_rr(ptids, gt, max_k=100))
+        for k in _MRR_KS:
+            rr_at_k[k].append(_rr(ptids, gt, max_k=k))
         r = _rank_of(ptids, gt)
         if r:
             ranks_found.append(r)
@@ -243,9 +268,15 @@ def compute_aggregate_metrics(predictions, ground_truth, track_meta):
         out[f"NDCG@{k}"] = mean(ndcg[k])
         out[f"Recall@{k}"] = mean(recall[k])
     out["MRR"] = mean(rr_all)
-    out["MRR@100"] = mean(rr_100)
+    for k in _MRR_KS:
+        out[f"MRR@{k}"] = mean(rr_at_k[k])
     out["Mean Rank (found)"] = mean(ranks_found) if ranks_found else 0.0
     out["Median Rank (found)"] = float(np.median(ranks_found)) if ranks_found else 0.0
+    out["% GT not in top-20"] = 1.0 - out["Recall@20"]
+    out["% GT not in top-100"] = 1.0 - out["Recall@100"]
+    out["% GT not in top-200"] = 1.0 - out["Recall@200"]
+    out["% GT not in top-500"] = 1.0 - out["Recall@500"]
+    out["% GT not in top-1000"] = 1.0 - out["Recall@1000"]
     out["Catalog Diversity @20"] = len(all_ids_20) / len(track_meta) if track_meta else 0.0
     out["Catalog Diversity @100"] = len(all_ids_100) / len(track_meta) if track_meta else 0.0
     out["Distinct-1"] = _distinct_n(responses, 1)
@@ -352,27 +383,35 @@ with st.sidebar:
 # ── Aggregate metrics (dev set only) ──
 if is_devset and show_agg:
     st.subheader("📊 Aggregate Metrics")
-    metrics = compute_aggregate_metrics(predictions, ground_truth, track_meta)
+    try:
+        metrics = compute_aggregate_metrics(predictions, ground_truth, track_meta)
+    except ValueError as exc:
+        st.error(str(exc))
+        st.stop()
 
     st.caption(
         f"Max prediction depth in file: **{metrics['_max_depth']}**. "
-        "Metrics at k beyond this depth saturate — rerun inference with "
-        "`retrieval_topk: 100` in the config to get meaningful Recall@50/100."
+        "Deep-cutoff diagnostics require `retrieval_topk: 1000` in the devset config."
     )
 
     st.markdown("**Ranking quality**")
-    rcols = st.columns(len(_KS) + 2)
+    rcols = st.columns(len(_KS) + len(_MRR_KS) + 1)
     for col, k in zip(rcols, _KS):
         col.metric(f"NDCG@{k}", f"{metrics[f'NDCG@{k}']:.4f}")
-    rcols[-2].metric("MRR", f"{metrics['MRR']:.4f}")
-    rcols[-1].metric("MRR@100", f"{metrics['MRR@100']:.4f}")
+    mrr_cols = rcols[len(_KS):]
+    mrr_cols[0].metric("MRR", f"{metrics['MRR']:.4f}")
+    for col, k in zip(mrr_cols[1:], _MRR_KS):
+        col.metric(f"MRR@{k}", f"{metrics[f'MRR@{k}']:.4f}")
 
     st.markdown("**Retrieval coverage** — *is the GT even in the pool?*")
-    ccols = st.columns(len(_KS) + 2)
+    ccols = st.columns(len(_KS) + 5 + 2)
     for col, k in zip(ccols, _KS):
         col.metric(f"Recall@{k}", f"{metrics[f'Recall@{k}']:.4f}")
-    ccols[-2].metric("Mean Rank (found)", f"{metrics['Mean Rank (found)']:.1f}")
-    ccols[-1].metric("Median Rank (found)", f"{metrics['Median Rank (found)']:.1f}")
+    coverage_tail = ccols[len(_KS):]
+    for col, k in zip(coverage_tail[:5], [20, 100, 200, 500, 1000]):
+        col.metric(f"% miss @{k}", f"{metrics[f'% GT not in top-{k}']:.1%}")
+    coverage_tail[-2].metric("Mean Rank (found)", f"{metrics['Mean Rank (found)']:.1f}")
+    coverage_tail[-1].metric("Median Rank (found)", f"{metrics['Median Rank (found)']:.1f}")
 
     st.markdown("**Diversity**")
     dcols = st.columns(4)
