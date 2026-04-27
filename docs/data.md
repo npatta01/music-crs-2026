@@ -6,6 +6,24 @@ HF collection: [talkpl-ai/talkplay-data-challenge](https://huggingface.co/collec
 
 ---
 
+## Dataset Inventory
+
+The challenge exposes more than the three core tables used by the baseline. As of this repo, the relevant Hugging Face datasets are:
+
+| Dataset | Primary key | Split(s) used here | Purpose |
+|-------|-------------|--------------------|---------|
+| `talkpl-ai/TalkPlayData-Challenge-Dataset` | `session_id` | `train`, `test`, `blind_a`, `blind_b` | Conversations, turn labels, goals, and inline user profile snapshots |
+| `talkpl-ai/TalkPlayData-Challenge-Track-Metadata` | `track_id` | `all_tracks` | Retrieval catalog and track-side metadata |
+| `talkpl-ai/TalkPlayData-Challenge-User-Metadata` | `user_id` | `all_users` | Standalone demographic table for personalization |
+| `talkpl-ai/TalkPlayData-Challenge-Track-Embeddings` | typically `track_id` | dataset-defined | Precomputed dense vectors for tracks |
+| `talkpl-ai/TalkPlayData-Challenge-User-Embeddings` | typically `user_id` | dataset-defined | Precomputed dense vectors for users |
+
+The baseline in this repo directly loads only the conversation, track metadata, and user metadata datasets. The embedding datasets are available for extensions such as dense retrieval, reranking, and user-track personalization, but they are not consumed by `CRS_BASELINE` out of the box.
+
+> Some older tip docs still reference `TalkPlayData-2-*` dataset names. For challenge work, prefer the `TalkPlayData-Challenge-*` datasets listed above.
+
+---
+
 ## Conversations
 
 **Dataset**: `talkpl-ai/TalkPlayData-Challenge-Dataset`
@@ -143,6 +161,88 @@ Used by `UserProfileDB` to build a personalization string injected into the LLM 
 {"user_id": "5e51258a-27e3-4b49-aed9-10c9d05f139c", "age": 19, "age_group": "10s", "country_code": "BG", "country_name": "Bulgaria",      "gender": "female"}
 {"user_id": "0c7e49b3-c87b-4759-8da2-cfd400af29bf", "age": 31, "age_group": "30s", "country_code": "US", "country_name": "United States", "gender": "male"}
 ```
+
+---
+
+## Embedding Datasets
+
+Two additional Hugging Face datasets in the same collection provide precomputed dense vectors:
+
+### Track Embeddings
+
+**Dataset**: `talkpl-ai/TalkPlayData-Challenge-Track-Embeddings`
+**Splits**: `all_tracks` (47,071 rows), `test_tracks` (7,411 rows)
+
+This dataset is the track-side dense representation companion to `TalkPlayData-Challenge-Track-Metadata`. It is useful when you want to:
+
+- replace lexical BM25 retrieval with vector similarity over the full catalog
+- seed a two-stage retriever or reranker without recomputing track embeddings locally
+- combine text retrieval scores with dense retrieval scores
+
+In this repo, the nearest extension point is a custom retrieval or reranker module. See [tips/add_reranker.md](tips/add_reranker.md) and [tips/improve_item_representation.md](tips/improve_item_representation.md) for related directions.
+
+#### Schema
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `track_id` | str | UUID, joins to `Track Metadata.track_id` |
+| `audio-laion_clap` | list[float] | Audio embedding, length 512 |
+| `image-siglip2` | list[float] | Image embedding, length 768 |
+| `cf-bpr` | list[float] | Collaborative filtering embedding, length 128 |
+| `attributes-qwen3_embedding_0.6b` | list[float] | Attribute-text embedding, length 1024 |
+| `lyrics-qwen3_embedding_0.6b` | list[float] | Lyrics embedding, length 1024 |
+| `metadata-qwen3_embedding_0.6b` | list[float] | Metadata-text embedding, length 1024 |
+
+Some rows contain empty arrays for one or more modalities, so downstream code should not assume every field is populated.
+
+#### Sample Row
+
+```json
+{
+  "track_id": "97f5eeec-1ec7-4bb9-93e9-a948ee7466fc",
+  "audio-laion_clap": [-0.052960943430662155, -0.015500283800065517, -0.00036561343586072326, "... 509 more"],
+  "image-siglip2": [-0.008145928382873535, -0.3267313241958618, -0.16615962982177734, "... 765 more"],
+  "cf-bpr": [0.0030792823527008295, 0.0032442151568830013, 0.0003919258888345212, "... 125 more"],
+  "attributes-qwen3_embedding_0.6b": [1.0537109375, 1.7294921875, -1.029296875, "... 1021 more"],
+  "lyrics-qwen3_embedding_0.6b": [-5.4453125, 7.6484375, -0.460205078125, "... 1021 more"],
+  "metadata-qwen3_embedding_0.6b": [2.255859375, 2.40234375, -0.8056640625, "... 1021 more"]
+}
+```
+
+### User Embeddings
+
+**Dataset**: `talkpl-ai/TalkPlayData-Challenge-User-Embeddings`
+**Splits**: `train` (8,591 rows), `test_warm` (371 rows), `test_cold` (129 rows)
+
+This dataset provides dense user-side representations that can be paired with retrieved candidate tracks for personalization. Typical uses:
+
+- score retrieved tracks by user-track similarity
+- personalize reranking beyond the demographic fields in `User Metadata`
+- cluster or analyze users offline for better retrieval strategies
+
+The baseline currently uses only structured demographics from `User Metadata` to build the prompt-time personalization string. If you want to use user embeddings, you will need to add a module that loads them explicitly and merges them into retrieval or reranking.
+
+#### Schema
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `user_id` | str | UUID, joins to `User Metadata.user_id` |
+| `cf-bpr` | list[float] | Collaborative filtering embedding, length 128 |
+
+#### Sample Row
+
+```json
+{
+  "user_id": "5e0690dc-ffcf-41c1-94e5-2fdafc4bd4ed",
+  "cf-bpr": [0.0013940718490630388, -0.0011165891773998737, 0.000915041018743068, "... 125 more"]
+}
+```
+
+### Practical Notes
+
+- These embedding datasets are optional: nothing in the current baseline pipeline depends on them.
+- The repo already contains a local dense retriever in [mcrs/retrieval_modules/bert.py](mcrs/retrieval_modules/bert.py), but that module computes its own embeddings from track metadata rather than loading the precomputed challenge embeddings.
+- When documenting or wiring a new module, join track embeddings on `track_id` and user embeddings on `user_id`.
 
 ---
 
