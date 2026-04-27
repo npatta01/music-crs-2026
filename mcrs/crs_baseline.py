@@ -43,6 +43,7 @@ class CRS_BASELINE:
         dtype=torch.bfloat16,
         retrieval_topk: int = 20,
         retrieval_config: dict | None = None,
+        qu_kwargs: Optional[dict[str, Any]] = None,
     ):
         """Initialize the CRS baseline components.
 
@@ -71,6 +72,7 @@ class CRS_BASELINE:
         self.attn_implementation = attn_implementation
         self.retrieval_topk = retrieval_topk
         self.retrieval_config = retrieval_config or {}
+        self.qu_kwargs = qu_kwargs or {}
         self.lm = load_lm_module(self.lm_type, self.device, self.attn_implementation, self.dtype)
         retrieval_config = dict(self.retrieval_config)
         retrieval_config.setdefault("device", self.device)
@@ -82,7 +84,14 @@ class CRS_BASELINE:
             self.cache_dir,
             retrieval_config=retrieval_config,
         )
-        self.qu = load_qu_module(self.qu_type)
+        self.qu = load_qu_module(
+            self.qu_type,
+            cache_dir=self.cache_dir,
+            device=self.device,
+            attn_implementation=self.attn_implementation,
+            dtype=self.dtype,
+            **self.qu_kwargs,
+        )
         self.item_db = MusicCatalogDB(self.item_db_name, self.track_split_types, self.corpus_types)
         self.user_db = UserProfileDB(self.user_db_name, self.user_split_types)
         self.prompts_dir = os.path.join(os.path.dirname(__file__), "system_prompts")
@@ -163,7 +172,6 @@ class CRS_BASELINE:
         """
         # Prepare batch inputs
         sys_prompts = []
-        retrieval_inputs = []
         session_memories = []
 
         for data in batch_data:
@@ -173,8 +181,12 @@ class CRS_BASELINE:
             session_memory.append({"role": "user", "content": user_query})
 
             sys_prompts.append(self._get_system_prompt(user_id))
-            retrieval_inputs.append(self.qu.transform_query(session_memory))
             session_memories.append(session_memory)
+
+        if hasattr(self.qu, "batch_transform_queries"):
+            retrieval_inputs = self.qu.batch_transform_queries(session_memories)
+        else:
+            retrieval_inputs = [self.qu.transform_query(session_memory) for session_memory in session_memories]
 
         # Stage 1: Batch retrieval
         if hasattr(self.retrieval, 'batch_text_to_item_retrieval'):
