@@ -39,3 +39,8 @@ Results saved to `exp/inference/{split}/{tid}.json`.
 ## Extend
 
 See `tips/` for directions: better item representations, reranker modules, generative retrieval.
+
+## Skills
+
+- `download-artifacts` — sync Modal prediction artifacts, rewrite traces, scores, and ground-truth files into `evaluator/exp` using `python modal/download_results.py`
+- `run-experiment` — run a Modal experiment end-to-end, download results locally, and evaluate devset runs

@@ -92,12 +92,28 @@ python evaluator/evaluate_devset.py --tid llama1b_bm25_devset
 
 ### Download results locally
 
-Pull a predictions file or scores file from the volume to your local `exp/` directory:
+Use the repo downloader to mirror artifacts from the Modal volume into local `evaluator/exp/` by default.
 
 ```bash
-# Download inference predictions
+# Download one run (legacy usage still works)
 python modal/download_results.py --tid llama1b_bm25_devset
 
-# Download evaluation scores
-python modal/download_results.py --tid llama1b_bm25_devset --type scores
+# Download all missing remote artifacts
+python modal/download_results.py
+
+# Preview what would be downloaded first
+python modal/download_results.py --dry-run --verbose
+
+# Restrict to scores only
+python modal/download_results.py --kind scores
 ```
+
+The downloader mirrors the remote artifact tree under your chosen `--out-dir`:
+
+- `inference/<split>/<tid>.json`
+- `inference/<split>/<tid>_rewrite_audit.jsonl`
+- `inference/<split>/<tid>_rewrite_stats.json`
+- `scores/<split>/<tid>.json`
+- `ground_truth/...`
+
+If remote `scores/` or `ground_truth/` directories do not exist yet, the downloader skips them cleanly.
