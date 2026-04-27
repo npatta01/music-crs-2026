@@ -1,5 +1,6 @@
 lm_type: "meta-llama/Llama-3.2-1B-Instruct"
 retrieval_type: "bm25"
+qu_type: "passthrough"
 test_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Dataset"
 item_db_name: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
 user_db_name: "talkpl-ai/TalkPlayData-Challenge-User-Metadata"

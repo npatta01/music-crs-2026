@@ -18,7 +18,8 @@ class BM25_MODEL:
         dataset_name: str,
         split_types: list[str],
         corpus_types: list[str],
-        cache_dir: str = "./cache"
+        cache_dir: str = "./cache",
+        formatter=None,
     ) -> None:
         """Initialize the BM25 retriever.
         Args:
@@ -26,11 +27,14 @@ class BM25_MODEL:
             split_types: Dataset splits to load and concatenate.
             corpus_types: Metadata fields to include in the text corpus.
             cache_dir: Directory to cache the BM25 index and artifacts.
+            formatter: CorpusFormatter instance; defaults to DefaultFormatter.
         """
+        from mcrs.corpus_formatters import load_corpus_formatter
         self.dataset_name = dataset_name
         self.split_types = split_types
         self.corpus_types = corpus_types
-        self.corpus_name = "_".join(corpus_types)
+        self.formatter = formatter if formatter is not None else load_corpus_formatter("default")
+        self.corpus_name = f"{self.formatter.name}_{'_'.join(corpus_types)}"
         self.cache_dir = cache_dir
         self.metadata_dict = self._load_corpus()
         if os.path.exists(f"{self.cache_dir}/bm25/{self.corpus_name}"):
@@ -60,21 +64,6 @@ class BM25_MODEL:
         metadata_dict = {item["track_id"]: item for item in metadata_concat_dataset}
         return metadata_dict
 
-    def _stringify_metadata(self, metadata: dict[str, object]) -> str:
-        """Convert a metadata dict into a multi-line string for indexing.
-        Args:
-            metadata: Track metadata with fields listed in `self.corpus_types`.
-        Returns:
-            A newline-separated string with `field: value` per selected field.
-        """
-        metadata_str = ""
-        for corpus_type in self.corpus_types:
-            entity = metadata[corpus_type]
-            if isinstance(entity, list):
-                entity = ", ".join(entity)
-            metadata_str += f"{corpus_type}: {entity}\n"
-        return metadata_str
-
     def build_index(self) -> None:
         """Build and persist a BM25 index over the loaded corpus.
         """
@@ -82,7 +71,7 @@ class BM25_MODEL:
         corpus = []
         for track_id in track_ids:
             metadata = self.metadata_dict[track_id]
-            metadata_str = self._stringify_metadata(metadata)
+            metadata_str = self.formatter.format(metadata, self.corpus_types)
             corpus.append(metadata_str)
         corpus_tokens = bm25s.tokenize(corpus)
         retriever = bm25s.BM25()

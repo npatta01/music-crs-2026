@@ -4,6 +4,7 @@ Batch inference script for Music CRS.
 
 import os
 import json
+import shutil
 import torch
 import argparse
 from mcrs import load_crs_baseline
@@ -67,12 +68,16 @@ def main(args):
         - Tracks progress with tqdm progress bar
         - Saves comprehensive results for evaluation
     """
-    print("Removing cache directory for preventing memory issues...")
-    os.system("rm -rf cache")
     config = OmegaConf.load(f"config/{args.tid}.yaml")
+    if args.clear_cache:
+        cache_dir = config.get("cache_dir", "./cache")
+        if os.path.exists(cache_dir):
+            print(f"Clearing cache directory: {cache_dir}")
+            shutil.rmtree(cache_dir)
     music_crs = load_crs_baseline(
         lm_type=config.lm_type,
         retrieval_type=config.retrieval_type,
+        qu_type=config.get("qu_type", "passthrough"),
         item_db_name=config.item_db_name,
         user_db_name=config.user_db_name,
         track_split_types=config.track_split_types,
@@ -161,6 +166,12 @@ if __name__ == "__main__":
         type=str,
         default="exp",
         help="Base directory for saving results (default: ./exp)"
+    )
+    parser.add_argument(
+        "--clear_cache",
+        action="store_true",
+        default=False,
+        help="Wipe the cache directory before running (forces re-indexing)"
     )
     args = parser.parse_args()
     main(args)
