@@ -66,7 +66,6 @@ results_vol = modal.Volume.from_name(RESULTS_VOLUME, create_if_missing=True)
 
 # Build image: uv_sync reads pyproject.toml + uv.lock for reproducible installs.
 # Source files are copied separately (uv_sync uses --no-install-project).
-# Evaluator submodule deps installed on top.
 image = (
     modal.Image.debian_slim(python_version="3.12")
     .uv_sync(".")
@@ -76,7 +75,6 @@ image = (
         copy=True,
         ignore=[".*", "__pycache__", "*.pyc", ".venv", "exp", "cache", "submission*"],
     )
-    .run_commands("pip install -r /app/evaluator/requirments.txt")
     .env({"PYTHONPATH": "/app"})
 )
 
@@ -146,11 +144,11 @@ def _inference_blindset(tid: str, batch_size: int, eval_dataset: str):
 )
 def _evaluate(tid: str, split: str):
     """
-    Evaluate predictions using the evaluator submodule (evaluator/).
+    Evaluate predictions using evaluator/.
 
     The evaluator scripts use relative exp/ paths. Running them with
     cwd=/root means exp/ resolves to /root/exp = the results volume mount.
-    PYTHONPATH includes /app/evaluator so the metrics module is importable.
+    PYTHONPATH=/app/evaluator makes the metrics package importable.
     """
     import subprocess
     import sys
