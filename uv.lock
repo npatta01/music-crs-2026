@@ -1701,7 +1701,7 @@ requires-dist = [
     { name = "torchaudio", marker = "sys_platform == 'linux'", index = "https://download.pytorch.org/whl/cu128" },
     { name = "torchvision", marker = "sys_platform != 'linux'" },
     { name = "torchvision", marker = "sys_platform == 'linux'", index = "https://download.pytorch.org/whl/cu128" },
-    { name = "transformers", specifier = ">=4.46.3" },
+    { name = "transformers", specifier = ">=4.51.0" },
 ]
 provides-extras = ["dev", "notebooks"]
 

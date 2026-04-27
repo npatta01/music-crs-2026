@@ -12,6 +12,13 @@ from tqdm import tqdm
 from omegaconf import OmegaConf
 from mcrs.inference_utils import chat_history_parser, resolve_qu_kwargs_placeholders
 
+
+def _to_plain_dict(value):
+    if value is None:
+        return None
+    return OmegaConf.to_container(value, resolve=True)
+
+
 def main(args):
     """
     Run batch inference on TalkPlayData-2 test dataset.
@@ -37,7 +44,6 @@ def main(args):
         if os.path.exists(cache_dir):
             print(f"Clearing cache directory: {cache_dir}")
             import shutil
-
             shutil.rmtree(cache_dir)
     raw_qu_kwargs = config.get("qu_kwargs")
     if raw_qu_kwargs is None:
@@ -65,6 +71,7 @@ def main(args):
         attn_implementation=config.attn_implementation,
         dtype=getattr(torch, config.get("dtype", "bfloat16")),
         retrieval_topk=int(config.get("retrieval_topk", 20)),
+        retrieval_config=_to_plain_dict(config.get("retrieval_config")),
     )
     db = load_dataset(config.test_dataset_name, split="test")
     # Prepare all batch data at once

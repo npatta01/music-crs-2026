@@ -1,5 +1,7 @@
-import torch
-from .crs_baseline import CRS_BASELINE
+try:
+    import torch
+except ModuleNotFoundError:  # pragma: no cover
+    torch = None
 
 def load_crs_baseline(
     lm_type="meta-llama/Llama-3.2-1B-Instruct",
@@ -13,10 +15,20 @@ def load_crs_baseline(
     cache_dir="./cache",
     device="cuda",
     attn_implementation="eager",
-    dtype=torch.bfloat16,
+    dtype=None,
     retrieval_topk: int = 20,
+    retrieval_config: dict | None = None,
     qu_kwargs=None,
 ):
+    if dtype is None:
+        if torch is None:
+            raise ModuleNotFoundError(
+                "torch is required to use mcrs.load_crs_baseline (install torch or pass dtype explicitly)."
+            )
+        dtype = torch.bfloat16
+
+    from .crs_baseline import CRS_BASELINE
+
     return CRS_BASELINE(
         lm_type,
         retrieval_type,
@@ -31,5 +43,6 @@ def load_crs_baseline(
         attn_implementation,
         dtype,
         retrieval_topk,
+        retrieval_config,
         qu_kwargs,
     )
