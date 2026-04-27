@@ -14,6 +14,12 @@ from typing import List, Dict, Any, Tuple
 import pandas as pd
 from omegaconf import OmegaConf
 
+
+def _to_plain_dict(value):
+    if value is None:
+        return None
+    return OmegaConf.to_container(value, resolve=True)
+
 def chat_history_parser(conversations, music_crs, target_turn_number):
     """
     Parse conversation history up to a target turn.
@@ -87,6 +93,7 @@ def main(args):
         attn_implementation=config.attn_implementation,
         dtype=getattr(torch, config.get("dtype", "bfloat16")),
         retrieval_topk=int(config.get("retrieval_topk", 20)),
+        retrieval_config=_to_plain_dict(config.get("retrieval_config")),
     )
     db = load_dataset(config.test_dataset_name, split="test")
     if args.session_ids_file is not None:

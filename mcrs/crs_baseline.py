@@ -42,6 +42,7 @@ class CRS_BASELINE:
         attn_implementation="eager",
         dtype=torch.bfloat16,
         retrieval_topk: int = 20,
+        retrieval_config: dict | None = None,
     ):
         """Initialize the CRS baseline components.
 
@@ -69,8 +70,18 @@ class CRS_BASELINE:
         self.dtype = dtype
         self.attn_implementation = attn_implementation
         self.retrieval_topk = retrieval_topk
+        self.retrieval_config = retrieval_config or {}
         self.lm = load_lm_module(self.lm_type, self.device, self.attn_implementation, self.dtype)
-        self.retrieval = load_retrieval_module(self.retrieval_type, self.item_db_name, self.track_split_types, self.corpus_types, self.cache_dir)
+        retrieval_config = dict(self.retrieval_config)
+        retrieval_config.setdefault("device", self.device)
+        self.retrieval = load_retrieval_module(
+            self.retrieval_type,
+            self.item_db_name,
+            self.track_split_types,
+            self.corpus_types,
+            self.cache_dir,
+            retrieval_config=retrieval_config,
+        )
         self.qu = load_qu_module(self.qu_type)
         self.item_db = MusicCatalogDB(self.item_db_name, self.track_split_types, self.corpus_types)
         self.user_db = UserProfileDB(self.user_db_name, self.user_split_types)

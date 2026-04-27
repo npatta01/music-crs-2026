@@ -1,0 +1,28 @@
+lm_type: "dummy"
+retrieval_type: "dense_transformer"
+qu_type: "passthrough"
+test_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Dataset"
+item_db_name: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
+user_db_name: "talkpl-ai/TalkPlayData-Challenge-User-Metadata"
+track_split_types:
+  - "all_tracks"
+user_split_types:
+  - "all_users"
+corpus_types:
+  - "track_name"
+  - "artist_name"
+  - "album_name"
+  - "tag_list"
+cache_dir: "./cache"
+device: "cuda"
+attn_implementation: "eager"
+retrieval_topk: 1000
+retrieval_config:
+  model_name: "BAAI/bge-base-en-v1.5"
+  pooling: "cls"
+  query_template: "Represent this sentence for searching relevant passages: {query}"
+  document_template: "{text}"
+  batch_size: 64
+  max_length: 512
+  padding_side: "right"
+  torch_dtype: "float32"

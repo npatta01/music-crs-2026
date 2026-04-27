@@ -62,17 +62,27 @@ Higher is better for all metrics.
 
 ## Devset Leaderboard
 
-| Rank | Model | NDCG@1 | NDCG@10 | NDCG@20 | Catalog Diversity | Lexical Diversity |
-|------|-------|--------|---------|---------|-------------------|-------------------|
-| 1 | llama1b_bm25 | 0.0098 | **0.0627** | 0.0815 | 0.3795 | 0.2549 |
-| 2 | llama1b_bert | 0.0018 | 0.0048 | 0.0063 | 0.0607 | 0.2069 |
-| 3 | popularity | 0.0005 | 0.0018 | 0.0024 | 0.0004 | 0.0000 |
-| 4 | random | 0.0000 | 0.0001 | 0.0001 | **0.9652** | 0.0000 |
+| Rank | Experiment | NDCG@1 | NDCG@10 | NDCG@20 | Catalog Diversity | Lexical Diversity |
+|------|------------|--------|---------|---------|-------------------|-------------------|
+| 1 | dense_qwen3_embedding_8b | 0.0136 | **0.0804** | **0.1025** | 0.4123 | 0.0000 |
+| 2 | dense_qwen3_embedding_4b | **0.0175** | 0.0788 | 0.0994 | 0.3679 | 0.0000 |
+| 3 | bm25_devset_retrieval_only_with_tag_list | 0.0095 | 0.0752 | 0.0970 | 0.4542 | 0.0000 |
+| 4 | dense_e5_base_v2 | 0.0115 | 0.0728 | 0.0906 | 0.3612 | 0.0000 |
+| 5 | dense_e5_large_v2 | 0.0105 | 0.0725 | 0.0895 | 0.3509 | 0.0000 |
+| 6 | dense_bge_large_en_v1_5 | 0.0113 | 0.0689 | 0.0865 | 0.3316 | 0.0000 |
+| 7 | dense_qwen3_embedding_0_6b | 0.0169 | 0.0688 | 0.0849 | 0.3373 | 0.0000 |
+| 8 | dense_bge_base_en_v1_5 | 0.0110 | 0.0674 | 0.0836 | 0.3611 | 0.0000 |
+| 9 | llama1b_bm25 | 0.0098 | 0.0626 | 0.0815 | 0.3796 | 0.2554 |
+| 10 | llama1b_bert | 0.0018 | 0.0048 | 0.0063 | 0.0607 | 0.2069 |
+| 11 | popularity | 0.0005 | 0.0018 | 0.0024 | 0.0004 | 0.0000 |
+| 12 | random | 0.0000 | 0.0001 | 0.0001 | **0.9652** | 0.0000 |
 
 Catalog size: 47,071 tracks.
 
 **Notes:**
-- `llama1b_bm25` is the best baseline on relevance (NDCG) — 13× better NDCG@10 than BERT.
+- `dense_qwen3_embedding_8b` is the current relevance leader on the devset leaderboard, edging `dense_qwen3_embedding_4b` and the best sparse retrieval-only baseline.
+- `bm25_devset_retrieval_only_with_tag_list` remains the strongest sparse retrieval-only baseline and outperforms every dense run except the Qwen 4B and 8B variants.
+- Retrieval-only `lm_type: dummy` runs have `lexical_diversity = 0.0` by construction, so lexical diversity is only meaningful for generative runs such as `llama1b_bm25` and `llama1b_bert`.
 - `random` has the highest catalog diversity but near-zero relevance.
 - `popularity` returns the same 20 tracks for everyone — zero diversity.
 
@@ -80,7 +90,7 @@ Catalog size: 47,071 tracks.
 
 ## Adding Experiment Results
 
-When you run a new experiment, append a row to the table above with the config name and scores.
+When you run a new experiment, append one or more rows to the table above with the config name and scores.
 
 ## Notes on submission vs dev-set
 

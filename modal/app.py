@@ -91,7 +91,7 @@ _VOLUME_MOUNTS = {
     secrets=[ENV_SECRET],
     timeout=7200,
 )
-def _inference_devset(tid: str, batch_size: int, num_sessions: int):
+def _inference_devset(tid: str, batch_size: int, num_sessions: int, clear_cache: bool):
     import subprocess
     import sys
 
@@ -103,6 +103,8 @@ def _inference_devset(tid: str, batch_size: int, num_sessions: int):
     ]
     if num_sessions > 0:
         cmd += ["--num_sessions", str(num_sessions)]
+    if clear_cache:
+        cmd += ["--clear_cache"]
 
     result = subprocess.run(cmd, cwd="/app")
     if result.returncode != 0:
@@ -187,9 +189,15 @@ def run_inference(
     tid: str = "llama1b_bm25_devset",
     batch_size: int = DEVSET_BATCH_SIZE,
     num_sessions: int = 0,
+    clear_cache: bool = False,
 ):
     """Run devset inference on the configured fast GPU fallback policy."""
-    _inference_devset.remote(tid=tid, batch_size=batch_size, num_sessions=num_sessions)
+    _inference_devset.remote(
+        tid=tid,
+        batch_size=batch_size,
+        num_sessions=num_sessions,
+        clear_cache=clear_cache,
+    )
 
 
 @app.local_entrypoint()

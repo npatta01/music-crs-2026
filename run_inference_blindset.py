@@ -13,6 +13,12 @@ from typing import List, Dict, Any, Tuple
 import pandas as pd
 from omegaconf import OmegaConf
 
+
+def _to_plain_dict(value):
+    if value is None:
+        return None
+    return OmegaConf.to_container(value, resolve=True)
+
 def chat_history_parser(conversations, music_crs, target_turn_number):
     """
     Parse conversation history up to a target turn.
@@ -66,12 +72,17 @@ def main(args):
         - Tracks progress with tqdm progress bar
         - Saves comprehensive results for evaluation
     """
-    print("Removing cache directory for preventing memory issues...")
-    os.system("rm -rf cache")
     config = OmegaConf.load(f"config/{args.tid}.yaml")
+    if args.clear_cache:
+        cache_dir = config.get("cache_dir", "./cache")
+        if os.path.exists(cache_dir):
+            print(f"Clearing cache directory: {cache_dir}")
+            import shutil
+            shutil.rmtree(cache_dir)
     music_crs = load_crs_baseline(
         lm_type=config.lm_type,
         retrieval_type=config.retrieval_type,
+        qu_type=config.get("qu_type", "passthrough"),
         item_db_name=config.item_db_name,
         user_db_name=config.user_db_name,
         track_split_types=config.track_split_types,
@@ -82,6 +93,7 @@ def main(args):
         attn_implementation=config.attn_implementation,
         dtype=getattr(torch, config.get("dtype", "bfloat16")),
         retrieval_topk=int(config.get("retrieval_topk", 20)),
+        retrieval_config=_to_plain_dict(config.get("retrieval_config")),
     )
     db = load_dataset(config.test_dataset_name, split="test")
     # Prepare all batch data at once
@@ -146,6 +158,12 @@ if __name__ == "__main__":
         type=str,
         default="exp",
         help="Base directory for saving results (default: ./exp)"
+    )
+    parser.add_argument(
+        "--clear_cache",
+        action="store_true",
+        default=False,
+        help="Wipe the cache directory before running (forces re-indexing)"
     )
     args = parser.parse_args()
     main(args)
