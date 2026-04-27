@@ -73,3 +73,65 @@ Next step:
 
 Status:
 - Done
+
+## 2026-04-27 - LLM rewrite wave 3
+
+Question:
+Can an LLM-backed QU rewrite improve BM25 retrieval on the new sparse control `track_name + artist_name + album_name + tag_list` with `release_date` removed?
+
+Control:
+- `bm25_devset_retrieval_only_tag_list_no_release_date`
+  - `NDCG@20 0.0972`
+  - `Hit@20 0.2640`
+  - `MRR 0.0561`
+
+Phase 1 preserve prompt runs completed:
+- `bm25_qu_llmrewrite_llama32_1b_preserve_entities_v1_devset`
+  - `NDCG@20 0.0946`
+  - `Hit@20 0.2577`
+- `bm25_qu_llmrewrite_smollm2_1p7b_preserve_entities_v1_devset`
+  - `NDCG@20 0.0970`
+  - `Hit@20 0.2594`
+- `bm25_qu_llmrewrite_gemma4_e2b_preserve_entities_v1_devset`
+  - `NDCG@20 0.1048`
+  - `Hit@20 0.2475`
+- `bm25_qu_llmrewrite_qwen25_3b_preserve_entities_v1_devset`
+  - `NDCG@20 0.1001`
+  - `Hit@20 0.2319`
+- `bm25_qu_llmrewrite_qwen3_4b_preserve_entities_v1_devset`
+  - `NDCG@20 0.1061`
+  - `Hit@20 0.2498`
+
+Phase 2 prompt runs completed so far:
+- `bm25_qu_llmrewrite_gemma4_e2b_catalog_terms_v2_devset`
+  - `NDCG@20 0.1089`
+  - `Hit@20 0.2500`
+  - `MRR 0.0732`
+- `bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset`
+  - `NDCG@20 0.1092`
+  - `Hit@20 0.2617`
+  - `MRR 0.0695`
+
+Takeaways:
+- The sparse control is strong, but multiple rewrite models beat it on ranking quality. The best completed run so far is `Gemma-4-E2B + carryover_guard_v3`, which improves `NDCG@20` from `0.0972 -> 0.1092`.
+- Among preserve-only Phase 1 runs, the current ranking is `Qwen3-4B` first, `Gemma-4-E2B` second, and `Qwen2.5-3B` third.
+- The best prompt outcome so far is not the baseline preserve prompt. Both completed Gemma prompt variants outperform `Gemma preserve_entities_v1`, which is a strong sign that prompt choice matters materially for rewrite quality.
+- Rewrites tend to trade some top-20 coverage for much stronger head ranking and MRR. This is most visible in the Gemma and Qwen families.
+- `meta-llama/Llama-3.2-3B-Instruct` was operationally blocked in Modal by gated-model access, so the planned fallback replacement `Qwen/Qwen2.5-3B-Instruct` was used instead.
+
+Linked reports:
+- `experiments/bm25_devset_retrieval_only_tag_list_no_release_date.md`
+- `experiments/bm25_qu_llmrewrite_llama32_1b_preserve_entities_v1_devset.md`
+- `experiments/bm25_qu_llmrewrite_smollm2_1p7b_preserve_entities_v1_devset.md`
+- `experiments/bm25_qu_llmrewrite_gemma4_e2b_preserve_entities_v1_devset.md`
+- `experiments/bm25_qu_llmrewrite_qwen25_3b_preserve_entities_v1_devset.md`
+- `experiments/bm25_qu_llmrewrite_qwen3_4b_preserve_entities_v1_devset.md`
+- `experiments/bm25_qu_llmrewrite_gemma4_e2b_catalog_terms_v2_devset.md`
+- `experiments/bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset.md`
+
+Next step:
+- Finish the remaining official Phase 2 runs for `Qwen2.5-3B` and `Qwen3-4B`.
+- Once those land, finalize the Wave 3 winner by the fixed rule: `NDCG@20`, then `Hit@20`, then rewrite latency, then fallback rate.
+
+Status:
+- In progress

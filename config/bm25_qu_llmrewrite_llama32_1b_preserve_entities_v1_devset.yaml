@@ -1,0 +1,25 @@
+lm_type: "dummy"
+retrieval_type: "bm25"
+qu_type: "llm_rewrite"
+qu_kwargs:
+  model_name: "meta-llama/Llama-3.2-1B-Instruct"
+  prompt_name: "preserve_entities_v1"
+  max_new_tokens: 96
+  audit_path: "./exp/inference/devset/<tid>_rewrite_audit.jsonl"
+  stats_path: "./exp/inference/devset/<tid>_rewrite_stats.json"
+test_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Dataset"
+item_db_name: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
+user_db_name: "talkpl-ai/TalkPlayData-Challenge-User-Metadata"
+track_split_types:
+  - "all_tracks"
+user_split_types:
+  - "all_users"
+corpus_types:
+  - "track_name"
+  - "artist_name"
+  - "album_name"
+  - "tag_list"
+cache_dir: "./cache"
+device: "cuda"
+attn_implementation: "sdpa"
+retrieval_topk: 1000

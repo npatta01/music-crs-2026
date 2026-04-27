@@ -34,6 +34,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+dev = [
+    "pytest>=8",
+]
 notebooks = [
     "ipywidgets>=8.0",
     "jupyterlab>=4.0",
