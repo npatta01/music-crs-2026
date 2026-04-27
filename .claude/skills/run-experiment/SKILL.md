@@ -130,8 +130,14 @@ Create `experiments/{tid}.md` at the project root using this template (fill in a
 | NDCG@20 | {ndcg@20:.4f} |
 | NDCG@50 | {ndcg@50:.4f} |
 | NDCG@100 | {ndcg@100:.4f} |
+| NDCG@200 | {ndcg@200:.4f} |
+| NDCG@500 | {ndcg@500:.4f} |
+| NDCG@1000 | {ndcg@1000:.4f} |
 | MRR | {mrr:.4f} |
 | MRR@100 | {mrr@100:.4f} |
+| MRR@200 | {mrr@200:.4f} |
+| MRR@500 | {mrr@500:.4f} |
+| MRR@1000 | {mrr@1000:.4f} |
 
 ## Retrieval Coverage
 
@@ -143,8 +149,14 @@ Create `experiments/{tid}.md` at the project root using this template (fill in a
 | Hit@20 | {hit@20:.4f} |
 | Hit@50 | {hit@50:.4f} |
 | Hit@100 | {hit@100:.4f} |
+| Hit@200 | {hit@200:.4f} |
+| Hit@500 | {hit@500:.4f} |
+| Hit@1000 | {hit@1000:.4f} |
 | % GT not in top-20 | {pct_gt_not_in_top20:.1%} |
 | % GT not in top-100 | {pct_gt_not_in_top100:.1%} |
+| % GT not in top-200 | {pct_gt_not_in_top200:.1%} |
+| % GT not in top-500 | {pct_gt_not_in_top500:.1%} |
+| % GT not in top-1000 | {pct_gt_not_in_top1000:.1%} |
 | Mean rank (when found) | {mean_rank_when_found:.1f} |
 | Median rank (when found) | {median_rank_when_found:.1f} |
 
