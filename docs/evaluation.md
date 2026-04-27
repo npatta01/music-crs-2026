@@ -27,17 +27,20 @@ Grouped so each group answers a different question.
 
 | Metric | Description |
 |--------|-------------|
-| **NDCG@{1,5,10,20,50,100}** | Normalized Discounted Cumulative Gain. NDCG@10 is the official primary ranking metric. |
+| **NDCG@{1,5,10,20,50,100}** | Headline ranking metrics plus near-pool diagnostics. NDCG@10 is the official primary ranking metric. |
+| **NDCG@{200,500,1000}** | Deep-cutoff diagnostics: useful for separating candidate-generation limits from reranking limits. |
 | **MRR** | Mean Reciprocal Rank over the full retrieved pool. |
-| **MRR@100** | MRR restricted to the top-100 — comparable across runs with different pool depths. |
+| **MRR@{100,200,500,1000}** | Reciprocal-rank diagnostics at fixed cutoffs, comparable across runs with the same retrieved depth. |
 
 ### Retrieval coverage — *is the GT even in the pool?*
 
 | Metric | Description |
 |--------|-------------|
-| **Recall@{1,5,10,20,50,100}** | Fraction of turns where the GT track appears in the top-k. With a single GT per turn, Recall@k = Hit@k. |
+| **Recall@{1,5,10,20,50,100}** | Headline coverage metrics. With a single GT per turn, Recall@k = Hit@k. |
+| **Recall@{200,500,1000}** | Deep-cutoff coverage diagnostics: tells you whether more recall is available beyond the top-100. |
 | **% GT not in top-20** | Ceiling on NDCG@20: any miss here is unrecoverable by reranking. |
 | **% GT not in top-100** | Ceiling on what a reranker over the top-100 can ever achieve. |
+| **% GT not in top-200 / top-500 / top-1000** | Same ceiling analysis for deeper candidate pools. |
 | **Mean / median rank (when found)** | Rank of the GT conditional on it being retrieved at all — useful for spotting reranking headroom. |
 
 ### Diversity
@@ -83,5 +86,7 @@ When you run a new experiment, append a row to the table above with the config n
 
 - `retrieval_topk` defaults to **20** in `CRS_BASELINE`, so blindset / submission
   outputs remain unchanged (the leaderboard expects exactly 20 ids per turn).
-- Devset configs override `retrieval_topk: 100` so the offline evaluator can
-  report Recall@100 / NDCG@100. The submission file format is independent.
+- Devset configs override `retrieval_topk: 1000` so the offline evaluator can
+  report deep-cutoff diagnostics through `@1000`. The submission file format is independent.
+- The evaluator now fails explicitly if any devset prediction row is shallower than
+  `1000` candidates, rather than silently treating `@200/@500/@1000` as truncated metrics.

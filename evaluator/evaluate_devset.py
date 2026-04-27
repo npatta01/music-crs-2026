@@ -5,11 +5,11 @@ Computes both the headline leaderboard metrics (NDCG@{1,10,20},
 catalog_diversity, lexical_diversity) and a richer set of diagnostic
 metrics used for dev-set iteration:
 
-- NDCG@{1,5,10,20,50,100}
-- Hit@{1,5,10,20,50,100}  (== recall@k for single-gold case)
-- MRR (over the full retrieved pool) and MRR@100
+- NDCG@{1,5,10,20,50,100,200,500,1000}
+- Hit@{1,5,10,20,50,100,200,500,1000}  (== recall@k for single-gold case)
+- MRR (over the full retrieved pool) and MRR@{100,200,500,1000}
 - Mean / median rank of the GT when it is retrieved at all
-- % of turns where the GT is not in top-20 / not in top-100
+- % of turns where the GT is not in top-{20,100,200,500,1000}
 - Per-turn (1-8) breakdown of NDCG@20 / Hit@20 / Hit@100
 
 The `ndcg@{1,10,20}` numbers preserve the original macro-averaging
@@ -35,9 +35,11 @@ from metrics.metrics_recsys import get_reciprocal_rank, get_rank
 
 
 # k values used for NDCG / Hit sweeps in the extended report.
-K_VALUES = [1, 5, 10, 20, 50, 100]
+K_VALUES = [1, 5, 10, 20, 50, 100, 200, 500, 1000]
 # Subset used for the headline leaderboard metrics (preserve backward-compat).
 HEADLINE_K = [1, 10, 20]
+MRR_K_VALUES = [100, 200, 500, 1000]
+REQUIRED_DIAGNOSTIC_DEPTH = max(K_VALUES)
 
 
 def df_filtering(df, session_id, turn_number):
@@ -53,15 +55,38 @@ def _median(xs):
     return float(np.median(xs)) if len(xs) else 0.0
 
 
+def _validate_prediction_depths(df_predictions):
+    depths = df_predictions["predicted_track_ids"].map(len)
+    too_shallow = df_predictions.loc[depths < REQUIRED_DIAGNOSTIC_DEPTH,
+                                     ["session_id", "turn_number"]]
+    if too_shallow.empty:
+        return
+
+    examples = ", ".join(
+        f"{row.session_id}/turn-{row.turn_number}"
+        for row in too_shallow.head(3).itertuples(index=False)
+    )
+    raise ValueError(
+        "Cannot compute top-1000 diagnostics because some prediction rows are "
+        f"shallower than {REQUIRED_DIAGNOSTIC_DEPTH} candidates "
+        f"({len(too_shallow)} / {len(df_predictions)} rows affected; "
+        f"examples: {examples}). Rerun devset inference with "
+        f"`retrieval_topk: {REQUIRED_DIAGNOSTIC_DEPTH}`."
+    )
+
+
 def evaluate(df_predictions, df_ground_truth):
     """Compute per-turn-instance metrics and aggregate them.
 
     Returns:
         (per_instance_rows, aggregate_dict)
     """
+    _validate_prediction_depths(df_predictions)
+
     rows = []
     ranks_found = []
-    rrs_full, rrs_100 = [], []
+    rrs_full = []
+    rr_at_k = {k: [] for k in MRR_K_VALUES}
     recommended_tracks_20 = []
     recommended_tracks_100 = []
     responses = []
@@ -79,11 +104,11 @@ def evaluate(df_predictions, df_ground_truth):
         recsys_metrics = compute_recsys_metrics(preds, [gt_id], K_VALUES)
         rank = get_rank([gt_id], preds)
         rr_full = get_reciprocal_rank(gt_id, preds)
-        rr_100 = get_reciprocal_rank(gt_id, preds, k=100)
         if rank is not None:
             ranks_found.append(rank)
         rrs_full.append(rr_full)
-        rrs_100.append(rr_100)
+        for k in MRR_K_VALUES:
+            rr_at_k[k].append(get_reciprocal_rank(gt_id, preds, k=k))
 
         # Catalog diversity uses the top-20 (submission format) and top-100
         # (dev pool) separately so we can tell the two apart.
@@ -96,7 +121,7 @@ def evaluate(df_predictions, df_ground_truth):
             "turn_number": tn,
             "gt_rank": rank if rank is not None else np.nan,
             "rr": rr_full,
-            "rr@100": rr_100,
+            **{f"rr@{k}": rr_at_k[k][-1] for k in MRR_K_VALUES},
             **recsys_metrics,
         })
 
@@ -131,13 +156,19 @@ def evaluate(df_predictions, df_ground_truth):
         **{f"hit@{k}":  float(headline.get(f"hit@{k}",  0.0)) for k in K_VALUES},
         **{f"recall@{k}": float(headline.get(f"recall@{k}", 0.0)) for k in K_VALUES},
         "mrr": _mean(rrs_full),
-        "mrr@100": _mean(rrs_100),
+        **{f"mrr@{k}": _mean(rr_at_k[k]) for k in MRR_K_VALUES},
         "mean_rank_when_found": _mean(ranks_found) if ranks_found else None,
         "median_rank_when_found": _median(ranks_found) if ranks_found else None,
         "pct_gt_not_in_top20":
             float((df_results["hit@20"] == 0).sum() / n_total) if n_total else 0.0,
         "pct_gt_not_in_top100":
             float((df_results["hit@100"] == 0).sum() / n_total) if n_total else 0.0,
+        "pct_gt_not_in_top200":
+            float((df_results["hit@200"] == 0).sum() / n_total) if n_total else 0.0,
+        "pct_gt_not_in_top500":
+            float((df_results["hit@500"] == 0).sum() / n_total) if n_total else 0.0,
+        "pct_gt_not_in_top1000":
+            float((df_results["hit@1000"] == 0).sum() / n_total) if n_total else 0.0,
         "per_turn": {str(k): v for k, v in sorted(per_turn.items())},
     }
     agg["_recommended_20"] = recommended_tracks_20
@@ -150,19 +181,24 @@ def print_report(m, tid):
     print(f"\n=== {tid} ===")
     print(f"Turns evaluated: {m['n_turns_evaluated']}   "
           f"Max pool depth: {m['max_pool_depth']}  "
-          f"(need >=100 for full Recall@100)\n")
+          f"(need >={REQUIRED_DIAGNOSTIC_DEPTH} for full diagnostics)\n")
 
     print("Ranking quality (macro avg: per-turn, then across turns)")
     for k in K_VALUES:
         print(f"  NDCG@{k:<3}    {m[f'ndcg@{k}']:.4f}")
     print(f"  MRR          {m['mrr']:.4f}")
-    print(f"  MRR@100      {m['mrr@100']:.4f}\n")
+    for k in MRR_K_VALUES:
+        print(f"  MRR@{k:<4}    {m[f'mrr@{k}']:.4f}")
+    print()
 
     print("Retrieval coverage (is the GT even in the pool?)")
     for k in K_VALUES:
         print(f"  Hit@{k:<3}     {m[f'hit@{k}']:.4f}")
     print(f"  % GT not in top-20   {m['pct_gt_not_in_top20']:.1%}")
     print(f"  % GT not in top-100  {m['pct_gt_not_in_top100']:.1%}")
+    print(f"  % GT not in top-200  {m['pct_gt_not_in_top200']:.1%}")
+    print(f"  % GT not in top-500  {m['pct_gt_not_in_top500']:.1%}")
+    print(f"  % GT not in top-1000 {m['pct_gt_not_in_top1000']:.1%}")
     if m["mean_rank_when_found"] is not None:
         print(f"  Mean rank (found)    {m['mean_rank_when_found']:.1f}")
         print(f"  Median rank (found)  {m['median_rank_when_found']:.1f}")

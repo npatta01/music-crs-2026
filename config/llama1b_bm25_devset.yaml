@@ -15,6 +15,7 @@ corpus_types:
 cache_dir: "./cache"
 device: "cuda"
 attn_implementation: "sdpa"
-# Retrieve deeper pool on devset so eval can report Recall@100, NDCG@100.
+# Retrieve a deeper pool on devset so evaluation can report
+# Recall/Hit, NDCG, and MRR diagnostics through @1000.
 # Blindset configs stay at default (20) — submission format unchanged.
-retrieval_topk: 100
+retrieval_topk: 1000
