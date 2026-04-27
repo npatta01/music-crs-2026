@@ -24,7 +24,7 @@ def main():
 
     import modal
 
-    vol = modal.Volume.lookup("music-crs-results")
+    vol = modal.Volume.from_name("music-crs-results")
 
     if args.type == "inference":
         remote_path = f"inference/{args.split}/{args.tid}.json"

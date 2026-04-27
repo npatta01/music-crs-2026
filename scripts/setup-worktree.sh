@@ -34,10 +34,6 @@ if [ -f "$INC" ]; then
     done < "$INC"
 fi
 
-# --- Submodules ---
-echo "Initialising submodules..."
-git submodule update --init --recursive
-
 # --- Python env ---
 echo "Running uv sync..."
 uv sync

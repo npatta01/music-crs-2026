@@ -15,6 +15,5 @@ inference:
     - "L40S"
     - "A100-80GB"
     - "A100-40GB"
-    - "A10"
   devset_batch_size: 64
   blindset_batch_size: 64

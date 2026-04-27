@@ -1,13 +1,13 @@
 ---
-name: music-crs-run-experiment
-description: End-to-end experiment runner for the music-conversational-music-recomender-2026 project. Use when the user wants to run inference, evaluate results, or run a full experiment with a given tid (task ID). Handles Modal GPU inference, result download, local evaluation, per-sample CSV export, and markdown report generation.
+name: run-experiment
+description: Use when running inference, evaluating results, or running a full Music CRS experiment with a given tid (task ID).
 ---
 
 # Music CRS: Run Experiment
 
 This is a **rigid skill** — follow every step exactly.
 
-**Announce at start:** "I'm using the music-crs-run-experiment skill to run this experiment."
+**Announce at start:** "I'm using the run-experiment skill to run this experiment."
 
 ---
 
@@ -50,6 +50,12 @@ modal run modal/app.py::run_inference_blindset --tid {tid}
 
 Wait for completion. If it fails, report the error and stop.
 
+If it fails with `Could not connect to the Modal server`, rerun the same command with network/escalated approval, then continue from this step.
+
+If it fails with `torch.OutOfMemoryError: CUDA out of memory`, stop and report the OOM. Suggest lowering the configured runtime batch size or rerunning with a smaller `--batch-size` if the Modal entrypoint supports it.
+
+If it fails with `{path} was modified during build process`, report that the local worktree changed while Modal packaged the app. The user may retry once the worktree is stable.
+
 Log: `Inference complete. Results saved to Modal volume: inference/devset/{tid}.json`
 
 ---
@@ -63,6 +69,10 @@ python modal/download_results.py --tid {tid} --out_dir evaluator/exp
 ```
 
 For blindset, also pass `--split {eval_dataset}` (the non-devset part of the tid, e.g. `blindset_A`).
+
+If download fails with `Could not connect to the Modal server`, rerun the same download command with network/escalated approval.
+
+The download script uses `modal.Volume.from_name("music-crs-results")`, which is the correct API for the current Modal SDK used by this repo.
 
 Log the local path: `Downloaded → evaluator/exp/inference/devset/{tid}.json`
 
@@ -83,6 +93,8 @@ If evaluation fails because ground truth is missing, generate it first:
 cd evaluator && PYTHONPATH=. python make_ground_truth.py
 ```
 Then re-run the evaluation.
+
+If `make_ground_truth.py` or `evaluate_devset.py` fails with Hugging Face network/cache errors such as `nodename nor servname provided`, `Could not connect`, or `PermissionError` for a path under `~/.cache/huggingface`, rerun the same command with network/filesystem escalation so the cached dataset lock files and metadata can be accessed.
 
 ---
 
