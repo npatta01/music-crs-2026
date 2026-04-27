@@ -9,3 +9,4 @@ evaluator/exp/*
 submission/
 data/
 exp/
+.worktrees/
