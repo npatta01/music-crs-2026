@@ -5,6 +5,7 @@ from mcrs.db_item import MusicCatalogDB
 from mcrs.db_user import UserProfileDB
 from mcrs.lm_modules import load_lm_module
 from mcrs.retrieval_modules import load_retrieval_module
+from mcrs.qu_modules import load_qu_module
 
 class CRS_BASELINE:
     """
@@ -30,6 +31,7 @@ class CRS_BASELINE:
     def __init__(self,
         lm_type="meta-llama/Llama-3.2-1B-Instruct",
         retrieval_type="bm25",
+        qu_type="passthrough",
         item_db_name: str = "talkpl-ai/TalkPlayData-Challenge-Track-Metadata",
         user_db_name: str = "talkpl-ai/TalkPlayData-Challenge-User-Metadata",
         track_split_types: list[str] = ["all_tracks"], # for test
@@ -57,6 +59,7 @@ class CRS_BASELINE:
         self.cache_dir = cache_dir
         self.lm_type = lm_type
         self.retrieval_type = retrieval_type
+        self.qu_type = qu_type
         self.item_db_name = item_db_name
         self.user_db_name = user_db_name
         self.track_split_types = track_split_types
@@ -68,6 +71,7 @@ class CRS_BASELINE:
         self.retrieval_topk = retrieval_topk
         self.lm = load_lm_module(self.lm_type, self.device, self.attn_implementation, self.dtype)
         self.retrieval = load_retrieval_module(self.retrieval_type, self.item_db_name, self.track_split_types, self.corpus_types, self.cache_dir)
+        self.qu = load_qu_module(self.qu_type)
         self.item_db = MusicCatalogDB(self.item_db_name, self.track_split_types, self.corpus_types)
         self.user_db = UserProfileDB(self.user_db_name, self.user_split_types)
         self.prompts_dir = os.path.join(os.path.dirname(__file__), "system_prompts")
@@ -118,7 +122,7 @@ class CRS_BASELINE:
         # stage0. system prompt
         system_prompt = self._get_system_prompt(user_id)
         # stage1. retrieval
-        retrieval_input = "\n".join([f"{conversation['role']}: {conversation['content']}" for conversation in self.session_memory])
+        retrieval_input = self.qu.transform_query(self.session_memory)
         retrieval_items = self.retrieval.text_to_item_retrieval(retrieval_input, topk=self.retrieval_topk)
         recommend_item = self.item_db.id_to_metadata(retrieval_items[0])
         # stage2. response generation
@@ -158,8 +162,7 @@ class CRS_BASELINE:
             session_memory.append({"role": "user", "content": user_query})
 
             sys_prompts.append(self._get_system_prompt(user_id))
-            retrieval_input = "\n".join([f"{conversation['role']}: {conversation['content']}" for conversation in session_memory])
-            retrieval_inputs.append(retrieval_input)
+            retrieval_inputs.append(self.qu.transform_query(session_memory))
             session_memories.append(session_memory)
 
         # Stage 1: Batch retrieval

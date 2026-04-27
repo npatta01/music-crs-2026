@@ -28,7 +28,8 @@ class BERT_MODEL:
         model_name: str = "bert-base-uncased",
         device: str | None = None,
         batch_size: int = 32,
-        max_length: int = 128
+        max_length: int = 128,
+        formatter=None,
     ) -> None:
         """Initialize the BERT retriever.
         Args:
@@ -40,11 +41,14 @@ class BERT_MODEL:
             device: Torch device string. If None, chooses CUDA if available else CPU.
             batch_size: Batch size for embedding computation when building index.
             max_length: Max sequence length for tokenization.
+            formatter: CorpusFormatter instance; defaults to DefaultFormatter.
         """
+        from mcrs.corpus_formatters import load_corpus_formatter
         self.dataset_name = dataset_name
         self.split_types = split_types
         self.corpus_types = corpus_types
-        self.corpus_name = "_".join(corpus_types)
+        self.formatter = formatter if formatter is not None else load_corpus_formatter("default")
+        self.corpus_name = f"{self.formatter.name}_{'_'.join(corpus_types)}"
         self.cache_dir = cache_dir
         self.index_dir = os.path.join(self.cache_dir, "bert", self.corpus_name)
         self.model_name = model_name
@@ -86,21 +90,6 @@ class BERT_MODEL:
         metadata_dict = {item["track_id"]: item for item in metadata_concat_dataset}
         return metadata_dict
 
-    def _stringify_metadata(self, metadata: Dict[str, object]) -> str:
-        """Convert a metadata dict into a multi-line string for indexing.
-        Args:
-            metadata: Track metadata with fields listed in `self.corpus_types`.
-        Returns:
-            A newline-separated string with `field: value` per selected field.
-        """
-        metadata_str = ""
-        for corpus_type in self.corpus_types:
-            entity = metadata[corpus_type]
-            if isinstance(entity, list):
-                entity = ", ".join(entity)
-            metadata_str += f"{corpus_type}: {entity}\n"
-        return metadata_str
-
     def _mean_pool(self, last_hidden_states: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         """Mean-pool token embeddings with attention mask.
         Args:
@@ -120,7 +109,7 @@ class BERT_MODEL:
         corpus_texts = []
         for track_id in track_ids:
             metadata = self.metadata_dict[track_id]
-            corpus_texts.append(self._stringify_metadata(metadata))
+            corpus_texts.append(self.formatter.format(metadata, self.corpus_types))
         os.makedirs(self.index_dir, exist_ok=True)
         embeddings: List[torch.Tensor] = []
         self.model.eval()

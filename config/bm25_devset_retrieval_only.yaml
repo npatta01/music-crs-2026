@@ -1,5 +1,5 @@
-lm_type: "meta-llama/Llama-3.2-1B-Instruct"
-retrieval_type: "bert"
+lm_type: "dummy"
+retrieval_type: "bm25"
 qu_type: "passthrough"
 test_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Dataset"
 item_db_name: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
@@ -14,6 +14,6 @@ corpus_types:
   - "album_name"
   - "release_date"
 cache_dir: "./cache"
-device: "cuda"
-attn_implementation: "sdpa"
+device: "cpu"
+attn_implementation: "eager"
 retrieval_topk: 1000
