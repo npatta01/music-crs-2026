@@ -102,6 +102,10 @@ class Gemma4TextAdapter:
         return [self.processor.decode(tokens, skip_special_tokens=True) for tokens in generated]
 
 
+def _proxy_model_name(model_name: str) -> str:
+    return model_name if "/" in model_name else f"openai/{model_name}"
+
+
 class LiteLLMTextAdapter:
     def __init__(
         self,
@@ -111,7 +115,7 @@ class LiteLLMTextAdapter:
         temperature: float = 0.0,
         **_unused,
     ):
-        self.model_name = model_name
+        self.model_name = _proxy_model_name(model_name)
         self.api_base = api_base or os.environ.get("LITELLM_PROXY_BASE", "http://localhost:4000")
         self.api_key = api_key or os.environ.get("LITELLM_PROXY_KEY", "sk-anything")
         self.temperature = temperature

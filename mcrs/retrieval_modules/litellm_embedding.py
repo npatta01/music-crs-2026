@@ -13,6 +13,10 @@ from datasets import concatenate_datasets, load_dataset
 from tqdm.auto import tqdm
 
 
+def _proxy_model_name(model_name: str) -> str:
+    return model_name if "/" in model_name else f"openai/{model_name}"
+
+
 def _sanitize_model_name(model_name: str) -> str:
     sanitized = model_name.replace("/", "__")
     return re.sub(r"[^A-Za-z0-9._-]+", "-", sanitized)
@@ -44,7 +48,7 @@ class LITELLM_EMBEDDING_MODEL:
         self.split_types = list(split_types)
         self.corpus_types = list(corpus_types)
         self.cache_dir = cache_dir
-        self.model_name = model_name
+        self.model_name = _proxy_model_name(model_name)
         self.api_base = api_base or os.environ.get("LITELLM_PROXY_BASE", "http://localhost:4000")
         self.api_key = api_key or os.environ.get("LITELLM_PROXY_KEY", "sk-anything")
         self.embedding_query_prefix = embedding_query_prefix
