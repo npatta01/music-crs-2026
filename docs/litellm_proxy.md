@@ -45,7 +45,7 @@ running through the local HF path — those slugs are not on OpenRouter.
 | `llama-3.3-70b-instruct` | `meta-llama/llama-3.3-70b-instruct` |
 | `gemma-3n-e4b-it` | `google/gemma-3n-e4b-it` |
 | `gemma-3-4b-it` | `google/gemma-3-4b-it` |
-| `qwen3-8b` | `qwen/qwen3-8b` |
+| `qwen3.5-9b` | `qwen/qwen3.5-9b` |
 | `qwen3-30b-a3b-instruct` | `qwen/qwen3-30b-a3b-instruct-2507` |
 | `qwen3-235b-a22b` | `qwen/qwen3-235b-a22b-2507` |
 | `gpt-oss-20b` | `openai/gpt-oss-20b` |
@@ -55,7 +55,7 @@ running through the local HF path — those slugs are not on OpenRouter.
 ## 4. End-to-end example
 
 `config/litellm_qwen3_8b_rewrite_emb3small_devset.yaml` runs litellm rewrite
-(`qwen3-8b`) plus litellm embeddings (`text-embedding-3-small`) together:
+(`qwen3.5-9b`) plus litellm embeddings (`text-embedding-3-small`) together:
 
 ```bash
 ./scripts/litellm-proxy &

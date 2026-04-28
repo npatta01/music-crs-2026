@@ -3,7 +3,7 @@ retrieval_type: "litellm_embedding"
 qu_type: "llm_rewrite"
 qu_kwargs:
   backend: "litellm"
-  model_name: "qwen3-8b"
+  model_name: "qwen3.5-9b"
   api_base: "http://localhost:4000"
   api_key: "sk-anything"
   prompt_name: "preserve_entities_v1"
