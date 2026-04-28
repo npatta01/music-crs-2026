@@ -74,6 +74,56 @@ Next step:
 Status:
 - Done
 
+## 2026-04-28 - Sparse/dense complementarity and hybrid simulation
+
+Question:
+Are the best sparse and dense retrieval runs complementary enough to justify a hybrid stack?
+
+Inputs:
+- `bm25_devset_retrieval_only_with_tag_list` (best sparse retrieval-only run)
+- `dense_qwen3_embedding_8b_devset` (best dense retrieval-only run)
+- Offline analysis from `notebooks/retrieval_analysis.ipynb` over `evaluator/exp/inference/devset/*.json`
+
+Key metrics:
+- Sparse baseline: `bm25_devset_retrieval_only_with_tag_list`
+  - `NDCG@20 0.0970`
+  - `Hit@20 0.2640`
+  - `Hit@1000 0.6311`
+- Dense baseline: `dense_qwen3_embedding_8b_devset`
+  - `NDCG@20 0.1025`
+  - `Hit@20 0.2653`
+  - `Hit@1000 0.6934`
+- Offline RRF hybrid (`k=60`) over the two ranked lists
+  - `NDCG@20 0.1072`
+  - `Hit@20 0.2828`
+  - `Hit@1000 0.7210`
+
+Complementarity breakdown at top-1000 across 8,000 dev turns:
+- Both hit: `4401` (`55.0%`)
+- Both miss: `1805` (`22.6%`)
+- Dense-only hits: `1146` (`14.3%`)
+- Sparse-only hits: `648` (`8.1%`)
+- Union hit count: `6195` (`77.4%`)
+
+Takeaways:
+- The dense Qwen 8B retriever is the stronger single system, but the sparse BM25 run still contributes substantial unique coverage.
+- BM25 recovers `648` gold tracks in the top-1000 that dense misses entirely, which is too much complementary signal to ignore.
+- The reverse gap is larger (`1146` dense-only hits), so any hybrid should treat dense as the stronger base and sparse as additive support rather than equal peers.
+- Simple rank fusion already improves over both standalone runs: `+0.0046 NDCG@20` over dense, `+0.0102 NDCG@20` over sparse, and `+0.0276 Hit@1000` over dense.
+- This is strong evidence that the next retrieval wave should include a hybrid sparse+dense candidate or a learned reranker over the union pool.
+
+Linked reports:
+- `experiments/bm25_devset_retrieval_only_with_tag_list.md`
+- `experiments/dense_qwen3_embedding_8b_devset.md`
+- `experiments/retrieval_analysis_findings_2026-04-28.md`
+- `notebooks/retrieval_analysis.ipynb`
+
+Next step:
+- Build a first hybrid retrieval wave using the dense Qwen 8B run as the primary branch and BM25-with-tags as the complementary branch, starting with offline fusion baselines and then a reranker over the union candidate set.
+
+Status:
+- Done
+
 ## 2026-04-27 - LLM rewrite wave 3
 
 Question:
