@@ -1,0 +1,33 @@
+lm_type: "dummy"
+retrieval_type: "litellm_embedding"
+qu_type: "llm_rewrite"
+qu_kwargs:
+  backend: "litellm"
+  model_name: "qwen3-8b"
+  api_base: "http://0.0.0.0:4000"
+  api_key: "sk-anything"
+  prompt_name: "preserve_entities_v1"
+  max_new_tokens: 96
+  audit_path: "./exp/inference/devset/<tid>_rewrite_audit.jsonl"
+  stats_path: "./exp/inference/devset/<tid>_rewrite_stats.json"
+test_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Dataset"
+item_db_name: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
+user_db_name: "talkpl-ai/TalkPlayData-Challenge-User-Metadata"
+track_split_types:
+  - "all_tracks"
+user_split_types:
+  - "all_users"
+corpus_types:
+  - "track_name"
+  - "artist_name"
+  - "album_name"
+  - "tag_list"
+cache_dir: "./cache"
+device: "cpu"
+attn_implementation: "eager"
+retrieval_topk: 1000
+retrieval_config:
+  model_name: "text-embedding-3-small"
+  api_base: "http://0.0.0.0:4000"
+  api_key: "sk-anything"
+  batch_size: 64

@@ -102,7 +102,57 @@ class Gemma4TextAdapter:
         return [self.processor.decode(tokens, skip_special_tokens=True) for tokens in generated]
 
 
-def build_model_adapter(model_name: str, device: str, attn_implementation: str, dtype):
+class LiteLLMTextAdapter:
+    def __init__(
+        self,
+        model_name: str,
+        api_base: str | None = None,
+        api_key: str | None = None,
+        temperature: float = 0.0,
+        **_unused,
+    ):
+        self.model_name = model_name
+        self.api_base = api_base or os.environ.get("LITELLM_PROXY_BASE", "http://0.0.0.0:4000")
+        self.api_key = api_key or os.environ.get("LITELLM_PROXY_KEY", "sk-anything")
+        self.temperature = temperature
+
+    def generate_batch(self, messages_list: list[list[dict[str, str]]], max_new_tokens: int) -> list[str]:
+        import litellm
+
+        responses = litellm.batch_completion(
+            model=self.model_name,
+            messages=messages_list,
+            api_base=self.api_base,
+            api_key=self.api_key,
+            temperature=self.temperature,
+            max_tokens=int(max_new_tokens),
+        )
+        outputs: list[str] = []
+        for response in responses:
+            try:
+                outputs.append(response.choices[0].message.content or "")
+            except Exception:
+                outputs.append("")
+        return outputs
+
+
+def build_model_adapter(
+    model_name: str,
+    device: str,
+    attn_implementation: str,
+    dtype,
+    backend: str = "local",
+    api_base: str | None = None,
+    api_key: str | None = None,
+    temperature: float = 0.0,
+):
+    if backend == "litellm":
+        return LiteLLMTextAdapter(
+            model_name,
+            api_base=api_base,
+            api_key=api_key,
+            temperature=temperature,
+        )
     if model_name.startswith("google/gemma-4-"):
         return Gemma4TextAdapter(model_name, device, attn_implementation, dtype)
     return TextCausalAdapter(model_name, device, attn_implementation, dtype)

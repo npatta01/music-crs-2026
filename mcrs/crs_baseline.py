@@ -44,6 +44,7 @@ class CRS_BASELINE:
         retrieval_topk: int = 20,
         retrieval_config: dict | None = None,
         qu_kwargs: Optional[dict[str, Any]] = None,
+        lm_kwargs: Optional[dict[str, Any]] = None,
     ):
         """Initialize the CRS baseline components.
 
@@ -73,7 +74,14 @@ class CRS_BASELINE:
         self.retrieval_topk = retrieval_topk
         self.retrieval_config = retrieval_config or {}
         self.qu_kwargs = qu_kwargs or {}
-        self.lm = load_lm_module(self.lm_type, self.device, self.attn_implementation, self.dtype)
+        self.lm_kwargs = lm_kwargs or {}
+        self.lm = load_lm_module(
+            self.lm_type,
+            self.device,
+            self.attn_implementation,
+            self.dtype,
+            lm_kwargs=self.lm_kwargs,
+        )
         retrieval_config = dict(self.retrieval_config)
         retrieval_config.setdefault("device", self.device)
         self.retrieval = load_retrieval_module(

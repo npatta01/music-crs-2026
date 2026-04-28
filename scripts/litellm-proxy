@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+set -eu
+
+ENV_FILE="${ENV_FILE:-.env}"
+OVERRIDE_CONFIG="${LITELLM_PROXY_CONFIG:-}"
+OVERRIDE_HOST="${LITELLM_PROXY_HOST:-}"
+OVERRIDE_PORT="${LITELLM_PROXY_PORT:-}"
+
+if [ ! -f "$ENV_FILE" ]; then
+  echo "Missing $ENV_FILE. Add OPENROUTER_API_KEY to a local .env file." >&2
+  exit 1
+fi
+
+set -a
+. "$ENV_FILE"
+set +a
+
+CONFIG_FILE="${OVERRIDE_CONFIG:-${LITELLM_PROXY_CONFIG:-configs/litellm_proxy.openrouter.yaml}}"
+HOST="${OVERRIDE_HOST:-${LITELLM_PROXY_HOST:-0.0.0.0}}"
+PORT="${OVERRIDE_PORT:-${LITELLM_PROXY_PORT:-4000}}"
+
+exec uv tool run \
+  --python 3.12 \
+  --env-file "$ENV_FILE" \
+  --from "litellm[proxy,caching]" \
+  --with "uvloop>=0.21" \
+  litellm \
+  --config "$CONFIG_FILE" \
+  --host "$HOST" \
+  --port "$PORT" \
+  "$@"

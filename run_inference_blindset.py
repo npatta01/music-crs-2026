@@ -72,6 +72,7 @@ def main(args):
         dtype=getattr(torch, config.get("dtype", "bfloat16")),
         retrieval_topk=int(config.get("retrieval_topk", 20)),
         retrieval_config=_to_plain_dict(config.get("retrieval_config")),
+        lm_kwargs=_to_plain_dict(config.get("lm_kwargs")),
     )
     db = load_dataset(config.test_dataset_name, split="test")
     # Prepare all batch data at once
