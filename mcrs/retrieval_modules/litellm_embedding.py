@@ -1,5 +1,6 @@
 """LiteLLM-backed dense retrieval over track metadata."""
 
+import asyncio
 import hashlib
 import json
 import os
@@ -9,6 +10,7 @@ from typing import Dict, List, Tuple
 import torch
 import torch.nn.functional as F
 from datasets import concatenate_datasets, load_dataset
+from tqdm.auto import tqdm
 
 
 def _sanitize_model_name(model_name: str) -> str:
@@ -30,7 +32,8 @@ class LITELLM_EMBEDDING_MODEL:
         api_key: str | None = None,
         embedding_query_prefix: str = "",
         embedding_passage_prefix: str = "",
-        batch_size: int = 64,
+        batch_size: int = 128,
+        concurrency: int = 8,
         dimensions: int | None = None,
         formatter=None,
         **_unused,
@@ -47,6 +50,7 @@ class LITELLM_EMBEDDING_MODEL:
         self.embedding_query_prefix = embedding_query_prefix
         self.embedding_passage_prefix = embedding_passage_prefix
         self.batch_size = batch_size
+        self.concurrency = max(1, int(concurrency))
         self.dimensions = dimensions
         self.formatter = formatter if formatter is not None else load_corpus_formatter("default")
         self.corpus_name = f"{self.formatter.name}_{'_'.join(corpus_types)}"
@@ -106,9 +110,7 @@ class LITELLM_EMBEDDING_MODEL:
     def _render_query_text(self, query: str) -> str:
         return f"{self.embedding_query_prefix}{query}"
 
-    def _embed(self, texts: list[str]) -> torch.Tensor:
-        import litellm
-
+    def _embed_kwargs(self, texts: list[str]) -> dict:
         kwargs = {
             "model": self.model_name,
             "input": texts,
@@ -117,16 +119,45 @@ class LITELLM_EMBEDDING_MODEL:
         }
         if self.dimensions is not None:
             kwargs["dimensions"] = self.dimensions
-        response = litellm.embedding(**kwargs)
-        # response.data is a list of {"embedding": [...], "index": i}
+        return kwargs
+
+    @staticmethod
+    def _response_to_tensor(response) -> torch.Tensor:
         vectors = [item["embedding"] for item in response.data]
         tensor = torch.tensor(vectors, dtype=torch.float32)
         return F.normalize(tensor, p=2, dim=1)
 
+    def _embed(self, texts: list[str]) -> torch.Tensor:
+        import litellm
+
+        response = litellm.embedding(**self._embed_kwargs(texts))
+        return self._response_to_tensor(response)
+
+    async def _aembed_batches(self, batches: list[list[str]], desc: str) -> list[torch.Tensor]:
+        import litellm
+
+        semaphore = asyncio.Semaphore(self.concurrency)
+        progress = tqdm(total=len(batches), desc=desc)
+
+        async def run(batch: list[str]) -> torch.Tensor:
+            async with semaphore:
+                response = await litellm.aembedding(**self._embed_kwargs(batch))
+                progress.update(1)
+                return self._response_to_tensor(response)
+
+        try:
+            return await asyncio.gather(*(run(batch) for batch in batches))
+        finally:
+            progress.close()
+
     def _embed_in_batches(self, texts: list[str]) -> torch.Tensor:
-        chunks: list[torch.Tensor] = []
-        for start in range(0, len(texts), self.batch_size):
-            chunks.append(self._embed(texts[start : start + self.batch_size]))
+        if not texts:
+            return torch.empty(0)
+        batches = [texts[i : i + self.batch_size] for i in range(0, len(texts), self.batch_size)]
+        if len(batches) == 1:
+            return self._embed(batches[0]).contiguous()
+        desc = f"Embedding ({self.model_name}, {len(batches)} batches × {self.batch_size}, conc={self.concurrency})"
+        chunks = asyncio.run(self._aembed_batches(batches, desc))
         return torch.cat(chunks, dim=0).contiguous()
 
     def build_index(self) -> None:

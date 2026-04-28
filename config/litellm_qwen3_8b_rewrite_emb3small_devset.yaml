@@ -30,4 +30,5 @@ retrieval_config:
   model_name: "text-embedding-3-small"
   api_base: "http://localhost:4000"
   api_key: "sk-anything"
-  batch_size: 64
+  batch_size: 128
+  concurrency: 8
