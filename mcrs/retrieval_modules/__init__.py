@@ -39,5 +39,17 @@ def load_retrieval_module(
             formatter=formatter,
             **retrieval_config,
         )
+    elif retrieval_type == "litellm_embedding":
+        from .litellm_embedding import LITELLM_EMBEDDING_MODEL
+        config = dict(retrieval_config)
+        config.pop("device", None)
+        return LITELLM_EMBEDDING_MODEL(
+            dataset_name=dataset_name,
+            split_types=track_split_types,
+            corpus_types=corpus_types,
+            cache_dir=cache_dir,
+            formatter=formatter,
+            **config,
+        )
     else:
         raise ValueError(f"Unsupported retrieval type: {retrieval_type}")

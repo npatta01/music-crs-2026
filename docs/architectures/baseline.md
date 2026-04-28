@@ -176,6 +176,12 @@ qu_kwargs:
 
 **Devset NDCG@10: 0.0048**
 
+### LiteLLM embedding (`mcrs/retrieval_modules/litellm_embedding.py`)
+
+Optional path that calls a hosted embedding model (OpenAI / OpenRouter) through
+a local LiteLLM proxy instead of running a transformer locally. See
+[../litellm_proxy.md](../litellm_proxy.md) for setup and the available models.
+
 ---
 
 ### LLM context string (Stage 2 input)

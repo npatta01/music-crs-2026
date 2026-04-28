@@ -29,6 +29,18 @@ def load_qu_module(
     elif qu_type == "no_music_history":
         return NoMusicHistoryQU()
     elif qu_type == "llm_rewrite":
+        from .llm_rewrite import build_model_adapter
+        backend = qu_kwargs.get("backend", "local")
+        adapter = build_model_adapter(
+            model_name=qu_kwargs["model_name"],
+            device=device,
+            attn_implementation=attn_implementation,
+            dtype=dtype,
+            backend=backend,
+            api_base=qu_kwargs.get("api_base"),
+            api_key=qu_kwargs.get("api_key"),
+            temperature=float(qu_kwargs.get("temperature", 0.0)),
+        )
         return LLMRewriteQU(
             model_name=qu_kwargs["model_name"],
             prompt_name=qu_kwargs["prompt_name"],
@@ -38,6 +50,7 @@ def load_qu_module(
             dtype=dtype,
             audit_path=qu_kwargs.get("audit_path"),
             stats_path=qu_kwargs.get("stats_path"),
+            adapter=adapter,
         )
     else:
         raise ValueError(f"Unsupported QU type: {qu_type}")
