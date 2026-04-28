@@ -37,7 +37,7 @@ class LITELLM_LM:
         **_unused,
     ):
         self.model_name = model_name
-        self.api_base = api_base or os.environ.get("LITELLM_PROXY_BASE", "http://0.0.0.0:4000")
+        self.api_base = api_base or os.environ.get("LITELLM_PROXY_BASE", "http://localhost:4000")
         self.api_key = api_key or os.environ.get("LITELLM_PROXY_KEY", "sk-anything")
         self.temperature = temperature
         self.max_tokens = max_tokens

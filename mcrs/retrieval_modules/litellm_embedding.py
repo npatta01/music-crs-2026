@@ -42,7 +42,7 @@ class LITELLM_EMBEDDING_MODEL:
         self.corpus_types = list(corpus_types)
         self.cache_dir = cache_dir
         self.model_name = model_name
-        self.api_base = api_base or os.environ.get("LITELLM_PROXY_BASE", "http://0.0.0.0:4000")
+        self.api_base = api_base or os.environ.get("LITELLM_PROXY_BASE", "http://localhost:4000")
         self.api_key = api_key or os.environ.get("LITELLM_PROXY_KEY", "sk-anything")
         self.embedding_query_prefix = embedding_query_prefix
         self.embedding_passage_prefix = embedding_passage_prefix
