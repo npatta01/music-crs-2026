@@ -1,57 +1,57 @@
 model_list:
   # ===== Rewrite + response generation via OpenRouter =====
-  - model_name: llama-3.2-1b-instruct
+  - model_name: openai/llama-3.2-1b-instruct
     litellm_params:
       model: openrouter/meta-llama/llama-3.2-1b-instruct
       api_key: os.environ/OPENROUTER_API_KEY
 
-  - model_name: llama-3.2-3b-instruct
+  - model_name: openai/llama-3.2-3b-instruct
     litellm_params:
       model: openrouter/meta-llama/llama-3.2-3b-instruct
       api_key: os.environ/OPENROUTER_API_KEY
 
-  - model_name: llama-3.3-70b-instruct
+  - model_name: openai/llama-3.3-70b-instruct
     litellm_params:
       model: openrouter/meta-llama/llama-3.3-70b-instruct
       api_key: os.environ/OPENROUTER_API_KEY
 
-  - model_name: gemma-3n-e4b-it
+  - model_name: openai/gemma-3n-e4b-it
     litellm_params:
       model: openrouter/google/gemma-3n-e4b-it
       api_key: os.environ/OPENROUTER_API_KEY
 
-  - model_name: gemma-3-4b-it
+  - model_name: openai/gemma-3-4b-it
     litellm_params:
       model: openrouter/google/gemma-3-4b-it
       api_key: os.environ/OPENROUTER_API_KEY
 
-  - model_name: qwen3.5-9b
+  - model_name: openai/qwen3.5-9b
     litellm_params:
       model: openrouter/qwen/qwen3.5-9b
       api_key: os.environ/OPENROUTER_API_KEY
 
-  - model_name: qwen3-30b-a3b-instruct
+  - model_name: openai/qwen3-30b-a3b-instruct
     litellm_params:
       model: openrouter/qwen/qwen3-30b-a3b-instruct-2507
       api_key: os.environ/OPENROUTER_API_KEY
 
-  - model_name: qwen3-235b-a22b
+  - model_name: openai/qwen3-235b-a22b
     litellm_params:
       model: openrouter/qwen/qwen3-235b-a22b-2507
       api_key: os.environ/OPENROUTER_API_KEY
 
-  - model_name: gpt-oss-20b
+  - model_name: openai/gpt-oss-20b
     litellm_params:
       model: openrouter/openai/gpt-oss-20b
       api_key: os.environ/OPENROUTER_API_KEY
 
   # ===== Embeddings via OpenRouter =====
-  - model_name: text-embedding-3-small
+  - model_name: openai/text-embedding-3-small
     litellm_params:
       model: openrouter/openai/text-embedding-3-small
       api_key: os.environ/OPENROUTER_API_KEY
 
-  - model_name: text-embedding-3-large
+  - model_name: openai/text-embedding-3-large
     litellm_params:
       model: openrouter/openai/text-embedding-3-large
       api_key: os.environ/OPENROUTER_API_KEY

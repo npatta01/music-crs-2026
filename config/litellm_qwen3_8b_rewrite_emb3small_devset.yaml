@@ -3,7 +3,7 @@ retrieval_type: "litellm_embedding"
 qu_type: "llm_rewrite"
 qu_kwargs:
   backend: "litellm"
-  model_name: "qwen3.5-9b"
+  model_name: "openai/qwen3.5-9b"
   api_base: "http://localhost:4000"
   api_key: "sk-anything"
   prompt_name: "preserve_entities_v1"
@@ -27,7 +27,7 @@ device: "cpu"
 attn_implementation: "eager"
 retrieval_topk: 1000
 retrieval_config:
-  model_name: "text-embedding-3-small"
+  model_name: "openai/text-embedding-3-small"
   api_base: "http://localhost:4000"
   api_key: "sk-anything"
   batch_size: 128

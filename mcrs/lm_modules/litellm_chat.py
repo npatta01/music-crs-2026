@@ -26,10 +26,6 @@ def _build_messages(sys_prompt: str, chat_history: list, recommend_item: Any) ->
     return messages
 
 
-def _proxy_model_name(model_name: str) -> str:
-    return model_name if "/" in model_name else f"openai/{model_name}"
-
-
 class LITELLM_LM:
     def __init__(
         self,
@@ -40,7 +36,7 @@ class LITELLM_LM:
         max_tokens: int = 512,
         **_unused,
     ):
-        self.model_name = _proxy_model_name(model_name)
+        self.model_name = model_name
         self.api_base = api_base or os.environ.get("LITELLM_PROXY_BASE", "http://localhost:4000")
         self.api_key = api_key or os.environ.get("LITELLM_PROXY_KEY", "sk-anything")
         self.temperature = temperature
