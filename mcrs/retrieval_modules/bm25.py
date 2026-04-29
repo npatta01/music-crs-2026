@@ -9,7 +9,10 @@ import json
 import bm25s
 from datasets import load_dataset, concatenate_datasets
 
+from mcrs.retrieval_modules.base import register_retriever
 
+
+@register_retriever("bm25")
 class BM25_MODEL:
     """BM25 retriever over track metadata.
     Builds an index from specified corpus fields (e.g., `track_name`, `artist_name`,`album_name`) and provides text-to-item retrieval.
@@ -20,6 +23,7 @@ class BM25_MODEL:
         corpus_types: list[str],
         cache_dir: str = "./cache",
         formatter=None,
+        **_unused,
     ) -> None:
         """Initialize the BM25 retriever.
         Args:
