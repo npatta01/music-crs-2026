@@ -1,22 +1,45 @@
 # Experiment Index
 
-Quick index for experiment reports in [`experiments/`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments) and the cross-run summaries in [`docs/experiment_log.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/docs/experiment_log.md).
+Use this directory as the main navigation surface for experiment runs, analysis packages, and cross-run status.
+
+## Start Here
+
+- Main status index: [README.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/README.md)
+- Cross-run log: [experiment_log.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md)
+- Analysis index: [analysis/README.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/README.md)
+- Local agent guidance: [CLAUDE.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/CLAUDE.md)
+- Offline retrieval notebook: [notebooks/retrieval_analysis.ipynb](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/notebooks/retrieval_analysis.ipynb)
+
+## Status Vocabulary
+
+- `planned`: scoped next step, not started
+- `running`: experiment execution or labeling in progress
+- `analyzed`: results exist and have a written analysis, but follow-up work remains open
+- `done`: wave or analysis is complete for now
+- `superseded`: kept for history, but replaced by a better follow-up
 
 ## Current Bests
 
-| Category | Run | Key result | Report |
-|---|---|---:|---|
-| Best sparse retrieval-only | `bm25_devset_retrieval_only_with_tag_list` | `NDCG@20 0.0970` | [bm25_devset_retrieval_only_with_tag_list.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/bm25_devset_retrieval_only_with_tag_list.md) |
-| Best dense retrieval-only | `dense_qwen3_embedding_8b_devset` | `NDCG@20 0.1025` | [dense_qwen3_embedding_8b_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/dense_qwen3_embedding_8b_devset.md) |
-| Best generative baseline | `llama1b_bm25_devset` | `NDCG@20 0.0815` | [llama1b_bm25_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/llama1b_bm25_devset.md) |
-| Best rewrite wave result | `bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset` | `NDCG@20 0.1092` | [bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset.md) |
-| Best offline hybrid so far | `RRF(bm25_with_tags, dense_qwen3_8b)` | `NDCG@20 0.1072` | [retrieval_analysis_findings_2026-04-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/retrieval_analysis_findings_2026-04-28.md) |
+| Category | Run | Key result | Status | Report |
+|---|---|---:|---|---|
+| Best sparse retrieval-only | `bm25_devset_retrieval_only_with_tag_list` | `NDCG@20 0.0970` | `done` | [bm25_devset_retrieval_only_with_tag_list.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/bm25_devset_retrieval_only_with_tag_list.md) |
+| Best dense retrieval-only | `dense_qwen3_embedding_8b_devset` | `NDCG@20 0.1025` | `done` | [dense_qwen3_embedding_8b_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/dense_qwen3_embedding_8b_devset.md) |
+| Best generative baseline | `llama1b_bm25_devset` | `NDCG@20 0.0815` | `done` | [llama1b_bm25_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/llama1b_bm25_devset.md) |
+| Best rewrite wave result | `bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset` | `NDCG@20 0.1092` | `done` | [bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset.md) |
+| Best offline hybrid so far | `RRF(bm25_with_tags, dense_qwen3_8b)` | `NDCG@20 0.1072` | `analyzed` | [retrieval_analysis_findings_2026-04-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/retrieval_analysis_findings_2026-04-28.md) |
 
-## Analysis Utilities
+## Current Active Work
 
-- Cross-run summary: [docs/experiment_log.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/docs/experiment_log.md)
-- Offline retrieval comparison notebook: [notebooks/retrieval_analysis.ipynb](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/notebooks/retrieval_analysis.ipynb)
-- Complementarity / hybrid findings note: [retrieval_analysis_findings_2026-04-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/retrieval_analysis_findings_2026-04-28.md)
+| Workstream | Status | Where to read |
+|---|---|---|
+| Hybrid sparse+dense retrieval follow-up | `planned` | [experiment_log.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md) |
+| Conversation-aware query representation direction | `analyzed` | [analysis/query_intent_v1/README.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/query_intent_v1/README.md) |
+
+## Analysis
+
+- [analysis/README.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/README.md) tracks packaged analysis work and linked artifacts.
+- [query_intent_v1](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/query_intent_v1/README.md) is the current conversation-intent analysis package with labeling artifacts and retrieval implications.
+- [retrieval_analysis_findings_2026-04-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/retrieval_analysis_findings_2026-04-28.md) is a top-level experiment note because it summarizes cross-run hybrid diagnostics rather than a self-contained artifact package.
 
 ## Waves
 
@@ -70,16 +93,10 @@ Quick index for experiment reports in [`experiments/`](/Users/npatta01/data/proj
 - [dense_qwen3_embedding_4b_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/dense_qwen3_embedding_4b_devset.md)
 - [dense_qwen3_embedding_8b_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/dense_qwen3_embedding_8b_devset.md)
 
-### Retrieval Analysis and Hybrid Diagnostics
-
-- [retrieval_analysis_findings_2026-04-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/retrieval_analysis_findings_2026-04-28.md)
-
 ## Conventions
 
 - One per-run report per file: `experiments/{tid}.md`
-- Cross-run conclusions go in [docs/experiment_log.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/docs/experiment_log.md)
-- Retrieval comparison and hybrid analysis belongs in [notebooks/retrieval_analysis.ipynb](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/notebooks/retrieval_analysis.ipynb)
-
-## Recommended Next Cleanup
-
-- Add a short metadata block to each experiment report with `wave`, `family`, and `status` so this index can eventually be generated automatically.
+- Cross-run conclusions go in [experiment_log.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md)
+- Packaged analyses live at `experiments/analysis/<analysis_name>/README.md`
+- Analysis artifacts live beside their analysis README in a local artifact subdirectory
+- Retrieval comparison and hybrid notebook work belongs in [notebooks/retrieval_analysis.ipynb](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/notebooks/retrieval_analysis.ipynb)

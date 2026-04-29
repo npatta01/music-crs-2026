@@ -1,14 +1,17 @@
 # Query Intent Analysis v1
 
-Issue 45 notebook-first analysis over the `test` split using full-conversation session labeling with `openai/gpt-5.5` through the local LiteLLM proxy.
+Notebook-first analysis over the `test` split using full-conversation session labeling with `openai/gpt-5.5` through the local LiteLLM proxy.
+
+Status: `analyzed`
 
 ## Coverage
 
 - Target sessions: `1000`
 - Successful labels: `999`
 - Skipped failures: `1`
-- Successful label file: `experiments/analysis/issue_45/full_labels_openai_gpt_5.5_1000.jsonl`
-- Failure log: `experiments/analysis/issue_45/full_labels_openai_gpt_5.5_1000_failures.jsonl`
+- Successful label file: `experiments/analysis/query_intent_v1/artifacts/full_labels_openai_gpt_5.5_1000.jsonl`
+- Failure log: `experiments/analysis/query_intent_v1/artifacts/full_labels_openai_gpt_5.5_1000_failures.jsonl`
+- Pilot label file: `experiments/analysis/query_intent_v1/artifacts/pilot_labels_openai_gpt_5.5_10.jsonl`
 
 The single skipped session (`a66c093c-76f5-4e8d-bd78-fe01bd9821f4`) returned reasoning-only output without a final JSON object after retry.
 
