@@ -44,3 +44,9 @@ See `tips/` for directions: better item representations, reranker modules, gener
 
 - `download-artifacts` — sync Modal prediction artifacts, rewrite traces, scores, and ground-truth files into `evaluator/exp` using `python modal/download_results.py`
 - `run-experiment` — run a Modal experiment end-to-end, download results locally, and evaluate devset runs
+
+## Experiments Workspace
+
+- Use [`experiments/README.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/README.md) as the main index for experiment reports, analysis packages, current bests, and status.
+- Use [`experiments/experiment_log.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md) for cross-run takeaways, decisions, and next steps.
+- If working inside `experiments/`, read the local [`experiments/CLAUDE.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/CLAUDE.md) and follow its conventions for report naming, analysis packaging, and status updates.
