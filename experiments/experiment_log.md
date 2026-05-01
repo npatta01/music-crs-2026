@@ -286,3 +286,46 @@ Next step:
 
 Status:
 - Done
+
+## 2026-04-28 - Precomputed track-embedding retrieval wave 5
+
+Question:
+Can the precomputed embedding spaces from `talkpl-ai/TalkPlayData-Challenge-Track-Embeddings` improve over Wave 4 dense text retrieval without re-encoding tracks?
+
+Controls:
+- `bm25_devset_retrieval_only_with_tag_list`: `NDCG@20 0.0970`, `Hit@20 0.2640`, `Hit@1000 0.6311`
+- `bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset`: `NDCG@20 0.1092`, `Hit@20 0.2617`, `Hit@1000 0.5561`
+- `dense_qwen3_embedding_8b_devset`: `NDCG@20 0.1025`, `Hit@20 0.2652`, `Hit@1000 0.6934`
+
+Runs (devset, `lm_type=dummy`, `retrieval_topk=1000`, query encoder = `Qwen/Qwen3-Embedding-0.6B`):
+- [x] `dense_precomputed_metadata_qwen3_06b_devset` — `NDCG@20 0.0665`, `Hit@20 0.1580`, `Hit@1000 0.4060`
+- [x] `dense_precomputed_attributes_qwen3_06b_devset` — `NDCG@20 0.0317`, `Hit@20 0.0723`, `Hit@1000 0.3915`
+- [x] `dense_precomputed_lyrics_qwen3_06b_devset` — `NDCG@20 0.0179`, `Hit@20 0.0369`, `Hit@1000 0.1944`
+
+Deferred (require checkpoint calibration — mean cosine > 0.8 against 200 sample tracks):
+- `dense_precomputed_audio_laion_clap_devset` — `audio-laion_clap` column (dim 512)
+- `dense_precomputed_image_siglip2_devset` — `image-siglip2` column (dim 768)
+- `cf-bpr` column — no public text encoder, skip
+
+Takeaways:
+- All three precomputed embedding runs substantially underperform the Wave 4 dense controls. The best result (`metadata`) reaches `NDCG@20 0.0665` vs the Wave 4 Qwen3-0.6B recomputed baseline of ~0.0857 (not shown here but implied by the 8B result of 0.1025 dominating). This is a 2× gap in `Hit@20` (0.158 vs 0.265) and in `Hit@1000` (0.406 vs 0.693).
+- The gap is likely a **query/document mismatch**: the precomputed metadata embeddings were produced from structured track metadata text, while the query is the raw conversational context. Wave 4's `DENSE_TRANSFORMER_MODEL` encodes both sides with the same model on the same text distribution; the precomputed embeddings have a different document representation.
+- The per-turn trend for metadata shows a steep drop across turns (Turn 1: `NDCG@20 0.130` → Turn 8: `0.037`), much steeper than Wave 4 runs, suggesting the precomputed embeddings capture first-mention signals well but cannot track the evolving conversation.
+- Attributes and lyrics embeddings are weak standalone signals for conversational query matching — attributes `NDCG@20 0.032`, lyrics `NDCG@20 0.018`. These may still add value in a hybrid or late-fusion stack, but they cannot replace metadata-based retrieval.
+- Precomputed embeddings could be more competitive if the query is also pre-processed to match the document representation (e.g., extract music entity names before embedding). Worth revisiting in a later wave with an entity-aware query encoder.
+
+Linked reports:
+- `experiments/dense_precomputed_metadata_qwen3_06b_devset.md`
+- `experiments/dense_precomputed_attributes_qwen3_06b_devset.md`
+- `experiments/dense_precomputed_lyrics_qwen3_06b_devset.md`
+
+Implementation notes:
+- New `PRECOMPUTED_EMBEDDING_MODEL` retriever in `mcrs/retrieval_modules/precomputed_embedding.py`; inherits query encoding from `DENSE_TRANSFORMER_MODEL`, overrides `build_index()` to load from HF dataset column
+- Registry pattern added (`mcrs/retrieval_modules/base.py`) — new retrievers only need a file + decorator, no `__init__.py` changes
+
+Next step:
+- Before running audio/image, perform checkpoint calibration (encode 200 tracks with candidate text towers and verify mean cosine > 0.8 against precomputed vectors).
+- Consider an entity-extraction QU step before precomputed-embedding retrieval to close the query/document distribution gap.
+
+Status:
+- Done

@@ -12,6 +12,8 @@ import torch.nn.functional as F
 from datasets import concatenate_datasets, load_dataset
 from tqdm.auto import tqdm
 
+from mcrs.retrieval_modules.base import register_retriever
+
 
 def _proxy_model_name(model_name: str) -> str:
     return model_name if "/" in model_name else f"openai/{model_name}"
@@ -22,6 +24,7 @@ def _sanitize_model_name(model_name: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", sanitized)
 
 
+@register_retriever("litellm_embedding")
 class LITELLM_EMBEDDING_MODEL:
     """Dense retriever that calls embeddings via LiteLLM (OpenAI-compatible)."""
 

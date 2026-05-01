@@ -93,6 +93,12 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 - [dense_qwen3_embedding_4b_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/dense_qwen3_embedding_4b_devset.md)
 - [dense_qwen3_embedding_8b_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/dense_qwen3_embedding_8b_devset.md)
 
+### Wave 5: Precomputed Track-Embedding Retrieval
+
+- [dense_precomputed_metadata_qwen3_06b_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/dense_precomputed_metadata_qwen3_06b_devset.md)
+- [dense_precomputed_attributes_qwen3_06b_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/dense_precomputed_attributes_qwen3_06b_devset.md)
+- [dense_precomputed_lyrics_qwen3_06b_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/dense_precomputed_lyrics_qwen3_06b_devset.md)
+
 ## Conventions
 
 - One per-run report per file: `experiments/{tid}.md`

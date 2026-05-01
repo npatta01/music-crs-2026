@@ -11,6 +11,8 @@ import torch.nn.functional as F
 from datasets import concatenate_datasets, load_dataset
 from transformers import AutoModel, AutoTokenizer
 
+from mcrs.retrieval_modules.base import register_retriever
+
 
 def _resolve_torch_dtype(torch_dtype):
     if torch_dtype is None:
@@ -39,6 +41,7 @@ def _sanitize_model_name(model_name: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", sanitized)
 
 
+@register_retriever("dense_transformer")
 class DENSE_TRANSFORMER_MODEL:
     """Configurable dense retriever over track metadata."""
 
@@ -244,6 +247,7 @@ class DENSE_TRANSFORMER_MODEL:
         return results
 
 
+@register_retriever("bert")
 class BERT_MODEL(DENSE_TRANSFORMER_MODEL):
     """Backward-compatible alias for the original BERT dense retriever."""
 
