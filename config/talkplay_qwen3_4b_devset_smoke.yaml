@@ -1,0 +1,27 @@
+model_name: "Qwen/Qwen3-4B"
+device: "cpu"
+cache_dir: "./talkplay-tools/cache"
+test_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Dataset"
+track_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
+track_split: "all_tracks"
+track_embeddings_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Track-Embeddings"
+track_embeddings_split: "all_tracks"
+user_dataset_name: "talkpl-ai/TalkPlayData-Challenge-User-Metadata"
+user_split: "all_users"
+prediction_depth: 20
+user_mode: "cold_start"
+num_sessions: 10
+enabled_tools:
+  - "sql"
+  - "bm25"
+  - "text_to_item_similarity"
+embedding_enabled_retrievers:
+  - "text"
+embedding_enabled_corpora:
+  - "metadata"
+  - "attributes"
+  - "lyrics"
+tool_calling_max_new_tokens: 2048
+response_max_new_tokens: 256
+allow_prediction_backfill: false
+generate_response: false

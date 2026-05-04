@@ -12,6 +12,9 @@ Usage:
     # Smoke test (5 sessions)
     modal run modal/app.py::run_inference --num-sessions 5
 
+    # TalkPlay smoke test
+    modal run modal/app.py::run_talkplay_inference --tid talkplay_qwen3_4b_devset_smoke --num-sessions 10
+
     # Full devset
     modal run modal/app.py::run_inference --tid llama1b_bm25_devset --batch-size 64
 
@@ -22,9 +25,11 @@ Usage:
     modal run modal/app.py::run_evaluate --tid llama1b_bm25_devset
 """
 
+import json
 from pathlib import Path
 
 import modal
+from datasets import load_dataset
 from omegaconf import OmegaConf
 
 
@@ -69,6 +74,11 @@ results_vol = modal.Volume.from_name(RESULTS_VOLUME, create_if_missing=True)
 image = (
     modal.Image.debian_slim(python_version="3.12")
     .uv_sync(".")
+    .uv_pip_install(
+        "sqlparse>=0.5.3",
+        "polars>=1.8.2",
+        "vector-quantize-pytorch>=1.14.8",
+    )
     .add_local_dir(
         ".",
         "/app",
@@ -111,6 +121,85 @@ def _inference_devset(tid: str, batch_size: int, num_sessions: int, clear_cache:
         raise RuntimeError(f"Inference failed (exit {result.returncode})")
     results_vol.commit()
     print(f"Results saved to volume: inference/devset/{tid}.json")
+
+
+@app.function(
+    image=image,
+    gpu=INFERENCE_GPU,
+    volumes=_VOLUME_MOUNTS,
+    secrets=[ENV_SECRET],
+    timeout=21600,
+)
+def _inference_talkplay_devset(
+    tid: str,
+    batch_size: int,
+    num_sessions: int,
+    clear_cache: bool,
+    session_ids_json: str = "",
+    output_suffix: str = "",
+):
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    cmd = [
+        sys.executable, "/app/run_inference_talkplay_devset.py",
+        "--tid", tid,
+        "--batch_size", str(batch_size),
+        "--exp_dir", EXP_DIR,
+        "--device", "cuda",
+    ]
+    if session_ids_json:
+        session_ids_path = Path("/tmp") / f"{tid}_session_ids.json"
+        session_ids_path.write_text(
+            json.dumps({"session_ids": json.loads(session_ids_json)}),
+            encoding="utf-8",
+        )
+        cmd += ["--session_ids_file", str(session_ids_path)]
+    if output_suffix:
+        cmd += ["--output_suffix", output_suffix]
+    if num_sessions > 0:
+        cmd += ["--num_sessions", str(num_sessions)]
+    if clear_cache:
+        cmd += ["--clear_cache"]
+
+    result = subprocess.run(cmd, cwd="/app")
+    if result.returncode != 0:
+        raise RuntimeError(f"TalkPlay inference failed (exit {result.returncode})")
+    results_vol.commit()
+    print(f"Results saved to volume: inference/devset/{tid}.json")
+
+
+@app.function(
+    image=image,
+    volumes=_VOLUME_MOUNTS,
+    secrets=[ENV_SECRET],
+    timeout=3600,
+)
+def _merge_talkplay_devset_shards(tid: str, shard_suffixes: list[str]):
+    import json
+
+    output_dir = Path(EXP_DIR) / "inference" / "devset"
+    merged_predictions = []
+    merged_traces = []
+    for suffix in shard_suffixes:
+        shard_stem = f"{tid}.{suffix}"
+        prediction_path = output_dir / f"{shard_stem}.json"
+        trace_path = output_dir / f"{shard_stem}_trace.json"
+        with prediction_path.open("r", encoding="utf-8") as f:
+            merged_predictions.extend(json.load(f))
+        with trace_path.open("r", encoding="utf-8") as f:
+            merged_traces.extend(json.load(f))
+
+    merged_predictions.sort(key=lambda row: (row["session_id"], row["turn_number"]))
+    merged_traces.sort(key=lambda row: (row["session_id"], row["turn_number"]))
+
+    with (output_dir / f"{tid}.json").open("w", encoding="utf-8") as f:
+        json.dump(merged_predictions, f, ensure_ascii=False)
+    with (output_dir / f"{tid}_trace.json").open("w", encoding="utf-8") as f:
+        json.dump(merged_traces, f, ensure_ascii=False)
+    results_vol.commit()
+    print(f"Merged {len(shard_suffixes)} TalkPlay shards into inference/devset/{tid}.json")
 
 
 @app.function(
@@ -208,6 +297,69 @@ def run_inference_blindset(
 ):
     """Run blindset inference on the configured fast GPU fallback policy."""
     _inference_blindset.remote(tid=tid, batch_size=batch_size, eval_dataset=eval_dataset)
+
+
+@app.local_entrypoint()
+def run_talkplay_inference(
+    tid: str = "talkplay_qwen3_4b_devset_smoke",
+    batch_size: int = 1,
+    num_sessions: int = 10,
+    clear_cache: bool = False,
+):
+    """Run TalkPlay devset smoke inference on the configured GPU policy."""
+    _inference_talkplay_devset.remote(
+        tid=tid,
+        batch_size=batch_size,
+        num_sessions=num_sessions,
+        clear_cache=clear_cache,
+    )
+
+
+def _split_session_ids(session_ids: list[str], num_shards: int) -> list[list[str]]:
+    num_shards = max(1, min(num_shards, len(session_ids)))
+    shards = [[] for _ in range(num_shards)]
+    for idx, session_id in enumerate(session_ids):
+        shards[idx % num_shards].append(session_id)
+    return [shard for shard in shards if shard]
+
+
+@app.local_entrypoint()
+def run_talkplay_full_devset(
+    tid: str = "talkplay_qwen3_4b_devset_smoke",
+    num_shards: int = 40,
+):
+    """Run full TalkPlay devset inference in parallel shards, then merge outputs."""
+    config = OmegaConf.load(Path("config") / f"{tid}.yaml")
+    devset = load_dataset(config.test_dataset_name, split="test")
+    session_ids = [item["session_id"] for item in devset]
+    shards = _split_session_ids(session_ids, num_shards)
+    print(f"Launching {len(shards)} TalkPlay shards for {len(session_ids)} dev sessions.")
+
+    calls = []
+    shard_suffixes = []
+    for shard_idx, shard_session_ids in enumerate(shards):
+        shard_suffix = f"shard_{shard_idx:03d}"
+        shard_suffixes.append(shard_suffix)
+        print(
+            f"Starting shard {shard_idx + 1}/{len(shards)} with "
+            f"{len(shard_session_ids)} sessions."
+        )
+        calls.append(
+            _inference_talkplay_devset.spawn(
+                tid=tid,
+                batch_size=1,
+                num_sessions=0,
+                clear_cache=False,
+                session_ids_json=json.dumps(shard_session_ids),
+                output_suffix=shard_suffix,
+            )
+        )
+
+    for shard_idx, call in enumerate(calls):
+        print(f"Waiting for shard {shard_idx + 1}/{len(shards)}.")
+        call.get(timeout=21600)
+
+    _merge_talkplay_devset_shards.remote(tid=tid, shard_suffixes=shard_suffixes)
 
 
 @app.local_entrypoint()

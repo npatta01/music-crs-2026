@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ENV_FILE="${ENV_FILE:-.env}"
+TID="${TID:-talkplay_openrouter_qwen35_9b_devset_full}"
+NUM_SHARDS="${NUM_SHARDS:-8}"
+SAMPLE_SESSIONS="${SAMPLE_SESSIONS:-0}"
+SAMPLE_SEED="${SAMPLE_SEED:-0}"
+EXP_DIR="${EXP_DIR:-exp}"
+EXTRA_DEPS=(
+  --with "sqlparse>=0.5.3"
+  --with "polars>=1.8.2"
+  --with "vector-quantize-pytorch>=1.14.8"
+)
+
+usage() {
+  cat <<'EOF'
+Usage:
+  scripts/run-talkplay-openrouter-parallel [--tid TID] [--num-shards N] [--sample-sessions N] [--sample-seed N] [--exp-dir DIR]
+
+Examples:
+  scripts/run-talkplay-openrouter-parallel
+  scripts/run-talkplay-openrouter-parallel --tid talkplay_openrouter_qwen35_9b_devset_smoke --num-shards 4 --sample-sessions 10
+EOF
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --tid)
+      TID="$2"
+      shift 2
+      ;;
+    --num-shards)
+      NUM_SHARDS="$2"
+      shift 2
+      ;;
+    --sample-sessions)
+      SAMPLE_SESSIONS="$2"
+      shift 2
+      ;;
+    --sample-seed)
+      SAMPLE_SEED="$2"
+      shift 2
+      ;;
+    --exp-dir)
+      EXP_DIR="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [ ! -f "$ENV_FILE" ]; then
+  echo "Missing $ENV_FILE. Add OPENROUTER_API_KEY and rerun." >&2
+  exit 1
+fi
+
+set -a
+. "$ENV_FILE"
+set +a
+
+if [ -z "${OPENROUTER_API_KEY:-}" ]; then
+  echo "OPENROUTER_API_KEY is not set in $ENV_FILE." >&2
+  exit 1
+fi
+
+if ! [[ "$NUM_SHARDS" =~ ^[0-9]+$ ]] || [ "$NUM_SHARDS" -le 0 ]; then
+  echo "--num-shards must be a positive integer." >&2
+  exit 1
+fi
+
+if ! [[ "$SAMPLE_SESSIONS" =~ ^[0-9]+$ ]] || [ "$SAMPLE_SESSIONS" -lt 0 ]; then
+  echo "--sample-sessions must be a non-negative integer." >&2
+  exit 1
+fi
+
+SHARD_DIR="$EXP_DIR/inference/devset/shards/$TID"
+mkdir -p "$SHARD_DIR"
+
+echo "Preparing session shards for $TID ..."
+TID="$TID" NUM_SHARDS="$NUM_SHARDS" SAMPLE_SESSIONS="$SAMPLE_SESSIONS" SAMPLE_SEED="$SAMPLE_SEED" SHARD_DIR="$SHARD_DIR" \
+python - <<'PY'
+import json
+import os
+import random
+from pathlib import Path
+
+from datasets import load_dataset
+from omegaconf import OmegaConf
+
+tid = os.environ["TID"]
+num_shards = int(os.environ["NUM_SHARDS"])
+sample_sessions = int(os.environ["SAMPLE_SESSIONS"])
+sample_seed = int(os.environ["SAMPLE_SEED"])
+shard_dir = Path(os.environ["SHARD_DIR"])
+
+config = OmegaConf.load(Path("config") / f"{tid}.yaml")
+db = load_dataset(config.test_dataset_name, split="test")
+session_ids = [row["session_id"] for row in db]
+
+if sample_sessions > 0:
+    rng = random.Random(sample_seed)
+    n = min(sample_sessions, len(session_ids))
+    session_ids = rng.sample(session_ids, n)
+
+num_shards = min(num_shards, len(session_ids))
+shards = [[] for _ in range(num_shards)]
+for idx, session_id in enumerate(session_ids):
+    shards[idx % num_shards].append(session_id)
+
+for idx, shard in enumerate(shards):
+    shard_path = shard_dir / f"shard_{idx:02d}.json"
+    shard_path.write_text(json.dumps({"session_ids": shard}), encoding="utf-8")
+
+print(json.dumps({
+    "num_sessions": len(session_ids),
+    "num_shards": len(shards),
+    "shard_sizes": [len(shard) for shard in shards],
+}, indent=2))
+PY
+
+pids=()
+
+cleanup() {
+  status=$?
+  if [ $status -ne 0 ] && [ ${#pids[@]} -gt 0 ]; then
+    echo "Stopping remaining shard workers ..."
+    kill "${pids[@]}" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT INT TERM
+
+for shard_file in "$SHARD_DIR"/shard_*.json; do
+  shard_name="$(basename "$shard_file" .json)"
+  echo "Launching $shard_name ..."
+  uv run "${EXTRA_DEPS[@]}" \
+    python run_inference_talkplay_devset.py \
+    --tid "$TID" \
+    --session_ids_file "$shard_file" \
+    --output_suffix "$shard_name" \
+    --exp_dir "$EXP_DIR" &
+  pids+=("$!")
+done
+
+for pid in "${pids[@]}"; do
+  wait "$pid"
+done
+
+echo "Merging shard outputs ..."
+TID="$TID" NUM_SHARDS="$NUM_SHARDS" EXP_DIR="$EXP_DIR" python - <<'PY'
+import json
+import os
+from pathlib import Path
+
+tid = os.environ["TID"]
+num_shards = int(os.environ["NUM_SHARDS"])
+exp_dir = Path(os.environ["EXP_DIR"])
+base = exp_dir / "inference" / "devset"
+suffixes = [f"shard_{idx:02d}" for idx in range(num_shards)]
+
+merged_predictions = []
+merged_traces = []
+fallback_rows = 0
+
+for suffix in suffixes:
+    prediction_path = base / f"{tid}.{suffix}.json"
+    trace_path = base / f"{tid}.{suffix}_trace.json"
+    if not prediction_path.exists():
+        continue
+    predictions = json.loads(prediction_path.read_text())
+    traces = json.loads(trace_path.read_text())
+    merged_predictions.extend(predictions)
+    merged_traces.extend(traces)
+    fallback_rows += sum(1 for row in traces if row["tool_trace"].get("fallback_used"))
+
+merged_predictions.sort(key=lambda row: (row["session_id"], row["turn_number"]))
+merged_traces.sort(key=lambda row: (row["session_id"], row["turn_number"]))
+
+(base / f"{tid}.json").write_text(json.dumps(merged_predictions, ensure_ascii=False), encoding="utf-8")
+(base / f"{tid}_trace.json").write_text(json.dumps(merged_traces, ensure_ascii=False), encoding="utf-8")
+
+print(json.dumps({
+    "prediction_rows": len(merged_predictions),
+    "trace_rows": len(merged_traces),
+    "fallback_rows": fallback_rows,
+    "prediction_path": str(base / f"{tid}.json"),
+    "trace_path": str(base / f"{tid}_trace.json"),
+}, indent=2))
+PY
+
+trap - EXIT INT TERM
+echo "Done."
