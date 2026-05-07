@@ -74,6 +74,39 @@ Next step:
 Status:
 - Done
 
+## 2026-05-06 - Hardened agentic qwen full devset
+
+Question:
+Can the hardened structured-output agentic path run end to end on the full devset without fallbacks, and how does that reliable top-20 path compare to the existing best retrieval results?
+
+Run:
+- `talkplay_openrouter_qwen35_9b_agentic_hardened_devset_full`
+
+Key metrics:
+- `NDCG@20 0.0262`
+- `Hit@20 0.0494`
+- `MRR 0.0196`
+- `Catalog diversity@20 0.3859`
+- Run health: `1000` sessions, `8000` turns, `0` fallbacks, `0` repairs
+
+Comparison against current bests:
+- Best rewrite-wave run `bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset`: `NDCG@20 0.1092`
+- Best dense retrieval-only run `dense_qwen3_embedding_8b_devset`: `NDCG@20 0.1025`
+- Best sparse retrieval-only run `bm25_devset_retrieval_only_with_tag_list`: `NDCG@20 0.0970`
+- Best generative baseline `llama1b_bm25_devset`: `NDCG@20 0.0815`
+
+Takeaways:
+- The main success of this run is operational reliability, not ranking quality. The hardened structured-output qwen path completed the full devset cleanly with no fallbacks or repairs.
+- Ranking quality is materially below every tracked best baseline. Relative to the current best rewrite-wave run, the gap is `0.0830` absolute at `NDCG@20`.
+- The current agentic top-20 path is likely overpaying for semantic retrieval while retrieving too few relevant tracks. The dominant `text_to_item_similarity -> sql_filter` pattern is stable, but not competitive.
+- Because this is a shallow top-20 run, the evaluator intentionally reports deep diagnostics as unavailable. That makes this path suitable for submission-style robustness checks, but not for 1000-candidate retrieval analysis.
+
+Next step:
+- Keep the hardened runtime contract, but shift quality work to retrieval policy: reduce unnecessary `text_to_item_similarity` calls, bias entity-heavy queries toward `bm25_search -> sql_filter`, and revisit local embeddings or deterministic first-tool routing before another full devset run.
+
+Status:
+- Analyzed
+
 ## 2026-04-28 - Sparse/dense complementarity and hybrid simulation
 
 Question:
@@ -237,6 +270,43 @@ Linked reports:
 - `experiments/bm25_qu_llmrewrite_qwen25_3b_carryover_guard_v3_devset.md`
 - `experiments/bm25_qu_llmrewrite_qwen3_4b_catalog_terms_v2_devset.md`
 - `experiments/bm25_qu_llmrewrite_qwen3_4b_carryover_guard_v3_devset.md`
+
+## 2026-05-05 - Agentic hardened evaluation contract and smoke rerun
+
+Question:
+Can the new native-tool agentic path be evaluated as a top-20 system, and is the current hardened 9b smoke path healthy enough to start a full devset run?
+
+Changes made:
+- Relaxed `evaluator/evaluate_devset.py` so shallow devset runs are scoreable.
+- Added `tests/test_evaluate_devset.py` to lock the shallow-depth contract.
+- Updated `docs/evaluation.md` and `evaluator/readme.md` to document depth-aware scoring.
+
+Evaluation contract:
+- Devset runs no longer need `1000` candidates to be scoreable.
+- The evaluator now scores only cutoffs supported by the smallest row depth in the file.
+- Unsupported deeper cutoffs are emitted as unavailable, with `min_pool_depth`, `max_pool_depth`, `supported_k_values`, and `supported_mrr_k_values` included in the score JSON.
+
+Smoke rerun:
+- Re-ran `talkplay_openrouter_qwen35_9b_agentic_hardened_devset_smoke` against the live proxy on `127.0.0.1:4001`.
+- The first rerun completed all 8 turns, but every turn fell back due to planner connectivity failure.
+- Root cause was a LiteLLM SDK model-name mismatch for proxy-backed chat/tool calls.
+- After fixing proxy model-name handling, the next smoke rerun reached real tool execution again.
+- Latest trace evidence: `7/8` turns ended with `submit_ranking`, `1/8` turn fell back with `tool_call_missing` after repair, and `4/8` turns used the bounded repair path.
+
+Takeaways:
+- The devset evaluation blocker is resolved for top-20 agentic runs.
+- The earlier proxy/planner connectivity blocker is resolved.
+- The current reliability gap is narrower: occasional missing tool calls remain after repair.
+- Do not start the hardened full devset run until smoke is back to stable no-fallback or clearly acceptable fallback behavior.
+
+Linked reports:
+- `experiments/agentic_hardened_handoff_2026-05-05.md`
+
+Next step:
+- Diagnose the live proxy connection failure path before attempting another full devset launch.
+
+Status:
+- Analyzed
 
 Next step:
 - Finalize the Wave 3 winner by the fixed rule: `NDCG@20`, then `Hit@20`, then rewrite latency, then fallback rate, while explicitly reporting `Hit@100`, `Hit@200`, and `Hit@1000` alongside the winner so deeper coverage tradeoffs stay visible.

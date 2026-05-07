@@ -7,6 +7,7 @@ Use this directory for self-contained analysis packages that combine a narrative
 | Analysis | Status | Purpose | Main finding | Next step |
 |---|---|---|---|---|
 | [query_intent_v1](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/query_intent_v1/README.md) | `analyzed` | Label conversation-level intent structure over the `test` split. | Most sessions depend on long-range conversational carryover and likely need hybrid retrieval plus structured state. | Build a conversation-aware query representation layer. |
+| [agentic_hardened_top20_design](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/agentic_hardened_top20_design/README.md) | `analyzed` | Document the hardened qwen agentic top-20 runtime, flow, full-run health, and current limitations. | The runtime is now full-devset stable with `0` fallbacks, but ranking quality is far below the best sparse, dense, and rewrite baselines. | Keep the hardened contract, but shift work toward retrieval routing, candidate depth, and faster/local semantic retrieval. |
 
 ## Artifact Conventions
 

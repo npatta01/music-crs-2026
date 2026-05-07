@@ -34,11 +34,13 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 |---|---|---|
 | Hybrid sparse+dense retrieval follow-up | `planned` | [experiment_log.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md) |
 | Conversation-aware query representation direction | `analyzed` | [analysis/query_intent_v1/README.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/query_intent_v1/README.md) |
+| Hardened agentic top-20 path | `analyzed` | [talkplay_openrouter_qwen35_9b_agentic_hardened_devset_full.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/talkplay_openrouter_qwen35_9b_agentic_hardened_devset_full.md) |
 
 ## Analysis
 
 - [analysis/README.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/README.md) tracks packaged analysis work and linked artifacts.
 - [query_intent_v1](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/query_intent_v1/README.md) is the current conversation-intent analysis package with labeling artifacts and retrieval implications.
+- [agentic_hardened_top20_design](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/agentic_hardened_top20_design/README.md) documents the current hardened qwen top-20 agentic runtime, flow, full-devset health, and why the stable path is still not competitive on ranking quality.
 - [retrieval_analysis_findings_2026-04-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/retrieval_analysis_findings_2026-04-28.md) is a top-level experiment note because it summarizes cross-run hybrid diagnostics rather than a self-contained artifact package.
 
 ## Waves
@@ -92,6 +94,10 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 - [dense_qwen3_embedding_0_6b_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/dense_qwen3_embedding_0_6b_devset.md)
 - [dense_qwen3_embedding_4b_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/dense_qwen3_embedding_4b_devset.md)
 - [dense_qwen3_embedding_8b_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/dense_qwen3_embedding_8b_devset.md)
+
+### Wave 5: Hardened Agentic Top-20
+
+- [talkplay_openrouter_qwen35_9b_agentic_hardened_devset_full.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/talkplay_openrouter_qwen35_9b_agentic_hardened_devset_full.md)
 
 ## Conventions
 
