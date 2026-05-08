@@ -6,3 +6,4 @@
 #   - Omit large directories like .venv — uv sync rebuilds them fast
 data/
 .env
+.hf-cache
