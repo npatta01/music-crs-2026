@@ -7,6 +7,7 @@ subsequent reuse.
 import os
 import json
 import bm25s
+import numpy as np
 from datasets import load_dataset, concatenate_datasets
 
 
@@ -42,6 +43,7 @@ class BM25_MODEL:
         else:
             self.build_index()
             self.bm25_model, self.track_ids = self._load_bm25(self.corpus_name)
+        self.track_id_to_index = {track_id: idx for idx, track_id in enumerate(self.track_ids)}
 
     def _load_bm25(self, corpus_name: str) -> tuple[bm25s.BM25, list[str]]:
         """Load a cached BM25 index and track id list.
@@ -109,3 +111,30 @@ class BM25_MODEL:
             bm25_results = doc_scores.documents[i]
             results.append([self.track_ids[item['id']] for item in bm25_results])
         return results
+
+    def score_track_pool(self, query: str, track_pool: list[str]) -> dict[str, float]:
+        """Score a candidate pool with BM25 without retrieving a new global list.
+
+        Args:
+            query: Text query to score against the configured BM25 corpus.
+            track_pool: Candidate track IDs to score.
+
+        Returns:
+            Mapping from candidate track ID to its BM25 score.
+        """
+        if not track_pool:
+            return {}
+
+        query_tokens = bm25s.tokenize([query.lower()])[0]
+        weight_mask = np.zeros(len(self.track_ids), dtype=np.float32)
+        for track_id in track_pool:
+            track_index = self.track_id_to_index.get(track_id)
+            if track_index is not None:
+                weight_mask[track_index] = 1.0
+
+        scores = self.bm25_model.get_scores(query_tokens, weight_mask=weight_mask)
+        return {
+            track_id: float(scores[self.track_id_to_index[track_id]])
+            for track_id in track_pool
+            if track_id in self.track_id_to_index
+        }

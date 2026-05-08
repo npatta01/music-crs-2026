@@ -56,6 +56,9 @@ def main(args):
         lm_type=config.lm_type,
         retrieval_type=config.retrieval_type,
         qu_type=config.get("qu_type", "passthrough"),
+        pipeline_type=config.get("pipeline_type", "baseline"),
+        planner_backend=config.get("planner_backend"),
+        planner_model_name=config.get("planner_model_name"),
         qu_kwargs=resolve_qu_kwargs_placeholders(
             qu_kwargs,
             args.tid,
@@ -73,6 +76,7 @@ def main(args):
         retrieval_topk=int(config.get("retrieval_topk", 20)),
         retrieval_config=_to_plain_dict(config.get("retrieval_config")),
         lm_kwargs=_to_plain_dict(config.get("lm_kwargs")),
+        toolcalling_config=_to_plain_dict(config.get("toolcalling_config")),
     )
     db = load_dataset(config.test_dataset_name, split="test")
     # Prepare all batch data at once
@@ -93,6 +97,7 @@ def main(args):
             'turn_number': turn_number
         })
     inference_results = []
+    trace_rows = []
     for i in tqdm(range(0, len(batch_data), args.batch_size), desc="Batch inference"):
         batch = batch_data[i:i+args.batch_size]
         batch_metadata = metadata[i:i+args.batch_size]
@@ -105,9 +110,20 @@ def main(args):
                 "predicted_track_ids": result['retrieval_items'],
                 "predicted_response": result["response"]
             })
+            if result.get("tool_trace") is not None:
+                trace_rows.append({
+                    "session_id": batch_metadata[j]["session_id"],
+                    "user_id": batch_metadata[j]["user_id"],
+                    "turn_number": batch_metadata[j]["turn_number"],
+                    "user_query": batch[j]["user_query"],
+                    "tool_trace": result["tool_trace"],
+                })
     os.makedirs(f"{args.exp_dir}/inference/{args.eval_dataset}", exist_ok=True)
     with open(f"{args.exp_dir}/inference/{args.eval_dataset}/{args.tid}.json", "w", encoding="utf-8") as f:
         json.dump(inference_results, f, ensure_ascii=False)
+    if trace_rows:
+        with open(f"{args.exp_dir}/inference/{args.eval_dataset}/{args.tid}_trace.json", "w", encoding="utf-8") as f:
+            json.dump(trace_rows, f, ensure_ascii=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

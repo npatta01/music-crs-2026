@@ -35,6 +35,7 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 | Hybrid sparse+dense retrieval follow-up | `planned` | [experiment_log.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md) |
 | Conversation-aware query representation direction | `analyzed` | [analysis/query_intent_v1/README.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/query_intent_v1/README.md) |
 | Hardened agentic top-20 path | `analyzed` | [talkplay_openrouter_qwen35_9b_agentic_hardened_devset_full.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/talkplay_openrouter_qwen35_9b_agentic_hardened_devset_full.md) |
+| Agentic hybrid-boost branch eval | `analyzed` | [talkplay_openrouter_gpt5_nano_agentic_hybrid_boost_devset_25_seed20260507.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/talkplay_openrouter_gpt5_nano_agentic_hybrid_boost_devset_25_seed20260507.md) |
 
 ## Analysis
 
@@ -98,6 +99,7 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 ### Wave 5: Hardened Agentic Top-20
 
 - [talkplay_openrouter_qwen35_9b_agentic_hardened_devset_full.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/talkplay_openrouter_qwen35_9b_agentic_hardened_devset_full.md)
+- [talkplay_openrouter_gpt5_nano_agentic_hybrid_boost_devset_25_seed20260507.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/talkplay_openrouter_gpt5_nano_agentic_hybrid_boost_devset_25_seed20260507.md)
 
 ## Conventions
 

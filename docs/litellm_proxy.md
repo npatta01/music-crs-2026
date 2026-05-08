@@ -21,8 +21,8 @@ required variable; the proxy itself accepts any client `api_key`.
 ```
 
 This spawns `uv tool run litellm[proxy,caching]` against
-`configs/litellm_proxy.openrouter.yaml`, bound to `0.0.0.0:4000` (clients reach
-it at `http://localhost:4000`). Disk cache
+`configs/litellm_proxy.openrouter.yaml`, bound to `0.0.0.0:4001` (clients reach
+it at `http://localhost:4001`). Disk cache
 lives under `artifacts/cache/litellm/` so repeated runs are cheap.
 
 Override host/port/config via env:

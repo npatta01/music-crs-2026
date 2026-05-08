@@ -104,6 +104,42 @@ Takeaways:
 Next step:
 - Keep the hardened runtime contract, but shift quality work to retrieval policy: reduce unnecessary `text_to_item_similarity` calls, bias entity-heavy queries toward `bm25_search -> sql_filter`, and revisit local embeddings or deterministic first-tool routing before another full devset run.
 
+## 2026-05-07 - Agentic hybrid-boost partial eval on 25 sessions
+
+Question:
+
+Can the new branch-local agentic hybrid-boost architecture compete with the current best rewrite-wave baseline on a fixed 25-session devset slice?
+
+Runs:
+
+- Baseline subset scored from existing predictions: `bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset`
+- New branch run: `talkplay_openrouter_gpt5_nano_agentic_hybrid_boost_devset_25_seed20260507`
+- Shared session split: `exp/session_splits/devset_25_seed20260507.json`
+
+Results on the same 25 sessions:
+
+- Baseline: `NDCG@20 0.0982`, `Hit@20 0.2700`, `MRR 0.0543`
+- New hybrid boost: `NDCG@20 0.0373`, `Hit@20 0.0950`, `MRR 0.0217`
+
+Operational notes for the new run:
+
+- Executed as `5` shards × `5` sessions
+- `200` turns total
+- `7` fallbacks
+- `45` repair retries
+- `193/200` turns ended as `retrieval_only`
+- Retrieval mix: `126` `text_to_item_similarity`, `66` `bm25_search`, `1` `item_to_item_similarity`
+
+Takeaways:
+
+- The branch architecture is more expressive, but it is not yet a stronger retrieval system than the best rewrite-wave baseline.
+- The main failure is retrieval quality, not evaluator behavior. The new run misses the ground-truth item in the final top-20 far more often than the baseline (`90.5%` vs `73.0%` GT-not-in-top-20).
+- The second-stage hybrid signal is too weak relative to the baseline's deep `1000`-candidate BM25 retrieval, and the planner still overuses semantic retrieval for this benchmark.
+
+Where to read:
+
+- `experiments/talkplay_openrouter_gpt5_nano_agentic_hybrid_boost_devset_25_seed20260507.md`
+
 Status:
 - Analyzed
 
