@@ -4,7 +4,7 @@ qu_type: "llm_rewrite"
 qu_kwargs:
   backend: "litellm"
   model_name: "openai/qwen3.5-9b"
-  api_base: "http://localhost:4000"
+  api_base: "http://localhost:4001"
   api_key: "sk-anything"
   prompt_name: "preserve_entities_v1"
   max_new_tokens: 96
@@ -28,7 +28,7 @@ attn_implementation: "eager"
 retrieval_topk: 1000
 retrieval_config:
   model_name: "openai/text-embedding-3-small"
-  api_base: "http://localhost:4000"
+  api_base: "http://localhost:4001"
   api_key: "sk-anything"
   batch_size: 128
   concurrency: 8

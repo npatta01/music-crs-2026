@@ -1,0 +1,48 @@
+pipeline_type: "agentic"
+planner_backend: "litellm_chat_completions"
+planner_model_name: "openai/gpt-5-nano"
+lm_type: "dummy"
+retrieval_type: "bm25"
+qu_type: "passthrough"
+test_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Dataset"
+item_db_name: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
+user_db_name: "talkpl-ai/TalkPlayData-Challenge-User-Metadata"
+track_split_types:
+  - "all_tracks"
+user_split_types:
+  - "all_users"
+corpus_types:
+  - "track_name"
+  - "artist_name"
+  - "album_name"
+  - "tag_list"
+cache_dir: "./cache"
+device: "cpu"
+attn_implementation: "eager"
+retrieval_topk: 20
+toolcalling_config:
+  prediction_depth: 20
+  max_planning_steps: 4
+  allow_prediction_backfill: true
+  enabled_tools:
+    - "sql_filter"
+    - "bm25_search"
+    - "text_to_item_similarity"
+    - "item_to_item_similarity"
+    - "user_to_item_similarity"
+    - "rank_candidates"
+  planner_max_tokens: 1024
+  temperature: 0.0
+  text_similarity_retrieval_type: "litellm_embedding"
+  text_similarity_retrieval_config:
+    model_name: "openai/text-embedding-3-small"
+    batch_size: 128
+    concurrency: 8
+  track_embeddings_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Track-Embeddings"
+  track_embeddings_split_types:
+    - "all_tracks"
+  user_embeddings_dataset_name: "talkpl-ai/TalkPlayData-Challenge-User-Embeddings"
+  user_embeddings_split_types:
+    - "train"
+    - "test_warm"
+    - "test_cold"

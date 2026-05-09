@@ -11,12 +11,7 @@ import torch
 import torch.nn.functional as F
 from datasets import concatenate_datasets, load_dataset
 from tqdm.auto import tqdm
-
-
-def _proxy_model_name(model_name: str) -> str:
-    return model_name if "/" in model_name else f"openai/{model_name}"
-
-
+from mcrs.litellm_utils import normalize_openai_client_model_name
 def _sanitize_model_name(model_name: str) -> str:
     sanitized = model_name.replace("/", "__")
     return re.sub(r"[^A-Za-z0-9._-]+", "-", sanitized)
@@ -48,8 +43,8 @@ class LITELLM_EMBEDDING_MODEL:
         self.split_types = list(split_types)
         self.corpus_types = list(corpus_types)
         self.cache_dir = cache_dir
-        self.model_name = _proxy_model_name(model_name)
-        self.api_base = api_base or os.environ.get("LITELLM_PROXY_BASE", "http://localhost:4000")
+        self.model_name = normalize_openai_client_model_name(model_name)
+        self.api_base = api_base or os.environ.get("LITELLM_PROXY_BASE", "http://localhost:4001")
         self.api_key = api_key or os.environ.get("LITELLM_PROXY_KEY", "sk-anything")
         self.embedding_query_prefix = embedding_query_prefix
         self.embedding_passage_prefix = embedding_passage_prefix
@@ -60,6 +55,11 @@ class LITELLM_EMBEDDING_MODEL:
         self.corpus_name = f"{self.formatter.name}_{'_'.join(corpus_types)}"
         self.index_dir = self._build_index_dir()
         print(f"LiteLLM embedding index dir: {self.index_dir}")
+        from openai import AsyncOpenAI, OpenAI
+
+        base_url = f"{self.api_base.rstrip('/')}/v1"
+        self.client = OpenAI(api_key=self.api_key, base_url=base_url)
+        self.async_client = AsyncOpenAI(api_key=self.api_key, base_url=base_url)
 
         self.metadata_dict = self._load_corpus()
 
@@ -118,8 +118,6 @@ class LITELLM_EMBEDDING_MODEL:
         kwargs = {
             "model": self.model_name,
             "input": texts,
-            "api_base": self.api_base,
-            "api_key": self.api_key,
         }
         if self.dimensions is not None:
             kwargs["dimensions"] = self.dimensions
@@ -127,25 +125,24 @@ class LITELLM_EMBEDDING_MODEL:
 
     @staticmethod
     def _response_to_tensor(response) -> torch.Tensor:
-        vectors = [item["embedding"] for item in response.data]
+        vectors = []
+        for item in response.data:
+            embedding = item["embedding"] if isinstance(item, dict) else item.embedding
+            vectors.append(embedding)
         tensor = torch.tensor(vectors, dtype=torch.float32)
         return F.normalize(tensor, p=2, dim=1)
 
     def _embed(self, texts: list[str]) -> torch.Tensor:
-        import litellm
-
-        response = litellm.embedding(**self._embed_kwargs(texts))
+        response = self.client.embeddings.create(**self._embed_kwargs(texts))
         return self._response_to_tensor(response)
 
     async def _aembed_batches(self, batches: list[list[str]], desc: str) -> list[torch.Tensor]:
-        import litellm
-
         semaphore = asyncio.Semaphore(self.concurrency)
         progress = tqdm(total=len(batches), desc=desc)
 
         async def run(batch: list[str]) -> torch.Tensor:
             async with semaphore:
-                response = await litellm.aembedding(**self._embed_kwargs(batch))
+                response = await self.async_client.embeddings.create(**self._embed_kwargs(batch))
                 progress.update(1)
                 return self._response_to_tensor(response)
 

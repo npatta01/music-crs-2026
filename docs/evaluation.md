@@ -28,19 +28,19 @@ Grouped so each group answers a different question.
 | Metric | Description |
 |--------|-------------|
 | **NDCG@{1,5,10,20,50,100}** | Headline ranking metrics plus near-pool diagnostics. NDCG@10 is the official primary ranking metric. |
-| **NDCG@{200,500,1000}** | Deep-cutoff diagnostics: useful for separating candidate-generation limits from reranking limits. |
+| **NDCG@{200,500,1000}** | Deep-cutoff diagnostics: useful for separating candidate-generation limits from reranking limits when the run retrieves that deeply. |
 | **MRR** | Mean Reciprocal Rank over the full retrieved pool. |
-| **MRR@{100,200,500,1000}** | Reciprocal-rank diagnostics at fixed cutoffs, comparable across runs with the same retrieved depth. |
+| **MRR@{100,200,500,1000}** | Reciprocal-rank diagnostics at fixed cutoffs, comparable across runs with the same retrieved depth. Unsupported cutoffs are reported as unavailable. |
 
 ### Retrieval coverage — *is the GT even in the pool?*
 
 | Metric | Description |
 |--------|-------------|
 | **Recall@{1,5,10,20,50,100}** | Headline coverage metrics. With a single GT per turn, Recall@k = Hit@k. |
-| **Recall@{200,500,1000}** | Deep-cutoff coverage diagnostics: tells you whether more recall is available beyond the top-100. |
+| **Recall@{200,500,1000}** | Deep-cutoff coverage diagnostics: tells you whether more recall is available beyond the top-100 when the run provides a deep enough pool. |
 | **% GT not in top-20** | Ceiling on NDCG@20: any miss here is unrecoverable by reranking. |
 | **% GT not in top-100** | Ceiling on what a reranker over the top-100 can ever achieve. |
-| **% GT not in top-200 / top-500 / top-1000** | Same ceiling analysis for deeper candidate pools. |
+| **% GT not in top-200 / top-500 / top-1000** | Same ceiling analysis for deeper candidate pools; unavailable if the run does not reach those cutoffs. |
 | **Mean / median rank (when found)** | Rank of the GT conditional on it being retrieved at all — useful for spotting reranking headroom. |
 
 ### Diversity
@@ -96,7 +96,10 @@ When you run a new experiment, append one or more rows to the table above with t
 
 - `retrieval_topk` defaults to **20** in `CRS_BASELINE`, so blindset / submission
   outputs remain unchanged (the leaderboard expects exactly 20 ids per turn).
-- Devset configs override `retrieval_topk: 1000` so the offline evaluator can
+- Devset configs can override `retrieval_topk: 1000` so the offline evaluator can
   report deep-cutoff diagnostics through `@1000`. The submission file format is independent.
-- The evaluator now fails explicitly if any devset prediction row is shallower than
-  `1000` candidates, rather than silently treating `@200/@500/@1000` as truncated metrics.
+- Submission-style or agentic runs that return only top-20 are also valid devset inputs.
+  The evaluator scores only the supported cutoffs for the file and marks deeper diagnostics
+  as unavailable.
+- Use `min_pool_depth`, `max_pool_depth`, and `supported_k_values` in the score JSON as the
+  source of truth for how deeply a run can be interpreted.

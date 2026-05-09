@@ -3,6 +3,8 @@
 import os
 from typing import Any
 
+from mcrs.litellm_utils import normalize_proxy_model_name
+
 
 def _format_recommend_item(recommend_item: Any) -> str:
     if isinstance(recommend_item, dict):
@@ -36,8 +38,8 @@ class LITELLM_LM:
         max_tokens: int = 512,
         **_unused,
     ):
-        self.model_name = model_name
-        self.api_base = api_base or os.environ.get("LITELLM_PROXY_BASE", "http://localhost:4000")
+        self.model_name = normalize_proxy_model_name(model_name)
+        self.api_base = api_base or os.environ.get("LITELLM_PROXY_BASE", "http://localhost:4001")
         self.api_key = api_key or os.environ.get("LITELLM_PROXY_KEY", "sk-anything")
         self.temperature = temperature
         self.max_tokens = max_tokens

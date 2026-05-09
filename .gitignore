@@ -10,3 +10,4 @@ submission/
 data/
 exp/
 .worktrees/
+.hf-cache
