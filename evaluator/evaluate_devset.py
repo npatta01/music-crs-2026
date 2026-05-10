@@ -17,10 +17,9 @@ semantics (mean per turn_number across sessions, then mean across turns)
 so they remain comparable with published leaderboard scores.
 """
 
-import os
-import json
 import argparse
-from collections import defaultdict
+import json
+import os
 from pathlib import Path
 
 import numpy as np
@@ -56,24 +55,68 @@ def _median(xs):
     return float(np.median(xs)) if len(xs) else 0.0
 
 
-def _validate_prediction_depths(df_predictions):
-    depths = df_predictions["predicted_track_ids"].map(len)
-    too_shallow = df_predictions.loc[depths < REQUIRED_DIAGNOSTIC_DEPTH,
-                                     ["session_id", "turn_number"]]
-    if too_shallow.empty:
-        return
+def _safe_float(value):
+    return None if pd.isna(value) else float(value)
 
-    examples = ", ".join(
-        f"{row.session_id}/turn-{row.turn_number}"
-        for row in too_shallow.head(3).itertuples(index=False)
-    )
-    raise ValueError(
-        "Cannot compute top-1000 diagnostics because some prediction rows are "
-        f"shallower than {REQUIRED_DIAGNOSTIC_DEPTH} candidates "
-        f"({len(too_shallow)} / {len(df_predictions)} rows affected; "
-        f"examples: {examples}). Rerun devset inference with "
-        f"`retrieval_topk: {REQUIRED_DIAGNOSTIC_DEPTH}`."
-    )
+
+def _safe_int(value):
+    return None if pd.isna(value) else int(value)
+
+
+def _depth_metadata(df_predictions):
+    depths = df_predictions["predicted_track_ids"].map(len)
+    min_pool_depth = int(depths.min()) if len(depths) else 0
+    max_pool_depth = int(depths.max()) if len(depths) else 0
+    n_shallow_rows = int((depths < REQUIRED_DIAGNOSTIC_DEPTH).sum())
+    available_cutoffs = [k for k in K_VALUES if k <= min_pool_depth]
+    available_mrr_cutoffs = [k for k in MRR_K_VALUES if k <= min_pool_depth]
+    return {
+        "depths": depths,
+        "min_pool_depth": min_pool_depth,
+        "max_pool_depth": max_pool_depth,
+        "n_shallow_rows": n_shallow_rows,
+        "available_cutoffs": available_cutoffs,
+        "available_mrr_cutoffs": available_mrr_cutoffs,
+    }
+
+
+def _null_unsupported_metrics(metric_values: dict[str, float], depth: int) -> dict[str, float | None]:
+    nulled = dict(metric_values)
+    for k in K_VALUES:
+        if k > depth:
+            for prefix in ("ndcg", "hit", "recall"):
+                nulled[f"{prefix}@{k}"] = None
+    return nulled
+
+
+def _null_unsupported_rr(rr_by_k: dict[int, float], depth: int) -> dict[int, float | None]:
+    return {
+        k: (value if k <= depth else None)
+        for k, value in rr_by_k.items()
+    }
+
+
+def _aggregate_metric(df_turnwise: pd.DataFrame, column_name: str, available: bool):
+    if not available or column_name not in df_turnwise:
+        return None
+    return _safe_float(df_turnwise[column_name].mean())
+
+
+def _availability_for_cutoffs(available_cutoffs: list[int], cutoffs: list[int]) -> dict[int, bool]:
+    available = set(available_cutoffs)
+    return {k: k in available for k in cutoffs}
+
+
+def _format_metric(label: str, value, decimals: int = 4):
+    if value is None:
+        return f"  {label:<11} n/a"
+    return f"  {label:<11} {value:.{decimals}f}"
+
+
+def _format_percent(label: str, value):
+    if value is None:
+        return f"  {label} n/a"
+    return f"  {label} {value:.1%}"
 
 
 def evaluate(df_predictions, df_ground_truth):
@@ -82,7 +125,7 @@ def evaluate(df_predictions, df_ground_truth):
     Returns:
         (per_instance_rows, aggregate_dict)
     """
-    _validate_prediction_depths(df_predictions)
+    depth_meta = _depth_metadata(df_predictions)
 
     rows = []
     ranks_found = []
@@ -91,7 +134,6 @@ def evaluate(df_predictions, df_ground_truth):
     recommended_tracks_20 = []
     recommended_tracks_100 = []
     responses = []
-    max_pool_depth = 0
 
     for _, row in tqdm(df_ground_truth.iterrows(), total=len(df_ground_truth),
                        desc="Scoring turns"):
@@ -100,16 +142,23 @@ def evaluate(df_predictions, df_ground_truth):
 
         pred = df_filtering(df_predictions, sid, tn)
         preds = pred["predicted_track_ids"]
-        max_pool_depth = max(max_pool_depth, len(preds))
+        pred_depth = len(preds)
 
-        recsys_metrics = compute_recsys_metrics(preds, [gt_id], K_VALUES)
+        recsys_metrics = _null_unsupported_metrics(
+            compute_recsys_metrics(preds, [gt_id], K_VALUES),
+            pred_depth,
+        )
         rank = get_rank([gt_id], preds)
         rr_full = get_reciprocal_rank(gt_id, preds)
         if rank is not None:
             ranks_found.append(rank)
         rrs_full.append(rr_full)
+        rr_values = _null_unsupported_rr(
+            {k: get_reciprocal_rank(gt_id, preds, k=k) for k in MRR_K_VALUES},
+            pred_depth,
+        )
         for k in MRR_K_VALUES:
-            rr_at_k[k].append(get_reciprocal_rank(gt_id, preds, k=k))
+            rr_at_k[k].append(rr_values[k])
 
         # Catalog diversity uses the top-20 (submission format) and top-100
         # (dev pool) separately so we can tell the two apart.
@@ -120,56 +169,66 @@ def evaluate(df_predictions, df_ground_truth):
         rows.append({
             "session_id": sid,
             "turn_number": tn,
+            "pool_depth": pred_depth,
             "gt_rank": rank if rank is not None else np.nan,
             "rr": rr_full,
-            **{f"rr@{k}": rr_at_k[k][-1] for k in MRR_K_VALUES},
+            **{f"rr@{k}": rr_values[k] for k in MRR_K_VALUES},
             **recsys_metrics,
         })
 
     df_results = pd.DataFrame(rows)
     metric_cols = [c for c in df_results.columns
-                   if c not in ("session_id", "turn_number", "gt_rank")]
+                   if c not in ("session_id", "turn_number", "gt_rank", "pool_depth")]
 
     # Headline macro-avg: group by turn, take mean over turns (preserves
     # published leaderboard semantics).
     df_turnwise = df_results[metric_cols + ["turn_number"]] \
         .groupby("turn_number").mean()
-    headline = df_turnwise.mean(axis=0).to_dict()
+    available_by_k = _availability_for_cutoffs(depth_meta["available_cutoffs"], K_VALUES)
+    available_by_mrr_k = _availability_for_cutoffs(depth_meta["available_mrr_cutoffs"], MRR_K_VALUES)
 
     # Per-turn breakdown (mean per turn_number, for diagnostics).
     per_turn = {}
     for tn, sub in df_results.groupby("turn_number"):
         per_turn[int(tn)] = {
             "n": int(len(sub)),
-            "ndcg@20": float(sub["ndcg@20"].mean()),
-            "hit@20": float(sub["hit@20"].mean()),
-            "hit@100": float(sub["hit@100"].mean()),
+            "ndcg@20": _safe_float(sub["ndcg@20"].mean()),
+            "hit@20": _safe_float(sub["hit@20"].mean()),
+            "hit@100": _safe_float(sub["hit@100"].mean()),
         }
 
     n_total = len(df_results)
     agg = {
         "n_turns_evaluated": n_total,
-        "max_pool_depth": max_pool_depth,
+        "require_full_diagnostic_depth": True,
+        "full_diagnostic_depth": REQUIRED_DIAGNOSTIC_DEPTH,
+        "available_cutoffs": depth_meta["available_cutoffs"],
+        "min_pool_depth": depth_meta["min_pool_depth"],
+        "max_pool_depth": depth_meta["max_pool_depth"],
+        "n_shallow_rows": depth_meta["n_shallow_rows"],
         # Headline metrics (turn-then-session macro avg) — match leaderboard
-        **{f"ndcg@{k}": float(headline.get(f"ndcg@{k}", 0.0)) for k in HEADLINE_K},
+        **{f"ndcg@{k}": _aggregate_metric(df_turnwise, f"ndcg@{k}", available_by_k[k]) for k in HEADLINE_K},
         # Full metric sweep (same macro-avg semantics so all metrics are comparable)
-        **{f"ndcg@{k}": float(headline.get(f"ndcg@{k}", 0.0)) for k in K_VALUES},
-        **{f"hit@{k}":  float(headline.get(f"hit@{k}",  0.0)) for k in K_VALUES},
-        **{f"recall@{k}": float(headline.get(f"recall@{k}", 0.0)) for k in K_VALUES},
+        **{f"ndcg@{k}": _aggregate_metric(df_turnwise, f"ndcg@{k}", available_by_k[k]) for k in K_VALUES},
+        **{f"hit@{k}": _aggregate_metric(df_turnwise, f"hit@{k}", available_by_k[k]) for k in K_VALUES},
+        **{f"recall@{k}": _aggregate_metric(df_turnwise, f"recall@{k}", available_by_k[k]) for k in K_VALUES},
         "mrr": _mean(rrs_full),
-        **{f"mrr@{k}": _mean(rr_at_k[k]) for k in MRR_K_VALUES},
+        **{
+            f"mrr@{k}": (_mean([value for value in rr_at_k[k] if value is not None]) if available_by_mrr_k[k] else None)
+            for k in MRR_K_VALUES
+        },
         "mean_rank_when_found": _mean(ranks_found) if ranks_found else None,
         "median_rank_when_found": _median(ranks_found) if ranks_found else None,
         "pct_gt_not_in_top20":
             float((df_results["hit@20"] == 0).sum() / n_total) if n_total else 0.0,
         "pct_gt_not_in_top100":
-            float((df_results["hit@100"] == 0).sum() / n_total) if n_total else 0.0,
+            (float((df_results["hit@100"] == 0).sum() / n_total) if n_total and available_by_k[100] else None),
         "pct_gt_not_in_top200":
-            float((df_results["hit@200"] == 0).sum() / n_total) if n_total else 0.0,
+            (float((df_results["hit@200"] == 0).sum() / n_total) if n_total and available_by_k[200] else None),
         "pct_gt_not_in_top500":
-            float((df_results["hit@500"] == 0).sum() / n_total) if n_total else 0.0,
+            (float((df_results["hit@500"] == 0).sum() / n_total) if n_total and available_by_k[500] else None),
         "pct_gt_not_in_top1000":
-            float((df_results["hit@1000"] == 0).sum() / n_total) if n_total else 0.0,
+            (float((df_results["hit@1000"] == 0).sum() / n_total) if n_total and available_by_k[1000] else None),
         "per_turn": {str(k): v for k, v in sorted(per_turn.items())},
     }
     agg["_recommended_20"] = recommended_tracks_20
@@ -180,26 +239,33 @@ def evaluate(df_predictions, df_ground_truth):
 
 def print_report(m, tid):
     print(f"\n=== {tid} ===")
-    print(f"Turns evaluated: {m['n_turns_evaluated']}   "
-          f"Max pool depth: {m['max_pool_depth']}  "
-          f"(need >={REQUIRED_DIAGNOSTIC_DEPTH} for full diagnostics)\n")
+    print(
+        f"Turns evaluated: {m['n_turns_evaluated']}   "
+        f"Min pool depth: {m['min_pool_depth']}   "
+        f"Max pool depth: {m['max_pool_depth']}   "
+        f"Shallow rows: {m['n_shallow_rows']}"
+    )
+    print(
+        f"Full diagnostic contract: require_full_diagnostic_depth={m['require_full_diagnostic_depth']} "
+        f"(need >={REQUIRED_DIAGNOSTIC_DEPTH}); available cutoffs: {m['available_cutoffs']}\n"
+    )
 
     print("Ranking quality (macro avg: per-turn, then across turns)")
     for k in K_VALUES:
-        print(f"  NDCG@{k:<3}    {m[f'ndcg@{k}']:.4f}")
-    print(f"  MRR          {m['mrr']:.4f}")
+        print(_format_metric(f"NDCG@{k}", m[f"ndcg@{k}"]))
+    print(_format_metric("MRR", m["mrr"]))
     for k in MRR_K_VALUES:
-        print(f"  MRR@{k:<4}    {m[f'mrr@{k}']:.4f}")
+        print(_format_metric(f"MRR@{k}", m[f"mrr@{k}"]))
     print()
 
     print("Retrieval coverage (is the GT even in the pool?)")
     for k in K_VALUES:
-        print(f"  Hit@{k:<3}     {m[f'hit@{k}']:.4f}")
-    print(f"  % GT not in top-20   {m['pct_gt_not_in_top20']:.1%}")
-    print(f"  % GT not in top-100  {m['pct_gt_not_in_top100']:.1%}")
-    print(f"  % GT not in top-200  {m['pct_gt_not_in_top200']:.1%}")
-    print(f"  % GT not in top-500  {m['pct_gt_not_in_top500']:.1%}")
-    print(f"  % GT not in top-1000 {m['pct_gt_not_in_top1000']:.1%}")
+        print(_format_metric(f"Hit@{k}", m[f"hit@{k}"]))
+    print(_format_percent("% GT not in top-20  ", m["pct_gt_not_in_top20"]))
+    print(_format_percent("% GT not in top-100 ", m["pct_gt_not_in_top100"]))
+    print(_format_percent("% GT not in top-200 ", m["pct_gt_not_in_top200"]))
+    print(_format_percent("% GT not in top-500 ", m["pct_gt_not_in_top500"]))
+    print(_format_percent("% GT not in top-1000", m["pct_gt_not_in_top1000"]))
     if m["mean_rank_when_found"] is not None:
         print(f"  Mean rank (found)    {m['mean_rank_when_found']:.1f}")
         print(f"  Median rank (found)  {m['median_rank_when_found']:.1f}")
@@ -212,8 +278,10 @@ def print_report(m, tid):
 
     print("Per-turn  (NDCG@20 / Hit@20 / Hit@100)")
     for tn, v in m["per_turn"].items():
-        print(f"  turn {tn}: {v['ndcg@20']:.4f}  {v['hit@20']:.4f}  "
-              f"{v['hit@100']:.4f}  (n={v['n']})")
+        ndcg20 = "n/a" if v["ndcg@20"] is None else f"{v['ndcg@20']:.4f}"
+        hit20 = "n/a" if v["hit@20"] is None else f"{v['hit@20']:.4f}"
+        hit100 = "n/a" if v["hit@100"] is None else f"{v['hit@100']:.4f}"
+        print(f"  turn {tn}: {ndcg20}  {hit20}  {hit100}  (n={v['n']})")
 
 
 def _resolve_exp_dir(exp_dir: str | Path | None) -> Path:

@@ -24,7 +24,12 @@ def _load_module(name: str, relative_path: str):
 def _base_eval_metrics(module) -> dict:
     metrics = {
         "n_turns_evaluated": 1,
+        "require_full_diagnostic_depth": True,
+        "full_diagnostic_depth": module.REQUIRED_DIAGNOSTIC_DEPTH,
+        "available_cutoffs": list(module.K_VALUES),
+        "min_pool_depth": 1000,
         "max_pool_depth": 1000,
+        "n_shallow_rows": 0,
         "mrr": 0.0,
         "mean_rank_when_found": None,
         "median_rank_when_found": None,
@@ -256,3 +261,87 @@ def test_evaluate_main_uses_custom_exp_dir(tmp_path, monkeypatch):
 
     assert (exp_dir / "scores" / "devset" / "foo_devset.json").exists()
     assert (exp_dir / "scores" / "devset" / "foo_devset_samples.csv").exists()
+
+
+def test_evaluate_keeps_nulls_for_unsupported_deep_cutoffs():
+    module = _load_module("evaluate_devset_shallow_module", "evaluator/evaluate_devset.py")
+
+    df_predictions = pd.DataFrame(
+        [
+            {
+                "session_id": "s1",
+                "turn_number": 1,
+                "predicted_track_ids": [f"track-{i}" for i in range(200)],
+                "predicted_response": "",
+            }
+        ]
+    )
+    df_ground_truth = pd.DataFrame(
+        [
+            {
+                "session_id": "s1",
+                "turn_number": 1,
+                "ground_truth_track_id": "track-0",
+            }
+        ]
+    )
+
+    df_results, agg = module.evaluate(df_predictions, df_ground_truth)
+
+    assert agg["require_full_diagnostic_depth"] is True
+    assert agg["full_diagnostic_depth"] == 1000
+    assert agg["available_cutoffs"] == [1, 5, 10, 20, 50, 100, 200]
+    assert agg["min_pool_depth"] == 200
+    assert agg["max_pool_depth"] == 200
+    assert agg["n_shallow_rows"] == 1
+    assert agg["ndcg@20"] == 1.0
+    assert agg["hit@20"] == 1.0
+    assert agg["mrr"] == 1.0
+    assert agg["ndcg@500"] is None
+    assert agg["hit@500"] is None
+    assert agg["recall@500"] is None
+    assert agg["mrr@500"] is None
+    assert agg["pct_gt_not_in_top500"] is None
+    assert pd.isna(df_results.loc[0, "ndcg@500"])
+    assert pd.isna(df_results.loc[0, "hit@500"])
+    assert pd.isna(df_results.loc[0, "rr@500"])
+
+
+def test_evaluate_full_depth_keeps_all_metric_keys_numeric():
+    module = _load_module("evaluate_devset_full_module", "evaluator/evaluate_devset.py")
+
+    df_predictions = pd.DataFrame(
+        [
+            {
+                "session_id": "s1",
+                "turn_number": 1,
+                "predicted_track_ids": [f"track-{i}" for i in range(1000)],
+                "predicted_response": "",
+            }
+        ]
+    )
+    df_ground_truth = pd.DataFrame(
+        [
+            {
+                "session_id": "s1",
+                "turn_number": 1,
+                "ground_truth_track_id": "track-0",
+            }
+        ]
+    )
+
+    df_results, agg = module.evaluate(df_predictions, df_ground_truth)
+
+    assert agg["require_full_diagnostic_depth"] is True
+    assert agg["available_cutoffs"] == module.K_VALUES
+    assert agg["min_pool_depth"] == 1000
+    assert agg["max_pool_depth"] == 1000
+    assert agg["n_shallow_rows"] == 0
+    assert agg["ndcg@1000"] == 1.0
+    assert agg["hit@1000"] == 1.0
+    assert agg["recall@1000"] == 1.0
+    assert agg["mrr@1000"] == 1.0
+    assert agg["pct_gt_not_in_top1000"] == 0.0
+    assert df_results.loc[0, "ndcg@1000"] == 1.0
+    assert df_results.loc[0, "hit@1000"] == 1.0
+    assert df_results.loc[0, "rr@1000"] == 1.0

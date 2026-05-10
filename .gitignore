@@ -1,6 +1,7 @@
 .venv
 .env
 cache/
+.hf-cache/
 __pycache__/
 *.egg-info/
 inference/

@@ -1,0 +1,51 @@
+lm_type: "dummy"
+retrieval_type: "milvus"
+qu_type: "passthrough"
+test_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Dataset"
+item_db_name: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
+user_db_name: "talkpl-ai/TalkPlayData-Challenge-User-Metadata"
+track_split_types:
+  - "all_tracks"
+user_split_types:
+  - "all_users"
+corpus_types:
+  - "track_name"
+  - "artist_name"
+  - "album_name"
+  - "tag_list"
+cache_dir: "./cache"
+device: "cuda"
+attn_implementation: "eager"
+retrieval_topk: 1000
+retrieval_config:
+  uri: "http://localhost:19530"
+  db_name: "default"
+  collection_name: "music_track_catalog"
+  searches:
+    - name: "sparse_tags"
+      kind: "bm25_fields"
+      weight: 0.6
+      fields:
+        - name: "track_name"
+          weight: 0.25
+        - name: "artist_name"
+          weight: 0.15
+        - name: "album_name"
+          weight: 0.10
+        - name: "tag_list"
+          weight: 0.50
+      topk: 1000
+    - name: "dense_metadata"
+      kind: "dense"
+      vector_field: "metadata_qwen3_embedding_0_6b"
+      weight: 0.4
+      topk: 1000
+      query_encoder:
+        model_name: "Qwen/Qwen3-Embedding-0.6B"
+        pooling: "last_token"
+        query_template: "Instruct: Given a music recommendation conversation, retrieve relevant track metadata passages that match the listener request and prior music preferences.\nQuery:{query}"
+        max_length: 512
+        padding_side: "left"
+        torch_dtype: "bfloat16"
+  fusion:
+    method: "weighted"

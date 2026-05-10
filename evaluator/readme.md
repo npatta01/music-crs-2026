@@ -37,10 +37,11 @@ The evaluation framework computes two categories of metrics:
 - **Per-turn breakdown** — NDCG@20 / Hit@20 / Hit@100 split by turn 1–8 so you can
   spot turn-specific degradation.
 
-For the deep-cutoff diagnostics to be meaningful, the prediction file must contain
->= 1000 ranked ids per turn. The evaluator now fails explicitly when a dev-set
-prediction row is too shallow for these metrics instead of silently truncating the
-metric definition. Submission files stay at top-20; dev-set inference can retrieve deeper.
+For the deep-cutoff diagnostics to be meaningful, the prediction file should contain
+>= 1000 ranked ids per turn. The evaluator keeps `require_full_diagnostic_depth: true`
+as the contract for those diagnostics, but if a dev-set prediction row is too shallow
+it now emits `null` for unsupported deep-cutoff metrics instead of failing or silently
+coercing them to zero. Submission files stay at top-20; dev-set inference can retrieve deeper.
 
 ## Setup
 
@@ -158,7 +159,8 @@ $$
 - IDCG@k is the ideal (maximum possible) DCG@k
 - Results are macro-averaged first over turns, then over sessions
 - `nDCG@{1,10,20}` remain the main comparable headline metrics
-- Deep-cutoff metrics require at least 1000 ranked IDs per turn; otherwise evaluation fails clearly
+- Deep-cutoff metrics require at least 1000 ranked IDs per turn for fully populated diagnostics
+- If a run is shallower, unsupported deep-cutoff metrics are written as `null` and the score JSON includes `available_cutoffs`, `min_pool_depth`, `max_pool_depth`, and `n_shallow_rows`
 
 ### Diversity Metrics
 

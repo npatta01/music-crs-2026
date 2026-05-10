@@ -1,5 +1,7 @@
 # Baseline Architecture: BM25 / BERT + Llama-3.2-1B
 
+For a separate Milvus retrieval extension, see [Milvus Architecture](./milvus.md).
+
 Two-stage pipeline: retrieve candidate tracks, then generate a natural language response.
 
 ---
