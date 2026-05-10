@@ -1,6 +1,6 @@
 ---
 name: run-experiment
-description: Use when running inference, evaluating results, or running a full Music CRS experiment with a given tid (task ID).
+description: Use when running inference, evaluating results, or running a full Music CRS experiment with a given tid (task ID) through the unified local-or-Modal wrapper.
 ---
 
 # Music CRS: Run Experiment
@@ -19,10 +19,12 @@ If no tid is given, ask: "Which experiment tid should I run?"
 
 ---
 
-## Step 2 — Detect split
+## Step 2 — Choose backend and detect split
 
+- Default to `local` unless the user explicitly asks for Modal.
 - tid contains `"devset"` → **devset path** (inference + evaluation + markdown report)
-- otherwise → **blindset path** (inference only)
+- tid containing `blindset_` → **blindset path** (inference only)
+- if the tid is ambiguous, require an explicit `--eval_dataset`
 
 ---
 
@@ -36,16 +38,26 @@ If missing, stop and tell the user: "No config found at config/{tid}.yaml — pl
 
 ---
 
-## Step 4 — Run Modal inference
+## Step 4 — Run the unified experiment command
 
-**Devset:**
+**Local devset:**
 ```bash
-modal run modal/app.py::run_inference --tid {tid}
+python run_experiment.py --backend local --tid {tid}
 ```
 
-**Blindset:**
+**Modal devset:**
 ```bash
-modal run modal/app.py::run_inference_blindset --tid {tid}
+python run_experiment.py --backend modal --tid {tid}
+```
+
+**Local blindset:**
+```bash
+python run_experiment.py --backend local --tid {tid} --eval_dataset {eval_dataset}
+```
+
+**Modal blindset:**
+```bash
+python run_experiment.py --backend modal --tid {tid} --eval_dataset {eval_dataset}
 ```
 
 Wait for completion. If it fails, report the error and stop.
@@ -56,45 +68,7 @@ If it fails with `torch.OutOfMemoryError: CUDA out of memory`, stop and report t
 
 If it fails with `{path} was modified during build process`, report that the local worktree changed while Modal packaged the app. The user may retry once the worktree is stable.
 
-Log: `Inference complete. Results saved to Modal volume: inference/devset/{tid}.json`
-
----
-
-## Step 5 — Download inference results
-
-Download to `evaluator/exp/` so the evaluation script can find them:
-
-```bash
-python modal/download_results.py --tid {tid} --out_dir evaluator/exp
-```
-
-For blindset, also pass `--split {eval_dataset}` (the non-devset part of the tid, e.g. `blindset_A`).
-
-If download fails with `Could not connect to the Modal server`, rerun the same download command with network/escalated approval.
-
-The download script uses `modal.Volume.from_name("music-crs-results")`, which is the correct API for the current Modal SDK used by this repo.
-
-Log the local path: `Downloaded → evaluator/exp/inference/devset/{tid}.json`
-
----
-
-## Step 6 (devset only) — Run evaluation locally
-
-```bash
-cd evaluator && PYTHONPATH=. python evaluate_devset.py --tid {tid}
-```
-
-This saves:
-- `evaluator/exp/scores/devset/{tid}.json` — aggregate metrics
-- `evaluator/exp/scores/devset/{tid}_samples.csv` — per-sample metrics (~8k rows)
-
-If evaluation fails because ground truth is missing, generate it first:
-```bash
-cd evaluator && PYTHONPATH=. python make_ground_truth.py
-```
-Then re-run the evaluation.
-
-If `make_ground_truth.py` or `evaluate_devset.py` fails with Hugging Face network/cache errors such as `nodename nor servname provided`, `Could not connect`, or `PermissionError` for a path under `~/.cache/huggingface`, rerun the same command with network/filesystem escalation so the cached dataset lock files and metadata can be accessed.
+For devset runs, the wrapper also evaluates locally and writes scores into `exp/scores/devset/`.
 
 ---
 
@@ -102,7 +76,7 @@ If `make_ground_truth.py` or `evaluate_devset.py` fails with Hugging Face networ
 
 Read these two files:
 - `config/{tid}.yaml` — for config fields
-- `evaluator/exp/scores/devset/{tid}.json` — for all metrics
+- `exp/scores/devset/{tid}.json` — for all metrics
 
 Create `experiments/{tid}.md` at the project root using this template (fill in all `{…}` placeholders from the JSON/YAML):
 
@@ -176,9 +150,9 @@ Create `experiments/{tid}.md` at the project root using this template (fill in a
 
 ## Files
 
-- Inference predictions: `evaluator/exp/inference/devset/{tid}.json`
-- Aggregate scores: `evaluator/exp/scores/devset/{tid}.json`
-- Per-sample metrics: `evaluator/exp/scores/devset/{tid}_samples.csv`
+- Inference predictions: `exp/inference/devset/{tid}.json`
+- Aggregate scores: `exp/scores/devset/{tid}.json`
+- Per-sample metrics: `exp/scores/devset/{tid}_samples.csv`
 ```
 
 Create the `experiments/` directory if it doesn't exist.
@@ -192,9 +166,9 @@ Report to the user:
 ```
 Experiment {tid} complete.
 
-Inference:  evaluator/exp/inference/devset/{tid}.json
-Scores:     evaluator/exp/scores/devset/{tid}.json
-Samples:    evaluator/exp/scores/devset/{tid}_samples.csv
+Inference:  exp/inference/devset/{tid}.json
+Scores:     exp/scores/devset/{tid}.json
+Samples:    exp/scores/devset/{tid}_samples.csv
 Report:     experiments/{tid}.md
 
 Key metrics:

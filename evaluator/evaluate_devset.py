@@ -21,6 +21,7 @@ import os
 import json
 import argparse
 from collections import defaultdict
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -215,14 +216,22 @@ def print_report(m, tid):
               f"{v['hit@100']:.4f}  (n={v['n']})")
 
 
+def _resolve_exp_dir(exp_dir: str | Path | None) -> Path:
+    if exp_dir is None:
+        return Path("exp")
+    return Path(exp_dir)
+
+
 def main(args):
     from datasets import load_dataset  # lazy to keep pure-metric tests import-free
-    ground_truth = json.load(open(f"exp/ground_truth/devset.json"))
+    exp_dir = _resolve_exp_dir(getattr(args, "exp_dir", None))
+    split = getattr(args, "eval_dataset", "devset")
+    ground_truth = json.load(open(exp_dir / "ground_truth" / f"{split}.json"))
     if args.session_ids_file:
         with open(args.session_ids_file) as f:
             keep = set(json.load(f)["session_ids"])
         ground_truth = [r for r in ground_truth if r["session_id"] in keep]
-    predictions = json.load(open(f"exp/inference/devset/{args.tid}.json"))
+    predictions = json.load(open(exp_dir / "inference" / split / f"{args.tid}.json"))
 
     df_predictions = pd.DataFrame(predictions)
     df_ground_truth = pd.DataFrame(ground_truth)
@@ -242,12 +251,13 @@ def main(args):
     agg["lexical_diversity"] = compute_lexical_diversity(agg.pop("_responses"))
     agg["total_catalog_size"] = total_catalog_size
 
-    os.makedirs("exp/scores/devset", exist_ok=True)
-    out_path = f"exp/scores/devset/{args.tid}.json"
+    score_dir = exp_dir / "scores" / split
+    os.makedirs(score_dir, exist_ok=True)
+    out_path = score_dir / f"{args.tid}.json"
     with open(out_path, "w") as f:
         json.dump(agg, f, indent=2)
 
-    samples_path = f"exp/scores/devset/{args.tid}_samples.csv"
+    samples_path = score_dir / f"{args.tid}_samples.csv"
     df_results.to_csv(samples_path, index=False)
 
     print_report(agg, args.tid)
@@ -264,5 +274,7 @@ if __name__ == "__main__":
     parser.add_argument("--eval_dataset", type=str, default="devset")
     parser.add_argument("--session_ids_file", type=str, default=None,
                         help="Optional JSON with {session_ids: [...]} to score a subset.")
+    parser.add_argument("--exp_dir", type=str, default="exp",
+                        help="Artifact root containing inference, ground_truth, and scores.")
     args = parser.parse_args()
     main(args)
