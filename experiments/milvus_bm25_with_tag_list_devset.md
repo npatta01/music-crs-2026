@@ -75,6 +75,23 @@
 | max_pool_depth | 1000 |
 | n_shallow_rows | 0 |
 
+## Analyzer Note
+
+This run uses an explicit Milvus BM25 analyzer override on the text fields instead of relying on the implicit/default Milvus field analysis:
+
+- tokenizer: `standard`
+- filters: `lowercase`, English stopword removal
+
+The goal was to move Milvus BM25 closer to the repo's existing `bm25s` sparse baseline while keeping the same combined label-based corpus text:
+
+- `track_name: ...`
+- `artist_name: ...`
+- `album_name: ...`
+- `release_date: ...`
+- `tag_list: ...`
+
+This analyzer change also closed the earlier output-depth issue from raw Milvus BM25. Before the override, some broad queries returned fewer than `topk=1000` results. After the analyzer change, this devset run stayed fully native with `min_pool_depth = max_pool_depth = 1000` and `n_shallow_rows = 0`.
+
 ## Comparison To Non-Milvus Sparse Baseline
 
 Reference baseline: `bm25_devset_retrieval_only_with_tag_list`
@@ -85,6 +102,11 @@ Reference baseline: `bm25_devset_retrieval_only_with_tag_list`
 | Hit@20 | 0.2640 | 0.2514 | -0.0126 |
 | Hit@1000 | 0.6311 | 0.6048 | -0.0263 |
 | MRR | 0.0558 | 0.0542 | -0.0016 |
+
+The remaining gap after the analyzer change is therefore modest but real:
+
+- head ranking gap: `-0.0037 NDCG@20`, `-0.0126 Hit@20`, `-0.0016 MRR`
+- deeper pool gap: `-0.0263 Hit@1000`
 
 ## Per-Turn Breakdown
 

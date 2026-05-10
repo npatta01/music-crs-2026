@@ -57,8 +57,10 @@ Key metrics:
 
 Takeaways:
 - Native Milvus BM25 is close to the repo's checked-in sparse baseline, but it is still slightly behind across head and deep retrieval metrics.
-- The current Milvus analyzer setup is good enough to preserve full `topk=1000` output depth on the devset, so the comparison is now fully native and does not rely on synthetic tail padding.
+- The current Milvus BM25 setup uses an explicit analyzer override on the text fields instead of the implicit/default Milvus field analysis: `standard` tokenizer plus `lowercase` and English stopword filtering.
+- That analyzer change was important operationally because earlier raw Milvus BM25 runs sometimes returned fewer than `topk=1000` results. With the explicit analyzer, the devset run preserved full `topk=1000` output depth, so the comparison is now fully native and does not rely on synthetic tail padding.
 - The remaining gap is modest at the head: `-0.0037 NDCG@20`, `-0.0126 Hit@20`, and `-0.0016 MRR`.
+- The deeper retrieval gap is still visible at `Hit@1000`: `0.6311 -> 0.6048` (`-0.0263`).
 - This is a reasonable foundation for future sparse+dense Milvus hybrid work, but the non-Milvus BM25 baseline remains the stronger pure sparse retrieval reference for now.
 
 Linked reports:
