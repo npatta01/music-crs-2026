@@ -345,3 +345,98 @@ def test_evaluate_full_depth_keeps_all_metric_keys_numeric():
     assert df_results.loc[0, "ndcg@1000"] == 1.0
     assert df_results.loc[0, "hit@1000"] == 1.0
     assert df_results.loc[0, "rr@1000"] == 1.0
+
+
+def test_evaluate_per_turn_nulls_deep_cutoffs_for_mixed_depth_rows():
+    module = _load_module("evaluate_devset_mixed_depth_module", "evaluator/evaluate_devset.py")
+
+    df_predictions = pd.DataFrame(
+        [
+            {
+                "session_id": "s1",
+                "turn_number": 1,
+                "predicted_track_ids": [f"track-{i}" for i in range(20)],
+                "predicted_response": "",
+            },
+            {
+                "session_id": "s2",
+                "turn_number": 1,
+                "predicted_track_ids": [f"track-{i}" for i in range(100)],
+                "predicted_response": "",
+            },
+        ]
+    )
+    df_ground_truth = pd.DataFrame(
+        [
+            {
+                "session_id": "s1",
+                "turn_number": 1,
+                "ground_truth_track_id": "track-0",
+            },
+            {
+                "session_id": "s2",
+                "turn_number": 1,
+                "ground_truth_track_id": "track-0",
+            },
+        ]
+    )
+
+    _, agg = module.evaluate(df_predictions, df_ground_truth)
+
+    assert agg["available_cutoffs"] == [1, 5, 10, 20]
+    assert agg["hit@100"] is None
+    assert agg["ndcg@100"] is None
+    assert agg["per_turn"]["1"]["ndcg@20"] == 1.0
+    assert agg["per_turn"]["1"]["hit@20"] == 1.0
+    assert agg["per_turn"]["1"]["hit@100"] is None
+
+
+def test_main_nulls_catalog_diversity_for_unavailable_cutoffs(tmp_path, monkeypatch):
+    module = _load_module("evaluate_devset_main_shallow_diversity_module", "evaluator/evaluate_devset.py")
+
+    exp_dir = tmp_path / "artifacts"
+    inference_dir = exp_dir / "inference" / "devset"
+    ground_truth_dir = exp_dir / "ground_truth"
+    inference_dir.mkdir(parents=True)
+    ground_truth_dir.mkdir(parents=True)
+
+    predictions = [
+        {
+            "session_id": "s1",
+            "turn_number": 1,
+            "predicted_track_ids": [f"track-{i}" for i in range(20)],
+            "predicted_response": "response",
+        }
+    ]
+    ground_truth = [
+        {
+            "session_id": "s1",
+            "turn_number": 1,
+            "ground_truth_track_id": "track-0",
+        }
+    ]
+
+    (inference_dir / "foo_devset.json").write_text(json.dumps(predictions), encoding="utf-8")
+    (ground_truth_dir / "devset.json").write_text(json.dumps(ground_truth), encoding="utf-8")
+
+    monkeypatch.setattr(module, "print_report", lambda *args, **kwargs: None)
+
+    import datasets
+
+    monkeypatch.setattr(datasets, "load_dataset", lambda *args, **kwargs: [1, 2, 3])
+
+    args = SimpleNamespace(
+        tid="foo_devset",
+        eval_dataset="devset",
+        session_ids_file=None,
+        exp_dir=str(exp_dir),
+    )
+
+    module.main(args)
+
+    score_path = exp_dir / "scores" / "devset" / "foo_devset.json"
+    payload = json.loads(score_path.read_text(encoding="utf-8"))
+
+    assert payload["available_cutoffs"] == [1, 5, 10, 20]
+    assert payload["catalog_diversity"] == pytest.approx(20 / 3)
+    assert payload["catalog_diversity@100"] is None

@@ -102,6 +102,15 @@ def _aggregate_metric(df_turnwise: pd.DataFrame, column_name: str, available: bo
     return _safe_float(df_turnwise[column_name].mean())
 
 
+def _aggregate_group_metric(sub: pd.DataFrame, column_name: str, cutoff: int):
+    if column_name not in sub:
+        return None
+    min_group_depth = int(sub["pool_depth"].min()) if len(sub) else 0
+    if min_group_depth < cutoff:
+        return None
+    return _safe_float(sub[column_name].mean())
+
+
 def _availability_for_cutoffs(available_cutoffs: list[int], cutoffs: list[int]) -> dict[int, bool]:
     available = set(available_cutoffs)
     return {k: k in available for k in cutoffs}
@@ -192,9 +201,9 @@ def evaluate(df_predictions, df_ground_truth):
     for tn, sub in df_results.groupby("turn_number"):
         per_turn[int(tn)] = {
             "n": int(len(sub)),
-            "ndcg@20": _safe_float(sub["ndcg@20"].mean()),
-            "hit@20": _safe_float(sub["hit@20"].mean()),
-            "hit@100": _safe_float(sub["hit@100"].mean()),
+            "ndcg@20": _aggregate_group_metric(sub, "ndcg@20", 20),
+            "hit@20": _aggregate_group_metric(sub, "hit@20", 20),
+            "hit@100": _aggregate_group_metric(sub, "hit@100", 100),
         }
 
     n_total = len(df_results)
@@ -272,8 +281,8 @@ def print_report(m, tid):
     print()
 
     print("Diversity")
-    print(f"  Catalog diversity @20   {m['catalog_diversity']:.4f}")
-    print(f"  Catalog diversity @100  {m['catalog_diversity@100']:.4f}")
+    print(_format_metric("Catalog div @20", m["catalog_diversity"]))
+    print(_format_metric("Catalog div @100", m["catalog_diversity@100"]))
     print(f"  Lexical diversity       {m['lexical_diversity']:.4f}\n")
 
     print("Per-turn  (NDCG@20 / Hit@20 / Hit@100)")
@@ -310,11 +319,18 @@ def main(args):
         "talkpl-ai/TalkPlayData-Challenge-Track-Metadata", split="all_tracks"
     )
     total_catalog_size = len(music_catalog)
-    agg["catalog_diversity"] = compute_catalog_diversity(
-        agg.pop("_recommended_20"), total_catalog_size
+    recommended_20 = agg.pop("_recommended_20")
+    recommended_100 = agg.pop("_recommended_100")
+    available_cutoffs = set(agg["available_cutoffs"])
+    agg["catalog_diversity"] = (
+        compute_catalog_diversity(recommended_20, total_catalog_size)
+        if 20 in available_cutoffs
+        else None
     )
-    agg["catalog_diversity@100"] = compute_catalog_diversity(
-        agg.pop("_recommended_100"), total_catalog_size
+    agg["catalog_diversity@100"] = (
+        compute_catalog_diversity(recommended_100, total_catalog_size)
+        if 100 in available_cutoffs
+        else None
     )
     agg["lexical_diversity"] = compute_lexical_diversity(agg.pop("_responses"))
     agg["total_catalog_size"] = total_catalog_size
