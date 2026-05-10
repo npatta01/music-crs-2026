@@ -92,6 +92,33 @@ uv run modal run other/modal_get_started.py
 # Expected: "This code is running on a remote worker! the square is 1764"
 ```
 
+### Run Experiments
+
+The preferred operator command is the unified experiment wrapper:
+
+```bash
+# Local devset run + local evaluation
+python run_experiment.py --backend local --tid llama1b_bm25_devset --batch_size 16
+
+# Modal devset run + download into local exp/ + local evaluation
+python run_experiment.py --backend modal --tid llama1b_bm25_devset --batch_size 16
+
+# Local blindset run
+python run_experiment.py --backend local --tid llama1b_bm25_blindset_A --eval_dataset blindset_A --batch_size 16
+```
+
+Devset runs write predictions to `exp/inference/devset/{tid}.json` and scores to `exp/scores/devset/{tid}.json`.
+
+The low-level inference scripts remain available when you want to run only one stage:
+
+```bash
+# Dev set inference only
+python run_inference_devset.py --tid llama1b_bm25_devset --batch_size 16
+
+# Blind set inference only
+python run_inference_blindset.py --tid llama1b_bm25_blindset_A --eval_dataset blindset_A --batch_size 16
+```
+
 ### Run Inference on the Development Set
 
 **⚠️ Note: During inference, the recommender system must always retrieve candidates from the entire track catalog. Do not filter, subset, or restrict tracks using `track_split_types` or any other mechanism!**
@@ -111,13 +138,13 @@ If you do not use `all_tracks`, your evaluation may be considered invalid.
 
 ```bash
 # BM25 baseline
-python run_inference_devset.py --tid llama1b_bm25_devset --batch_size 16
+python run_experiment.py --backend local --tid llama1b_bm25_devset --batch_size 16
 
 # BERT baseline
-python run_inference_devset.py --tid llama1b_bert_devset --batch_size 16
+python run_experiment.py --backend local --tid llama1b_bert_devset --batch_size 16
 ```
 
-Results are saved to `exp/inference/{tid}.json`.
+Results are saved under `exp/`.
 
 Rewrite-based QU experiments may also emit sidecars alongside the prediction file:
 
@@ -151,10 +178,10 @@ The downloader defaults to `evaluator/exp/` and mirrors any available remote:
 
 ```bash
 # BM25 baseline
-python run_inference_blindset.py --tid llama1b_bm25_blindset_A --batch_size 16
+python run_experiment.py --backend local --tid llama1b_bm25_blindset_A --eval_dataset blindset_A --batch_size 16
 
 # BERT baseline
-python run_inference_blindset.py --tid llama1b_bert_blindset_A --batch_size 16
+python run_experiment.py --backend local --tid llama1b_bert_blindset_A --eval_dataset blindset_A --batch_size 16
 ```
 
 ---
@@ -188,7 +215,7 @@ attn_implementation: "sdpa"
 Then run with your config:
 
 ```bash
-python run_inference_devset.py --tid my_model
+python run_experiment.py --backend local --tid my_model --eval_dataset devset
 ```
 
 For retrieval-only Wave 3 rewrite experiments, use `lm_type: "dummy"` and move the rewrite model into `qu_kwargs`:

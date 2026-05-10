@@ -41,62 +41,48 @@ Modal reads this automatically via `modal.Secret.from_dotenv()`. Volumes are cre
 
 ---
 
-### Run inference
+### Run experiments
 
 **Smoke test (5 random sessions, fast)**
 
 ```bash
-modal run modal/app.py::run_inference --num-sessions 5
+python run_experiment.py --backend modal --tid llama1b_bm25_devset --num_sessions 5
 ```
 
 **Full devset**
 
 ```bash
-modal run modal/app.py::run_inference --tid llama1b_bm25_devset --batch-size 16
+python run_experiment.py --backend modal --tid llama1b_bm25_devset --batch_size 16
 ```
 
 **Blindset (submission)**
 
 ```bash
-modal run modal/app.py::run_inference_blindset --tid llama1b_bm25_blindset_A
+python run_experiment.py --backend modal --tid llama1b_bm25_blindset_A --eval_dataset blindset_A --batch_size 16
 ```
 
-The second run skips re-downloading model weights — HF model cache is persisted in the `music-crs-hf-cache` volume.
+The wrapper runs Modal inference, downloads artifacts back into your local `exp/` tree, and evaluates devset runs locally. The second Modal run skips re-downloading model weights because the HF cache is persisted in the `music-crs-hf-cache` volume.
 
 ---
 
-### Run evaluation
+### Advanced manual commands
 
-After inference completes, score the predictions on CPU:
-
-```bash
-modal run modal/app.py::run_evaluate --tid llama1b_bm25_devset
-```
-
-Prints NDCG@1/10/20 and catalog diversity. Scores are written to the `music-crs-results` volume at `scores/devset/{tid}.json`.
-
-You can also run evaluation locally using the evaluator submodule directly:
+If you want to bypass the unified wrapper, the underlying Modal entrypoints are still available:
 
 ```bash
-# First initialise the submodule if you haven't already
-git submodule update --init evaluator
-
-# Generate ground truth once
-python evaluator/make_ground_truth.py
-
-# Score predictions
-python evaluator/evaluate_devset.py --tid llama1b_bm25_devset
+modal run modal/app.py::run_inference --tid llama1b_bm25_devset --batch-size 16
+modal run modal/app.py::run_inference_blindset --tid llama1b_bm25_blindset_A --batch-size 16 --eval-dataset blindset_A
 ```
 
 ---
 
 ### Download results locally
 
-Use the repo downloader to mirror artifacts from the Modal volume into local `evaluator/exp/` by default.
+Use the repo downloader to mirror artifacts from the Modal volume into a chosen local output directory. The unified wrapper uses `exp/`.
 
 ```bash
-# Download one run (legacy usage still works)
-python modal/download_results.py --tid llama1b_bm25_devset
+# Download one run into exp/
+python modal/download_results.py --tid llama1b_bm25_devset --out-dir exp
 
 # Download all missing remote artifacts
 python modal/download_results.py

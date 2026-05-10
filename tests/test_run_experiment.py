@@ -1,0 +1,258 @@
+from __future__ import annotations
+
+import importlib.util
+import json
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+
+import pandas as pd
+import pytest
+
+
+def _load_module(name: str, relative_path: str):
+    module_path = Path(__file__).resolve().parents[1] / relative_path
+    sys.path.insert(0, str(module_path.parent))
+    spec = importlib.util.spec_from_file_location(name, module_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _base_eval_metrics(module) -> dict:
+    metrics = {
+        "n_turns_evaluated": 1,
+        "max_pool_depth": 1000,
+        "mrr": 0.0,
+        "mean_rank_when_found": None,
+        "median_rank_when_found": None,
+        "pct_gt_not_in_top20": 1.0,
+        "pct_gt_not_in_top100": 1.0,
+        "pct_gt_not_in_top200": 1.0,
+        "pct_gt_not_in_top500": 1.0,
+        "pct_gt_not_in_top1000": 1.0,
+        "per_turn": {},
+        "_recommended_20": [],
+        "_recommended_100": [],
+        "_responses": [],
+    }
+    for k in module.K_VALUES:
+        metrics[f"ndcg@{k}"] = 0.0
+        metrics[f"hit@{k}"] = 0.0
+        metrics[f"recall@{k}"] = 0.0
+    for k in module.MRR_K_VALUES:
+        metrics[f"mrr@{k}"] = 0.0
+    return metrics
+
+
+def _write_config(root: Path, tid: str):
+    config_dir = root / "config"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    (config_dir / f"{tid}.yaml").write_text("lm_type: dummy\n", encoding="utf-8")
+
+
+def test_resolve_split_rejects_unknown_non_devset_tid():
+    module = _load_module("run_experiment_module", "run_experiment.py")
+
+    with pytest.raises(ValueError):
+        module.resolve_split("custom_run", None)
+
+
+def test_local_devset_runs_inference_then_ground_truth_then_eval(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_local", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+
+    commands: list[tuple[list[str], Path]] = []
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append(([str(part) for part in cmd], Path(cwd))),
+    )
+
+    exit_code = module.main(
+        [
+            "--backend",
+            "local",
+            "--tid",
+            "foo_devset",
+            "--batch_size",
+            "4",
+            "--exp_dir",
+            str(project_root / "artifacts"),
+        ]
+    )
+
+    assert exit_code == 0
+    assert commands == [
+        (
+            [
+                "/usr/bin/python3",
+                "run_inference_devset.py",
+                "--tid",
+                "foo_devset",
+                "--batch_size",
+                "4",
+                "--exp_dir",
+                str(project_root / "artifacts"),
+            ],
+            project_root,
+        ),
+        (
+            [
+                "/usr/bin/python3",
+                "evaluator/make_ground_truth.py",
+                "--exp_dir",
+                str(project_root / "artifacts"),
+            ],
+            project_root,
+        ),
+        (
+            [
+                "/usr/bin/python3",
+                "evaluator/evaluate_devset.py",
+                "--tid",
+                "foo_devset",
+                "--eval_dataset",
+                "devset",
+                "--exp_dir",
+                str(project_root / "artifacts"),
+            ],
+            project_root,
+        ),
+    ]
+
+
+def test_modal_blindset_downloads_into_requested_exp_dir(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_modal", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_blindset_A")
+
+    commands: list[tuple[list[str], Path]] = []
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append(([str(part) for part in cmd], Path(cwd))),
+    )
+
+    exit_code = module.main(
+        [
+            "--backend",
+            "modal",
+            "--tid",
+            "foo_blindset_A",
+            "--batch_size",
+            "8",
+            "--exp_dir",
+            str(project_root / "exp-out"),
+        ]
+    )
+
+    assert exit_code == 0
+    assert commands == [
+        (
+            [
+                "/usr/bin/python3",
+                "-m",
+                "modal",
+                "run",
+                "modal/app.py::run_inference_blindset",
+                "--tid",
+                "foo_blindset_A",
+                "--batch-size",
+                "8",
+                "--eval-dataset",
+                "blindset_A",
+            ],
+            project_root,
+        ),
+        (
+            [
+                "/usr/bin/python3",
+                "modal/download_results.py",
+                "--tid",
+                "foo_blindset_A",
+                "--split",
+                "blindset_A",
+                "--out-dir",
+                str(project_root / "exp-out"),
+            ],
+            project_root,
+        ),
+    ]
+
+
+def test_evaluate_main_uses_custom_exp_dir(tmp_path, monkeypatch):
+    module = _load_module("evaluate_devset_module", "evaluator/evaluate_devset.py")
+    exp_dir = tmp_path / "artifacts"
+    (exp_dir / "ground_truth").mkdir(parents=True)
+    (exp_dir / "inference" / "devset").mkdir(parents=True)
+    (exp_dir / "ground_truth" / "devset.json").write_text(
+        json.dumps(
+            [
+                {
+                    "session_id": "s1",
+                    "user_id": "u1",
+                    "turn_number": 1,
+                    "ground_truth_track_id": "track-1",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (exp_dir / "inference" / "devset" / "foo_devset.json").write_text(
+        json.dumps(
+            [
+                {
+                    "session_id": "s1",
+                    "user_id": "u1",
+                    "turn_number": 1,
+                    "predicted_track_ids": ["track-1"] * 1000,
+                    "predicted_response": "hello",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        module,
+        "evaluate",
+        lambda df_predictions, df_ground_truth: (
+            pd.DataFrame(
+                [
+                    {
+                        "session_id": "s1",
+                        "turn_number": 1,
+                        "gt_rank": 1,
+                    }
+                ]
+            ),
+            _base_eval_metrics(module),
+        ),
+    )
+    monkeypatch.setattr(module, "print_report", lambda *args, **kwargs: None)
+
+    import datasets
+
+    monkeypatch.setattr(datasets, "load_dataset", lambda *args, **kwargs: [1, 2, 3])
+
+    args = SimpleNamespace(
+        tid="foo_devset",
+        eval_dataset="devset",
+        session_ids_file=None,
+        exp_dir=str(exp_dir),
+    )
+
+    module.main(args)
+
+    assert (exp_dir / "scores" / "devset" / "foo_devset.json").exists()
+    assert (exp_dir / "scores" / "devset" / "foo_devset_samples.csv").exists()

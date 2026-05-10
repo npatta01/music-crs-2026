@@ -24,10 +24,14 @@ uvx hf auth login   # HF access required for datasets + Llama
 ## Run
 
 ```bash
-# Dev set
-python run_inference_devset.py --tid llama1b_bm25_devset --batch_size 16
+# Preferred: unified experiment command (local)
+python run_experiment.py --backend local --tid llama1b_bm25_devset --batch_size 16
 
-# Blind set A (submission)
+# Preferred: unified experiment command (Modal)
+python run_experiment.py --backend modal --tid llama1b_bm25_devset --batch_size 16
+
+# Low-level inference scripts still work
+python run_inference_devset.py --tid llama1b_bm25_devset --batch_size 16
 python run_inference_blindset.py --tid llama1b_bm25_blindset_A --eval_dataset blindset_A --batch_size 16
 
 # Package submission
@@ -43,7 +47,7 @@ See `tips/` for directions: better item representations, reranker modules, gener
 ## Skills
 
 - `download-artifacts` — sync Modal prediction artifacts, rewrite traces, scores, and ground-truth files into `evaluator/exp` using `python modal/download_results.py`
-- `run-experiment` — run a Modal experiment end-to-end, download results locally, and evaluate devset runs
+- `run-experiment` — run a local or Modal experiment end-to-end with the unified `run_experiment.py` wrapper
 
 ## Experiments Workspace
 
