@@ -34,6 +34,45 @@ Next step:
 Status:
 - In progress
 
+## 2026-05-10 - Milvus native BM25 tag-list comparison
+
+Question:
+How close is native Milvus BM25 to the checked-in non-Milvus sparse baseline when both use the same combined metadata plus tag-list corpus?
+
+Runs:
+- `bm25_devset_retrieval_only_with_tag_list`
+- `milvus_bm25_with_tag_list_devset`
+
+Key metrics:
+- Non-Milvus baseline: `bm25_devset_retrieval_only_with_tag_list`
+  - `NDCG@20 0.0970`
+  - `Hit@20 0.2640`
+  - `Hit@1000 0.6311`
+  - `MRR 0.0558`
+- Milvus native BM25: `milvus_bm25_with_tag_list_devset`
+  - `NDCG@20 0.0933`
+  - `Hit@20 0.2514`
+  - `Hit@1000 0.6048`
+  - `MRR 0.0542`
+
+Takeaways:
+- Native Milvus BM25 is close to the repo's checked-in sparse baseline, but it is still slightly behind across head and deep retrieval metrics.
+- The current Milvus BM25 setup uses an explicit analyzer override on the text fields instead of the implicit/default Milvus field analysis: `standard` tokenizer plus `lowercase` and English stopword filtering.
+- That analyzer change was important operationally because earlier raw Milvus BM25 runs sometimes returned fewer than `topk=1000` results. With the explicit analyzer, the devset run preserved full `topk=1000` output depth, so the comparison is now fully native and does not rely on synthetic tail padding.
+- The remaining gap is modest at the head: `-0.0037 NDCG@20`, `-0.0126 Hit@20`, and `-0.0016 MRR`.
+- The deeper retrieval gap is still visible at `Hit@1000`: `0.6311 -> 0.6048` (`-0.0263`).
+- This is a reasonable foundation for future sparse+dense Milvus hybrid work, but the non-Milvus BM25 baseline remains the stronger pure sparse retrieval reference for now.
+
+Linked reports:
+- `experiments/bm25_devset_retrieval_only_with_tag_list.md`
+- `experiments/milvus_bm25_with_tag_list_devset.md`
+
+Next step:
+- Use `milvus_bm25_with_tag_list_devset` as the Milvus sparse anchor when comparing future Milvus dense-only and hybrid retrieval configs.
+
+Status:
+- Done
+
 ## 2026-04-27 - Deterministic QU wave 2
 
 Question:

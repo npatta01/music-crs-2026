@@ -28,7 +28,7 @@ Grouped so each group answers a different question.
 | Metric | Description |
 |--------|-------------|
 | **NDCG@{1,5,10,20,50,100}** | Headline ranking metrics plus near-pool diagnostics. NDCG@10 is the official primary ranking metric. |
-| **NDCG@{200,500,1000}** | Deep-cutoff diagnostics: useful for separating candidate-generation limits from reranking limits. |
+| **NDCG@{200,500,1000}** | Deep-cutoff diagnostics: useful for separating candidate-generation limits from reranking limits. Values become `null` when the retrieved pool is shallower than the cutoff. |
 | **MRR** | Mean Reciprocal Rank over the full retrieved pool. |
 | **MRR@{100,200,500,1000}** | Reciprocal-rank diagnostics at fixed cutoffs, comparable across runs with the same retrieved depth. |
 
@@ -37,7 +37,7 @@ Grouped so each group answers a different question.
 | Metric | Description |
 |--------|-------------|
 | **Recall@{1,5,10,20,50,100}** | Headline coverage metrics. With a single GT per turn, Recall@k = Hit@k. |
-| **Recall@{200,500,1000}** | Deep-cutoff coverage diagnostics: tells you whether more recall is available beyond the top-100. |
+| **Recall@{200,500,1000}** | Deep-cutoff coverage diagnostics: tells you whether more recall is available beyond the top-100. Values become `null` when the retrieved pool is shallower than the cutoff. |
 | **% GT not in top-20** | Ceiling on NDCG@20: any miss here is unrecoverable by reranking. |
 | **% GT not in top-100** | Ceiling on what a reranker over the top-100 can ever achieve. |
 | **% GT not in top-200 / top-500 / top-1000** | Same ceiling analysis for deeper candidate pools. |
@@ -98,5 +98,5 @@ When you run a new experiment, append one or more rows to the table above with t
   outputs remain unchanged (the leaderboard expects exactly 20 ids per turn).
 - Devset configs override `retrieval_topk: 1000` so the offline evaluator can
   report deep-cutoff diagnostics through `@1000`. The submission file format is independent.
-- The evaluator now fails explicitly if any devset prediction row is shallower than
-  `1000` candidates, rather than silently treating `@200/@500/@1000` as truncated metrics.
+- The evaluator keeps `require_full_diagnostic_depth: true` as the diagnostic contract, but if a devset run returns a shallower pool it now emits `null` for unsupported deep metrics instead of failing or silently coercing them to zero.
+- Score JSON files also include depth metadata such as `available_cutoffs`, `min_pool_depth`, `max_pool_depth`, and `n_shallow_rows` so raw native Milvus runs stay easy to compare.

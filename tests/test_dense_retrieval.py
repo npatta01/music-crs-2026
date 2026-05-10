@@ -98,8 +98,8 @@ class CRSPlumbingTests(unittest.TestCase):
                 retrieval_config=retrieval_config,
             )
 
-            args, _ = mock_baseline.call_args
-            self.assertEqual(args[-1], retrieval_config)
+            _, kwargs = mock_baseline.call_args
+            self.assertEqual(kwargs["retrieval_config"], retrieval_config)
 
 
 class DenseTransformerModelTests(unittest.TestCase):

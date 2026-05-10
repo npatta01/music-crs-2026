@@ -1,0 +1,37 @@
+lm_type: "dummy"
+retrieval_type: "milvus"
+qu_type: "passthrough"
+test_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Dataset"
+item_db_name: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
+user_db_name: "talkpl-ai/TalkPlayData-Challenge-User-Metadata"
+track_split_types:
+  - "all_tracks"
+user_split_types:
+  - "all_users"
+corpus_types:
+  - "track_name"
+  - "artist_name"
+  - "album_name"
+  - "release_date"
+  - "tag_list"
+cache_dir: "./cache"
+device: "cpu"
+attn_implementation: "eager"
+retrieval_topk: 1000
+retrieval_config:
+  uri: "http://localhost:19530"
+  db_name: "default"
+  collection_name: "music_track_catalog"
+  searches:
+    - name: "bm25_with_tag_list"
+      kind: "bm25_compat"
+      corpus_fields:
+        - "track_name"
+        - "artist_name"
+        - "album_name"
+        - "release_date"
+        - "tag_list"
+      weight: 1.0
+      topk: 1000
+  fusion:
+    method: "weighted"

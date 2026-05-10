@@ -62,6 +62,47 @@ def _passthrough_config():
     )
 
 
+def _milvus_config():
+    return OmegaConf.create(
+        {
+            "lm_type": "dummy",
+            "retrieval_type": "milvus",
+            "qu_type": "passthrough",
+            "test_dataset_name": "ignored",
+            "item_db_name": "ignored",
+            "user_db_name": "ignored",
+            "track_split_types": ["all_tracks"],
+            "user_split_types": ["all_users"],
+            "corpus_types": ["track_name", "artist_name", "album_name", "release_date", "tag_list"],
+            "cache_dir": "./cache",
+            "device": "cpu",
+            "attn_implementation": "eager",
+            "retrieval_topk": 1000,
+            "retrieval_config": {
+                "uri": "http://localhost:19530",
+                "db_name": "default",
+                "collection_name": "music_track_catalog",
+                "searches": [
+                    {
+                        "name": "bm25_with_tag_list",
+                        "kind": "bm25_compat",
+                        "corpus_fields": [
+                            "track_name",
+                            "artist_name",
+                            "album_name",
+                            "release_date",
+                            "tag_list",
+                        ],
+                        "weight": 1.0,
+                        "topk": 1000,
+                    }
+                ],
+                "fusion": {"method": "weighted"},
+            },
+        }
+    )
+
+
 def test_run_inference_devset_passes_qu_kwargs(monkeypatch, tmp_path):
     captured = {}
 
@@ -149,6 +190,52 @@ def test_run_inference_devset_handles_missing_qu_kwargs(monkeypatch, tmp_path):
 
     assert captured["qu_type"] == "passthrough"
     assert captured["qu_kwargs"] == {}
+
+
+def test_run_inference_devset_passes_milvus_retrieval_config_unchanged(monkeypatch, tmp_path):
+    captured = {}
+
+    def fake_load_crs_baseline(**kwargs):
+        captured.update(kwargs)
+        return _FakeCRS()
+
+    monkeypatch.setattr(run_inference_devset.OmegaConf, "load", lambda _: _milvus_config())
+    monkeypatch.setattr(run_inference_devset, "load_crs_baseline", fake_load_crs_baseline)
+    monkeypatch.setattr(run_inference_devset, "load_dataset", lambda *args, **kwargs: [])
+
+    args = SimpleNamespace(
+        tid="milvus_benchmark_devset",
+        batch_size=1,
+        session_ids_file=None,
+        num_sessions=0,
+        exp_dir=str(tmp_path / "exp"),
+        clear_cache=False,
+    )
+
+    run_inference_devset.main(args)
+
+    assert captured["retrieval_type"] == "milvus"
+    assert captured["retrieval_config"] == {
+        "uri": "http://localhost:19530",
+        "db_name": "default",
+        "collection_name": "music_track_catalog",
+        "searches": [
+            {
+                "name": "bm25_with_tag_list",
+                "kind": "bm25_compat",
+                "corpus_fields": [
+                    "track_name",
+                    "artist_name",
+                    "album_name",
+                    "release_date",
+                    "tag_list",
+                ],
+                "weight": 1.0,
+                "topk": 1000,
+            }
+        ],
+        "fusion": {"method": "weighted"},
+    }
 
 
 def test_blindset_chat_history_parser_resolves_music_turns():
