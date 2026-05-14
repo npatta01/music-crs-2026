@@ -37,9 +37,9 @@ def resolve_qu_kwargs_placeholders(qu_kwargs: dict[str, Any], tid: str, exp_dir:
             resolved = value.replace("<tid>", tid)
             if exp_dir is not None:
                 if resolved.startswith("./exp/"):
-                    return os.path.join(exp_dir, resolved[len("./exp/") :])
+                    return os.path.normpath(os.path.join(exp_dir, resolved[len("./exp/") :]))
                 if resolved.startswith("exp/"):
-                    return os.path.join(exp_dir, resolved[len("exp/") :])
+                    return os.path.normpath(os.path.join(exp_dir, resolved[len("exp/") :]))
             return resolved
         if isinstance(value, list):
             return [_resolve(item) for item in value]

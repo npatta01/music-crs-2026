@@ -1,3 +1,4 @@
+import json
 import sys
 import tempfile
 import unittest
@@ -211,6 +212,62 @@ class DenseTransformerModelTests(unittest.TestCase):
             self.assertIn("intfloat__e5-base-v2", str(Path(base.index_dir)))
             self.assertIn("BAAI__bge-base-en-v1.5", str(Path(variant.index_dir)))
             self.assertNotEqual(base.index_dir, variant.index_dir)
+
+
+class LiteLLMEmbeddingModelTests(unittest.TestCase):
+    def test_build_index_resumes_from_cached_chunks(self):
+        if torch is None:
+            self.skipTest("torch is not installed")
+
+        from mcrs.retrieval_modules.litellm_embedding import LITELLM_EMBEDDING_MODEL
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            model = LITELLM_EMBEDDING_MODEL.__new__(LITELLM_EMBEDDING_MODEL)
+            model.index_dir = temp_dir
+            model.batch_size = 2
+            model.concurrency = 2
+            model.model_name = "openrouter/qwen/qwen3-embedding-4b"
+            model.corpus_types = ["track_name"]
+            model.embedding_query_prefix = ""
+            model.embedding_passage_prefix = ""
+            model.dimensions = None
+            model.max_retries = 0
+            model.retry_base_seconds = 0
+            model.metadata_dict = {
+                "track-1": {"track_id": "track-1", "track_name": "one"},
+                "track-2": {"track_id": "track-2", "track_name": "two"},
+                "track-3": {"track_id": "track-3", "track_name": "three"},
+            }
+            model._render_document_text = lambda metadata: metadata["track_name"]
+
+            chunk_dir = Path(temp_dir) / "chunks"
+            chunk_dir.mkdir(parents=True)
+            torch.save(torch.tensor([[1.0, 0.0], [0.0, 1.0]]), chunk_dir / "00000000.pt")
+            (chunk_dir / "00000000.track_ids.json").write_text(
+                json.dumps(["track-1", "track-2"]),
+                encoding="utf-8",
+            )
+
+            calls = []
+
+            def fake_embed_specs(specs, desc):
+                calls.extend(spec["start"] for spec in specs)
+                for spec in specs:
+                    torch.save(torch.tensor([[0.5, 0.5]]), spec["embedding_path"])
+                    Path(spec["track_ids_path"]).write_text(
+                        json.dumps(spec["track_ids"]),
+                        encoding="utf-8",
+                    )
+
+            model._embed_index_specs = fake_embed_specs
+
+            model.build_index()
+
+            self.assertEqual(calls, [2])
+            embeddings = torch.load(Path(temp_dir) / "embeddings.pt")
+            self.assertTrue(torch.equal(embeddings, torch.tensor([[1.0, 0.0], [0.0, 1.0], [0.5, 0.5]])))
+            track_ids = json.loads((Path(temp_dir) / "track_ids.json").read_text(encoding="utf-8"))
+            self.assertEqual(track_ids, ["track-1", "track-2", "track-3"])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,26 @@
+lm_type: "dummy"
+retrieval_type: "litellm_embedding"
+qu_type: "passthrough"
+test_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Dataset"
+item_db_name: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
+user_db_name: "talkpl-ai/TalkPlayData-Challenge-User-Metadata"
+track_split_types:
+  - "all_tracks"
+user_split_types:
+  - "all_users"
+corpus_types:
+  - "track_name"
+  - "artist_name"
+  - "album_name"
+  - "tag_list"
+cache_dir: "./cache"
+device: "cpu"
+attn_implementation: "eager"
+retrieval_topk: 1000
+retrieval_config:
+  model_name: "openrouter/qwen/qwen3-embedding-4b"
+  api_base: "https://openrouter.ai/api/v1"
+  batch_size: 64
+  concurrency: 2
+  max_retries: 6
+  retry_base_seconds: 3
