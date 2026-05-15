@@ -73,6 +73,57 @@ Next step:
 Status:
 - Done
 
+## 2026-05-15 - LanceDB CPU FTS tag-list comparison
+
+Question:
+Can LanceDB provide a CPU-only sparse retrieval path on Modal that stays close to the direct `bm25s` tag-list baseline and is competitive with the native Milvus BM25 comparison?
+
+Runs:
+- `lancedb_fts_with_tag_list_devset`
+- `bm25_devset_retrieval_only_with_tag_list`
+- `milvus_bm25_with_tag_list_devset`
+
+Key metrics:
+- Direct BM25 tag-list baseline:
+  - `NDCG@20 0.0971`
+  - `Hit@20 0.2642`
+  - `Hit@100 0.4305`
+  - `Hit@1000 0.6310`
+  - `MRR 0.0558`
+- LanceDB CPU FTS:
+  - `NDCG@20 0.0962`
+  - `Hit@20 0.2602`
+  - `Hit@100 0.4249`
+  - `Hit@1000 0.6235`
+  - `MRR 0.0557`
+- Milvus native BM25:
+  - `NDCG@20 0.0933`
+  - `Hit@20 0.2514`
+  - `Hit@100 0.4104`
+  - `Hit@1000 0.6048`
+  - `MRR 0.0542`
+
+Takeaways:
+- LanceDB FTS does not need GPU for this sparse retrieval experiment; the Modal path uses CPU resources and reads the index from the `music-crs-models` volume.
+- The useful configuration is `fts_bm25s_compat`: pre-tokenize item text with `bm25s.tokenize`, index that field with LanceDB whitespace FTS, and query with structured `MatchQuery` boosts to preserve repeated query terms.
+- Native LanceDB string querying against the tokenized field was not close enough by itself because it lost the repeated-query-term signal that direct `bm25s` uses.
+- The final LanceDB run is very close to direct BM25: `-0.0009 NDCG@20`, `-0.0040 Hit@20`, `-0.0075 Hit@1000`, and `-0.0001 MRR`.
+- Candidate overlap with direct BM25 is high: `overlap@20 0.9463`, `overlap@100 0.9511`, and `overlap@1000 0.9582`.
+- LanceDB is ahead of the current Milvus sparse anchor across head and deep retrieval metrics: `+0.0029 NDCG@20`, `+0.0088 Hit@20`, and `+0.0187 Hit@1000`.
+- LanceDB FTS can return fewer than `topk` rows for rare queries. The implementation pads the zero-score tail from catalog order after scored FTS matches so the devset diagnostic contract stays at `min_pool_depth = max_pool_depth = 1000`.
+
+Linked reports:
+- `experiments/lancedb_fts_with_tag_list_devset.md`
+- `experiments/bm25_devset_retrieval_only_with_tag_list.md`
+- `experiments/milvus_bm25_with_tag_list_devset.md`
+
+Next step:
+- Upload the rebuilt local `cache/lancedb` directory to the Modal models volume before Modal runs: `uv run modal run modal/app.py::upload_lancedb_index --local-db-dir cache/lancedb --remote-dir lancedb`.
+- Use `lancedb_fts_with_tag_list_devset` as the LanceDB sparse anchor for future CPU sparse or sparse+dense comparisons.
+
+Status:
+- Done
+
 ## 2026-04-27 - Deterministic QU wave 2
 
 Question:

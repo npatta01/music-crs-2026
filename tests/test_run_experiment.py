@@ -133,6 +133,168 @@ def test_local_devset_runs_inference_then_ground_truth_then_eval(tmp_path, monke
     ]
 
 
+def test_local_devset_forwards_session_ids_file_to_evaluation(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_local_subset", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+    session_ids_file = project_root / "sessions.json"
+    session_ids_file.write_text('{"session_ids":["s1"]}', encoding="utf-8")
+
+    commands: list[tuple[list[str], Path]] = []
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append(([str(part) for part in cmd], Path(cwd))),
+    )
+
+    exit_code = module.main(
+        [
+            "--backend",
+            "local",
+            "--tid",
+            "foo_devset",
+            "--session_ids_file",
+            str(session_ids_file),
+            "--exp_dir",
+            str(project_root / "artifacts"),
+        ]
+    )
+
+    assert exit_code == 0
+    assert commands[-1][0] == [
+        "/usr/bin/python3",
+        "evaluator/evaluate_devset.py",
+        "--tid",
+        "foo_devset",
+        "--eval_dataset",
+        "devset",
+        "--exp_dir",
+        str(project_root / "artifacts"),
+        "--session_ids_file",
+        str(session_ids_file),
+    ]
+
+
+def test_local_num_sessions_materializes_shared_subset_file(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_local_num_sessions", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+
+    commands: list[tuple[list[str], Path]] = []
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append(([str(part) for part in cmd], Path(cwd))),
+    )
+    monkeypatch.setattr(
+        module,
+        "load_dataset",
+        lambda *args, **kwargs: [{"session_id": f"s{i}"} for i in range(10)],
+    )
+
+    exit_code = module.main(
+        [
+            "--backend",
+            "local",
+            "--tid",
+            "foo_devset",
+            "--num_sessions",
+            "3",
+            "--exp_dir",
+            str(project_root / "artifacts"),
+        ]
+    )
+
+    subset_file = project_root / "artifacts" / "subsets" / "foo_devset_num_sessions_3.json"
+    assert exit_code == 0
+    assert json.loads(subset_file.read_text(encoding="utf-8")) == {
+        "session_ids": ["s6", "s9", "s0"]
+    }
+    assert commands[0][0][-2:] == ["--session_ids_file", str(subset_file)]
+    assert "--num_sessions" not in commands[0][0]
+    assert commands[-1][0][-2:] == ["--session_ids_file", str(subset_file)]
+
+
+def test_modal_num_sessions_sends_same_subset_to_remote_and_eval(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_modal_num_sessions", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+
+    commands: list[tuple[list[str], Path]] = []
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append(([str(part) for part in cmd], Path(cwd))),
+    )
+    monkeypatch.setattr(
+        module,
+        "load_dataset",
+        lambda *args, **kwargs: [{"session_id": f"s{i}"} for i in range(10)],
+    )
+
+    exit_code = module.main(
+        [
+            "--backend",
+            "modal",
+            "--tid",
+            "foo_devset",
+            "--num_sessions",
+            "3",
+            "--exp_dir",
+            str(project_root / "artifacts"),
+        ]
+    )
+
+    subset_file = project_root / "artifacts" / "subsets" / "foo_devset_num_sessions_3.json"
+    assert exit_code == 0
+    assert commands[0][0] == [
+        "/usr/bin/python3",
+        "-m",
+        "modal",
+        "run",
+        "modal/app.py::run_inference",
+        "--tid",
+        "foo_devset",
+        "--batch-size",
+        "16",
+        "--session-ids-json",
+        '["s6", "s9", "s0"]',
+    ]
+    assert commands[-1][0][-2:] == ["--session_ids_file", str(subset_file)]
+
+
+def test_num_sessions_and_session_ids_file_are_mutually_exclusive(tmp_path):
+    module = _load_module("run_experiment_module_subset_validation", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+    session_ids_file = project_root / "sessions.json"
+    session_ids_file.write_text('{"session_ids":["s1"]}', encoding="utf-8")
+    module.PROJECT_ROOT = project_root
+
+    with pytest.raises(ValueError, match="Use either --num_sessions or --session_ids_file"):
+        module.main(
+            [
+                "--backend",
+                "local",
+                "--tid",
+                "foo_devset",
+                "--num_sessions",
+                "3",
+                "--session_ids_file",
+                str(session_ids_file),
+            ]
+        )
+
+
 def test_modal_blindset_downloads_into_requested_exp_dir(tmp_path, monkeypatch):
     module = _load_module("run_experiment_module_modal", "run_experiment.py")
     project_root = tmp_path / "repo"

@@ -3,10 +3,12 @@ app_name: "music-crs"
 volumes:
   hf_cache: "music-crs-hf-cache"
   results: "music-crs-results"
+  models: "music-crs-models"
 
 container:
   hf_cache_dir: "/root/.cache/huggingface"
   exp_dir: "/root/exp"
+  models_dir: "/root/models"
 
 inference:
   gpu:
@@ -17,3 +19,9 @@ inference:
     - "A100-40GB"
   devset_batch_size: 64
   blindset_batch_size: 64
+
+lancedb:
+  inference_cpu: 8.0
+  inference_memory: 32768
+  query_cpu: 4.0
+  query_memory: 16384

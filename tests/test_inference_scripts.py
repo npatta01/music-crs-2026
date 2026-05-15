@@ -103,6 +103,46 @@ def _milvus_config():
     )
 
 
+def _lancedb_config():
+    return OmegaConf.create(
+        {
+            "lm_type": "dummy",
+            "retrieval_type": "lancedb",
+            "qu_type": "passthrough",
+            "test_dataset_name": "ignored",
+            "item_db_name": "ignored",
+            "user_db_name": "ignored",
+            "track_split_types": ["all_tracks"],
+            "user_split_types": ["all_users"],
+            "corpus_types": ["track_name", "artist_name", "album_name", "release_date", "tag_list"],
+            "cache_dir": "./cache",
+            "device": "cpu",
+            "attn_implementation": "eager",
+            "retrieval_topk": 1000,
+            "retrieval_config": {
+                "db_uri": "./cache/lancedb",
+                "table_name": "music_track_catalog",
+                "searches": [
+                    {
+                        "name": "bm25_with_tag_list",
+                        "kind": "fts_bm25s_compat",
+                        "corpus_fields": [
+                            "track_name",
+                            "artist_name",
+                            "album_name",
+                            "release_date",
+                            "tag_list",
+                        ],
+                        "weight": 1.0,
+                        "topk": 1000,
+                    }
+                ],
+                "fusion": {"method": "weighted_rrf"},
+            },
+        }
+    )
+
+
 def test_run_inference_devset_passes_qu_kwargs(monkeypatch, tmp_path):
     captured = {}
 
@@ -236,6 +276,34 @@ def test_run_inference_devset_passes_milvus_retrieval_config_unchanged(monkeypat
         ],
         "fusion": {"method": "weighted"},
     }
+
+
+def test_run_inference_devset_passes_lancedb_retrieval_config_unchanged(monkeypatch, tmp_path):
+    captured = {}
+
+    def fake_load_crs_baseline(**kwargs):
+        captured.update(kwargs)
+        return _FakeCRS()
+
+    monkeypatch.setattr(run_inference_devset.OmegaConf, "load", lambda _: _lancedb_config())
+    monkeypatch.setattr(run_inference_devset, "load_crs_baseline", fake_load_crs_baseline)
+    monkeypatch.setattr(run_inference_devset, "load_dataset", lambda *args, **kwargs: [])
+
+    args = SimpleNamespace(
+        tid="lancedb_fts_with_tag_list_devset",
+        batch_size=1,
+        session_ids_file=None,
+        num_sessions=0,
+        exp_dir=str(tmp_path / "exp"),
+        clear_cache=False,
+    )
+
+    run_inference_devset.main(args)
+
+    assert captured["retrieval_type"] == "lancedb"
+    assert captured["device"] == "cpu"
+    assert captured["retrieval_config"]["db_uri"] == "./cache/lancedb"
+    assert captured["retrieval_config"]["fusion"] == {"method": "weighted_rrf"}
 
 
 def test_blindset_chat_history_parser_resolves_music_turns():

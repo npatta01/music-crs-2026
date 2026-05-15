@@ -9,7 +9,10 @@ try:
 except ModuleNotFoundError:  # pragma: no cover
     torch = None
 
-sys.modules.setdefault("bm25s", MagicMock())
+try:
+    import bm25s  # noqa: F401
+except ModuleNotFoundError:  # pragma: no cover
+    sys.modules.setdefault("bm25s", MagicMock())
 
 import mcrs
 
@@ -82,6 +85,46 @@ class RetrievalFactoryTests(unittest.TestCase):
             _, kwargs = mock_dense_model.call_args
             for key, value in retrieval_config.items():
                 self.assertEqual(kwargs[key], value)
+
+    def test_lancedb_selector_forwards_retrieval_config(self):
+        try:
+            from mcrs.retrieval_modules import load_retrieval_module
+        except ModuleNotFoundError as exc:
+            self.skipTest(f"optional dependency missing: {exc}")
+
+        with patch("mcrs.retrieval_modules.lancedb.LANCEDB_MODEL") as mock_lancedb_model:
+            retrieval_config = {
+                "db_uri": "./cache/lancedb",
+                "table_name": "music_track_catalog",
+                "device": "cpu",
+                "searches": [
+                    {
+                        "name": "bm25_with_tag_list",
+                        "kind": "fts_compat",
+                        "corpus_fields": [
+                            "track_name",
+                            "artist_name",
+                            "album_name",
+                            "release_date",
+                            "tag_list",
+                        ],
+                        "topk": 1000,
+                    }
+                ],
+                "fusion": {"method": "weighted_rrf"},
+            }
+
+            load_retrieval_module(
+                retrieval_type="lancedb",
+                dataset_name="tracks",
+                track_split_types=["all_tracks"],
+                corpus_types=["track_name", "artist_name", "album_name", "tag_list"],
+                cache_dir="./cache",
+                retrieval_config=retrieval_config,
+            )
+
+            _, kwargs = mock_lancedb_model.call_args
+            self.assertEqual(kwargs["retrieval_config"], retrieval_config)
 
 
 class CRSPlumbingTests(unittest.TestCase):

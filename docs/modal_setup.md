@@ -65,6 +65,38 @@ The wrapper runs Modal inference, downloads artifacts back into your local `exp/
 
 ---
 
+### LanceDB CPU retrieval
+
+LanceDB FTS runs do not need a GPU. Build the DB locally, upload it to the `music-crs-models` volume, then run the CPU Modal path:
+
+```bash
+uv run python scripts/build_lancedb_index.py --out-dir cache/lancedb --drop-existing
+uv run modal run modal/app.py::upload_lancedb_index --local-db-dir cache/lancedb --remote-dir lancedb
+python run_experiment.py --backend modal --tid lancedb_fts_with_tag_list_devset --num_sessions 5
+```
+
+The same local build/upload/smoke flow is available as
+`notebooks/05_lancedb_indexing.ipynb`; the notebook calls the checked-in scripts
+and Modal entrypoints rather than embedding indexing logic in notebook cells.
+
+The default LanceDB build stores precomputed track embedding columns too. The
+current FTS config still queries only sparse text fields; use `--metadata-only`
+on `scripts/build_lancedb_index.py` only when you explicitly want a smaller
+sparse-only DB artifact.
+
+The wrapper materializes a deterministic session-id subset for `--num_sessions`, so inference and local evaluation use the same smoke rows.
+
+The LanceDB CPU resource sizes live in `modal/config.yaml`. Current defaults request 8 CPU / 32 GiB for full inference and 4 CPU / 16 GiB for the private query endpoint.
+
+For a private Modal SDK query smoke after deployment:
+
+```bash
+uv run modal deploy modal/app.py
+uv run python scripts/smoke_lancedb_modal_query.py --query "dark atmospheric synthwave" --topk 20
+```
+
+---
+
 ### Advanced manual commands
 
 If you want to bypass the unified wrapper, the underlying Modal entrypoints are still available:

@@ -9,6 +9,7 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 - Analysis index: [analysis/README.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/README.md)
 - Local agent guidance: [CLAUDE.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/CLAUDE.md)
 - Offline retrieval notebook: [notebooks/retrieval_analysis.ipynb](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/notebooks/retrieval_analysis.ipynb)
+- LanceDB indexing notebook: [notebooks/05_lancedb_indexing.ipynb](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/notebooks/05_lancedb_indexing.ipynb)
 
 ## Status Vocabulary
 
@@ -35,6 +36,7 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 | Hybrid sparse+dense retrieval follow-up | `planned` | [experiment_log.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md) |
 | Conversation-aware query representation direction | `analyzed` | [analysis/query_intent_v1/README.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/query_intent_v1/README.md) |
 | Milvus native sparse retrieval evaluation | `analyzed` | [milvus_bm25_with_tag_list_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/milvus_bm25_with_tag_list_devset.md) |
+| LanceDB CPU FTS retrieval evaluation | `done` | [lancedb_fts_with_tag_list_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/lancedb_fts_with_tag_list_devset.md) |
 
 ## Analysis
 
@@ -98,6 +100,10 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 
 - [milvus_bm25_with_tag_list_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/milvus_bm25_with_tag_list_devset.md)
 
+### Wave 6: LanceDB Retrieval
+
+- [lancedb_fts_with_tag_list_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/lancedb_fts_with_tag_list_devset.md)
+
 ## Conventions
 
 - One per-run report per file: `experiments/{tid}.md`
@@ -105,3 +111,4 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 - Packaged analyses live at `experiments/analysis/<analysis_name>/README.md`
 - Analysis artifacts live beside their analysis README in a local artifact subdirectory
 - Retrieval comparison and hybrid notebook work belongs in [notebooks/retrieval_analysis.ipynb](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/notebooks/retrieval_analysis.ipynb)
+- LanceDB local indexing, Modal upload, and Modal smoke-test notebook work belongs in [notebooks/05_lancedb_indexing.ipynb](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/notebooks/05_lancedb_indexing.ipynb)
