@@ -9,17 +9,14 @@ Secret (.env in project root):
     HF_TOKEN=hf_...
 
 Usage:
-    # Smoke test (5 sessions)
-    modal run modal/app.py::run_inference --num-sessions 5
+    # Smoke test (5 sessions, with matching local evaluation subset)
+    python run_experiment.py --backend modal --tid llama1b_bm25_devset --num_sessions 5
 
     # Full devset
-    modal run modal/app.py::run_inference --tid llama1b_bm25_devset --batch-size 64
+    python run_experiment.py --backend modal --tid llama1b_bm25_devset --batch_size 64
 
     # Blindset
-    modal run modal/app.py::run_inference_blindset --tid llama1b_bm25_blindset_A
-
-    # Evaluate (after inference)
-    modal run modal/app.py::run_evaluate --tid llama1b_bm25_devset
+    python run_experiment.py --backend modal --tid llama1b_bm25_blindset_A --eval_dataset blindset_A
 """
 
 from pathlib import Path
@@ -53,16 +50,23 @@ _cfg = OmegaConf.load(_config_path())
 APP_NAME = _cfg.app_name
 HF_CACHE_VOLUME = _cfg.volumes.hf_cache
 RESULTS_VOLUME = _cfg.volumes.results
+MODELS_VOLUME = _cfg.volumes.models
 HF_CACHE_DIR = _cfg.container.hf_cache_dir
 EXP_DIR = _cfg.container.exp_dir
+MODELS_DIR = _cfg.container.models_dir
 INFERENCE_GPU = list(_cfg.inference.gpu)
 DEVSET_BATCH_SIZE = int(_cfg.inference.devset_batch_size)
 BLINDSET_BATCH_SIZE = int(_cfg.inference.blindset_batch_size)
+LANCEDB_INFERENCE_CPU = float(_cfg.lancedb.inference_cpu)
+LANCEDB_INFERENCE_MEMORY = int(_cfg.lancedb.inference_memory)
+LANCEDB_QUERY_CPU = float(_cfg.lancedb.query_cpu)
+LANCEDB_QUERY_MEMORY = int(_cfg.lancedb.query_memory)
 
 app = modal.App(APP_NAME)
 
 hf_cache_vol = modal.Volume.from_name(HF_CACHE_VOLUME, create_if_missing=True)
 results_vol = modal.Volume.from_name(RESULTS_VOLUME, create_if_missing=True)
+models_vol = modal.Volume.from_name(MODELS_VOLUME, create_if_missing=True)
 
 # Build image: uv_sync reads pyproject.toml + uv.lock for reproducible installs.
 # Source files are copied separately (uv_sync uses --no-install-project).
@@ -81,7 +85,43 @@ image = (
 _VOLUME_MOUNTS = {
     HF_CACHE_DIR: hf_cache_vol,
     EXP_DIR: results_vol,
+    MODELS_DIR: models_vol,
 }
+
+DEFAULT_REMOTE_LANCEDB_URI = f"{MODELS_DIR}/lancedb"
+
+
+def _tid_config(tid: str):
+    return OmegaConf.load(Path.cwd() / "config" / f"{tid}.yaml")
+
+
+def _tid_uses_cpu(tid: str) -> bool:
+    config = _tid_config(tid)
+    return str(config.get("device", "")).lower() == "cpu"
+
+
+def _run_inference_command(cmd: list[str], *, lancedb_uri: str | None = None) -> None:
+    import os
+    import subprocess
+
+    env = os.environ.copy()
+    if lancedb_uri:
+        env["MCRS_LANCEDB_URI"] = lancedb_uri
+
+    result = subprocess.run(cmd, cwd="/app", env=env)
+    if result.returncode != 0:
+        raise RuntimeError(f"Inference failed (exit {result.returncode})")
+
+
+def _session_ids_file_arg(session_ids_json: str | None) -> list[str]:
+    if not session_ids_json:
+        return []
+    import json
+
+    path = Path("/tmp/session_ids.json")
+    session_ids = json.loads(session_ids_json)
+    path.write_text(json.dumps({"session_ids": session_ids}), encoding="utf-8")
+    return ["--session_ids_file", str(path)]
 
 
 @app.function(
@@ -91,8 +131,13 @@ _VOLUME_MOUNTS = {
     secrets=[ENV_SECRET],
     timeout=7200,
 )
-def _inference_devset(tid: str, batch_size: int, num_sessions: int, clear_cache: bool):
-    import subprocess
+def _inference_devset(
+    tid: str,
+    batch_size: int,
+    num_sessions: int,
+    clear_cache: bool,
+    session_ids_json: str | None = None,
+):
     import sys
 
     cmd = [
@@ -101,16 +146,51 @@ def _inference_devset(tid: str, batch_size: int, num_sessions: int, clear_cache:
         "--batch_size", str(batch_size),
         "--exp_dir", EXP_DIR,
     ]
-    if num_sessions > 0:
+    if session_ids_json:
+        cmd += _session_ids_file_arg(session_ids_json)
+    elif num_sessions > 0:
         cmd += ["--num_sessions", str(num_sessions)]
     if clear_cache:
         cmd += ["--clear_cache"]
 
-    result = subprocess.run(cmd, cwd="/app")
-    if result.returncode != 0:
-        raise RuntimeError(f"Inference failed (exit {result.returncode})")
+    _run_inference_command(cmd)
     results_vol.commit()
     print(f"Results saved to volume: inference/devset/{tid}.json")
+
+
+@app.function(
+    image=image,
+    volumes=_VOLUME_MOUNTS,
+    secrets=[ENV_SECRET],
+    cpu=LANCEDB_INFERENCE_CPU,
+    memory=LANCEDB_INFERENCE_MEMORY,
+    timeout=7200,
+)
+def _inference_devset_cpu(
+    tid: str,
+    batch_size: int,
+    num_sessions: int,
+    clear_cache: bool,
+    session_ids_json: str | None = None,
+):
+    import sys
+
+    cmd = [
+        sys.executable, "/app/run_inference_devset.py",
+        "--tid", tid,
+        "--batch_size", str(batch_size),
+        "--exp_dir", EXP_DIR,
+    ]
+    if session_ids_json:
+        cmd += _session_ids_file_arg(session_ids_json)
+    elif num_sessions > 0:
+        cmd += ["--num_sessions", str(num_sessions)]
+    if clear_cache:
+        cmd += ["--clear_cache"]
+
+    _run_inference_command(cmd, lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI)
+    results_vol.commit()
+    print(f"CPU results saved to volume: inference/devset/{tid}.json")
 
 
 @app.function(
@@ -121,7 +201,6 @@ def _inference_devset(tid: str, batch_size: int, num_sessions: int, clear_cache:
     timeout=7200,
 )
 def _inference_blindset(tid: str, batch_size: int, eval_dataset: str):
-    import subprocess
     import sys
 
     cmd = [
@@ -131,11 +210,74 @@ def _inference_blindset(tid: str, batch_size: int, eval_dataset: str):
         "--eval_dataset", eval_dataset,
         "--exp_dir", EXP_DIR,
     ]
-    result = subprocess.run(cmd, cwd="/app")
-    if result.returncode != 0:
-        raise RuntimeError(f"Inference failed (exit {result.returncode})")
+    _run_inference_command(cmd)
     results_vol.commit()
     print(f"Results saved to volume: inference/{eval_dataset}/{tid}.json")
+
+
+@app.function(
+    image=image,
+    volumes=_VOLUME_MOUNTS,
+    secrets=[ENV_SECRET],
+    cpu=LANCEDB_INFERENCE_CPU,
+    memory=LANCEDB_INFERENCE_MEMORY,
+    timeout=7200,
+)
+def _inference_blindset_cpu(tid: str, batch_size: int, eval_dataset: str):
+    import sys
+
+    cmd = [
+        sys.executable, "/app/run_inference_blindset.py",
+        "--tid", tid,
+        "--batch_size", str(batch_size),
+        "--eval_dataset", eval_dataset,
+        "--exp_dir", EXP_DIR,
+    ]
+    _run_inference_command(cmd, lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI)
+    results_vol.commit()
+    print(f"CPU results saved to volume: inference/{eval_dataset}/{tid}.json")
+
+
+@app.function(
+    image=image,
+    volumes={MODELS_DIR: models_vol},
+    cpu=LANCEDB_QUERY_CPU,
+    memory=LANCEDB_QUERY_MEMORY,
+    timeout=600,
+)
+def query_lancedb(
+    query: str,
+    topk: int = 20,
+    retrieval_config: dict | None = None,
+) -> list[str]:
+    from mcrs.milvus.indexing import BM25_WITH_TAG_LIST_CORPUS_FIELDS
+    from mcrs.retrieval_modules.lancedb import LANCEDB_MODEL
+
+    config = dict(retrieval_config or {})
+    config.setdefault("db_uri", DEFAULT_REMOTE_LANCEDB_URI)
+    config.setdefault("table_name", "music_track_catalog")
+    config.setdefault(
+        "searches",
+        [
+            {
+                "name": "bm25_with_tag_list",
+                "kind": "fts_bm25s_compat",
+                "corpus_fields": list(BM25_WITH_TAG_LIST_CORPUS_FIELDS),
+                "weight": 1.0,
+                "topk": max(int(topk), 1000),
+            }
+        ],
+    )
+    config.setdefault("fusion", {"method": "weighted_rrf"})
+    config["device"] = "cpu"
+
+    model = LANCEDB_MODEL(
+        dataset_name="unused",
+        split_types=["all_tracks"],
+        corpus_types=[],
+        retrieval_config=config,
+    )
+    return model.text_to_item_retrieval(query, topk=topk)
 
 
 @app.function(
@@ -190,13 +332,16 @@ def run_inference(
     batch_size: int = DEVSET_BATCH_SIZE,
     num_sessions: int = 0,
     clear_cache: bool = False,
+    session_ids_json: str | None = None,
 ):
     """Run devset inference on the configured fast GPU fallback policy."""
-    _inference_devset.remote(
+    inference_fn = _inference_devset_cpu if _tid_uses_cpu(tid) else _inference_devset
+    inference_fn.remote(
         tid=tid,
         batch_size=batch_size,
         num_sessions=num_sessions,
         clear_cache=clear_cache,
+        session_ids_json=session_ids_json,
     )
 
 
@@ -207,7 +352,8 @@ def run_inference_blindset(
     eval_dataset: str = "blindset_A",
 ):
     """Run blindset inference on the configured fast GPU fallback policy."""
-    _inference_blindset.remote(tid=tid, batch_size=batch_size, eval_dataset=eval_dataset)
+    inference_fn = _inference_blindset_cpu if _tid_uses_cpu(tid) else _inference_blindset
+    inference_fn.remote(tid=tid, batch_size=batch_size, eval_dataset=eval_dataset)
 
 
 @app.local_entrypoint()
@@ -217,3 +363,28 @@ def run_evaluate(
 ):
     """Score predictions using the evaluator submodule (CPU)."""
     _evaluate.remote(tid=tid, split=split)
+
+
+@app.local_entrypoint()
+def upload_lancedb_index(
+    local_db_dir: str = "cache/lancedb",
+    remote_dir: str = "lancedb",
+):
+    """Upload a locally built LanceDB directory into the Modal models volume."""
+    local_path = Path(local_db_dir).resolve()
+    if not local_path.exists():
+        raise FileNotFoundError(f"Local LanceDB directory does not exist: {local_path}")
+    remote_path = f"/{remote_dir.strip('/')}"
+    with models_vol.batch_upload() as batch:
+        batch.put_directory(str(local_path), remote_path)
+    print(f"Uploaded {local_path} to volume {MODELS_VOLUME}:{remote_path}")
+
+
+@app.local_entrypoint()
+def smoke_lancedb_query(
+    query: str = "dark atmospheric synthwave",
+    topk: int = 20,
+):
+    """Smoke-test the private Modal LanceDB query function."""
+    track_ids = query_lancedb.remote(query=query, topk=topk)
+    print(track_ids)

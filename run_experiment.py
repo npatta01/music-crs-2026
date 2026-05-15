@@ -1,14 +1,21 @@
 from __future__ import annotations
 
 import argparse
+import json
+import random
 import re
 import subprocess
 import sys
 from pathlib import Path
 
+from datasets import load_dataset
+from omegaconf import OmegaConf
+
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 BLINDSET_PATTERN = re.compile(r"(blindset_[A-Za-z0-9]+)")
+DEFAULT_TEST_DATASET = "talkpl-ai/TalkPlayData-Challenge-Dataset"
+SUBSET_RANDOM_SEED = 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -89,6 +96,22 @@ def require_config(tid: str) -> Path:
     return config_path
 
 
+def _test_dataset_name(tid: str) -> str:
+    config = OmegaConf.load(PROJECT_ROOT / "config" / f"{tid}.yaml")
+    return str(config.get("test_dataset_name", DEFAULT_TEST_DATASET))
+
+
+def materialize_num_sessions_file(tid: str, exp_dir: Path, num_sessions: int) -> str:
+    dataset = load_dataset(_test_dataset_name(tid), split="test")
+    n = min(num_sessions, len(dataset))
+    indices = random.Random(SUBSET_RANDOM_SEED).sample(range(len(dataset)), n)
+    session_ids = [str(dataset[index]["session_id"]) for index in indices]
+    path = exp_dir / "subsets" / f"{tid}_num_sessions_{n}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"session_ids": session_ids}, indent=2), encoding="utf-8")
+    return str(path)
+
+
 def run_command(cmd: list[str], cwd: Path | None = None) -> None:
     subprocess.run(cmd, cwd=cwd or PROJECT_ROOT, check=True)
 
@@ -108,20 +131,25 @@ def ensure_ground_truth(exp_dir: Path) -> None:
     )
 
 
-def run_evaluation(tid: str, exp_dir: Path, split: str) -> None:
-    run_command(
-        [
-            sys.executable,
-            "evaluator/evaluate_devset.py",
-            "--tid",
-            tid,
-            "--eval_dataset",
-            split,
-            "--exp_dir",
-            str(exp_dir),
-        ],
-        cwd=PROJECT_ROOT,
-    )
+def run_evaluation(
+    tid: str,
+    exp_dir: Path,
+    split: str,
+    session_ids_file: str | None = None,
+) -> None:
+    cmd = [
+        sys.executable,
+        "evaluator/evaluate_devset.py",
+        "--tid",
+        tid,
+        "--eval_dataset",
+        split,
+        "--exp_dir",
+        str(exp_dir),
+    ]
+    if session_ids_file:
+        cmd.extend(["--session_ids_file", session_ids_file])
+    run_command(cmd, cwd=PROJECT_ROOT)
 
 
 def validate_args(args: argparse.Namespace, split: str) -> None:
@@ -129,6 +157,8 @@ def validate_args(args: argparse.Namespace, split: str) -> None:
         raise ValueError("--num_sessions is only supported for devset runs.")
     if split != "devset" and args.session_ids_file:
         raise ValueError("--session_ids_file is only supported for devset runs.")
+    if args.num_sessions and args.session_ids_file:
+        raise ValueError("Use either --num_sessions or --session_ids_file, not both.")
     if args.backend == "modal" and args.session_ids_file:
         raise ValueError(
             "--session_ids_file is only supported for the local backend."
@@ -141,6 +171,9 @@ def validate_args(args: argparse.Namespace, split: str) -> None:
 
 def run_local(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
     if split == "devset":
+        session_ids_file = args.session_ids_file
+        if args.num_sessions > 0:
+            session_ids_file = materialize_num_sessions_file(args.tid, exp_dir, args.num_sessions)
         cmd = [
             sys.executable,
             "run_inference_devset.py",
@@ -151,15 +184,13 @@ def run_local(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
             "--exp_dir",
             str(exp_dir),
         ]
-        if args.num_sessions > 0:
-            cmd.extend(["--num_sessions", str(args.num_sessions)])
-        if args.session_ids_file:
-            cmd.extend(["--session_ids_file", args.session_ids_file])
+        if session_ids_file:
+            cmd.extend(["--session_ids_file", session_ids_file])
         if args.clear_cache:
             cmd.append("--clear_cache")
         run_command(cmd, cwd=PROJECT_ROOT)
         ensure_ground_truth(exp_dir)
-        run_evaluation(args.tid, exp_dir, split)
+        run_evaluation(args.tid, exp_dir, split, session_ids_file=session_ids_file)
         return
 
     cmd = [
@@ -181,6 +212,13 @@ def run_local(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
 
 def run_modal(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
     if split == "devset":
+        session_ids_file = None
+        session_ids_json = None
+        if args.num_sessions > 0:
+            session_ids_file = materialize_num_sessions_file(args.tid, exp_dir, args.num_sessions)
+            session_ids_json = json.dumps(
+                json.loads(Path(session_ids_file).read_text(encoding="utf-8"))["session_ids"]
+            )
         cmd = [
             sys.executable,
             "-m",
@@ -192,8 +230,8 @@ def run_modal(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
             "--batch-size",
             str(args.batch_size),
         ]
-        if args.num_sessions > 0:
-            cmd.extend(["--num-sessions", str(args.num_sessions)])
+        if session_ids_json:
+            cmd.extend(["--session-ids-json", session_ids_json])
         if args.clear_cache:
             cmd.append("--clear-cache")
         run_command(cmd, cwd=PROJECT_ROOT)
@@ -209,7 +247,7 @@ def run_modal(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
             cwd=PROJECT_ROOT,
         )
         ensure_ground_truth(exp_dir)
-        run_evaluation(args.tid, exp_dir, split)
+        run_evaluation(args.tid, exp_dir, split, session_ids_file=session_ids_file)
         return
 
     run_command(

@@ -33,6 +33,7 @@ dependencies = [
     "torchaudio",
     "torchvision",
     "transformers>=4.51.0",
+    "lancedb>=0.30.2",
 ]
 
 [project.optional-dependencies]
@@ -49,8 +50,8 @@ notebooks = [
 [project.scripts]
 music-dashboard = "mcrs.dashboard:main"
 
-[tool.setuptools]
-packages = ["mcrs"]
+[tool.setuptools.packages.find]
+include = ["mcrs*"]
 
 [tool.uv]
 link-mode = "copy"
