@@ -10,7 +10,7 @@ cd evaluator
 python make_ground_truth.py                      # once
 # Predictions are read from ./exp/inference/devset/<tid>.json
 # (symlink or copy from the main repo's exp/inference/devset/).
-python evaluate_devset.py --tid llama1b_bm25_devset
+python evaluate_devset.py --tid bm25_devset_retrieval_only_with_tag_list
 ```
 
 This writes `evaluator/exp/scores/devset/<tid>.json` and prints a grouped

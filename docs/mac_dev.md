@@ -1,6 +1,6 @@
 # Mac / Local Dev
 
-Mac configs use MPS + float32 + eager attention (no CUDA). Separate from Linux configs.
+Mac local runs can use the CPU-compatible retrieval-only configs in `configs/`.
 
 ## One-time setup
 
@@ -15,7 +15,7 @@ uv run python scripts/create_local_split.py --n_per_tier 3 --seed 42
 ```bash
 uv run python run_experiment.py \
   --backend local \
-  --tid llama1b_bm25_devset_mac \
+  --tid bm25_devset_retrieval_only_with_tag_list \
   --batch_size 2 \
   --exp_dir exp \
   --session_ids_file data/local_eval_split.json

@@ -1,7 +1,7 @@
 # Experiment: bm25_qu_last_user_turn_devset
 
 **Date:** 2026-04-27
-**Config:** `config/bm25_qu_last_user_turn_devset.yaml`
+**Config:** `configs/archive/bm25_qu_last_user_turn_devset.yaml`
 
 ## Configuration
 

@@ -10,13 +10,13 @@ Secret (.env in project root):
 
 Usage:
     # Smoke test (5 sessions, with matching local evaluation subset)
-    python run_experiment.py --backend modal --tid llama1b_bm25_devset --num_sessions 5
+    python run_experiment.py --backend modal --tid bm25_devset_retrieval_only_with_tag_list --num_sessions 5
 
     # Full devset
-    python run_experiment.py --backend modal --tid llama1b_bm25_devset --batch_size 64
+    python run_experiment.py --backend modal --tid lancedb_fts_with_tag_list_devset --batch_size 64
 
-    # Blindset
-    python run_experiment.py --backend modal --tid llama1b_bm25_blindset_A --eval_dataset blindset_A
+    # Blindset, after adding a split-specific config under configs/
+    python run_experiment.py --backend modal --tid my_blindset_A_config --eval_dataset blindset_A
 """
 
 from pathlib import Path
@@ -92,7 +92,7 @@ DEFAULT_REMOTE_LANCEDB_URI = f"{MODELS_DIR}/lancedb"
 
 
 def _tid_config(tid: str):
-    return OmegaConf.load(Path.cwd() / "config" / f"{tid}.yaml")
+    return OmegaConf.load(Path.cwd() / "configs" / f"{tid}.yaml")
 
 
 def _tid_uses_cpu(tid: str) -> bool:
@@ -328,7 +328,7 @@ def _evaluate(tid: str, split: str):
 
 @app.local_entrypoint()
 def run_inference(
-    tid: str = "llama1b_bm25_devset",
+    tid: str = "bm25_devset_retrieval_only_with_tag_list",
     batch_size: int = DEVSET_BATCH_SIZE,
     num_sessions: int = 0,
     clear_cache: bool = False,
@@ -347,7 +347,7 @@ def run_inference(
 
 @app.local_entrypoint()
 def run_inference_blindset(
-    tid: str = "llama1b_bm25_blindset_A",
+    tid: str = "bm25_devset_retrieval_only_with_tag_list",
     batch_size: int = BLINDSET_BATCH_SIZE,
     eval_dataset: str = "blindset_A",
 ):
@@ -358,7 +358,7 @@ def run_inference_blindset(
 
 @app.local_entrypoint()
 def run_evaluate(
-    tid: str = "llama1b_bm25_devset",
+    tid: str = "bm25_devset_retrieval_only_with_tag_list",
     split: str = "devset",
 ):
     """Score predictions using the evaluator submodule (CPU)."""

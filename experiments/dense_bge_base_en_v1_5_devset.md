@@ -1,7 +1,7 @@
 # Experiment: dense_bge_base_en_v1_5_devset
 
 **Date:** 2026-04-27
-**Config:** `config/dense_bge_base_en_v1_5_devset.yaml`
+**Config:** `configs/archive/dense_bge_base_en_v1_5_devset.yaml`
 
 ## Configuration
 

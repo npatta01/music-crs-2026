@@ -1,7 +1,7 @@
 # Experiment: bm25_devset_retrieval_only_tag_list_no_release_date
 
 **Date:** 2026-04-27
-**Config:** `config/bm25_devset_retrieval_only_tag_list_no_release_date.yaml`
+**Config:** `configs/archive/bm25_devset_retrieval_only_tag_list_no_release_date.yaml`
 
 ## Configuration
 

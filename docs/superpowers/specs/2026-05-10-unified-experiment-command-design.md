@@ -14,7 +14,7 @@ Add a new repo-root wrapper, `run_experiment.py`, as the primary entrypoint for 
 
 The wrapper will:
 
-- validate that `config/{tid}.yaml` exists
+- validate that `configs/{tid}.yaml` exists
 - resolve whether the run targets `devset` or a `blindset_*` split
 - dispatch either a local or Modal backend
 - standardize local artifacts under one `exp/`-style output tree
@@ -43,9 +43,9 @@ The wrapper will:
 Primary command examples:
 
 ```bash
-uv run python run_experiment.py --backend local --tid llama1b_bm25_devset
-uv run python run_experiment.py --backend modal --tid llama1b_bm25_devset
-uv run python run_experiment.py --backend local --tid llama1b_bm25_blindset_A --eval_dataset blindset_A
+uv run python run_experiment.py --backend local --tid bm25_devset_retrieval_only_with_tag_list
+uv run python run_experiment.py --backend modal --tid lancedb_fts_with_tag_list_devset
+uv run python run_experiment.py --backend local --tid my_blindset_A_config --eval_dataset blindset_A
 ```
 
 Key arguments:

@@ -98,13 +98,13 @@ The preferred operator command is the unified experiment wrapper:
 
 ```bash
 # Local devset run + local evaluation
-python run_experiment.py --backend local --tid llama1b_bm25_devset --batch_size 16
+python run_experiment.py --backend local --tid bm25_devset_retrieval_only_with_tag_list --batch_size 16
 
 # Modal devset run + download into local exp/ + local evaluation
-python run_experiment.py --backend modal --tid llama1b_bm25_devset --batch_size 16
+python run_experiment.py --backend modal --tid lancedb_fts_with_tag_list_devset --batch_size 64
 
-# Local blindset run
-python run_experiment.py --backend local --tid llama1b_bm25_blindset_A --eval_dataset blindset_A --batch_size 16
+# Local dense retriever run
+python run_experiment.py --backend local --tid dense_qwen3_embedding_8b_devset --batch_size 16
 ```
 
 Devset runs write predictions to `exp/inference/devset/{tid}.json` and scores to `exp/scores/devset/{tid}.json`.
@@ -113,17 +113,17 @@ The low-level inference scripts remain available when you want to run only one s
 
 ```bash
 # Dev set inference only
-python run_inference_devset.py --tid llama1b_bm25_devset --batch_size 16
+python run_inference_devset.py --tid bm25_devset_retrieval_only_with_tag_list --batch_size 16
 
-# Blind set inference only
-python run_inference_blindset.py --tid llama1b_bm25_blindset_A --eval_dataset blindset_A --batch_size 16
+# Blind set inference requires adding a split-specific config under configs/.
+python run_inference_blindset.py --tid my_blindset_A_config --eval_dataset blindset_A --batch_size 16
 ```
 
 ### Run Inference on the Development Set
 
 **⚠️ Note: During inference, the recommender system must always retrieve candidates from the entire track catalog. Do not filter, subset, or restrict tracks using `track_split_types` or any other mechanism!**
 
-For BM25/BERT baselines, your config must include:
+For BM25/dense baselines, your config must include:
 
 ```yaml
 track_split_types:
@@ -138,10 +138,10 @@ If you do not use `all_tracks`, your evaluation may be considered invalid.
 
 ```bash
 # BM25 baseline
-python run_experiment.py --backend local --tid llama1b_bm25_devset --batch_size 16
+python run_experiment.py --backend local --tid bm25_devset_retrieval_only_with_tag_list --batch_size 16
 
-# BERT baseline
-python run_experiment.py --backend local --tid llama1b_bert_devset --batch_size 16
+# Dense retriever
+python run_experiment.py --backend local --tid dense_qwen3_embedding_8b_devset --batch_size 16
 ```
 
 Results are saved under `exp/`.
@@ -155,7 +155,7 @@ To pull Modal-run artifacts back to your machine, use the bulk downloader:
 
 ```bash
 # Download one run (predictions, traces, and scores if present)
-python modal/download_results.py --tid llama1b_bm25_devset
+python modal/download_results.py --tid bm25_devset_retrieval_only_with_tag_list
 
 # Sync all missing artifacts from the Modal volume into evaluator/exp/
 python modal/download_results.py
@@ -177,21 +177,18 @@ The downloader defaults to `evaluator/exp/` and mirrors any available remote:
 ### Run Inference on Blind Sets (for submission)
 
 ```bash
-# BM25 baseline
-python run_experiment.py --backend local --tid llama1b_bm25_blindset_A --eval_dataset blindset_A --batch_size 16
-
-# BERT baseline
-python run_experiment.py --backend local --tid llama1b_bert_blindset_A --eval_dataset blindset_A --batch_size 16
+# Add a split-specific config in configs/ first, then pass the blindset explicitly.
+python run_experiment.py --backend local --tid my_blindset_A_config --eval_dataset blindset_A --batch_size 16
 ```
 
 ---
 
 ## Custom Configuration
 
-Create a config file in `config/`:
+Create a config file in `configs/`:
 
 ```yaml
-# config/my_model.yaml
+# configs/my_model.yaml
 lm_type: "Qwen/Qwen3-4B" # change llama to qwen3
 retrieval_type: "bm25"
 qu_type: "passthrough"

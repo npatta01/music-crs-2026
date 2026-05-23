@@ -1,7 +1,7 @@
 # Experiment: bm25_qu_user_turns_only_devset
 
 **Date:** 2026-04-27
-**Config:** `config/bm25_qu_user_turns_only_devset.yaml`
+**Config:** `configs/archive/bm25_qu_user_turns_only_devset.yaml`
 
 ## Configuration
 

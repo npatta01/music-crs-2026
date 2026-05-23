@@ -22,7 +22,7 @@ flowchart LR
     end
 
     subgraph Online["Online Retrieval + Response"]
-        Config["config/&lt;tid&gt;.yaml<br/>retrieval_type: milvus<br/>retrieval_config.searches[]"]
+        Config["configs/&lt;tid&gt;.yaml<br/>retrieval_type: milvus<br/>retrieval_config.searches[]"]
         Run["run_inference_devset.py<br/>or run_inference_blindset.py"]
         Loader["mcrs.load_crs_baseline()"]
         CRS["CRS_BASELINE"]
@@ -67,7 +67,7 @@ flowchart LR
 
 ## Runtime Flow
 
-1. Each Milvus experiment declares retrieval behavior explicitly in `config/<tid>.yaml`.
+1. Each Milvus experiment declares retrieval behavior explicitly in `configs/<tid>.yaml`.
 2. `run_inference_*.py` passes that config into `mcrs.load_crs_baseline()`, which instantiates `CRS_BASELINE`.
 3. `CRS_BASELINE` runs query understanding first, then sends the transformed query text to `MILVUS_MODEL`.
 4. `MILVUS_MODEL` builds one or more Milvus search requests from `retrieval_config.searches`.

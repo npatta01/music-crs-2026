@@ -1,7 +1,7 @@
 # Experiment: bm25_qu_no_music_history_devset
 
 **Date:** 2026-04-27
-**Config:** `config/bm25_qu_no_music_history_devset.yaml`
+**Config:** `configs/archive/bm25_qu_no_music_history_devset.yaml`
 
 ## Configuration
 

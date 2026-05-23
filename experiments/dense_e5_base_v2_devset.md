@@ -1,7 +1,7 @@
 # Experiment: dense_e5_base_v2_devset
 
 **Date:** 2026-04-27
-**Config:** `config/dense_e5_base_v2_devset.yaml`
+**Config:** `configs/archive/dense_e5_base_v2_devset.yaml`
 
 ## Configuration
 

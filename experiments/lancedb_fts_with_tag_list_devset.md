@@ -1,7 +1,7 @@
 # Experiment: lancedb_fts_with_tag_list_devset
 
 **Date:** 2026-05-15
-**Config:** `config/lancedb_fts_with_tag_list_devset.yaml`
+**Config:** `configs/lancedb_fts_with_tag_list_devset.yaml`
 
 ## Configuration
 
