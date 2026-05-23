@@ -31,10 +31,11 @@ the square is 1764
 
 ### One-time setup
 
-Add your HF token to a `.env` file in the project root (already in `.gitignore`):
+Add API tokens to a `.env` file in the project root (already in `.gitignore`):
 
 ```
 HF_TOKEN=hf_...
+OPENROUTER_API_KEY=sk-or-...
 ```
 
 Modal reads this automatically via `modal.Secret.from_dotenv()`. Volumes are created automatically on first run — no manual setup needed. Volume names and container paths are configured in `modal/config.yaml`.
@@ -93,6 +94,44 @@ For a private Modal SDK query smoke after deployment:
 ```bash
 uv run modal deploy modal/app.py
 uv run python scripts/smoke_lancedb_modal_query.py --query "dark atmospheric synthwave" --topk 20
+```
+
+### Scale-to-zero retrieval service
+
+The class-backed retrieval service is private to Modal SDK callers and is cost
+controlled by:
+
+```yaml
+lancedb:
+  query_scaledown_window: 300
+  query_max_containers: 1
+```
+
+The service decorator hard-codes `min_containers=0`. Do not change this unless
+intentionally paying for an always-warm retriever.
+
+### LiteLLM cache service
+
+`ModalLiteLLMService` smoke-tests paid API caching for both embeddings and chat.
+It uses a separate `music-crs-litellm-cache` volume mounted at
+`/root/litellm-cache`, so LiteLLM cache files can be cleared without touching
+LanceDB or model artifacts.
+
+```bash
+uv run modal deploy modal/app.py
+uv run python scripts/smoke_litellm_modal_cache.py
+```
+
+The default smoke calls OpenRouter embeddings
+(`openrouter/openai/text-embedding-3-small`) and OpenRouter Gemma
+(`openrouter/google/gemma-3-4b-it`) twice and fails unless the second identical
+call reports `cache_hit: true`. You can still test provider-specific options
+with `--embedding-model` and `--chat-model`.
+
+To smoke the 0.6B Qwen chat route through HF Inference Providers:
+
+```bash
+uv run python scripts/smoke_litellm_modal_cache.py --skip-embedding --chat-profile qwen-0.6b
 ```
 
 ---

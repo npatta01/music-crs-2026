@@ -6,11 +6,11 @@ LanceDB is a CPU-only retrieval experiment for comparing native LanceDB FTS agai
 - Milvus BM25: `configs/milvus_bm25_with_tag_list_devset.yaml`
 - LanceDB FTS: `configs/lancedb_fts_with_tag_list_devset.yaml`
 
-The first LanceDB config is intentionally sparse/FTS-only at query time. The
+The first LanceDB config is intentionally sparse/FTS-only at query time.
+LanceDB also supports dense vector lookup over stored embedding columns. The
 local index build stores precomputed track embeddings by default so the same DB
-can support later dense or hybrid LanceDB experiments, but
-`lancedb_fts_with_tag_list_devset` does not load a dense query encoder and does
-not request a GPU on Modal.
+can support dense or later hybrid LanceDB experiments, but
+`lancedb_fts_with_tag_list_devset` does not load a dense query encoder.
 
 This path should stay a pure LanceDB FTS comparison. Do not add a local
 candidate reranker to make it match direct `bm25s`; if top-1000 scores diverge,
@@ -119,4 +119,52 @@ uv run modal deploy modal/app.py
 uv run python scripts/smoke_lancedb_modal_query.py --query "dark atmospheric synthwave" --topk 20
 ```
 
-The Python client uses `modal.Function.from_name(...).remote(...)`, so access is controlled by the normal Modal client credentials.
+The Python client uses `modal.Cls.from_name(...)`, so access is controlled by
+the normal Modal client credentials.
+
+Dense vector retrieval uses the same table and a `dense_vector` search entry.
+The query embedding must come from the same model family as the stored vector
+field.
+
+```yaml
+retrieval_config:
+  searches:
+    - name: "metadata_dense"
+      kind: "dense_vector"
+      vector_field: "metadata_qwen3_embedding_0_6b"
+      distance_type: "cosine"
+      topk: 1000
+  fusion:
+    method: "weighted_rrf"
+```
+
+For Modal, set `MCRS_EMBEDDING_MODEL` plus its provider credentials so
+`ModalRetrievalService` can embed the query before calling LanceDB.
+
+### Private Modal Retrieval Service
+
+`ModalRetrievalService` is the efficient service-style path for repeated LanceDB
+queries. It is a private Modal class, not a public HTTP endpoint. The class
+mounts the `music-crs-models` volume, opens `/root/models/lancedb` once per warm
+container, and exposes:
+
+- `retrieve(query, topk)`
+- `retrieve_batch(queries, topk)`
+- `embed_batch(texts)` when an embedding client is configured
+
+Both retrieval methods also accept an optional `retrieval_config`. When supplied,
+the service merges it with the default LanceDB path/table settings and builds a
+request-scoped retriever, which lets callers choose FTS or dense vector search
+without redeploying Modal.
+
+The service is configured with `min_containers=0`, so it scales to zero when
+idle. `query_scaledown_window` controls how long a warm container can stay idle
+before shutdown, and `query_max_containers` caps cost during bursts.
+
+Use this path when local or external Python inference should call Modal-hosted
+retrieval:
+
+```bash
+uv run modal deploy modal/app.py
+uv run python scripts/smoke_lancedb_modal_query.py --query "dark atmospheric synthwave" --topk 20
+```

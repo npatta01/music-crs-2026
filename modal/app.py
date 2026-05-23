@@ -19,6 +19,7 @@ Usage:
     python run_experiment.py --backend modal --tid my_blindset_A_config --eval_dataset blindset_A
 """
 
+import json
 from pathlib import Path
 
 import modal
@@ -51,9 +52,11 @@ APP_NAME = _cfg.app_name
 HF_CACHE_VOLUME = _cfg.volumes.hf_cache
 RESULTS_VOLUME = _cfg.volumes.results
 MODELS_VOLUME = _cfg.volumes.models
+LITELLM_CACHE_VOLUME = _cfg.volumes.litellm_cache
 HF_CACHE_DIR = _cfg.container.hf_cache_dir
 EXP_DIR = _cfg.container.exp_dir
 MODELS_DIR = _cfg.container.models_dir
+LITELLM_CACHE_DIR = _cfg.container.litellm_cache_dir
 INFERENCE_GPU = list(_cfg.inference.gpu)
 DEVSET_BATCH_SIZE = int(_cfg.inference.devset_batch_size)
 BLINDSET_BATCH_SIZE = int(_cfg.inference.blindset_batch_size)
@@ -61,12 +64,22 @@ LANCEDB_INFERENCE_CPU = float(_cfg.lancedb.inference_cpu)
 LANCEDB_INFERENCE_MEMORY = int(_cfg.lancedb.inference_memory)
 LANCEDB_QUERY_CPU = float(_cfg.lancedb.query_cpu)
 LANCEDB_QUERY_MEMORY = int(_cfg.lancedb.query_memory)
+LANCEDB_QUERY_SCALEDOWN_WINDOW = int(_cfg.lancedb.query_scaledown_window)
+LANCEDB_QUERY_MAX_CONTAINERS = int(_cfg.lancedb.query_max_containers)
+LITELLM_CPU = float(_cfg.litellm.cpu)
+LITELLM_MEMORY = int(_cfg.litellm.memory)
+LITELLM_SCALEDOWN_WINDOW = int(_cfg.litellm.scaledown_window)
+LITELLM_MAX_CONTAINERS = int(_cfg.litellm.max_containers)
+LITELLM_EMBEDDING_MODEL = str(_cfg.litellm.embedding_model)
+LITELLM_CHAT_MODEL = str(_cfg.litellm.chat_model)
+LITELLM_SMALL_CHAT_MODEL = str(_cfg.litellm.small_chat_model)
 
 app = modal.App(APP_NAME)
 
 hf_cache_vol = modal.Volume.from_name(HF_CACHE_VOLUME, create_if_missing=True)
 results_vol = modal.Volume.from_name(RESULTS_VOLUME, create_if_missing=True)
 models_vol = modal.Volume.from_name(MODELS_VOLUME, create_if_missing=True)
+litellm_cache_vol = modal.Volume.from_name(LITELLM_CACHE_VOLUME, create_if_missing=True)
 
 # Build image: uv_sync reads pyproject.toml + uv.lock for reproducible installs.
 # Source files are copied separately (uv_sync uses --no-install-project).
@@ -89,6 +102,55 @@ _VOLUME_MOUNTS = {
 }
 
 DEFAULT_REMOTE_LANCEDB_URI = f"{MODELS_DIR}/lancedb"
+RETRIEVAL_SERVICE_CACHE_SIZE = 8
+
+
+def _default_lancedb_retrieval_config(topk: int = 1000) -> dict:
+    from mcrs.milvus.indexing import BM25_WITH_TAG_LIST_CORPUS_FIELDS
+
+    return {
+        "db_uri": DEFAULT_REMOTE_LANCEDB_URI,
+        "table_name": "music_track_catalog",
+        "searches": [
+            {
+                "name": "bm25_with_tag_list",
+                "kind": "fts_compat",
+                "corpus_fields": list(BM25_WITH_TAG_LIST_CORPUS_FIELDS),
+                "weight": 1.0,
+                "topk": max(int(topk), 1000),
+            }
+        ],
+        "fusion": {"method": "weighted_rrf"},
+        "device": "cpu",
+    }
+
+
+def _retrieval_config_cache_key(config: dict) -> str:
+    return json.dumps(config, sort_keys=True, separators=(",", ":"), default=str)
+
+
+def _ensure_query_lancedb_fts_only(config: dict) -> None:
+    searches = config.get("searches") or []
+    if any(search.get("kind") == "dense_vector" for search in searches if isinstance(search, dict)):
+        raise ValueError(
+            "query_lancedb is FTS-only; use ModalRetrievalService with an embedding client for dense_vector"
+        )
+
+
+def _api_key_for_litellm_model(
+    model_name: str,
+    api_base: str | None,
+    *,
+    hf_token: str | None,
+    openrouter_api_key: str | None,
+) -> str | None:
+    if model_name.startswith("openrouter/"):
+        return openrouter_api_key
+    if api_base and "openrouter.ai" in api_base:
+        return openrouter_api_key
+    if model_name.startswith("huggingface/"):
+        return hf_token
+    return None
 
 
 def _tid_config(tid: str):
@@ -238,6 +300,247 @@ def _inference_blindset_cpu(tid: str, batch_size: int, eval_dataset: str):
     print(f"CPU results saved to volume: inference/{eval_dataset}/{tid}.json")
 
 
+@app.cls(
+    image=image,
+    volumes={MODELS_DIR: models_vol},
+    secrets=[ENV_SECRET],
+    cpu=LANCEDB_QUERY_CPU,
+    memory=LANCEDB_QUERY_MEMORY,
+    timeout=600,
+    min_containers=0,
+    max_containers=LANCEDB_QUERY_MAX_CONTAINERS,
+    scaledown_window=LANCEDB_QUERY_SCALEDOWN_WINDOW,
+)
+class ModalRetrievalService:
+    @modal.enter()
+    def setup(self):
+        import os
+
+        from mcrs.embeddings import LiteLLMEmbeddingClient
+        from mcrs.lancedb.retriever import LanceDbRetriever
+        from mcrs.retrieval_services import RetrievalService
+
+        embedding_client = None
+        embedding_model = os.environ.get("MCRS_EMBEDDING_MODEL")
+        if embedding_model:
+            embedding_client = LiteLLMEmbeddingClient(
+                model_name=embedding_model,
+                api_base=os.environ.get("MCRS_EMBEDDING_API_BASE"),
+                api_key=os.environ.get("MCRS_EMBEDDING_API_KEY") or os.environ.get("HF_TOKEN"),
+                batch_size=int(os.environ.get("MCRS_EMBEDDING_BATCH_SIZE", "128")),
+            )
+        retriever = LanceDbRetriever.from_retrieval_config(
+            _default_lancedb_retrieval_config(),
+            embedding_client=embedding_client,
+        )
+        self.embedding_client = embedding_client
+        self.service = RetrievalService(retriever=retriever, embedding_client=embedding_client)
+        self._retrieval_service_cache = {}
+        self._retrieval_service_cache_order = []
+
+    def _service_for_retrieval_config(self, retrieval_config: dict | None, topk: int):
+        if retrieval_config is None:
+            return self.service
+
+        from mcrs.lancedb.retriever import LanceDbRetriever
+        from mcrs.retrieval_services import RetrievalService
+
+        config = _default_lancedb_retrieval_config(topk=topk)
+        config.update(dict(retrieval_config))
+        cache_key = _retrieval_config_cache_key(config)
+        cached_service = self._retrieval_service_cache.get(cache_key)
+        if cached_service is not None:
+            return cached_service
+
+        retriever = LanceDbRetriever.from_retrieval_config(
+            config,
+            embedding_client=self.embedding_client,
+        )
+        service = RetrievalService(retriever=retriever, embedding_client=self.embedding_client)
+        self._retrieval_service_cache[cache_key] = service
+        self._retrieval_service_cache_order.append(cache_key)
+        while len(self._retrieval_service_cache_order) > RETRIEVAL_SERVICE_CACHE_SIZE:
+            old_key = self._retrieval_service_cache_order.pop(0)
+            self._retrieval_service_cache.pop(old_key, None)
+        return service
+
+    @modal.method()
+    def retrieve(
+        self,
+        query: str,
+        topk: int = 20,
+        retrieval_config: dict | None = None,
+    ) -> list[str]:
+        service = self._service_for_retrieval_config(retrieval_config, topk=topk)
+        return service.retrieve(query, topk=topk)
+
+    @modal.method()
+    def retrieve_batch(
+        self,
+        queries: list[str],
+        topk: int = 20,
+        retrieval_config: dict | None = None,
+    ) -> list[list[str]]:
+        service = self._service_for_retrieval_config(retrieval_config, topk=topk)
+        return service.retrieve_batch(queries, topk=topk)
+
+    @modal.method()
+    def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        return self.service.embed_batch(texts)
+
+
+@app.cls(
+    image=image,
+    volumes={LITELLM_CACHE_DIR: litellm_cache_vol},
+    secrets=[ENV_SECRET],
+    cpu=LITELLM_CPU,
+    memory=LITELLM_MEMORY,
+    timeout=600,
+    min_containers=0,
+    max_containers=LITELLM_MAX_CONTAINERS,
+    scaledown_window=LITELLM_SCALEDOWN_WINDOW,
+)
+class ModalLiteLLMService:
+    @modal.enter()
+    def setup(self):
+        import os
+
+        import litellm
+        from litellm.caching.caching import Cache
+
+        litellm.success_callback = [self._track_cache_hit]
+        litellm.cache = Cache(
+            type="disk",
+            supported_call_types=["completion", "acompletion", "embedding", "aembedding"],
+            namespace="music-crs",
+            disk_cache_dir=LITELLM_CACHE_DIR,
+        )
+        self.last_cache_hit = None
+        self.hf_token = os.environ.get("HF_TOKEN")
+        self.openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
+        self.default_embedding_model = os.environ.get("MCRS_TEST_EMBEDDING_MODEL", LITELLM_EMBEDDING_MODEL)
+        self.default_chat_model = os.environ.get("MCRS_TEST_CHAT_MODEL", LITELLM_CHAT_MODEL)
+
+    @staticmethod
+    def _cache_hit_from_response(completion_response) -> bool | None:
+        hidden = getattr(completion_response, "_hidden_params", None)
+        if isinstance(hidden, dict) and "cache_hit" in hidden:
+            return bool(hidden["cache_hit"])
+        return None
+
+    def _track_cache_hit(self, kwargs, completion_response, start_time, end_time):
+        cache_hit = kwargs.get("cache_hit")
+        if cache_hit is None:
+            cache_hit = self._cache_hit_from_response(completion_response)
+        self.last_cache_hit = None if cache_hit is None else bool(cache_hit)
+
+    @modal.method()
+    def embed_once_with_cache_status(
+        self,
+        text: str,
+        model_name: str | None = None,
+        api_base: str | None = None,
+    ) -> dict:
+        from mcrs.embeddings import LiteLLMEmbeddingClient
+
+        selected_model = model_name or self.default_embedding_model
+        selected_api_base = api_base
+        embedder = LiteLLMEmbeddingClient(
+            model_name=selected_model,
+            api_base=selected_api_base,
+            api_key=self._api_key_for_model(selected_model, selected_api_base),
+            batch_size=8,
+            cache={"ttl": 86400},
+        )
+        self.last_cache_hit = None
+        cache_hit_before = self._cache_hit_before_call(embedder.build_request_kwargs([text]))
+        try:
+            vector = embedder.embed_one(text)
+        except Exception as exc:
+            return self._error_response("embedding", selected_model, exc)
+        return {
+            "kind": "embedding",
+            "ok": True,
+            "model": embedder.model_name,
+            "cache_hit": self._cache_status(cache_hit_before),
+            "dimensions": len(vector),
+        }
+
+    @modal.method()
+    def chat_once_with_cache_status(
+        self,
+        prompt: str,
+        model_name: str | None = None,
+        api_base: str | None = None,
+    ) -> dict:
+        from mcrs.lm_modules.litellm_client import LiteLLMChatClient
+
+        selected_model = model_name or self.default_chat_model
+        selected_api_base = api_base
+        chat_client = LiteLLMChatClient(
+            model_name=selected_model,
+            api_base=selected_api_base,
+            api_key=self._api_key_for_model(selected_model, selected_api_base),
+            temperature=0.0,
+            max_tokens=32,
+        )
+        self.last_cache_hit = None
+        messages = [{"role": "user", "content": prompt}]
+        cache_control = {"ttl": 86400}
+        cache_hit_before = self._cache_hit_before_call(
+            chat_client.build_request_kwargs(messages=messages, cache=cache_control)
+        )
+        try:
+            content = chat_client.chat(
+                messages,
+                cache=cache_control,
+            )
+        except Exception as exc:
+            return self._error_response("chat", selected_model, exc)
+        return {
+            "kind": "chat",
+            "ok": True,
+            "model": chat_client.model_name,
+            "cache_hit": self._cache_status(cache_hit_before),
+            "content": content,
+        }
+
+    @staticmethod
+    def _cache_hit_before_call(call_kwargs: dict) -> bool | None:
+        import litellm
+
+        if litellm.cache is None:
+            return None
+        try:
+            return litellm.cache.get_cache(**call_kwargs) is not None
+        except Exception as exc:
+            print(f"LiteLLM cache lookup failed: {type(exc).__name__}: {exc}")
+            return None
+
+    def _cache_status(self, cache_hit_before: bool | None) -> bool | None:
+        if cache_hit_before is not None:
+            return cache_hit_before
+        return self.last_cache_hit
+
+    def _api_key_for_model(self, model_name: str, api_base: str | None) -> str | None:
+        return _api_key_for_litellm_model(
+            model_name,
+            api_base,
+            hf_token=self.hf_token,
+            openrouter_api_key=self.openrouter_api_key,
+        )
+
+    def _error_response(self, kind: str, model_name: str, exc: Exception) -> dict:
+        return {
+            "kind": kind,
+            "ok": False,
+            "model": model_name,
+            "cache_hit": self.last_cache_hit,
+            "error_type": type(exc).__name__,
+            "error": str(exc).splitlines()[0][:1000],
+        }
+
+
 @app.function(
     image=image,
     volumes={MODELS_DIR: models_vol},
@@ -250,26 +553,14 @@ def query_lancedb(
     topk: int = 20,
     retrieval_config: dict | None = None,
 ) -> list[str]:
-    from mcrs.milvus.indexing import BM25_WITH_TAG_LIST_CORPUS_FIELDS
     from mcrs.retrieval_modules.lancedb import LANCEDB_MODEL
 
     config = dict(retrieval_config or {})
-    config.setdefault("db_uri", DEFAULT_REMOTE_LANCEDB_URI)
-    config.setdefault("table_name", "music_track_catalog")
-    config.setdefault(
-        "searches",
-        [
-            {
-                "name": "bm25_with_tag_list",
-                "kind": "fts_bm25s_compat",
-                "corpus_fields": list(BM25_WITH_TAG_LIST_CORPUS_FIELDS),
-                "weight": 1.0,
-                "topk": max(int(topk), 1000),
-            }
-        ],
-    )
-    config.setdefault("fusion", {"method": "weighted_rrf"})
+    defaults = _default_lancedb_retrieval_config(topk=topk)
+    for key, value in defaults.items():
+        config.setdefault(key, value)
     config["device"] = "cpu"
+    _ensure_query_lancedb_fts_only(config)
 
     model = LANCEDB_MODEL(
         dataset_name="unused",

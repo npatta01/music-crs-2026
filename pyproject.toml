@@ -20,7 +20,7 @@ dependencies = [
     "bm25s>=0.2.13",
     "datasets>=3.1.0",
     "flash-attn; sys_platform == 'linux'",
-    "litellm>=1.50",
+    "litellm[caching]>=1.50",
     "pandas>=2.0",
     "scipy>=1.11",
     "modal>=1.4.2",

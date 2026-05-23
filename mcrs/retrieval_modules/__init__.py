@@ -73,5 +73,16 @@ def load_retrieval_module(
             formatter=formatter,
             retrieval_config=retrieval_config,
         )
+    elif retrieval_type == "modal_lancedb":
+        from .modal_lancedb import MODAL_LANCEDB_MODEL
+
+        return MODAL_LANCEDB_MODEL(
+            dataset_name=dataset_name,
+            split_types=track_split_types,
+            corpus_types=corpus_types,
+            cache_dir=cache_dir,
+            formatter=formatter,
+            retrieval_config=retrieval_config,
+        )
     else:
         raise ValueError(f"Unsupported retrieval type: {retrieval_type}")

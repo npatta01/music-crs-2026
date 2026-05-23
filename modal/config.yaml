@@ -4,11 +4,13 @@ volumes:
   hf_cache: "music-crs-hf-cache"
   results: "music-crs-results"
   models: "music-crs-models"
+  litellm_cache: "music-crs-litellm-cache"
 
 container:
   hf_cache_dir: "/root/.cache/huggingface"
   exp_dir: "/root/exp"
   models_dir: "/root/models"
+  litellm_cache_dir: "/root/litellm-cache"
 
 inference:
   gpu:
@@ -25,3 +27,14 @@ lancedb:
   inference_memory: 32768
   query_cpu: 4.0
   query_memory: 16384
+  query_scaledown_window: 300
+  query_max_containers: 1
+
+litellm:
+  cpu: 2.0
+  memory: 8192
+  scaledown_window: 300
+  max_containers: 1
+  embedding_model: "openrouter/openai/text-embedding-3-small"
+  chat_model: "openrouter/google/gemma-3-4b-it"
+  small_chat_model: "huggingface/featherless-ai/Qwen/Qwen3-0.6B"
