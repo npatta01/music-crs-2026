@@ -53,7 +53,7 @@ def _base_eval_metrics(module) -> dict:
 
 
 def _write_config(root: Path, tid: str):
-    config_dir = root / "config"
+    config_dir = root / "configs"
     config_dir.mkdir(parents=True, exist_ok=True)
     (config_dir / f"{tid}.yaml").write_text("lm_type: dummy\n", encoding="utf-8")
 

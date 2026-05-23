@@ -255,14 +255,14 @@ Final prompt = `roleplay` + `response_generation` + `personalization` + `user_pr
 
 ## Configuration
 
-YAML files in `config/`. Provided configs:
+Runnable experiment YAML files live in `configs/`. Older experiment YAMLs are retained in `configs/archive/`.
 
 | Config | Retrieval | Dataset |
 |--------|-----------|---------|
-| `llama1b_bm25_devset` | BM25 | dev set |
-| `llama1b_bert_devset` | BERT | dev set |
-| `llama1b_bm25_blindset_A` | BM25 | blind A |
-| `llama1b_bert_blindset_A` | BERT | blind A |
+| `bm25_devset_retrieval_only_with_tag_list` | BM25 with tag list | dev set |
+| `milvus_bm25_with_tag_list_devset` | Milvus BM25 with tag list | dev set |
+| `lancedb_fts_with_tag_list_devset` | LanceDB FTS with tag list | dev set |
+| `dense_qwen3_embedding_8b_devset` | Dense transformer | dev set |
 
 Key YAML fields:
 

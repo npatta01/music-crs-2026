@@ -1,7 +1,7 @@
 # Experiment: bm25_qu_llmrewrite_smollm2_1p7b_preserve_entities_v1_devset
 
 **Date:** 2026-04-27
-**Config:** `config/bm25_qu_llmrewrite_smollm2_1p7b_preserve_entities_v1_devset.yaml`
+**Config:** `configs/archive/bm25_qu_llmrewrite_smollm2_1p7b_preserve_entities_v1_devset.yaml`
 
 ## Configuration
 

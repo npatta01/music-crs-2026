@@ -18,7 +18,7 @@ device: "cuda"
 attn_implementation: "eager"
 retrieval_topk: 1000
 retrieval_config:
-  uri: "http://localhost:19530"
+  uri: "http://localhost:19531"
   db_name: "default"
   collection_name: "music_track_catalog"
   searches:

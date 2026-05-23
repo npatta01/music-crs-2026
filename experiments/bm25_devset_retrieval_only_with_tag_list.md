@@ -1,7 +1,7 @@
 # Experiment: bm25_devset_retrieval_only_with_tag_list
 
 **Date:** 2026-04-27
-**Config:** `config/bm25_devset_retrieval_only_with_tag_list.yaml`
+**Config:** `configs/bm25_devset_retrieval_only_with_tag_list.yaml`
 
 ## Configuration
 

@@ -62,7 +62,7 @@ uv venv .venv
 uv pip install -e .
 
 # Run inference as normal
-python run_inference_devset.py --tid llama1b_bm25_devset --batch_size 16
+python run_inference_devset.py --tid bm25_devset_retrieval_only_with_tag_list --batch_size 16
 ```
 
 ## What Stays Per-Worktree

@@ -46,19 +46,19 @@ Modal reads this automatically via `modal.Secret.from_dotenv()`. Volumes are cre
 **Smoke test (5 random sessions, fast)**
 
 ```bash
-python run_experiment.py --backend modal --tid llama1b_bm25_devset --num_sessions 5
+python run_experiment.py --backend modal --tid bm25_devset_retrieval_only_with_tag_list --num_sessions 5
 ```
 
 **Full devset**
 
 ```bash
-python run_experiment.py --backend modal --tid llama1b_bm25_devset --batch_size 16
+python run_experiment.py --backend modal --tid lancedb_fts_with_tag_list_devset --batch_size 64
 ```
 
 **Blindset (submission)**
 
 ```bash
-python run_experiment.py --backend modal --tid llama1b_bm25_blindset_A --eval_dataset blindset_A --batch_size 16
+python run_experiment.py --backend modal --tid my_blindset_A_config --eval_dataset blindset_A --batch_size 16
 ```
 
 The wrapper runs Modal inference, downloads artifacts back into your local `exp/` tree, and evaluates devset runs locally. The second Modal run skips re-downloading model weights because the HF cache is persisted in the `music-crs-hf-cache` volume.
@@ -102,8 +102,8 @@ uv run python scripts/smoke_lancedb_modal_query.py --query "dark atmospheric syn
 If you want to bypass the unified wrapper, the underlying Modal entrypoints are still available:
 
 ```bash
-modal run modal/app.py::run_inference --tid llama1b_bm25_devset --batch-size 16
-modal run modal/app.py::run_inference_blindset --tid llama1b_bm25_blindset_A --batch-size 16 --eval-dataset blindset_A
+modal run modal/app.py::run_inference --tid bm25_devset_retrieval_only_with_tag_list --batch-size 16
+modal run modal/app.py::run_inference_blindset --tid my_blindset_A_config --batch-size 16 --eval-dataset blindset_A
 ```
 
 ---
@@ -114,7 +114,7 @@ Use the repo downloader to mirror artifacts from the Modal volume into a chosen 
 
 ```bash
 # Download one run into exp/
-python modal/download_results.py --tid llama1b_bm25_devset --out-dir exp
+python modal/download_results.py --tid bm25_devset_retrieval_only_with_tag_list --out-dir exp
 
 # Download all missing remote artifacts
 python modal/download_results.py

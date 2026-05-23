@@ -33,12 +33,12 @@ def main(args):
         None. Results are saved to exp/inference/{tid}.json
 
     Processing:
-        - Loads model configuration from config/{tid}.yaml
+        - Loads model configuration from configs/{tid}.yaml
         - Processes all sessions × 8 turns in batches
         - Tracks progress with tqdm progress bar
         - Saves comprehensive results for evaluation
     """
-    config = OmegaConf.load(f"config/{args.tid}.yaml")
+    config = OmegaConf.load(f"configs/{args.tid}.yaml")
     if args.clear_cache:
         cache_dir = config.get("cache_dir", "./cache")
         if os.path.exists(cache_dir):
@@ -116,8 +116,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tid",
         type=str,
-        default="llama1b_bm25_blindset_A",
-        help="Task identifier matching a config file (e.g., 'llama1b_bm25' loads config/llama1b_bm25.yaml)"
+        default="bm25_devset_retrieval_only_with_tag_list",
+        help="Task identifier matching a config file (e.g., 'bm25_devset_retrieval_only_with_tag_list' loads configs/bm25_devset_retrieval_only_with_tag_list.yaml)"
     )
     parser.add_argument(
         "--eval_dataset",

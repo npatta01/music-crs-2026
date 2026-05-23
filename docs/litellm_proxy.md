@@ -21,7 +21,7 @@ required variable; the proxy itself accepts any client `api_key`.
 ```
 
 This spawns `uv tool run litellm[proxy,caching]` against
-`configs/litellm_proxy.openrouter.yaml`, bound to `0.0.0.0:4000` (clients reach
+`infra/litellm/litellm_proxy.openrouter.yaml`, bound to `0.0.0.0:4000` (clients reach
 it at `http://localhost:4000`). Disk cache
 lives under `artifacts/cache/litellm/` so repeated runs are cheap.
 
@@ -33,7 +33,7 @@ LITELLM_PROXY_PORT=4100 ./scripts/litellm-proxy
 
 ## 3. Available models
 
-`configs/litellm_proxy.openrouter.yaml` exposes proxy-side names mapped to
+`infra/litellm/litellm_proxy.openrouter.yaml` exposes proxy-side names mapped to
 OpenRouter slugs (verified live at 2026-04). Old repo configs that referenced
 `Qwen2.5-3B`, `gemma-3-E2B`, `SmolLM2-1.7B`, or `Qwen3-4B-Instruct-2507` keep
 running through the local HF path — those slugs are not on OpenRouter.
@@ -54,11 +54,12 @@ running through the local HF path — those slugs are not on OpenRouter.
 
 ## 4. End-to-end example
 
-`config/litellm_qwen3_8b_rewrite_emb3small_devset.yaml` runs litellm rewrite
-(`qwen3.5-9b`) plus litellm embeddings (`text-embedding-3-small`) together:
+`configs/archive/litellm_qwen3_8b_rewrite_emb3small_devset.yaml` is the archived config for litellm rewrite
+(`qwen3.5-9b`) plus litellm embeddings (`text-embedding-3-small`) together. Copy it back to `configs/` before rerunning it:
 
 ```bash
 ./scripts/litellm-proxy &
+cp configs/archive/litellm_qwen3_8b_rewrite_emb3small_devset.yaml configs/
 python run_inference_devset.py \
   --tid litellm_qwen3_8b_rewrite_emb3small_devset \
   --batch_size 16 --num_sessions 4

@@ -1,7 +1,7 @@
 # Experiment: llama1b_bm25_devset
 
 **Date:** 2026-04-27
-**Config:** `config/llama1b_bm25_devset.yaml`
+**Config:** `configs/archive/llama1b_bm25_devset.yaml`
 
 ## Configuration
 

@@ -2,9 +2,9 @@
 
 LanceDB is a CPU-only retrieval experiment for comparing native LanceDB FTS against the existing tag-list BM25 baselines:
 
-- direct BM25: `config/bm25_devset_retrieval_only_with_tag_list.yaml`
-- Milvus BM25: `config/milvus_bm25_with_tag_list_devset.yaml`
-- LanceDB FTS: `config/lancedb_fts_with_tag_list_devset.yaml`
+- direct BM25: `configs/bm25_devset_retrieval_only_with_tag_list.yaml`
+- Milvus BM25: `configs/milvus_bm25_with_tag_list_devset.yaml`
+- LanceDB FTS: `configs/lancedb_fts_with_tag_list_devset.yaml`
 
 The first LanceDB config is intentionally sparse/FTS-only at query time. The
 local index build stores precomputed track embeddings by default so the same DB

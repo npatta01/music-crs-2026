@@ -1,7 +1,7 @@
 # Experiment: bm25_devset_retrieval_only
 
 **Date:** 2026-04-27
-**Config:** `config/bm25_devset_retrieval_only.yaml`
+**Config:** `configs/archive/bm25_devset_retrieval_only.yaml`
 
 ## Configuration
 

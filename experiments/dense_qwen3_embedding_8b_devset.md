@@ -1,7 +1,7 @@
 # Experiment: dense_qwen3_embedding_8b_devset
 
 **Date:** 2026-04-27
-**Config:** `config/dense_qwen3_embedding_8b_devset.yaml`
+**Config:** `configs/dense_qwen3_embedding_8b_devset.yaml`
 
 ## Configuration
 

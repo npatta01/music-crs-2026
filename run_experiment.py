@@ -31,7 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--tid",
         required=True,
-        help="Task identifier matching config/{tid}.yaml.",
+        help="Task identifier matching configs/{tid}.yaml.",
     )
     parser.add_argument(
         "--eval_dataset",
@@ -90,14 +90,14 @@ def resolve_exp_dir(exp_dir: str) -> Path:
 
 
 def require_config(tid: str) -> Path:
-    config_path = PROJECT_ROOT / "config" / f"{tid}.yaml"
+    config_path = PROJECT_ROOT / "configs" / f"{tid}.yaml"
     if not config_path.exists():
         raise FileNotFoundError(f"No config found at {config_path}")
     return config_path
 
 
 def _test_dataset_name(tid: str) -> str:
-    config = OmegaConf.load(PROJECT_ROOT / "config" / f"{tid}.yaml")
+    config = OmegaConf.load(PROJECT_ROOT / "configs" / f"{tid}.yaml")
     return str(config.get("test_dataset_name", DEFAULT_TEST_DATASET))
 
 

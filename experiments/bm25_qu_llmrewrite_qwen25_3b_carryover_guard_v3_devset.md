@@ -1,7 +1,7 @@
 # Experiment: bm25_qu_llmrewrite_qwen25_3b_carryover_guard_v3_devset
 
 **Date:** 2026-04-27
-**Config:** `config/bm25_qu_llmrewrite_qwen25_3b_carryover_guard_v3_devset.yaml`
+**Config:** `configs/archive/bm25_qu_llmrewrite_qwen25_3b_carryover_guard_v3_devset.yaml`
 
 ## Configuration
 

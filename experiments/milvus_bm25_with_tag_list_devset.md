@@ -1,7 +1,7 @@
 # Experiment: milvus_bm25_with_tag_list_devset
 
 **Date:** 2026-05-10
-**Config:** `config/milvus_bm25_with_tag_list_devset.yaml`
+**Config:** `configs/milvus_bm25_with_tag_list_devset.yaml`
 
 ## Configuration
 
