@@ -1,13 +1,24 @@
 from __future__ import annotations
 
 import ast
+import importlib.util
+import sys
 import tomllib
 from pathlib import Path
+from types import SimpleNamespace
 
 from omegaconf import OmegaConf
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _load_modal_app_module():
+    spec = importlib.util.spec_from_file_location("modal_app_under_test", PROJECT_ROOT / "modal" / "app.py")
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
 
 
 def _modal_function_decorator_keywords(function_name: str) -> dict[str, ast.AST]:
@@ -134,3 +145,97 @@ def test_modal_retrieval_methods_accept_request_retrieval_config():
 
     assert retrieve_args == ["self", "query", "topk", "retrieval_config"]
     assert batch_args == ["self", "queries", "topk", "retrieval_config"]
+
+
+def test_modal_retrieval_config_services_are_cached(monkeypatch):
+    module = _load_modal_app_module()
+    created_configs = []
+
+    class FakeRetriever:
+        pass
+
+    class FakeService:
+        def __init__(self, retriever, embedding_client):
+            self.retriever = retriever
+            self.embedding_client = embedding_client
+
+    def fake_from_retrieval_config(config, embedding_client=None):
+        created_configs.append(config)
+        assert embedding_client == "embedder"
+        return FakeRetriever()
+
+    monkeypatch.setattr(
+        "mcrs.lancedb.retriever.LanceDbRetriever.from_retrieval_config",
+        fake_from_retrieval_config,
+    )
+    monkeypatch.setattr("mcrs.retrieval_services.RetrievalService", FakeService)
+
+    modal_retrieval_service = module.ModalRetrievalService._get_user_cls()
+    service = modal_retrieval_service.__new__(modal_retrieval_service)
+    service.service = object()
+    service.embedding_client = "embedder"
+    service._retrieval_service_cache = {}
+    service._retrieval_service_cache_order = []
+
+    retrieval_config = {
+        "searches": [
+            {
+                "name": "metadata_dense",
+                "kind": "dense_vector",
+                "vector_field": "metadata_qwen3_embedding_0_6b",
+                "topk": 1000,
+            }
+        ]
+    }
+    first = service._service_for_retrieval_config(retrieval_config, topk=20)
+    second = service._service_for_retrieval_config(dict(retrieval_config), topk=20)
+
+    assert first is second
+    assert len(created_configs) == 1
+
+
+def test_modal_litellm_unknown_model_does_not_use_hf_token():
+    module = _load_modal_app_module()
+    modal_litellm_service = module.ModalLiteLLMService._get_user_cls()
+    service = modal_litellm_service.__new__(modal_litellm_service)
+    service.hf_token = "hf-secret"
+    service.openrouter_api_key = "or-secret"
+
+    assert service._api_key_for_model("openrouter/google/gemma-3-4b-it", None) == "or-secret"
+    assert service._api_key_for_model("huggingface/featherless-ai/Qwen/Qwen3-0.6B", None) == "hf-secret"
+    assert service._api_key_for_model("openai/text-embedding-3-small", None) is None
+
+
+def test_modal_litellm_cache_lookup_logs_failure(monkeypatch, capsys):
+    module = _load_modal_app_module()
+
+    class FakeCache:
+        def get_cache(self, **kwargs):
+            raise RuntimeError("cache unavailable")
+
+    monkeypatch.setitem(sys.modules, "litellm", SimpleNamespace(cache=FakeCache()))
+
+    assert module.ModalLiteLLMService._cache_hit_before_call({"model": "x"}) is None
+    captured = capsys.readouterr()
+    assert "LiteLLM cache lookup failed" in captured.out
+
+
+def test_query_lancedb_rejects_dense_vector_config():
+    module = _load_modal_app_module()
+
+    try:
+        module._ensure_query_lancedb_fts_only(
+            {
+                "searches": [
+                    {
+                        "name": "metadata_dense",
+                        "kind": "dense_vector",
+                        "vector_field": "metadata_qwen3_embedding_0_6b",
+                    }
+                ]
+            }
+        )
+    except ValueError as exc:
+        assert "query_lancedb is FTS-only" in str(exc)
+    else:
+        raise AssertionError("Expected dense_vector config to be rejected")

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from mcrs.lancedb.indexing import connect_lancedb
 from mcrs.lancedb.retriever import LanceDbRetriever
 
 
@@ -23,7 +22,6 @@ class LANCEDB_MODEL:
         del dataset_name, split_types, corpus_types, cache_dir, formatter
         self.retriever = LanceDbRetriever.from_retrieval_config(
             dict(retrieval_config or {}),
-            connect=connect_lancedb,
         )
 
     def text_to_item_retrieval(self, query: str, topk: int) -> list[str]:

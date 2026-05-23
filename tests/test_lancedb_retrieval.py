@@ -74,7 +74,7 @@ def test_lancedb_fts_compat_searches_taglist_text_field(monkeypatch):
         }
     )
     fake_db = FakeDb(table)
-    monkeypatch.setattr("mcrs.retrieval_modules.lancedb.connect_lancedb", lambda _: fake_db)
+    monkeypatch.setattr("mcrs.lancedb.retriever.connect_lancedb", lambda _: fake_db)
 
     model = LANCEDB_MODEL(
         dataset_name="tracks",
@@ -121,7 +121,7 @@ def test_lancedb_bm25s_compat_uses_tokenized_field_and_query_term_boosts(monkeyp
         }
     )
     fake_db = FakeDb(table)
-    monkeypatch.setattr("mcrs.retrieval_modules.lancedb.connect_lancedb", lambda _: fake_db)
+    monkeypatch.setattr("mcrs.lancedb.retriever.connect_lancedb", lambda _: fake_db)
 
     model = LANCEDB_MODEL(
         dataset_name="tracks",
@@ -179,7 +179,7 @@ def test_lancedb_pads_short_fts_results_from_catalog_order(monkeypatch):
         all_track_ids=["track-1", "track-2", "track-3"],
     )
     fake_db = FakeDb(table)
-    monkeypatch.setattr("mcrs.retrieval_modules.lancedb.connect_lancedb", lambda _: fake_db)
+    monkeypatch.setattr("mcrs.lancedb.retriever.connect_lancedb", lambda _: fake_db)
 
     model = LANCEDB_MODEL(
         dataset_name="tracks",
@@ -220,7 +220,7 @@ def test_lancedb_multi_field_fts_uses_weighted_rrf(monkeypatch):
         }
     )
     fake_db = FakeDb(table)
-    monkeypatch.setattr("mcrs.retrieval_modules.lancedb.connect_lancedb", lambda _: fake_db)
+    monkeypatch.setattr("mcrs.lancedb.retriever.connect_lancedb", lambda _: fake_db)
 
     model = LANCEDB_MODEL(
         dataset_name="tracks",
@@ -247,6 +247,47 @@ def test_lancedb_multi_field_fts_uses_weighted_rrf(monkeypatch):
 
     assert model.text_to_item_retrieval("ambient calm", topk=3) == ["track-a", "track-c", "track-b"]
     assert [call["fts_columns"] for call in table.search_calls] == ["track_name_text", "tag_list_text"]
+
+
+def test_lancedb_rrf_does_not_rank_zero_score_padding(monkeypatch):
+    from mcrs.retrieval_modules.lancedb import LANCEDB_MODEL
+
+    table = FakeTable(
+        {
+            "track_name_text": [],
+            "tag_list_text": [
+                {"track_id": "track-c", "_score": 10.0},
+            ],
+        },
+        all_track_ids=["track-a", "track-b", "track-c"],
+    )
+    fake_db = FakeDb(table)
+    monkeypatch.setattr("mcrs.lancedb.retriever.connect_lancedb", lambda _: fake_db)
+
+    model = LANCEDB_MODEL(
+        dataset_name="tracks",
+        split_types=["all_tracks"],
+        corpus_types=["track_name"],
+        retrieval_config={
+            "db_uri": "./cache/lancedb",
+            "table_name": "music_track_catalog",
+            "searches": [
+                {
+                    "name": "field_fts",
+                    "kind": "fts_fields",
+                    "weight": 1.0,
+                    "fields": [
+                        {"name": "track_name", "weight": 0.5},
+                        {"name": "tag_list", "weight": 0.5},
+                    ],
+                    "topk": 3,
+                }
+            ],
+            "fusion": {"method": "weighted_rrf"},
+        },
+    )
+
+    assert model.text_to_item_retrieval("ambient calm", topk=3) == ["track-c"]
 
 
 def test_lancedb_retriever_rejects_non_cpu_device():

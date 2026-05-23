@@ -19,6 +19,7 @@ Usage:
     python run_experiment.py --backend modal --tid my_blindset_A_config --eval_dataset blindset_A
 """
 
+import json
 from pathlib import Path
 
 import modal
@@ -101,6 +102,7 @@ _VOLUME_MOUNTS = {
 }
 
 DEFAULT_REMOTE_LANCEDB_URI = f"{MODELS_DIR}/lancedb"
+RETRIEVAL_SERVICE_CACHE_SIZE = 8
 
 
 def _default_lancedb_retrieval_config(topk: int = 1000) -> dict:
@@ -121,6 +123,34 @@ def _default_lancedb_retrieval_config(topk: int = 1000) -> dict:
         "fusion": {"method": "weighted_rrf"},
         "device": "cpu",
     }
+
+
+def _retrieval_config_cache_key(config: dict) -> str:
+    return json.dumps(config, sort_keys=True, separators=(",", ":"), default=str)
+
+
+def _ensure_query_lancedb_fts_only(config: dict) -> None:
+    searches = config.get("searches") or []
+    if any(search.get("kind") == "dense_vector" for search in searches if isinstance(search, dict)):
+        raise ValueError(
+            "query_lancedb is FTS-only; use ModalRetrievalService with an embedding client for dense_vector"
+        )
+
+
+def _api_key_for_litellm_model(
+    model_name: str,
+    api_base: str | None,
+    *,
+    hf_token: str | None,
+    openrouter_api_key: str | None,
+) -> str | None:
+    if model_name.startswith("openrouter/"):
+        return openrouter_api_key
+    if api_base and "openrouter.ai" in api_base:
+        return openrouter_api_key
+    if model_name.startswith("huggingface/"):
+        return hf_token
+    return None
 
 
 def _tid_config(tid: str):
@@ -305,6 +335,8 @@ class ModalRetrievalService:
         )
         self.embedding_client = embedding_client
         self.service = RetrievalService(retriever=retriever, embedding_client=embedding_client)
+        self._retrieval_service_cache = {}
+        self._retrieval_service_cache_order = []
 
     def _service_for_retrieval_config(self, retrieval_config: dict | None, topk: int):
         if retrieval_config is None:
@@ -315,11 +347,22 @@ class ModalRetrievalService:
 
         config = _default_lancedb_retrieval_config(topk=topk)
         config.update(dict(retrieval_config))
+        cache_key = _retrieval_config_cache_key(config)
+        cached_service = self._retrieval_service_cache.get(cache_key)
+        if cached_service is not None:
+            return cached_service
+
         retriever = LanceDbRetriever.from_retrieval_config(
             config,
             embedding_client=self.embedding_client,
         )
-        return RetrievalService(retriever=retriever, embedding_client=self.embedding_client)
+        service = RetrievalService(retriever=retriever, embedding_client=self.embedding_client)
+        self._retrieval_service_cache[cache_key] = service
+        self._retrieval_service_cache_order.append(cache_key)
+        while len(self._retrieval_service_cache_order) > RETRIEVAL_SERVICE_CACHE_SIZE:
+            old_key = self._retrieval_service_cache_order.pop(0)
+            self._retrieval_service_cache.pop(old_key, None)
+        return service
 
     @modal.method()
     def retrieve(
@@ -365,9 +408,6 @@ class ModalLiteLLMService:
         import litellm
         from litellm.caching.caching import Cache
 
-        from mcrs.embeddings import LiteLLMEmbeddingClient
-        from mcrs.lm_modules.litellm_client import LiteLLMChatClient
-
         litellm.success_callback = [self._track_cache_hit]
         litellm.cache = Cache(
             type="disk",
@@ -378,20 +418,8 @@ class ModalLiteLLMService:
         self.last_cache_hit = None
         self.hf_token = os.environ.get("HF_TOKEN")
         self.openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
-        default_embedding_model = os.environ.get("MCRS_TEST_EMBEDDING_MODEL", LITELLM_EMBEDDING_MODEL)
-        default_chat_model = os.environ.get("MCRS_TEST_CHAT_MODEL", LITELLM_CHAT_MODEL)
-        self.embedder = LiteLLMEmbeddingClient(
-            model_name=default_embedding_model,
-            api_key=self._api_key_for_model(default_embedding_model, None),
-            batch_size=8,
-            cache={"ttl": 86400},
-        )
-        self.chat_client = LiteLLMChatClient(
-            model_name=default_chat_model,
-            api_key=self._api_key_for_model(default_chat_model, None),
-            temperature=0.0,
-            max_tokens=32,
-        )
+        self.default_embedding_model = os.environ.get("MCRS_TEST_EMBEDDING_MODEL", LITELLM_EMBEDDING_MODEL)
+        self.default_chat_model = os.environ.get("MCRS_TEST_CHAT_MODEL", LITELLM_CHAT_MODEL)
 
     @staticmethod
     def _cache_hit_from_response(completion_response) -> bool | None:
@@ -415,8 +443,8 @@ class ModalLiteLLMService:
     ) -> dict:
         from mcrs.embeddings import LiteLLMEmbeddingClient
 
-        selected_model = model_name or self.embedder.model_name
-        selected_api_base = api_base or self.embedder.api_base
+        selected_model = model_name or self.default_embedding_model
+        selected_api_base = api_base
         embedder = LiteLLMEmbeddingClient(
             model_name=selected_model,
             api_base=selected_api_base,
@@ -425,7 +453,7 @@ class ModalLiteLLMService:
             cache={"ttl": 86400},
         )
         self.last_cache_hit = None
-        cache_hit_before = self._cache_hit_before_call(embedder._kwargs(text))
+        cache_hit_before = self._cache_hit_before_call(embedder.build_request_kwargs([text]))
         try:
             vector = embedder.embed_one(text)
         except Exception as exc:
@@ -447,8 +475,8 @@ class ModalLiteLLMService:
     ) -> dict:
         from mcrs.lm_modules.litellm_client import LiteLLMChatClient
 
-        selected_model = model_name or self.chat_client.model_name
-        selected_api_base = api_base or self.chat_client.api_base
+        selected_model = model_name or self.default_chat_model
+        selected_api_base = api_base
         chat_client = LiteLLMChatClient(
             model_name=selected_model,
             api_base=selected_api_base,
@@ -460,7 +488,7 @@ class ModalLiteLLMService:
         messages = [{"role": "user", "content": prompt}]
         cache_control = {"ttl": 86400}
         cache_hit_before = self._cache_hit_before_call(
-            chat_client._kwargs(messages=messages, cache=cache_control)
+            chat_client.build_request_kwargs(messages=messages, cache=cache_control)
         )
         try:
             content = chat_client.chat(
@@ -485,7 +513,8 @@ class ModalLiteLLMService:
             return None
         try:
             return litellm.cache.get_cache(**call_kwargs) is not None
-        except Exception:
+        except Exception as exc:
+            print(f"LiteLLM cache lookup failed: {type(exc).__name__}: {exc}")
             return None
 
     def _cache_status(self, cache_hit_before: bool | None) -> bool | None:
@@ -494,13 +523,12 @@ class ModalLiteLLMService:
         return self.last_cache_hit
 
     def _api_key_for_model(self, model_name: str, api_base: str | None) -> str | None:
-        if model_name.startswith("openrouter/"):
-            return self.openrouter_api_key
-        if api_base and "openrouter.ai" in api_base:
-            return self.openrouter_api_key
-        if model_name.startswith("huggingface/"):
-            return self.hf_token
-        return self.hf_token
+        return _api_key_for_litellm_model(
+            model_name,
+            api_base,
+            hf_token=self.hf_token,
+            openrouter_api_key=self.openrouter_api_key,
+        )
 
     def _error_response(self, kind: str, model_name: str, exc: Exception) -> dict:
         return {
@@ -532,6 +560,7 @@ def query_lancedb(
     for key, value in defaults.items():
         config.setdefault(key, value)
     config["device"] = "cpu"
+    _ensure_query_lancedb_fts_only(config)
 
     model = LANCEDB_MODEL(
         dataset_name="unused",

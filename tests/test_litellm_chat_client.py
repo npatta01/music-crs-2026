@@ -47,6 +47,29 @@ def test_litellm_chat_client_calls_completion(monkeypatch):
     ]
 
 
+def test_litellm_chat_client_builds_public_request_kwargs():
+    from mcrs.lm_modules.litellm_client import LiteLLMChatClient
+
+    client = LiteLLMChatClient(
+        model_name="openrouter/google/gemma-3-4b-it",
+        api_key="or-test",
+        temperature=0.0,
+        max_tokens=32,
+    )
+
+    assert client.build_request_kwargs(
+        messages=[{"role": "user", "content": "Say hello."}],
+        cache={"ttl": 3600},
+    ) == {
+        "model": "openrouter/google/gemma-3-4b-it",
+        "messages": [{"role": "user", "content": "Say hello."}],
+        "temperature": 0.0,
+        "max_tokens": 32,
+        "api_key": "or-test",
+        "cache": {"ttl": 3600},
+    }
+
+
 def test_litellm_chat_client_rejects_empty_model_name():
     import pytest
 

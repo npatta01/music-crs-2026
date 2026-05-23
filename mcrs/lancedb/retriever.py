@@ -16,10 +16,14 @@ from mcrs.lancedb.indexing import (
 )
 from mcrs.milvus.indexing import (
     BM25_EXPERIMENTAL_FIELDS,
+    EMBEDDING_FIELDS,
     bm25_text_field_name,
     has_embedding_field_name,
+    milvus_safe_field_name,
     resolve_bm25_combined_text_field,
 )
+
+LANCEDB_VECTOR_FIELDS = frozenset(milvus_safe_field_name(name) for name in EMBEDDING_FIELDS)
 
 
 @dataclass(frozen=True)
@@ -253,6 +257,8 @@ class LanceDbRetriever:
 
         if kind == "dense_vector":
             vector_field = self._require_str(raw_search, "vector_field")
+            if vector_field not in LANCEDB_VECTOR_FIELDS:
+                raise ValueError(f"Unsupported LanceDB vector field: {vector_field}")
             distance_type = str(raw_search.get("distance_type", "cosine"))
             filter_missing = bool(raw_search.get("filter_missing", True))
             return _DenseVectorSearch(
@@ -279,6 +285,7 @@ class LanceDbRetriever:
         counts = Counter(tokens)
         if not counts:
             return None
+        # Match the direct bm25s baseline: repeated query tokens become term-frequency boosts.
         return BooleanQuery(
             [
                 (Occur.SHOULD, MatchQuery(token, text_field, boost=float(count)))
@@ -311,26 +318,26 @@ class LanceDbRetriever:
                 break
         return padded
 
-    def _fts_search(self, query: str, text_field: str, limit: int) -> list[dict[str, Any]]:
+    def _fts_search(self, query: str, text_field: str, limit: int, *, pad_short: bool) -> list[dict[str, Any]]:
         hits = (
             self.table.search(query, query_type="fts", fts_columns=text_field)
             .limit(limit)
             .select(["track_id", "_score"])
             .to_list()
         )
-        return self._pad_short_hits(hits, limit)
+        return self._pad_short_hits(hits, limit) if pad_short else hits
 
-    def _fts_bm25s_search(self, query: str, text_field: str, limit: int) -> list[dict[str, Any]]:
+    def _fts_bm25s_search(self, query: str, text_field: str, limit: int, *, pad_short: bool) -> list[dict[str, Any]]:
         query_object = self._bm25s_query_object(query, text_field)
         if query_object is None:
-            return self._pad_short_hits([], limit)
+            return self._pad_short_hits([], limit) if pad_short else []
         hits = (
             self.table.search(query_object, query_type="fts")
             .limit(limit)
             .select(["track_id", "_score"])
             .to_list()
         )
-        return self._pad_short_hits(hits, limit)
+        return self._pad_short_hits(hits, limit) if pad_short else hits
 
     def _embed_query(self, query: str) -> list[float]:
         if self.embedding_client is None:
@@ -358,12 +365,16 @@ class LanceDbRetriever:
 
     def text_to_item_retrieval(self, query: str, topk: int) -> list[str]:
         result_sets = []
+        pad_single_search = len(self.searches) == 1 and isinstance(
+            self.searches[0],
+            (_FtsCompatSearch, _FtsBm25sCompatSearch),
+        )
         for search in self.searches:
             limit = self._request_limit(search.topk, topk)
             if isinstance(search, _FtsCompatSearch):
                 result_sets.append(
                     _SearchResultSet(
-                        hits=self._fts_search(query, search.text_field, limit),
+                        hits=self._fts_search(query, search.text_field, limit, pad_short=pad_single_search),
                         weight=search.weight,
                     )
                 )
@@ -372,7 +383,7 @@ class LanceDbRetriever:
             if isinstance(search, _FtsBm25sCompatSearch):
                 result_sets.append(
                     _SearchResultSet(
-                        hits=self._fts_bm25s_search(query, search.text_field, limit),
+                        hits=self._fts_bm25s_search(query, search.text_field, limit, pad_short=pad_single_search),
                         weight=search.weight,
                     )
                 )
@@ -382,7 +393,12 @@ class LanceDbRetriever:
                 for field in search.fields:
                     result_sets.append(
                         _SearchResultSet(
-                            hits=self._fts_search(query, bm25_text_field_name(field.name), limit),
+                            hits=self._fts_search(
+                                query,
+                                bm25_text_field_name(field.name),
+                                limit,
+                                pad_short=False,
+                            ),
                             weight=round(search.weight * field.weight, 12),
                         )
                     )

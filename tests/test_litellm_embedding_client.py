@@ -73,11 +73,28 @@ def test_litellm_embedding_client_can_embed_single_text_as_string(monkeypatch):
     assert calls == [
         {
             "model": "openrouter/openai/text-embedding-3-small",
-            "input": "solo query",
+            "input": ["solo query"],
             "api_key": "or-test",
             "cache": {"ttl": 3600},
         }
     ]
+
+
+def test_litellm_embedding_client_builds_public_request_kwargs():
+    from mcrs.embeddings.litellm_client import LiteLLMEmbeddingClient
+
+    client = LiteLLMEmbeddingClient(
+        model_name="openrouter/openai/text-embedding-3-small",
+        api_key="or-test",
+        cache={"ttl": 3600},
+    )
+
+    assert client.build_request_kwargs(["query"]) == {
+        "model": "openrouter/openai/text-embedding-3-small",
+        "input": ["query"],
+        "api_key": "or-test",
+        "cache": {"ttl": 3600},
+    }
 
 
 def test_litellm_embedding_client_rejects_empty_batch_size():

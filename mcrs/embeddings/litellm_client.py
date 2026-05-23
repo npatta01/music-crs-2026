@@ -36,7 +36,7 @@ class LiteLLMEmbeddingClient:
         if not self.model_name.strip():
             raise ValueError("model_name must be a non-empty string")
 
-    def _kwargs(self, texts: list[str] | str) -> dict[str, Any]:
+    def build_request_kwargs(self, texts: list[str]) -> dict[str, Any]:
         kwargs: dict[str, Any] = {
             "model": self.model_name,
             "input": texts,
@@ -51,6 +51,10 @@ class LiteLLMEmbeddingClient:
             kwargs["cache"] = self.cache
         kwargs.update(self.extra_params)
         return kwargs
+
+    def _kwargs(self, texts: list[str] | str) -> dict[str, Any]:
+        input_texts = [texts] if isinstance(texts, str) else texts
+        return self.build_request_kwargs(input_texts)
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
         if not texts:
@@ -67,5 +71,5 @@ class LiteLLMEmbeddingClient:
     def embed_one(self, text: str) -> list[float]:
         import litellm
 
-        response = litellm.embedding(**self._kwargs(text))
+        response = litellm.embedding(**self.build_request_kwargs([text]))
         return _embedding_from_item(response.data[0])

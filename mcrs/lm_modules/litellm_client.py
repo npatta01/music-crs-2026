@@ -22,7 +22,7 @@ class LiteLLMChatClient:
         if self.max_tokens <= 0:
             raise ValueError("max_tokens must be positive")
 
-    def _kwargs(self, messages: list[dict[str, str]], cache: dict[str, Any] | None) -> dict[str, Any]:
+    def build_request_kwargs(self, messages: list[dict[str, str]], cache: dict[str, Any] | None) -> dict[str, Any]:
         kwargs: dict[str, Any] = {
             "model": self.model_name,
             "messages": messages,
@@ -38,8 +38,11 @@ class LiteLLMChatClient:
         kwargs.update(self.extra_params)
         return kwargs
 
+    def _kwargs(self, messages: list[dict[str, str]], cache: dict[str, Any] | None) -> dict[str, Any]:
+        return self.build_request_kwargs(messages=messages, cache=cache)
+
     def chat(self, messages: list[dict[str, str]], cache: dict[str, Any] | None = None) -> str:
         import litellm
 
-        response = litellm.completion(**self._kwargs(messages=messages, cache=cache))
+        response = litellm.completion(**self.build_request_kwargs(messages=messages, cache=cache))
         return response.choices[0].message.content or ""

@@ -190,3 +190,26 @@ def test_standalone_lance_retriever_dense_vector_requires_embedding_client(monke
 
     with pytest.raises(RuntimeError, match="requires an embedding client"):
         retriever.retrieve("dreamy synth pads", topk=2)
+
+
+def test_standalone_lance_retriever_rejects_unknown_dense_vector_field(monkeypatch):
+    import pytest
+
+    from mcrs.lancedb.retriever import LanceDbRetriever
+
+    table = FakeVectorTable()
+    fake_db = FakeDb(table)
+    monkeypatch.setattr("mcrs.lancedb.retriever.connect_lancedb", lambda _: fake_db)
+
+    config = _retrieval_config()
+    config["searches"] = [
+        {
+            "name": "unsafe_dense",
+            "kind": "dense_vector",
+            "vector_field": "metadata_qwen3_embedding_0_6b = true OR true",
+            "topk": 1000,
+        }
+    ]
+
+    with pytest.raises(ValueError, match="Unsupported LanceDB vector field"):
+        LanceDbRetriever.from_retrieval_config(config)
