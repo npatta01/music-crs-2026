@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gen-CRS 2025 Tutorial - Standalone Music-CRS Brief</title>
+  <style>
+    :root {
+      --ink: #15202b;
+      --muted: #5b6778;
+      --paper: #fbfaf7;
+      --panel: #ffffff;
+      --rule: #d9d4cb;
+      --blue: #2c6fbb;
+      --blue-soft: #eaf2fb;
+      --green: #278565;
+      --green-soft: #eaf7f1;
+      --red: #b84a43;
+      --red-soft: #fff1ef;
+      --gold: #b9822b;
+      --gold-soft: #fff5e4;
+      --slate: #273241;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    header {
+      padding: 48px min(7vw, 88px) 34px;
+      border-bottom: 1px solid var(--rule);
+      background: linear-gradient(180deg, #ffffff 0%, #fbfaf7 100%);
+    }
+    main {
+      padding: 36px min(7vw, 88px) 72px;
+    }
+    section {
+      max-width: 1180px;
+      margin: 0 auto 50px;
+    }
+    .kicker {
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--green);
+    }
+    h1 {
+      max-width: 980px;
+      margin: 8px 0 14px;
+      font-size: clamp(38px, 5.4vw, 68px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 16px;
+      font-size: 32px;
+      line-height: 1.12;
+    }
+    h3 {
+      margin: 0 0 8px;
+      font-size: 20px;
+    }
+    p { margin: 0 0 12px; }
+    a { color: var(--blue); }
+    code {
+      background: #ede9df;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 90%;
+    }
+    .lede {
+      max-width: 930px;
+      font-size: 21px;
+      color: var(--muted);
+    }
+    .grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .grid.two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      padding: 18px;
+      min-height: 152px;
+    }
+    .card.green { border-top: 5px solid var(--green); }
+    .card.blue { border-top: 5px solid var(--blue); }
+    .card.gold { border-top: 5px solid var(--gold); }
+    .card.red { border-top: 5px solid var(--red); }
+    .metric {
+      display: block;
+      font-size: 34px;
+      line-height: 1;
+      font-weight: 850;
+      margin-bottom: 6px;
+      color: var(--slate);
+    }
+    .muted { color: var(--muted); }
+    .callout {
+      border-left: 5px solid var(--green);
+      background: var(--green-soft);
+      border-radius: 6px;
+      padding: 16px 18px;
+    }
+    .callout.warn {
+      border-left-color: var(--red);
+      background: var(--red-soft);
+    }
+    .diagram {
+      background: var(--panel);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      padding: 22px;
+      overflow-x: auto;
+    }
+    .flow {
+      min-width: 1060px;
+      display: grid;
+      grid-template-columns: 1.1fr .26fr 1.1fr .26fr 1.1fr .26fr 1.1fr;
+      align-items: stretch;
+      gap: 10px;
+    }
+    .flow.five {
+      grid-template-columns: 1fr .22fr 1fr .22fr 1fr .22fr 1fr .22fr 1fr;
+      min-width: 1120px;
+    }
+    .node {
+      border: 1px solid #c9d3df;
+      border-top: 5px solid var(--blue);
+      border-radius: 8px;
+      padding: 13px;
+      background: #f9fbfd;
+      min-height: 106px;
+    }
+    .node.green { border-top-color: var(--green); }
+    .node.gold { border-top-color: var(--gold); }
+    .node.red { border-top-color: var(--red); }
+    .arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-weight: 900;
+      font-size: 24px;
+    }
+    ul { padding-left: 20px; margin: 8px 0 0; }
+    li { margin: 5px 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      text-align: left;
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--rule);
+      vertical-align: top;
+    }
+    th {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+      background: #f2f0eb;
+    }
+    tr:last-child td { border-bottom: 0; }
+    pre {
+      background: #f0eee8;
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      padding: 14px 16px;
+      overflow-x: auto;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    footer {
+      border-top: 1px solid var(--rule);
+      padding: 24px min(7vw, 88px);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    @media (max-width: 900px) {
+      .grid, .grid.two { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="kicker">Standalone brief for non-CRS readers</div>
+    <h1>Gen-CRS tutorial takeaways for the Music-CRS competition</h1>
+    <p class="lede">This page explains what CRS means, what the competition asks for, what the tutorial contributes, and why the recommended architecture is a grounded hybrid retrieval system rather than a free-form LLM recommender.</p>
+  </header>
+
+  <main>
+    <section>
+      <div class="callout">
+        <h2>Detailed literature review</h2>
+        <p>I added a deeper competition-focused review that goes paper by paper: CRS foundations, the Gen-CRS tutorial, RA-Rec, TalkPlayData 2, TALKPLAY, MusiCRS, ReFICR, Reindex-Then-Adapt, MemoCRS, RecLLM, iEvaLM, EventChat, and zero-shot LLM CRS work.</p>
+        <p><a href="literature_review.html">Open the standalone HTML literature review</a> or <a href="artifacts/detailed_literature_review.md">read the Markdown source</a>.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Start here: what is a CRS?</h2>
+      <div class="grid">
+        <div class="card blue">
+          <h3>Recommender system</h3>
+          <p>A system that chooses items for a user. Spotify recommends songs; Netflix recommends movies; Amazon recommends products.</p>
+        </div>
+        <div class="card green">
+          <h3>Conversational recommender system</h3>
+          <p>A recommender that works through dialogue. It must remember prior turns, user feedback, and changing preferences.</p>
+        </div>
+        <div class="card gold">
+          <h3>Generative CRS</h3>
+          <p>A conversational recommender that uses an LLM for some part of the job, such as state tracking, response generation, or reranking.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>What the Music-CRS competition asks for</h2>
+      <div class="diagram">
+        <div class="flow">
+          <div class="node"><strong>Input</strong><br>Multi-turn music conversation with user context and prior music recommendations.</div>
+          <div class="arrow">-></div>
+          <div class="node green"><strong>System task</strong><br>Understand the current intent using the full conversation, not only the latest turn.</div>
+          <div class="arrow">-></div>
+          <div class="node gold"><strong>Recommendation output</strong><br>Return 20 valid track IDs from a fixed catalog of about 47,000 tracks.</div>
+          <div class="arrow">-></div>
+          <div class="node red"><strong>Language output</strong><br>Generate a natural response grounded in the selected track evidence.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid" aria-label="current evidence">
+      <div class="card">
+        <span class="metric">99.6%</span>
+        <strong>Conversation-wide dependency</strong>
+        <p class="muted">Local query-intent labels show nearly every dev session needs prior user plus assistant/music turns.</p>
+      </div>
+      <div class="card">
+        <span class="metric">0.1072</span>
+        <strong>Offline RRF NDCG@20</strong>
+        <p class="muted">Sparse BM25+tags and dense Qwen retrieval already improve when fused.</p>
+      </div>
+      <div class="card">
+        <span class="metric">0.7210</span>
+        <strong>Hybrid Hit@1000</strong>
+        <p class="muted">The hybrid candidate pool contains the correct track more often than either branch alone.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>The tutorial's architecture lesson</h2>
+      <table>
+        <thead>
+          <tr><th>Architecture</th><th>Plain meaning</th><th>Use for Music-CRS?</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Unified Gen-CRS</td>
+            <td>One LLM reads the conversation and directly generates recommendations.</td>
+            <td>Not as the primary path. Too much invalid-ID and popularity-bias risk.</td>
+          </tr>
+          <tr>
+            <td>Modular Gen-CRS</td>
+            <td>Separate state tracking, retrieval, reranking, and response generation.</td>
+            <td>Yes. This keeps recommendations grounded in the official catalog.</td>
+          </tr>
+          <tr>
+            <td>Agentic Gen-CRS</td>
+            <td>An LLM planner chooses tools and updates memory across steps.</td>
+            <td>Later. Useful but higher latency, harder debugging, and more instability.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Recommended standalone architecture</h2>
+      <div class="diagram">
+        <div class="flow five">
+          <div class="node green"><strong>ConversationState</strong><br>Structured memory of accepted tracks, rejected tracks, constraints, and current intent.</div>
+          <div class="arrow">-></div>
+          <div class="node blue"><strong>Retrieval views</strong><br>One sparse keyword query and one dense semantic query derived from the state.</div>
+          <div class="arrow">-></div>
+          <div class="node gold"><strong>Hybrid retrieval</strong><br>BM25 or LanceDB FTS plus Qwen dense retrieval plus user/item signals.</div>
+          <div class="arrow">-></div>
+          <div class="node green"><strong>Fusion and rerank</strong><br>Use RRF first, then feature-aware rescoring over the union pool.</div>
+          <div class="arrow">-></div>
+          <div class="node red"><strong>Grounded response</strong><br>Return 20 valid track IDs and generate text only from catalog evidence.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid two">
+      <div class="callout">
+        <h3>Why ConversationState matters</h3>
+        <p>A flat query can forget that the user rejected a prior suggestion or that "more like this" refers to the second recommendation. A state object keeps those facts separate and reusable.</p>
+      </div>
+      <div class="callout warn">
+        <h3>Why direct LLM recommendation is risky</h3>
+        <p>The LLM can write plausible song names that are outside the catalog. It can also over-recommend popular items. The competition needs valid IDs and measurable ranking quality.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Example ConversationState</h2>
+      <pre><code>intent_mode: refinement
+positive_anchors:
+  tracks: ["track id from the suggestion the user liked"]
+negative_anchors:
+  tags: ["too heavy", "too gloomy"]
+active_constraints:
+  mood: ["chill", "warm"]
+  instrumentation: ["more acoustic"]
+  vocal: ["female vocalist"]
+sparse_query_view: "ambient warm acoustic female vocalist artist"
+dense_query_view: "warm chill acoustic electronic song with female vocals"
+response_evidence_view:
+  allowed_track_facts: ["track name", "artist", "album", "tags"]</code></pre>
+    </section>
+
+    <section>
+      <h2>Evaluation: what each metric tells you</h2>
+      <table>
+        <thead>
+          <tr><th>Metric</th><th>Plain-English question</th><th>Why it matters</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Hit@20 / Recall@20</td>
+            <td>Did the correct track appear in the final top 20?</td>
+            <td>Measures final recommendation success.</td>
+          </tr>
+          <tr>
+            <td>Hit@1000 / Recall@1000</td>
+            <td>Did candidate generation find the correct track anywhere in the broad pool?</td>
+            <td>A reranker cannot recover a track that was never retrieved.</td>
+          </tr>
+          <tr>
+            <td>NDCG@20</td>
+            <td>Was the correct track ranked near the top?</td>
+            <td>Rewards better ordering, not just inclusion.</td>
+          </tr>
+          <tr>
+            <td>Per-turn metrics</td>
+            <td>Does performance break later in the conversation?</td>
+            <td>Late turns expose state and carryover failures.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Links and slide references</h2>
+      <table>
+        <thead>
+          <tr><th>Area</th><th>Useful links</th><th>Why it matters</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Primary tutorial</td>
+            <td><a href="https://recsys-lab.at/gen-conv-recsys-tutorial/">Tutorial page</a><br><a href="https://recsys-lab.at/wp-content/uploads/2025/10/Gen-CRS2025_Tutorial.pdf">PDF slides</a></td>
+            <td>Architecture taxonomy, RAG/state tracking, hybrid recommendation generation, evaluation dimensions.</td>
+          </tr>
+          <tr>
+            <td>Challenge</td>
+            <td><a href="https://nlp4musa.github.io/music-crs-challenge/">Music-CRS 2026</a></td>
+            <td>Confirms multi-turn music recommendation, natural language response, and provided multimodal embeddings.</td>
+          </tr>
+          <tr>
+            <td>State tracking RAG</td>
+            <td><a href="https://doi.org/10.1145/3626772.3657670">Kemper et al., SIGIR 2024</a></td>
+            <td>The closest tutorial pattern to the proposed ConversationState layer.</td>
+          </tr>
+          <tr>
+            <td>LLM retrieval / reranking</td>
+            <td><a href="https://doi.org/10.1145/3640457.3688146">Yang and Chen, RecSys 2024</a></td>
+            <td>Supports retrieve-then-rerank and conversation-aware retrieval.</td>
+          </tr>
+          <tr>
+            <td>LLM caveats</td>
+            <td><a href="https://doi.org/10.1145/3583780.3614949">Zero-shot CRS</a><br><a href="https://doi.org/10.1145/3701551.3703573">Reindex-Then-Adapt</a></td>
+            <td>Useful warnings: popularity bias, collaborative weakness, item-set control, distribution mismatch.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer>
+    Companion artifacts: <code>README.md</code>, <code>literature_review.html</code>, <code>artifacts/detailed_literature_review.md</code>, <code>artifacts/source_digest_for_rebuild.md</code>, <code>artifacts/standalone_slide_notes.md</code>, <code>artifacts/relevant_links_and_architecture.md</code>, <code>artifacts/standalone_glossary.md</code>, and <code>artifacts/gen_crs2025_music_crs_takeaways.pptx</code>.
+  </footer>
+</body>
+</html>
