@@ -1,0 +1,1508 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Detailed Literature Review - Music-CRS Competition</title>
+  <style>
+:root {
+  --ink: #18222f;
+  --muted: #5c6877;
+  --paper: #fbfaf7;
+  --panel: #ffffff;
+  --rule: #d8d2c8;
+  --blue: #256db0;
+  --green: #257b62;
+  --gold: #a87522;
+  --red: #ad443e;
+  --code: #f0ece3;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font: 16px/1.62 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+a { color: var(--blue); }
+header {
+  padding: 42px min(6vw, 76px) 28px;
+  border-bottom: 1px solid var(--rule);
+  background: linear-gradient(180deg, #fff 0%, var(--paper) 100%);
+}
+.kicker {
+  color: var(--green);
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+h1 {
+  max-width: 980px;
+  margin: 8px 0 12px;
+  font-size: clamp(34px, 5vw, 62px);
+  line-height: 1.02;
+  letter-spacing: 0;
+}
+.lede {
+  max-width: 980px;
+  color: var(--muted);
+  font-size: 20px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+.actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  background: var(--panel);
+  text-decoration: none;
+  font-weight: 650;
+}
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 28px;
+  max-width: 1380px;
+  margin: 0 auto;
+  padding: 34px min(6vw, 76px) 72px;
+}
+article {
+  min-width: 0;
+  max-width: 920px;
+}
+aside {
+  align-self: start;
+  position: sticky;
+  top: 18px;
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--panel);
+}
+aside h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: .06em;
+}
+.toc ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+.toc li {
+  margin: 4px 0;
+  padding-left: 0;
+}
+.toc ul ul {
+  margin-top: 3px;
+  padding-left: 14px;
+  border-left: 2px solid #eee7db;
+}
+.toc a {
+  display: block;
+  padding: 2px 0;
+  text-decoration: none;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.toc a:hover { color: var(--blue); }
+article h1 { display: none; }
+article h2 {
+  margin: 42px 0 12px;
+  padding-top: 6px;
+  font-size: 30px;
+  line-height: 1.18;
+  border-top: 1px solid var(--rule);
+}
+article h3 {
+  margin: 30px 0 8px;
+  font-size: 22px;
+  line-height: 1.25;
+  color: #243143;
+}
+article p { margin: 0 0 13px; }
+article ul, article ol { margin: 8px 0 16px; padding-left: 23px; }
+article li { margin: 4px 0; }
+article blockquote {
+  margin: 18px 0;
+  padding: 14px 16px;
+  border-left: 5px solid var(--green);
+  background: #eef8f2;
+  border-radius: 6px;
+}
+article table {
+  width: 100%;
+  margin: 16px 0 24px;
+  border-collapse: collapse;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  border-radius: 8px;
+  overflow: hidden;
+}
+article th, article td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+  text-align: left;
+}
+article th {
+  color: var(--muted);
+  background: #f1eee7;
+  font-size: 12px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+article tr:last-child td { border-bottom: 0; }
+code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--code);
+  font-size: 90%;
+}
+pre {
+  margin: 16px 0 22px;
+  padding: 16px;
+  overflow-x: auto;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: #f1eee7;
+  line-height: 1.45;
+}
+pre code {
+  padding: 0;
+  background: transparent;
+  font-size: 14px;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 34px 0;
+}
+.meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+  max-width: 960px;
+}
+.meta div {
+  min-height: 92px;
+  padding: 13px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.meta strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--green);
+}
+footer {
+  border-top: 1px solid var(--rule);
+  padding: 22px min(6vw, 76px);
+  color: var(--muted);
+  font-size: 13px;
+}
+@media (max-width: 1100px) {
+  .layout { grid-template-columns: 1fr; }
+  aside { position: static; max-height: none; order: -1; }
+  article { max-width: none; }
+  .meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 650px) {
+  header, .layout, footer { padding-left: 20px; padding-right: 20px; }
+  .meta { grid-template-columns: 1fr; }
+  article h2 { font-size: 26px; }
+}
+</style>
+</head>
+<body>
+  <header>
+    <div class="kicker">Standalone literature review</div>
+    <h1>Detailed literature review for the Music-CRS competition</h1>
+    <p class="lede">A paper-by-paper review of the Gen-CRS tutorial and related CRS, music recommendation, state tracking, retrieval, memory, and evaluation work, translated into practical architecture choices for this repo.</p>
+    <div class="actions">
+      <a href="index.html">Back to summary</a>
+      <a href="artifacts/detailed_literature_review.md">Markdown source</a>
+      <a href="artifacts/source_digest_for_rebuild.md">Source digest</a>
+    </div>
+    <div class="meta">
+      <div><strong>Recommendation</strong>State-first hybrid retrieval with grounded response generation.</div>
+      <div><strong>Use LLMs for</strong>Conversation understanding, state maintenance, and final wording.</div>
+      <div><strong>Avoid first</strong>Free-form item generation, agent loops, and huge LLM rerankers.</div>
+      <div><strong>Best next test</strong>ConversationState -> sparse/dense views -> branch retrieval -> RRF.</div>
+    </div>
+  </header>
+  <div class="layout">
+    <article>
+<h1 id="detailed-literature-review-for-the-music-crs-competition">Detailed Literature Review for the Music-CRS Competition</h1>
+<p>Status: <code>expanded literature review</code></p>
+<p>Audience: a builder who does not already know conversational recommender systems, but needs to make the current Music-CRS codebase less fragile.</p>
+<p>Primary question:</p>
+<pre><code class="language-text">Which ideas from the Gen-CRS tutorial and nearby papers are actually useful for the RecSys Challenge 2026 Music-CRS competition?
+</code></pre>
+<p>Short answer:</p>
+<pre><code class="language-text">Build a modular, catalog-grounded conversational recommender.
+
+Use LLMs mainly for:
+  - understanding the conversation
+  - maintaining structured state
+  - writing the final response from retrieved evidence
+
+Do not rely on an LLM to freely invent tracks.
+Do not start with an agent loop.
+Do not hide retrieval, ranking, and response generation inside one prompt.
+</code></pre>
+<h2 id="1-competition-context">1. Competition Context</h2>
+<p>The competition is a conversational music recommendation task. Given a dialogue history and user context, the system must output:</p>
+<ul>
+<li>exactly 20 ranked track IDs</li>
+<li>track IDs from the provided catalog</li>
+<li>a natural language response</li>
+</ul>
+<p>The official challenge page frames the task as a bridge between natural language understanding and high-precision recommender systems. That phrasing matters: this is not only an NLP task and not only a retrieval task. The system needs both.</p>
+<p>The repo docs currently describe the core local catalog as:</p>
+<ul>
+<li><code>15,199</code> train sessions</li>
+<li><code>test</code>, <code>blind_a</code>, and <code>blind_b</code> evaluation splits</li>
+<li><code>47,071</code> tracks in the <code>all_tracks</code> catalog used here</li>
+<li>user metadata fields such as age, country, gender, preferred language, and preferred musical culture</li>
+<li>track metadata fields such as track name, artist, album, tags, popularity, release date, duration, ISRC, artist ID, and album ID</li>
+<li>precomputed track embeddings for audio, image, collaborative filtering, attributes, lyrics, and metadata</li>
+<li>precomputed user collaborative filtering embeddings</li>
+</ul>
+<p>The practical shape of the challenge is therefore:</p>
+<pre><code class="language-text">multi-turn dialogue
+  + user profile
+  + track metadata
+  + track embeddings
+  + user embeddings
+  -&gt; ranked top-20 valid track IDs
+  -&gt; grounded natural language response
+</code></pre>
+<p>This review evaluates papers by whether they improve one of those arrows.</p>
+<h2 id="2-literature-map-by-usefulness">2. Literature Map By Usefulness</h2>
+<p>The most useful literature for this competition falls into seven buckets.</p>
+<table>
+<thead>
+<tr>
+<th>Bucket</th>
+<th>Main lesson</th>
+<th>Competition relevance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CRS foundations</td>
+<td>A CRS is a multi-component system, not just a chatbot</td>
+<td>Helps choose stable architecture boundaries</td>
+</tr>
+<tr>
+<td>Gen-CRS tutorial</td>
+<td>Modern CRS can be unified, modular, or agentic</td>
+<td>Strongly supports modular build for this repo</td>
+</tr>
+<tr>
+<td>State tracking and RAG</td>
+<td>Keep explicit preference state, then retrieve evidence</td>
+<td>Highest immediate value</td>
+</tr>
+<tr>
+<td>LLM retrieval/ranking</td>
+<td>LLMs can help interpret queries but need catalog control</td>
+<td>Useful, but avoid huge LLM rankers first</td>
+</tr>
+<tr>
+<td>Memory and personalization</td>
+<td>Memory should be compact, source-backed, and retrieved</td>
+<td>Useful after session state is working</td>
+</tr>
+<tr>
+<td>Music-specific CRS</td>
+<td>Music needs multimodal and audio-aware signals</td>
+<td>Useful because challenge provides embeddings</td>
+</tr>
+<tr>
+<td>Evaluation</td>
+<td>Final score is not enough to debug CRS failures</td>
+<td>Essential for fixing a bad codebase</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-strongest-overall-recommendation">3. Strongest Overall Recommendation</h2>
+<p>The tutorial and papers converge on this architecture:</p>
+<pre><code class="language-text">Conversation history
+  -&gt; ConversationState
+  -&gt; retrieval views
+       - sparse lexical view
+       - dense semantic view
+       - user/profile view
+       - prior accepted/rejected item view
+  -&gt; branch retrieval
+       - BM25 / full text search
+       - metadata embeddings
+       - lyrics/attributes embeddings
+       - collaborative user-track scoring
+       - optional audio/image embeddings
+  -&gt; fusion
+       - reciprocal rank fusion first
+       - candidate source count
+       - negative penalties
+       - direct constraint boosts
+  -&gt; small reranker
+       - feature-aware deterministic model first
+       - LLM reranker only for small candidate sets later
+  -&gt; grounded response writer
+       - use selected tracks and catalog metadata only
+  -&gt; trace
+       - state, queries, candidates, scores, final IDs, response evidence
+</code></pre>
+<p>This is the opposite of a one-prompt system. The goal is not to make the model sound smarter. The goal is to make the recommendation path measurable.</p>
+<h2 id="4-paper-by-paper-review">4. Paper-by-Paper Review</h2>
+<h3 id="41-jannach-et-al-a-survey-on-conversational-recommender-systems">4.1 Jannach et al., "A Survey on Conversational Recommender Systems"</h3>
+<p>Link: <a href="https://doi.org/10.1145/3453154">https://doi.org/10.1145/3453154</a></p>
+<p>Type: foundation / survey.</p>
+<p>Core idea:</p>
+<p>Conversational recommender systems differ from traditional one-shot recommenders because they allow interactive preference elicitation, feedback, questions, and refinement. The survey categorizes CRS work by supported user intents, background knowledge, technical approach, and evaluation method.</p>
+<p>Why it matters for Music-CRS:</p>
+<p>The challenge conversations are not independent search queries. They contain preference elicitation, feedback, and refinement. A user can say:</p>
+<pre><code class="language-text">that was too mellow
+more like the second one
+something with a warmer vocal
+not that artist again
+</code></pre>
+<p>Those utterances only make sense if the system keeps track of:</p>
+<ul>
+<li>what was recommended earlier</li>
+<li>which item the user refers to</li>
+<li>what was liked</li>
+<li>what was rejected</li>
+<li>which constraints are still active</li>
+<li>which constraints were superseded</li>
+</ul>
+<p>What to steal:</p>
+<ul>
+<li>Treat CRS as an interaction problem, not only a ranking problem.</li>
+<li>Support user intents explicitly: request, refine, reject, accept, compare, ask for more information, and pivot.</li>
+<li>Separate dialogue understanding from recommendation ranking.</li>
+<li>Evaluate both recommendation quality and conversation behavior.</li>
+</ul>
+<p>What not to overbuild:</p>
+<ul>
+<li>Do not build a full question-asking dialogue policy before the offline ranked retrieval task works.</li>
+<li>Do not optimize for a real-time interactive user study before the challenge metrics are under control.</li>
+</ul>
+<p>Implementation priority:</p>
+<p><code>now</code>, as architecture framing.</p>
+<p>Concrete code implication:</p>
+<p>Create an enum or schema field like:</p>
+<pre><code class="language-text">intent_mode:
+  lookup
+  refine
+  pivot
+  reject
+  accept
+  compare
+  ask_info
+  unclear
+</code></pre>
+<p>Use that state to choose retrieval strategy. A <code>refine</code> turn should preserve accepted anchors and apply new constraints; a <code>pivot</code> turn should reduce carryover; a <code>reject</code> turn should add explicit penalties.</p>
+<p>Risk if ignored:</p>
+<p>The system turns every user message into a flat query. That fails on anaphora, negative feedback, and late-turn refinement.</p>
+<h3 id="42-gen-crs-2025-tutorial-kolb-et-al">4.2 Gen-CRS 2025 Tutorial, Kolb et al.</h3>
+<p>Links:</p>
+<ul>
+<li>Tutorial page: <a href="https://recsys-lab.at/gen-conv-recsys-tutorial/">https://recsys-lab.at/gen-conv-recsys-tutorial/</a></li>
+<li>Slides PDF: <a href="https://recsys-lab.at/wp-content/uploads/2025/10/Gen-CRS2025_Tutorial.pdf">https://recsys-lab.at/wp-content/uploads/2025/10/Gen-CRS2025_Tutorial.pdf</a></li>
+</ul>
+<p>Type: tutorial / architecture map.</p>
+<p>Core idea:</p>
+<p>The tutorial organizes modern generative conversational recommenders into a few broad patterns:</p>
+<ul>
+<li>unified systems</li>
+<li>modular systems</li>
+<li>agentic systems</li>
+<li>retrieval-augmented and knowledge-grounded systems</li>
+<li>systems that need better evaluation, memory, grounding, and safety</li>
+</ul>
+<p>Why it matters for Music-CRS:</p>
+<p>This competition is exactly where the tutorial's architecture taxonomy becomes practical. The output has to be valid catalog track IDs, so a pure generative system is unsafe. The task is offline batch inference, so an open-ended agent loop is likely overkill. A modular system fits the contest:</p>
+<pre><code class="language-text">state tracking -&gt; retrieval -&gt; reranking -&gt; response generation
+</code></pre>
+<p>What to steal:</p>
+<ul>
+<li>Use modular Gen-CRS as the default architecture.</li>
+<li>Use RAG-style grounding for the response.</li>
+<li>Treat knowledge/data foundation as a first-class part of the system.</li>
+<li>Evaluate internal stages, not only final output.</li>
+<li>Keep hallucination control explicit.</li>
+</ul>
+<p>What not to steal first:</p>
+<ul>
+<li>Agentic orchestration with many tool calls.</li>
+<li>Fully unified LLM recommendation.</li>
+<li>Large LLM-as-ranker loops over hundreds or thousands of candidates.</li>
+</ul>
+<p>Implementation priority:</p>
+<p><code>now</code>, as the architecture blueprint.</p>
+<p>Concrete code implication:</p>
+<p>The codebase should expose contracts like:</p>
+<pre><code class="language-text">ConversationState
+RetrievalResult
+CandidateFeatures
+RankedRecommendation
+ResponseEvidence
+Trace
+</code></pre>
+<p>If a function cannot be described as one of those contracts, it is probably mixing responsibilities.</p>
+<p>Risk if ignored:</p>
+<p>The code stays tangled. When NDCG changes, you cannot tell whether the cause was query understanding, candidate recall, fusion, reranking, or response generation.</p>
+<h3 id="43-ra-rec-retrieval-augmented-conversational-recommendation-with-prompt-based-semi-structured-natural-language-state-tracking">4.3 RA-Rec, "Retrieval-Augmented Conversational Recommendation with Prompt-based Semi-Structured Natural Language State Tracking"</h3>
+<p>Link: <a href="https://arxiv.org/abs/2406.00033">https://arxiv.org/abs/2406.00033</a></p>
+<p>Type: state tracking + retrieval augmented recommendation.</p>
+<p>Core idea:</p>
+<p>RA-Rec uses LLMs for semi-structured dialogue state tracking and retrieval-augmented recommendation. The paper's important move is not "ask an LLM for the answer"; it is "use an LLM to keep a structured state that can drive retrieval."</p>
+<p>The paper highlights that user preferences in natural language can be indirect, rich, and hard to match with only metadata. It proposes an LLM-driven dialogue state tracking system where the state remains semi-structured, rather than disappearing into free text.</p>
+<p>Why it matters for Music-CRS:</p>
+<p>This is the closest paper-level design pattern for the competition. The challenge conversations require:</p>
+<ul>
+<li>resolving references to prior recommendations</li>
+<li>remembering accepted and rejected tracks</li>
+<li>carrying forward soft preferences</li>
+<li>recognizing hard constraints</li>
+<li>turning all of that into retrieval queries</li>
+</ul>
+<p>Music examples:</p>
+<pre><code class="language-text">&quot;More like that, but less gloomy.&quot;
+&quot;The previous one was too electronic.&quot;
+&quot;Keep the chill mood, but give me something with vocals.&quot;
+&quot;I liked the artist, not the song.&quot;
+</code></pre>
+<p>A flat query is not enough for these turns.</p>
+<p>What to steal:</p>
+<ul>
+<li>Semi-structured state.</li>
+<li>Natural-language values inside a fixed schema.</li>
+<li>Hard constraints separate from soft preferences.</li>
+<li>Accepted items separate from rejected items.</li>
+<li>State-derived retrieval queries.</li>
+<li>Response generation grounded in retrieved item evidence.</li>
+</ul>
+<p>Music-CRS translation:</p>
+<pre><code class="language-text">ConversationState:
+  session_id
+  user_id
+  current_turn_number
+  intent_mode
+
+  positive_anchors:
+    track_ids
+    artists
+    albums
+    tags
+    moods
+    natural_language_descriptions
+
+  negative_anchors:
+    track_ids
+    artists
+    albums
+    tags
+    moods
+    natural_language_descriptions
+
+  hard_constraints:
+    required_artist_ids
+    banned_artist_ids
+    required_languages
+    release_year_min
+    release_year_max
+    explicit_track_refs
+
+  soft_constraints:
+    genre
+    mood
+    energy
+    instrumentation
+    vocal_style
+    era
+    similarity_description
+
+  recommendation_history:
+    turn_number -&gt; track_id
+
+  sparse_query_view:
+    exact artist/title/album/tag/release terms
+
+  dense_query_view:
+    semantic description of desired sound
+
+  evidence:
+    state_field -&gt; source turn ids
+</code></pre>
+<p>What not to copy blindly:</p>
+<ul>
+<li>Restaurant/product-specific fields.</li>
+<li>Review retrieval if we do not have comparable music review text.</li>
+<li>LLM-heavy reasoning before retrieval traces exist.</li>
+</ul>
+<p>Implementation priority:</p>
+<p><code>now</code>, highest priority.</p>
+<p>Concrete experiment:</p>
+<p>Compare three candidate-generation setups:</p>
+<pre><code class="language-text">A. latest user turn -&gt; BM25
+B. full conversation string -&gt; BM25
+C. ConversationState -&gt; sparse_query_view + dense_query_view -&gt; hybrid retrieval
+</code></pre>
+<p>Track:</p>
+<ul>
+<li>Hit@1000 by turn</li>
+<li>NDCG@20 by turn</li>
+<li>target disappeared at retrieval vs rerank</li>
+<li>failures involving "previous one", rejection, or refinement</li>
+</ul>
+<p>Risk if ignored:</p>
+<p>The system remains unable to tell the difference between "more like this", "not this", and "forget that, new direction".</p>
+<h3 id="44-talkplaydata-2-an-agentic-synthetic-data-pipeline-for-multimodal-conversational-music-recommendation">4.4 TalkPlayData 2, "An Agentic Synthetic Data Pipeline for Multimodal Conversational Music Recommendation"</h3>
+<p>Link: <a href="https://arxiv.org/abs/2509.09685">https://arxiv.org/abs/2509.09685</a></p>
+<p>Type: dataset / synthetic data generation / music CRS.</p>
+<p>Core idea:</p>
+<p>TalkPlayData 2 presents a synthetic dataset for multimodal conversational music recommendation generated by an agentic pipeline. Multiple LLM agents play specialized roles, including listener and recommender roles, with access to different information. Conversations are conditioned on listener profiles, goals, and music items.</p>
+<p>Why it matters for Music-CRS:</p>
+<p>The challenge uses TalkPlayData-Challenge, which is downstream of this research direction. That means the dataset is not a random collection of human chats. It likely has structure induced by:</p>
+<ul>
+<li>listener goals</li>
+<li>recommender behavior</li>
+<li>multimodal item evidence</li>
+<li>profile-conditioned dialogue</li>
+<li>multi-agent generation patterns</li>
+</ul>
+<p>This affects modeling strategy. A system should exploit the dataset schema rather than treating the conversation as generic text.</p>
+<p>What to steal:</p>
+<ul>
+<li>Condition state extraction on the listener goal and user profile.</li>
+<li>Treat each session as goal-directed.</li>
+<li>Expect repeated conversational patterns because the data was generated by a pipeline.</li>
+<li>Use multimodal music resources if available, especially track embeddings.</li>
+</ul>
+<p>What to be careful about:</p>
+<ul>
+<li>Synthetic conversations can contain artifacts. A model can overfit to stylistic patterns rather than real preference logic.</li>
+<li>If the listener and recommender agents used specific phrasing templates, lexical retrieval can pick up spurious signals.</li>
+<li>Blind sets may expose whether the model learned robust state or only generation artifacts.</li>
+</ul>
+<p>Implementation priority:</p>
+<p><code>now</code>, as data interpretation.</p>
+<p>Concrete code implication:</p>
+<p>Include the session <code>conversation_goal</code> in state extraction:</p>
+<pre><code class="language-text">goal_context:
+  category
+  specificity
+  listener_goal
+</code></pre>
+<p>Use it carefully as context, not as a replacement for turn-level evidence.</p>
+<p>Risk if ignored:</p>
+<p>The model may miss that the session has a goal trajectory. It may overreact to the latest turn and underuse profile/goal fields.</p>
+<h3 id="45-talkplay-multimodal-music-recommendation-with-large-language-models">4.5 TALKPLAY, "Multimodal Music Recommendation with Large Language Models"</h3>
+<p>Link: <a href="https://arxiv.org/abs/2502.13713">https://arxiv.org/abs/2502.13713</a></p>
+<p>Type: music-specific unified LLM recommender.</p>
+<p>Core idea:</p>
+<p>TALKPLAY reformulates music recommendation as token generation with LLMs. It extends an LLM with multimodal music tokens derived from audio, lyrics, metadata, semantic tags, and playlist co-occurrence signals. This is a unified approach: the model recommends and responds in one architecture.</p>
+<p>Why it matters for Music-CRS:</p>
+<p>The paper is highly relevant as background because it is from the same music CRS research neighborhood and directly addresses multimodal music recommendation with LLMs.</p>
+<p>However, it is not the most practical next step for this repo.</p>
+<p>What to steal:</p>
+<ul>
+<li>Music recommendation should use multimodal item signals.</li>
+<li>Metadata-only systems miss important audio and cultural signals.</li>
+<li>Long conversation context matters.</li>
+<li>Joint recommendation plus language response is possible when the model is trained for it.</li>
+</ul>
+<p>What not to copy now:</p>
+<ul>
+<li>Training a unified LLM recommender with expanded music vocabulary.</li>
+<li>Generating recommendations as unconstrained item tokens unless the repo has the infrastructure to guarantee catalog validity.</li>
+<li>Treating the challenge as solved by a single LLM architecture.</li>
+</ul>
+<p>Implementation priority:</p>
+<p><code>later</code>, unless the team has time and compute for model training.</p>
+<p>Near-term translation:</p>
+<p>Use TALKPLAY as a justification for branch retrieval over multiple track representations:</p>
+<pre><code class="language-text">metadata-qwen retrieval
+attributes-qwen retrieval
+lyrics-qwen retrieval
+cf-bpr user-track scoring
+audio-laion retrieval for sound/mood turns
+image-siglip2 only if album-art semantics appear useful
+</code></pre>
+<p>Risk if ignored:</p>
+<p>The system may stay stuck in lexical metadata retrieval and fail on music-language concepts like "warm", "nocturnal", "washed out", "driving", "intimate", or "crunchy guitar".</p>
+<h3 id="46-musicrs-benchmarking-audio-centric-conversational-recommendation">4.6 MusiCRS, "Benchmarking Audio-Centric Conversational Recommendation"</h3>
+<p>Link: <a href="https://arxiv.org/abs/2509.19469">https://arxiv.org/abs/2509.19469</a></p>
+<p>Type: music CRS benchmark / audio grounding.</p>
+<p>Core idea:</p>
+<p>MusiCRS argues that music is a special CRS domain because effective recommendation may require reasoning over audio content, not only text or metadata. It provides an audio-centric benchmark and finds that current systems struggle with cross-modal integration.</p>
+<p>Why it matters for Music-CRS:</p>
+<p>The challenge provides precomputed multimodal track embeddings, including audio and lyrics. That means the competition designers likely expect participants to go beyond simple text matching.</p>
+<p>What to steal:</p>
+<ul>
+<li>Treat audio and lyrics embeddings as real retrieval branches, not decoration.</li>
+<li>Test modality-specific performance instead of assuming "more modalities always helps".</li>
+<li>Build ablations for text-only, audio-only, collaborative-only, and fused retrieval.</li>
+</ul>
+<p>What not to overclaim:</p>
+<ul>
+<li>Audio embeddings are not automatically better. MusiCRS explicitly warns that cross-modal integration is hard.</li>
+<li>Blindly concatenating every embedding can hurt.</li>
+</ul>
+<p>Implementation priority:</p>
+<p><code>next</code>, after state and base hybrid retrieval are traceable.</p>
+<p>Concrete experiment:</p>
+<p>Run candidate recall by branch:</p>
+<pre><code class="language-text">metadata-qwen
+attributes-qwen
+lyrics-qwen
+audio-laion_clap
+cf-bpr user-track
+BM25 tags/artist/title
+RRF union
+</code></pre>
+<p>Then segment failures by utterance type:</p>
+<ul>
+<li>exact artist/title</li>
+<li>mood/style</li>
+<li>similarity to prior track</li>
+<li>lyrics/theme</li>
+<li>audio texture/instrumentation</li>
+<li>demographic or cultural preference</li>
+</ul>
+<p>Risk if ignored:</p>
+<p>The system may fail on exactly the music-specific language that differentiates this challenge from generic movie or product CRS.</p>
+<h3 id="47-reficr-unleashing-the-retrieval-potential-of-large-language-models-in-conversational-recommender-systems">4.7 ReFICR, "Unleashing the Retrieval Potential of Large Language Models in Conversational Recommender Systems"</h3>
+<p>Link: <a href="https://doi.org/10.1145/3640457.3688146">https://doi.org/10.1145/3640457.3688146</a></p>
+<p>Type: LLM retrieval instruction tuning / decomposition.</p>
+<p>Core idea:</p>
+<p>ReFICR decomposes CRS into subtasks and distinguishes retrieval-oriented instructions from generation-oriented instructions. The relevant lesson is that retrieval and generation should have different roles.</p>
+<p>Why it matters for Music-CRS:</p>
+<p>This paper supports a clean split:</p>
+<pre><code class="language-text">Retrieval instructions:
+  - conversation -&gt; tracks
+  - conversation -&gt; similar sessions
+  - state -&gt; query views
+
+Generation instructions:
+  - state update
+  - response writing
+  - optional explanation
+</code></pre>
+<p>What to steal:</p>
+<ul>
+<li>Name subtasks explicitly.</li>
+<li>Do not make one model call responsible for every behavior.</li>
+<li>Candidate retrieval and candidate ranking are different problems.</li>
+<li>If using LLMs, feed them narrow instructions and narrow candidate sets.</li>
+</ul>
+<p>What to defer:</p>
+<ul>
+<li>Fine-tuning a retrievable LLM.</li>
+<li>Contrastive instruction tuning.</li>
+<li>LLM ranking over very large candidate pools.</li>
+</ul>
+<p>Implementation priority:</p>
+<p><code>next</code>, as design vocabulary and optional future training direction.</p>
+<p>Concrete code implication:</p>
+<p>Put prompt templates, if any, behind task names:</p>
+<pre><code class="language-text">StateUpdatePrompt
+SparseQueryPrompt
+DenseQueryPrompt
+ResponseGroundingPrompt
+SmallCandidateRerankPrompt
+</code></pre>
+<p>Do not have one <code>recommend_prompt</code> that does all of these.</p>
+<p>Risk if ignored:</p>
+<p>The system becomes impossible to debug because every failure is "the prompt did it".</p>
+<h3 id="48-reindex-then-adapt">4.8 Reindex-Then-Adapt</h3>
+<p>Link: <a href="https://arxiv.org/abs/2405.12119">https://arxiv.org/abs/2405.12119</a></p>
+<p>Type: LLM item-set control / recommendation distribution adaptation.</p>
+<p>Core idea:</p>
+<p>LLMs can understand complex conversational contexts and item content, but controlling the distribution of recommended items is difficult when the model generates item titles autoregressively. Reindex-Then-Adapt converts item titles into single tokens and adapts probability distributions, combining LLM understanding with RecSys-style control.</p>
+<p>Why it matters for Music-CRS:</p>
+<p>The warning transfers directly: an LLM may understand the user's taste and still recommend the wrong item distribution, invalid titles, or popular-but-wrong tracks. The challenge needs valid catalog IDs and high ranking metrics.</p>
+<p>What to steal:</p>
+<ul>
+<li>Catalog control matters.</li>
+<li>Platform/item distribution matters.</li>
+<li>Traditional RecSys scoring signals still matter.</li>
+<li>Use LLMs for understanding, but keep item selection gated by catalog retrieval and ranking.</li>
+</ul>
+<p>What not to build now:</p>
+<ul>
+<li>Reindexing every track into custom LLM tokens.</li>
+<li>Full probability adaptation over item tokens.</li>
+</ul>
+<p>Implementation priority:</p>
+<p><code>now</code>, as a guardrail.</p>
+<p>Concrete code implication:</p>
+<p>Never let response generation introduce new recommendation IDs. The response writer receives:</p>
+<pre><code class="language-text">selected_track_ids
+selected_track_metadata
+ConversationState
+</code></pre>
+<p>and is only allowed to talk about those selected tracks.</p>
+<p>Risk if ignored:</p>
+<p>The model can sound impressive while recommending invalid or distributionally poor items.</p>
+<h3 id="49-large-language-models-as-zero-shot-conversational-recommenders">4.9 "Large Language Models as Zero-Shot Conversational Recommenders"</h3>
+<p>Link: <a href="https://arxiv.org/abs/2308.10053">https://arxiv.org/abs/2308.10053</a></p>
+<p>Type: empirical LLM baseline / warning and opportunity.</p>
+<p>Core idea:</p>
+<p>The paper studies LLMs as zero-shot conversational recommenders and finds that LLMs can perform surprisingly well in some conversational recommendation settings, while also exposing limitations such as popularity bias, dataset effects, and gaps in collaborative knowledge.</p>
+<p>Why it matters for Music-CRS:</p>
+<p>This is a useful reminder that LLMs are not useless. They can interpret natural language, infer preferences, and generate persuasive explanations. But the competition's catalog constraint changes the risk profile.</p>
+<p>What to steal:</p>
+<ul>
+<li>LLMs are strong at understanding conversation context.</li>
+<li>Use them for state extraction and explanation.</li>
+<li>Probe for popularity bias and collaborative weakness.</li>
+</ul>
+<p>What not to rely on:</p>
+<ul>
+<li>Zero-shot LLM recommendation as the final item selector.</li>
+<li>Generated track titles as submission IDs.</li>
+<li>Popularity-biased output as if it were personalization.</li>
+</ul>
+<p>Implementation priority:</p>
+<p><code>now</code>, as a bounded component.</p>
+<p>Concrete experiment:</p>
+<p>Use an LLM to produce only structured state:</p>
+<pre><code class="language-json">{
+  &quot;intent_mode&quot;: &quot;refine&quot;,
+  &quot;positive_anchors&quot;: [&quot;...&quot;],
+  &quot;negative_anchors&quot;: [&quot;...&quot;],
+  &quot;active_constraints&quot;: [&quot;...&quot;],
+  &quot;sparse_query_view&quot;: &quot;...&quot;,
+  &quot;dense_query_view&quot;: &quot;...&quot;
+}
+</code></pre>
+<p>Then compare retrieval metrics against deterministic extraction. Do not ask the LLM to output final track IDs.</p>
+<p>Risk if ignored:</p>
+<p>Either extreme is bad: a pure LLM recommender loses catalog control, while a no-LLM pipeline may miss nuanced language.</p>
+<h3 id="410-memocrs">4.10 MemoCRS</h3>
+<p>Link: <a href="https://arxiv.org/abs/2407.04960">https://arxiv.org/abs/2407.04960</a></p>
+<p>Type: memory-enhanced sequential CRS.</p>
+<p>Core idea:</p>
+<p>MemoCRS argues that user preferences have continuity across sessions, but raw historical dialogue is redundant and noisy. It proposes user-specific memory and general memory to retrieve relevant preference information while reducing noise and helping cold-start users.</p>
+<p>Why it matters for Music-CRS:</p>
+<p>The immediate competition input is session-level dialogue, but user metadata and embeddings are also available. Long-term user memory may or may not be legal/useful depending on split and data access, but session memory is definitely needed.</p>
+<p>What to steal:</p>
+<ul>
+<li>Memory should be compact.</li>
+<li>Memory should store entity plus attitude.</li>
+<li>Memory should be retrievable.</li>
+<li>Historical data should not be blindly pasted into prompts.</li>
+<li>Cold-start and user-specific cases may need different paths.</li>
+</ul>
+<p>Music-CRS memory record:</p>
+<pre><code class="language-text">MemoryRecord:
+  entity_type: track | artist | album | tag | genre | mood | era | language | instrumentation
+  entity_value: string or ID
+  attitude: requested | liked | disliked | rejected | accepted | uncertain
+  source_turn_number: int
+  source_role: user | assistant | music
+  confidence: float
+</code></pre>
+<p>What to defer:</p>
+<ul>
+<li>Permanent cross-session user memory until split leakage is checked.</li>
+<li>Complex memory merging.</li>
+<li>LLM memory agents.</li>
+</ul>
+<p>Implementation priority:</p>
+<p><code>now</code> for session memory, <code>later</code> for cross-session memory.</p>
+<p>Concrete code implication:</p>
+<p>Represent prior recommendations and user feedback explicitly:</p>
+<pre><code class="language-text">recommendation_history:
+  turn 1 -&gt; track_a
+  turn 2 -&gt; track_b
+
+feedback_events:
+  turn 3:
+    refers_to: track_b
+    attitude: liked
+    constraint_delta: &quot;more acoustic&quot;
+</code></pre>
+<p>Risk if ignored:</p>
+<p>The system treats "that one" and "the second song" as meaningless text.</p>
+<h3 id="411-recllm-leveraging-large-language-models-in-conversational-recommender-systems">4.11 RecLLM, "Leveraging Large Language Models in Conversational Recommender Systems"</h3>
+<p>Link: <a href="https://arxiv.org/abs/2305.07961">https://arxiv.org/abs/2305.07961</a></p>
+<p>Type: production CRS architecture / roadmap.</p>
+<p>Core idea:</p>
+<p>RecLLM presents a roadmap for building a large-scale LLM-based CRS. It emphasizes user preference understanding, dialogue management, retrieval from external sources, explainable recommendations, natural-language user profiles, and user simulation when conversational data is scarce.</p>
+<p>Why it matters for Music-CRS:</p>
+<p>This is a component checklist for the repo. The challenge already has conversational data, user profiles, and catalog resources, so the system does not need a full simulator first. But it does need the same architectural pieces.</p>
+<p>What to steal:</p>
+<ul>
+<li>Dialogue manager maps to <code>ConversationState</code>.</li>
+<li>Retrieval/ranking should be external and controllable.</li>
+<li>User profiles can be represented in natural language for LLM state extraction.</li>
+<li>Explanations should be grounded in candidate evidence.</li>
+<li>Simulation is useful later for stress tests, not a first priority.</li>
+</ul>
+<p>What to defer:</p>
+<ul>
+<li>Full production dialogue manager.</li>
+<li>Broad interactive user simulator.</li>
+<li>Complex UI behavior.</li>
+</ul>
+<p>Implementation priority:</p>
+<p><code>now</code>, as component checklist.</p>
+<p>Concrete code implication:</p>
+<p>Add a profile view to state extraction:</p>
+<pre><code class="language-text">user_profile_view:
+  age_group
+  country_name
+  preferred_language
+  preferred_musical_culture
+  optional user embedding id
+</code></pre>
+<p>Use it as a weak personalization signal, not as a hard filter.</p>
+<p>Risk if ignored:</p>
+<p>The system loses available personalization and treats every user as anonymous even when the challenge provides profile/context.</p>
+<h3 id="412-ievalm-rethinking-the-evaluation-for-conversational-recommendation-in-the-era-of-large-language-models">4.12 iEvaLM, "Rethinking the Evaluation for Conversational Recommendation in the Era of Large Language Models"</h3>
+<p>Link: <a href="https://aclanthology.org/2023.emnlp-main.621/">https://aclanthology.org/2023.emnlp-main.621/</a></p>
+<p>Type: evaluation.</p>
+<p>Core idea:</p>
+<p>iEvaLM argues that existing CRS evaluation overemphasizes matching static ground-truth items and underrepresents the interactive nature of CRS. It proposes LLM-based user simulation and emphasizes explainability evaluation.</p>
+<p>Why it matters for Music-CRS:</p>
+<p>The official competition metrics still matter most. Do not replace NDCG@20 or the leaderboard with an LLM judge. But for development, the paper's core warning is crucial: final ranked output alone does not explain CRS failures.</p>
+<p>What to steal:</p>
+<ul>
+<li>Separate recommendation accuracy from explanation quality.</li>
+<li>Inspect interaction behavior, not only final IDs.</li>
+<li>Use trace-level diagnostics for multi-turn failures.</li>
+<li>Response quality is a distinct dimension from retrieval quality.</li>
+</ul>
+<p>What not to do now:</p>
+<ul>
+<li>Build a full LLM user simulator as the main evaluator.</li>
+<li>Optimize for LLM-as-judge text score while recommendation quality is bad.</li>
+</ul>
+<p>Implementation priority:</p>
+<p><code>now</code>, for diagnostics.</p>
+<p>Concrete evaluation dashboard:</p>
+<pre><code class="language-text">For each session-turn:
+  state_ok:
+    were anchors resolved?
+    were rejections captured?
+    were constraints retained?
+
+  retrieval_ok:
+    target in BM25 top 1000?
+    target in dense top 1000?
+    target in fused pool?
+
+  ranking_ok:
+    target final rank
+    candidate features for target
+    negative penalties applied?
+
+  response_ok:
+    mentions only selected tracks?
+    uses real artist/title/tag metadata?
+</code></pre>
+<p>Risk if ignored:</p>
+<p>You can improve final prose while recommendation quality stays bad, or improve candidate recall while final NDCG drops, without knowing why.</p>
+<h3 id="413-eventchat">4.13 EventChat</h3>
+<p>Link: <a href="https://arxiv.org/abs/2407.04472">https://arxiv.org/abs/2407.04472</a></p>
+<p>Type: deployed LLM-driven CRS / cost and latency warning.</p>
+<p>Core idea:</p>
+<p>EventChat describes an LLM-driven CRS in a real SME setting. It reports user-facing promise but also practical problems: latency, cost, response quality, and the expense of using a strong LLM as a ranker inside a RAG pipeline.</p>
+<p>Why it matters for Music-CRS:</p>
+<p>Even though the challenge is offline, batch inference can still become slow and expensive. If the code uses per-candidate LLM ranking or agentic tool loops, it may become impractical for dev and blind submissions.</p>
+<p>What to steal:</p>
+<ul>
+<li>Stage-based design.</li>
+<li>Latency and token-count logging.</li>
+<li>Be skeptical of prompt-only quality.</li>
+<li>Avoid using an advanced LLM as a large-candidate ranker unless proven necessary.</li>
+</ul>
+<p>What to defer:</p>
+<ul>
+<li>Live UI quality studies.</li>
+<li>Per-interaction user satisfaction metrics.</li>
+</ul>
+<p>Implementation priority:</p>
+<p><code>now</code>, as engineering discipline.</p>
+<p>Concrete code implication:</p>
+<p>Every run should report:</p>
+<pre><code class="language-text">sessions processed
+LLM calls per session
+tokens per session
+retrieval latency
+reranking latency
+response latency
+total cost estimate if applicable
+</code></pre>
+<p>Risk if ignored:</p>
+<p>The best-looking architecture on paper may be too slow, expensive, or nondeterministic to run before the deadline.</p>
+<h2 id="5-the-main-disagreement-in-the-literature">5. The Main Disagreement In The Literature</h2>
+<p>The literature does not say one thing. It has a tension:</p>
+<pre><code class="language-text">Unified LLM systems:
+  attractive because they can jointly understand context and generate responses
+  risky because item validity, distribution control, and debuggability are weak
+
+Modular systems:
+  less glamorous
+  easier to debug
+  better fit for fixed-catalog ranked retrieval
+
+Agentic systems:
+  flexible
+  expensive and nondeterministic
+  better after the basic retrieval/ranking pipeline is strong
+</code></pre>
+<p>For this competition, the tie-breaker is the fixed catalog and metric structure. We should choose the system that lets us measure retrieval and ranking.</p>
+<h2 id="6-what-the-review-says-to-build">6. What The Review Says To Build</h2>
+<h3 id="61-conversationstate-v0">6.1 ConversationState v0</h3>
+<p>Start with a small but useful state. Do not wait for the perfect ontology.</p>
+<pre><code class="language-text">ConversationState:
+  ids:
+    session_id
+    user_id
+    current_turn_number
+
+  context:
+    user_profile
+    conversation_goal
+
+  intent:
+    mode
+    confidence
+
+  anchors:
+    liked_track_ids
+    disliked_track_ids
+    referenced_prior_track_ids
+    liked_artists
+    disliked_artists
+    liked_tags
+    disliked_tags
+
+  constraints:
+    hard_positive
+    hard_negative
+    soft_positive
+    soft_negative
+
+  retrieval_views:
+    sparse_query_view
+    dense_query_view
+    profile_query_view
+
+  evidence:
+    field -&gt; source_turn_numbers
+</code></pre>
+<p>Minimum viable behavior:</p>
+<ul>
+<li>capture prior <code>role="music"</code> track IDs</li>
+<li>map "previous", "that", "second one", and "last song" to prior track IDs when possible</li>
+<li>capture explicit "not", "too", "less", "avoid" as negatives</li>
+<li>preserve liked anchors across refinement</li>
+<li>create separate sparse and dense query views</li>
+</ul>
+<h3 id="62-retrieval-branches">6.2 Retrieval Branches</h3>
+<p>The literature strongly supports multiple retrieval branches. Each branch should return the same <code>RetrievalResult</code> schema.</p>
+<p>Immediate branches:</p>
+<pre><code class="language-text">bm25_metadata:
+  query: sparse_query_view
+  fields: track_name, artist_name, album_name, release_date, tag_list
+
+dense_metadata:
+  query: dense_query_view
+  vectors: metadata-qwen3_embedding_0.6b
+
+dense_attributes:
+  query: dense_query_view
+  vectors: attributes-qwen3_embedding_0.6b
+
+dense_lyrics:
+  query: dense_query_view
+  vectors: lyrics-qwen3_embedding_0.6b
+
+user_cf:
+  query: user_id
+  vectors: user cf-bpr against track cf-bpr
+</code></pre>
+<p>Next branches:</p>
+<pre><code class="language-text">audio_clap:
+  use for sound, mood, instrumentation, texture, energy
+
+accepted_anchor_similarity:
+  retrieve tracks similar to liked prior tracks
+
+negative_anchor_filter:
+  penalize tracks similar to rejected prior tracks
+</code></pre>
+<p>Do not blend all signals too early. Keep branch-level ranks visible.</p>
+<h3 id="63-fusion-first-learned-rerank-later">6.3 Fusion First, Learned Rerank Later</h3>
+<p>Start with reciprocal rank fusion because it is simple, robust, and traceable.</p>
+<p>Candidate features:</p>
+<pre><code class="language-text">track_id
+bm25_rank
+metadata_dense_rank
+attributes_dense_rank
+lyrics_dense_rank
+audio_rank
+user_cf_rank
+source_branch_count
+artist_exact_match
+tag_overlap
+popularity
+accepted_anchor_similarity
+rejected_anchor_similarity
+negative_constraint_penalty
+hard_constraint_violation
+</code></pre>
+<p>Then add a small feature-aware reranker. Options:</p>
+<ul>
+<li>weighted linear score</li>
+<li>logistic regression</li>
+<li>LambdaMART / LightGBM ranker</li>
+<li>small neural reranker only after enough labels and traces exist</li>
+</ul>
+<p>Avoid:</p>
+<ul>
+<li>LLM reranking over 1000 candidates</li>
+<li>prompt-only reranking as the primary top-20 selector</li>
+<li>opaque rerank features</li>
+</ul>
+<h3 id="64-grounded-response-writer">6.4 Grounded Response Writer</h3>
+<p>The response writer should not decide recommendations. It should verbalize them.</p>
+<p>Inputs:</p>
+<pre><code class="language-text">ConversationState
+top_20_track_ids
+metadata for top recommended tracks
+evidence snippets:
+  matched tags
+  matched artist/title
+  matched mood/genre
+  accepted anchor similarity if available
+</code></pre>
+<p>Rules:</p>
+<ul>
+<li>mention only selected tracks or selected artists</li>
+<li>do not invent catalog facts</li>
+<li>do not promise exact audio qualities unless supported by tags/metadata/embedding explanation</li>
+<li>keep response aligned with current intent</li>
+</ul>
+<p>This directly follows the tutorial's grounding theme and the Reindex-Then-Adapt warning about item-set control.</p>
+<h2 id="7-what-to-measure">7. What To Measure</h2>
+<p>The review implies this evaluation stack:</p>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Metric or diagnostic</th>
+<th>Question answered</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Retrieval branch</td>
+<td>Hit@1000 per branch</td>
+<td>Can this branch find the target at all?</td>
+</tr>
+<tr>
+<td>Candidate union</td>
+<td>Hit@1000 union</td>
+<td>Does hybrid retrieval increase coverage?</td>
+</tr>
+<tr>
+<td>Fusion</td>
+<td>target fused rank</td>
+<td>Did fusion bury the target?</td>
+</tr>
+<tr>
+<td>Final top 20</td>
+<td>NDCG@20, Hit@20, MRR</td>
+<td>Did final ranking solve the official task?</td>
+</tr>
+<tr>
+<td>Diversity</td>
+<td>unique recommended tracks / catalog</td>
+<td>Are we collapsing to popular items?</td>
+</tr>
+<tr>
+<td>State</td>
+<td>anchor/constraint audit</td>
+<td>Did the system understand the conversation?</td>
+</tr>
+<tr>
+<td>Response</td>
+<td>groundedness audit</td>
+<td>Does text only use selected catalog evidence?</td>
+</tr>
+<tr>
+<td>Cost</td>
+<td>LLM calls, tokens, latency</td>
+<td>Can this run at blind-set scale?</td>
+</tr>
+</tbody>
+</table>
+<h2 id="8-ablations-this-literature-review-implies">8. Ablations This Literature Review Implies</h2>
+<p>Run these before building anything fancy:</p>
+<ol>
+<li>Latest turn BM25 vs full conversation BM25.</li>
+<li>Full conversation BM25 vs state-derived sparse query.</li>
+<li>State-derived sparse query vs state-derived dense query.</li>
+<li>BM25 only vs dense only vs RRF union.</li>
+<li>Metadata dense vs attributes dense vs lyrics dense vs audio dense.</li>
+<li>No user profile vs profile text in state extraction.</li>
+<li>No user embedding vs user CF branch.</li>
+<li>No negative penalties vs explicit rejection penalties.</li>
+<li>No accepted anchor retrieval vs accepted-anchor similarity branch.</li>
+<li>RRF fusion vs weighted feature score.</li>
+<li>Response-only LLM vs LLM state extraction plus deterministic retrieval.</li>
+<li>No trace logging vs full trace logging for failure analysis.</li>
+</ol>
+<p>The first six are probably the highest return.</p>
+<h2 id="9-what-is-less-useful-right-now">9. What Is Less Useful Right Now</h2>
+<h3 id="pure-unified-llm-recommendation">Pure unified LLM recommendation</h3>
+<p>Tempting because it is simple to prototype. Weak because the challenge requires valid IDs and ranking control.</p>
+<p>Use later only if:</p>
+<ul>
+<li>the model is trained with catalog item tokens</li>
+<li>valid ID generation is guaranteed</li>
+<li>it beats modular retrieval on dev metrics</li>
+</ul>
+<h3 id="agentic-crs">Agentic CRS</h3>
+<p>Tempting because the tutorial and TalkPlayData pipeline use agentic ideas. Weak as a first competition system because agent loops add latency, nondeterminism, and debugging burden.</p>
+<p>Use later for:</p>
+<ul>
+<li>automatic failure analysis</li>
+<li>query rewriting experiments</li>
+<li>interactive simulation</li>
+</ul>
+<p>Not for:</p>
+<ul>
+<li>first ranked retrieval pipeline</li>
+</ul>
+<h3 id="full-llm-reranker">Full LLM reranker</h3>
+<p>Tempting because LLMs understand subtle preference text. Risky because candidate sets are large and cost/latency can dominate.</p>
+<p>Use later only after:</p>
+<ul>
+<li>candidate set is narrowed to perhaps 20-100 items</li>
+<li>deterministic reranker is already measured</li>
+<li>prompt output is stable and parseable</li>
+</ul>
+<h3 id="long-term-user-memory">Long-term user memory</h3>
+<p>Tempting because MemoCRS shows value. Risky because split leakage and available-history rules need careful checking.</p>
+<p>Use now only as:</p>
+<ul>
+<li>session memory</li>
+<li>current conversation memory</li>
+<li>profile metadata</li>
+<li>provided user embeddings</li>
+</ul>
+<h2 id="10-suggested-build-order">10. Suggested Build Order</h2>
+<h3 id="sprint-1-traceable-baseline">Sprint 1: Traceable baseline</h3>
+<p>Goal: make current failures visible.</p>
+<p>Deliverables:</p>
+<ul>
+<li>trace file per prediction</li>
+<li>query used</li>
+<li>retrieved candidates</li>
+<li>final 20</li>
+<li>response evidence</li>
+<li>target rank if labels are available</li>
+</ul>
+<h3 id="sprint-2-conversationstate-v0">Sprint 2: ConversationState v0</h3>
+<p>Goal: make conversation understanding explicit.</p>
+<p>Deliverables:</p>
+<ul>
+<li>deterministic state extraction for prior music turns and explicit feedback</li>
+<li>optional LLM state extraction for fuzzy constraints</li>
+<li>sparse and dense query views</li>
+<li>source-turn evidence for state fields</li>
+</ul>
+<h3 id="sprint-3-hybrid-retrieval-v0">Sprint 3: Hybrid retrieval v0</h3>
+<p>Goal: improve candidate recall.</p>
+<p>Deliverables:</p>
+<ul>
+<li>BM25 branch</li>
+<li>metadata dense branch</li>
+<li>attributes dense branch</li>
+<li>lyrics dense branch</li>
+<li>RRF fusion</li>
+<li>branch-level Hit@1000 report</li>
+</ul>
+<h3 id="sprint-4-personalization-and-negatives">Sprint 4: Personalization and negatives</h3>
+<p>Goal: stop recommending against the conversation.</p>
+<p>Deliverables:</p>
+<ul>
+<li>rejection penalties</li>
+<li>accepted-anchor similarity</li>
+<li>user CF branch if embeddings are reliable</li>
+<li>profile-aware rerank features</li>
+</ul>
+<h3 id="sprint-5-small-reranker">Sprint 5: Small reranker</h3>
+<p>Goal: improve NDCG@20.</p>
+<p>Deliverables:</p>
+<ul>
+<li>feature table</li>
+<li>simple weighted model</li>
+<li>learned reranker if enough labels</li>
+<li>per-turn analysis</li>
+</ul>
+<h3 id="sprint-6-grounded-response">Sprint 6: Grounded response</h3>
+<p>Goal: avoid response hallucination and improve judge dimensions.</p>
+<p>Deliverables:</p>
+<ul>
+<li>selected-track metadata pack</li>
+<li>response prompt that cannot invent recommendations</li>
+<li>response groundedness checks</li>
+</ul>
+<h2 id="11-practical-interpretation-for-a-messy-codebase">11. Practical Interpretation For A Messy Codebase</h2>
+<p>If the code feels like garbage, the likely architectural smell is boundary collapse:</p>
+<pre><code class="language-text">conversation understanding mixed with retrieval
+retrieval mixed with ranking
+ranking mixed with generation
+generation mixed with item selection
+evaluation mixed with final prediction only
+</code></pre>
+<p>The literature points to the same repair pattern repeatedly:</p>
+<pre><code class="language-text">make state explicit
+make retrieval branches explicit
+make ranking features explicit
+make response evidence explicit
+make traces unavoidable
+</code></pre>
+<p>You do not need a grand rewrite to start. The first useful move is a wrapper:</p>
+<pre><code class="language-text">existing input
+  -&gt; new ConversationState object
+  -&gt; derive the old query from state
+  -&gt; run existing retrieval
+  -&gt; log trace
+</code></pre>
+<p>That lets you introduce better contracts without stopping experiments.</p>
+<h2 id="12-ranked-source-priority">12. Ranked Source Priority</h2>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Source</th>
+<th>Use it for</th>
+<th>Build impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>RA-Rec</td>
+<td>ConversationState and state-derived retrieval</td>
+<td>Very high</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Gen-CRS tutorial</td>
+<td>Modular architecture and grounding</td>
+<td>Very high</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Music-CRS challenge docs</td>
+<td>Exact task, resources, evaluation</td>
+<td>Very high</td>
+</tr>
+<tr>
+<td>4</td>
+<td>TalkPlayData 2</td>
+<td>Dataset generation assumptions and goal/profile context</td>
+<td>High</td>
+</tr>
+<tr>
+<td>5</td>
+<td>MusiCRS</td>
+<td>Audio/multimodal retrieval ablations</td>
+<td>High</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Reindex-Then-Adapt</td>
+<td>Catalog control and distribution warning</td>
+<td>High</td>
+</tr>
+<tr>
+<td>7</td>
+<td>MemoCRS</td>
+<td>Compact session memory and attitude tracking</td>
+<td>Medium-high</td>
+</tr>
+<tr>
+<td>8</td>
+<td>RecLLM</td>
+<td>Component checklist and profile-aware CRS</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>9</td>
+<td>ReFICR</td>
+<td>Retrieval/generation subtask split</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>10</td>
+<td>iEvaLM</td>
+<td>Stage-level and interaction-aware evaluation</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>11</td>
+<td>EventChat</td>
+<td>Cost, latency, and prompt-only warnings</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Zero-shot LLM CRS</td>
+<td>Bounded use of LLMs for understanding</td>
+<td>Medium</td>
+</tr>
+</tbody>
+</table>
+<h2 id="13-one-page-design-this-review-supports">13. One-Page Design This Review Supports</h2>
+<pre><code class="language-text">Input:
+  conversation, user_profile, conversation_goal
+
+State:
+  ConversationState with positive anchors, negatives, constraints, prior track refs
+
+Retrieval:
+  BM25 over metadata/tag text
+  dense metadata/attributes/lyrics/audio branches
+  user CF branch
+  accepted-anchor similarity branch
+
+Fusion:
+  RRF + branch count + direct constraints + negative penalties
+
+Rerank:
+  feature-aware score, trained later if useful
+
+Output:
+  top 20 valid track IDs
+  response generated only from selected-track evidence
+
+Trace:
+  all state fields, source turns, branch results, fusion scores, final rank
+</code></pre>
+<h2 id="14-bottom-line">14. Bottom Line</h2>
+<p>The most useful literature does not say "use a bigger LLM." It says:</p>
+<pre><code class="language-text">Use language models to understand conversation.
+Use recommender machinery to control item selection.
+Use retrieval to ground the response.
+Use traces to know where the system failed.
+</code></pre>
+<p>For this competition, the next serious architecture should be:</p>
+<pre><code class="language-text">state-first hybrid retrieval with grounded response generation
+</code></pre>
+<p>That is the best compromise between the Gen-CRS tutorial, the music-specific papers, and the fixed-catalog evaluation reality of Music-CRS.</p>
+<h2 id="sources">Sources</h2>
+<ul>
+<li>Gen-CRS tutorial page: <a href="https://recsys-lab.at/gen-conv-recsys-tutorial/">https://recsys-lab.at/gen-conv-recsys-tutorial/</a></li>
+<li>Gen-CRS tutorial slides: <a href="https://recsys-lab.at/wp-content/uploads/2025/10/Gen-CRS2025_Tutorial.pdf">https://recsys-lab.at/wp-content/uploads/2025/10/Gen-CRS2025_Tutorial.pdf</a></li>
+<li>RecSys Challenge 2026 Music-CRS: <a href="https://www.recsyschallenge.com/2026/">https://www.recsyschallenge.com/2026/</a></li>
+<li>Music-CRS challenge site: <a href="https://nlp4musa.github.io/music-crs-challenge/">https://nlp4musa.github.io/music-crs-challenge/</a></li>
+<li>TalkPlayData 2: <a href="https://arxiv.org/abs/2509.09685">https://arxiv.org/abs/2509.09685</a></li>
+<li>TALKPLAY: <a href="https://arxiv.org/abs/2502.13713">https://arxiv.org/abs/2502.13713</a></li>
+<li>MusiCRS: <a href="https://arxiv.org/abs/2509.19469">https://arxiv.org/abs/2509.19469</a></li>
+<li>RA-Rec: <a href="https://arxiv.org/abs/2406.00033">https://arxiv.org/abs/2406.00033</a></li>
+<li>ReFICR: <a href="https://doi.org/10.1145/3640457.3688146">https://doi.org/10.1145/3640457.3688146</a></li>
+<li>Reindex-Then-Adapt: <a href="https://arxiv.org/abs/2405.12119">https://arxiv.org/abs/2405.12119</a></li>
+<li>Large Language Models as Zero-Shot Conversational Recommenders: <a href="https://arxiv.org/abs/2308.10053">https://arxiv.org/abs/2308.10053</a></li>
+<li>MemoCRS: <a href="https://arxiv.org/abs/2407.04960">https://arxiv.org/abs/2407.04960</a></li>
+<li>RecLLM: <a href="https://arxiv.org/abs/2305.07961">https://arxiv.org/abs/2305.07961</a></li>
+<li>iEvaLM: <a href="https://aclanthology.org/2023.emnlp-main.621/">https://aclanthology.org/2023.emnlp-main.621/</a></li>
+<li>EventChat: <a href="https://arxiv.org/abs/2407.04472">https://arxiv.org/abs/2407.04472</a></li>
+<li>A Survey on Conversational Recommender Systems: <a href="https://doi.org/10.1145/3453154">https://doi.org/10.1145/3453154</a></li>
+</ul>
+    </article>
+    <aside>
+      <h2>Contents</h2>
+      <nav class="toc">
+<div class="toc">
+<ul>
+<li><a href="#1-competition-context">1. Competition Context</a></li>
+<li><a href="#2-literature-map-by-usefulness">2. Literature Map By Usefulness</a></li>
+<li><a href="#3-strongest-overall-recommendation">3. Strongest Overall Recommendation</a></li>
+<li><a href="#4-paper-by-paper-review">4. Paper-by-Paper Review</a><ul>
+<li><a href="#41-jannach-et-al-a-survey-on-conversational-recommender-systems">4.1 Jannach et al., "A Survey on Conversational Recommender Systems"</a></li>
+<li><a href="#42-gen-crs-2025-tutorial-kolb-et-al">4.2 Gen-CRS 2025 Tutorial, Kolb et al.</a></li>
+<li><a href="#43-ra-rec-retrieval-augmented-conversational-recommendation-with-prompt-based-semi-structured-natural-language-state-tracking">4.3 RA-Rec, "Retrieval-Augmented Conversational Recommendation with Prompt-based Semi-Structured Natural Language State Tracking"</a></li>
+<li><a href="#44-talkplaydata-2-an-agentic-synthetic-data-pipeline-for-multimodal-conversational-music-recommendation">4.4 TalkPlayData 2, "An Agentic Synthetic Data Pipeline for Multimodal Conversational Music Recommendation"</a></li>
+<li><a href="#45-talkplay-multimodal-music-recommendation-with-large-language-models">4.5 TALKPLAY, "Multimodal Music Recommendation with Large Language Models"</a></li>
+<li><a href="#46-musicrs-benchmarking-audio-centric-conversational-recommendation">4.6 MusiCRS, "Benchmarking Audio-Centric Conversational Recommendation"</a></li>
+<li><a href="#47-reficr-unleashing-the-retrieval-potential-of-large-language-models-in-conversational-recommender-systems">4.7 ReFICR, "Unleashing the Retrieval Potential of Large Language Models in Conversational Recommender Systems"</a></li>
+<li><a href="#48-reindex-then-adapt">4.8 Reindex-Then-Adapt</a></li>
+<li><a href="#49-large-language-models-as-zero-shot-conversational-recommenders">4.9 "Large Language Models as Zero-Shot Conversational Recommenders"</a></li>
+<li><a href="#410-memocrs">4.10 MemoCRS</a></li>
+<li><a href="#411-recllm-leveraging-large-language-models-in-conversational-recommender-systems">4.11 RecLLM, "Leveraging Large Language Models in Conversational Recommender Systems"</a></li>
+<li><a href="#412-ievalm-rethinking-the-evaluation-for-conversational-recommendation-in-the-era-of-large-language-models">4.12 iEvaLM, "Rethinking the Evaluation for Conversational Recommendation in the Era of Large Language Models"</a></li>
+<li><a href="#413-eventchat">4.13 EventChat</a></li>
+</ul>
+</li>
+<li><a href="#5-the-main-disagreement-in-the-literature">5. The Main Disagreement In The Literature</a></li>
+<li><a href="#6-what-the-review-says-to-build">6. What The Review Says To Build</a><ul>
+<li><a href="#61-conversationstate-v0">6.1 ConversationState v0</a></li>
+<li><a href="#62-retrieval-branches">6.2 Retrieval Branches</a></li>
+<li><a href="#63-fusion-first-learned-rerank-later">6.3 Fusion First, Learned Rerank Later</a></li>
+<li><a href="#64-grounded-response-writer">6.4 Grounded Response Writer</a></li>
+</ul>
+</li>
+<li><a href="#7-what-to-measure">7. What To Measure</a></li>
+<li><a href="#8-ablations-this-literature-review-implies">8. Ablations This Literature Review Implies</a></li>
+<li><a href="#9-what-is-less-useful-right-now">9. What Is Less Useful Right Now</a><ul>
+<li><a href="#pure-unified-llm-recommendation">Pure unified LLM recommendation</a></li>
+<li><a href="#agentic-crs">Agentic CRS</a></li>
+<li><a href="#full-llm-reranker">Full LLM reranker</a></li>
+<li><a href="#long-term-user-memory">Long-term user memory</a></li>
+</ul>
+</li>
+<li><a href="#10-suggested-build-order">10. Suggested Build Order</a><ul>
+<li><a href="#sprint-1-traceable-baseline">Sprint 1: Traceable baseline</a></li>
+<li><a href="#sprint-2-conversationstate-v0">Sprint 2: ConversationState v0</a></li>
+<li><a href="#sprint-3-hybrid-retrieval-v0">Sprint 3: Hybrid retrieval v0</a></li>
+<li><a href="#sprint-4-personalization-and-negatives">Sprint 4: Personalization and negatives</a></li>
+<li><a href="#sprint-5-small-reranker">Sprint 5: Small reranker</a></li>
+<li><a href="#sprint-6-grounded-response">Sprint 6: Grounded response</a></li>
+</ul>
+</li>
+<li><a href="#11-practical-interpretation-for-a-messy-codebase">11. Practical Interpretation For A Messy Codebase</a></li>
+<li><a href="#12-ranked-source-priority">12. Ranked Source Priority</a></li>
+<li><a href="#13-one-page-design-this-review-supports">13. One-Page Design This Review Supports</a></li>
+<li><a href="#14-bottom-line">14. Bottom Line</a></li>
+<li><a href="#sources">Sources</a></li>
+</ul>
+</div>
+
+      </nav>
+    </aside>
+  </div>
+  <footer>
+    Generated from <code>artifacts/detailed_literature_review.md</code>. Sources are listed at the end of the review.
+  </footer>
+</body>
+</html>
