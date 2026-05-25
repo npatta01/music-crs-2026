@@ -123,6 +123,9 @@ class LanceDbCatalog:
             if isinstance(rd, _date):
                 self._release_date_by_tid[tid] = rd
 
+        self._artist_names.sort()
+        self._track_names.sort()
+
         self._popularity_sorted = sorted(
             self._per_track.keys(),
             key=lambda t: (-(float(self._per_track[t].get("popularity") or 0.0)), t),
@@ -182,6 +185,14 @@ class LanceDbCatalog:
         return self.vector(track_id, "metadata_qwen3_embedding_0_6b")
 
     def release_date_filter_mask(self, hf: "HardFilter") -> set[str]:
+        # Defensive: a malformed HardFilter (e.g., constructed by bypassing Pydantic
+        # validation) could have None bounds. Skip rather than crash.
+        if hf.op == "<" and hf.end is None:
+            return set()
+        if hf.op == ">" and hf.start is None:
+            return set()
+        if hf.op == "between" and (hf.start is None or hf.end is None):
+            return set()
         out: set[str] = set()
         for tid, rd in self._release_date_by_tid.items():
             if hf.op == "<" and rd < hf.end:

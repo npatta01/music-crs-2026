@@ -227,7 +227,7 @@ class HFTalkPlayCatalog:
         self._tracks_by_artist_id = dict(tracks_by_artist)
         self._popularity_sorted = sorted(
             self.metadata.keys(),
-            key=lambda tid: -_popularity_of(self.metadata[tid]),
+            key=lambda tid: (-_popularity_of(self.metadata[tid]), tid),
         )
 
     # ------------------------------------------------------------------
@@ -282,6 +282,14 @@ class HFTalkPlayCatalog:
     # Assumes meta["release_date"] is a zero-padded "YYYY-MM-DD" string.
     # Year-only or year-month catalog values would be silently dropped (date.fromisoformat raises).
     def release_date_filter_mask(self, hf) -> set[str]:
+        # Defensive: a malformed HardFilter (e.g., constructed by bypassing Pydantic
+        # validation) could have None bounds. Skip rather than crash.
+        if hf.op == "<" and hf.end is None:
+            return set()
+        if hf.op == ">" and hf.start is None:
+            return set()
+        if hf.op == "between" and (hf.start is None or hf.end is None):
+            return set()
         out: set[str] = set()
         for tid, meta in self.metadata.items():
             rd_str = meta.get("release_date")

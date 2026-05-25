@@ -37,6 +37,21 @@ def test_loads_artist_and_track_names(tmp_path):
     assert set(cat.track_names) == {"Old", "In", "New", "Null"}
 
 
+def test_artist_and_track_names_are_sorted_alphabetically(tmp_path):
+    _build_fixture_table(tmp_path)
+    cat = LanceDbCatalog(db_uri=str(tmp_path), table_name="music_track_catalog")
+    assert cat.artist_names == ["Alice", "Bob", "Carol"]
+    assert cat.track_names == ["In", "New", "Null", "Old"]
+
+
+def test_release_date_filter_mask_handles_malformed_hf_gracefully(tmp_path):
+    """Defensive: bypass Pydantic and pass a malformed HardFilter — should not crash."""
+    _build_fixture_table(tmp_path)
+    cat = LanceDbCatalog(db_uri=str(tmp_path), table_name="music_track_catalog")
+    bogus = HardFilter.model_construct(field="release_date", op="<", start=None, end=None)
+    assert cat.release_date_filter_mask(bogus) == set()
+
+
 def test_artist_id_of_name(tmp_path):
     _build_fixture_table(tmp_path)
     cat = LanceDbCatalog(db_uri=str(tmp_path), table_name="music_track_catalog")
