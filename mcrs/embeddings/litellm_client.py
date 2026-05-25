@@ -26,6 +26,9 @@ class LiteLLMEmbeddingClient:
     api_key: str | None = None
     batch_size: int = 128
     dimensions: int | None = None
+    # encoding_format: required by some providers (e.g. DeepInfra returns 422 without it).
+    # Set to "float" when using DeepInfra or any provider that requires explicit format.
+    encoding_format: str | None = None
     cache: dict[str, Any] | None = None
     extra_params: dict[str, Any] = field(default_factory=dict)
 
@@ -47,6 +50,8 @@ class LiteLLMEmbeddingClient:
             kwargs["api_key"] = self.api_key
         if self.dimensions is not None:
             kwargs["dimensions"] = int(self.dimensions)
+        if self.encoding_format is not None:
+            kwargs["encoding_format"] = self.encoding_format
         if self.cache is not None:
             kwargs["cache"] = self.cache
         kwargs.update(self.extra_params)
