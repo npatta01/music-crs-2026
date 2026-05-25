@@ -60,6 +60,13 @@ class TestHardFilterRequiredFields:
         with pytest.raises(ValidationError):
             HardFilter(field="release_date", op="<=", end="2010-01-01")
 
+    def test_unknown_op_rejected_by_pydantic(self):
+        """Regression: removed test_release_date_unknown_op_returns_all_track_ids from
+        the catalog tests because Pydantic's Literal now rejects unknown ops at
+        construction. Pin that contract here."""
+        with pytest.raises(ValidationError):
+            HardFilter(field="release_date", op="!=", end="2010-01-01")
+
     def test_malformed_date_rejected(self):
         with pytest.raises(ValidationError):
             HardFilter(field="release_date", op="<", end="January 2010")

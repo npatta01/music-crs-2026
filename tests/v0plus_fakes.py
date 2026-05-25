@@ -12,6 +12,7 @@ production Protocol relaxed.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
 
 from mcrs.retrieval_modules.base import FieldQuery
 
@@ -118,13 +119,11 @@ class DictCatalog:
     # ----- Catalog-wide -----
 
     def release_date_filter_mask(self, hf) -> set[str]:
-        from datetime import date as _date
-
         out: set[str] = set()
         for tid, meta in self.tracks.items():
             rd_str = meta.get("release_date") or ""
             try:
-                rd = _date.fromisoformat(rd_str)
+                rd = date.fromisoformat(rd_str)
             except ValueError:
                 continue
             if hf.op == "<" and rd < hf.end:

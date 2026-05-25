@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
+from datetime import date
 from typing import Any, Iterable, Mapping
 
 DEFAULT_METADATA_DATASET = "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
@@ -278,16 +279,16 @@ class HFTalkPlayCatalog:
         # Convenience wrapper; back-compat with single-branch v0+ design.
         return self.vector(track_id, "metadata_qwen3_embedding_0_6b")
 
+    # Assumes meta["release_date"] is a zero-padded "YYYY-MM-DD" string.
+    # Year-only or year-month catalog values would be silently dropped (date.fromisoformat raises).
     def release_date_filter_mask(self, hf) -> set[str]:
-        from datetime import date as _date
-
         out: set[str] = set()
         for tid, meta in self.metadata.items():
             rd_str = meta.get("release_date")
             if not isinstance(rd_str, str) or not rd_str:
                 continue
             try:
-                rd = _date.fromisoformat(rd_str)
+                rd = date.fromisoformat(rd_str)
             except ValueError:
                 continue
             if hf.op == "<" and rd < hf.end:

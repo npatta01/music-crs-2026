@@ -71,15 +71,17 @@ class HardFilter(BaseModel):
     start: _date | None = Field(
         default=None,
         description=(
-            "Start of the range (inclusive). Required for op='>' and op='between'. "
-            "Emit as YYYY-MM-DD; 'YYYY' is expanded to YYYY-01-01, 'YYYY-MM' to YYYY-MM-01."
+            "Lower bound. For op='>' tracks with release_date strictly greater than start match; "
+            "for op='between' start is inclusive. Emit as YYYY-MM-DD; 'YYYY' expands to YYYY-01-01, "
+            "'YYYY-MM' to YYYY-MM-01."
         ),
     )
     end: _date | None = Field(
         default=None,
         description=(
-            "End of the range (inclusive). Required for op='<' and op='between'. "
-            "Emit as YYYY-MM-DD; 'YYYY' is expanded to YYYY-12-31, 'YYYY-MM' to last day of month."
+            "Upper bound. For op='<' tracks with release_date strictly less than end match; "
+            "for op='between' end is inclusive. Emit as YYYY-MM-DD; 'YYYY' expands to YYYY-12-31, "
+            "'YYYY-MM' to the last day of that month."
         ),
     )
 
