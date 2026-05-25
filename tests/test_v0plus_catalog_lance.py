@@ -135,3 +135,70 @@ def test_vector_returns_none_when_column_missing(tmp_path):
     _build_fixture_table(tmp_path)
     cat = LanceDbCatalog(db_uri=str(tmp_path), table_name="music_track_catalog")
     assert cat.vector("t-in", "nonexistent_field") is None
+
+
+def test_vector_returns_eager_loaded_embedding(tmp_path):
+    """When eager_vector_fields includes a vector column, vector() reads from
+    the in-memory cache (no per-call LanceDB query) and returns the embedding."""
+    import lancedb
+    import pyarrow as pa
+    from datetime import date
+
+    db = lancedb.connect(str(tmp_path))
+    rows = [
+        {"track_id": "t1",
+         "metadata_qwen3_embedding_0_6b": [0.1, 0.2, 0.3, 0.4],
+         "has_metadata_qwen3_embedding_0_6b": True,
+         "release_date": date(2020, 1, 1), "popularity": 0.0,
+         "track_name": ["X"], "artist_name": ["A"], "artist_id": ["a"],
+         "album_name": ["Y"], "album_id": ["y"], "tag_list": []},
+        {"track_id": "t2",
+         "metadata_qwen3_embedding_0_6b": [0.0, 0.0, 0.0, 0.0],
+         "has_metadata_qwen3_embedding_0_6b": False,
+         "release_date": date(2020, 1, 1), "popularity": 0.0,
+         "track_name": ["Y"], "artist_name": ["B"], "artist_id": ["b"],
+         "album_name": ["Y"], "album_id": ["y"], "tag_list": []},
+    ]
+    schema = pa.schema([
+        pa.field("track_id", pa.string()),
+        pa.field("metadata_qwen3_embedding_0_6b", pa.list_(pa.float32(), 4)),
+        pa.field("has_metadata_qwen3_embedding_0_6b", pa.bool_()),
+        pa.field("release_date", pa.date32()),
+        pa.field("popularity", pa.float64()),
+        pa.field("track_name", pa.list_(pa.string())),
+        pa.field("artist_name", pa.list_(pa.string())),
+        pa.field("artist_id", pa.list_(pa.string())),
+        pa.field("album_name", pa.list_(pa.string())),
+        pa.field("album_id", pa.list_(pa.string())),
+        pa.field("tag_list", pa.list_(pa.string())),
+    ])
+    db.create_table("music_track_catalog", data=rows, schema=schema)
+
+    cat = LanceDbCatalog(
+        db_uri=str(tmp_path),
+        table_name="music_track_catalog",
+        eager_vector_fields=("metadata_qwen3_embedding_0_6b",),
+    )
+
+    # Happy path: has_metadata flag True, vector loaded
+    v = cat.metadata_vector("t1")
+    assert v is not None
+    assert v == pytest.approx([0.1, 0.2, 0.3, 0.4])
+
+    # has_metadata=False -> vector() returns None even though row exists
+    assert cat.metadata_vector("t2") is None
+
+    # Unknown track_id -> None
+    assert cat.metadata_vector("missing") is None
+
+
+def test_vector_falls_back_to_lance_query_when_not_eager(tmp_path):
+    """When eager_vector_fields is empty (default), vector() still works via
+    on-demand LanceDB query. Verifies the cold-path behavior we already have."""
+    _build_fixture_table(tmp_path)
+    cat = LanceDbCatalog(
+        db_uri=str(tmp_path),
+        table_name="music_track_catalog",
+    )
+    # Fixture has no vector columns at all
+    assert cat.vector("t-in", "nonexistent_field") is None

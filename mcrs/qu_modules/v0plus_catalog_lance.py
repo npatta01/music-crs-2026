@@ -62,6 +62,7 @@ class LanceDbCatalog:
 
     db_uri: str
     table_name: str = "music_track_catalog"
+    eager_vector_fields: tuple[str, ...] = ()
 
     # Populated from the LanceDB scan in __post_init__
     _per_track: dict[str, dict[str, Any]] = field(default_factory=dict, init=False, repr=False)
@@ -73,6 +74,7 @@ class LanceDbCatalog:
     _popularity_sorted: list[str] = field(default_factory=list, init=False, repr=False)
     _release_date_by_tid: dict[str, _date] = field(default_factory=dict, init=False, repr=False)
     _vector_columns_available: set[str] = field(default_factory=set, init=False, repr=False)
+    _vectors: dict[str, dict[str, list[float]]] = field(default_factory=dict, init=False, repr=False)
     _table: Any = field(default=None, init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -131,6 +133,28 @@ class LanceDbCatalog:
             key=lambda t: (-(float(self._per_track[t].get("popularity") or 0.0)), t),
         )
 
+        # Eager-load any vector columns the caller opted into. Scans each named
+        # column once so subsequent vector() lookups are an O(1) dict hit.
+        schema_field_names = {f.name for f in self._table.schema}
+        for vf in self.eager_vector_fields:
+            if vf not in self._vector_columns_available:
+                continue
+            has_col = f"has_{vf}"
+            cols = ["track_id", vf]
+            if has_col in schema_field_names:
+                cols.append(has_col)
+            vdf = self._table.search().select(cols).limit(0).to_pandas()
+            store: dict[str, list[float]] = {}
+            for row in vdf.to_dict(orient="records"):
+                tid = str(row["track_id"])
+                if has_col in row and not row.get(has_col):
+                    continue
+                vec = row.get(vf)
+                if vec is None:
+                    continue
+                store[tid] = [float(x) for x in vec]
+            self._vectors[vf] = store
+
     # ----- Protocol methods -----
 
     @property
@@ -163,6 +187,12 @@ class LanceDbCatalog:
         return _list_of_str(row.get("tag_list"))
 
     def vector(self, track_id: str, vector_field: str) -> list[float] | None:
+        # Eager path: O(1) dict lookup if this field was preloaded at init.
+        cached = self._vectors.get(vector_field)
+        if cached is not None:
+            return cached.get(track_id)
+        # Cold path: per-call LanceDB query. Preserved for backward-compat and
+        # for tests/callers that don't opt into eager loading.
         if vector_field not in self._vector_columns_available:
             return None
         # lancedb 0.30.2: use the search builder for column projection +
