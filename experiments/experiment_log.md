@@ -376,3 +376,47 @@ Next step:
 
 Status:
 - Done
+
+## 2026-05-25 - v0+ ConversationState compiler: end-to-end devset run + tuning campaign
+
+Question:
+Does the v0+ compiler (full pipeline: LLM extractor → resolver → multi-branch retrieval + fusion + soft adjustments) beat the BM25 baseline on the competition metric (NDCG@20), and where is the remaining headroom?
+
+Runs:
+- `v0plus_compiler_devset` (the canonical config — see [`v0plus_compiler_devset.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_devset.md) for full ablation history)
+
+Setup highlights (also documented in the per-run report):
+- Migrated the v0+ catalog source-of-truth from a duplicated in-memory `HFTalkPlayCatalog` to `LanceDbCatalog` (single canonical source — the same LanceDB used for retrieval). 9-task implementation plan at [`docs/superpowers/plans/2026-05-25-lancedb-as-catalog-source-of-truth.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/docs/superpowers/plans/2026-05-25-lancedb-as-catalog-source-of-truth.md).
+- Fixed a silent `release_date between` filter bug: schema was overloaded `value: str | list[str]`, catalog only handled the list form, LLM emitted the string form — filter mask silently returned `set()`, killing the candidate pool. Schema retyped to `start: date | None, end: date | None`; LanceDB `release_date` migrated from `string` to `pa.date32()`.
+- Fixed a second silent bug: `_apply_soft_adjustments` ignored `rs.resolved_rejections` entirely. Resolver translated `explicit_rejections` into artist/track ids but the compiler never read the field. Now hard-excludes matching tracks; pivot subset Hit@20 went 0.126 → 0.201.
+- Added per-turn state trace sidecar (`{tid}_trace.json`) capturing extracted state + resolver counts + compiler counts.
+- Added cross-container sharding (`run_inference_sharded` in `modal/app.py` + `scripts/merge_shard_results.py`) — full devset wall time ~10 min at N=5 vs ~60 min single-shard.
+
+Headline result:
+- `NDCG@20 0.1005`, `Hit@20 0.2378`, `MRR 0.0676` on full 1000-session devset.
+- vs BM25 baseline (`lancedb_fts_with_tag_list`): **+36% NDCG@20, +23% Hit@20, +52% MRR, +182% Hit@1**.
+- vs v0+ design target (`NDCG@20 ≥ 0.1092`): 8% short.
+- Per-turn pattern: v0+ advantage *grows* with conversation depth (turn 1 +7% vs BM25, turn 6 +44%) — the multi-turn state is doing real work.
+
+Ablation campaign (NDCG@20, full devset):
+- Baseline (dense on, original knobs): 0.0878
+- α = 0.30, `same_artist_demote` = 1.0 (dense on): 0.0880 — no signal
+- α = 0.30, dense **off**: **0.1009** (+15% vs baseline) ← picked
+- + explicit-rejections hard-exclude: 0.1005 (macro flat; pivot subset Hit@20 +60%)
+
+Takeaways:
+- Sparse-only retrieval *beats* hybrid for this dataset. The 3 Qwen3 dense branches blurred exact-match precision more than they added coverage; disabling lifts NDCG@20 by 15%. Re-enabling dense only makes sense behind a reranker that can re-prioritize.
+- The dominant remaining bottleneck is structural, not parametric: 62% of GT turns have a **novel artist** (not in prior plays), and on that cohort Hit@100 is only 0.16 — the candidate isn't even in our top-100. Diversification + a CF (`cf_bpr`) branch would attack this; tuning the same knobs further won't.
+- NDCG ranking headroom on the *current* retrieval pool is +0.137 (Hit@20 = 0.238 means 24% of GT is already in top-20; if a perfect reranker pushed them all to rank 1 the NDCG@20 would be 0.238 vs current 0.101). A cross-encoder reranker is the highest-leverage move for NDCG.
+- Pivot intent is rare (2% of turns) and the LLM still mis-extracts contrastive mentions ("different from X" → puts X in `mentioned_entities` instead of `explicit_rejections`). Prompt fix is small but cache-invalidating; not worth the cost until other bigger levers land.
+
+Linked reports:
+- [`v0plus_compiler_devset.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_devset.md)
+
+Next step:
+- Per-artist diversity cap in top-K (small change, attacks same-artist crowding directly).
+- Add `cf_bpr` as a track→track dense branch (it's already indexed in LanceDB, never wired into v0+). Best single bet for closing the novel-artist coverage gap.
+- Cross-encoder reranker on top-100 (largest expected NDCG@20 impact; biggest implementation lift).
+
+Status:
+- Analyzed
