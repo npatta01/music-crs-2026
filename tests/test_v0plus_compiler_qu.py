@@ -537,3 +537,18 @@ def test_build_qu_respects_mcrs_lancedb_uri_env_var(tmp_path, monkeypatch):
     )
     assert isinstance(qu.catalog, LanceDbCatalog)
     assert qu.catalog.artist_id_of_name("EnvArtist") == "e"
+
+
+def test_shard_slice_math_partitions_all_indices():
+    """For any (total, num_shards), every index in [0, total) belongs to exactly one shard."""
+    for total in (1, 100, 999, 1000, 1001):
+        for num_shards in (1, 2, 3, 4, 7, 8, 10):
+            seen = set()
+            for shard_id in range(num_shards):
+                start = (shard_id * total) // num_shards
+                end   = ((shard_id + 1) * total) // num_shards
+                for i in range(start, end):
+                    assert i not in seen, f"idx {i} in two shards for total={total} S={num_shards}"
+                    seen.add(i)
+            assert seen == set(range(total)), \
+                f"missed indices for total={total} S={num_shards}: {set(range(total)) - seen}"

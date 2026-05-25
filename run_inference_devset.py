@@ -128,6 +128,18 @@ def main(args):
         n = min(args.num_sessions, len(db))
         db = db.select(random.sample(range(len(db)), n))
         print(f"Running on {n} randomly sampled sessions.")
+    if args.num_shards > 1:
+        if not (0 <= args.shard_id < args.num_shards):
+            raise ValueError(
+                f"shard_id={args.shard_id} out of range for num_shards={args.num_shards}"
+            )
+        # Contiguous slicing: shard k gets session indices [k*N/S, (k+1)*N/S).
+        total = len(db)
+        start = (args.shard_id * total) // args.num_shards
+        end   = ((args.shard_id + 1) * total) // args.num_shards
+        db = db.select(range(start, end))
+        print(f"Shard {args.shard_id}/{args.num_shards}: {len(db)} sessions "
+              f"(indices [{start}, {end}))")
     # Prepare all batch data at once
     batch_data, metadata = [], []
     for item in db:
@@ -169,11 +181,12 @@ def main(args):
                 "trace": result.get("trace"),
             })
     os.makedirs(f"{args.exp_dir}/inference/devset", exist_ok=True)
-    with open(f"{args.exp_dir}/inference/devset/{args.tid}.json", "w", encoding="utf-8") as f:
-        json.dump(inference_results, f, ensure_ascii=False)
+    out_path = f"{args.exp_dir}/inference/devset/{args.tid}{args.output_suffix}.json"
     # Trace sidecar — `default=str` handles datetime.date fields inside the
     # extracted v0+ state's hard_filters.start/end without a custom encoder.
-    trace_path = f"{args.exp_dir}/inference/devset/{args.tid}_trace.json"
+    trace_path = f"{args.exp_dir}/inference/devset/{args.tid}{args.output_suffix}_trace.json"
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(inference_results, f, ensure_ascii=False)
     with open(trace_path, "w", encoding="utf-8") as f:
         json.dump(trace_results, f, ensure_ascii=False, default=str)
 
@@ -216,6 +229,25 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Wipe the cache directory before running (forces re-indexing)"
+    )
+    parser.add_argument(
+        "--num_shards",
+        type=int,
+        default=1,
+        help="Total number of shards. >1 enables sharded mode (must pair with --shard_id).",
+    )
+    parser.add_argument(
+        "--shard_id",
+        type=int,
+        default=0,
+        help="0-based shard index. Only this shard's slice of sessions is processed.",
+    )
+    parser.add_argument(
+        "--output_suffix",
+        type=str,
+        default="",
+        help="Optional suffix appended to the output filenames "
+             "(e.g. '.shard_3' -> '{tid}.shard_3.json'). Empty = '{tid}.json'.",
     )
     args = parser.parse_args()
     main(args)
