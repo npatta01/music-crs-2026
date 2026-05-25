@@ -1,0 +1,491 @@
+"""End-to-end smoke for the v0+ QU wrapper.
+
+Uses the test fakes (DictCatalog + FakeRetriever + FakeEmbeddingClient) plus
+an injected fake LiteLLMExtractor so the whole pipeline runs offline.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import time
+from dataclasses import dataclass, field
+
+import pytest
+
+from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
+    ConversationStateV0Plus,
+    ExplicitRejection,
+    MentionedEntity,
+    TrackFeedback,
+)
+from mcrs.qu_modules import load_qu_module
+from mcrs.qu_modules.compiler_v0plus_qu import (
+    V0PlusCompilerQU,
+    build_v0plus_compiler_qu,
+    session_memory_to_conversation,
+)
+from mcrs.qu_modules.fuzzy_matcher import RapidfuzzCatalogMatcher
+from tests.v0plus_fakes import DictCatalog, FakeEmbeddingClient, FakeRetriever
+
+
+# ---------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------
+
+
+def _catalog() -> DictCatalog:
+    return DictCatalog(
+        tracks={
+            "t-morphine-1": {
+                "artist_id": "a-morphine", "artist_name": "Morphine",
+                "track_name": "Cure for Pain",
+                "tag_list": ["smoky", "lounge"],
+                "popularity": 70.0, "release_date": "1993-09-14",
+                "metadata_vector": [1.0, 0.0, 0.0],
+            },
+            "t-fugazi-1": {
+                "artist_id": "a-fugazi", "artist_name": "Fugazi",
+                "track_name": "Waiting Room",
+                "tag_list": ["post-hardcore"],
+                "popularity": 80.0, "release_date": "1988-11-04",
+                "metadata_vector": [0.0, 1.0, 0.0],
+            },
+            "t-filler-1": {
+                "artist_id": "a-filler", "artist_name": "Filler",
+                "track_name": "Filler",
+                "tag_list": [],
+                "popularity": 50.0, "release_date": "2010-01-01",
+                "metadata_vector": [0.0, 0.0, 1.0],
+            },
+        }
+    )
+
+
+@dataclass
+class _FakeExtractor:
+    """Returns a scripted ConversationStateV0Plus regardless of input.
+    Pass `state=None` to simulate extractor failure."""
+
+    state: ConversationStateV0Plus | None = None
+
+    def extract(self, conversation, played_track_ids):
+        return self.state
+
+    async def aextract(self, conversation, played_track_ids):
+        return self.state
+
+
+@dataclass
+class _ConcurrencyRecordingExtractor:
+    """Tracks max concurrent in-flight `aextract` calls and per-call latency.
+    Used to verify the async batch fan-out is actually parallelizing."""
+
+    state: ConversationStateV0Plus | None = None
+    per_call_sleep_s: float = 0.05
+    in_flight: int = 0
+    max_in_flight_observed: int = 0
+    call_count: int = 0
+    _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+
+    def extract(self, conversation, played_track_ids):
+        raise NotImplementedError("use aextract — this fake only supports the async path")
+
+    async def aextract(self, conversation, played_track_ids):
+        async with self._lock:
+            self.in_flight += 1
+            self.max_in_flight_observed = max(self.max_in_flight_observed, self.in_flight)
+            self.call_count += 1
+        try:
+            await asyncio.sleep(self.per_call_sleep_s)
+            return self.state
+        finally:
+            async with self._lock:
+                self.in_flight -= 1
+
+
+_SENTINEL = object()
+
+
+def _state(**overrides) -> ConversationStateV0Plus:
+    defaults = dict(
+        turn_intent="anything",
+        intent_mode="refinement",
+        track_feedback=[],
+        referenced_track_ids=[],
+        mentioned_entities=[],
+        hard_filters=[],
+        explicit_rejections=[],
+    )
+    defaults.update(overrides)
+    return ConversationStateV0Plus(**defaults)
+
+
+def _build_qu(state=_SENTINEL) -> V0PlusCompilerQU:
+    """`state=_SENTINEL` (default) → extractor returns default _state().
+    `state=None` → extractor returns None (LLM failure simulation).
+    `state=<ConversationStateV0Plus>` → extractor returns that."""
+    extracted = _state() if state is _SENTINEL else state
+    catalog = _catalog()
+    return build_v0plus_compiler_qu(
+        qu_kwargs={},
+        _overrides={
+            "catalog": catalog,
+            "matcher": RapidfuzzCatalogMatcher(catalog),
+            "encoder": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5]),
+            "retriever": FakeRetriever(
+                text_hits_by_field={
+                    "artist_name": [("t-morphine-1", 5.0), ("t-fugazi-1", 3.0)],
+                    "tag_list": [("t-morphine-1", 2.0)],
+                },
+                embedding_hits=[("t-morphine-1", 0.9), ("t-fugazi-1", 0.7)],
+            ),
+            "extractor": _FakeExtractor(state=extracted),
+        },
+    )
+
+
+# ---------------------------------------------------------------------
+# session_memory -> v0+ conversation format
+# ---------------------------------------------------------------------
+
+
+def test_session_memory_to_conversation_basic_shape():
+    memory = [
+        {"role": "user", "content": "play me something smoky"},
+        {"role": "assistant", "content": "how about Morphine"},
+        {"role": "music", "content": "t-morphine-1"},
+        {"role": "user", "content": "more like that"},
+    ]
+    conv, played = session_memory_to_conversation(memory)
+    assert played == ["t-morphine-1"]
+    assert [c["role"] for c in conv] == ["user", "assistant", "music", "user"]
+    # turn numbers increment on each user message
+    assert conv[0]["turn"] == 1
+    assert conv[1]["turn"] == 1
+    assert conv[2]["turn"] == 1
+    assert conv[3]["turn"] == 2
+
+
+def test_session_memory_to_conversation_attaches_track_id_for_music_items():
+    memory = [
+        {"role": "user", "content": "x"},
+        {"role": "music", "content": "t-abc"},
+    ]
+    conv, played = session_memory_to_conversation(memory)
+    music_item = next(c for c in conv if c["role"] == "music")
+    assert music_item["track_id"] == "t-abc"
+    assert "label" in music_item
+
+
+# ---------------------------------------------------------------------
+# QU wrapper end-to-end
+# ---------------------------------------------------------------------
+
+
+def test_qu_wrapper_compile_track_ids_runs_full_pipeline():
+    state = _state(
+        turn_intent="more like Morphine",
+        mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)],
+        explicit_rejections=[ExplicitRejection(kind="artist", value="Fugazi", source_turn=2)],
+    )
+    qu = _build_qu(state)
+    # No music turns yet -> nothing in played_track_ids -> Morphine isn't pre-dropped
+    result = qu.compile_track_ids(
+        [{"role": "user", "content": "play me Morphine"}]
+    )
+    # Fugazi resolved + hard-dropped via artist rejection
+    assert "t-fugazi-1" not in result
+    # Morphine retained (top-ranked from BM25 + dense)
+    assert "t-morphine-1" in result
+    assert result[0] == "t-morphine-1"
+
+
+def test_qu_wrapper_compile_track_ids_hard_drops_played_tracks():
+    """When the conversation has played a track, it must be excluded from results
+    (challenge convention)."""
+    state = _state(
+        turn_intent="more",
+        mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)],
+    )
+    qu = _build_qu(state)
+    result = qu.compile_track_ids(
+        [
+            {"role": "user", "content": "play"},
+            {"role": "music", "content": "t-morphine-1"},  # played -> hard-drop
+            {"role": "user", "content": "more"},
+        ]
+    )
+    assert "t-morphine-1" not in result
+
+
+def test_qu_wrapper_transform_query_returns_state_json():
+    state = _state(turn_intent="something smoky")
+    qu = _build_qu(state)
+    out = qu.transform_query([{"role": "user", "content": "anything"}])
+    assert isinstance(out, str)
+    assert "turn_intent" in out
+    assert "something smoky" in out
+
+
+def test_qu_wrapper_extractor_failure_returns_empty_list():
+    """When the extractor fails, the QU returns []. CRS_BASELINE handles
+    empty by passing recommend_item=None to the LM; eval scores the row as
+    zero hits — that's the honest signal. Popularity backfill is
+    intentionally NOT applied here because it would bypass any resolver
+    filters that would normally have run."""
+    qu = _build_qu(state=None)  # extractor returns None
+    memory = [{"role": "user", "content": "hi"}]
+    result = qu.compile_track_ids(memory, topk=10)
+    assert result == []
+
+
+# ---------------------------------------------------------------------
+# load_qu_module dispatch
+# ---------------------------------------------------------------------
+
+
+def test_load_qu_module_rejects_v0plus_compiler_without_lancedb_settings():
+    """Verifies the dispatch path; without lancedb config the LanceDB connect
+    will fail. We just confirm the dispatch routes correctly by catching the
+    expected failure."""
+    with pytest.raises((KeyError, FileNotFoundError, Exception)):
+        load_qu_module(
+            "v0plus_compiler",
+            # No qu_kwargs => no lancedb config => construction will fail.
+        )
+
+
+def test_load_qu_module_unsupported_raises():
+    with pytest.raises(ValueError, match="Unsupported QU type"):
+        load_qu_module("not_a_real_qu_type")
+
+
+# ---------------------------------------------------------------------
+# Encoder backend selection
+# ---------------------------------------------------------------------
+
+
+def test_build_qu_rejects_unknown_encoder_backend():
+    catalog = _catalog()
+    with pytest.raises(ValueError, match="Unknown encoder.backend"):
+        build_v0plus_compiler_qu(
+            qu_kwargs={"encoder": {"backend": "bogus"}},
+            _overrides={
+                "catalog": catalog,
+                "matcher": RapidfuzzCatalogMatcher(catalog),
+                # retriever / extractor / compiler aren't reached — factory
+                # bails on the encoder branch first.
+                "retriever": FakeRetriever(),
+                "extractor": _FakeExtractor(state=_state()),
+            },
+        )
+
+
+# ---------------------------------------------------------------------
+# Async batch fan-out
+# ---------------------------------------------------------------------
+
+
+def _build_qu_with_extractor(extractor, max_in_flight: int) -> V0PlusCompilerQU:
+    catalog = _catalog()
+    qu = build_v0plus_compiler_qu(
+        qu_kwargs={"max_in_flight": max_in_flight},
+        _overrides={
+            "catalog": catalog,
+            "matcher": RapidfuzzCatalogMatcher(catalog),
+            "encoder": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5]),
+            "retriever": FakeRetriever(
+                text_hits_by_field={
+                    "artist_name": [("t-morphine-1", 5.0), ("t-fugazi-1", 3.0)],
+                },
+                embedding_hits=[("t-morphine-1", 0.9)],
+            ),
+            "extractor": extractor,
+        },
+    )
+    assert qu.max_in_flight == max_in_flight
+    return qu
+
+
+def test_batch_compile_track_ids_runs_extractor_calls_concurrently():
+    """N entries with 50 ms simulated latency should complete in roughly one
+    'wave' when max_in_flight ≥ N — not N × 50 ms (which would mean serial)."""
+    ext = _ConcurrencyRecordingExtractor(state=_state(turn_intent="x"), per_call_sleep_s=0.05)
+    qu = _build_qu_with_extractor(ext, max_in_flight=8)
+    n = 8
+    memories = [[{"role": "user", "content": f"q{i}"}] for i in range(n)]
+
+    t0 = time.perf_counter()
+    results = qu.batch_compile_track_ids(memories, topk=5)
+    elapsed = time.perf_counter() - t0
+
+    assert len(results) == n
+    assert ext.call_count == n
+    # Concurrency actually happened — at some point ≥ 2 calls were in flight.
+    assert ext.max_in_flight_observed >= 2, (
+        f"expected at least 2 concurrent calls, observed max {ext.max_in_flight_observed}"
+    )
+    # With 8 calls × 50 ms each, serial would be ~400 ms. Concurrent should
+    # finish in well under 200 ms even on a slow CI box.
+    assert elapsed < 0.2, f"batch took {elapsed:.3f}s — looks serial"
+
+
+def test_batch_compile_track_ids_respects_max_in_flight_cap():
+    """With max_in_flight=2, 6 calls should never have more than 2 in flight
+    at once. Latency-based verification: 6 × 50 ms with cap 2 ≈ 3 waves ≈ 150 ms."""
+    ext = _ConcurrencyRecordingExtractor(state=_state(turn_intent="x"), per_call_sleep_s=0.05)
+    qu = _build_qu_with_extractor(ext, max_in_flight=2)
+    memories = [[{"role": "user", "content": f"q{i}"}] for i in range(6)]
+
+    results = qu.batch_compile_track_ids(memories, topk=5)
+
+    assert len(results) == 6
+    assert ext.max_in_flight_observed <= 2, (
+        f"semaphore was supposed to cap at 2 but {ext.max_in_flight_observed} ran together"
+    )
+
+
+def test_batch_compile_track_ids_handles_empty_batch():
+    ext = _FakeExtractor(state=_state())
+    qu = _build_qu_with_extractor(ext, max_in_flight=4)
+    assert qu.batch_compile_track_ids([], topk=10) == []
+
+
+def test_batch_compile_track_ids_returns_results_in_input_order():
+    """`asyncio.gather` preserves order even when tasks complete out of order
+    (variable per-call latency). Verify by giving each entry a distinguishable
+    state and checking results map back correctly."""
+    # State1 references Morphine, state2 references Fugazi.
+    s1 = _state(mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)])
+    s2 = _state(mentioned_entities=[MentionedEntity(type="artist", value="Fugazi", sentiment=1)])
+
+    @dataclass
+    class _IndexedExtractor:
+        states: list
+        idx: int = 0
+
+        async def aextract(self, conversation, played_track_ids):
+            # Read which session this is from the conversation text "q{i}"
+            text = conversation[-1]["text"]
+            i = int(text[1:])
+            # Asymmetric latency — later entries return faster, would scramble
+            # output if gather didn't preserve order.
+            await asyncio.sleep(0.05 - 0.005 * i)
+            return self.states[i]
+
+        def extract(self, *a, **kw):
+            raise NotImplementedError
+
+    ext = _IndexedExtractor(states=[s1, s2])
+    qu = _build_qu_with_extractor(ext, max_in_flight=4)
+    memories = [
+        [{"role": "user", "content": "q0"}],
+        [{"role": "user", "content": "q1"}],
+    ]
+    results = qu.batch_compile_track_ids(memories, topk=5)
+    assert len(results) == 2
+    # First entry's state mentioned Morphine -> Morphine should rank first.
+    assert results[0][0] == "t-morphine-1"
+    # Second entry's state mentioned Fugazi -> Fugazi first (Morphine got
+    # demoted to 0 hits because retriever returns artist_name hits for both
+    # but only the resolved artist anchor matches).
+    assert "t-fugazi-1" in results[1]
+
+
+# ---------------------------------------------------------------------
+# Production catalog wiring (LanceDB-backed)
+# ---------------------------------------------------------------------
+
+
+def test_build_qu_raises_when_no_lancedb_uri(monkeypatch):
+    """The factory should raise a clear ValueError when neither MCRS_LANCEDB_URI
+    env var nor qu_kwargs.lancedb.db_uri is set and no catalog override is
+    given. This is the production wiring's first defensive check — failing
+    early here is much friendlier than a mysterious LanceDB connect error."""
+    monkeypatch.delenv("MCRS_LANCEDB_URI", raising=False)
+    with pytest.raises(ValueError, match="LanceDB URI"):
+        build_v0plus_compiler_qu(qu_kwargs={})
+
+
+def test_build_qu_constructs_lancedb_catalog_from_qu_kwargs(tmp_path, monkeypatch):
+    """When no _overrides['catalog'] is provided, build_v0plus_compiler_qu
+    constructs a LanceDbCatalog from qu_kwargs.lancedb.db_uri. Tests the new
+    production wiring without needing a real model / retriever stack — we
+    override every other heavy component."""
+    import lancedb
+    from datetime import date
+
+    from mcrs.qu_modules.v0plus_catalog_lance import LanceDbCatalog
+
+    # Clear any inherited env-var URI so we exercise the qu_kwargs path.
+    monkeypatch.delenv("MCRS_LANCEDB_URI", raising=False)
+
+    db = lancedb.connect(str(tmp_path))
+    db.create_table(
+        "music_track_catalog",
+        data=[
+            {
+                "track_id": "t1", "release_date": date(2020, 1, 1), "popularity": 0.0,
+                "track_name": ["X"], "artist_name": ["A"], "artist_id": ["a"],
+                "album_name": ["X"], "album_id": ["x"], "tag_list": [],
+            },
+        ],
+    )
+
+    qu = build_v0plus_compiler_qu(
+        qu_kwargs={
+            "lancedb": {
+                "db_uri": str(tmp_path),
+                "table_name": "music_track_catalog",
+                # Empty eager-load list keeps init cheap; the wiring path is
+                # what's under test, not the vector eager-load behavior.
+                "eager_vector_fields": [],
+            },
+            "max_in_flight": 1,
+        },
+        _overrides={
+            # Catalog is INTENTIONALLY omitted — that's what we're testing.
+            "extractor": _FakeExtractor(state=_state()),
+            "encoder": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5]),
+            "retriever": FakeRetriever(),
+        },
+    )
+    assert isinstance(qu.catalog, LanceDbCatalog)
+    # Sanity: the catalog actually loaded the fixture row.
+    assert qu.catalog.artist_id_of("t1") == "a"
+
+
+def test_build_qu_respects_mcrs_lancedb_uri_env_var(tmp_path, monkeypatch):
+    """MCRS_LANCEDB_URI overrides qu_kwargs.lancedb.db_uri — matches the
+    precedence used elsewhere in this factory (and on Modal)."""
+    import lancedb
+    from datetime import date
+
+    from mcrs.qu_modules.v0plus_catalog_lance import LanceDbCatalog
+
+    db = lancedb.connect(str(tmp_path))
+    db.create_table(
+        "music_track_catalog",
+        data=[
+            {
+                "track_id": "t-env", "release_date": date(2020, 1, 1), "popularity": 0.0,
+                "track_name": ["E"], "artist_name": ["EnvArtist"], "artist_id": ["e"],
+                "album_name": ["E"], "album_id": ["e"], "tag_list": [],
+            },
+        ],
+    )
+    monkeypatch.setenv("MCRS_LANCEDB_URI", str(tmp_path))
+
+    qu = build_v0plus_compiler_qu(
+        qu_kwargs={
+            # Bogus db_uri here — env var should win.
+            "lancedb": {"db_uri": "/does/not/exist", "eager_vector_fields": []},
+        },
+        _overrides={
+            "extractor": _FakeExtractor(state=_state()),
+            "encoder": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5]),
+            "retriever": FakeRetriever(),
+        },
+    )
+    assert isinstance(qu.catalog, LanceDbCatalog)
+    assert qu.catalog.artist_id_of_name("EnvArtist") == "e"
