@@ -66,6 +66,25 @@ class LanceDbBuildSummary:
     fts_text_fields: list[str]
 
 
+def _parse_iso_date(value):
+    """Parse YYYY-MM-DD into datetime.date; return None for None / empty / malformed input.
+
+    Indexing is strict — partial dates ("2016", "2016-06") are NOT expanded here.
+    The Pydantic HardFilter validator expands partial dates on the filter side; the
+    catalog itself should only store fully-qualified dates.
+    """
+    from datetime import date
+    if value is None:
+        return None
+    s = str(value).strip()
+    if not s:
+        return None
+    try:
+        return date.fromisoformat(s)
+    except ValueError:
+        return None
+
+
 def _normalize_string_list(value: Any) -> list[str]:
     if value is None:
         return []
@@ -115,7 +134,7 @@ def build_track_record(
     for field_name in ARRAY_METADATA_FIELDS:
         record[field_name] = _normalize_string_list(metadata_row.get(field_name))
     record["popularity"] = _normalize_optional_float(metadata_row.get("popularity"))
-    record["release_date"] = str(metadata_row.get("release_date") or "")
+    record["release_date"] = _parse_iso_date(metadata_row.get("release_date"))
     record["duration"] = _normalize_optional_int(metadata_row.get("duration"))
     bm25_text_fields = render_bm25_text_fields(metadata_row)
     record.update(bm25_text_fields)
