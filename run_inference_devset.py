@@ -4,6 +4,7 @@ Batch inference script for Music CRS.
 
 import os
 import json
+import logging
 import shutil
 import torch
 import argparse
@@ -14,10 +15,51 @@ from omegaconf import OmegaConf
 from mcrs.inference_utils import chat_history_parser, resolve_qu_kwargs_placeholders
 
 
+def _setup_logging() -> None:
+    """Surface logger.warning/info calls from mcrs.* in stderr.
+
+    Without basicConfig, Python's last-resort handler writes WARNING+ to
+    stderr but with no timestamp/level prefix, and INFO is dropped. That
+    let v0+ extractor failures and empty-compile cases vanish silently in
+    Modal logs. Configure once at startup so all submodules surface.
+    """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        force=True,  # override any prior config (e.g., from imported libs)
+    )
+    # Quiet the chatty libraries — we only care about our own warnings here.
+    logging.getLogger("LiteLLM").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+
 def _to_plain_dict(value):
     if value is None:
         return None
     return OmegaConf.to_container(value, resolve=True)
+
+
+def _setup_litellm_cache() -> None:
+    """Configure litellm disk cache when MCRS_LITELLM_CACHE_DIR is set.
+
+    The Modal inference container sets this env var to the path of the shared
+    litellm-cache volume (same volume used by ModalLiteLLMService).  Caching
+    here means repeated LLM extraction calls on identical conversations are
+    served from disk — no OpenRouter round-trip, no cost.
+    """
+    cache_dir = os.environ.get("MCRS_LITELLM_CACHE_DIR")
+    if not cache_dir:
+        return
+    import litellm
+    from litellm.caching.caching import Cache
+    litellm.cache = Cache(
+        type="disk",
+        supported_call_types=["completion", "acompletion"],
+        namespace="music-crs",
+        disk_cache_dir=cache_dir,
+    )
+    print(f"LiteLLM disk cache enabled at: {cache_dir}")
 
 
 def main(args):
@@ -39,6 +81,8 @@ def main(args):
         - Tracks progress with tqdm progress bar
         - Saves comprehensive results for evaluation
     """
+    _setup_logging()
+    _setup_litellm_cache()
     config = OmegaConf.load(f"configs/{args.tid}.yaml")
     if args.clear_cache:
         cache_dir = config.get("cache_dir", "./cache")
@@ -102,6 +146,7 @@ def main(args):
                 'turn_number': target_turn_number
             })
     inference_results = []
+    trace_results = []
     for i in tqdm(range(0, len(batch_data), args.batch_size), desc="Batch inference"):
         batch = batch_data[i:i+args.batch_size]
         batch_metadata = metadata[i:i+args.batch_size]
@@ -114,9 +159,23 @@ def main(args):
                 "predicted_track_ids": result['retrieval_items'],
                 "predicted_response": result["response"]
             })
+            # V0PlusCompilerQU populates `result["trace"]`; other QUs leave it
+            # as None. Save in a sibling file so the main predictions JSON
+            # stays small and easy to diff between runs.
+            trace_results.append({
+                "session_id": batch_metadata[j]['session_id'],
+                "user_id": batch_metadata[j]['user_id'],
+                "turn_number": batch_metadata[j]['turn_number'],
+                "trace": result.get("trace"),
+            })
     os.makedirs(f"{args.exp_dir}/inference/devset", exist_ok=True)
     with open(f"{args.exp_dir}/inference/devset/{args.tid}.json", "w", encoding="utf-8") as f:
         json.dump(inference_results, f, ensure_ascii=False)
+    # Trace sidecar — `default=str` handles datetime.date fields inside the
+    # extracted v0+ state's hard_filters.start/end without a custom encoder.
+    trace_path = f"{args.exp_dir}/inference/devset/{args.tid}_trace.json"
+    with open(trace_path, "w", encoding="utf-8") as f:
+        json.dump(trace_results, f, ensure_ascii=False, default=str)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

@@ -227,6 +227,12 @@ class V0PlusCompilerQU:
     compiler: V0PlusCompiler
     max_in_flight: int = DEFAULT_MAX_IN_FLIGHT
 
+    # Per-call side channel: populated by `batch_compile_track_ids`, reset on
+    # each call. Lets callers (e.g. `run_inference_devset.py`) save the
+    # extractor state + resolver/compiler decisions alongside predictions
+    # without changing the batch return shape.
+    last_traces: list[dict[str, Any]] = field(default_factory=list, init=False, repr=False)
+
     # ------------------------------------------------------------------
     # CRS_BASELINE QU contract
     # ------------------------------------------------------------------
@@ -282,14 +288,20 @@ class V0PlusCompilerQU:
 
     async def _acompile_one(
         self,
+        idx: int,
         session_memory: list[dict[str, Any]],
         topk: int,
         sem: asyncio.Semaphore,
-    ) -> list[str]:
+    ) -> tuple[int, list[str], dict[str, Any]]:
         """Async per-session worker — extractor runs under the semaphore;
-        the synchronous resolver/compiler runs off the event loop via
+        the synchronous compiler runs off the event loop via
         `asyncio.to_thread` so concurrent batch entries don't block each
-        other on Python-bound work."""
+        other on Python-bound work.
+
+        Returns `(idx, track_ids, trace)`. `idx` lets the caller reassemble
+        results in input order; `trace` is the per-turn observability record
+        the caller stashes in `last_traces`.
+        """
         conv, played = session_memory_to_conversation(session_memory, self.catalog)
         async with sem:
             state = await self.extractor.aextract(conv, played)
@@ -299,22 +311,93 @@ class V0PlusCompilerQU:
                 len(conv), len(played),
                 next((c["text"] for c in reversed(conv) if c.get("role") == "user"), "")[:120],
             )
-            return []
+            trace = {
+                "idx": idx,
+                "intent_mode": None,
+                "state": None,
+                "resolver": None,
+                "compiler": {
+                    "n_candidates": 0,
+                    "n_hard_filters": 0,
+                    "n_explicit_rejections": 0,
+                    "extractor_returned_none": True,
+                },
+            }
+            return idx, [], trace
 
-        def _resolve_and_compile() -> tuple[list[str], int, int]:
-            rs = self.resolver.resolve(state, played_track_ids=played)
-            ids = self.compiler.compile(rs)[:topk]
-            return ids, len(state.hard_filters), len(state.explicit_rejections)
+        # Resolver is fast pure-Python work — run inline. Only the compiler
+        # (BM25 + dense + reranking) is heavy enough to be worth pushing off
+        # the event loop. Inlining the resolver gives us `rs` for the trace.
+        rs = self.resolver.resolve(state, played_track_ids=played)
 
-        track_ids, n_filters, n_rejections = await asyncio.to_thread(_resolve_and_compile)
+        def _compile() -> list[str]:
+            return self.compiler.compile(rs)[:topk]
+
+        track_ids = await asyncio.to_thread(_compile)
         if not track_ids:
             logger.warning(
                 "v0+ empty result: compiler returned 0 candidates (async) | "
                 "turns=%d played=%d hard_filters=%d rejections=%d intent=%s",
-                len(conv), len(played), n_filters, n_rejections,
+                len(conv), len(played),
+                len(state.hard_filters), len(state.explicit_rejections),
                 getattr(state.intent_mode, "value", state.intent_mode),
             )
-        return track_ids
+
+        # Build the per-turn trace. Resolver fields are pulled directly from
+        # `ResolvedConversationState` — currently exposes `resolved_rejections`
+        # (per-rejection artist/track ids) and `track_feedback_artist_ids`
+        # (resolved artist for each track-feedback entry). We flatten these
+        # into top-level rejection id lists for easier downstream inspection.
+        rejected_track_ids: list[str] = []
+        rejected_artist_ids: list[str] = []
+        for rej in rs.resolved_rejections.values():
+            rejected_track_ids.extend(rej.track_ids)
+            rejected_artist_ids.extend(rej.artist_ids)
+        # Track-feedback-derived artist rejections (compiler demotes these).
+        for tf in state.track_feedback:
+            if tf.role == "rejected":
+                aid = rs.track_feedback_artist_ids.get(tf.track_id)
+                if aid is not None:
+                    rejected_artist_ids.append(aid)
+        rejected_tags = [
+            er.value for er in state.explicit_rejections
+            if er.kind == "tag" and er.value
+        ]
+        positive_tags = [
+            me.value for me in state.mentioned_entities
+            if me.sentiment > 0 and me.type == "tag" and me.value
+        ]
+        # Anchor tracks/artists for centroid + tag expansion (mirrors what
+        # the compiler considers a "positive" reference).
+        anchor_track_ids: list[str] = []
+        for tf in state.track_feedback:
+            if tf.role in ("accepted", "seed") and tf.overall_sentiment > 0:
+                anchor_track_ids.append(tf.track_id)
+        anchor_track_ids.extend(state.referenced_track_ids)
+        anchor_artist_ids = [
+            me.value for me in state.mentioned_entities
+            if me.sentiment > 0 and me.type == "artist" and me.value
+        ]
+        trace = {
+            "idx": idx,
+            "intent_mode": getattr(state.intent_mode, "value", str(state.intent_mode)),
+            "state": state.model_dump(mode="json"),
+            "resolver": {
+                "anchor_track_ids": anchor_track_ids,
+                "anchor_artist_ids": anchor_artist_ids,
+                "rejected_track_ids": rejected_track_ids,
+                "rejected_artist_ids": rejected_artist_ids,
+                "rejected_tags": rejected_tags,
+                "positive_tags": positive_tags,
+                "played_track_ids": list(rs.played_track_ids),
+            },
+            "compiler": {
+                "n_candidates": len(track_ids),
+                "n_hard_filters": len(state.hard_filters),
+                "n_explicit_rejections": len(state.explicit_rejections),
+            },
+        }
+        return idx, track_ids, trace
 
     def batch_compile_track_ids(
         self,
@@ -323,20 +406,35 @@ class V0PlusCompilerQU:
     ) -> list[list[str]]:
         """Parallel batch fan-out via asyncio + semaphore. Each batch entry
         is independent (extractor is stateless re. prior turns), so we run
-        them concurrently capped at `self.max_in_flight` in-flight calls."""
+        them concurrently capped at `self.max_in_flight` in-flight calls.
+
+        Side effect: populates `self.last_traces` with one trace dict per
+        input session, ordered to match the returned list. Callers that want
+        observability into extractor / resolver / compiler decisions read
+        `last_traces` immediately after this call returns.
+        """
         if not session_memories:
+            self.last_traces = []
             return []
 
-        async def _run() -> list[list[str]]:
+        async def _run() -> list[tuple[int, list[str], dict[str, Any]]]:
             sem = asyncio.Semaphore(self.max_in_flight)
-            tasks = [self._acompile_one(sm, topk, sem) for sm in session_memories]
+            tasks = [
+                self._acompile_one(i, sm, topk, sem)
+                for i, sm in enumerate(session_memories)
+            ]
             return await asyncio.gather(*tasks)
 
         # `asyncio.run` creates and tears down its own loop. CRS_BASELINE's
         # batch_chat is called from a sync context (run_inference_devset.py),
         # so this is safe. If a future caller already has a running loop,
         # they should call `_run` directly.
-        return asyncio.run(_run())
+        results = asyncio.run(_run())
+        # `asyncio.gather` preserves task order, but sort by idx defensively
+        # so this stays correct if the run helper ever swaps in `as_completed`.
+        results.sort(key=lambda x: x[0])
+        self.last_traces = [trace for _, _, trace in results]
+        return [track_ids for _, track_ids, _ in results]
 
 
 # ----------------------------------------------------------------------

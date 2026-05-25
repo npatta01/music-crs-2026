@@ -349,6 +349,54 @@ def test_batch_compile_track_ids_handles_empty_batch():
     ext = _FakeExtractor(state=_state())
     qu = _build_qu_with_extractor(ext, max_in_flight=4)
     assert qu.batch_compile_track_ids([], topk=10) == []
+    # Empty batch should still reset the trace list (so a previous call's
+    # traces don't leak into an empty rerun).
+    assert qu.last_traces == []
+
+
+def test_batch_compile_track_ids_populates_last_traces():
+    """The QU records a per-session trace so callers (e.g. run_inference_devset)
+    can save extracted state + resolver/compiler decisions alongside predictions.
+
+    Contract: `last_traces` is set on every `batch_compile_track_ids` call,
+    one entry per input session, in input order, with the documented shape.
+    """
+    state = _state(
+        turn_intent="more like Morphine",
+        mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)],
+        explicit_rejections=[ExplicitRejection(kind="artist", value="Fugazi", source_turn=2)],
+    )
+    qu = _build_qu(state)
+    session_memories = [
+        [{"role": "user", "content": "hi"}],
+        [{"role": "user", "content": "bye"}],
+    ]
+    out = qu.batch_compile_track_ids(session_memories, topk=10)
+    assert len(out) == 2
+    assert len(qu.last_traces) == 2
+    for trace in qu.last_traces:
+        assert trace["intent_mode"] == "refinement"
+        # Full state dump round-trips fields the caller cares about.
+        assert trace["state"]["turn_intent"] == "more like Morphine"
+        # Resolver block carries the resolved rejection ids + anchor lists.
+        assert "anchor_artist_ids" in trace["resolver"]
+        assert "rejected_artist_ids" in trace["resolver"]
+        # Compiler block carries the summary counts.
+        assert trace["compiler"]["n_explicit_rejections"] == 1
+        assert trace["compiler"]["n_candidates"] == len(out[0])
+
+
+def test_batch_compile_track_ids_trace_handles_extractor_failure():
+    """When the extractor returns None for a session, the trace still records
+    that fact (so the user can tell extractor failure from compiler emptiness)."""
+    qu = _build_qu(state=None)
+    out = qu.batch_compile_track_ids([[{"role": "user", "content": "x"}]], topk=10)
+    assert out == [[]]
+    assert len(qu.last_traces) == 1
+    t = qu.last_traces[0]
+    assert t["state"] is None
+    assert t["intent_mode"] is None
+    assert t["compiler"]["extractor_returned_none"] is True
 
 
 def test_batch_compile_track_ids_returns_results_in_input_order():

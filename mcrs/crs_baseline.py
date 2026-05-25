@@ -150,9 +150,24 @@ class CRS_BASELINE:
         # stage0. system prompt
         system_prompt = self._get_system_prompt(user_id)
         # stage1. retrieval
-        retrieval_input = self.qu.transform_query(self.session_memory)
-        retrieval_items = self.retrieval.text_to_item_retrieval(retrieval_input, topk=self.retrieval_topk)
-        recommend_item = self.item_db.id_to_metadata(retrieval_items[0])
+        # QUs that implement `compile_track_ids` (e.g. V0PlusCompilerQU) own
+        # the full extract → resolve → compile → top-K pipeline and bypass
+        # `self.retrieval` entirely.
+        if hasattr(self.qu, "compile_track_ids"):
+            retrieval_items = self.qu.compile_track_ids(
+                self.session_memory, topk=self.retrieval_topk
+            )
+        else:
+            retrieval_input = self.qu.transform_query(self.session_memory)
+            retrieval_items = self.retrieval.text_to_item_retrieval(
+                retrieval_input, topk=self.retrieval_topk
+            )
+        # When retrieval comes back empty (e.g. v0+ extractor failed and the
+        # compiler had no anchors), pass `recommend_item=None` to the LM
+        # instead of crashing on `retrieval_items[0]`. Eval treats the empty
+        # list as zero hits, which is the correct signal — popularity backfill
+        # here would silently inflate metrics.
+        recommend_item = self.item_db.id_to_metadata(retrieval_items[0]) if retrieval_items else None
         # stage2. response generation
         response = self.lm.response_generation(system_prompt, self.session_memory, recommend_item)
         return {
@@ -191,19 +206,38 @@ class CRS_BASELINE:
             sys_prompts.append(self._get_system_prompt(user_id))
             session_memories.append(session_memory)
 
-        if hasattr(self.qu, "batch_transform_queries"):
-            retrieval_inputs = self.qu.batch_transform_queries(session_memories)
+        # QUs that own the full pipeline (V0PlusCompilerQU) provide
+        # `batch_compile_track_ids` and bypass `self.retrieval`.
+        batch_traces: list[Any] = []
+        if hasattr(self.qu, "batch_compile_track_ids"):
+            batch_retrieval_items = self.qu.batch_compile_track_ids(
+                session_memories, topk=self.retrieval_topk
+            )
+            # V0PlusCompilerQU stashes per-session traces here as a side effect.
+            batch_traces = list(getattr(self.qu, "last_traces", []) or [])
+        elif hasattr(self.qu, "compile_track_ids"):
+            batch_retrieval_items = [
+                self.qu.compile_track_ids(sm, topk=self.retrieval_topk)
+                for sm in session_memories
+            ]
         else:
-            retrieval_inputs = [self.qu.transform_query(session_memory) for session_memory in session_memories]
+            if hasattr(self.qu, "batch_transform_queries"):
+                retrieval_inputs = self.qu.batch_transform_queries(session_memories)
+            else:
+                retrieval_inputs = [self.qu.transform_query(session_memory) for session_memory in session_memories]
 
-        # Stage 1: Batch retrieval
-        if hasattr(self.retrieval, 'batch_text_to_item_retrieval'):
-            batch_retrieval_items = self.retrieval.batch_text_to_item_retrieval(retrieval_inputs, topk=self.retrieval_topk)
-        else:
-            # Fallback to sequential retrieval if batch method not available
-            batch_retrieval_items = [self.retrieval.text_to_item_retrieval(inp, topk=self.retrieval_topk) for inp in retrieval_inputs]
+            # Stage 1: Batch retrieval
+            if hasattr(self.retrieval, 'batch_text_to_item_retrieval'):
+                batch_retrieval_items = self.retrieval.batch_text_to_item_retrieval(retrieval_inputs, topk=self.retrieval_topk)
+            else:
+                # Fallback to sequential retrieval if batch method not available
+                batch_retrieval_items = [self.retrieval.text_to_item_retrieval(inp, topk=self.retrieval_topk) for inp in retrieval_inputs]
 
-        recommend_items = [self.item_db.id_to_metadata(items[0]) for items in batch_retrieval_items]
+        # See `chat` above — empty retrieval -> recommend_item=None, not a crash.
+        recommend_items = [
+            self.item_db.id_to_metadata(items[0]) if items else None
+            for items in batch_retrieval_items
+        ]
 
         # Stage 2: Batch response generation
         if hasattr(self.lm, 'batch_response_generation'):
@@ -212,6 +246,11 @@ class CRS_BASELINE:
             # Fallback to sequential generation if batch method not available
             responses = [self.lm.response_generation(sys_prompts[i], session_memories[i], recommend_items[i])
                         for i in range(len(batch_data))]
+
+        # Pad traces to match batch length so non-v0+ QUs (which don't produce
+        # traces) get `None` rather than IndexError.
+        if len(batch_traces) < len(batch_data):
+            batch_traces = batch_traces + [None] * (len(batch_data) - len(batch_traces))
 
         # Prepare results
         results = []
@@ -222,6 +261,7 @@ class CRS_BASELINE:
                 "retrieval_items": batch_retrieval_items[i],
                 "recommend_item": recommend_items[i],
                 "response": responses[i],
+                "trace": batch_traces[i],
             })
 
         return results
