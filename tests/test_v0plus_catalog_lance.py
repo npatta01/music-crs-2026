@@ -202,3 +202,37 @@ def test_vector_falls_back_to_lance_query_when_not_eager(tmp_path):
     )
     # Fixture has no vector columns at all
     assert cat.vector("t-in", "nonexistent_field") is None
+
+
+def test_multi_artist_tracks_are_indexed_under_all_credited_artists(tmp_path):
+    """A collaboration track must be discoverable via either artist name AND must
+    appear in tracks_by_artist_id for every credited artist_id. Earlier versions
+    of LanceDbCatalog only indexed _first(artist_name) / _first(artist_id), which
+    silently dropped collaborations from resolver fuzzy match + explicit-rejection
+    hard-exclude (parity gap vs HFTalkPlayCatalog). Regression guard."""
+    db = lancedb.connect(str(tmp_path))
+    rows = [
+        # Solo track by Alice
+        {"track_id": "t-solo",  "release_date": date(2010, 1, 1), "popularity": 0.5,
+         "track_name": ["Solo"], "artist_name": ["Alice"], "artist_id": ["a1"],
+         "album_name": ["X"], "album_id": ["x1"], "tag_list": []},
+        # Collab credited to BOTH Alice and Bob
+        {"track_id": "t-collab", "release_date": date(2012, 1, 1), "popularity": 0.5,
+         "track_name": ["Collab"], "artist_name": ["Alice", "Bob"], "artist_id": ["a1", "b1"],
+         "album_name": ["Y"], "album_id": ["y1"], "tag_list": []},
+        # Solo track by Bob
+        {"track_id": "t-bob",   "release_date": date(2014, 1, 1), "popularity": 0.5,
+         "track_name": ["BobSong"], "artist_name": ["Bob"], "artist_id": ["b1"],
+         "album_name": ["Z"], "album_id": ["z1"], "tag_list": []},
+    ]
+    db.create_table("music_track_catalog", data=rows)
+    cat = LanceDbCatalog(db_uri=str(tmp_path), table_name="music_track_catalog")
+
+    # Both artists are known
+    assert set(cat.artist_names) == {"Alice", "Bob"}
+    # Name → id resolution works for either credited artist
+    assert cat.artist_id_of_name("Alice") == "a1"
+    assert cat.artist_id_of_name("Bob") == "b1"
+    # The collab shows up under BOTH artists' track lists
+    assert set(cat.tracks_by_artist_id("a1")) == {"t-solo", "t-collab"}
+    assert set(cat.tracks_by_artist_id("b1")) == {"t-collab", "t-bob"}

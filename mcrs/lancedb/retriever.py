@@ -22,6 +22,7 @@ from mcrs.milvus.indexing import (
     milvus_safe_field_name,
     resolve_bm25_combined_text_field,
 )
+from mcrs.retrieval_modules.base import FieldQuery
 
 LANCEDB_VECTOR_FIELDS = frozenset(milvus_safe_field_name(name) for name in EMBEDDING_FIELDS)
 
@@ -169,10 +170,17 @@ class LanceDbRetriever:
         if not isinstance(fusion, dict) or fusion.get("method") != "weighted_rrf":
             raise ValueError("retrieval_config.fusion.method must be 'weighted_rrf'")
 
+        # `searches` is optional: callers that use the imperative
+        # `text_to_item_retrieval_channels` API don't need a declarative search
+        # list. When `searches` is provided it must be a non-empty list of
+        # well-formed search specs (validated below).
         searches = config.get("searches")
-        if not isinstance(searches, list) or not searches:
-            raise ValueError("retrieval_config.searches must be a non-empty list")
-        self.searches = tuple(self._parse_search(search) for search in searches)
+        if searches is None:
+            self.searches: tuple = ()
+        else:
+            if not isinstance(searches, list) or not searches:
+                raise ValueError("retrieval_config.searches, when present, must be a non-empty list")
+            self.searches = tuple(self._parse_search(search) for search in searches)
 
         connect_fn = connect or connect_lancedb
         self.db = connect_fn(self.db_uri)
@@ -364,6 +372,12 @@ class LanceDbRetriever:
         return hits
 
     def text_to_item_retrieval(self, query: str, topk: int) -> list[str]:
+        if not self.searches:
+            raise RuntimeError(
+                "text_to_item_retrieval requires `searches` in the retrieval config. "
+                "For the Retriever-Protocol API (FieldQuery clauses + dense), use "
+                "`search` or `search_embedding` instead."
+            )
         result_sets = []
         pad_single_search = len(self.searches) == 1 and isinstance(
             self.searches[0],
@@ -432,3 +446,139 @@ class LanceDbRetriever:
 
     def retrieve_batch(self, queries: list[str], topk: int) -> list[list[str]]:
         return self.batch_text_to_item_retrieval(queries, topk=topk)
+
+    # ---------------------------------------------------------------------
+    # Retriever Protocol implementation (see mcrs/retrieval_modules/base.py).
+    #
+    # The compiler issues exactly two calls per turn: one `search` with N
+    # FieldQuery clauses (BM25 across whichever fields have content) and one
+    # `search_embedding`. Cross-modal fusion of those two ranked lists is the
+    # compiler's job; intra-BM25 fusion across clauses lives here because the
+    # backend can decide whether to use native multi-field BM25 (Tantivy,
+    # Milvus) or simulate via per-field calls + weighted RRF.
+    # ---------------------------------------------------------------------
+
+    @property
+    def supported_text_fields(self) -> frozenset[str]:
+        return frozenset(BM25_EXPERIMENTAL_FIELDS)
+
+    @property
+    def supported_vector_fields(self) -> frozenset[str]:
+        return LANCEDB_VECTOR_FIELDS
+
+    def search(
+        self,
+        clauses: list[FieldQuery],
+        *,
+        topk: int = 1000,
+    ) -> list[tuple[str, float]]:
+        """BM25/FTS over one or more field-targeted clauses.
+
+        Issues a SINGLE tantivy Boolean(SHOULD) query with one MatchQuery per
+        clause — true Solr-style multi-field BM25 in one call. Per-field
+        boosts are honored via MatchQuery's `boost` parameter; tantivy
+        computes BM25 across all fields and produces a single ranked list.
+
+        Empty / whitespace-only clauses are skipped. Returns ranked
+        `(track_id, score)` pairs (higher score = more relevant).
+        """
+        if not clauses:
+            return []
+        valid: list[FieldQuery] = []
+        for c in clauses:
+            if not c.query.strip():
+                continue
+            if c.field not in BM25_EXPERIMENTAL_FIELDS:
+                raise ValueError(
+                    f"Unsupported BM25 field: {c.field!r}. "
+                    f"Valid options: {sorted(BM25_EXPERIMENTAL_FIELDS)}"
+                )
+            valid.append(c)
+        if not valid:
+            return []
+
+        # Build one MatchQuery per clause — phrase is the whole query string;
+        # tantivy tokenizes per-column internally. Boost = field weight.
+        match_clauses = [
+            (
+                Occur.SHOULD,
+                MatchQuery(
+                    c.query,
+                    bm25_text_field_name(c.field),
+                    boost=float(c.boost),
+                ),
+            )
+            for c in valid
+        ]
+        bool_query = BooleanQuery(match_clauses)
+
+        hits = (
+            self.table.search(bool_query, query_type="fts")
+            .limit(topk)
+            .select(["track_id", "_score"])
+            .to_list()
+        )
+        out: list[tuple[str, float]] = []
+        for hit in hits:
+            tid = _hit_track_id(hit)
+            if tid is None:
+                continue
+            out.append((tid, float(hit.get("_score", 0.0))))
+        return out
+
+    def search_embedding(
+        self,
+        query_vector: list[float],
+        *,
+        vector_field: str,
+        topk: int = 1000,
+        distance_type: str = "cosine",
+        filter_missing: bool = True,
+    ) -> list[tuple[str, float]]:
+        """Dense ANN against one vector column with a caller-supplied vector.
+
+        Returns ranked (track_id, similarity) pairs. Higher = more similar;
+        backend converts native distances per `distance_type` so the caller
+        never has to remember which conventions are flipped.
+        """
+        if vector_field not in LANCEDB_VECTOR_FIELDS:
+            raise ValueError(
+                f"Unsupported LanceDB vector field: {vector_field!r}. "
+                f"Valid options: {sorted(LANCEDB_VECTOR_FIELDS)}"
+            )
+        query_builder = self.table.search(
+            list(query_vector),
+            query_type="vector",
+            vector_column_name=vector_field,
+        ).distance_type(distance_type)
+        if filter_missing:
+            query_builder = query_builder.where(
+                f"{has_embedding_field_name(vector_field)} = true"
+            )
+        hits = (
+            query_builder
+            .limit(topk)
+            .select(["track_id", "_distance"])
+            .to_list()
+        )
+        out: list[tuple[str, float]] = []
+        for hit in hits:
+            tid = _hit_track_id(hit)
+            if tid is None:
+                continue
+            distance = float(hit.get("_distance", 0.0))
+            out.append((tid, _distance_to_similarity(distance, distance_type)))
+        return out
+
+
+def _distance_to_similarity(distance: float, distance_type: str) -> float:
+    """Backend-side flip so the Retriever Protocol contract holds:
+    higher = more similar."""
+    if distance_type == "cosine":
+        # LanceDB cosine returns 1 - cos_sim; invert to recover cos_sim.
+        return 1.0 - distance
+    if distance_type in ("dot", "ip", "inner_product"):
+        # Inner product: higher already = more similar; pass through.
+        return distance
+    # l2, euclidean, or anything else with "lower = closer" semantics.
+    return 1.0 / (1.0 + distance)

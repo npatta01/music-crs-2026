@@ -107,20 +107,25 @@ class LanceDbCatalog:
         for row in df.to_dict(orient="records"):
             tid = str(row["track_id"])
             self._per_track[tid] = row
-            artist_name = _first(row.get("artist_name"))
+            # Index ALL co-credited artists (parity with HFTalkPlayCatalog) —
+            # taking only the first artist would silently drop collaborations
+            # from resolver fuzzy match + explicit-rejection hard-exclude.
+            artist_names = _list_of_str(row.get("artist_name"))
+            artist_ids = _list_of_str(row.get("artist_id"))
             track_name = _first(row.get("track_name"))
-            artist_id = _first(row.get("artist_id"))
-            if artist_name and artist_name not in artist_seen:
-                artist_seen.add(artist_name)
-                self._artist_names.append(artist_name)
-                if artist_id:
-                    self._artist_name_to_id[artist_name] = artist_id
+            for name, aid in zip(artist_names, artist_ids):
+                name = name.strip()
+                if name and name not in artist_seen:
+                    artist_seen.add(name)
+                    self._artist_names.append(name)
+                    if aid:
+                        self._artist_name_to_id[name] = aid
+                if aid:
+                    self._tracks_by_artist_id.setdefault(aid, []).append(tid)
             if track_name and track_name not in track_seen:
                 track_seen.add(track_name)
                 self._track_names.append(track_name)
                 self._track_name_to_id[track_name] = tid
-            if artist_id:
-                self._tracks_by_artist_id.setdefault(artist_id, []).append(tid)
             rd = row.get("release_date")
             if isinstance(rd, _date):
                 self._release_date_by_tid[tid] = rd
