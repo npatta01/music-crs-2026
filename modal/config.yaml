@@ -23,8 +23,13 @@ inference:
   blindset_batch_size: 64
 
 lancedb:
-  inference_cpu: 8.0
-  inference_memory: 32768
+  # v0+ inference is async I/O bound (OpenRouter LLM extractor); the container's
+  # CPU + memory profile is dominated by network waits and the in-memory catalog.
+  # Measured at max_in_flight=8: ~1.3 cores used, ~11 GiB RAM used. Reserved
+  # 2 cores / 16 GiB gives ~50% headroom and ~75% cost reduction vs the prior
+  # 8 cores / 32 GiB. Bump CPU back to 4 if max_in_flight goes to 32+.
+  inference_cpu: 2.0
+  inference_memory: 16384
   query_cpu: 4.0
   query_memory: 16384
   query_scaledown_window: 300
@@ -38,3 +43,18 @@ litellm:
   embedding_model: "openrouter/openai/text-embedding-3-small"
   chat_model: "openrouter/google/gemma-3-4b-it"
   small_chat_model: "huggingface/featherless-ai/Qwen/Qwen3-0.6B"
+
+# Modal GPU-backed Qwen3-Embedding-0.6B service used by the v0+ compiler.
+# Loaded on @modal.enter, scaled to zero after `scaledown_window` seconds idle.
+# T4 is the cheapest GPU that fits the 0.6B model with headroom; bump to L4 /
+# A10G if encoder throughput becomes a bottleneck again.
+qwen3_encoder:
+  gpu: "T4"
+  cpu: 2.0
+  memory: 8192
+  timeout: 600
+  scaledown_window: 300
+  max_containers: 4
+  # bfloat16 on T4 — same accuracy as fp32 for 0.6B at half the memory.
+  torch_dtype: "bfloat16"
+  batch_size: 32

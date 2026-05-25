@@ -380,15 +380,34 @@ class V0PlusCompiler:
             for me in state.mentioned_entities
             if me.sentiment > 0 and me.type == "tag" and me.value
         }
-        rejected_artist_ids = {
+        # Soft rejection: artists inferred from `track_feedback` (user rejected a
+        # specific track, so we infer the artist is unwelcome). Multiplied, not
+        # excluded, because the artist signal here is indirect.
+        soft_rejected_artist_ids = {
             rs.track_feedback_artist_ids.get(tf.track_id)
             for tf in state.track_feedback
             if tf.role == "rejected"
         }
-        rejected_artist_ids.discard(None)
+        soft_rejected_artist_ids.discard(None)
+
+        # HARD rejection: `explicit_rejections` resolved by the resolver. These
+        # are the user's direct "no more X" statements — we drop matching
+        # tracks entirely, not just demote. Resolver may attach BOTH track_ids
+        # and artist_ids per rejection (e.g. kind="track" still resolves the
+        # owning artist; kind="artist" resolves all that artist's track_ids).
+        hard_excluded_track_ids: set[str] = set()
+        hard_excluded_artist_ids: set[str] = set()
+        for rj in rs.resolved_rejections.values():
+            hard_excluded_track_ids.update(rj.track_ids)
+            hard_excluded_artist_ids.update(rj.artist_ids)
 
         adjusted: list[tuple[str, float]] = []
         for tid, score in fused:
+            if tid in hard_excluded_track_ids:
+                continue
+            artist_id = self.catalog.artist_id_of(tid)
+            if artist_id is not None and artist_id in hard_excluded_artist_ids:
+                continue
             tags = {t.lower() for t in self.catalog.tag_list(tid)}
             mult = 1.0
             if rejected_tags:
@@ -397,8 +416,7 @@ class V0PlusCompiler:
                 mult *= (1.0 + self.cfg.positive_tag_multiplier_step) ** len(
                     tags & positive_tags
                 )
-            artist_id = self.catalog.artist_id_of(tid)
-            if artist_id is not None and artist_id in rejected_artist_ids:
+            if artist_id is not None and artist_id in soft_rejected_artist_ids:
                 mult *= self.cfg.same_artist_demote
             adjusted.append((tid, score * mult))
         adjusted.sort(key=lambda x: -x[1])
