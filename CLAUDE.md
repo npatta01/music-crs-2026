@@ -40,6 +40,10 @@ bash prepare_submission.sh
 
 Results saved to `exp/inference/{split}/{tid}.json`.
 
+## Architecture notes
+
+- v0+ catalog source of truth is LanceDB (`mcrs/qu_modules/v0plus_catalog_lance.py`). The HF-backed `HFTalkPlayCatalog` is retained only for unit tests.
+
 ## Extend
 
 See `tips/` for directions: better item representations, reranker modules, generative retrieval.

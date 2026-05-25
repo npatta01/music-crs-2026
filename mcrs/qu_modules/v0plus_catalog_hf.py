@@ -28,10 +28,6 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Iterable, Mapping
 
-DEFAULT_METADATA_DATASET = "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
-DEFAULT_EMBEDDINGS_DATASET = "talkpl-ai/TalkPlayData-Challenge-Track-Embeddings"
-DEFAULT_METADATA_SPLIT = "all_tracks"
-DEFAULT_EMBEDDINGS_SPLIT = "all_tracks"
 DEFAULT_VECTOR_COLUMN = "metadata-qwen3_embedding_0.6b"
 
 # Default vector columns to load from the HF embeddings dataset. The v0+ compiler
@@ -63,10 +59,11 @@ def _first_or_none(value: Any) -> Any:
 
 @dataclass
 class HFTalkPlayCatalog:
-    """In-memory snapshot of the TalkPlayData track catalog + metadata embeddings.
+    """In-memory CompilerCatalog used by unit tests.
 
-    Implements the `CompilerCatalog` Protocol. Prefer `__init__` for production
-    (loads from HF); use `from_rows` for tests / synthetic data.
+    Production v0+ inference reads from `LanceDbCatalog`
+    (`mcrs/qu_modules/v0plus_catalog_lance.py`); this class is retained for
+    synthetic-data tests via `from_rows`.
     """
 
     # ---- Per-track storage ----
@@ -108,33 +105,6 @@ class HFTalkPlayCatalog:
     # ------------------------------------------------------------------
     # Construction
     # ------------------------------------------------------------------
-
-    @classmethod
-    def from_hf(
-        cls,
-        metadata_dataset: str = DEFAULT_METADATA_DATASET,
-        embeddings_dataset: str = DEFAULT_EMBEDDINGS_DATASET,
-        metadata_split: str = DEFAULT_METADATA_SPLIT,
-        embeddings_split: str = DEFAULT_EMBEDDINGS_SPLIT,
-        vector_columns: tuple[str, ...] | list[str] = DEFAULT_VECTOR_COLUMNS_FOR_V0PLUS,
-    ) -> "HFTalkPlayCatalog":
-        """Load both datasets and build the catalog. Triggers network IO and
-        any cached HF dataset materialization.
-
-        `vector_columns` is the list of HF-side embedding column names to keep
-        in memory (e.g. ``metadata-qwen3_embedding_0.6b``). Loading only the
-        columns we'll actually use saves ~hundreds of MB on the multi-modal
-        embeddings dataset.
-        """
-        from datasets import load_dataset
-
-        meta_ds = load_dataset(metadata_dataset, split=metadata_split)
-        emb_ds = load_dataset(embeddings_dataset, split=embeddings_split)
-        return cls.from_rows(
-            metadata_rows=meta_ds,
-            embedding_rows=emb_ds,
-            vector_columns=vector_columns,
-        )
 
     @classmethod
     def from_rows(
