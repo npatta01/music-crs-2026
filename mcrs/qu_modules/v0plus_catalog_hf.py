@@ -236,6 +236,18 @@ class HFTalkPlayCatalog:
             return [str(tags)]
         return [str(t) for t in tags if t]
 
+    def track_label(self, track_id: str) -> str:
+        meta = self.metadata.get(track_id)
+        if not meta:
+            return ""
+        track_names = meta.get("track_name") or []
+        artist_names = meta.get("artist_name") or []
+        track = (track_names[0] if isinstance(track_names, list) and track_names else str(track_names or "")).strip()
+        artist = (artist_names[0] if isinstance(artist_names, list) and artist_names else str(artist_names or "")).strip()
+        if artist and track:
+            return f"{artist} - {track}"
+        return track or artist
+
     def vector(self, track_id: str, vector_field: str) -> list[float] | None:
         store = self._vectors_by_field.get(vector_field)
         if store is None:

@@ -154,9 +154,16 @@ class CRS_BASELINE:
         # the full extract → resolve → compile → top-K pipeline and bypass
         # `self.retrieval` entirely.
         if hasattr(self.qu, "compile_track_ids"):
-            retrieval_items = self.qu.compile_track_ids(
-                self.session_memory, topk=self.retrieval_topk
-            )
+            import inspect
+            sig = inspect.signature(self.qu.compile_track_ids)
+            if "user_id" in sig.parameters:
+                retrieval_items = self.qu.compile_track_ids(
+                    self.session_memory, topk=self.retrieval_topk, user_id=user_id,
+                )
+            else:
+                retrieval_items = self.qu.compile_track_ids(
+                    self.session_memory, topk=self.retrieval_topk
+                )
         else:
             retrieval_input = self.qu.transform_query(self.session_memory)
             retrieval_items = self.retrieval.text_to_item_retrieval(
@@ -196,6 +203,7 @@ class CRS_BASELINE:
         # Prepare batch inputs
         sys_prompts = []
         session_memories = []
+        user_ids: list[Any] = []
 
         for data in batch_data:
             user_query = data['user_query']
@@ -205,21 +213,40 @@ class CRS_BASELINE:
 
             sys_prompts.append(self._get_system_prompt(user_id))
             session_memories.append(session_memory)
+            user_ids.append(user_id)
 
         # QUs that own the full pipeline (V0PlusCompilerQU) provide
-        # `batch_compile_track_ids` and bypass `self.retrieval`.
+        # `batch_compile_track_ids` and bypass `self.retrieval`. Forward
+        # user_ids when the QU accepts the kwarg so user-source centroid
+        # branches can look up the user's vector. Keep back-compat for
+        # QUs that don't (signature inspection avoids a hard requirement).
         batch_traces: list[Any] = []
         if hasattr(self.qu, "batch_compile_track_ids"):
-            batch_retrieval_items = self.qu.batch_compile_track_ids(
-                session_memories, topk=self.retrieval_topk
-            )
+            import inspect
+            sig = inspect.signature(self.qu.batch_compile_track_ids)
+            if "user_ids" in sig.parameters:
+                batch_retrieval_items = self.qu.batch_compile_track_ids(
+                    session_memories, topk=self.retrieval_topk, user_ids=user_ids,
+                )
+            else:
+                batch_retrieval_items = self.qu.batch_compile_track_ids(
+                    session_memories, topk=self.retrieval_topk,
+                )
             # V0PlusCompilerQU stashes per-session traces here as a side effect.
             batch_traces = list(getattr(self.qu, "last_traces", []) or [])
         elif hasattr(self.qu, "compile_track_ids"):
-            batch_retrieval_items = [
-                self.qu.compile_track_ids(sm, topk=self.retrieval_topk)
-                for sm in session_memories
-            ]
+            import inspect
+            sig = inspect.signature(self.qu.compile_track_ids)
+            if "user_id" in sig.parameters:
+                batch_retrieval_items = [
+                    self.qu.compile_track_ids(sm, topk=self.retrieval_topk, user_id=uid)
+                    for sm, uid in zip(session_memories, user_ids)
+                ]
+            else:
+                batch_retrieval_items = [
+                    self.qu.compile_track_ids(sm, topk=self.retrieval_topk)
+                    for sm in session_memories
+                ]
         else:
             if hasattr(self.qu, "batch_transform_queries"):
                 retrieval_inputs = self.qu.batch_transform_queries(session_memories)

@@ -41,8 +41,19 @@ import asyncio
 import json
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any
+
+# `chat_history_parser` (mcrs/inference_utils.py) rewrites music-role content
+# from a bare track_id into a yaml-style metadata blob via
+# `MusicCatalogDB.id_to_metadata`, e.g.
+#   "track_id: 2445ed62-..., track_name: heart-shaped box, artist_name: nirvana, ..."
+# Other QU types want that prose form. The v0+ extractor wants clean
+# track_ids so the LLM has a clean `played_track_ids` list to reference.
+# We undo the rewrite here: pull the UUID off the front, then let the
+# catalog produce the human-readable label.
+_METADATA_BLOB_TRACK_ID_RE = re.compile(r"^track_id:\s*([0-9a-fA-F\-]{36})\b")
 
 from experiments.analysis.conversation_state_extraction_bakeoff.prompts import (
     build_messages,
@@ -53,7 +64,8 @@ from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
 )
 from mcrs.embeddings.base import EmbeddingClient
 from mcrs.embeddings.qwen3_embedding import Qwen3EmbeddingClient
-from mcrs.qu_modules.compiler_v0plus import CompilerConfig, DenseBranch, V0PlusCompiler
+from mcrs.qu_modules.compiler_v0plus import CentroidOnlyBranch, CompilerConfig, DenseBranch, V0PlusCompiler
+from mcrs.qu_modules.user_embeddings import UserEmbeddings
 from mcrs.qu_modules.fuzzy_matcher import FuzzyMatcher, RapidfuzzCatalogMatcher
 from mcrs.qu_modules.resolver_v0plus import V0PlusResolver
 from mcrs.qu_modules.v0plus_catalog import CompilerCatalog
@@ -80,16 +92,25 @@ class LiteLLMExtractor:
     max_tokens: int = 1500
     timeout_s: int = 90
 
+    # Temperature used for the JSON-decode retry. The LLM occasionally enters
+    # a degenerative-output mode (one valid field followed by a stutter of
+    # whitespace tokens until max_tokens), which is a deterministic function
+    # of (model, prompt, temperature). Bumping temperature for the retry both
+    # bypasses the LiteLLM cache (key includes temperature) and shifts the
+    # sampling trajectory off the degenerative path.
+    retry_temperature: float = 0.3
+
     def _build_kwargs(
         self,
         conversation: list[dict[str, Any]],
         played_track_ids: list[str],
+        temperature: float | None = None,
     ) -> dict[str, Any]:
         messages = build_messages(conversation, played_track_ids)
         kwargs: dict[str, Any] = {
             "model": self.model_name,
             "messages": messages,
-            "temperature": self.temperature,
+            "temperature": self.temperature if temperature is None else temperature,
             "max_tokens": self.max_tokens,
             "timeout": self.timeout_s,
             "response_format": json_schema_for_response_format(),
@@ -103,25 +124,26 @@ class LiteLLMExtractor:
             kwargs["extra_body"] = {"reasoning": {"enabled": False}}
         return kwargs
 
-    def _parse_response(self, raw: str) -> ConversationStateV0Plus | None:
+    def _decode(self, raw: str) -> ConversationStateV0Plus:
+        """Parse a raw LLM response into a state. Raises:
+          - `json.JSONDecodeError` if the response isn't valid JSON. The
+            caller treats this as retryable because it's usually a transient
+            degenerative-generation failure (whitespace stutter).
+          - `pydantic.ValidationError` if the JSON is valid but the schema
+            doesn't match. Not retryable — same model + same input on a
+            retry will likely produce the same wrong-but-valid structure.
+        """
         if not raw:
-            logger.warning("v0+ extractor parse: LLM returned empty content")
-            return None
+            # Treat empty content as a JSON parse failure so the retry kicks in.
+            raise json.JSONDecodeError("empty response", "", 0)
         cleaned = raw.strip()
         if cleaned.startswith("```"):
             cleaned = cleaned.split("```", 2)[1]
             if cleaned.startswith("json"):
                 cleaned = cleaned[4:]
             cleaned = cleaned.rsplit("```", 1)[0].strip()
-        try:
-            parsed = json.loads(cleaned)
-            return ConversationStateV0Plus.model_validate(parsed)
-        except Exception as exc:
-            logger.warning(
-                "v0+ extractor parse/validate failed: %s: %s | raw=%r",
-                type(exc).__name__, exc, raw[:300],
-            )
-            return None
+        parsed = json.loads(cleaned)
+        return ConversationStateV0Plus.model_validate(parsed)
 
     def extract(
         self,
@@ -130,13 +152,40 @@ class LiteLLMExtractor:
     ) -> ConversationStateV0Plus | None:
         import litellm
 
-        try:
-            response = litellm.completion(**self._build_kwargs(conversation, played_track_ids))
-            raw = response.choices[0].message.content or ""
-        except Exception as exc:
-            logger.warning("v0+ extractor LLM call failed: %s: %s", type(exc).__name__, exc)
-            return None
-        return self._parse_response(raw)
+        # Try the configured temperature first; if the response is unparseable
+        # JSON, try once more with retry_temperature to escape any
+        # degenerative path the deterministic call settled into.
+        temps = [self.temperature]
+        if self.retry_temperature != self.temperature:
+            temps.append(self.retry_temperature)
+        for attempt, temp in enumerate(temps, start=1):
+            try:
+                response = litellm.completion(
+                    **self._build_kwargs(conversation, played_track_ids, temperature=temp)
+                )
+                raw = response.choices[0].message.content or ""
+            except Exception as exc:
+                logger.warning(
+                    "v0+ extractor LLM call failed (attempt %d, temp=%.2f): %s: %s",
+                    attempt, temp, type(exc).__name__, exc,
+                )
+                return None
+            try:
+                return self._decode(raw)
+            except json.JSONDecodeError as exc:
+                logger.warning(
+                    "v0+ extractor JSON decode failed (attempt %d, temp=%.2f): %s | raw=%r",
+                    attempt, temp, exc, raw[:200],
+                )
+                continue  # next temperature
+            except Exception as exc:
+                # ValidationError or other schema mismatch — not retryable.
+                logger.warning(
+                    "v0+ extractor schema validate failed (attempt %d, temp=%.2f): %s: %s | raw=%r",
+                    attempt, temp, type(exc).__name__, exc, raw[:200],
+                )
+                return None
+        return None
 
     async def aextract(
         self,
@@ -144,18 +193,40 @@ class LiteLLMExtractor:
         played_track_ids: list[str],
     ) -> ConversationStateV0Plus | None:
         """Async variant of `extract` — used by `abatch_compile_track_ids` to
-        fan out extractor calls concurrently with `asyncio.gather`."""
+        fan out extractor calls concurrently with `asyncio.gather`. Same
+        retry semantics as the sync path."""
         import litellm
 
-        try:
-            response = await litellm.acompletion(**self._build_kwargs(conversation, played_track_ids))
-            raw = response.choices[0].message.content or ""
-        except Exception as exc:
-            logger.warning(
-                "v0+ extractor LLM call failed (async): %s: %s", type(exc).__name__, exc,
-            )
-            return None
-        return self._parse_response(raw)
+        temps = [self.temperature]
+        if self.retry_temperature != self.temperature:
+            temps.append(self.retry_temperature)
+        for attempt, temp in enumerate(temps, start=1):
+            try:
+                response = await litellm.acompletion(
+                    **self._build_kwargs(conversation, played_track_ids, temperature=temp)
+                )
+                raw = response.choices[0].message.content or ""
+            except Exception as exc:
+                logger.warning(
+                    "v0+ extractor LLM call failed (async, attempt %d, temp=%.2f): %s: %s",
+                    attempt, temp, type(exc).__name__, exc,
+                )
+                return None
+            try:
+                return self._decode(raw)
+            except json.JSONDecodeError as exc:
+                logger.warning(
+                    "v0+ extractor JSON decode failed (async, attempt %d, temp=%.2f): %s | raw=%r",
+                    attempt, temp, exc, raw[:200],
+                )
+                continue
+            except Exception as exc:
+                logger.warning(
+                    "v0+ extractor schema validate failed (async, attempt %d, temp=%.2f): %s: %s | raw=%r",
+                    attempt, temp, type(exc).__name__, exc, raw[:200],
+                )
+                return None
+        return None
 
 
 # ----------------------------------------------------------------------
@@ -191,13 +262,23 @@ def session_memory_to_conversation(
         elif role == "assistant":
             conv.append({"turn": turn or 1, "role": "assistant", "text": str(content)})
         elif role == "music":
-            track_id = str(content)
+            raw = str(content)
+            # `chat_history_parser` upstream rewrites music content from the
+            # raw track_id into a yaml-blob via `id_to_metadata`. Strip the
+            # blob back to a UUID so `played_track_ids` and music-turn
+            # `track_id=` are clean. Without this, the extractor LLM sees
+            # 2000-char-per-track blobs in `played_track_ids` and dutifully
+            # echoes those blobs back as track_ids in its output, which then
+            # crashes downstream code that expects UUIDs.
+            m = _METADATA_BLOB_TRACK_ID_RE.match(raw)
+            track_id = m.group(1) if m else raw
             played.append(track_id)
+            # Use "artist - track" so the label format matches the few-shot
+            # examples in prompts.py. Fall back to the UUID prefix when the
+            # catalog doesn't know the track.
             label = ""
             if catalog is not None:
-                aid = catalog.artist_id_of(track_id)
-                # Cheap label: just track_id when we have no easy display string
-                label = f"track={track_id[:8]} artist_id={aid or '?'}"
+                label = catalog.track_label(track_id) or f"track={track_id[:8]}"
             conv.append({"turn": turn or 1, "role": "music", "track_id": track_id, "label": label})
     return conv, played
 
@@ -258,13 +339,18 @@ class V0PlusCompilerQU:
         self,
         session_memory: list[dict[str, Any]],
         topk: int = 1000,
+        user_id: str | None = None,
     ) -> list[str]:
         """Return up to `topk` track_ids. May return an empty list when the
         extractor fails or the compiler finds no candidates that satisfy the
         resolver's filters / rejections. Callers (e.g. `CRS_BASELINE.chat`)
         must handle empty results — popularity backfill is intentionally NOT
         applied here because it would bypass the resolver's hard drops and
-        silently inflate retrieval metrics."""
+        silently inflate retrieval metrics.
+
+        `user_id` is forwarded to the compiler so any user-source centroid
+        branches (e.g. user_cf_bpr) can look up the user's vector. None is
+        fine — user branches just no-op."""
         conv, played = session_memory_to_conversation(session_memory, self.catalog)
         state = self.extractor.extract(conv, played)
         if state is None:
@@ -275,7 +361,7 @@ class V0PlusCompilerQU:
             )
             return []
         rs = self.resolver.resolve(state, played_track_ids=played)
-        track_ids = self.compiler.compile(rs)[:topk]
+        track_ids = self.compiler.compile(rs, user_id=user_id)[:topk]
         if not track_ids:
             logger.warning(
                 "v0+ empty result: compiler returned 0 candidates | "
@@ -292,6 +378,7 @@ class V0PlusCompilerQU:
         session_memory: list[dict[str, Any]],
         topk: int,
         sem: asyncio.Semaphore,
+        user_id: str | None = None,
     ) -> tuple[int, list[str], dict[str, Any]]:
         """Async per-session worker — extractor runs under the semaphore;
         the synchronous compiler runs off the event loop via
@@ -300,7 +387,8 @@ class V0PlusCompilerQU:
 
         Returns `(idx, track_ids, trace)`. `idx` lets the caller reassemble
         results in input order; `trace` is the per-turn observability record
-        the caller stashes in `last_traces`.
+        the caller stashes in `last_traces`. `user_id` is forwarded to the
+        compiler for user-source centroid branches.
         """
         conv, played = session_memory_to_conversation(session_memory, self.catalog)
         async with sem:
@@ -331,7 +419,7 @@ class V0PlusCompilerQU:
         rs = self.resolver.resolve(state, played_track_ids=played)
 
         def _compile() -> list[str]:
-            return self.compiler.compile(rs)[:topk]
+            return self.compiler.compile(rs, user_id=user_id)[:topk]
 
         track_ids = await asyncio.to_thread(_compile)
         if not track_ids:
@@ -403,6 +491,7 @@ class V0PlusCompilerQU:
         self,
         session_memories: list[list[dict[str, Any]]],
         topk: int = 1000,
+        user_ids: list[str | None] | None = None,
     ) -> list[list[str]]:
         """Parallel batch fan-out via asyncio + semaphore. Each batch entry
         is independent (extractor is stateless re. prior turns), so we run
@@ -412,16 +501,28 @@ class V0PlusCompilerQU:
         input session, ordered to match the returned list. Callers that want
         observability into extractor / resolver / compiler decisions read
         `last_traces` immediately after this call returns.
+
+        `user_ids`, if provided, must be parallel to `session_memories` and
+        is forwarded to the compiler per-row for user-source centroid
+        branches. None entries are fine — the user branch just no-ops there.
         """
         if not session_memories:
             self.last_traces = []
             return []
 
+        if user_ids is None:
+            user_ids = [None] * len(session_memories)
+        elif len(user_ids) != len(session_memories):
+            raise ValueError(
+                f"user_ids length {len(user_ids)} must match session_memories "
+                f"length {len(session_memories)}"
+            )
+
         async def _run() -> list[tuple[int, list[str], dict[str, Any]]]:
             sem = asyncio.Semaphore(self.max_in_flight)
             tasks = [
-                self._acompile_one(i, sm, topk, sem)
-                for i, sm in enumerate(session_memories)
+                self._acompile_one(i, sm, topk, sem, user_id=uid)
+                for i, (sm, uid) in enumerate(zip(session_memories, user_ids))
             ]
             return await asyncio.gather(*tasks)
 
@@ -612,6 +713,30 @@ def build_v0plus_compiler_qu(
                         )
                     )
 
+        # Parse centroid_only_branches the same way (each entry: vector_field
+        # + optional weight/topk/distance_type/centroid_source). Used for
+        # cf_bpr / audio / image-style branches that have no encoded query
+        # text. `centroid_source` defaults to "anchor_tracks"; set to "user"
+        # to query the user's precomputed vector instead of the mean of
+        # positive-anchor tracks.
+        raw_centroid = comp_cfg.get("centroid_only_branches")
+        centroid_only_branches: list[CentroidOnlyBranch] | None = None
+        if raw_centroid is not None:
+            centroid_only_branches = []
+            for entry in raw_centroid:
+                if isinstance(entry, str):
+                    centroid_only_branches.append(CentroidOnlyBranch(vector_field=entry))
+                else:
+                    centroid_only_branches.append(
+                        CentroidOnlyBranch(
+                            vector_field=str(entry["vector_field"]),
+                            weight=float(entry.get("weight", 1.0)),
+                            topk=int(entry.get("topk", 1000)),
+                            distance_type=str(entry.get("distance_type", "cosine")),
+                            centroid_source=str(entry.get("centroid_source", "anchor_tracks")),
+                        )
+                    )
+
         config_kwargs: dict[str, Any] = {
             k: v
             for k, v in comp_cfg.items()
@@ -623,10 +748,31 @@ def build_v0plus_compiler_qu(
                 "positive_tag_multiplier_step",
                 "same_artist_demote",
                 "enable_dense",
+                "enable_cf_bpr",
+                "cf_bpr_weight",
+                "cf_bpr_topk",
+                "cf_bpr_vector_field",
+                "cf_bpr_distance_type",
             }
         }
         if dense_branches is not None:
             config_kwargs["dense_branches"] = dense_branches
+        if centroid_only_branches is not None:
+            config_kwargs["centroid_only_branches"] = centroid_only_branches
+
+        # Load UserEmbeddings only if any centroid branch needs it. Avoids
+        # paying the HF dataset load + ~4 MB RAM when nothing uses it.
+        user_embeddings = None
+        if centroid_only_branches and any(
+            b.centroid_source == "user" for b in centroid_only_branches
+        ):
+            ue_cfg = dict(qu_kwargs.get("user_embeddings") or {})
+            user_embeddings = _overrides.get("user_embeddings") or UserEmbeddings(
+                dataset_name=ue_cfg.get(
+                    "dataset_name", "talkpl-ai/TalkPlayData-Challenge-User-Embeddings"
+                ),
+                splits=tuple(ue_cfg.get("splits") or ("train", "test_warm", "test_cold")),
+            )
 
         compiler = V0PlusCompiler(
             catalog,
@@ -639,6 +785,7 @@ def build_v0plus_compiler_qu(
                 final_topk=int(comp_cfg.get("final_topk", 1000)),
                 **config_kwargs,
             ),
+            user_embeddings=user_embeddings,
         )
 
     # Concurrency cap for the async batch fan-out. Conservative default (8)

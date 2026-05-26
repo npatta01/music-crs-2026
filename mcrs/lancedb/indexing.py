@@ -269,25 +269,40 @@ def build_track_lancedb_table(
         raise ValueError("No metadata rows available for LanceDB build")
 
     mode = "overwrite" if drop_existing else "create"
-    # Pin the `release_date` column type to `date32` regardless of what
-    # pyarrow infers from the first batch. PyArrow's normal inference picks
-    # the right type when the batch has at least one non-null `datetime.date`,
-    # but if a batch happens to be all-null (low-density data, small
-    # batch_size, or null-first ordering) it would infer `null` and every
-    # subsequent batch with real dates would fail with a schema mismatch.
-    # An explicit cast on the first batch removes that fragility.
+    # Pin column types explicitly rather than relying on pyarrow inference:
+    #  - `release_date` → `date32`: an all-null first batch would otherwise be
+    #    inferred as `null` and subsequent batches with real dates would fail
+    #    with a schema mismatch.
+    #  - embedding columns → `fixed_size_list<float32>[dim]`: pyarrow infers
+    #    variable-length `list<double>` from python list-of-floats, which is
+    #    not ANN-indexable in LanceDB (the qwen3 columns end up fixed-size
+    #    only because their HF source is already numpy float32; cf_bpr /
+    #    audio_laion_clap / image_siglip2 come in as plain python lists and
+    #    landed as `list<double>` — leaving them unqueryable via ANN).
+    #    Pinning here yields a uniform `fixed_size_list<float32>[dim]` type
+    #    across all embedding columns and halves the on-disk size vs double.
     import pyarrow as pa
-    first_arrow = pa.Table.from_pylist(first_batch)
-    if "release_date" in first_arrow.schema.names:
-        target_schema = pa.schema([
-            f.with_type(pa.date32()) if f.name == "release_date" else f
-            for f in first_arrow.schema
-        ])
-        first_arrow = first_arrow.cast(target_schema)
+
+    def _pin_schema(arrow_table: pa.Table) -> pa.Table:
+        new_fields = []
+        for f in arrow_table.schema:
+            if f.name == "release_date":
+                new_fields.append(f.with_type(pa.date32()))
+            elif vector_dims is not None and f.name in vector_dims:
+                new_fields.append(
+                    f.with_type(pa.list_(pa.float32(), vector_dims[f.name]))
+                )
+            else:
+                new_fields.append(f)
+        return arrow_table.cast(pa.schema(new_fields))
+
+    first_arrow = _pin_schema(pa.Table.from_pylist(first_batch))
     table = db.create_table(table_name, data=first_arrow, mode=mode)
     inserted_rows = len(first_batch)
     for batch in batches:
-        table.add(batch)
+        # Subsequent batches need the same schema cast or `table.add` would
+        # reject them on schema mismatch (list<double> vs fixed_size_list<float32>).
+        table.add(_pin_schema(pa.Table.from_pylist(batch)))
         inserted_rows += len(batch)
 
     for text_field in LANCEDB_FTS_TEXT_FIELDS:
