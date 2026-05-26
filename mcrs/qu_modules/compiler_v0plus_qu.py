@@ -15,24 +15,24 @@ special-case QUs that expose `compile_track_ids(...)` and skip the
 | Field | Purpose |
 |---|---|
 | `extractor` | LLM extractor settings: model_name, api_base, temperature, max_tokens |
-| `lancedb` | retriever settings: db_uri, table_name |
-| `catalog` | HF catalog settings (defaulted to challenge datasets) |
-| `encoder` | Qwen3 encoder settings: device, batch_size, query_instruct |
+| `lancedb` | db_uri, table_name, eager_vector_fields — used for BOTH the LanceDbCatalog (metadata + vectors) and the LanceDbRetriever (BM25 + dense channels) |
+| `encoder` | Qwen3 encoder settings: backend, device, batch_size, query_instruct |
 | `compiler` | `CompilerConfig` knobs (field_boosts, centroid_alpha, ...) |
 | `resolver` | `score_cutoff`, topks |
 
 ## Preconditions for production runs
 
 1. LanceDB table built at `lancedb.db_uri` / `lancedb.table_name` with the
-   `metadata_qwen3_embedding_0_6b` vector column + FTS indexes on the BM25
-   text fields. See `scripts/build_lancedb_index.py`.
+   metadata + the three `*_qwen3_embedding_0_6b` vector columns + FTS
+   indexes on the BM25 text fields. Build it once via
+   `scripts/build_lancedb_index.py`; that step (and only that step)
+   requires HF auth (`uvx hf auth login`) for the source datasets.
 2. LiteLLM proxy running (or OpenRouter API key set) so the extractor LLM
    call can reach `gemma-3-12b-it`.
-3. HF auth (`uvx hf auth login`) for the catalog metadata + embeddings
-   datasets.
 
-For smoke / unit tests, inject `_overrides` to swap in fakes for any of
-the heavyweight components (see `tests/test_v0plus_compiler_qu.py`).
+Inference itself does NOT touch HuggingFace — `LanceDbCatalog` reads the
+prebuilt LanceDB locally. For smoke / unit tests, inject `_overrides` to
+swap in fakes (see `tests/test_v0plus_compiler_qu.py`).
 """
 
 from __future__ import annotations

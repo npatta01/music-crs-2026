@@ -1,13 +1,16 @@
 """Catalog Protocol for the v0+ Resolver and Compiler.
 
 This is the contract the Resolver and Compiler use to talk to the underlying
-track catalog (metadata + precomputed embeddings). The real implementation
-loads from the challenge HF datasets and wires up the LanceDB-side lookups;
-tests use the `DictCatalog` fake in `tests/v0plus_fakes.py`.
+track catalog (metadata + precomputed embeddings). Production wires
+`LanceDbCatalog` (`mcrs/qu_modules/v0plus_catalog_lance.py`), which opens the
+same LanceDB table used for retrieval and builds per-track caches at init.
+Tests use the `HFTalkPlayCatalog.from_rows(...)` synthetic-data fake
+(`mcrs/qu_modules/v0plus_catalog_hf.py`) or the smaller `DictCatalog` fake
+in `tests/v0plus_fakes.py`.
 
 Keeping the contract narrow lets us swap catalog implementations (in-memory
-dict for tests, HF-backed for production, Modal-backed for cloud runs)
-without touching Resolver / Compiler code.
+dict for tests, LanceDB-backed for production) without touching Resolver /
+Compiler code.
 """
 
 from __future__ import annotations
