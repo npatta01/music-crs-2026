@@ -28,12 +28,16 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 | Best generative baseline | `llama1b_bm25_devset` | `NDCG@20 0.0815` | `done` | [llama1b_bm25_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/llama1b_bm25_devset.md) |
 | Best rewrite wave result | `bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset` | `NDCG@20 0.1092` | `done` | [bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset.md) |
 | Best offline hybrid so far | `RRF(bm25_with_tags, dense_qwen3_8b)` | `NDCG@20 0.1072` | `analyzed` | [retrieval_analysis_findings_2026-04-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/retrieval_analysis_findings_2026-04-28.md) |
-| Best v0+ ConversationState compiler | `v0plus_compiler_devset` | `NDCG@20 0.1005` | `analyzed` | [v0plus_compiler_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_devset.md) |
+| Best v0+ ConversationState compiler (BM25-only) | `v0plus_compiler_devset` | `NDCG@20 0.1005` | `superseded` | [v0plus_compiler_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_devset.md) |
+| **Best v0+ retrieval overall (multimodal)** | `v0plus_compiler_image_devset` | `NDCG@20 0.1461` | `analyzed` | [v0plus_compiler_ablation_2026-05-26.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_ablation_2026-05-26.md) |
+| Best v0+ candidate coverage (Hit@1000) | `v0plus_compiler_all_devset` | `Hit@1000 0.6730` | `analyzed` | [v0plus_compiler_ablation_2026-05-26.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_ablation_2026-05-26.md) |
 
 ## Current Active Work
 
 | Workstream | Status | Where to read |
 |---|---|---|
+| v0+ compiler multimodal embedding ablation | `analyzed` | [v0plus_compiler_ablation_2026-05-26.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_ablation_2026-05-26.md) |
+| Cross-encoder reranker over top-200 (attacks novel-artist gap) | `planned` | [experiment_log.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md) |
 | Hybrid sparse+dense retrieval follow-up | `planned` | [experiment_log.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md) |
 | Conversation-aware query representation direction | `analyzed` | [analysis/query_intent_v1/README.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/query_intent_v1/README.md) |
 | Milvus native sparse retrieval evaluation | `analyzed` | [milvus_bm25_with_tag_list_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/milvus_bm25_with_tag_list_devset.md) |

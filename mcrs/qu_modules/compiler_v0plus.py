@@ -61,6 +61,32 @@ class DenseBranch:
 
 
 @dataclass
+class CentroidOnlyBranch:
+    """A vector branch whose query is a precomputed centroid (no encoded
+    query text). Two centroid sources are supported:
+
+    - `centroid_source="anchor_tracks"` (default): centroid = mean of the
+      positive-anchor track vectors in `vector_field`. Skipped when there
+      are no anchors (turn 1, pure pivot, zero-positive-feedback turns).
+      Used for cf_bpr (co-listening), audio_laion_clap (sonic),
+      image_siglip2 (cover art).
+
+    - `centroid_source="user"`: centroid = the current user's precomputed
+      vector in `vector_field` (loaded from the user-embeddings catalog).
+      Fires every turn including turn 1, so long as a `user_id` is provided
+      and the user has a vector in that field. Used for user_cf_bpr — the
+      only user-side modality available in TalkPlayData. Provides a per-user
+      "always-on" preference prior that complements per-turn anchor signals.
+    """
+
+    vector_field: str
+    weight: float = 1.0
+    topk: int = 1000
+    distance_type: str = "cosine"
+    centroid_source: str = "anchor_tracks"  # or "user"
+
+
+@dataclass
 class CompilerConfig:
     """Configuration for the v0+ Compiler.
 
@@ -120,6 +146,23 @@ class CompilerConfig:
     # are skipped and the compiler runs BM25-only.
     enable_dense: bool = True
 
+    # Centroid-only branches: behavioral / sonic / visual signals with no
+    # encoded query text. Each entry fires one `retriever.search_embedding`
+    # call with the anchor-track centroid in the branch's vector space. Used
+    # for `cf_bpr` (co-listening), `audio_laion_clap` (sonic), `image_siglip2`
+    # (cover art). Branches skip when there are no positive anchors.
+    centroid_only_branches: list[CentroidOnlyBranch] = field(default_factory=list)
+
+    # Legacy single-cf_bpr knobs. If `enable_cf_bpr=True` and
+    # `centroid_only_branches` is empty, the compiler synthesizes a 1-entry
+    # centroid_only_branches list from these. Kept for back-compat with
+    # configs/v0plus_compiler_cfbpr_devset.yaml.
+    enable_cf_bpr: bool = False
+    cf_bpr_topk: int = 1000
+    cf_bpr_weight: float = 1.0
+    cf_bpr_vector_field: str = "cf_bpr"
+    cf_bpr_distance_type: str = "cosine"
+
 
 class V0PlusCompiler:
     """Turn a ResolvedConversationState into top-N ranked track_ids."""
@@ -130,17 +173,22 @@ class V0PlusCompiler:
         retriever: Retriever,
         encoder: EmbeddingClient,
         config: CompilerConfig | None = None,
+        user_embeddings: "UserEmbeddings | None" = None,
     ) -> None:
         self.catalog = catalog
         self.retriever = retriever
         self.encoder = encoder
         self.cfg = config or CompilerConfig()
+        # Optional user-side embeddings lookup. Required only when a config
+        # uses `centroid_only_branches` with `centroid_source="user"`. None
+        # otherwise, and the user branch is silently skipped.
+        self.user_embeddings = user_embeddings
 
     # ------------------------------------------------------------------
     # Top-level
     # ------------------------------------------------------------------
 
-    def compile(self, rs: ResolvedConversationState) -> list[str]:
+    def compile(self, rs: ResolvedConversationState, user_id: str | None = None) -> list[str]:
         state = rs.state
 
         # 1. Pre-fusion catalog mask from hard_filters.release_date
@@ -164,11 +212,37 @@ class V0PlusCompiler:
                 )
                 dense_branch_results.append(hits)
 
+        # 3b. Centroid-only branches — one `search_embedding` call per entry.
+        # Two centroid sources:
+        #  - "anchor_tracks": mean of positive-anchor track vectors. Skipped
+        #    when there are no anchors (turn 1, pure pivot turns).
+        #  - "user": the current user's precomputed vector. Fires every turn
+        #    so long as a user_id is supplied AND the user has a vector in
+        #    this field. Used for user_cf_bpr (only user-side modality in
+        #    TalkPlayData).
+        centroid_branches = self._resolve_centroid_only_branches()
+        centroid_branch_results: list[tuple[list[tuple[str, float]], float]] = []
+        for cb in centroid_branches:
+            centroid = self._centroid_for_branch(rs, user_id, cb)
+            if centroid is None:
+                continue
+            hits = self.retriever.search_embedding(
+                query_vector=centroid,
+                vector_field=cb.vector_field,
+                topk=cb.topk,
+                distance_type=cb.distance_type,
+            )
+            centroid_branch_results.append((hits, cb.weight))
+
         # 4. Apply pre-fusion mask (post-hoc until the retriever supports masks)
         bm25_hits = [(t, s) for t, s in bm25_hits if t in candidate_mask]
         dense_branch_results = [
             [(t, s) for t, s in hits if t in candidate_mask]
             for hits in dense_branch_results
+        ]
+        centroid_branch_results = [
+            ([(t, s) for t, s in hits if t in candidate_mask], w)
+            for hits, w in centroid_branch_results
         ]
 
         # 5. Hard-drop set (played + rejections + tf.rejected)
@@ -178,11 +252,18 @@ class V0PlusCompiler:
             [(t, s) for t, s in hits if t not in hard_drop]
             for hits in dense_branch_results
         ]
+        centroid_branch_results = [
+            ([(t, s) for t, s in hits if t not in hard_drop], w)
+            for hits, w in centroid_branch_results
+        ]
 
         # 6. Weighted RRF fusion (compiler-owned, cross-modal)
         weighted_pools: list[tuple[list[tuple[str, float]], float]] = [(bm25_hits, 1.0)]
         for hits, branch in zip(dense_branch_results, self.cfg.dense_branches):
             weighted_pools.append((hits, branch.weight))
+        for hits, weight in centroid_branch_results:
+            if hits:
+                weighted_pools.append((hits, weight))
         fused = self._rrf_fuse_weighted(weighted_pools, k=self.cfg.rrf_k)
 
         # 7. Soft (de)promotes
@@ -447,6 +528,44 @@ class V0PlusCompiler:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _centroid_for_branch(
+        self,
+        rs: ResolvedConversationState,
+        user_id: str | None,
+        cb: CentroidOnlyBranch,
+    ) -> list[float] | None:
+        """Dispatch on centroid_source. Returns None when the branch should
+        be skipped (no anchors / no user_id / user has no vector in this
+        field / user-embeddings catalog not configured)."""
+        if cb.centroid_source == "anchor_tracks":
+            return self._anchor_centroid_for_field(rs, cb.vector_field)
+        if cb.centroid_source == "user":
+            if user_id is None or self.user_embeddings is None:
+                return None
+            vec = self.user_embeddings.vector(user_id, cb.vector_field)
+            if vec is None or not vec:
+                return None
+            return _normalize(list(vec))
+        # Unknown source — fail silently to skip rather than crash inference.
+        return None
+
+    def _resolve_centroid_only_branches(self) -> list[CentroidOnlyBranch]:
+        """Either an explicit `centroid_only_branches` list or — for back-compat
+        with the older `enable_cf_bpr` knobs — a 1-entry synthesized list. If
+        both are empty/false, returns []."""
+        if self.cfg.centroid_only_branches:
+            return list(self.cfg.centroid_only_branches)
+        if self.cfg.enable_cf_bpr:
+            return [
+                CentroidOnlyBranch(
+                    vector_field=self.cfg.cf_bpr_vector_field,
+                    weight=self.cfg.cf_bpr_weight,
+                    topk=self.cfg.cf_bpr_topk,
+                    distance_type=self.cfg.cf_bpr_distance_type,
+                )
+            ]
+        return []
 
     def _anchor_track_ids(
         self, state: ConversationStateV0Plus

@@ -94,6 +94,16 @@ class DictCatalog:
         meta = self.tracks.get(track_id)
         return list(meta.get("tag_list", []) if meta else [])
 
+    def track_label(self, track_id: str) -> str:
+        meta = self.tracks.get(track_id)
+        if not meta:
+            return ""
+        track = str(meta.get("track_name") or "").strip()
+        artist = str(meta.get("artist_name") or "").strip()
+        if artist and track:
+            return f"{artist} - {track}"
+        return track or artist
+
     # ----- Embeddings -----
 
     def vector(self, track_id: str, vector_field: str) -> list[float] | None:

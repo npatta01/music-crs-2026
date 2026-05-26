@@ -11,6 +11,7 @@ Used by:
 
 from __future__ import annotations
 
+import re as _re
 from datetime import date as _date
 from enum import Enum
 from typing import Literal
@@ -27,9 +28,45 @@ class IntentMode(str, Enum):
 
 Sentiment = Literal[-1, 0, 1]
 
+# Production TalkPlay track_ids are UUID v4 strings, but tests and synthetic
+# data use ergonomic ids like "t-fugazi-1". The real attack surface is the
+# LLM occasionally hallucinating a stringified row dump as a track_id (e.g.
+# `"track_id: 72a..., track_name: when will my life begin..., ..."`) — those
+# strings contain quotes, colons, commas, and whitespace and crash the
+# catalog's SQL WHERE clause. We accept any "safe identifier" — bare ASCII
+# letters / digits / hyphens / underscores — and reject anything with the
+# dangerous characters. Covers UUIDs, test ids, and any plausible production
+# id format while still catching the hallucinated-row-dump pattern.
+_TRACK_ID_SAFE_RE = _re.compile(r"^[A-Za-z0-9_\-]+$")
+
+
+def _validate_track_id(value: str) -> str:
+    if not isinstance(value, str) or not _TRACK_ID_SAFE_RE.match(value):
+        raise ValueError(
+            f"track_id must be a bare identifier (letters/digits/hyphens/"
+            f"underscores only), got {value!r}. Likely cause: LLM emitted a "
+            "stringified row dump or other malformed value instead of just "
+            "the id."
+        )
+    return value
+
+
+def _filter_valid_track_ids(values: list[str]) -> list[str]:
+    """Drop entries that aren't safe identifier-shaped. Used on list-of-id
+    fields where one bad LLM hallucination shouldn't invalidate the whole
+    turn — we silently drop bad ids and keep the rest. For single-value
+    fields (TrackFeedback.track_id) we raise instead, because there's no
+    graceful per-list-entry recovery."""
+    return [v for v in values if isinstance(v, str) and _TRACK_ID_SAFE_RE.match(v)]
+
 
 class TrackFeedback(BaseModel):
     track_id: str = Field(..., description="A played track_id from played_track_ids.")
+
+    @field_validator("track_id")
+    @classmethod
+    def _check_track_id(cls, v: str) -> str:
+        return _validate_track_id(v)
     overall_sentiment: Sentiment = Field(
         ...,
         description=(
@@ -206,6 +243,13 @@ class ConversationStateV0Plus(BaseModel):
             "tracks whose tag_list overlaps."
         ),
     )
+
+    @field_validator("referenced_track_ids", mode="after")
+    @classmethod
+    def _filter_referenced_track_ids(cls, value: list[str]) -> list[str]:
+        # Per-entry recovery: one hallucinated id shouldn't void the whole
+        # turn. Drop non-UUID-shaped entries silently.
+        return _filter_valid_track_ids(value)
 
     class Config:
         extra = "forbid"

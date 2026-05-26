@@ -2,13 +2,80 @@
 
 Usage:
     python scripts/merge_shard_results.py --tid v0plus_compiler_devset --num_shards 4 --exp-dir exp
+
+Behavior:
+  - Reads shards 0..num_shards-1 for both predictions and traces.
+  - Each row is keyed by (session_id, turn_number); output is always unique
+    by that key.
+  - If shards have overlapping keys (e.g. a leftover shard from a prior run
+    with different --num_shards), deduplicates by keeping the row from the
+    highest shard index (last-shard-index wins) and prints a warning with
+    the per-shard contribution and example conflicts. The merge proceeds —
+    it does not abort.
 """
 from __future__ import annotations
 
 import argparse
 import json
-import os
+import sys
 from pathlib import Path
+
+
+def _key(row: dict) -> tuple:
+    return (row["session_id"], row["turn_number"])
+
+
+def _load_shards(base: Path, tid: str, num_shards: int, kind: str) -> list[tuple[int, Path, list[dict]]]:
+    out = []
+    for shard_id in range(num_shards):
+        shard_path = base / f"{tid}.shard_{shard_id}{kind}.json"
+        if not shard_path.exists():
+            raise FileNotFoundError(f"Missing shard output: {shard_path}")
+        with open(shard_path) as f:
+            out.append((shard_id, shard_path, json.load(f)))
+    return out
+
+
+def _merge(
+    shards: list[tuple[int, Path, list[dict]]],
+    *,
+    label: str,
+    tid: str,
+) -> list[dict]:
+    raw_total = sum(len(rows) for _, _, rows in shards)
+    seen: dict[tuple, int] = {}  # key -> shard_id that currently owns it
+    merged: dict[tuple, dict] = {}
+    conflicts: list[tuple[tuple, int, int]] = []  # (key, prev_shard, new_shard)
+
+    for shard_id, _path, rows in shards:
+        for row in rows:
+            k = _key(row)
+            if k in seen and seen[k] != shard_id:
+                conflicts.append((k, seen[k], shard_id))
+            seen[k] = shard_id
+            merged[k] = row  # last shard index wins on conflict
+
+    if conflicts:
+        n_conflicts = len(conflicts)
+        contrib: dict[int, int] = {sid: 0 for sid, _, _ in shards}
+        for _k, owner_sid in seen.items():
+            contrib[owner_sid] += 1
+
+        lines = [
+            f"[{label}] WARNING: shards for tid={tid!r} have overlapping (session_id, turn_number) keys.",
+            f"  Raw total rows:   {raw_total}",
+            f"  Unique keys:      {len(merged)}",
+            f"  Overlapping rows: {n_conflicts}  (dedup: kept the row from the highest shard index)",
+            "  Per-shard contribution after dedup:",
+        ]
+        for sid, _path, rows in shards:
+            lines.append(f"    shard_{sid}: {len(rows):5d} raw rows -> {contrib[sid]:5d} kept")
+        lines.append("  First 3 conflicting keys (key, earlier_shard -> later_shard):")
+        for k, prev_sid, new_sid in conflicts[:3]:
+            lines.append(f"    {k}  shard_{prev_sid} -> shard_{new_sid}")
+        print("\n".join(lines), file=sys.stderr)
+
+    return list(merged.values())
 
 
 def main():
@@ -21,17 +88,13 @@ def main():
 
     base = Path(args.exp_dir) / "inference" / args.split
     for kind in ("", "_trace"):
-        rows: list = []
-        for shard_id in range(args.num_shards):
-            shard_path = base / f"{args.tid}.shard_{shard_id}{kind}.json"
-            if not shard_path.exists():
-                raise FileNotFoundError(f"Missing shard output: {shard_path}")
-            with open(shard_path) as f:
-                rows.extend(json.load(f))
+        label = "predictions" if kind == "" else "traces"
+        shards = _load_shards(base, args.tid, args.num_shards, kind)
+        rows = _merge(shards, label=label, tid=args.tid)
         out_path = base / f"{args.tid}{kind}.json"
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(rows, f, ensure_ascii=False)
-        print(f"Wrote {out_path}  ({len(rows)} rows from {args.num_shards} shards)")
+        print(f"Wrote {out_path}  ({len(rows)} unique rows from {args.num_shards} shards)")
 
 
 if __name__ == "__main__":

@@ -10,10 +10,40 @@ from dataclasses import dataclass, field
 from datetime import date as _date
 from typing import Any, TYPE_CHECKING
 
+# Vector columns that don't follow the `*_embedding_*` naming convention but
+# are still per-track precomputed vectors we want to load. Add new
+# alternative-modality columns here as the LanceDB index grows.
+#
+# All three are stored as `fixed_size_list<float32>[dim]` (pinned by
+# `mcrs.lancedb.indexing.build_track_lancedb_table`) so they are ANN-queryable
+# via the LanceDB retriever just like the qwen3 columns.
+_NON_EMBEDDING_VECTOR_COLUMNS = (
+    "cf_bpr",            # 128-d collaborative-filtering BPR vector
+    "audio_laion_clap",  # 512-d LAION CLAP audio embedding
+    "image_siglip2",     # 768-d SigLIP-2 cover-image embedding
+)
+
 if TYPE_CHECKING:
     from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
         HardFilter,
     )
+
+
+import re as _re
+
+# "Safe identifier" shape: bare ASCII letters / digits / hyphens / underscores.
+# Matches both UUID v4 and test fixtures like "t-fugazi-1"; rejects the row-
+# dump-shaped strings the LLM extractor occasionally emits (those contain
+# quotes / colons / whitespace that would break the SQL WHERE clause in
+# `LanceDbCatalog.vector`). Schema-level validation in
+# `experiments/analysis/conversation_state_extraction_bakeoff/schema.py`
+# enforces the same rule so bad ids never reach this code path in production —
+# this is defense in depth for callers that bypass the schema.
+_SAFE_ID_RE = _re.compile(r"^[A-Za-z0-9_\-]+$")
+
+
+def _looks_like_track_id(value: Any) -> bool:
+    return isinstance(value, str) and bool(_SAFE_ID_RE.match(value))
 
 
 def _is_sequence(value: Any) -> bool:
@@ -88,7 +118,9 @@ class LanceDbCatalog:
         # loading of these columns is Task 5.
         existing = {f.name for f in self._table.schema}
         for name in existing:
-            if "embedding" in name and not name.startswith("has_"):
+            if name.startswith("has_"):
+                continue
+            if "embedding" in name or name in _NON_EMBEDDING_VECTOR_COLUMNS:
                 self._vector_columns_available.add(name)
 
         wanted = [
@@ -191,6 +223,16 @@ class LanceDbCatalog:
             return []
         return _list_of_str(row.get("tag_list"))
 
+    def track_label(self, track_id: str) -> str:
+        row = self._per_track.get(track_id)
+        if row is None:
+            return ""
+        track = _first(row.get("track_name")) or ""
+        artist = _first(row.get("artist_name")) or ""
+        if artist and track:
+            return f"{artist} - {track}"
+        return track or artist
+
     def vector(self, track_id: str, vector_field: str) -> list[float] | None:
         # Eager path: O(1) dict lookup if this field was preloaded at init.
         cached = self._vectors.get(vector_field)
@@ -200,15 +242,28 @@ class LanceDbCatalog:
         # for tests/callers that don't opt into eager loading.
         if vector_field not in self._vector_columns_available:
             return None
-        # lancedb 0.30.2: use the search builder for column projection +
-        # where-filtering. `.limit(0)` returns all matching rows.
-        df = (
-            self._table.search()
-            .select(["track_id", vector_field])
-            .where(f"track_id = '{track_id}'")
-            .limit(0)
-            .to_pandas()
-        )
+        # Defense in depth: the LLM extractor occasionally hallucinates a
+        # whole stringified track record as a `track_id` (e.g. a yaml dump
+        # of the row's metadata). Such values contain quotes and break the
+        # SQL WHERE clause below. Catch malformed inputs by shape first,
+        # then escape single quotes for valid-looking ids, and finally fall
+        # back to None on any LanceDB error so a single bad anchor doesn't
+        # crash an entire shard.
+        if not _looks_like_track_id(track_id):
+            return None
+        escaped = track_id.replace("'", "''")
+        try:
+            # lancedb 0.30.2: use the search builder for column projection +
+            # where-filtering. `.limit(0)` returns all matching rows.
+            df = (
+                self._table.search()
+                .select(["track_id", vector_field])
+                .where(f"track_id = '{escaped}'")
+                .limit(0)
+                .to_pandas()
+            )
+        except Exception:
+            return None
         if df.empty:
             return None
         v = df.iloc[0][vector_field]

@@ -61,6 +61,15 @@ class CompilerCatalog(Protocol):
         """Genre / mood tags for the track (lowercase, deduped). Empty list if none."""
         ...
 
+    def track_label(self, track_id: str) -> str:
+        """Human-readable "artist - track" label for prompt rendering. Empty
+        string if the track is unknown. Used by the extractor prompt's music
+        turns so the labels in real conversations match the few-shot format
+        the model was tuned on (mismatched label formats caused the model to
+        hallucinate stringified row dumps as track_ids — see
+        experiments/v0plus_compiler_cfbpr_devset.md)."""
+        ...
+
     # ----- embedding lookups (Compiler centroid mixing) -----
 
     def vector(self, track_id: str, vector_field: str) -> list[float] | None:
