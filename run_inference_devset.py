@@ -134,6 +134,21 @@ def main(args):
     num_shards = getattr(args, "num_shards", 1)
     shard_id = getattr(args, "shard_id", 0)
     if num_shards > 1:
+        if args.num_sessions > 0:
+            # Both knobs together would silently overlap: each shard process
+            # independently random-samples N sessions (no seed), then slices
+            # its window out of THAT random pool — so shards work on different
+            # random samples of the corpus, not a single partition. The
+            # documented sharded entry point (modal/app.py::run_inference_sharded)
+            # always passes num_sessions=0, so this only fires for direct CLI
+            # callers who combine both flags.
+            raise ValueError(
+                "Cannot combine --num_sessions > 0 with --num_shards > 1: "
+                "each shard would independently random-sample the corpus, "
+                "producing overlapping pools rather than a clean partition. "
+                "Use --num_sessions for quick smoke tests OR --num_shards for "
+                "parallel full-devset runs, not both."
+            )
         if not (0 <= shard_id < num_shards):
             raise ValueError(
                 f"shard_id={shard_id} out of range for num_shards={num_shards}"

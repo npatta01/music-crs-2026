@@ -269,7 +269,22 @@ def build_track_lancedb_table(
         raise ValueError("No metadata rows available for LanceDB build")
 
     mode = "overwrite" if drop_existing else "create"
-    table = db.create_table(table_name, data=first_batch, mode=mode)
+    # Pin the `release_date` column type to `date32` regardless of what
+    # pyarrow infers from the first batch. PyArrow's normal inference picks
+    # the right type when the batch has at least one non-null `datetime.date`,
+    # but if a batch happens to be all-null (low-density data, small
+    # batch_size, or null-first ordering) it would infer `null` and every
+    # subsequent batch with real dates would fail with a schema mismatch.
+    # An explicit cast on the first batch removes that fragility.
+    import pyarrow as pa
+    first_arrow = pa.Table.from_pylist(first_batch)
+    if "release_date" in first_arrow.schema.names:
+        target_schema = pa.schema([
+            f.with_type(pa.date32()) if f.name == "release_date" else f
+            for f in first_arrow.schema
+        ])
+        first_arrow = first_arrow.cast(target_schema)
+    table = db.create_table(table_name, data=first_arrow, mode=mode)
     inserted_rows = len(first_batch)
     for batch in batches:
         table.add(batch)
