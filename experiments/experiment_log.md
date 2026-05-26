@@ -420,3 +420,54 @@ Next step:
 
 Status:
 - Analyzed
+
+## 2026-05-26 - v0+ compiler multimodal embedding ablation
+
+Question:
+Now that v0+'s LanceDB has all 6 track-side embedding columns properly indexed (fixed_size_list<float32>[dim]) and a UserEmbeddings catalog is available, which embedding signals — fused into the compiler's RRF pool alongside BM25 — actually lift NDCG@20 over the BM25-only baseline?
+
+Runs (all on 1000-session devset, 4-shard Modal inference, identical extractor / resolver / fusion, varying only retrieval branches):
+- `v0plus_compiler_devset` (BM25-only baseline)
+- `v0plus_compiler_user_devset` (BM25 + user_cf_bpr — user-source centroid)
+- `v0plus_compiler_cfbpr_devset` (BM25 + cf_bpr anchor-track centroid)
+- `v0plus_compiler_audio_devset` (BM25 + audio_laion_clap anchor centroid)
+- `v0plus_compiler_image_devset` (BM25 + image_siglip2 anchor centroid)
+- `v0plus_compiler_audio_image_devset` (BM25 + audio + image)
+- `v0plus_compiler_attributes_devset` (BM25 + attributes_qwen3 dense)
+- `v0plus_compiler_lyrics_devset` (BM25 + lyrics_qwen3 dense)
+- `v0plus_compiler_metadata_devset` (BM25 + metadata_qwen3 dense)
+- `v0plus_compiler_all_devset` (BM25 + everything)
+
+Headline (NDCG@20, ranked):
+- `+ image_siglip2`: **`0.1461`** (`+48.4%` vs BM25 baseline `0.0984`) ← new canonical
+- `+ all embeddings`: `0.1428` (+45.1%) ← best on Hit@1000 and novel-artist Hit@20
+- `+ audio + image`: `0.1421` (+44.4%)
+- `+ metadata_qwen3`: `0.1191` (+21.0%) ← only qwen3 dense that helps
+- `+ audio_laion_clap`: `0.1082` (+10.0%)
+- `+ cf_bpr (anchor)`: `0.1036` (+5.3%) — handicapped by 12.7% cold-cache extractor-fail rate
+- `+ user_cf_bpr`: `0.0996` (+1.2%)
+- baseline (BM25): `0.0984`
+- `+ attributes_qwen3`: `0.0919` (-6.7%)
+- `+ lyrics_qwen3`: `0.0897` (-8.9%)
+
+Takeaways:
+- `image_siglip2` is the single biggest lever. Hit@1 doubles (`+107%`), NDCG@20 lifts `+48%`, MRR lifts `+61%`. Cover-art embeddings cluster tracks by genre/era/visual aesthetic — a remarkably strong same-artist / same-era signal.
+- All embeddings combined gives the best **novel-artist** Hit@20 (`0.120` vs baseline `0.093`, `+29%`) and the best Hit@1000 (`0.673`, `+18%`). It's the only config that meaningfully moves the novel-artist needle.
+- `cf_bpr (anchor)` and `user_cf_bpr` underperform expectations. cf_bpr's behavioral neighborhood for an anchor track is dominated by *more tracks by the same artist* (BPR factorization concentrates within-artist co-listening), so it strengthens continuation but actively hurts novel-artist Hit@20 (-8%). user_cf_bpr's all-time taste prior is too coarse to compete with even BM25 on turn 1 (-16% turn-1 NDCG@20).
+- Two qwen3 dense branches (attributes, lyrics) drag macro NDCG@20 down. Only `metadata_qwen3` helps (`+21%`) — the metadata text contains the same surface forms as the LLM's `turn_intent`, so it acts as a fuzzy semantic-BM25.
+- Per-turn: image is the only config that fully flattens the turn 6-8 NDCG@20 decay that's been the v0+ pipeline's biggest depth-related failure mode.
+- Empty-pool from extractor failure is rare in steady state — ~0.16% of turns once the LiteLLM cache is warm. The 12.7% spike in the cf_bpr run was a one-off (first run with the rewritten extractor prompt, fully-cold cache, DeepInfra rate-limited).
+- The dominant remaining gap is **novel-artist coverage**: 64% of turns are novel-artist, baseline Hit@20 = `0.093`, best config = `0.120`. Every retrieval branch we have starts from an anchor centroid and is structurally biased toward continuation. No centroid-based modality alone (or in combination) brings novel-artist Hit@20 above `0.13`. Next lever is a cross-encoder reranker over top-200 — anchor-free, scores (intent_text, candidate_text) pairs directly.
+
+Linked reports:
+- [`v0plus_compiler_ablation_2026-05-26.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_ablation_2026-05-26.md) — canonical writeup with cohort + per-turn + gap analysis
+- [`v0plus_compiler_cfbpr_devset.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_cfbpr_devset.md) — per-run cf_bpr report (root-cause-analysis of the cold-cache extractor-fail spike)
+
+Next step:
+- Ship `v0plus_compiler_image_devset` as the new canonical retrieval config (`NDCG@20 0.1461`).
+- Try weighted RRF (image w=2.0 + audio w=1.0) — leverages image's top-of-list precision and audio's pool-coverage asymmetrically.
+- Build a cross-encoder reranker over the top-200 candidate pool — only structural lever that can attack the novel-artist gap.
+- Drop `attributes_qwen3` and `lyrics_qwen3` from future hybrid configs (both regress).
+
+Status:
+- Analyzed
