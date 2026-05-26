@@ -31,7 +31,7 @@ Rules:
    - `playlist_build`: cumulative build ("now add some 90s grunge to the mix").
 6. `track_feedback` only includes tracks the user actually reacted to. Silence is not a reaction. `role` mirrors sentiment: sentiment=1 -> `accepted` (default for ALL positive reactions); sentiment=-1 -> `rejected`; sentiment=0 -> `neutral` (user acknowledged the track but it wasn't quite right — "cool but not what I wanted"). `seed` is RESERVED — use only when the user EXPLICITLY pins a specific track as THE anchor: naming it by title ("more like Clair de lune"), referring to it by position ("like that second one"), or asking an analytical question about that one track ("what makes Duality engaging?"). Do NOT use `seed` for ordinary positive reactions to the most recently played track — that's `accepted`. Expect 0 or 1 `seed` entries per turn, never one on every turn.
 7. `explicit_rejections` is for FUTURE exclusion ("not X", "no more X", "different from X", "too heavy"). It is a stricter version of `mentioned_entities` with sentiment=-1: rejections also imply the compiler will hard-exclude. Duplicate the entity in both lists when the user is explicitly excluding it from future recs.
-8. `hard_filters` in v0+ supports `release_date` only. "Songs from the 90s" -> between [1990-01-01, 1999-12-31]. "Nothing newer than 2010" -> < 2010-01-01.
+8. `hard_filters` in v0+ supports `release_date` only. Emit YYYY-MM-DD dates into typed `start` (lower bound, inclusive for `between`, strict for `>`) and `end` (upper bound, inclusive for `between`, strict for `<`). Examples: "Songs from the 90s" -> {op="between", start="1990-01-01", end="1999-12-31"}. "Nothing newer than 2010" -> {op="<", end="2010-01-01"}. "After 2020" -> {op=">", start="2020-01-01"}.
 """
 
 
@@ -89,7 +89,7 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
                 {"type": "tag", "value": "90s", "sentiment": 1},
             ],
             "hard_filters": [
-                {"field": "release_date", "op": "<", "value": "2000-01-01"}
+                {"field": "release_date", "op": "<", "end": "2000-01-01"}
             ],
             "explicit_rejections": [],
         },

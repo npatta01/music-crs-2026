@@ -128,17 +128,22 @@ def main(args):
         n = min(args.num_sessions, len(db))
         db = db.select(random.sample(range(len(db)), n))
         print(f"Running on {n} randomly sampled sessions.")
-    if args.num_shards > 1:
-        if not (0 <= args.shard_id < args.num_shards):
+    # Sharding kwargs were added later; programmatic callers (e.g. tests using
+    # SimpleNamespace) may not set them. Read defensively so the script stays
+    # backward-compatible with the pre-sharding arg surface.
+    num_shards = getattr(args, "num_shards", 1)
+    shard_id = getattr(args, "shard_id", 0)
+    if num_shards > 1:
+        if not (0 <= shard_id < num_shards):
             raise ValueError(
-                f"shard_id={args.shard_id} out of range for num_shards={args.num_shards}"
+                f"shard_id={shard_id} out of range for num_shards={num_shards}"
             )
         # Contiguous slicing: shard k gets session indices [k*N/S, (k+1)*N/S).
         total = len(db)
-        start = (args.shard_id * total) // args.num_shards
-        end   = ((args.shard_id + 1) * total) // args.num_shards
+        start = (shard_id * total) // num_shards
+        end   = ((shard_id + 1) * total) // num_shards
         db = db.select(range(start, end))
-        print(f"Shard {args.shard_id}/{args.num_shards}: {len(db)} sessions "
+        print(f"Shard {shard_id}/{num_shards}: {len(db)} sessions "
               f"(indices [{start}, {end}))")
     # Prepare all batch data at once
     batch_data, metadata = [], []
@@ -181,10 +186,12 @@ def main(args):
                 "trace": result.get("trace"),
             })
     os.makedirs(f"{args.exp_dir}/inference/devset", exist_ok=True)
-    out_path = f"{args.exp_dir}/inference/devset/{args.tid}{args.output_suffix}.json"
+    # `output_suffix` is sharding-time metadata; programmatic callers may not set it.
+    output_suffix = getattr(args, "output_suffix", "")
+    out_path = f"{args.exp_dir}/inference/devset/{args.tid}{output_suffix}.json"
     # Trace sidecar — `default=str` handles datetime.date fields inside the
     # extracted v0+ state's hard_filters.start/end without a custom encoder.
-    trace_path = f"{args.exp_dir}/inference/devset/{args.tid}{args.output_suffix}_trace.json"
+    trace_path = f"{args.exp_dir}/inference/devset/{args.tid}{output_suffix}_trace.json"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(inference_results, f, ensure_ascii=False)
     with open(trace_path, "w", encoding="utf-8") as f:
