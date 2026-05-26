@@ -1,0 +1,126 @@
+# v0+ ConversationState Compiler — devset config
+#
+# Preconditions (see mcrs/qu_modules/compiler_v0plus_qu.py for details):
+# 1. LanceDB table at retrieval_config.lancedb.db_uri / table_name with:
+#    - FTS indexes on track_name, artist_name, album_name, tag_list
+#    - The `metadata_qwen3_embedding_0_6b` vector column (1024-D)
+#    Build via `python scripts/build_lancedb_index.py` (see that script for
+#    the exact set of columns/options the v0+ compiler needs).
+# 2. LiteLLM proxy running OR OpenRouter API key set in env, so the extractor
+#    LLM call can reach `gemma-3-12b-it`.
+# 3. HF auth: `uvx hf auth login` for the catalog metadata + embeddings datasets.
+
+lm_type: "dummy"  # response generation is downstream of this experiment's scope
+retrieval_type: "bm25"  # placeholder — V0PlusCompilerQU owns its own retriever
+                         # and CRS_BASELINE bypasses `self.retrieval` for this qu
+
+qu_type: "v0plus_compiler"
+qu_kwargs:
+  # Async batch fan-out concurrency cap. Each in-flight slot = one extractor
+  # LLM call (and the encoder forward pass that follows). 32 caused sustained
+  # 429s from OpenRouter when the litellm cache is cold; 8 is safer for cold
+  # runs. Bump back to 32 once the cache is populated and OpenRouter recovers.
+  max_in_flight: 8
+
+  extractor:
+    # Winner of the conversation_state_extraction_bakeoff
+    model_name: "openrouter/google/gemma-3-12b-it"
+    # api_base/api_key are read from env (LITELLM_PROXY_BASE / OPENROUTER_API_KEY)
+    # if not set explicitly here.
+    temperature: 0.0
+    max_tokens: 1500
+    timeout_s: 90
+
+  catalog:
+    metadata_dataset: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
+    embeddings_dataset: "talkpl-ai/TalkPlayData-Challenge-Track-Embeddings"
+    metadata_split: "all_tracks"
+    embeddings_split: "all_tracks"
+
+  encoder:
+    # backend: "litellm" — DeepInfra Qwen3-Embedding-0.6B via LiteLLM SDK.
+    # ~200 ms/call, no cold starts, $0.01/1M tokens, flows through the
+    # shared litellm disk cache so reruns are free.
+    # Requires DEEPINFRA_API_KEY in env / Modal secret.
+    # encoding_format="float" is mandatory for DeepInfra (422 without it).
+    #
+    # backend: "modal" — deployed Qwen3Encoder T4 GPU (~181 ms warm,
+    #   ~30 s cold start, no caching). Use when DeepInfra is unavailable.
+    # backend: "local" — in-process CPU (~1-2 s). Good for offline tests.
+    backend: "litellm"
+    model_name: "openai/Qwen/Qwen3-Embedding-0.6B"
+    api_base: "https://api.deepinfra.com/v1/openai"
+    # api_key read from DEEPINFRA_API_KEY env var if not set here
+    batch_size: 32
+    encoding_format: "float"
+
+  lancedb:
+    db_uri: "./cache/lancedb"
+    table_name: "music_track_catalog"
+    # `searches:` is intentionally omitted — V0PlusCompiler calls
+    # retriever.search(clauses)/search_embedding(...) directly via the
+    # Retriever Protocol, not the declarative searches API.
+
+  resolver:
+    score_cutoff: 80
+    artist_match_topk: 20
+    track_match_topk: 5
+
+  compiler:
+    bm25_k: 1000
+    dense_k: 1000
+    rrf_k: 60
+    final_topk: 1000
+    field_boosts:
+      track_name: 3.0
+      artist_name: 3.0
+      album_name: 2.0
+      tag_list: 1.5
+    # Tuned via A/B on 1000-session devset:
+    #   0.40/0.50 (original)  → Hit@20=0.2216  Hit@1=0.0161  MRR=0.0563
+    #   0.15/0.15 (overcorr.) → Hit@20=0.2143  Hit@1=0.0194  MRR=0.0575
+    #   0.30/0.30 (this)      → middle ground; centroid still contributes but
+    #                           doesn't dominate the LLM-rewritten query.
+    centroid_alpha:
+      refinement: 0.30
+      playlist_build: 0.30
+      pivot: 0.0
+      open_explore: 0.0
+    anchor_tag_expansion_n: 5
+    rejected_tag_multiplier: 0.5
+    positive_tag_multiplier_step: 0.15
+    # Was 0.7 — disabled to test whether artist-anti-redundancy was demoting
+    # GT same-artist tracks out of top-20. A user who just accepted a track by
+    # artist Y often wants MORE by Y; the demote was working against that.
+    same_artist_demote: 1.0
+    # A/B: disabled to test whether the 3 dense Qwen3 branches (each at weight
+    # 1.0) are net-additive vs the 4 BM25 branches. Re-enable after measuring.
+    enable_dense: false
+    dense_branches:
+      - vector_field: "metadata_qwen3_embedding_0_6b"
+        weight: 1.0
+        distance_type: "cosine"
+      - vector_field: "attributes_qwen3_embedding_0_6b"
+        weight: 1.0
+        distance_type: "cosine"
+      - vector_field: "lyrics_qwen3_embedding_0_6b"
+        weight: 1.0
+        distance_type: "cosine"
+
+# Catalog / split / topk plumbing (matches the other configs' shape)
+test_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Dataset"
+item_db_name: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
+user_db_name: "talkpl-ai/TalkPlayData-Challenge-User-Metadata"
+track_split_types:
+  - "all_tracks"
+user_split_types:
+  - "all_users"
+corpus_types:
+  - "track_name"
+  - "artist_name"
+  - "album_name"
+  - "tag_list"
+cache_dir: "./cache"
+device: "cpu"
+attn_implementation: "eager"
+retrieval_topk: 1000

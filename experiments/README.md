@@ -28,6 +28,7 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 | Best generative baseline | `llama1b_bm25_devset` | `NDCG@20 0.0815` | `done` | [llama1b_bm25_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/llama1b_bm25_devset.md) |
 | Best rewrite wave result | `bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset` | `NDCG@20 0.1092` | `done` | [bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset.md) |
 | Best offline hybrid so far | `RRF(bm25_with_tags, dense_qwen3_8b)` | `NDCG@20 0.1072` | `analyzed` | [retrieval_analysis_findings_2026-04-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/retrieval_analysis_findings_2026-04-28.md) |
+| Best v0+ ConversationState compiler | `v0plus_compiler_devset` | `NDCG@20 0.1005` | `analyzed` | [v0plus_compiler_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_devset.md) |
 
 ## Current Active Work
 
@@ -42,6 +43,8 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 
 - [analysis/README.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/README.md) tracks packaged analysis work and linked artifacts.
 - [query_intent_v1](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/query_intent_v1/README.md) is the current conversation-intent analysis package with labeling artifacts and retrieval implications.
+- [conversation_state_extraction_bakeoff](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/conversation_state_extraction_bakeoff/README.md) ([`analyzed`](README.md), 3 iteration rounds) picked `google/gemma-3-12b-it` as the v0+ ConversationState extractor — 0.812 F1 vs Opus 4.7 hand labels, 100% schema validity via strict json_schema, $1.86 full-devset cost. See [`analysis.md`](analysis/conversation_state_extraction_bakeoff/analysis.md) for the long-form methodology + caveats writeup.
+- [conversation_state_compiler_v0plus](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/conversation_state_compiler_v0plus/README.md) (`planned`) is the design doc for the v0+ retrieval compiler — 3-branch fusion (BM25 + dense-text + entity-probe), with per-field mapping table, pseudocode, and 6 open questions for review.
 - [retrieval_analysis_findings_2026-04-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/retrieval_analysis_findings_2026-04-28.md) is a top-level experiment note because it summarizes cross-run hybrid diagnostics rather than a self-contained artifact package.
 
 ## Waves

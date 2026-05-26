@@ -74,6 +74,15 @@ LITELLM_EMBEDDING_MODEL = str(_cfg.litellm.embedding_model)
 LITELLM_CHAT_MODEL = str(_cfg.litellm.chat_model)
 LITELLM_SMALL_CHAT_MODEL = str(_cfg.litellm.small_chat_model)
 
+QWEN3_ENCODER_GPU = str(_cfg.qwen3_encoder.gpu)
+QWEN3_ENCODER_CPU = float(_cfg.qwen3_encoder.cpu)
+QWEN3_ENCODER_MEMORY = int(_cfg.qwen3_encoder.memory)
+QWEN3_ENCODER_TIMEOUT = int(_cfg.qwen3_encoder.timeout)
+QWEN3_ENCODER_SCALEDOWN_WINDOW = int(_cfg.qwen3_encoder.scaledown_window)
+QWEN3_ENCODER_MAX_CONTAINERS = int(_cfg.qwen3_encoder.max_containers)
+QWEN3_ENCODER_TORCH_DTYPE = str(_cfg.qwen3_encoder.torch_dtype)
+QWEN3_ENCODER_BATCH_SIZE = int(_cfg.qwen3_encoder.batch_size)
+
 app = modal.App(APP_NAME)
 
 hf_cache_vol = modal.Volume.from_name(HF_CACHE_VOLUME, create_if_missing=True)
@@ -99,6 +108,7 @@ _VOLUME_MOUNTS = {
     HF_CACHE_DIR: hf_cache_vol,
     EXP_DIR: results_vol,
     MODELS_DIR: models_vol,
+    LITELLM_CACHE_DIR: litellm_cache_vol,  # shared with ModalLiteLLMService for LLM call caching
 }
 
 DEFAULT_REMOTE_LANCEDB_URI = f"{MODELS_DIR}/lancedb"
@@ -143,7 +153,10 @@ def _api_key_for_litellm_model(
     *,
     hf_token: str | None,
     openrouter_api_key: str | None,
+    deepinfra_api_key: str | None = None,
 ) -> str | None:
+    if api_base and "deepinfra.com" in api_base:
+        return deepinfra_api_key
     if model_name.startswith("openrouter/"):
         return openrouter_api_key
     if api_base and "openrouter.ai" in api_base:
@@ -169,6 +182,9 @@ def _run_inference_command(cmd: list[str], *, lancedb_uri: str | None = None) ->
     env = os.environ.copy()
     if lancedb_uri:
         env["MCRS_LANCEDB_URI"] = lancedb_uri
+    # Tell run_inference_devset.py where to find the shared LiteLLM disk cache so
+    # repeated LLM extraction calls on the same conversation are served from cache.
+    env["MCRS_LITELLM_CACHE_DIR"] = LITELLM_CACHE_DIR
 
     result = subprocess.run(cmd, cwd="/app", env=env)
     if result.returncode != 0:
@@ -199,6 +215,9 @@ def _inference_devset(
     num_sessions: int,
     clear_cache: bool,
     session_ids_json: str | None = None,
+    num_shards: int = 1,
+    shard_id: int = 0,
+    output_suffix: str = "",
 ):
     import sys
 
@@ -214,10 +233,14 @@ def _inference_devset(
         cmd += ["--num_sessions", str(num_sessions)]
     if clear_cache:
         cmd += ["--clear_cache"]
+    if num_shards > 1:
+        cmd += ["--num_shards", str(num_shards), "--shard_id", str(shard_id)]
+    if output_suffix:
+        cmd += ["--output_suffix", output_suffix]
 
     _run_inference_command(cmd)
     results_vol.commit()
-    print(f"Results saved to volume: inference/devset/{tid}.json")
+    print(f"Results saved to volume: inference/devset/{tid}{output_suffix}.json")
 
 
 @app.function(
@@ -234,6 +257,9 @@ def _inference_devset_cpu(
     num_sessions: int,
     clear_cache: bool,
     session_ids_json: str | None = None,
+    num_shards: int = 1,
+    shard_id: int = 0,
+    output_suffix: str = "",
 ):
     import sys
 
@@ -249,10 +275,14 @@ def _inference_devset_cpu(
         cmd += ["--num_sessions", str(num_sessions)]
     if clear_cache:
         cmd += ["--clear_cache"]
+    if num_shards > 1:
+        cmd += ["--num_shards", str(num_shards), "--shard_id", str(shard_id)]
+    if output_suffix:
+        cmd += ["--output_suffix", output_suffix]
 
     _run_inference_command(cmd, lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI)
     results_vol.commit()
-    print(f"CPU results saved to volume: inference/devset/{tid}.json")
+    print(f"CPU results saved to volume: inference/devset/{tid}{output_suffix}.json")
 
 
 @app.function(
@@ -391,6 +421,54 @@ class ModalRetrievalService:
 
 @app.cls(
     image=image,
+    gpu=QWEN3_ENCODER_GPU,
+    volumes={HF_CACHE_DIR: hf_cache_vol},
+    secrets=[ENV_SECRET],
+    cpu=QWEN3_ENCODER_CPU,
+    memory=QWEN3_ENCODER_MEMORY,
+    timeout=QWEN3_ENCODER_TIMEOUT,
+    min_containers=0,
+    max_containers=QWEN3_ENCODER_MAX_CONTAINERS,
+    scaledown_window=QWEN3_ENCODER_SCALEDOWN_WINDOW,
+)
+class Qwen3Encoder:
+    """GPU-backed Qwen3-Embedding-0.6B query encoder.
+
+    Replaces the per-turn CPU encode (~1-2 s) with a remote GPU call
+    (~50 ms on T4). Used by the v0+ compiler via
+    `mcrs.embeddings.modal_qwen3_client.ModalQwen3EmbeddingClient` when
+    `encoder.backend: "modal"` is set in the compiler config.
+
+    Scales to zero after `scaledown_window` seconds; cold start ~30 s
+    (model load from HF cache volume). Deploy via:
+        modal deploy modal/app.py
+    """
+
+    @modal.enter()
+    def setup(self):
+        import os
+
+        os.environ.setdefault("HF_HOME", HF_CACHE_DIR)
+        from mcrs.embeddings.qwen3_embedding import Qwen3EmbeddingClient
+
+        self.client = Qwen3EmbeddingClient(
+            device="cuda",
+            torch_dtype_name=QWEN3_ENCODER_TORCH_DTYPE,
+            batch_size=QWEN3_ENCODER_BATCH_SIZE,
+        )
+        # Eager-load the model + tokenizer so the first remote call doesn't
+        # pay the load tax on the request path.
+        self.client._ensure_loaded()
+
+    @modal.method()
+    def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        return self.client.embed_batch(texts)
+
+
+@app.cls(
+    image=image,
     volumes={LITELLM_CACHE_DIR: litellm_cache_vol},
     secrets=[ENV_SECRET],
     cpu=LITELLM_CPU,
@@ -418,6 +496,7 @@ class ModalLiteLLMService:
         self.last_cache_hit = None
         self.hf_token = os.environ.get("HF_TOKEN")
         self.openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
+        self.deepinfra_api_key = os.environ.get("DEEPINFRA_API_KEY")
         self.default_embedding_model = os.environ.get("MCRS_TEST_EMBEDDING_MODEL", LITELLM_EMBEDDING_MODEL)
         self.default_chat_model = os.environ.get("MCRS_TEST_CHAT_MODEL", LITELLM_CHAT_MODEL)
 
@@ -528,6 +607,7 @@ class ModalLiteLLMService:
             api_base,
             hf_token=self.hf_token,
             openrouter_api_key=self.openrouter_api_key,
+            deepinfra_api_key=self.deepinfra_api_key,
         )
 
     def _error_response(self, kind: str, model_name: str, exc: Exception) -> dict:
@@ -634,6 +714,52 @@ def run_inference(
         clear_cache=clear_cache,
         session_ids_json=session_ids_json,
     )
+
+
+@app.local_entrypoint()
+def run_inference_sharded(
+    tid: str = "v0plus_compiler_devset",
+    batch_size: int = DEVSET_BATCH_SIZE,
+    num_shards: int = 4,
+    clear_cache: bool = False,
+):
+    """Run devset inference in parallel across `num_shards` Modal containers.
+
+    Each shard processes len(devset)/num_shards sessions and writes its own
+    `{tid}.shard_{i}.json` + `{tid}.shard_{i}_trace.json` on the results volume.
+    No concatenation step here — pull the per-shard files with download_results
+    or merge them locally with scripts/merge_shard_results.py.
+
+    Args:
+        tid: experiment id (config file in configs/{tid}.yaml).
+        batch_size: per-shard batch size (default DEVSET_BATCH_SIZE).
+        num_shards: number of parallel Modal containers.
+        clear_cache: pass --clear_cache through to each shard's run_inference_devset.
+    """
+    inference_fn = _inference_devset_cpu if _tid_uses_cpu(tid) else _inference_devset
+
+    # Fire shards in parallel via .spawn — returns immediately with a function
+    # call handle for each. Then await all by calling .get() on each handle.
+    calls = []
+    for shard_id in range(num_shards):
+        call = inference_fn.spawn(
+            tid=tid,
+            batch_size=batch_size,
+            num_sessions=0,
+            clear_cache=clear_cache,
+            session_ids_json=None,
+            num_shards=num_shards,
+            shard_id=shard_id,
+            output_suffix=f".shard_{shard_id}",
+        )
+        calls.append(call)
+
+    print(f"Spawned {num_shards} shards for {tid}.")
+    for shard_id, call in enumerate(calls):
+        call.get()  # blocks until that shard finishes
+        print(f"Shard {shard_id} complete.")
+    print(f"All {num_shards} shards complete. Per-shard outputs: "
+          f"inference/devset/{tid}.shard_{{0..{num_shards-1}}}.json")
 
 
 @app.local_entrypoint()

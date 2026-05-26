@@ -67,8 +67,13 @@ def _name(node: ast.AST) -> str:
 def test_lancedb_modal_cpu_resource_config_is_explicit():
     config = OmegaConf.load(PROJECT_ROOT / "modal" / "config.yaml")
 
-    assert float(config.lancedb.inference_cpu) >= 8.0
-    assert int(config.lancedb.inference_memory) >= 32768
+    # Inference container is async-I/O bound (LLM extractor calls dominate);
+    # 2 cores / 16 GiB is the measured-headroom right-size for max_in_flight=8.
+    # If max_in_flight is pushed back to 16+, this floor needs to be raised
+    # alongside the config bump. Memory floor still ≥ 16384 to hold the
+    # in-memory LanceDB catalog scan + eager vector loads.
+    assert float(config.lancedb.inference_cpu) >= 2.0
+    assert int(config.lancedb.inference_memory) >= 16384
     assert float(config.lancedb.query_cpu) >= 4.0
     assert int(config.lancedb.query_memory) >= 16384
 
@@ -200,6 +205,11 @@ def test_modal_litellm_unknown_model_does_not_use_hf_token():
     service = modal_litellm_service.__new__(modal_litellm_service)
     service.hf_token = "hf-secret"
     service.openrouter_api_key = "or-secret"
+    # ModalLiteLLMService now also stashes a deepinfra_api_key so the routing
+    # helper can pin BYOK on DeepInfra api_bases (e.g. the v0+ Qwen3 encoder
+    # route). The test sets a sentinel so we can assert it isn't accidentally
+    # used for non-DeepInfra models.
+    service.deepinfra_api_key = "di-secret"
 
     assert service._api_key_for_model("openrouter/google/gemma-3-4b-it", None) == "or-secret"
     assert service._api_key_for_model("huggingface/featherless-ai/Qwen/Qwen3-0.6B", None) == "hf-secret"

@@ -52,5 +52,8 @@ def load_qu_module(
             stats_path=qu_kwargs.get("stats_path"),
             adapter=adapter,
         )
+    elif qu_type == "v0plus_compiler":
+        from .compiler_v0plus_qu import build_v0plus_compiler_qu
+        return build_v0plus_compiler_qu(qu_kwargs=qu_kwargs)
     else:
         raise ValueError(f"Unsupported QU type: {qu_type}")
