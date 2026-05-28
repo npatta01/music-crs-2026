@@ -1,7 +1,7 @@
-import os
-import torch
-import json
 from datasets import load_dataset, concatenate_datasets
+
+from mcrs.corpus_formatters import format_field_value
+
 
 class MusicCatalogDB:
     def __init__(self,
@@ -19,6 +19,6 @@ class MusicCatalogDB:
         track_id = metadata['track_id']
         entity_str = f"track_id: {track_id}"
         for corpus_type in self.corpus_types:
-            corpus_type_value = ", ".join(metadata[corpus_type]).lower()
+            corpus_type_value = format_field_value(metadata[corpus_type]).lower()
             entity_str += f", {corpus_type}: {corpus_type_value}"
         return entity_str

@@ -147,6 +147,34 @@ def test_compiler_routes_artist_mention_to_artist_name_channel():
     assert by_field["artist_name"] == "Morphine"  # would have "more like Morphine" if leaked
 
 
+def test_compiler_emits_one_bm25_clause_per_positive_entity():
+    """Multiple positive mentions of the same entity type should each get their
+    own FieldQuery, not be space-joined into a single multi-token query.
+
+    With the joined form, tantivy's BM25 systematically out-scores docs that
+    match a multi-token name (`"Rolling Stones"`) over docs that match a
+    single-token name (`"Beatles"`), regardless of user intent. Splitting per
+    entity gives each one an independent, normalized BM25 signal."""
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",  # keep intent out so we only see entity clauses
+        mentioned_entities=[
+            MentionedEntity(type="artist", value="Morphine", sentiment=1),
+            MentionedEntity(type="artist", value="Tom Waits", sentiment=1),
+        ],
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder()).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    artist_queries = [c.query for c in clauses if c.field == "artist_name"]
+    # Two separate artist mentions => two separate clauses, NOT one joined.
+    assert "Morphine" in artist_queries
+    assert "Tom Waits" in artist_queries
+    # And the buggy joined form must not appear.
+    assert "Morphine Tom Waits" not in artist_queries
+
+
 def test_compiler_skips_negative_sentiment_mentions_in_bm25():
     catalog = _catalog()
     retriever = FakeRetriever()
@@ -328,6 +356,50 @@ def test_compiler_hard_drops_resolved_artist_rejections():
     assert "t-fugazi-2" not in result
     # Morphine survives
     assert "t-morphine-1" in result
+
+
+def test_compiler_backfill_respects_artist_level_hard_exclusions():
+    """When a rejection resolves to BOTH track_ids and artist_ids (per the
+    `_apply_soft_adjustments` comment "kind='track' still resolves the owning
+    artist"), `_backfill` must also honor the artist-level exclusion. Otherwise
+    popularity-sorted backfill silently re-admits tracks by the rejected
+    artist, undoing the post-fusion hard exclusion."""
+    from mcrs.qu_modules.resolver_v0plus import (
+        ResolvedConversationState,
+        ResolvedRejection,
+    )
+
+    catalog = _catalog()
+    # Force backfill: BM25 returns no hits, so the only way the result list
+    # gets to 1000 is via the popularity-sorted backfill in _backfill.
+    retriever = FakeRetriever(text_hits_by_field={})
+    state = _state(
+        explicit_rejections=[
+            ExplicitRejection(kind="track", value="Cure for Pain", source_turn=2),
+        ],
+    )
+    # Manually build the resolved state with BOTH ids populated for the
+    # kind="track" rejection — this is the case the compiler's hard filter
+    # in _apply_soft_adjustments is designed to handle.
+    rs = ResolvedConversationState(
+        state=state,
+        played_track_ids=(),
+        resolved_rejections={
+            0: ResolvedRejection(
+                track_ids=("t-morphine-1",),
+                artist_ids=("a-morphine",),
+            )
+        },
+        track_feedback_artist_ids={},
+    )
+
+    result = V0PlusCompiler(catalog, retriever, _fake_encoder()).compile(rs)
+
+    # Both morphine tracks must stay out: t-morphine-1 via the track id,
+    # t-morphine-2 via the artist id. Pre-fix, t-morphine-2 sneaks back in
+    # through popularity-sorted backfill.
+    assert "t-morphine-1" not in result
+    assert "t-morphine-2" not in result
 
 
 def test_compiler_release_date_filter_excludes_out_of_range_tracks():
