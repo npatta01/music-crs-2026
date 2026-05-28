@@ -37,11 +37,11 @@ The evaluation framework computes two categories of metrics:
 - **Per-turn breakdown** — NDCG@20 / Hit@20 / Hit@100 split by turn 1–8 so you can
   spot turn-specific degradation.
 
-For the deep-cutoff diagnostics to be meaningful, the prediction file should contain
->= 1000 ranked ids per turn. The evaluator keeps `require_full_diagnostic_depth: true`
-as the contract for those diagnostics, but if a dev-set prediction row is too shallow
-it now emits `null` for unsupported deep-cutoff metrics instead of failing or silently
-coercing them to zero. Submission files stay at top-20; dev-set inference can retrieve deeper.
+For the most complete deep-cutoff diagnostics, the prediction file should contain
+>= 1000 ranked ids per turn. The evaluator still reports numeric cutoff metrics for
+shallower rows: if the GT is present in the returned pool it receives credit at
+deeper cutoffs, and if it is absent the missing tail counts as a miss. Submission
+files stay at top-20; dev-set inference can retrieve deeper.
 
 ## Setup
 
@@ -159,8 +159,8 @@ $$
 - IDCG@k is the ideal (maximum possible) DCG@k
 - Results are macro-averaged first over turns, then over sessions
 - `nDCG@{1,10,20}` remain the main comparable headline metrics
-- Deep-cutoff metrics require at least 1000 ranked IDs per turn for fully populated diagnostics
-- If a run is shallower, unsupported deep-cutoff metrics are written as `null` and the score JSON includes `available_cutoffs`, `min_pool_depth`, `max_pool_depth`, and `n_shallow_rows`
+- Deep-cutoff metrics are most informative when runs return up to 1000 ranked IDs per turn
+- If a run is shallower, missing unretrieved tail positions count as misses and the score JSON includes `available_cutoffs`, `min_pool_depth`, `max_pool_depth`, and `n_shallow_rows`
 
 ### Diversity Metrics
 
