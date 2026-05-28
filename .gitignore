@@ -11,3 +11,6 @@ submission/
 data/
 exp/
 .worktrees/
+# Per-run audit/smoke output JSONs (scripts/*.json are scratch artifacts)
+scripts/*_results.json
+scripts/*_audit*.json

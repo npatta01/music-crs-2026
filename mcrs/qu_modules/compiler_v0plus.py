@@ -723,6 +723,18 @@ class V0PlusCompiler:
         for hf in state.hard_filters:
             if hf.field != "release_date":
                 continue
+            # Skip non-actionable filters (LLM sometimes emits these — e.g. an
+            # `op="between"` with both bounds missing). Without this, the
+            # catalog's `release_date_filter_mask` returns `set()` for the
+            # malformed filter and we'd intersect the entire candidate pool
+            # away. Treat them as no-ops — the rest of the state still drives
+            # retrieval.
+            if hf.op == "<" and hf.end is None:
+                continue
+            if hf.op == ">" and hf.start is None:
+                continue
+            if hf.op == "between" and (hf.start is None or hf.end is None):
+                continue
             try:
                 step_mask = self.catalog.release_date_filter_mask(hf)
             except Exception:
@@ -791,58 +803,31 @@ class V0PlusCompiler:
         fused: list[tuple[str, float]],
         rs: ResolvedConversationState,
     ) -> list[tuple[str, float]]:
-        state = rs.state
-        rejected_tags = {
-            er.value.lower()
-            for er in state.explicit_rejections
-            if er.kind == "tag" and er.value
-        }
-        positive_tags = {
-            me.value.lower()
-            for me in state.mentioned_entities
-            if me.sentiment > 0 and me.type == "tag" and me.value
-        }
-        # Soft rejection: artists inferred from `track_feedback` (user rejected a
-        # specific track, so we infer the artist is unwelcome). Multiplied, not
-        # excluded, because the artist signal here is indirect.
-        soft_rejected_artist_ids = {
-            rs.track_feedback_artist_ids.get(tf.track_id)
-            for tf in state.track_feedback
-            if tf.role == "rejected"
-        }
-        soft_rejected_artist_ids.discard(None)
+        """Post-fusion rerank — delegates to `PostFusionReranker` with the
+        two-feature config (UserFeedback + SessionAnchor). Existing knobs
+        (`rejected_tag_multiplier`, `positive_tag_multiplier_step`,
+        `same_artist_demote`) are threaded through to feature multipliers,
+        so this is behavior-preserving when `exploration_policy=balanced`
+        (the default).
 
-        # HARD rejection: `explicit_rejections` resolved by the resolver. These
-        # are the user's direct "no more X" statements — we drop matching
-        # tracks entirely, not just demote. Resolver may attach BOTH track_ids
-        # and artist_ids per rejection (e.g. kind="track" still resolves the
-        # owning artist; kind="artist" resolves all that artist's track_ids).
-        hard_excluded_track_ids: set[str] = set()
-        hard_excluded_artist_ids: set[str] = set()
-        for rj in rs.resolved_rejections.values():
-            hard_excluded_track_ids.update(rj.track_ids)
-            hard_excluded_artist_ids.update(rj.artist_ids)
+        Adds: policy-driven anchor-artist demote when the LLM extracts
+        `exploration_policy=diversify_artists` on a turn. See
+        `post_fusion_features.ANCHOR_ARTIST_DEMOTE_BY_POLICY`.
+        """
+        from mcrs.qu_modules.post_fusion_features import (
+            PostFusionReranker,
+            build_features_for_state,
+        )
 
-        adjusted: list[tuple[str, float]] = []
-        for tid, score in fused:
-            if tid in hard_excluded_track_ids:
-                continue
-            artist_id = self.catalog.artist_id_of(tid)
-            if artist_id is not None and artist_id in hard_excluded_artist_ids:
-                continue
-            tags = {t.lower() for t in self.catalog.tag_list(tid)}
-            mult = 1.0
-            if rejected_tags:
-                mult *= self.cfg.rejected_tag_multiplier ** len(tags & rejected_tags)
-            if positive_tags:
-                mult *= (1.0 + self.cfg.positive_tag_multiplier_step) ** len(
-                    tags & positive_tags
-                )
-            if artist_id is not None and artist_id in soft_rejected_artist_ids:
-                mult *= self.cfg.same_artist_demote
-            adjusted.append((tid, score * mult))
-        adjusted.sort(key=lambda x: -x[1])
-        return adjusted
+        features = build_features_for_state(
+            rs,
+            self.catalog,
+            tag_rejection_per_overlap=self.cfg.rejected_tag_multiplier,
+            positive_tag_per_overlap=1.0 + self.cfg.positive_tag_multiplier_step,
+            inferred_artist_rejection_mult=self.cfg.same_artist_demote,
+        )
+        reranker = PostFusionReranker(features=features)
+        return reranker.rerank(fused, self.catalog)
 
     # ------------------------------------------------------------------
     # Backfill
