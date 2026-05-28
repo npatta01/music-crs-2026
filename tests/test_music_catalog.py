@@ -34,7 +34,12 @@ def test_id_to_metadata_keeps_string_release_date_intact():
 
     out = db.id_to_metadata("t-1")
 
-    assert "release_date: 2006-12-06" in out
+    assert out == (
+        "track_id: t-1\n"
+        "track_name: With Rainy Eyes\n"
+        "artist_name: Emancipator\n"
+        "release_date: 2006-12-06\n"
+    )
     # The buggy version produces "2, 0, 0, 6, -, 1, 2, -, 0, 6"
     assert "2, 0, 0, 6" not in out
 
@@ -52,5 +57,8 @@ def test_id_to_metadata_joins_list_fields():
 
     out = db.id_to_metadata("t-2")
 
-    assert "track_name: abbey road" in out
-    assert "artist_name: the beatles, john lennon" in out
+    assert out == (
+        "track_id: t-2\n"
+        "track_name: Abbey Road\n"
+        "artist_name: The Beatles, John Lennon\n"
+    )

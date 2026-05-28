@@ -364,11 +364,6 @@ def test_compiler_backfill_respects_artist_level_hard_exclusions():
     artist"), `_backfill` must also honor the artist-level exclusion. Otherwise
     popularity-sorted backfill silently re-admits tracks by the rejected
     artist, undoing the post-fusion hard exclusion."""
-    from mcrs.qu_modules.resolver_v0plus import (
-        ResolvedConversationState,
-        ResolvedRejection,
-    )
-
     catalog = _catalog()
     # Force backfill: BM25 returns no hits, so the only way the result list
     # gets to 1000 is via the popularity-sorted backfill in _backfill.
@@ -378,22 +373,9 @@ def test_compiler_backfill_respects_artist_level_hard_exclusions():
             ExplicitRejection(kind="track", value="Cure for Pain", source_turn=2),
         ],
     )
-    # Manually build the resolved state with BOTH ids populated for the
-    # kind="track" rejection — this is the case the compiler's hard filter
-    # in _apply_soft_adjustments is designed to handle.
-    rs = ResolvedConversationState(
-        state=state,
-        played_track_ids=(),
-        resolved_rejections={
-            0: ResolvedRejection(
-                track_ids=("t-morphine-1",),
-                artist_ids=("a-morphine",),
-            )
-        },
-        track_feedback_artist_ids={},
+    result = V0PlusCompiler(catalog, retriever, _fake_encoder()).compile(
+        _resolve(state, catalog)
     )
-
-    result = V0PlusCompiler(catalog, retriever, _fake_encoder()).compile(rs)
 
     # Both morphine tracks must stay out: t-morphine-1 via the track id,
     # t-morphine-2 via the artist id. Pre-fix, t-morphine-2 sneaks back in
