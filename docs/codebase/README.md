@@ -24,4 +24,4 @@ See [code-paths.md](code-paths.md) for the end-to-end execution paths through th
 
 ## Bugs
 
-See [bugs.md](bugs.md) for the code audit — 9 verified issue(s) confirmed after an adversarial verification pass.
+See [bugs.md](bugs.md) for the code audit. 9 issues were initially confirmed; after follow-up, **7 are fixed** (issue #70 → PRs #66/#71, plus the `id_to_metadata` refactor), **1 was retracted as a false positive** (#1, ground-truth parser — verified correct against the real dataset), and **1 remains open** (#9, `prepare_submission.sh` hardcoded split).
