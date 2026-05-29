@@ -20,30 +20,49 @@ catalog vectors live in the same space.
 Usage:
     python scripts/verify_textside_catalog_convention.py --modality siglip2 --n 200
     python scripts/verify_textside_catalog_convention.py --modality clap --n 200 --clap-ckpt /path/to/music_audioset_epoch_15_esc_90.14.pt
+
+Catalog parquet paths default to whatever `huggingface_hub.snapshot_download`
+returns for the talkpl-ai dataset repos (works on any machine / CI / fresh
+checkout). Override with `--meta-parquet` / `--emb-parquet` if you have a
+specific local copy you'd rather read.
 """
 
 from __future__ import annotations
 
 import argparse
 import random
-import statistics
+from pathlib import Path
 
 import numpy as np
 import pyarrow.parquet as pq
 
+CATALOG_META_REPO = "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
+CATALOG_EMB_REPO = "talkpl-ai/TalkPlayData-Challenge-Track-Embeddings"
+ALL_TRACKS_GLOB = "data/all_tracks-*.parquet"
 
-CATALOG_META = (
-    "/Users/npatta01/.cache/huggingface/hub/"
-    "datasets--talkpl-ai--TalkPlayData-Challenge-Track-Metadata/"
-    "snapshots/91ddb944e1b0f5d13f18a2672214f69022c09d10/"
-    "data/all_tracks-00000-of-00001.parquet"
-)
-CATALOG_EMB = (
-    "/Users/npatta01/.cache/huggingface/hub/"
-    "datasets--talkpl-ai--TalkPlayData-Challenge-Track-Embeddings/"
-    "snapshots/e946dc86e6b245cddd2c6ebf74929176682919ef/"
-    "data/all_tracks-00000-of-00001.parquet"
-)
+
+def _resolve_parquet(repo_id: str, override: str | None) -> str:
+    """Return a local parquet path for a talkpl-ai dataset repo.
+
+    Uses an explicit `--*-parquet` override if provided; otherwise falls
+    back to `huggingface_hub.snapshot_download`, which is idempotent and
+    populates the user's HF cache.
+    """
+    if override:
+        return override
+    from huggingface_hub import snapshot_download
+
+    local_dir = snapshot_download(
+        repo_id=repo_id,
+        repo_type="dataset",
+        allow_patterns=[ALL_TRACKS_GLOB],
+    )
+    matches = sorted(Path(local_dir).glob(ALL_TRACKS_GLOB))
+    if not matches:
+        raise FileNotFoundError(
+            f"no parquet matching {ALL_TRACKS_GLOB!r} under {local_dir}"
+        )
+    return str(matches[0])
 
 
 def build_text(row: dict) -> str:
@@ -73,13 +92,30 @@ def main() -> None:
     ap.add_argument("--normalize", action="store_true",
                     help="L2-normalize the text-side output before scoring.")
     ap.add_argument("--device", default="cuda")
+    ap.add_argument(
+        "--meta-parquet",
+        type=str,
+        default=None,
+        help="Override catalog metadata parquet path (default: HF snapshot_download)",
+    )
+    ap.add_argument(
+        "--emb-parquet",
+        type=str,
+        default=None,
+        help="Override catalog embeddings parquet path (default: HF snapshot_download)",
+    )
     args = ap.parse_args()
 
+    catalog_meta = _resolve_parquet(CATALOG_META_REPO, args.meta_parquet)
+    catalog_emb = _resolve_parquet(CATALOG_EMB_REPO, args.emb_parquet)
+    print(f"meta : {catalog_meta}")
+    print(f"emb  : {catalog_emb}")
+
     meta_cols = ["track_id", "track_name", "artist_name", "tag_list"]
-    meta = pq.read_table(CATALOG_META, columns=meta_cols).to_pylist()
+    meta = pq.read_table(catalog_meta, columns=meta_cols).to_pylist()
 
     emb_col = "image-siglip2" if args.modality == "siglip2" else "audio-laion_clap"
-    emb_tbl = pq.read_table(CATALOG_EMB, columns=["track_id", emb_col])
+    emb_tbl = pq.read_table(catalog_emb, columns=["track_id", emb_col])
     emb_by_id = dict(zip(emb_tbl["track_id"].to_pylist(), emb_tbl[emb_col].to_pylist()))
 
     rng = random.Random(args.seed)

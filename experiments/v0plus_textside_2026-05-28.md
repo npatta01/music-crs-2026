@@ -11,7 +11,7 @@ Canonical config remains `v0plus_compiler_image_devset` (NDCG@20 = 0.1461). Text
 
 ## What we built
 
-Six new YAML configs under `configs/v0plus_compiler_textside_*_devset.yaml`, all backed by a refactored compiler that supports:
+Three YAML configs are committed under `configs/v0plus_compiler_textside_*_devset.yaml` — `v2`, `v3b`, and `v4` (the rest of the rounds were run from local-only configs that we chose not to ship; the recipes are recoverable from the round descriptions below). All three are backed by a refactored compiler that supports:
 
 - **Per-branch encoder dispatch.** `DenseBranch.encoder_id` selects from an `encoders: dict[str, EmbeddingClient]` map on `V0PlusCompiler`. YAML schema: top-level `encoders:` block. Back-compat with the legacy single-`encoder:` block preserved (all 38 existing tests pass).
 - **Per-branch query template.** `DenseBranch.query_id` selects a query builder from a registry — `intent`, `sonic`, `sonic_nl`, `sonic_nl_enriched`, `visual`, `lyric`. Adding a new template is a single method + registry entry.
@@ -33,7 +33,7 @@ CLAP music text-side has substantially stronger text↔modality alignment than S
 
 ## Round results — all on 50-session slice (400 turns: 236 novel, 164 continuation) unless noted
 
-### R1 — `v0plus_compiler_textside_devset` (shared `intent` query, equal weights)
+### R1 — shared `intent` query, equal weights (config not committed)
 BM25 + image_centroid + SigLIP-text(intent) + CLAP-text(intent), all four branches at equal RRF weight.
 
 - Slice novel Hit@1000 = **0.335** vs baseline 0.288 (**+16.2%**) — coverage win confirmed.
@@ -52,7 +52,7 @@ Same fusion as R1 but SigLIP uses `query_id=visual` ("album cover, {tags}"), CLA
 
 Full-devset confirmed the slice pattern: novel-artist pool coverage modestly lifts, top-K ranking gets worse. The two new branches contribute mostly redundant pool depth + ranking noise.
 
-### R3 — `v0plus_compiler_textside_v3_devset` (sonic_nl + lyric + asymmetric weights, drop SigLIP)
+### R3 — sonic_nl + lyric + asymmetric weights, drop SigLIP (config not committed; superseded by R3b / R4)
 Three changes, motivated by Phase B (below):
 1. CLAP-text uses `query_id=sonic_nl` ("A song with {tags} sound, similar to {artists}"). Phase B showed +120% top-20 lift on novel-only.
 2. New conditional `lyric` branch on `lyrics_qwen3_embedding_0_6b` (only fires when state has lyric-hint vocabulary).
@@ -62,8 +62,8 @@ Three changes, motivated by Phase B (below):
 Slice: NDCG@20 = 0.137 (−5.4% vs baseline), continuation recovered (0.299 vs baseline 0.304), novel Hit@1000 = 0.331.
 
 ### R3a / R3b ablations
-- **R3a** (sonic_nl only, drop lyric): slice novel Hit@1000 = **0.339** — best of all variants. Confirms CLAP contributes; lyric was neutral.
-- **R3b** (lyric only, no CLAP): slice metrics indistinguishable from baseline on every cohort. Lyric branch is "do no harm" but adds essentially nothing.
+- **R3a** (sonic_nl only, drop lyric — config not committed): slice novel Hit@1000 = **0.339** — best of all variants. Confirms CLAP contributes; lyric was neutral.
+- **R3b** — `v0plus_compiler_textside_v3b_devset` (lyric only, no CLAP): slice metrics indistinguishable from baseline on every cohort. Lyric branch is "do no harm" but adds essentially nothing.
 
 ### R4 — `v0plus_compiler_textside_v4_devset` (multi-CLAP-recall)
 Three CLAP queries against the same audio column, fused via RRF. Each captures different turn types (per Phase B). Plus the R3b conditional lyric branch.

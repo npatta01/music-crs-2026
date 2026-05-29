@@ -501,10 +501,11 @@ Status:
 Question:
 Can anchor-free text-side retrieval (SigLIP-2 text → image_siglip2, LAION-CLAP music text → audio_laion_clap) lift the novel-artist cohort that image_centroid can't reach?
 
-Configs (all 50-session slice unless noted):
-- `v0plus_compiler_textside_devset` (R1: shared intent query, equal weights)
-- `v0plus_compiler_textside_v2_devset` (R2: per-encoder queries sonic + visual) - full devset
-- `v0plus_compiler_textside_v3_devset` / v3a / v3b (R3: sonic_nl + lyric, asymmetric, ablations)
+Configs (all 50-session slice unless noted; only `v2`, `v3b`, `v4` are committed to the repo, others were run from local-only configs):
+- R1 (shared intent query, equal weights) — config not committed
+- `v0plus_compiler_textside_v2_devset` (R2: per-encoder queries sonic + visual) — full devset
+- R3 / R3a (sonic_nl + lyric, asymmetric, ablations) — config not committed
+- `v0plus_compiler_textside_v3b_devset` (R3b: lyric branch only — "do no harm" reference)
 - `v0plus_compiler_textside_v4_devset` (R4: 3xCLAP + lyric)
 
 Headline:

@@ -34,8 +34,14 @@ See: experiments/analysis/conversation_state_compiler_v0plus/README.md
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from dataclasses import dataclass, field
+
+# Word-boundary tokenizer for lyric-hint detection. Splits on any
+# non-word character so substring matches like `"story" in "history"` or
+# `"deep" in "deepfake"` don't accidentally fire the lyric branch.
+_LYRIC_TOKEN_RE = re.compile(r"\w+")
 
 from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
     ConversationStateV0Plus,
@@ -232,7 +238,8 @@ class V0PlusCompiler:
 
         When `branch_traces` is a dict, it is populated with each retriever
         branch's top-K candidate IDs (K = self.cfg.branch_trace_topk).
-        Keys are stable identifiers ("bm25", "dense.<encoder_id>.<vector_field>",
+        Keys are stable identifiers ("bm25",
+        "dense.<encoder_id>.<query_id>.<vector_field>",
         "centroid.<source>.<vector_field>") so downstream analysis can match
         them across runs. No-op when branch_traces is None or topk is 0.
         """
@@ -296,9 +303,12 @@ class V0PlusCompiler:
                 )
                 dense_branch_results.append(hits)
                 if _trace_k:
-                    branch_traces[f"dense.{branch.encoder_id}.{branch.vector_field}"] = (
-                        [t for t, _ in hits[:_trace_k]]
-                    )
+                    # Include `query_id` so multiple branches sharing
+                    # encoder_id + vector_field (e.g. v4's 3xCLAP) get
+                    # distinct trace keys instead of overwriting each other.
+                    branch_traces[
+                        f"dense.{branch.encoder_id}.{branch.query_id}.{branch.vector_field}"
+                    ] = [t for t, _ in hits[:_trace_k]]
 
         # 3b. Centroid-only branches — one `search_embedding` call per entry.
         # Two centroid sources:
@@ -637,11 +647,15 @@ class V0PlusCompiler:
         """
         state = rs.state
         intent_text = (state.turn_intent or "").strip()
-        intent_lower = intent_text.lower()
         # Access via class so call sites that bind only the methods (test
         # harnesses, doc-renderers) still see the lexicon.
         hints = V0PlusCompiler._LYRIC_HINT_WORDS
-        has_intent_signal = any(w in intent_lower for w in hints)
+        # Token-level membership, not substring. Substring match would
+        # false-positive on common English (`"story" in "history"`,
+        # `"deep" in "deepfake"`, `"soul" in "souls"`) and fire the lyric
+        # branch on non-lyric turns. Splits on any non-word char.
+        intent_tokens = set(_LYRIC_TOKEN_RE.findall(intent_text.lower()))
+        has_intent_signal = bool(intent_tokens & hints)
 
         tag_values = [
             me.value for me in state.mentioned_entities
@@ -649,7 +663,7 @@ class V0PlusCompiler:
         ]
         lyric_tags = [
             t for t in tag_values
-            if any(w in t.lower() for w in hints)
+            if set(_LYRIC_TOKEN_RE.findall(t.lower())) & hints
         ]
 
         if not has_intent_signal and not lyric_tags:
