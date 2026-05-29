@@ -26,6 +26,13 @@ class IntentMode(str, Enum):
     playlist_build = "playlist_build"
 
 
+class ExplorationPolicy(str, Enum):
+    exploit = "exploit"
+    diversify_artists = "diversify_artists"
+    diversify_albums = "diversify_albums"
+    balanced = "balanced"
+
+
 Sentiment = Literal[-1, 0, 1]
 
 # Production TalkPlay track_ids are UUID v4 strings, but tests and synthetic
@@ -145,21 +152,50 @@ class HardFilter(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def _check_required_per_op(self):
-        if self.op == "<":
-            if self.end is None:
-                raise ValueError("op='<' requires end")
-        elif self.op == ">":
-            if self.start is None:
-                raise ValueError("op='>' requires start")
-        elif self.op == "between":
-            if self.start is None:
-                raise ValueError("op='between' requires start")
-            if self.end is None:
-                raise ValueError("op='between' requires end")
-            if self.start > self.end:
-                raise ValueError(f"between: start ({self.start}) must be <= end ({self.end})")
+    def _check_consistent_bounds(self):
+        # Tolerant: missing-bound filters (e.g. `between` with start=None) are
+        # accepted at the schema level and treated as no-ops downstream by the
+        # compiler. The LLM occasionally emits these on hard turns; rejecting
+        # them at validation time used to blow up the whole turn's state
+        # (losing turn_intent, mentioned_entities, etc.) for a single bad
+        # filter. The compiler now skips non-actionable filters; the schema
+        # only enforces semantic consistency (inverted ranges).
+        if (
+            self.op == "between"
+            and self.start is not None
+            and self.end is not None
+            and self.start > self.end
+        ):
+            raise ValueError(f"between: start ({self.start}) must be <= end ({self.end})")
         return self
+
+
+class ProcessConstraints(BaseModel):
+    """How aggressively to vary or stay-the-course on the next recommendation.
+
+    Orthogonal to `intent_mode`: intent says what the user is *doing*
+    (refining, pivoting, etc.), process_constraints says how the system
+    should *behave* along the artist/album axes. A user can be in
+    `intent_mode=refinement` AND `exploration_policy=diversify_artists` —
+    "more in this style, but different artists."
+    """
+
+    exploration_policy: ExplorationPolicy = Field(
+        default=ExplorationPolicy.balanced,
+        description=(
+            "exploit: stick with the current artist/album; the user signals continuation "
+            "of the same source ('more by them', 'another by this artist', 'more from this album'). "
+            "diversify_artists: keep the style/genre/era, but explicitly look for OTHER artists "
+            "('another <genre> track', 'more bands like this', 'something else in this vein'). "
+            "Most common when the user re-states a style descriptor instead of an artist anchor. "
+            "ALSO fires when the user rejects an artist by name (explicit_rejections.kind=artist) "
+            "and is still asking for continuation in the same style. "
+            "diversify_albums: same artist OK but prefer different albums ('another song by them, "
+            "different album', 'more from earlier in their career'). Rare. "
+            "balanced: default when the user gives no signal — e.g. 'more like this', 'something similar'. "
+            "Compiler can mix continuation and variation."
+        ),
+    )
 
 
 class ExplicitRejection(BaseModel):
@@ -241,6 +277,15 @@ class ConversationStateV0Plus(BaseModel):
             '"stop playing X", "different from X", "too heavy", "too gloomy". kind=artist excludes '
             "all tracks by that artist; kind=track excludes that track_id; kind=tag soft-demotes "
             "tracks whose tag_list overlaps."
+        ),
+    )
+
+    process_constraints: ProcessConstraints = Field(
+        default_factory=ProcessConstraints,
+        description=(
+            "How aggressively the compiler should vary vs continue along the artist/album/novelty "
+            "axes. Orthogonal to intent_mode. See ProcessConstraints field docs for the full "
+            "decision table."
         ),
     )
 

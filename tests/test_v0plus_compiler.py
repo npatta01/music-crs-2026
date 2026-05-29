@@ -549,6 +549,25 @@ def test_compiler_backfill_respects_hard_drops():
     assert "t-filler-1" not in result  # never re-introduced via backfill
 
 
+def test_compiler_skips_malformed_release_date_filter():
+    """A `between` filter with missing bounds should be a no-op, not blow up
+    the candidate pool. Regression: previously the catalog returned `set()`
+    for malformed filters and the compiler intersected → empty pool.
+    """
+    catalog = _catalog()
+    retriever = FakeRetriever(
+        text_hits_by_field={"tag_list": [("t-morphine-1", 5.0), ("t-tomwaits-1", 4.0)]},
+    )
+    # Construct a malformed filter the way the LLM occasionally does
+    bogus = HardFilter(field="release_date", op="between")
+    state = _state(hard_filters=[bogus])
+    result = V0PlusCompiler(catalog, retriever, _fake_encoder()).compile(_resolve(state, catalog))
+
+    # Pool should not be wiped by the malformed filter; both hits survive
+    assert "t-morphine-1" in result
+    assert "t-tomwaits-1" in result
+
+
 def test_compiler_backfill_respects_release_date_mask():
     catalog = _catalog()
     retriever = FakeRetriever(text_hits_by_field={"tag_list": [("t-morphine-1", 5.0)]})
