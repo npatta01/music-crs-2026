@@ -421,6 +421,30 @@ Next step:
 Status:
 - Analyzed
 
+## 2026-05-28 - v0+ image config post-bugfix rescore
+
+Question:
+After PR #66 metadata / resolver bugfixes, is `v0plus_compiler_image_devset` performing better, and should shallow devset rows suppress all cutoff metrics?
+
+Run:
+- `v0plus_compiler_image_devset` on Modal, predictions generated at `05133129b7e9556eba52cc89cf6cb4f48116f444`
+- Rescored with relaxed evaluator semantics: `require_full_diagnostic_depth=false`; shallow rows count missing unretrieved tails as misses instead of nulling all cutoffs.
+
+Results:
+- NDCG@20 `0.1452`, Hit@20 `0.2989`, MRR `0.1062`
+- Hit@100 `0.4450`, Hit@1000 `0.6261`
+- 81 / 8000 rows were shallower than 1000 candidates; min pool depth was 0.
+
+Takeaways:
+- Headline top-20 quality is flat to slightly lower than the prior image ablation (`0.1452` vs `0.1461` NDCG@20), so the bugfixes are correctness wins rather than a headline metric lift.
+- Deep coverage improved versus the prior image row (`Hit@1000 0.6261` vs `0.598`), while the config remains far ahead of BM25-only (`0.1452` vs `0.0984` NDCG@20).
+
+Linked report:
+- [`v0plus_compiler_image_devset.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_image_devset.md)
+
+Status:
+- Analyzed
+
 ## 2026-05-26 - v0+ compiler multimodal embedding ablation
 
 Question:

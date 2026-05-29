@@ -405,14 +405,21 @@ class V0PlusCompiler:
             per_field.setdefault("track_name", []).append(intent)
             per_field.setdefault("tag_list", []).append(intent)
 
+        # Emit one FieldQuery per term so each entity contributes a separate
+        # MatchQuery to tantivy's Boolean SHOULD. Joining all terms into a
+        # single space-joined query biases BM25 toward documents that happen
+        # to match more tokens of a multi-word entity name regardless of user
+        # intent (e.g. "Rolling Stones" out-scores "Beatles" purely on
+        # token-count grounds).
         return [
             FieldQuery(
                 field=field_name,
-                query=" ".join(terms).strip(),
+                query=term.strip(),
                 boost=self.cfg.field_boosts.get(field_name, 1.0),
             )
             for field_name, terms in per_field.items()
-            if " ".join(terms).strip()
+            for term in terms
+            if term.strip()
         ]
 
     # -- Dense query templates --------------------------------------------
@@ -716,13 +723,15 @@ class V0PlusCompiler:
             if tf.role == "rejected":
                 drop.add(tf.track_id)
 
-        for i, rej in rs.resolved_rejections.items():
-            er = state.explicit_rejections[i]
-            if er.kind == "track":
-                drop.update(rej.track_ids)
-            elif er.kind == "artist":
-                for aid in rej.artist_ids:
-                    drop.update(self.catalog.tracks_by_artist_id(aid))
+        # Expand BOTH track_ids and artist_ids for every resolved rejection,
+        # regardless of `er.kind`. The resolver may attach owning-artist ids
+        # to a kind="track" rejection (and vice versa); honoring only one
+        # side of that pairing here lets step-8 backfill silently re-admit
+        # tracks that step-7 `_apply_soft_adjustments` excluded.
+        for rej in rs.resolved_rejections.values():
+            drop.update(rej.track_ids)
+            for aid in rej.artist_ids:
+                drop.update(self.catalog.tracks_by_artist_id(aid))
 
         return drop
 

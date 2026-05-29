@@ -29,14 +29,14 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 | Best rewrite wave result | `bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset` | `NDCG@20 0.1092` | `done` | [bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset.md) |
 | Best offline hybrid so far | `RRF(bm25_with_tags, dense_qwen3_8b)` | `NDCG@20 0.1072` | `analyzed` | [retrieval_analysis_findings_2026-04-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/retrieval_analysis_findings_2026-04-28.md) |
 | Best v0+ ConversationState compiler (BM25-only) | `v0plus_compiler_devset` | `NDCG@20 0.1005` | `superseded` | [v0plus_compiler_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_devset.md) |
-| **Best v0+ retrieval overall (multimodal)** | `v0plus_compiler_image_devset` | `NDCG@20 0.1461` | `analyzed` | [v0plus_compiler_ablation_2026-05-26.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_ablation_2026-05-26.md) |
+| **Best v0+ retrieval overall (multimodal)** | `v0plus_compiler_image_devset` | `NDCG@20 0.1452` post-bugfix; prior `0.1461` | `analyzed` | [v0plus_compiler_image_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_image_devset.md) |
 | Best v0+ candidate coverage (Hit@1000) | `v0plus_compiler_all_devset` | `Hit@1000 0.6730` | `analyzed` | [v0plus_compiler_ablation_2026-05-26.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_ablation_2026-05-26.md) |
 
 ## Current Active Work
 
 | Workstream | Status | Where to read |
 |---|---|---|
-| v0+ compiler multimodal embedding ablation | `analyzed` | [v0plus_compiler_ablation_2026-05-26.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_ablation_2026-05-26.md) |
+| v0+ compiler multimodal embedding ablation | `analyzed` | [v0plus_compiler_image_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_image_devset.md) |
 | v0+ text-side retrieval Rounds 1-4 + failure taxonomy | `analyzed` | [v0plus_textside_2026-05-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_textside_2026-05-28.md) |
 | Extractor prompt revision (attacks 46% of failures) | `planned` | [v0plus_textside_2026-05-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_textside_2026-05-28.md#recommended-next-iterations-prioritized-by-leverage) |
 | Long-tail / popularity-balanced retrieval | `planned` | [v0plus_textside_2026-05-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_textside_2026-05-28.md#recommended-next-iterations-prioritized-by-leverage) |

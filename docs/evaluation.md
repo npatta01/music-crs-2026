@@ -98,5 +98,5 @@ When you run a new experiment, append one or more rows to the table above with t
   outputs remain unchanged (the leaderboard expects exactly 20 ids per turn).
 - Devset configs override `retrieval_topk: 1000` so the offline evaluator can
   report deep-cutoff diagnostics through `@1000`. The submission file format is independent.
-- The evaluator keeps `require_full_diagnostic_depth: true` as the diagnostic contract, but if a devset run returns a shallower pool it now emits `null` for unsupported deep metrics instead of failing or silently coercing them to zero.
+- The evaluator reports cutoff metrics even when a devset row returns fewer than 1000 candidates. A shallow row can still hit at deep cutoffs if the GT is present in the returned pool; otherwise the missing tail counts as a miss.
 - Score JSON files also include depth metadata such as `available_cutoffs`, `min_pool_depth`, `max_pool_depth`, and `n_shallow_rows` so raw native Milvus runs stay easy to compare.
