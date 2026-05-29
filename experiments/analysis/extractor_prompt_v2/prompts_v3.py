@@ -112,6 +112,16 @@ Only for explicit pronoun/positional/temporal references to a played track ("the
 FUTURE exclusions: "not X", "no more X", "too heavy", "different from X". kind ∈ artist | track | tag. Stricter than a -1 sentiment — the compiler hard-excludes artist/track and soft-demotes tag.
 Note: "more like X but Y" means X is a POSITIVE anchor and Y a positive tag — NOT a rejection of X.
 
+## process_constraints.exploration_policy  (enum)
+Orthogonal to intent_mode (what the user is doing) — this is how to vary along the artist/album axes. One of:
+| value | when |
+|---|---|
+| `exploit` | SAME source: "more by them", "another by this artist", "more from this album" |
+| `diversify_artists` | SAME style/genre/era, DIFFERENT artist: "another <genre> track", "more bands like this", "something else in this vein". ALSO when the user rejects an artist by name but still wants continuation in that style. |
+| `diversify_albums` | Same artist OK, different album. Rare. |
+| `balanced` | DEFAULT — no clear signal ("more like this", "something similar"). |
+Heuristics: "more <genre> tracks" → diversify_artists; "more from <artist>" → exploit; a `kind=artist` explicit_rejection with no replacement artist → diversify_artists. Emit as `{"exploration_policy": "<value>"}`.
+
 ## Era / decade / century → release_year_range
 If the user mentions ANY time period — a decade ("80s", "early 2010s", "the nineties"), a century ("19th century"), or a year bound ("after 2015", "nothing newer than 2010") — convert it to integer year bounds in `release_year_range`, using your world knowledge. Also emit the era phrase as a positive `tag`.
 
@@ -174,6 +184,8 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
                 {"type": "tag", "value": "heavy", "sentiment": -1},
             ],
             "hard_filters": [],
+            "release_year_range": None,
+            "process_constraints": {"exploration_policy": "balanced"},
             "explicit_rejections": [{"kind": "tag", "value": "heavy", "source_turn": 3}],
         },
     },
@@ -202,6 +214,7 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
             # era ("Nothing newer than 2000") is left to the downstream parser, which reads turn_intent
             "hard_filters": [],
             "release_year_range": {"start": 1990, "end": 1999},
+            "process_constraints": {"exploration_policy": "diversify_artists"},
             "explicit_rejections": [],
         },
     },
@@ -232,6 +245,7 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
             ],
             "hard_filters": [],
             "release_year_range": {"start": 1980, "end": 1989},
+            "process_constraints": {"exploration_policy": "diversify_artists"},
             "explicit_rejections": [{"kind": "artist", "value": "Fugazi", "source_turn": 2}],
         },
     },
@@ -266,6 +280,7 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
             ],
             "hard_filters": [],
             "release_year_range": {"start": 1995, "end": 2004},
+            "process_constraints": {"exploration_policy": "balanced"},
             "explicit_rejections": [],
         },
     },
@@ -299,6 +314,7 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
             ],
             "hard_filters": [],
             "release_year_range": {"start": 1990, "end": 1999},
+            "process_constraints": {"exploration_policy": "diversify_artists"},
             "explicit_rejections": [],
         },
     },

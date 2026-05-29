@@ -38,6 +38,7 @@ class CatalogProtocol(Protocol):
     def artist_id_of(self, track_id: str) -> str | None: ...
     def album_id_of(self, track_id: str) -> str | None: ...
     def tag_list(self, track_id: str) -> list[str]: ...
+    def release_year_of(self, track_id: str) -> int | None: ...
 
 
 @dataclass
@@ -229,6 +230,50 @@ class SessionAnchorFeature:
 
 
 # ----------------------------------------------------------------------
+# Feature 3: release-year soft preference (from state.release_year_range)
+# ----------------------------------------------------------------------
+
+
+@dataclass
+class ReleaseYearRangeFeature:
+    """Soft date-boosting from the LLM-extracted `release_year_range`.
+
+    A SOFT preference, not a hard filter: a track inside the requested era is
+    boosted; one outside is gently demoted with linear decay by how many years
+    it falls outside the [start, end] interval, floored so it's never zeroed.
+    Open-ended bounds (start or end is None) only constrain the side that's set.
+
+    No-op (multiplier 1.0) when the turn has no era (`start`/`end` both None) or
+    the candidate has no known release year — so it touches only the ~16% of
+    turns that mention a time period.
+    """
+
+    name: str
+    start_year: int | None = None
+    end_year: int | None = None
+    in_range_mult: float = 1.10          # gentle boost for in-era tracks
+    per_year_outside_penalty: float = 0.05
+    floor_mult: float = 0.6              # never demote below this
+
+    def _active(self) -> bool:
+        return self.start_year is not None or self.end_year is not None
+
+    def compute(self, track_id: str, catalog: CatalogProtocol) -> FeatureValue:
+        if not self._active():
+            return FeatureValue(self.name, 1.0)
+        year = catalog.release_year_of(track_id)
+        if year is None:
+            return FeatureValue(self.name, 1.0)
+        lo = self.start_year if self.start_year is not None else year
+        hi = self.end_year if self.end_year is not None else year
+        if lo <= year <= hi:
+            return FeatureValue(self.name, self.in_range_mult, breakdown={"in_range": self.in_range_mult})
+        distance = (lo - year) if year < lo else (year - hi)
+        m = max(self.floor_mult, 1.0 - self.per_year_outside_penalty * distance)
+        return FeatureValue(self.name, m, breakdown={"outside_by_years": float(distance), "mult": m})
+
+
+# ----------------------------------------------------------------------
 # Builder: pull all the precomputed sets out of a ResolvedConversationState
 # ----------------------------------------------------------------------
 
@@ -246,8 +291,11 @@ def build_features_for_state(
     explicit_artist_rejection_mult: float = 0.0,
     anchor_artist_demote_by_policy: dict[ExplorationPolicy, float] | None = None,
     anchor_album_demote_by_policy: dict[ExplorationPolicy, float] | None = None,
+    release_year_in_range_mult: float = 1.10,
+    release_year_per_year_outside_penalty: float = 0.05,
+    release_year_floor_mult: float = 0.6,
 ) -> list[Feature]:
-    """Construct the two-feature set from a resolved state. Pre-computes
+    """Construct the feature set from a resolved state. Pre-computes
     the relevant id-sets so per-candidate `compute()` calls are O(1)."""
     state = rs.state
     policy = state.process_constraints.exploration_policy
@@ -320,6 +368,14 @@ def build_features_for_state(
             anchor_album_ids=frozenset(anchor_album_ids),
             anchor_artist_mult=anchor_artist_mult,
             anchor_album_mult=anchor_album_mult,
+        ),
+        ReleaseYearRangeFeature(
+            name="release_year_range",
+            start_year=(state.release_year_range.start if state.release_year_range else None),
+            end_year=(state.release_year_range.end if state.release_year_range else None),
+            in_range_mult=release_year_in_range_mult,
+            per_year_outside_penalty=release_year_per_year_outside_penalty,
+            floor_mult=release_year_floor_mult,
         ),
     ]
 

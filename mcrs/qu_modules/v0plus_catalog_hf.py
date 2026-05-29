@@ -230,6 +230,17 @@ class HFTalkPlayCatalog:
             return None
         return _first_or_none(meta.get("album_id"))
 
+    def release_year_of(self, track_id: str) -> int | None:
+        """Year (int) of the track's release_date, or None if unknown."""
+        meta = self.metadata.get(track_id)
+        if not meta:
+            return None
+        rd = _first_or_none(meta.get("release_date"))
+        if not rd:
+            return None
+        s = str(rd).strip()
+        return int(s[:4]) if len(s) >= 4 and s[:4].isdigit() else None
+
     def tracks_by_artist_id(self, artist_id: str) -> list[str]:
         return list(self._tracks_by_artist_id.get(artist_id, []))
 

@@ -252,3 +252,42 @@ def test_reranker_drops_zero_scored_tracks_from_output():
     out = r.rerank([("t1", 0.5), ("t2", 0.3)], cat)
     assert "t1" not in dict(out)
     assert dict(out)["t2"] == 0.3
+
+
+# --- release_year_range soft date feature (extractor_prompt_v2 follow-up) ---
+
+from mcrs.qu_modules.post_fusion_features import ReleaseYearRangeFeature
+
+
+class _YearCatalog:
+    def __init__(self, year): self._y = year
+    def artist_id_of(self, t): return None
+    def album_id_of(self, t): return None
+    def tag_list(self, t): return []
+    def release_year_of(self, t): return self._y
+
+
+def test_release_year_feature_in_range_boosts():
+    f = ReleaseYearRangeFeature(name="ryr", start_year=2010, end_year=2014)
+    assert f.compute("t", _YearCatalog(2012)).value == 1.10
+
+
+def test_release_year_feature_outside_decays_and_floors():
+    f = ReleaseYearRangeFeature(name="ryr", start_year=2010, end_year=2014)
+    assert abs(f.compute("t", _YearCatalog(2015)).value - 0.95) < 1e-9   # 1yr out
+    assert f.compute("t", _YearCatalog(2050)).value == 0.6              # floored
+
+
+def test_release_year_feature_noop_when_inactive_or_unknown():
+    # no era -> always 1.0
+    assert ReleaseYearRangeFeature(name="ryr").compute("t", _YearCatalog(2012)).value == 1.0
+    # era set but candidate year unknown -> 1.0
+    assert ReleaseYearRangeFeature(name="ryr", start_year=1990, end_year=1999).compute(
+        "t", _YearCatalog(None)).value == 1.0
+
+
+def test_release_year_feature_open_bounds():
+    # "after 1900" (start only): a 2000 track is in-range, an 1850 track demoted
+    f = ReleaseYearRangeFeature(name="ryr", start_year=1901, end_year=None)
+    assert f.compute("t", _YearCatalog(2000)).value == 1.10
+    assert f.compute("t", _YearCatalog(1850)).value == 0.6
