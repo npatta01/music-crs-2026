@@ -114,6 +114,14 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 
 - [lancedb_fts_with_tag_list_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/lancedb_fts_with_tag_list_devset.md)
 
+### Wave 7: v0+ ConversationState Compiler (multimodal)
+
+- [v0plus_compiler_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_devset.md) — BM25-only baseline run (NDCG@20 0.1005), `superseded`
+- [v0plus_compiler_ablation_2026-05-26.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_ablation_2026-05-26.md) — 10-config embedding ablation; `image_siglip2` best at NDCG@20 0.1461 (pre-bugfix)
+- [v0plus_compiler_image_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_image_devset.md) — canonical image config re-run after #66/#71 bugfixes (NDCG@20 0.1452)
+- [v0plus_textside_2026-05-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_textside_2026-05-28.md) — anchor-free SigLIP-2 / LAION-CLAP text-side Rounds 1–4; no config beats image on NDCG@20 (ranks too deep without a reranker)
+- Per-variant configs: [`configs/v0plus_compiler_*_devset.yaml`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/configs)
+
 ## Conventions
 
 - One per-run report per file: `experiments/{tid}.md`
