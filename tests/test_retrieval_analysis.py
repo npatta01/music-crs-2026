@@ -55,6 +55,15 @@ def test_load_run_rejects_duplicate_track_ids(tmp_path):
 
 
 def test_evaluate_run_reproduces_control_metrics_within_rounding_tolerance():
+    required_paths = [
+        EVAL_EXP_DIR / "ground_truth" / "devset.json",
+        EVAL_EXP_DIR / "inference" / "devset" / "bm25_devset_retrieval_only_with_tag_list.json",
+        EVAL_EXP_DIR / "inference" / "devset" / "dense_qwen3_embedding_8b_devset.json",
+    ]
+    missing = [path for path in required_paths if not path.exists()]
+    if missing:
+        pytest.skip(f"control evaluator artifacts are not available: {missing[0]}")
+
     ground_truth = load_ground_truth("devset", exp_dir=EVAL_EXP_DIR)
 
     controls = {

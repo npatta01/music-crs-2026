@@ -469,6 +469,38 @@ def test_evaluate_reports_numeric_metrics_for_shallow_cutoffs():
     assert df_results.loc[0, "rr@500"] == 1.0
 
 
+def test_evaluate_reports_missing_prediction_key_clearly():
+    module = _load_module("evaluate_devset_missing_key_module", "evaluator/evaluate_devset.py")
+
+    df_predictions = pd.DataFrame(
+        [
+            {
+                "session_id": "s1",
+                "turn_number": 1,
+                "predicted_track_ids": ["track-1"],
+                "predicted_response": "",
+            }
+        ]
+    )
+    df_ground_truth = pd.DataFrame(
+        [
+            {
+                "session_id": "s1",
+                "turn_number": 1,
+                "ground_truth_track_id": "track-1",
+            },
+            {
+                "session_id": "s1",
+                "turn_number": 2,
+                "ground_truth_track_id": "track-2",
+            },
+        ]
+    )
+
+    with pytest.raises(KeyError, match="No prediction for session_id=s1 turn_number=2"):
+        module.evaluate(df_predictions, df_ground_truth)
+
+
 def test_evaluate_full_depth_keeps_all_metric_keys_numeric():
     module = _load_module("evaluate_devset_full_module", "evaluator/evaluate_devset.py")
 

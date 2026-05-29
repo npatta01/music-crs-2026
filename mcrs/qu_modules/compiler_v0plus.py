@@ -321,6 +321,8 @@ class V0PlusCompiler:
         centroid_branches = self._resolve_centroid_only_branches()
         centroid_branch_results: list[tuple[list[tuple[str, float]], float]] = []
         for cb in centroid_branches:
+            if cb.centroid_source == "anchor_tracks" and state.intent_mode.value == "pivot":
+                continue
             centroid = self._centroid_for_branch(rs, user_id, cb)
             if centroid is None:
                 continue

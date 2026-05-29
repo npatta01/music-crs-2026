@@ -44,7 +44,12 @@ REQUIRED_DIAGNOSTIC_DEPTH = max(K_VALUES)
 
 def df_filtering(df, session_id, turn_number):
     mask = (df["session_id"] == session_id) & (df["turn_number"] == turn_number)
-    return df[mask].iloc[0]
+    sub = df[mask]
+    if sub.empty:
+        raise KeyError(
+            f"No prediction for session_id={session_id} turn_number={turn_number}"
+        )
+    return sub.iloc[0]
 
 
 def _mean(xs):

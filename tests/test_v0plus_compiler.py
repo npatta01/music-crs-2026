@@ -9,7 +9,11 @@ from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
     MentionedEntity,
     TrackFeedback,
 )
-from mcrs.qu_modules.compiler_v0plus import CompilerConfig, V0PlusCompiler
+from mcrs.qu_modules.compiler_v0plus import (
+    CentroidOnlyBranch,
+    CompilerConfig,
+    V0PlusCompiler,
+)
 from mcrs.qu_modules.fuzzy_matcher import RapidfuzzCatalogMatcher
 from mcrs.qu_modules.resolver_v0plus import V0PlusResolver
 from tests.v0plus_fakes import DictCatalog, FakeEmbeddingClient, FakeRetriever
@@ -254,6 +258,28 @@ def test_compiler_centroid_alpha_zero_on_pivot_means_no_mixing():
         actual = call["query_vector"]
         for a, e in zip(actual, expected):
             assert abs(a - e) < 1e-9
+
+
+def test_compiler_skips_anchor_centroid_only_branches_on_pivot():
+    catalog = _catalog()
+    retriever = FakeRetriever(embedding_hits=[("t-morphine-2", 0.9)])
+    state = _state(
+        turn_intent="actually take me somewhere totally different",
+        intent_mode="pivot",
+        track_feedback=[
+            TrackFeedback(track_id="t-morphine-1", overall_sentiment=1, role="accepted"),
+        ],
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        centroid_only_branches=[
+            CentroidOnlyBranch(vector_field="metadata_qwen3_embedding_0_6b"),
+        ],
+    )
+
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    assert retriever.embedding_calls == []
 
 
 def test_compiler_centroid_alpha_positive_on_refinement_actually_mixes():
