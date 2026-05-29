@@ -471,3 +471,37 @@ Next step:
 
 Status:
 - Analyzed
+
+---
+
+## Wave: extractor prompt iteration + competition-data reframing (2026-05-29)
+
+Full analysis package: [`analysis/extractor_prompt_v2/README.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/extractor_prompt_v2/README.md).
+
+Started as an extractor-prompt fix for the textside writeup's "46% of failures
+have a GT-tag word the user literally said but the extractor dropped it." Ended
+by reading the actual TalkPlayData-2 generation code, which reframed priorities.
+
+Extractor results (full 2744-turn missed-literal cohort, gemma-4-26b-a4b-it):
+- v2c (verbatim-only, anti-hallucination): catalog recall 9.2%, era→release_date 67%, pure-noise 5.9%.
+- **v3 (generous + catalog-vocabulary bridging): catalog recall 11.4% (+24%), era→release_date 88.8% (+22pts), bridged tokens 7.5×, pure-noise 14.7%.** Wins every retrieval-predictive metric; noise is boosting-tolerable. v3 is the recommended extractor prompt IF the extractor route is pursued.
+- gemma-4-26b-a4b-it is the right extractor model: 0 systematic errors, lowest hallucination; gemma-3-12b had a 24% call-failure rate under the longer prompt; qwen3.6-35b-a3b is faster but noisier.
+
+Competition-data findings (from https://github.com/talkpl-ai/talkplaydata-2):
+- The GT is a **Gemini holistic pick** from a pool, rationale stored in the per-turn `thought` field (mineable). Not a deterministic field match — irreducible noise.
+- The generator's own reaction model (44 goal templates in `conversation_goals.yaml`) weights signals: **audio embsim 113, co-occurrence 51, metadata 51, tags ~97, lyrics ~46, release_date 37, image 36, popularity 27, tempo/key/chord 14**.
+- **Mismatch:** canonical `v0plus_compiler_image_devset` runs on tags(BM25)+image-centroid = the generator's #4 and #7 signals; audio(#1)/coocur(#2)/metadata(#3)/lyrics(#5) are all off or absent.
+- We have embeddings for ALL of them in the challenge dataset (`audio-laion_clap`, `cf-bpr`, `metadata-qwen3`, `lyrics-qwen3`, `image-siglip2`, `attributes-qwen3`).
+- All 5731 R2 failures bucketed by goal category: **64.5% extractor-addressable** (K era 16.6%, H artist 13%, E 9.4%, F 9.1%, D 8.6%, G 8%), **35.5% need another branch** (B lyrics 13.5%, J popularity 8%, C visual 6%, A audio 5.9%, I geography 2%). Even HH specificity fails 63% — hard ceiling.
+
+Reconciliation with the 2026-05-26 ablation:
+- cf_bpr (coocur, generator's #2) was tested there and **hurt novel-artist Hit@20 (-8%)** because BPR concentrates within-artist. So coocur is a **continuation** signal (matches the generator's "achieved / more like this" turns using embsim:coocur), not a novel-artist one → it's a **routing** decision, not an always-on branch.
+- **Audio-anchor-centroid (accepted track's `audio-laion_clap` → catalog audio) was NEVER tested.** The textside work only tried CLAP-*text* (text→audio), which ranked deep. Audio-anchor-centroid is the generator's #1 signal and the cleanest untried high-value lever — same mechanism as the working image_centroid.
+
+Recommended next levers (revised):
+1. **Audio-anchor-centroid branch** (`audio-laion_clap`, anchor centroid like image_siglip2) — generator's #1 signal, untried. Highest expected lever.
+2. **Per-turn branch routing** driven by an extractor goal-category / routing-tag output: coocur on refinement/playlist_build, audio on category A, image on C, release_date filter on K, popularity prior on J. Mirrors the generator's per-goal reaction model; the north-star v3 schema's `routing_tags` field.
+3. **Extractor v3** for the addressable 64.5% (era-filter 89%, +24% catalog recall) + emit a `popularity` intent.
+4. Skip tempo/key/chord (no catalog columns) and raw-lyric BM25 (only the lyrics embedding ships).
+
+Status: Analyzed. No canonical change yet — next step is the audio-anchor-centroid retrieval experiment (needs user go-ahead on Modal compute).

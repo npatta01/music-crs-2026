@@ -1,0 +1,7 @@
+{
+  "n_trace_rows": 8000,
+  "n_failed_top20": 5731,
+  "n_zero_positive_tags": 2030,
+  "n_cohort_missed_literal_tags": 2744,
+  "share_of_failed": 0.47879951142906996
+}

@@ -62,6 +62,29 @@ from experiments.analysis.conversation_state_extraction_bakeoff.prompts import (
 from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
     ConversationStateV0Plus,
 )
+
+
+def _resolve_prompt_fns(prompt_version: str):
+    """Return (build_messages, json_schema_for_response_format) for a prompt
+    version. Default 'v1' is the original bakeoff prompt (back-compat). 'v3' is
+    the generous-extraction + catalog-bridging rewrite from the
+    extractor_prompt_v2 analysis package."""
+    pv = (prompt_version or "v1").lower()
+    if pv in ("v1", "bakeoff", "default"):
+        return build_messages, json_schema_for_response_format
+    if pv in ("v2", "v2c"):
+        from experiments.analysis.extractor_prompt_v2.prompts_v2 import (
+            build_messages as bm,
+            json_schema_for_response_format as schema,
+        )
+        return bm, schema
+    if pv == "v3":
+        from experiments.analysis.extractor_prompt_v2.prompts_v3 import (
+            build_messages as bm,
+            json_schema_for_response_format as schema,
+        )
+        return bm, schema
+    raise ValueError(f"unknown extractor prompt_version: {prompt_version!r}")
 from mcrs.embeddings.base import EmbeddingClient
 from mcrs.embeddings.qwen3_embedding import Qwen3EmbeddingClient
 from mcrs.qu_modules.compiler_v0plus import CentroidOnlyBranch, CompilerConfig, DenseBranch, V0PlusCompiler
@@ -79,6 +102,39 @@ logger = logging.getLogger(__name__)
 # ----------------------------------------------------------------------
 
 
+def _hard_filter_is_valid(hf: Any) -> bool:
+    """A release_date filter is usable only if its bounds are well-formed."""
+    if not isinstance(hf, dict):
+        return False
+    op = hf.get("op")
+    s, e = hf.get("start"), hf.get("end")
+    if op == "between":
+        return isinstance(s, str) and isinstance(e, str) and s <= e
+    if op == ">":
+        return isinstance(s, str)
+    if op == "<":
+        return isinstance(e, str)
+    return False
+
+
+def _sanitize_parsed_state(parsed: Any) -> Any:
+    """Generic graceful degradation BEFORE schema validation: a single bad
+    optional field should never discard the whole turn's state (→ empty pool).
+
+    Currently: drop malformed `hard_filters` (e.g. a `between` with start > end)
+    rather than letting one bad entry fail validation of the entire state. Era /
+    decade handling lives in `release_year_range`, which the LLM fills using
+    world knowledge and the schema self-normalizes (swaps inverted bounds) — no
+    code-side date parsing.
+    """
+    if not isinstance(parsed, dict):
+        return parsed
+    hfs = parsed.get("hard_filters")
+    if isinstance(hfs, list):
+        parsed["hard_filters"] = [hf for hf in hfs if _hard_filter_is_valid(hf)]
+    return parsed
+
+
 @dataclass
 class LiteLLMExtractor:
     """Calls a hosted LLM (via litellm) with the v0+ extraction prompt and
@@ -92,6 +148,12 @@ class LiteLLMExtractor:
     max_tokens: int = 1500
     timeout_s: int = 90
 
+    # Which extraction prompt to use. "v1" = original bakeoff prompt (default,
+    # back-compat). "v3" = generous-extraction + catalog-bridging rewrite (see
+    # experiments/analysis/extractor_prompt_v2/). Resolved to functions in
+    # __post_init__.
+    prompt_version: str = "v1"
+
     # Temperature used for the JSON-decode retry. The LLM occasionally enters
     # a degenerative-output mode (one valid field followed by a stutter of
     # whitespace tokens until max_tokens), which is a deterministic function
@@ -100,20 +162,23 @@ class LiteLLMExtractor:
     # sampling trajectory off the degenerative path.
     retry_temperature: float = 0.3
 
+    def __post_init__(self):
+        self._build_messages_fn, self._schema_fn = _resolve_prompt_fns(self.prompt_version)
+
     def _build_kwargs(
         self,
         conversation: list[dict[str, Any]],
         played_track_ids: list[str],
         temperature: float | None = None,
     ) -> dict[str, Any]:
-        messages = build_messages(conversation, played_track_ids)
+        messages = self._build_messages_fn(conversation, played_track_ids)
         kwargs: dict[str, Any] = {
             "model": self.model_name,
             "messages": messages,
             "temperature": self.temperature if temperature is None else temperature,
             "max_tokens": self.max_tokens,
             "timeout": self.timeout_s,
-            "response_format": json_schema_for_response_format(),
+            "response_format": self._schema_fn(),
         }
         if self.api_base:
             kwargs["api_base"] = self.api_base
@@ -143,6 +208,7 @@ class LiteLLMExtractor:
                 cleaned = cleaned[4:]
             cleaned = cleaned.rsplit("```", 1)[0].strip()
         parsed = json.loads(cleaned)
+        parsed = _sanitize_parsed_state(parsed)
         return ConversationStateV0Plus.model_validate(parsed)
 
     def extract(
@@ -674,6 +740,7 @@ def build_v0plus_compiler_qu(
             temperature=float(ex_cfg.get("temperature", 0.0)),
             max_tokens=int(ex_cfg.get("max_tokens", 1500)),
             timeout_s=int(ex_cfg.get("timeout_s", 90)),
+            prompt_version=str(ex_cfg.get("prompt_version", "v1")),
         )
 
     # ----- Resolver -----

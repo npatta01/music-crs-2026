@@ -1,0 +1,793 @@
+[
+  {
+    "session_id": "a3a9d0e4-0d34-4087-ad3e-8fb9e382b8e1",
+    "turn_number": 2,
+    "target_token": "megadeth",
+    "user_text": "Megadeth is cool, good stuff, but I've heard a lot of their tracks. Can you hit me with something with that classic heavy metal sound, powerful vocals for sure, but maybe a band that's a bit more obscure or with a different kind of intensity?",
+    "claude_tags": [
+      "powerful vocals",
+      "powerful",
+      "classic heavy metal",
+      "heavy metal",
+      "obscure",
+      "intensity"
+    ],
+    "claude_mentioned_entities": [
+      {
+        "type": "artist",
+        "value": "Ozzy Osbourne",
+        "sentiment": 1
+      },
+      {
+        "type": "artist",
+        "value": "Megadeth",
+        "sentiment": 0
+      },
+      {
+        "type": "tag",
+        "value": "powerful vocals",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "powerful",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "classic heavy metal",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "heavy metal",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "obscure",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "intensity",
+        "sentiment": 1
+      }
+    ],
+    "recovered_as_tag": false,
+    "recovered_as_entity": true,
+    "latency_s": 10.00588370906189
+  },
+  {
+    "session_id": "c73e7980-8112-4e9c-b558-dfeb4787049c",
+    "turn_number": 7,
+    "target_token": "ennio morricone",
+    "user_text": "Oh, this is wonderful! Ennio Morricone is truly a master, and 'Marcia - Marcetta' is exactly the kind of iconic, grand cinematic piece I was hoping for. It's absolutely perfect for setting that immersive background. Do you have more instrumental tracks from classic film scores that evoke a similar powerful and sweeping atmosphere?",
+    "claude_tags": [
+      "atmospheric",
+      "background",
+      "instrumental",
+      "classic film scores",
+      "powerful",
+      "sweeping",
+      "iconic",
+      "grand",
+      "cinematic",
+      "epic",
+      "orchestral",
+      "immersive"
+    ],
+    "claude_mentioned_entities": [
+      {
+        "type": "artist",
+        "value": "Ennio Morricone",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Marcia - Marcetta",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "atmospheric",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "background",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "instrumental",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "classic film scores",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "powerful",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "sweeping",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "iconic",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "grand",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "cinematic",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "epic",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "orchestral",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "immersive",
+        "sentiment": 1
+      }
+    ],
+    "recovered_as_tag": false,
+    "recovered_as_entity": true,
+    "latency_s": 7.915732332970947
+  },
+  {
+    "session_id": "6e00389a-e797-4d3e-bd51-0e9cf9a93d95",
+    "turn_number": 8,
+    "target_token": "cannibal corpse",
+    "user_text": "Return To Flesh\" is cool, but it's still focusing more on being dead or reanimated, not the truly *unnatural* transformation into something alien and grotesque by eldritch forces. I'm looking for lyrics that describe bodies *warping* into things that shouldn't exist, not just being dismembered or undead. Can you recommend some brutal death metal that really nails that bizarre, Lovecraftian *physical* transformation, even if it's from a band other than Cannibal Corpse?",
+    "claude_tags": [
+      "brutal death metal",
+      "brutal",
+      "death metal",
+      "body horror",
+      "graphic",
+      "intense",
+      "gore",
+      "vivid",
+      "disturbing",
+      "cannibalism",
+      "extreme bodily transformation",
+      "medical experimentation",
+      "torture",
+      "gruesome rituals",
+      "ancient",
+      "cosmic horror",
+      "alien",
+      "grotesque",
+      "unnatural",
+      "eldritch",
+      "Lovecraftian",
+      "H.P. Lovecraft",
+      "warping",
+      "physical transformation",
+      "bizarre"
+    ],
+    "claude_mentioned_entities": [
+      {
+        "type": "artist",
+        "value": "Cannibal Corpse",
+        "sentiment": 0
+      },
+      {
+        "type": "artist",
+        "value": "Suffocation",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Disposal of the Body",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Disfigured",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "An Experiment In Homicide",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Mummified in Barbed Wire",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Staring Through The Eyes Of The Dead",
+        "sentiment": 0
+      },
+      {
+        "type": "track",
+        "value": "The Bleeding",
+        "sentiment": 0
+      },
+      {
+        "type": "track",
+        "value": "Return To Flesh",
+        "sentiment": 0
+      },
+      {
+        "type": "tag",
+        "value": "brutal death metal",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "brutal",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "death metal",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "body horror",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "dismemberment",
+        "sentiment": 0
+      },
+      {
+        "type": "tag",
+        "value": "graphic",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "intense",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "gore",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "vivid",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "disturbing",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "cannibalism",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "extreme bodily transformation",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "medical experimentation",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "torture",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "gruesome rituals",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "ancient",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "cosmic horror",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "alien",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "grotesque",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "unnatural",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "eldritch",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "Lovecraftian",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "H.P. Lovecraft",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "warping",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "physical transformation",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "bizarre",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "undead",
+        "sentiment": -1
+      },
+      {
+        "type": "tag",
+        "value": "reanimated",
+        "sentiment": -1
+      }
+    ],
+    "recovered_as_tag": false,
+    "recovered_as_entity": true,
+    "latency_s": 23.799015416763723
+  },
+  {
+    "session_id": "d5a58190-68df-4d54-99f3-255cd846f3f3",
+    "turn_number": 7,
+    "target_token": "kreator",
+    "user_text": "Oh yes! \"Storming with Menace\" is absolutely brutal! This is exactly the kind of relentless thrash I wanted to hear. Can you recommend one more track, maybe something equally ferocious and fast-paced, either by Kreator or another band with a very similar vibe?",
+    "claude_tags": [
+      "intense",
+      "aggressive",
+      "metal",
+      "thrash",
+      "thrash metal",
+      "raw",
+      "old-school",
+      "brutal",
+      "relentless",
+      "ferocious",
+      "fast-paced",
+      "80s",
+      "early 90s",
+      "German",
+      "guttural",
+      "anti-establishment",
+      "iconic"
+    ],
+    "claude_mentioned_entities": [
+      {
+        "type": "artist",
+        "value": "Kreator",
+        "sentiment": 1
+      },
+      {
+        "type": "artist",
+        "value": "Exodus",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Storming with Menace",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "intense",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "aggressive",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "metal",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "thrash",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "thrash metal",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "raw",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "old-school",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "brutal",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "relentless",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "ferocious",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "fast-paced",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "80s",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "early 90s",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "German",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "guttural",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "anti-establishment",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "iconic",
+        "sentiment": 1
+      }
+    ],
+    "recovered_as_tag": false,
+    "recovered_as_entity": true,
+    "latency_s": 10.671400084160268
+  },
+  {
+    "session_id": "f21ccd75-0edb-4557-ae36-9d4769838812",
+    "turn_number": 3,
+    "target_token": "eminem",
+    "user_text": "Oh yeah, \"My Dad's Gone Crazy\" is a classic too! Good pick. Can you recommend more Eminem songs that have a bit of a darker or more serious tone, like \"Stan\"? Or maybe some other hip-hop artists with similar vibes?",
+    "claude_tags": [
+      "rap",
+      "hip-hop",
+      "darker",
+      "serious"
+    ],
+    "claude_mentioned_entities": [
+      {
+        "type": "artist",
+        "value": "Eminem",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Stan",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "My Dad's Gone Crazy",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "rap",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "hip-hop",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "darker",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "serious",
+        "sentiment": 1
+      }
+    ],
+    "recovered_as_tag": false,
+    "recovered_as_entity": true,
+    "latency_s": 5.175347582902759
+  },
+  {
+    "session_id": "9580e0ed-7299-464f-8d74-cc96af55f1ff",
+    "turn_number": 7,
+    "target_token": "destiny's child",
+    "user_text": "Oh, cool! Destiny's Child is awesome too! 'Happy Face' is a pretty good song. Can you play something else super upbeat and fun from the 2000s pop era?",
+    "claude_tags": [
+      "2000s",
+      "pop",
+      "upbeat",
+      "fun",
+      "iconic",
+      "energetic"
+    ],
+    "claude_mentioned_entities": [
+      {
+        "type": "artist",
+        "value": "Britney Spears",
+        "sentiment": 1
+      },
+      {
+        "type": "album",
+        "value": "Blackout",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Piece of Me",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Break the Ice",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Toxic",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Radar",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Womanizer",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Get Naked (I Got a Plan)",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Gimme More",
+        "sentiment": 1
+      },
+      {
+        "type": "artist",
+        "value": "Destiny's Child",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Happy Face",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "2000s",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "pop",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "upbeat",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "fun",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "iconic",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "energetic",
+        "sentiment": 1
+      }
+    ],
+    "recovered_as_tag": false,
+    "recovered_as_entity": true,
+    "latency_s": 8.873079957906157
+  },
+  {
+    "session_id": "f51831e3-5653-4685-9bd8-cc2efcdb149f",
+    "turn_number": 3,
+    "target_token": "classic",
+    "user_text": "Oh, \"Jolene\" is a classic, and Pentatonix does an amazing job with it! Thanks for that. Since you helped me remember that unique foreign pop song, do you have any other really catchy, upbeat rock songs? Something with a strong melody like The Calling?",
+    "claude_tags": [
+      "foreign pop",
+      "pop",
+      "unique",
+      "catchy",
+      "upbeat",
+      "rock",
+      "strong melody"
+    ],
+    "claude_mentioned_entities": [
+      {
+        "type": "artist",
+        "value": "Pentatonix",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Papaoutai",
+        "sentiment": 1
+      },
+      {
+        "type": "track",
+        "value": "Jolene",
+        "sentiment": 1
+      },
+      {
+        "type": "artist",
+        "value": "The Calling",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "foreign pop",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "pop",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "unique",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "catchy",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "upbeat",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "rock",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "strong melody",
+        "sentiment": 1
+      }
+    ],
+    "recovered_as_tag": false,
+    "recovered_as_entity": false,
+    "latency_s": 5.989959457889199
+  },
+  {
+    "session_id": "80984510-54f4-48e8-994e-f2a98ee9e13f",
+    "turn_number": 2,
+    "target_token": "classic",
+    "user_text": "That's a classic, and definitely in the right time period and genre! But it's not quite the one. The song I'm thinking of is more about a relationship that's maybe falling apart, or someone feeling confused about their partner.",
+    "claude_tags": [
+      "romantic relationships",
+      "90s",
+      "early 2000s",
+      "relationship that's maybe falling apart",
+      "confused about their partner"
+    ],
+    "claude_mentioned_entities": [
+      {
+        "type": "artist",
+        "value": "Sixpence None The Richer",
+        "sentiment": 0
+      },
+      {
+        "type": "track",
+        "value": "Kiss Me",
+        "sentiment": 0
+      },
+      {
+        "type": "tag",
+        "value": "romantic relationships",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "90s",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "early 2000s",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "relationship that's maybe falling apart",
+        "sentiment": 1
+      },
+      {
+        "type": "tag",
+        "value": "confused about their partner",
+        "sentiment": 1
+      }
+    ],
+    "recovered_as_tag": false,
+    "recovered_as_entity": false,
+    "latency_s": 6.5940840831026435
+  }
+]

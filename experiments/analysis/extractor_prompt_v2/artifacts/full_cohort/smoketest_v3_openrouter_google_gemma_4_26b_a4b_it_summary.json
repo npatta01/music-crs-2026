@@ -1,0 +1,21 @@
+{
+  "model": "openrouter/google/gemma-4-26b-a4b-it",
+  "prompt_version": "v3",
+  "n_turns": 2744,
+  "n_errors": 6,
+  "n_with_at_least_one_recovered_token": 1738,
+  "share_with_at_least_one_recovered": 0.6347699050401753,
+  "mean_per_turn_recovery_rate": 0.501503135286919,
+  "mean_catalog_recall": 0.11352910518714861,
+  "share_turns_with_any_catalog_hit": 0.9163623082542002,
+  "total_catalog_hits": 6622,
+  "total_bridged_tokens": 1241,
+  "total_pure_noise_tokens": 911,
+  "total_emitted_tag_tokens": 20008,
+  "share_emitted_tokens_pure_noise": 0.045531787285085966,
+  "total_emitted_tags": 17815,
+  "total_hallucinated_tags": 1966,
+  "share_emitted_tags_hallucinated": 0.11035644120123492,
+  "n_turns_with_zero_hallucination": 1462,
+  "latency_p50_s": 4.5329266670159996
+}

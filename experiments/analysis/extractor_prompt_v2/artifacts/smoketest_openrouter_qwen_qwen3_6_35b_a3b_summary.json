@@ -1,0 +1,9 @@
+{
+  "model": "openrouter/qwen/qwen3.6-35b-a3b",
+  "n_turns": 50,
+  "n_errors": 0,
+  "n_with_at_least_one_recovered_token": 30,
+  "share_with_at_least_one_recovered": 0.6,
+  "mean_per_turn_recovery_rate": 0.45023809523809527,
+  "latency_p50_s": 3.7127713751979172
+}

@@ -1,0 +1,15 @@
+{
+  "model": "openrouter/qwen/qwen3.6-35b-a3b",
+  "n_turns": 50,
+  "n_errors": 0,
+  "n_with_at_least_one_recovered_token": 31,
+  "share_with_at_least_one_recovered": 0.62,
+  "mean_per_turn_recovery_rate": 0.49357142857142855,
+  "total_emitted_tags": 383,
+  "total_hallucinated_tags": 6,
+  "share_emitted_tags_hallucinated": 0.015665796344647518,
+  "mean_per_turn_hallucination_rate": 0.006080128205128206,
+  "n_turns_with_zero_hallucination": 46,
+  "share_turns_with_zero_hallucination": 0.92,
+  "latency_p50_s": 6.614942290820181
+}
