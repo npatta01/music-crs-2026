@@ -37,6 +37,9 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 | Workstream | Status | Where to read |
 |---|---|---|
 | v0+ compiler multimodal embedding ablation | `analyzed` | [v0plus_compiler_ablation_2026-05-26.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_ablation_2026-05-26.md) |
+| v0+ text-side retrieval Rounds 1-4 + failure taxonomy | `analyzed` | [v0plus_textside_2026-05-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_textside_2026-05-28.md) |
+| Extractor prompt revision (attacks 46% of failures) | `planned` | [v0plus_textside_2026-05-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_textside_2026-05-28.md#recommended-next-iterations-prioritized-by-leverage) |
+| Long-tail / popularity-balanced retrieval | `planned` | [v0plus_textside_2026-05-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_textside_2026-05-28.md#recommended-next-iterations-prioritized-by-leverage) |
 | Cross-encoder reranker over top-200 (attacks novel-artist gap) | `planned` | [experiment_log.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md) |
 | Hybrid sparse+dense retrieval follow-up | `planned` | [experiment_log.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md) |
 | Conversation-aware query representation direction | `analyzed` | [analysis/query_intent_v1/README.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/query_intent_v1/README.md) |

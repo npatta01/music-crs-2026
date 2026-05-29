@@ -50,14 +50,28 @@ from mcrs.retrieval_modules.base import FieldQuery, Retriever
 class DenseBranch:
     """One dense retrieval branch — a vector column to ANN-query against.
 
-    The Compiler issues one `search_embedding(...)` call per enabled branch,
-    each with the SAME encoded query text but a branch-specific anchor
-    centroid (from `catalog.vector(track_id, vector_field)`).
+    The Compiler issues one `search_embedding(...)` call per enabled branch.
+
+    Two strings address what gets encoded against what:
+    - `encoder_id` picks which `EmbeddingClient` from the compiler's
+      `encoders` map encodes this branch's query. Default is `"default"`
+      for back-compat with single-encoder configs (today's Qwen3-only setup).
+      New text-side branches set this to e.g. `"siglip2_text"` / `"clap_text"`.
+    - `query_id` picks which query string template to use. Default `"intent"`
+      uses the standard turn_intent + entities + tags concatenation. Future
+      per-modality templates (visual-style, sonic) can be added without
+      touching code by defining new entries in the CompilerConfig.queries
+      mapping.
+
+    The encoded vector is cached per (encoder_id, query_id) tuple so multiple
+    branches sharing an encoder/query pay one encode call.
     """
 
     vector_field: str
     weight: float = 1.0
     distance_type: str = "cosine"
+    encoder_id: str = "default"
+    query_id: str = "intent"
 
 
 @dataclass
@@ -163,6 +177,13 @@ class CompilerConfig:
     cf_bpr_vector_field: str = "cf_bpr"
     cf_bpr_distance_type: str = "cosine"
 
+    # Per-branch ranking diagnostic. When > 0, every `compile()` populates the
+    # trace's `branch_rankings` map with each branch's top-K candidate IDs
+    # (BM25 + each dense + each centroid-only). 0 means off (no trace cost).
+    # Use for offline diagnostics like "where does the GT rank inside each
+    # retriever?" Costs ~36 KB * branches * turns when on.
+    branch_trace_topk: int = 0
+
 
 class V0PlusCompiler:
     """Turn a ResolvedConversationState into top-N ranked track_ids."""
@@ -171,13 +192,26 @@ class V0PlusCompiler:
         self,
         catalog: CompilerCatalog,
         retriever: Retriever,
-        encoder: EmbeddingClient,
+        encoder: EmbeddingClient | None = None,
         config: CompilerConfig | None = None,
         user_embeddings: "UserEmbeddings | None" = None,
+        encoders: dict[str, EmbeddingClient] | None = None,
     ) -> None:
         self.catalog = catalog
         self.retriever = retriever
-        self.encoder = encoder
+        # Encoder registry. Back-compat: a single `encoder=` becomes the
+        # "default" entry. New configs may pass `encoders=` directly with
+        # additional named encoders (e.g. "siglip2_text", "clap_text").
+        if encoder is None and not encoders:
+            raise ValueError(
+                "V0PlusCompiler requires either `encoder` or a non-empty `encoders` map"
+            )
+        self.encoders: dict[str, EmbeddingClient] = dict(encoders or {})
+        if encoder is not None:
+            self.encoders.setdefault("default", encoder)
+        # Legacy single-encoder accessor kept for any external caller that
+        # still references `compiler.encoder` directly.
+        self.encoder: EmbeddingClient | None = self.encoders.get("default", encoder)
         self.cfg = config or CompilerConfig()
         # Optional user-side embeddings lookup. Required only when a config
         # uses `centroid_only_branches` with `centroid_source="user"`. None
@@ -188,22 +222,72 @@ class V0PlusCompiler:
     # Top-level
     # ------------------------------------------------------------------
 
-    def compile(self, rs: ResolvedConversationState, user_id: str | None = None) -> list[str]:
+    def compile(
+        self,
+        rs: ResolvedConversationState,
+        user_id: str | None = None,
+        branch_traces: dict[str, list[str]] | None = None,
+    ) -> list[str]:
+        """Compile a resolved state into top-N ranked track_ids.
+
+        When `branch_traces` is a dict, it is populated with each retriever
+        branch's top-K candidate IDs (K = self.cfg.branch_trace_topk).
+        Keys are stable identifiers ("bm25", "dense.<encoder_id>.<vector_field>",
+        "centroid.<source>.<vector_field>") so downstream analysis can match
+        them across runs. No-op when branch_traces is None or topk is 0.
+        """
         state = rs.state
+        _trace_k = self.cfg.branch_trace_topk if branch_traces is not None else 0
 
         # 1. Pre-fusion catalog mask from hard_filters.release_date
         candidate_mask = self._release_date_mask(state)
 
         # 2. Build queries
         bm25_clauses = self._build_bm25_clauses(rs)
-        encoded_query = self._build_dense_query_text(rs) if self.cfg.enable_dense else None
+        # query_id -> query string (None when the state has no positive signal
+        # for that template). Only build templates referenced by some branch
+        # so unused builders never run. Reject unknown query_ids early.
+        query_strings: dict[str, str | None] = {}
+        if self.cfg.enable_dense:
+            referenced_query_ids = {b.query_id for b in self.cfg.dense_branches}
+            builders = self._query_builders
+            for qid in referenced_query_ids:
+                if qid not in builders:
+                    raise KeyError(
+                        f"DenseBranch references unknown query_id={qid!r}. "
+                        f"Available templates: {sorted(builders)}"
+                    )
+                query_strings[qid] = builders[qid](rs)
 
         # 3. Retrieval — 1 BM25 call + 1 search_embedding per enabled dense branch
         bm25_hits = self.retriever.search(bm25_clauses, topk=self.cfg.bm25_k)
+        if _trace_k:
+            branch_traces["bm25"] = [t for t, _ in bm25_hits[:_trace_k]]
+        # Cache encoded vectors by (encoder_id, query_id) so branches sharing
+        # an encoder/query pair pay one encode call total.
+        encoded_cache: dict[tuple[str, str], list[float]] = {}
         dense_branch_results: list[list[tuple[str, float]]] = []
-        if encoded_query is not None:
+        if self.cfg.enable_dense:
             for branch in self.cfg.dense_branches:
-                vec = self._mix_for_branch(rs, encoded_query, branch)
+                q_text = query_strings.get(branch.query_id)
+                if q_text is None:
+                    # Either query_id unknown OR state had no positive signal.
+                    # Append empty hits to keep dense_branch_results aligned
+                    # with self.cfg.dense_branches for the RRF fusion zip().
+                    dense_branch_results.append([])
+                    continue
+                cache_key = (branch.encoder_id, branch.query_id)
+                if cache_key not in encoded_cache:
+                    enc = self.encoders.get(branch.encoder_id)
+                    if enc is None:
+                        raise KeyError(
+                            f"DenseBranch(vector_field={branch.vector_field!r}) "
+                            f"references unknown encoder_id={branch.encoder_id!r}. "
+                            f"Available encoders: {sorted(self.encoders)}"
+                        )
+                    raw = enc.embed_batch([q_text])[0]
+                    encoded_cache[cache_key] = _normalize(raw)
+                vec = self._mix_for_branch(rs, encoded_cache[cache_key], branch)
                 hits = self.retriever.search_embedding(
                     query_vector=vec,
                     vector_field=branch.vector_field,
@@ -211,6 +295,10 @@ class V0PlusCompiler:
                     distance_type=branch.distance_type,
                 )
                 dense_branch_results.append(hits)
+                if _trace_k:
+                    branch_traces[f"dense.{branch.encoder_id}.{branch.vector_field}"] = (
+                        [t for t, _ in hits[:_trace_k]]
+                    )
 
         # 3b. Centroid-only branches — one `search_embedding` call per entry.
         # Two centroid sources:
@@ -233,6 +321,10 @@ class V0PlusCompiler:
                 distance_type=cb.distance_type,
             )
             centroid_branch_results.append((hits, cb.weight))
+            if _trace_k:
+                branch_traces[f"centroid.{cb.centroid_source}.{cb.vector_field}"] = (
+                    [t for t, _ in hits[:_trace_k]]
+                )
 
         # 4. Apply pre-fusion mask (post-hoc until the retriever supports masks)
         bm25_hits = [(t, s) for t, s in bm25_hits if t in candidate_mask]
@@ -323,13 +415,19 @@ class V0PlusCompiler:
             if " ".join(terms).strip()
         ]
 
-    def _build_dense_query_text(self, rs: ResolvedConversationState) -> list[float] | None:
-        """Encode the dense query string ONCE. Returns the normalized encoded
-        vector, or None when turn_intent / positive entities / tags are all
-        empty (so the dense modality is skipped entirely).
+    # -- Dense query templates --------------------------------------------
+    # Each builder takes the resolved state and returns a query STRING (or
+    # None to skip the branch). Branches reference templates by `query_id`.
+    # New `query_id`s are added by writing a `_build_<name>_query_string`
+    # method and registering it in `_query_builders` below.
 
-        Centroid mixing is per-branch and happens in `_mix_for_branch` so
-        each dense field can mix its own anchor centroid.
+    def _build_dense_query_string(self, rs: ResolvedConversationState) -> str | None:
+        """`query_id="intent"` — canonical Qwen3/BM25-shaped query string.
+
+        Joins turn_intent + positive artist mentions + positive tags. Matches
+        the literal surface forms in the catalog's metadata column and the
+        qwen3 text encoder's natural language. Used by qwen3 dense branches
+        when present; default for any branch that doesn't override `query_id`.
         """
         state = rs.state
         text_parts: list[str] = []
@@ -351,10 +449,228 @@ class V0PlusCompiler:
 
         if not text_parts:
             return None
+        return "; ".join(text_parts)
 
-        query_string = "; ".join(text_parts)
-        query_vec = self.encoder.embed_batch([query_string])[0]
-        return _normalize(query_vec)
+    def _build_sonic_query_string(self, rs: ResolvedConversationState) -> str | None:
+        """`query_id="sonic"` — CLAP-music-shaped query string.
+
+        CLAP music was trained on (audio, caption) pairs over music + AudioSet,
+        so its text encoder aligns best with sonic/musical descriptors:
+        genre, mood, instrumentation, vocal style, era. Artist names and
+        narrative themes ("overcoming struggles") do NOT align with audio
+        features.
+
+        Template:
+          - Positive tag mentions joined as comma list (genre/mood/instrument).
+          - If positive tags are present, prepend any sonic-style turn_intent
+            text for richer description; otherwise fall back to turn_intent
+            alone so the branch still fires when extraction is tag-poor.
+        """
+        state = rs.state
+        tags = [
+            me.value for me in state.mentioned_entities
+            if me.sentiment >= 0 and me.type == "tag"
+        ]
+        intent = state.turn_intent.strip()
+        if tags:
+            joined_tags = ", ".join(tags)
+            # Keep turn_intent too — it often contains sonic descriptors
+            # ("intense", "high-energy") that aren't captured as discrete
+            # tag mentions. Artist names within it are accepted noise.
+            return f"music: {joined_tags}" + (f"; {intent}" if intent else "")
+        if intent:
+            return f"music: {intent}"
+        return None
+
+    def _build_visual_query_string(self, rs: ResolvedConversationState) -> str | None:
+        """`query_id="visual"` — SigLIP-2-shaped query string.
+
+        SigLIP-2's text branch was trained on (image, caption) pairs from
+        the general web. It aligns best with visual descriptions. For music
+        retrieval over cover-art embeddings, the most useful framing is
+        "album cover, <genre/era/mood>" — pushes the encoder toward the
+        cover-art subspace of its training distribution rather than
+        generic photographic content.
+
+        Template:
+          - "album cover, {positive_tags}" when tags are present.
+          - Falls back to "album cover, {turn_intent}" otherwise.
+        """
+        state = rs.state
+        tags = [
+            me.value for me in state.mentioned_entities
+            if me.sentiment >= 0 and me.type == "tag"
+        ]
+        if tags:
+            return "album cover, " + ", ".join(tags)
+        intent = state.turn_intent.strip()
+        if intent:
+            return f"album cover, {intent}"
+        return None
+
+    def _build_sonic_nl_query_string(self, rs: ResolvedConversationState) -> str | None:
+        """`query_id="sonic_nl"` — natural-language sonic description for CLAP.
+
+        Round 3 query for CLAP music's text-side encoder. Phase B measured
+        this template on 499 novel-artist turns and saw +120% CLAP Hit@20
+        and +14% CLAP Hit@1000 vs the Round 2 `sonic` template, including
+        recovering 14% of the previously "unreachable" A4 bucket.
+
+        CLAP music was trained on (audio, caption) pairs where captions are
+        full-sentence music descriptions ("A song with distorted electric
+        guitars and aggressive vocals"). This template builds a sentence
+        from the state's tag list and positive artist references, which
+        matches that training distribution more closely than the Round 2
+        "music: {tags}; {turn_intent}" comma-list template.
+
+        Template:
+          - "A song with {tags} sound, similar to {artists}"
+          - Falls back to turn_intent alone when both tags and artists
+            are empty (preserves any signal at all).
+        """
+        state = rs.state
+        tags = [
+            me.value for me in state.mentioned_entities
+            if me.sentiment >= 0 and me.type == "tag"
+        ]
+        artists = [
+            me.value for me in state.mentioned_entities
+            if me.sentiment >= 0 and me.type == "artist"
+        ]
+        parts: list[str] = []
+        if tags:
+            parts.append(f"A song with {', '.join(tags)} sound")
+        if artists:
+            parts.append(f"similar to {', '.join(artists)}")
+        if parts:
+            return ", ".join(parts)
+        intent = state.turn_intent.strip()
+        return intent or None
+
+    # Lexicon for detecting turns where the user's intent is at least
+    # partly about LYRICS / THEMES / NARRATIVE rather than just sound.
+    # Hand-curated from A4 deep-dive samples — kept small and specific so
+    # the lyric branch fires only when there's real lyric signal to retrieve.
+    _LYRIC_HINT_WORDS = frozenset({
+        "lyric", "lyrics", "lyrical", "words", "story", "stories",
+        "storytelling", "narrative", "narratives", "theme", "themes",
+        "meaning", "meaningful", "message", "introspective", "deep",
+        "emotional", "feels", "feelings", "soul", "heart", "heartbreak",
+        "loneliness", "struggle", "struggles", "overcoming", "resilience",
+        "personal", "journey", "journeys", "reflective", "reflection",
+        "melancholic", "melancholy", "longing", "saudade",
+    })
+
+    def _build_sonic_nl_enriched_query_string(
+        self, rs: ResolvedConversationState
+    ) -> str | None:
+        """`query_id="sonic_nl_enriched"` — natural-language CLAP query
+        enriched with anchor tracks' catalog-canonical tag vocabulary.
+
+        Phase B+v4 (499 novel turns): +11% Hit@1000 on the A3 "text-side
+        hero" bucket and +4% on A2 "BM25-deep" turns. Useful complement
+        in a multi-query CLAP recall stack — catches turns where the user
+        wants "more like the anchors but different artist" by exposing
+        the catalog's vocabulary for the anchor tracks' genres.
+
+        Same NL framing as sonic_nl; the difference is that the tag list
+        is the UNION of the state's positive tags + top-N anchor-track
+        tags (deduped, source-order preserved).
+        """
+        state = rs.state
+        state_tags = [
+            me.value for me in state.mentioned_entities
+            if me.sentiment >= 0 and me.type == "tag" and me.value
+        ]
+        artists = [
+            me.value for me in state.mentioned_entities
+            if me.sentiment >= 0 and me.type == "artist" and me.value
+        ]
+        # Top-N catalog-canonical tags from positive anchors (reuses the
+        # same machinery BM25 uses for anchor_tag_expansion).
+        anchor_tags = self._top_anchor_tags(rs, n=5)
+        # Preserve order, dedup (case-insensitive on the dedup key but
+        # keep the original casing in the final query for richer signal).
+        seen = set()
+        all_tags: list[str] = []
+        for t in state_tags + list(anchor_tags):
+            key = t.strip().lower()
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            all_tags.append(t)
+        parts: list[str] = []
+        if all_tags:
+            parts.append(f"A song with {', '.join(all_tags)} sound")
+        if artists:
+            parts.append(f"similar to {', '.join(artists)}")
+        if parts:
+            return ", ".join(parts)
+        intent = (state.turn_intent or "").strip()
+        return intent or None
+
+    def _build_lyric_query_string(self, rs: ResolvedConversationState) -> str | None:
+        """`query_id="lyric"` — qwen3-shaped query for the lyrics column.
+
+        Fires only when the resolver/extractor signal contains lyric or
+        thematic language. The conditional firing addresses the Wave-3
+        finding that an always-on lyrics_qwen3 branch regressed macro
+        NDCG@20 by -9% (the catalog lyrics column matched arbitrary intent
+        text poorly when the intent had no lyric content).
+
+        Returns None to skip the branch when no lyric signal is present.
+        The compiler handles None by appending an empty hit list to keep
+        branch ordering aligned with the dense_branches config — RRF then
+        naturally ignores it.
+
+        Template (when fired):
+          - turn_intent + any lyric-relevant tag mentions, separated by ";".
+          - Qwen3 encoder semantically aligns this with the catalog's
+            full-song-lyric embeddings.
+        """
+        state = rs.state
+        intent_text = (state.turn_intent or "").strip()
+        intent_lower = intent_text.lower()
+        # Access via class so call sites that bind only the methods (test
+        # harnesses, doc-renderers) still see the lexicon.
+        hints = V0PlusCompiler._LYRIC_HINT_WORDS
+        has_intent_signal = any(w in intent_lower for w in hints)
+
+        tag_values = [
+            me.value for me in state.mentioned_entities
+            if me.sentiment >= 0 and me.type == "tag" and me.value
+        ]
+        lyric_tags = [
+            t for t in tag_values
+            if any(w in t.lower() for w in hints)
+        ]
+
+        if not has_intent_signal and not lyric_tags:
+            return None
+
+        parts: list[str] = []
+        if intent_text:
+            parts.append(intent_text)
+        if lyric_tags:
+            parts.append("themes: " + ", ".join(lyric_tags))
+        return "; ".join(parts) if parts else None
+
+    @property
+    def _query_builders(self):
+        """Registry mapping `query_id` -> builder method.
+
+        Extending Round 2 with a new template requires a new method here
+        plus a YAML branch referencing it via `query_id`. No further code
+        changes needed.
+        """
+        return {
+            "intent": self._build_dense_query_string,
+            "sonic": self._build_sonic_query_string,
+            "visual": self._build_visual_query_string,
+            "sonic_nl": self._build_sonic_nl_query_string,
+            "sonic_nl_enriched": self._build_sonic_nl_enriched_query_string,
+            "lyric": self._build_lyric_query_string,
+        }
 
     def _mix_for_branch(
         self,
