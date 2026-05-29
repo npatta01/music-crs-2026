@@ -53,6 +53,7 @@ qu_kwargs:
     track_match_topk: 5
 
   compiler:
+    branch_trace_topk: 1000
     bm25_k: 1000
     dense_k: 1000
     rrf_k: 60
