@@ -46,13 +46,13 @@ from dataclasses import dataclass, field
 from typing import Any
 
 # `chat_history_parser` (mcrs/inference_utils.py) rewrites music-role content
-# from a bare track_id into a yaml-style metadata blob via
-# `MusicCatalogDB.id_to_metadata`, e.g.
-#   "track_id: 2445ed62-..., track_name: heart-shaped box, artist_name: nirvana, ..."
-# Other QU types want that prose form. The v0+ extractor wants clean
-# track_ids so the LLM has a clean `played_track_ids` list to reference.
-# We undo the rewrite here: pull the UUID off the front, then let the
-# catalog produce the human-readable label.
+# from a bare track_id into the line-oriented metadata blob returned by
+# `MusicCatalogDB.id_to_metadata`, starting with:
+#   "track_id: 2445ed62-...\ntrack_name: Heart-Shaped Box\n..."
+# Other QU types want that prose form. The v0+ extractor wants clean track_ids
+# so the LLM has a clean `played_track_ids` list to reference. We undo the
+# rewrite here: pull the UUID off the front, then let the catalog produce the
+# human-readable label.
 _METADATA_BLOB_TRACK_ID_RE = re.compile(r"^track_id:\s*([0-9a-fA-F\-]{36})\b")
 
 from experiments.analysis.conversation_state_extraction_bakeoff.prompts import (
