@@ -421,6 +421,30 @@ Next step:
 Status:
 - Analyzed
 
+## 2026-05-28 - v0+ image config post-bugfix rescore
+
+Question:
+After PR #66 metadata / resolver bugfixes, is `v0plus_compiler_image_devset` performing better, and should shallow devset rows suppress all cutoff metrics?
+
+Run:
+- `v0plus_compiler_image_devset` on Modal, predictions generated at `05133129b7e9556eba52cc89cf6cb4f48116f444`
+- Rescored with relaxed evaluator semantics: `require_full_diagnostic_depth=false`; shallow rows count missing unretrieved tails as misses instead of nulling all cutoffs.
+
+Results:
+- NDCG@20 `0.1452`, Hit@20 `0.2989`, MRR `0.1062`
+- Hit@100 `0.4450`, Hit@1000 `0.6261`
+- 81 / 8000 rows were shallower than 1000 candidates; min pool depth was 0.
+
+Takeaways:
+- Headline top-20 quality is flat to slightly lower than the prior image ablation (`0.1452` vs `0.1461` NDCG@20), so the bugfixes are correctness wins rather than a headline metric lift.
+- Deep coverage improved versus the prior image row (`Hit@1000 0.6261` vs `0.598`), while the config remains far ahead of BM25-only (`0.1452` vs `0.0984` NDCG@20).
+
+Linked report:
+- [`v0plus_compiler_image_devset.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_image_devset.md)
+
+Status:
+- Analyzed
+
 ## 2026-05-26 - v0+ compiler multimodal embedding ablation
 
 Question:
@@ -505,3 +529,53 @@ Recommended next levers (revised):
 4. Skip tempo/key/chord (no catalog columns) and raw-lyric BM25 (only the lyrics embedding ships).
 
 Status: Analyzed. No canonical change yet — next step is the audio-anchor-centroid retrieval experiment (needs user go-ahead on Modal compute).
+
+---
+
+## 2026-05-28 - v0+ text-side retrieval (Rounds 1-4) + failure taxonomy
+
+Question:
+Can anchor-free text-side retrieval (SigLIP-2 text → image_siglip2, LAION-CLAP music text → audio_laion_clap) lift the novel-artist cohort that image_centroid can't reach?
+
+Configs (all 50-session slice unless noted; only `v2`, `v3b`, `v4` are committed to the repo, others were run from local-only configs):
+- R1 (shared intent query, equal weights) — config not committed
+- `v0plus_compiler_textside_v2_devset` (R2: per-encoder queries sonic + visual) — full devset
+- R3 / R3a (sonic_nl + lyric, asymmetric, ablations) — config not committed
+- `v0plus_compiler_textside_v3b_devset` (R3b: lyric branch only — "do no harm" reference)
+- `v0plus_compiler_textside_v4_devset` (R4: 3xCLAP + lyric)
+
+Headline:
+- No textside config beats the canonical `v0plus_compiler_image_devset` on NDCG@20.
+- R2 full devset: NDCG@20 -10% vs baseline; novel Hit@1000 +5%. Coverage gain real but modest, ranking loss real.
+- R4 50-session: novel Hit@200 +35.5% vs baseline, novel Hit@1000 +19.1%. Strongest recall variant but not run on full devset.
+- Architecture verified working (CLAP text->audio alignment lift +0.165 vs random pairings); the candidates rank too deep to translate to top-K wins without a reranker downstream.
+
+What was built (worth keeping as infrastructure):
+- Compiler refactor: per-branch `encoder_id` + `query_id` + encoder map + `branch_traces` diagnostic. Five new query templates (intent, sonic, sonic_nl, visual, sonic_nl_enriched, lyric). Back-compat preserved (38 tests pass).
+- Modal `MultimodalTextEncoder` service (SigLIP-2 + CLAP music) - deployed.
+- Per-branch GT-rank trace diagnostic - controlled via `CompilerConfig.branch_trace_topk`. Decoupled diagnostic from inference cost.
+
+Diagnostic findings (the durable value, beyond any single config):
+- Per-branch trace on R2 full devset shows BM25 is the novel-artist workhorse (Hit@1000 = 0.365); CLAP-text uniquely contributes ~9% of novel turns; SigLIP-text is mostly redundant; image_centroid is the continuation engine (median rank 10 on cont).
+- Phase A bucketing of 4777 novel turns: A1 BM25 top-20 (7%), A2 BM25 deep (29%), A3 text-side hero (20%), A4 total miss (43%).
+- Phase B query A/B (499 novel turns, CLAP only): natural-language query (`"A song with {tags} sound, similar to {artists}"`) +120% Hit@20 vs the Round-2 sonic template, recovers 14% of A4.
+- A4 deep-dive: ~30% catalog tag noise, ~30% vocabulary mismatch, ~15-20% dataset noise (GT contradicts user intent), ~15% lyric/theme queries with no audio signal.
+- Multi-dimensional Hit@1000 split (R4 slice): state↔GT artist overlap is the dominant predictor (0.97 with match vs 0.31 without); long-tail GT artist (0.37 Hit@1000); goal category B vague-recall (0.38); 0 tags extracted (0.55).
+- Aggregate analysis of 3100 R2 full-devset failures: **46% have a GT-tag word the user literally said but the extractor failed to capture as a tag**. 35% are long-tail GT artists. ~15-20% are dataset noise (GT contradicts stated intent like rejected artists).
+
+Takeaways:
+- The textside direction does not beat baseline NDCG@20 on this catalog without a reranker. The encoders work and the pool genuinely grows, but the new candidates rank too deep for RRF to promote to top-K.
+- The architectural ceiling for fusion-only changes is roughly the R4 slice numbers. Further gains need either (a) a reranker downstream, or (b) better state extraction.
+- State extraction is the highest-leverage next lever. 46% of failures are extractor tag-extraction gaps - the extractor packs descriptive vocabulary into `turn_intent` as prose and doesn't emit it as discrete `mentioned_entities[type=tag]`.
+
+Linked reports:
+- [`v0plus_textside_2026-05-28.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_textside_2026-05-28.md) - full writeup with diagnostics, all rounds, failure taxonomy, recommendations.
+
+Next step (prioritized by leverage):
+- Revised extractor prompt: force complete tag extraction, era-to-filter conversion, lyric-snippet flagging, sharper anti-anchor parsing. Single prompt change + LiteLLM cache flush. Attacks 46% of failures.
+- Long-tail / popularity-balanced retrieval: cf-bpr (warm cache) or popularity prior on post-fusion ranking. Attacks 35%.
+- Anchor-track audio centroid in CLAP space (untried): use accepted-track audio embedding as CLAP query, not text. Attacks A4-shaped failures.
+- Reranker on top-K pool (still deferred but data points loudly here for the A2 bucket: 29% of novel turns, median BM25 rank 318).
+
+Status:
+- Analyzed

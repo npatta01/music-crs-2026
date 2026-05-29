@@ -537,7 +537,7 @@ def test_search_embedding_flips_l2_distance_to_similarity(monkeypatch):
     assert result[0][1] > result[1][1]
 
 
-def test_search_embedding_inner_product_passes_through(monkeypatch):
+def test_search_embedding_converts_dot_distance_to_similarity(monkeypatch):
     from mcrs.lancedb.retriever import LanceDbRetriever
 
     table = FakeVectorTable()
@@ -553,9 +553,56 @@ def test_search_embedding_inner_product_passes_through(monkeypatch):
         distance_type="dot",
     )
 
-    # inner product: already "higher = more similar"; pass through.
-    assert result[0] == ("track-v1", 0.01)
-    assert result[1] == ("track-v2", 0.03)
+    # LanceDB dot returns distance = 1 - dot_product. Convert back so higher
+    # still means more similar, matching the Retriever Protocol contract.
+    assert result[0] == ("track-v1", 1.0 - 0.01)
+    assert result[1] == ("track-v2", 1.0 - 0.03)
+    assert result[0][1] > result[1][1]
+
+
+def test_dense_vector_search_rejects_unsupported_distance_type(monkeypatch):
+    import pytest
+
+    from mcrs.lancedb.retriever import LanceDbRetriever
+
+    table = FakeVectorTable()
+    fake_db = FakeDb(table)
+    monkeypatch.setattr("mcrs.lancedb.retriever.connect_lancedb", lambda _: fake_db)
+
+    config = _retrieval_config()
+    config["searches"] = [
+        {
+            "name": "metadata_dense",
+            "kind": "dense_vector",
+            "vector_field": "metadata_qwen3_embedding_0_6b",
+            "distance_type": "ip",
+            "weight": 1.0,
+            "topk": 1000,
+        }
+    ]
+
+    with pytest.raises(ValueError, match="Unsupported LanceDB distance type"):
+        LanceDbRetriever.from_retrieval_config(config)
+
+
+def test_search_embedding_rejects_unsupported_distance_type(monkeypatch):
+    import pytest
+
+    from mcrs.lancedb.retriever import LanceDbRetriever
+
+    table = FakeVectorTable()
+    fake_db = FakeDb(table)
+    monkeypatch.setattr("mcrs.lancedb.retriever.connect_lancedb", lambda _: fake_db)
+
+    retriever = LanceDbRetriever.from_retrieval_config(_retrieval_config())
+
+    with pytest.raises(ValueError, match="Unsupported LanceDB distance type"):
+        retriever.search_embedding(
+            query_vector=[0.1],
+            vector_field="metadata_qwen3_embedding_0_6b",
+            topk=1,
+            distance_type="inner_product",
+        )
 
 
 def test_search_embedding_rejects_unknown_vector_field(monkeypatch):

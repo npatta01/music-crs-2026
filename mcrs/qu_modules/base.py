@@ -5,6 +5,18 @@ def _render_role(role: str) -> str:
     return "assistant" if role == "music" else role
 
 
+def _render_content(turn: dict) -> str:
+    content = str(turn["content"])
+    if turn["role"] != "music":
+        return content
+    lines = [
+        line
+        for line in content.splitlines()
+        if not line.lower().startswith("track_id:")
+    ]
+    return "\n".join(lines) if lines else content
+
+
 class PassthroughQU:
     """QU module that returns the conversation text unchanged (current behavior).
 
@@ -15,7 +27,7 @@ class PassthroughQU:
 
     def transform_query(self, session_memory: list) -> str:
         return "\n".join(
-            f"{_render_role(turn['role'])}: {turn['content']}"
+            f"{_render_role(turn['role'])}: {_render_content(turn)}"
             for turn in session_memory
         )
 

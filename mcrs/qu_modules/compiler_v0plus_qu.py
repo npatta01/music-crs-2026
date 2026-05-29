@@ -46,13 +46,13 @@ from dataclasses import dataclass, field
 from typing import Any
 
 # `chat_history_parser` (mcrs/inference_utils.py) rewrites music-role content
-# from a bare track_id into a yaml-style metadata blob via
-# `MusicCatalogDB.id_to_metadata`, e.g.
-#   "track_id: 2445ed62-..., track_name: heart-shaped box, artist_name: nirvana, ..."
-# Other QU types want that prose form. The v0+ extractor wants clean
-# track_ids so the LLM has a clean `played_track_ids` list to reference.
-# We undo the rewrite here: pull the UUID off the front, then let the
-# catalog produce the human-readable label.
+# from a bare track_id into the line-oriented metadata blob returned by
+# `MusicCatalogDB.id_to_metadata`, starting with:
+#   "track_id: 2445ed62-...\ntrack_name: Heart-Shaped Box\n..."
+# Other QU types want that prose form. The v0+ extractor wants clean track_ids
+# so the LLM has a clean `played_track_ids` list to reference. We undo the
+# rewrite here: pull the UUID off the front, then let the catalog produce the
+# human-readable label.
 _METADATA_BLOB_TRACK_ID_RE = re.compile(r"^track_id:\s*([0-9a-fA-F\-]{36})\b")
 
 from experiments.analysis.conversation_state_extraction_bakeoff.prompts import (
@@ -95,6 +95,82 @@ from mcrs.qu_modules.v0plus_catalog import CompilerCatalog
 from mcrs.retrieval_modules.base import Retriever
 
 logger = logging.getLogger(__name__)
+
+
+# ----------------------------------------------------------------------
+# Encoder factory — shared by single-encoder + encoder-map YAML schemas
+# ----------------------------------------------------------------------
+
+
+def _build_encoder(enc_cfg: dict) -> EmbeddingClient:
+    """Build one EmbeddingClient from a YAML encoder spec.
+
+    Supported backends:
+      - `local` / (default): in-process Qwen3-0.6B (CPU/CUDA), good for tests.
+      - `litellm`: API call via LiteLLM SDK (e.g. DeepInfra Qwen3 endpoint).
+      - `modal`: deployed `Qwen3Encoder` Modal class (legacy single-encoder).
+      - `modal_multimodal`: shared `MultimodalTextEncoder` Modal class
+        exposing both SigLIP-2 text and CLAP-music text. Pick which method to
+        call by setting `method: "embed_siglip_text"` or `"embed_clap_text"`.
+    """
+    backend = str(enc_cfg.get("backend", "local")).lower()
+
+    if backend == "modal":
+        from mcrs.embeddings.modal_qwen3_client import ModalQwen3EmbeddingClient
+
+        return ModalQwen3EmbeddingClient(
+            app_name=enc_cfg.get("modal_app_name", "music-crs"),
+            cls_name=enc_cfg.get("modal_cls_name", "Qwen3Encoder"),
+        )
+
+    if backend == "modal_multimodal":
+        # Shared SigLIP-2 + CLAP-music text-side service. The `method` key
+        # picks which RPC the local client calls (`embed_siglip_text` /
+        # `embed_clap_text`). One container hosts both models so the smoke
+        # test pays one warm-up.
+        from mcrs.embeddings.modal_multimodal_client import (
+            ModalMultimodalTextEmbeddingClient,
+        )
+
+        method = str(enc_cfg.get("method", "")).strip()
+        if method not in {"embed_siglip_text", "embed_clap_text"}:
+            raise ValueError(
+                f"modal_multimodal encoder needs method=embed_siglip_text "
+                f"or method=embed_clap_text; got {method!r}"
+            )
+        return ModalMultimodalTextEmbeddingClient(
+            app_name=enc_cfg.get("modal_app_name", "music-crs"),
+            cls_name=enc_cfg.get("modal_cls_name", "MultimodalTextEncoder"),
+            method=method,
+        )
+
+    if backend == "litellm":
+        from mcrs.embeddings.litellm_client import LiteLLMEmbeddingClient
+
+        api_key = enc_cfg.get("api_key") or os.environ.get("DEEPINFRA_API_KEY")
+        return LiteLLMEmbeddingClient(
+            model_name=enc_cfg.get("model_name", "openai/Qwen/Qwen3-Embedding-0.6B"),
+            api_base=enc_cfg.get("api_base", "https://api.deepinfra.com/v1/openai"),
+            api_key=api_key,
+            batch_size=int(enc_cfg.get("batch_size", 32)),
+            encoding_format=enc_cfg.get("encoding_format", "float"),
+        )
+
+    if backend == "local":
+        return Qwen3EmbeddingClient(
+            model_name=enc_cfg.get("model_name", "Qwen/Qwen3-Embedding-0.6B"),
+            device=enc_cfg.get("device", "cpu"),
+            torch_dtype_name=enc_cfg.get("torch_dtype", "float32"),
+            max_length=int(enc_cfg.get("max_length", 512)),
+            batch_size=int(enc_cfg.get("batch_size", 8)),
+            padding_side=enc_cfg.get("padding_side", "left"),
+            query_instruct=enc_cfg.get("query_instruct", ""),
+        )
+
+    raise ValueError(
+        f"Unknown encoder.backend={backend!r}; expected one of "
+        f"'local', 'litellm', 'modal', 'modal_multimodal'."
+    )
 
 
 # ----------------------------------------------------------------------
@@ -484,8 +560,14 @@ class V0PlusCompilerQU:
         # the event loop. Inlining the resolver gives us `rs` for the trace.
         rs = self.resolver.resolve(state, played_track_ids=played)
 
+        # Per-branch ranking diagnostic. Populated by the compiler when
+        # `branch_trace_topk > 0` (config knob). Empty otherwise.
+        branch_traces: dict[str, list[str]] = {}
+
         def _compile() -> list[str]:
-            return self.compiler.compile(rs, user_id=user_id)[:topk]
+            return self.compiler.compile(
+                rs, user_id=user_id, branch_traces=branch_traces
+            )[:topk]
 
         track_ids = await asyncio.to_thread(_compile)
         if not track_ids:
@@ -551,6 +633,12 @@ class V0PlusCompilerQU:
                 "n_explicit_rejections": len(state.explicit_rejections),
             },
         }
+        # Diagnostic: per-retriever top-K rankings. Only populated when
+        # CompilerConfig.branch_trace_topk > 0. Lets offline analysis answer
+        # "where did the GT rank inside each branch?" — useful for telling
+        # apart "candidate missing from pool" vs "RRF mis-ranked the pool".
+        if branch_traces:
+            trace["branch_rankings"] = branch_traces
         return idx, track_ids, trace
 
     def batch_compile_track_ids(
@@ -656,51 +744,37 @@ def build_v0plus_compiler_qu(
     # ----- Matcher (prebakes catalog state) -----
     matcher: FuzzyMatcher = _overrides.get("matcher") or RapidfuzzCatalogMatcher(catalog)
 
-    # ----- Encoder (Qwen3-Embedding-0.6B) -----
-    # Three backends:
-    #   local  — in-process CPU/CUDA (~1-2 s/call); good for tests / no cloud creds
-    #   modal  — deployed T4 GPU class (~181 ms warm, ~30 s cold start); no caching
-    #   litellm — API call via LiteLLM SDK (e.g. DeepInfra $0.01/1M tokens, ~200 ms);
-    #             flows through the shared litellm disk cache so reruns are free
-    if "encoder" in _overrides:
-        encoder: EmbeddingClient = _overrides["encoder"]
+    # ----- Encoder(s) -----
+    # Two YAML schemas, both supported:
+    #
+    # Legacy single encoder (today's configs):
+    #   encoder:
+    #     backend: litellm
+    #     model_name: openai/Qwen/Qwen3-Embedding-0.6B
+    #
+    # New encoder map (multi-modal text-side configs):
+    #   encoders:
+    #     default:        { backend: litellm, model_name: ... }
+    #     siglip2_text:   { backend: modal, modal_cls_name: MultimodalTextEncoder, method: embed_siglip_text }
+    #     clap_text:      { backend: modal, modal_cls_name: MultimodalTextEncoder, method: embed_clap_text }
+    #
+    # Either accepted; mixing legacy + map promotes the legacy entry to `default`.
+    if "encoders" in _overrides:
+        encoders: dict[str, EmbeddingClient] = dict(_overrides["encoders"])
     else:
-        enc_cfg = dict(qu_kwargs.get("encoder") or {})
-        backend = str(enc_cfg.get("backend", "local")).lower()
-        if backend == "modal":
-            from mcrs.embeddings.modal_qwen3_client import ModalQwen3EmbeddingClient
-
-            encoder = ModalQwen3EmbeddingClient(
-                app_name=enc_cfg.get("modal_app_name", "music-crs"),
-                cls_name=enc_cfg.get("modal_cls_name", "Qwen3Encoder"),
-            )
-        elif backend == "litellm":
-            # API-backed encoder — cheaper than Modal GPU, no cold starts, cacheable.
-            # encoding_format="float" is mandatory for DeepInfra (422 without it).
-            from mcrs.embeddings.litellm_client import LiteLLMEmbeddingClient
-
-            api_key = enc_cfg.get("api_key") or os.environ.get("DEEPINFRA_API_KEY")
-            encoder = LiteLLMEmbeddingClient(
-                model_name=enc_cfg.get("model_name", "openai/Qwen/Qwen3-Embedding-0.6B"),
-                api_base=enc_cfg.get("api_base", "https://api.deepinfra.com/v1/openai"),
-                api_key=api_key,
-                batch_size=int(enc_cfg.get("batch_size", 32)),
-                encoding_format=enc_cfg.get("encoding_format", "float"),
-            )
-        elif backend == "local":
-            encoder = Qwen3EmbeddingClient(
-                model_name=enc_cfg.get("model_name", "Qwen/Qwen3-Embedding-0.6B"),
-                device=enc_cfg.get("device", "cpu"),
-                torch_dtype_name=enc_cfg.get("torch_dtype", "float32"),
-                max_length=int(enc_cfg.get("max_length", 512)),
-                batch_size=int(enc_cfg.get("batch_size", 8)),
-                padding_side=enc_cfg.get("padding_side", "left"),
-                query_instruct=enc_cfg.get("query_instruct", ""),
-            )
-        else:
-            raise ValueError(
-                f"Unknown encoder.backend={backend!r}; expected 'local', 'litellm', or 'modal'"
-            )
+        encoders = {}
+        legacy_cfg = qu_kwargs.get("encoder")
+        if legacy_cfg is not None:
+            encoders["default"] = _build_encoder(dict(legacy_cfg))
+        for name, sub_cfg in (qu_kwargs.get("encoders") or {}).items():
+            encoders[str(name)] = _build_encoder(dict(sub_cfg))
+        if "encoder" in _overrides:
+            encoders["default"] = _overrides["encoder"]
+        if not encoders:
+            # Back-compat default: build the legacy Qwen3 local encoder
+            # when the YAML supplies neither `encoder:` nor `encoders:`.
+            encoders["default"] = _build_encoder({})
+    encoder: EmbeddingClient = encoders.get("default") or next(iter(encoders.values()))
 
     # ----- Retriever (LanceDB) -----
     if "retriever" in _overrides:
@@ -777,6 +851,8 @@ def build_v0plus_compiler_qu(
                             vector_field=str(entry["vector_field"]),
                             weight=float(entry.get("weight", 1.0)),
                             distance_type=str(entry.get("distance_type", "cosine")),
+                            encoder_id=str(entry.get("encoder_id", "default")),
+                            query_id=str(entry.get("query_id", "intent")),
                         )
                     )
 
@@ -820,6 +896,7 @@ def build_v0plus_compiler_qu(
                 "cf_bpr_topk",
                 "cf_bpr_vector_field",
                 "cf_bpr_distance_type",
+                "branch_trace_topk",
             }
         }
         if dense_branches is not None:
@@ -841,10 +918,24 @@ def build_v0plus_compiler_qu(
                 splits=tuple(ue_cfg.get("splits") or ("train", "test_warm", "test_cold")),
             )
 
+        # Validate every branch's encoder_id resolves before constructing
+        # the compiler — fail-fast with a clear message instead of at first
+        # call from the inference loop.
+        if dense_branches:
+            unknown_ids = sorted(
+                {b.encoder_id for b in dense_branches} - set(encoders)
+            )
+            if unknown_ids:
+                raise KeyError(
+                    f"dense_branches reference encoder_id(s) {unknown_ids!r} "
+                    f"not present in `encoders` map. Available: {sorted(encoders)}."
+                )
+
         compiler = V0PlusCompiler(
             catalog,
             retriever,
-            encoder,
+            encoder=encoder,  # kept for back-compat with .encoder accessor
+            encoders=encoders,
             config=CompilerConfig(
                 bm25_k=int(comp_cfg.get("bm25_k", 1000)),
                 dense_k=int(comp_cfg.get("dense_k", 1000)),

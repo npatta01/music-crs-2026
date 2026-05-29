@@ -54,6 +54,9 @@ music-dashboard = "mcrs.dashboard:main"
 [tool.setuptools.packages.find]
 include = ["mcrs*"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.uv]
 link-mode = "copy"
 

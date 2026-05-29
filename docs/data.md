@@ -84,8 +84,8 @@ The baseline in this repo directly loads only the conversation, track metadata, 
   },
   "conversations": [
     {"turn_number": 1, "role": "user",      "content": "...", "thought": null},
-    {"turn_number": 1, "role": "assistant", "content": "...", "thought": "..."},
     {"turn_number": 1, "role": "music",     "content": "<track_id>", "thought": null},
+    {"turn_number": 1, "role": "assistant", "content": "...", "thought": "..."},
     ...
   ],
   "goal_progress_assessments": [...]

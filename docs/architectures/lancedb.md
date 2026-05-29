@@ -124,7 +124,8 @@ the normal Modal client credentials.
 
 Dense vector retrieval uses the same table and a `dense_vector` search entry.
 The query embedding must come from the same model family as the stored vector
-field.
+field. Supported LanceDB `distance_type` values are `cosine`, `dot`, and `l2`;
+retriever results are converted so higher scores always mean more similar.
 
 ```yaml
 retrieval_config:

@@ -159,7 +159,11 @@ def _artifact_kind(remote_path: str) -> str | None:
     path = Path(remote_path)
     top = path.parts[0]
     if top == "inference":
-        if path.name.endswith("_rewrite_audit.jsonl") or path.name.endswith("_rewrite_stats.json"):
+        if (
+            path.name.endswith("_trace.json")
+            or path.name.endswith("_rewrite_audit.jsonl")
+            or path.name.endswith("_rewrite_stats.json")
+        ):
             return "trace"
         if path.suffix == ".json":
             return "inference"
@@ -174,7 +178,7 @@ def _artifact_kind(remote_path: str) -> str | None:
 def _artifact_tid(remote_path: str, kind: str) -> str | None:
     name = Path(remote_path).name
     if kind == "trace":
-        for suffix in ("_rewrite_audit.jsonl", "_rewrite_stats.json"):
+        for suffix in ("_trace.json", "_rewrite_audit.jsonl", "_rewrite_stats.json"):
             if name.endswith(suffix):
                 return name[: -len(suffix)]
     if kind in {"inference", "scores"} and name.endswith(".json"):

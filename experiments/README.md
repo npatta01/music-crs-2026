@@ -29,15 +29,19 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 | Best rewrite wave result | `bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset` | `NDCG@20 0.1092` | `done` | [bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/bm25_qu_llmrewrite_gemma4_e2b_carryover_guard_v3_devset.md) |
 | Best offline hybrid so far | `RRF(bm25_with_tags, dense_qwen3_8b)` | `NDCG@20 0.1072` | `analyzed` | [retrieval_analysis_findings_2026-04-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/retrieval_analysis_findings_2026-04-28.md) |
 | Best v0+ ConversationState compiler (BM25-only) | `v0plus_compiler_devset` | `NDCG@20 0.1005` | `superseded` | [v0plus_compiler_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_devset.md) |
-| **Best v0+ retrieval overall (multimodal)** | `v0plus_compiler_image_devset` | `NDCG@20 0.1461` | `analyzed` | [v0plus_compiler_ablation_2026-05-26.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_ablation_2026-05-26.md) |
+| Best v0+ retrieval-only (multimodal) | `v0plus_compiler_image_devset` | `NDCG@20 0.1452` post-bugfix; prior `0.1461` | `superseded` | [v0plus_compiler_image_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_image_devset.md) |
+| **Best overall (retrieval + reranker, OFFLINE)** | `bm25_image_audio_cfbpr_metadata` + `Qwen3-Reranker-0.6B-structured` rerank | `NDCG@20 0.1594` | `analyzed` — reranker is opt-in via `scripts/rerank_offline.py`; NOT wired into live compiler | [cross_encoder_rerank_bakeoff.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/cross_encoder_rerank_bakeoff.md) |
 | Best v0+ candidate coverage (Hit@1000) | `v0plus_compiler_all_devset` | `Hit@1000 0.6730` | `analyzed` | [v0plus_compiler_ablation_2026-05-26.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_ablation_2026-05-26.md) |
 
 ## Current Active Work
 
 | Workstream | Status | Where to read |
 |---|---|---|
-| v0+ compiler multimodal embedding ablation | `analyzed` | [v0plus_compiler_ablation_2026-05-26.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_ablation_2026-05-26.md) |
-| Cross-encoder reranker over top-200 (attacks novel-artist gap) | `planned` | [experiment_log.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md) |
+| v0+ compiler multimodal embedding ablation | `analyzed` | [v0plus_compiler_image_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_image_devset.md) |
+| v0+ text-side retrieval Rounds 1-4 + failure taxonomy | `analyzed` | [v0plus_textside_2026-05-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_textside_2026-05-28.md) |
+| Extractor prompt revision (attacks 46% of failures) | `planned` | [v0plus_textside_2026-05-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_textside_2026-05-28.md#recommended-next-iterations-prioritized-by-leverage) |
+| Long-tail / popularity-balanced retrieval | `planned` | [v0plus_textside_2026-05-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_textside_2026-05-28.md#recommended-next-iterations-prioritized-by-leverage) |
+| Cross-encoder reranker over top-200 (attacks novel-artist gap) | `analyzed` — offline-only via `scripts/rerank_offline.py`; +12.6% NDCG@20 but most lift on continuation cohort, not novel-artist | [cross_encoder_rerank_bakeoff.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/cross_encoder_rerank_bakeoff.md) |
 | Hybrid sparse+dense retrieval follow-up | `planned` | [experiment_log.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md) |
 | Conversation-aware query representation direction | `analyzed` | [analysis/query_intent_v1/README.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/analysis/query_intent_v1/README.md) |
 | Milvus native sparse retrieval evaluation | `analyzed` | [milvus_bm25_with_tag_list_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/milvus_bm25_with_tag_list_devset.md) |
@@ -111,6 +115,14 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 ### Wave 6: LanceDB Retrieval
 
 - [lancedb_fts_with_tag_list_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/lancedb_fts_with_tag_list_devset.md)
+
+### Wave 7: v0+ ConversationState Compiler (multimodal)
+
+- [v0plus_compiler_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_devset.md) — BM25-only baseline run (NDCG@20 0.1005), `superseded`
+- [v0plus_compiler_ablation_2026-05-26.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_ablation_2026-05-26.md) — 10-config embedding ablation; `image_siglip2` best at NDCG@20 0.1461 (pre-bugfix)
+- [v0plus_compiler_image_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_image_devset.md) — canonical image config re-run after #66/#71 bugfixes (NDCG@20 0.1452)
+- [v0plus_textside_2026-05-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_textside_2026-05-28.md) — anchor-free SigLIP-2 / LAION-CLAP text-side Rounds 1–4; no config beats image on NDCG@20 (ranks too deep without a reranker)
+- Per-variant configs: [`configs/v0plus_compiler_*_devset.yaml`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/configs)
 
 ## Conventions
 

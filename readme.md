@@ -150,6 +150,7 @@ Rewrite-based QU experiments may also emit sidecars alongside the prediction fil
 
 - `exp/inference/devset/{tid}_rewrite_audit.jsonl`
 - `exp/inference/devset/{tid}_rewrite_stats.json`
+- Modal shard runs may also emit `exp/inference/devset/{tid}_trace.json`
 
 To pull Modal-run artifacts back to your machine, use the bulk downloader:
 
@@ -169,6 +170,7 @@ If you are using Codex with this repo, the `download-artifacts` skill wraps the 
 The downloader defaults to `evaluator/exp/` and mirrors any available remote:
 
 - `inference/<split>/<tid>.json`
+- `inference/<split>/<tid>_trace.json`
 - `inference/<split>/<tid>_rewrite_audit.jsonl`
 - `inference/<split>/<tid>_rewrite_stats.json`
 - `scores/<split>/<tid>.json`

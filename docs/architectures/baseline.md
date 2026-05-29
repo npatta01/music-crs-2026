@@ -188,13 +188,18 @@ a local LiteLLM proxy instead of running a transformer locally. See
 
 ### LLM context string (Stage 2 input)
 
-After retrieval, `MusicCatalogDB.id_to_metadata()` formats the top-1 track for the LLM — different format from the corpus document:
+After retrieval, `MusicCatalogDB.id_to_metadata()` formats the top-1 track for the LLM:
 
 ```
-track_id: 97f5eeec-..., track_name: with rainy eyes, artist_name: emancipator, album_name: soon it will be cold enough, release_date: 2006-12-06
+track_id: 97f5eeec-...
+track_name: With Rainy Eyes
+artist_name: Emancipator
+album_name: Soon It Will Be Cold Enough
+release_date: 2006-12-06
 ```
 
-Comma-separated, all values lowercased.
+Line-oriented via the shared corpus formatter, with an additional `track_id`
+line so downstream adapters can recover played-track IDs from music turns.
 
 ---
 

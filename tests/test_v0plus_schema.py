@@ -34,22 +34,33 @@ class TestHardFilterDateTypes:
         assert f.start == date(2020, 1, 1)
 
 
-class TestHardFilterRequiredFields:
-    def test_lt_requires_end(self):
-        with pytest.raises(ValidationError, match="end"):
-            HardFilter(field="release_date", op="<", start="2010-01-01")
+class TestHardFilterBoundsTolerant:
+    """Schema accepts missing-bound filters; compiler skips them downstream.
 
-    def test_gt_requires_start(self):
-        with pytest.raises(ValidationError, match="start"):
-            HardFilter(field="release_date", op=">", end="2010-01-01")
+    Rationale: the LLM occasionally emits `op="between"` with both bounds
+    None on hard turns. Old behavior: schema raised → whole-state validation
+    failed → turn returned 0 candidates. New behavior: schema accepts → the
+    compiler treats the filter as a no-op and the rest of the state drives
+    retrieval. See `compiler_v0plus._release_date_mask` for the skip.
+    """
 
-    def test_between_requires_both(self):
-        with pytest.raises(ValidationError, match="start"):
-            HardFilter(field="release_date", op="between", end="2010-12-31")
-        with pytest.raises(ValidationError, match="end"):
-            HardFilter(field="release_date", op="between", start="2010-01-01")
+    def test_lt_accepts_missing_end(self):
+        f = HardFilter(field="release_date", op="<", start="2010-01-01")
+        assert f.end is None  # constructed, not raised
 
-    def test_between_rejects_inverted_range(self):
+    def test_gt_accepts_missing_start(self):
+        f = HardFilter(field="release_date", op=">", end="2010-01-01")
+        assert f.start is None
+
+    def test_between_accepts_missing_bounds(self):
+        f1 = HardFilter(field="release_date", op="between", end="2010-12-31")
+        assert f1.start is None
+        f2 = HardFilter(field="release_date", op="between", start="2010-01-01")
+        assert f2.end is None
+        f3 = HardFilter(field="release_date", op="between")
+        assert f3.start is None and f3.end is None
+
+    def test_between_still_rejects_inverted_range(self):
         with pytest.raises(ValidationError, match="start.*end"):
             HardFilter(
                 field="release_date", op="between",

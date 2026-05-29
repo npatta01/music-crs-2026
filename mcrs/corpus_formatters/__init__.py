@@ -1,4 +1,4 @@
-from .base import DefaultFormatter
+from .base import DefaultFormatter, format_field_value
 
 
 def load_corpus_formatter(formatter_type: str):
