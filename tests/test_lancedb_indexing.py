@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from mcrs.lancedb.indexing import (
     BM25S_TOKENIZED_FTS_INDEX_OPTIONS,
     BM25_WITH_TAG_LIST_BM25S_TOKENIZED_TEXT_FIELD,
@@ -171,11 +173,15 @@ def test_build_track_lancedb_table_defaults_to_embedding_columns(monkeypatch, tm
 
     class FakeTable:
         def __init__(self, rows):
+            if hasattr(rows, "to_pylist"):
+                rows = rows.to_pylist()
             self.rows = list(rows)
             self.fts_indexes = []
             self.optimized = False
 
         def add(self, rows):
+            if hasattr(rows, "to_pylist"):
+                rows = rows.to_pylist()
             self.rows.extend(rows)
 
         def create_fts_index(self, text_field, replace=True, **kwargs):
@@ -216,8 +222,8 @@ def test_build_track_lancedb_table_defaults_to_embedding_columns(monkeypatch, tm
     assert fake_db.table is not None
     assert fake_db.table.optimized is True
     row = fake_db.table.rows[0]
-    assert row["audio_laion_clap"] == [0.1, 0.2]
-    assert row["metadata_qwen3_embedding_0_6b"] == [1.1, 1.2]
+    assert row["audio_laion_clap"] == pytest.approx([0.1, 0.2])
+    assert row["metadata_qwen3_embedding_0_6b"] == pytest.approx([1.1, 1.2])
     assert row["has_audio_laion_clap"] is True
 
 

@@ -25,6 +25,7 @@ from mcrs.milvus.indexing import (
 from mcrs.retrieval_modules.base import FieldQuery
 
 LANCEDB_VECTOR_FIELDS = frozenset(milvus_safe_field_name(name) for name in EMBEDDING_FIELDS)
+LANCEDB_DISTANCE_TYPES = frozenset({"l2", "cosine", "dot"})
 
 
 @dataclass(frozen=True)
@@ -209,6 +210,16 @@ class LanceDbRetriever:
             raise ValueError(f"{label} must be positive")
         return topk
 
+    @staticmethod
+    def _require_distance_type(value: Any) -> str:
+        distance_type = str(value)
+        if distance_type not in LANCEDB_DISTANCE_TYPES:
+            raise ValueError(
+                f"Unsupported LanceDB distance type: {distance_type!r}. "
+                f"Valid options: {sorted(LANCEDB_DISTANCE_TYPES)}"
+            )
+        return distance_type
+
     def _parse_search(self, raw_search: dict[str, Any]):
         if not isinstance(raw_search, dict):
             raise ValueError("Each retrieval_config.searches entry must be a mapping")
@@ -267,7 +278,7 @@ class LanceDbRetriever:
             vector_field = self._require_str(raw_search, "vector_field")
             if vector_field not in LANCEDB_VECTOR_FIELDS:
                 raise ValueError(f"Unsupported LanceDB vector field: {vector_field}")
-            distance_type = str(raw_search.get("distance_type", "cosine"))
+            distance_type = self._require_distance_type(raw_search.get("distance_type", "cosine"))
             filter_missing = bool(raw_search.get("filter_missing", True))
             return _DenseVectorSearch(
                 name=name,
@@ -546,6 +557,7 @@ class LanceDbRetriever:
                 f"Unsupported LanceDB vector field: {vector_field!r}. "
                 f"Valid options: {sorted(LANCEDB_VECTOR_FIELDS)}"
             )
+        distance_type = self._require_distance_type(distance_type)
         query_builder = self.table.search(
             list(query_vector),
             query_type="vector",
@@ -574,11 +586,9 @@ class LanceDbRetriever:
 def _distance_to_similarity(distance: float, distance_type: str) -> float:
     """Backend-side flip so the Retriever Protocol contract holds:
     higher = more similar."""
-    if distance_type == "cosine":
-        # LanceDB cosine returns 1 - cos_sim; invert to recover cos_sim.
+    if distance_type in ("cosine", "dot"):
+        # LanceDB cosine returns 1 - cos_sim, and dot returns 1 - dot_product.
+        # Invert both so callers get "higher = more similar".
         return 1.0 - distance
-    if distance_type in ("dot", "ip", "inner_product"):
-        # Inner product: higher already = more similar; pass through.
-        return distance
-    # l2, euclidean, or anything else with "lower = closer" semantics.
+    # l2 has "lower = closer" semantics.
     return 1.0 / (1.0 + distance)

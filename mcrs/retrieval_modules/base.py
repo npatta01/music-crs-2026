@@ -12,10 +12,11 @@ Design points:
   BM25 (Tantivy, Milvus 2.4+) execute it in one call; others simulate via
   per-field calls + internal weighted RRF. Either way the caller sees a single
   ranked list of (track_id, score) pairs.
-- Scores are always "higher = better". Distance-based backends flip
-  internally (cosine -> 1 - d; L2 -> 1 / (1 + d); inner product -> as-is).
-  This means the compiler never has to remember which backend uses which
-  convention; for RRF, only rank order matters anyway.
+- Scores are always "higher = better". Distance-based backends convert native
+  distances internally, including backend-specific conventions such as LanceDB
+  cosine/dot distances and L2 distances. This means the compiler never has to
+  remember which backend uses which convention; for RRF, only rank order
+  matters anyway.
 - The Protocol exposes `supported_text_fields` and `supported_vector_fields`
   so the compiler can introspect at construction time.
 
@@ -104,8 +105,7 @@ class Retriever(Protocol):
 
         Returns a ranked list of (track_id, similarity) pairs. Higher = more
         similar — backend converts native distances to similarities per
-        `distance_type` (cosine -> 1 - d; L2 -> 1 / (1 + d); inner product
-        passes through).
+        `distance_type`.
 
         Raises ValueError if `vector_field` is not in
         `supported_vector_fields`.
