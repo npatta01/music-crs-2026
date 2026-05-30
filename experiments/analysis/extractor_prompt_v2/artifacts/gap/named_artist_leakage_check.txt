@@ -1,0 +1,5 @@
+n=7987
+mismatch_stored_vs_prefix=0
+future_only_appearances=2029
+named hit=0.889 n=2754
+not-named hit=0.511 n=5246

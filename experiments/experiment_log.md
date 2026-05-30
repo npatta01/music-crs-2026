@@ -579,3 +579,25 @@ Next step (prioritized by leverage):
 
 Status:
 - Analyzed
+
+
+## 2026-05-30 — Recall-gap deep-dive (v0plus_compiler_mm_extractor_v3_devset)
+
+Question:
+Why is fused Hit@1000 only 0.641, and where is the gap recoverable vs. structurally missing?
+
+Takeaways (recomputed from `gap_table_v3.jsonl`, 8000 turns; hardened against 3 independent Codex review passes):
+- Decomposition: branch union@1000 0.780; fusion/cutoff loss 0.139 (1111 turns, recoverable by quota/survivor-set); never-reach 0.220 (1761 turns, needs new retrieval). 100% of GTs in-catalog.
+- Dominant axis = resolvable GT artist. Code-grounded root cause: the resolver does NOT ground positive `mentioned_entities` into artist-discography fetches.
+- Reframe: optimize top-100 branch coverage (final Hit@100 0.406 vs union@100 0.526), not the union@1000 ceiling — VRank takes ~1000 candidates, so union@1000 is diagnostic.
+- Two regimes by turn depth: turn-1 cold-start = never-reach (centroids dead, no anchors); late turns = fusion/carryover loss (RRF loss 0.049→0.196).
+
+Linked reports:
+- `experiments/analysis/extractor_prompt_v2/RECALL_GAP_REPORT.md` (§10/§11 reconcile the 3 Codex passes)
+- `experiments/analysis/extractor_prompt_v2/CODEX_MM_DEEP_DIVE.md` (Codex multimodal deep-dive, verbatim)
+
+Next step:
+- Branch Hit@100 diagnostics → fix resolver (ground positive mentions) → cheap action retrievers (exact-title, resolved-artist discography, anchor-free dense, routed lyrics/popularity) → carryover policy → tag-IDF audit.
+
+Status:
+- analyzed

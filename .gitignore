@@ -14,3 +14,6 @@ exp/
 # Per-run audit/smoke output JSONs (scripts/*.json are scratch artifacts)
 scripts/*_results.json
 scripts/*_audit*.json
+
+# Large regenerable recall-gap table (build via scripts/build_gap_table_on_modal.py)
+experiments/analysis/extractor_prompt_v2/artifacts/gap/gap_table_v3.jsonl
