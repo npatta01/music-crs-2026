@@ -231,6 +231,20 @@ class LanceDbCatalog:
             return []
         return _list_of_str(row.get("tag_list"))
 
+    def release_year_of(self, track_id: str) -> int | None:
+        """Year (int) of the track's release_date, or None if unknown/unparseable.
+        Used by the release_year_range post-fusion feature for soft date boosting."""
+        row = self._per_track.get(track_id)
+        if row is None:
+            return None
+        rd = _first(row.get("release_date")) if isinstance(row.get("release_date"), list) else row.get("release_date")
+        if not rd:
+            return None
+        s = str(rd).strip()
+        if len(s) >= 4 and s[:4].isdigit():
+            return int(s[:4])
+        return None
+
     def track_label(self, track_id: str) -> str:
         row = self._per_track.get(track_id)
         if row is None:

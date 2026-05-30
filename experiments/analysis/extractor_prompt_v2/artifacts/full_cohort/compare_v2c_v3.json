@@ -1,0 +1,30 @@
+{
+  "v2c": {
+    "n": 2744,
+    "n_errors": 3,
+    "literal_recovery_share": 0.6618022619481941,
+    "mean_catalog_recall": 0.09154517851201077,
+    "catalog_hit_share": 0.8504195549069683,
+    "total_bridged": 311,
+    "total_pure_noise": 1069,
+    "total_emitted_tokens": 18220,
+    "pure_noise_rate": 0.05867178924259056,
+    "era_turns": 919,
+    "era_filter_rate": 0.6702937976060935,
+    "latency_p50": 3.3561146669089794
+  },
+  "v3": {
+    "n": 2744,
+    "n_errors": 6,
+    "literal_recovery_share": 0.6347699050401753,
+    "mean_catalog_recall": 0.11352910518714861,
+    "catalog_hit_share": 0.9163623082542002,
+    "total_bridged": 2337,
+    "total_pure_noise": 2946,
+    "total_emitted_tokens": 20008,
+    "pure_noise_rate": 0.14724110355857656,
+    "era_turns": 1024,
+    "era_filter_rate": 0.8876953125,
+    "latency_p50": 4.5329266670159996
+  }
+}

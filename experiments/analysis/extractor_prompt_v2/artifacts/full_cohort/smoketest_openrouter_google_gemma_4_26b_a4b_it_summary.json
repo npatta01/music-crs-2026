@@ -1,0 +1,15 @@
+{
+  "model": "openrouter/google/gemma-4-26b-a4b-it",
+  "n_turns": 2744,
+  "n_errors": 3,
+  "n_with_at_least_one_recovered_token": 1814,
+  "share_with_at_least_one_recovered": 0.6618022619481941,
+  "mean_per_turn_recovery_rate": 0.5285545295030885,
+  "total_emitted_tags": 16051,
+  "total_hallucinated_tags": 42,
+  "share_emitted_tags_hallucinated": 0.0026166593981683385,
+  "mean_per_turn_hallucination_rate": 0.0024629582657996504,
+  "n_turns_with_zero_hallucination": 2701,
+  "share_turns_with_zero_hallucination": 0.9854067858445823,
+  "latency_p50_s": 3.3561146669089794
+}

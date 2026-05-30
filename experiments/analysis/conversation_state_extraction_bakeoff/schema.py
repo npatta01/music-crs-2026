@@ -170,6 +170,33 @@ class HardFilter(BaseModel):
         return self
 
 
+class ReleaseYearRange(BaseModel):
+    """Soft temporal hint for a downstream reranker's date-boosting (NOT a hard
+    filter). The LLM converts any era/decade/century/year expression to integer
+    year bounds using world knowledge; the reranker boosts candidates whose
+    release year falls in (or near) this range. Either bound may be null = open.
+
+    Examples the LLM should produce:
+      "early 2010s"        -> {start: 2010, end: 2014}
+      "90s"                -> {start: 1990, end: 1999}
+      "19th century"       -> {start: 1801, end: 1900}
+      "after 19th century" -> {start: 1901, end: null}
+      "before 2000"        -> {start: null, end: 1999}
+    """
+
+    start: int | None = Field(default=None, description="Inclusive lower bound year, or null for open-ended.")
+    end: int | None = Field(default=None, description="Inclusive upper bound year, or null for open-ended.")
+
+    @model_validator(mode="after")
+    def _normalize(self):
+        # Safety net only: if the model inverts the bounds, swap rather than
+        # reject — a soft hint should never crash extraction. Correct mapping is
+        # the prompt's job; this just guarantees start <= end.
+        if self.start is not None and self.end is not None and self.start > self.end:
+            self.start, self.end = self.end, self.start
+        return self
+
+
 class ProcessConstraints(BaseModel):
     """How aggressively to vary or stay-the-course on the next recommendation.
 
@@ -286,6 +313,17 @@ class ConversationStateV0Plus(BaseModel):
             "How aggressively the compiler should vary vs continue along the artist/album/novelty "
             "axes. Orthogonal to intent_mode. See ProcessConstraints field docs for the full "
             "decision table."
+        ),
+    )
+
+    release_year_range: ReleaseYearRange | None = Field(
+        default=None,
+        description=(
+            "Soft temporal hint when the user mentions any era / decade / century / year bound. "
+            "Convert the expression to integer year bounds using world knowledge (e.g. "
+            "'early 2010s' -> {2010, 2014}; '19th century' -> {1801, 1900}; 'after the 19th "
+            "century' -> {1901, null}). Either bound may be null for open-ended. null when the "
+            "user states no time period. This is a soft boost signal for the reranker, not a hard filter."
         ),
     )
 
