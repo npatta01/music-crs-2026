@@ -31,7 +31,7 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 | Best v0+ ConversationState compiler (BM25-only) | `v0plus_compiler_devset` | `NDCG@20 0.1005` | `superseded` | [v0plus_compiler_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_devset.md) |
 | Best v0+ retrieval-only (multimodal) | `v0plus_compiler_image_devset` | `NDCG@20 0.1452` post-bugfix; prior `0.1461` | `superseded` | [v0plus_compiler_image_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_image_devset.md) |
 | **Best overall (retrieval + reranker, OFFLINE)** | `bm25_image_audio_cfbpr_metadata` + `Qwen3-Reranker-0.6B-structured` rerank | `NDCG@20 0.1594` | `analyzed` — reranker is opt-in via `scripts/rerank_offline.py`; NOT wired into live compiler | [cross_encoder_rerank_bakeoff.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/cross_encoder_rerank_bakeoff.md) |
-| Best v0+ candidate coverage (Hit@1000) | `v0plus_compiler_all_devset` | `Hit@1000 0.6730` | `analyzed` | [v0plus_compiler_ablation_2026-05-26.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_ablation_2026-05-26.md) |
+| Best v0+ candidate coverage (Hit@1000) | `v0plus_compiler_all_retrievers_devset` | `Hit@1000 0.6967` | `analyzed` | [v0plus_compiler_all_retrievers_devset.md](v0plus_compiler_all_retrievers_devset.md) |
 
 ## Current Active Work
 
@@ -122,6 +122,7 @@ Use this directory as the main navigation surface for experiment runs, analysis 
 - [v0plus_compiler_ablation_2026-05-26.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_ablation_2026-05-26.md) — 10-config embedding ablation; `image_siglip2` best at NDCG@20 0.1461 (pre-bugfix)
 - [v0plus_compiler_image_devset.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_compiler_image_devset.md) — canonical image config re-run after #66/#71 bugfixes (NDCG@20 0.1452)
 - [v0plus_textside_2026-05-28.md](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/v0plus_textside_2026-05-28.md) — anchor-free SigLIP-2 / LAION-CLAP text-side Rounds 1–4; no config beats image on NDCG@20 (ranks too deep without a reranker)
+- [v0plus_compiler_all_retrievers_devset.md](v0plus_compiler_all_retrievers_devset.md) — prompt-v4 all-retrievers config; best tracked Hit@1000 coverage (0.6967), but weaker top-20 ranking than image/all-embeddings (NDCG@20 0.1219)
 - Per-variant configs: [`configs/v0plus_compiler_*_devset.yaml`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/configs)
 
 ## Conventions
