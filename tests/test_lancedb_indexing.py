@@ -73,6 +73,8 @@ def test_build_track_record_preserves_bm25_with_tag_list_text_and_vectors():
     assert record[BM25_WITH_TAG_LIST_BM25S_TOKENIZED_TEXT_FIELD] == (
         "track_name song artist_name artist album_name album release_date 2006 12 06 tag_list calm ambient"
     )
+    assert record["release_year_text"] == "2006"
+    assert record["release_decade_text"] == "2000s"
     assert record["audio_laion_clap"] == [0.0, 0.0]
     assert record["metadata_qwen3_embedding_0_6b"] == [1.6, 1.7]
     assert record["has_audio_laion_clap"] is False
@@ -124,6 +126,8 @@ def test_lancedb_fts_fields_include_taglist_compat_and_per_field_text():
     assert "artist_name_text" in LANCEDB_FTS_TEXT_FIELDS
     assert "album_name_text" in LANCEDB_FTS_TEXT_FIELDS
     assert "release_date_text" in LANCEDB_FTS_TEXT_FIELDS
+    assert "release_year_text" in LANCEDB_FTS_TEXT_FIELDS
+    assert "release_decade_text" in LANCEDB_FTS_TEXT_FIELDS
     assert "tag_list_text" in LANCEDB_FTS_TEXT_FIELDS
 
 

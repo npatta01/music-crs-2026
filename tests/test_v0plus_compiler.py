@@ -85,6 +85,16 @@ def _catalog() -> DictCatalog:
     )
 
 
+class CountingReleaseYearCatalog(DictCatalog):
+    def __post_init__(self) -> None:
+        self.release_year_calls = 0
+        super().__post_init__()
+
+    def release_year_of(self, track_id: str) -> int | None:
+        self.release_year_calls += 1
+        return super().release_year_of(track_id)
+
+
 def _fake_encoder():
     """Fresh FakeEmbeddingClient per test. Returns a fixed vector; tests
     assert on what the compiler does WITH the vector, not its contents."""
@@ -313,6 +323,158 @@ def test_compiler_no_dense_call_when_query_string_is_empty():
 
     assert retriever.embedding_calls == []  # dense skipped
     # BM25 may also be empty; that's fine — backfill handles it
+
+
+def test_compiler_routes_single_decade_release_year_range_to_release_decade_bm25():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 1990, "end": 1999},
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        field_boosts={"release_decade": 2.25},
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    assert [
+        (c.field, c.query, c.boost)
+        for c in clauses
+        if c.field in {"release_year", "release_decade"}
+    ] == [("release_decade", "1990s", 2.25)]
+
+
+def test_compiler_routes_exact_release_year_range_to_release_year_bm25():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 1995, "end": 1995},
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        field_boosts={"release_year": 3.5},
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    assert [
+        (c.field, c.query, c.boost)
+        for c in clauses
+        if c.field in {"release_year", "release_decade"}
+    ] == [("release_year", "1995", 3.5)]
+
+
+def test_compiler_routes_cross_decade_release_year_range_to_each_decade_bm25():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 1995, "end": 2004},
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        field_boosts={"release_decade": 2.25},
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    assert [
+        (c.field, c.query, c.boost)
+        for c in clauses
+        if c.field in {"release_year", "release_decade"}
+    ] == [
+        ("release_decade", "1990s", 2.25),
+        ("release_decade", "2000s", 2.25),
+    ]
+
+
+def test_compiler_clamps_open_ended_release_year_range_to_catalog_decades():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 2000, "end": None},
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        field_boosts={"release_decade": 2.25},
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    assert [
+        (c.field, c.query, c.boost)
+        for c in clauses
+        if c.field in {"release_year", "release_decade"}
+    ] == [
+        ("release_decade", "2000s", 2.25),
+        ("release_decade", "2010s", 2.25),
+    ]
+
+
+def test_compiler_keeps_release_year_range_fts_disabled_by_default():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 1990, "end": 1999},
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder()).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    assert [
+        c for c in clauses
+        if c.field in {"release_year", "release_decade"}
+    ] == []
+
+
+def test_compiler_does_not_scan_release_year_bounds_when_fts_boosts_disabled():
+    catalog = CountingReleaseYearCatalog(tracks=_catalog().tracks)
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 2000, "end": None},
+    )
+    cfg = CompilerConfig(enable_dense=False)
+
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    assert catalog.release_year_calls == 0
+
+
+def test_compiler_reuses_catalog_release_year_bounds_for_open_ranges():
+    catalog = CountingReleaseYearCatalog(tracks=_catalog().tracks)
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 2000, "end": None},
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        field_boosts={"release_decade": 2.25},
+    )
+    compiler = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg)
+    resolved = _resolve(state, catalog)
+
+    compiler.compile(resolved)
+    compiler.compile(resolved)
+
+    assert catalog.release_year_calls == len(catalog.tracks)
+
+
+def test_compiler_config_merges_default_field_boosts_without_mutating_input():
+    field_boosts = {"tag_list": 9.0}
+
+    cfg = CompilerConfig(field_boosts=field_boosts)
+
+    assert field_boosts == {"tag_list": 9.0}
+    assert cfg.field_boosts["tag_list"] == 9.0
+    assert cfg.field_boosts["track_name"] == 3.0
+    assert cfg.field_boosts["release_year"] == 0.0
+    assert cfg.field_boosts["release_decade"] == 0.0
 
 
 # ---------------------------------------------------------------------

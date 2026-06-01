@@ -103,6 +103,10 @@ def test_build_track_collection_plan_infers_metadata_and_vector_schema():
     assert field_specs["track_name_sparse"].datatype_name == "SPARSE_FLOAT_VECTOR"
     assert field_specs["release_date_text"].datatype_name == "VARCHAR"
     assert field_specs["release_date_sparse"].datatype_name == "SPARSE_FLOAT_VECTOR"
+    assert field_specs["release_year_text"].datatype_name == "VARCHAR"
+    assert field_specs["release_year_sparse"].datatype_name == "SPARSE_FLOAT_VECTOR"
+    assert field_specs["release_decade_text"].datatype_name == "VARCHAR"
+    assert field_specs["release_decade_sparse"].datatype_name == "SPARSE_FLOAT_VECTOR"
     assert field_specs["tag_list_text"].datatype_name == "VARCHAR"
     assert field_specs["tag_list_sparse"].datatype_name == "SPARSE_FLOAT_VECTOR"
     assert set(plan.vector_field_names) == {milvus_safe_field_name(name) for name in EMBEDDING_FIELDS}
@@ -113,6 +117,8 @@ def test_build_track_collection_plan_infers_metadata_and_vector_schema():
         "artist_name_text",
         "album_name_text",
         "release_date_text",
+        "release_year_text",
+        "release_decade_text",
         "tag_list_text",
     }
 
@@ -180,6 +186,8 @@ def test_build_track_document_preserves_metadata_and_zero_fills_missing_vectors(
     )
     assert doc["track_name_text"] == "track_name: A Song\n"
     assert doc["artist_name_text"] == "artist_name: An Artist\n"
+    assert doc["release_year_text"] == "2006"
+    assert doc["release_decade_text"] == "2000s"
     assert doc["tag_list_text"] == "tag_list: calm, ambient\n"
 
 
@@ -249,6 +257,8 @@ def test_render_bm25_text_fields_matches_default_formatter_shape():
     assert bm25_fields["artist_name_text"] == "artist_name: Artist A, Artist B\n"
     assert bm25_fields["album_name_text"] == "album_name: Album X\n"
     assert bm25_fields["release_date_text"] == "release_date: 2020-01-02\n"
+    assert bm25_fields["release_year_text"] == "2020"
+    assert bm25_fields["release_decade_text"] == "2020s"
     assert bm25_fields["tag_list_text"] == "tag_list: indie, energetic\n"
 
 
@@ -271,6 +281,8 @@ def test_bm25_compat_corpus_fields_are_the_benchmark_fields():
         "artist_name",
         "album_name",
         "release_date",
+        "release_year",
+        "release_decade",
         "tag_list",
     )
 
