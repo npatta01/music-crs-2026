@@ -74,6 +74,11 @@ class CompileResult:
 
     `fused` is the RRF-fused list BEFORE soft (de)promotes; `ranked` is the
     final list AFTER soft adjustments AND popularity backfill.
+
+    `n_from_fusion` counts how many of `ranked` came through the fusion
+    pipeline (RRF + soft (de)promotes, which also hard-drops resolved
+    rejections), NOT only the raw RRF step; `n_from_backfill` counts the
+    popularity-backfill remainder. The two always sum to `len(ranked)`.
     """
 
     ranked: list[str]
