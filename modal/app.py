@@ -747,9 +747,8 @@ def run_inference_sharded(
 
     # Fire shards in parallel via .spawn — returns immediately with a function
     # call handle for each. Then await all by calling .get() on each handle.
-    calls = []
-    for shard_id in range(num_shards):
-        call = inference_fn.spawn(
+    def _spawn(shard_id):
+        return inference_fn.spawn(
             tid=tid,
             batch_size=batch_size,
             num_sessions=0,
@@ -759,12 +758,45 @@ def run_inference_sharded(
             shard_id=shard_id,
             output_suffix=f".shard_{shard_id}",
         )
-        calls.append(call)
 
+    # Resilient join: a single shard failure must NOT raise out of this local
+    # entrypoint. An uncaught local exception makes Modal stop the whole app and
+    # SIGINT every other (healthy, in-progress) shard container — a cascade that
+    # loses the entire run over one transient (rate-limit / dropped connection
+    # under concurrency). So catch per shard, then retry the failures once.
+    def _join(pairs):
+        ok, bad = [], []
+        for shard_id, call in pairs:
+            try:
+                call.get()  # blocks until that shard finishes
+                ok.append(shard_id)
+                print(f"Shard {shard_id} complete.")
+            except Exception as e:  # noqa: BLE001 — report and continue, never abort the run
+                bad.append(shard_id)
+                print(f"Shard {shard_id} FAILED: {type(e).__name__}: {e}")
+        return ok, bad
+
+    calls = [(shard_id, _spawn(shard_id)) for shard_id in range(num_shards)]
     print(f"Spawned {num_shards} shards for {tid}.")
-    for shard_id, call in enumerate(calls):
-        call.get()  # blocks until that shard finishes
-        print(f"Shard {shard_id} complete.")
+    ok, failed = _join(calls)
+
+    if failed:
+        print(f"Retrying {len(failed)} failed shard(s): {failed}")
+        ok2, failed = _join([(shard_id, _spawn(shard_id)) for shard_id in failed])
+        ok += ok2
+
+    if failed:
+        # All spawns have been joined at this point — no healthy shard is still
+        # in flight, so raising here does NOT trigger the SIGINT cascade this PR
+        # fixes (that only happens when the entrypoint raises mid-run). Failing
+        # loudly is required: an incomplete sharded run must not exit 0, or a
+        # later merge silently picks up stale {tid}.shard_N.json files from a
+        # prior attempt and reports an incomplete run as successful.
+        raise RuntimeError(
+            f"{len(failed)}/{num_shards} shard(s) failed after retry: {failed}. "
+            f"Sharded run is INCOMPLETE — re-run these shard_ids (same "
+            f"--num-shards) before merging."
+        )
     print(f"All {num_shards} shards complete. Per-shard outputs: "
           f"inference/devset/{tid}.shard_{{0..{num_shards-1}}}.json")
 
