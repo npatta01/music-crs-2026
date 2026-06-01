@@ -537,7 +537,10 @@ def test_compute_metrics_aggregates():
     assert m["n_turns"] == 2
     assert m["hit@1"] == 0.5           # turn1 top1=gt hit, turn2 top1=a miss
     assert m["hit@20"] == 1.0          # gt in final top-20 both turns
+    assert m["hit@50"] == 1.0          # 50-slice cutoff present
     assert m["unionhit@100"] == 1.0    # gt in union both turns
+    assert m["unionhit@20"] == 1.0     # union@20 cutoff present
+    assert m["unionhit@50"] == 1.0     # union@50 cutoff present
     assert "fusion_efficiency@100" in m
 ```
 
@@ -556,11 +559,11 @@ Create `scripts/branch_diagnostics.py`:
 Reads a trace sidecar (exp/inference/devset/{tid}_trace.json) plus the
 evaluator ground truth (evaluator/exp/ground_truth/devset.json) and reports:
 
-  - hit@{1,20,100,200,1000}        over the FINAL recommendation
-  - unionhit@{100,200}             over the union of every branch's top-k
+  - hit@{1,20,50,100,200,1000}     over the FINAL recommendation
+  - unionhit@{20,50,100,200}       over the union of every branch's top-k
   - recall@{100,200,1000} per branch (denominator = turns the branch fired)
-  - union_size@{100,200}           mean distinct candidates in the union
-  - fusion_efficiency@{100,200}    hit@k(final) / unionhit@k
+  - union_size@{20,50,100,200}     mean distinct candidates in the union
+  - fusion_efficiency@{20,50,100,200}  hit@k(final) / unionhit@k
 
 Single GT track per turn, so recall@k == hit@k. The evaluator submodule is
 not touched; this is an adjacent standalone tool.
@@ -573,8 +576,8 @@ import json
 import sys
 from collections import defaultdict
 
-FINAL_KS = [1, 20, 100, 200, 1000]
-UNION_KS = [100, 200]
+FINAL_KS = [1, 20, 50, 100, 200, 1000]
+UNION_KS = [20, 50, 100, 200]
 BRANCH_KS = [100, 200, 1000]
 
 
@@ -876,8 +879,8 @@ track an explanation would target). Submission/blindset runs do not write traces
 
 `scripts/branch_diagnostics.py` reads the trace + ground truth and reports:
 
-- `hit@{1,20,100,200,1000}` over the final recommendation,
-- `unionhit@{100,200}` over the union of every branch's top-k (the coverage
+- `hit@{1,20,50,100,200,1000}` over the final recommendation,
+- `unionhit@{20,50,100,200}` over the union of every branch's top-k (the coverage
   ceiling if fusion were perfect), `union_size@k`, and `fusion_efficiency@k`,
 - per-branch `recall@{100,200,1000}` (denominator = turns the branch fired).
 

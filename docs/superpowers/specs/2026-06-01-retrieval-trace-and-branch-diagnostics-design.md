@@ -142,10 +142,10 @@ Single GT track per turn, so recall@k = hit@k = 1 iff GT ∈ set.
 | Metric | Definition | Measured against |
 |---|---|---|
 | `hit@1` | GT == headline rec | `recommended.top1_track_id` |
-| `hit@{20,100,200,1000}` | GT in top-k of the final recommendation | `final.track_ids` |
-| `unionhit@{100,200}` | GT in the union of every branch's top-k | `∪ pools[*].hits[:k]` |
+| `hit@{20,50,100,200,1000}` | GT in top-k of the final recommendation | `final.track_ids` |
+| `unionhit@{20,50,100,200}` | GT in the union of every branch's top-k | `∪ pools[*].hits[:k]` |
 | `recall@{100,200,1000}` per branch | GT in that branch's top-k | each `pools[i].hits` |
-| `union_size@{100,200}` | mean distinct candidates in the union | `pools` |
+| `union_size@{20,50,100,200}` | mean distinct candidates in the union | `pools` |
 | `fusion_efficiency@k` | `hit@k(final) / unionhit@k` | reachable recall fusion+backfill keeps |
 
 - Turn alignment: trace turns are matched to GT by `session_id` + turn index.
