@@ -6,6 +6,10 @@ Tags: `Added` `Changed` `Fixed` `Docs` `Experiment`. See [experiments/README.md]
 
 Repo: https://github.com/npatta01/music-conversational-music-recomender-2026
 
+## 2026-06
+
+- `Experiment` **v0+ prompt-v4 all-retrievers full devset** — [#80](https://github.com/npatta01/music-conversational-music-recomender-2026/pull/80). `v0plus_compiler_all_retrievers_devset` exercises BM25/year boosts, Qwen3 dense text, CLAP text, centroid branches, resolved-artist discography, and era/popularity. Full 5-shard Modal run: **NDCG@20 0.1219**, Hit@20 0.2660, Hit@1000 0.6967. Best tracked candidate coverage, but not a canonical top-20 ranking config. [report](experiments/v0plus_compiler_all_retrievers_devset.md)
+
 ## 2026-05
 
 - `Fixed` **Issue #70 code-audit bugs** — [#71](https://github.com/npatta01/music-conversational-music-recomender-2026/pull/71). Validate LanceDB distance types + convert `dot` distance back to higher-is-better similarity; skip anchor centroid-only branches on pivot turns; clear error on missing prediction keys in devset eval; dashboard points at `blindset_A` (`mcrs/dashboard_paths.py`); download `_trace.json` sidecars as trace artifacts. (`id_to_metadata` char-by-char bug was already fixed via the `DefaultFormatter` refactor.) Closes [#70](https://github.com/npatta01/music-conversational-music-recomender-2026/issues/70).

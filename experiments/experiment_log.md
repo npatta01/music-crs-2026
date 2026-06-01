@@ -601,3 +601,30 @@ Next step:
 
 Status:
 - analyzed
+
+## 2026-06-01 - v0+ prompt-v4 all-retrievers full devset
+
+Question:
+Does the prompt-v4 compiler config that exercises every available retriever branch improve coverage or headline top-20 ranking?
+
+Run:
+- `v0plus_compiler_all_retrievers_devset`
+- Modal 5-shard full devset run at git head `9f4904aece3ff96a397e365bac4252dbb5ac0d0f`
+
+Results:
+- `NDCG@20 0.1219`, `Hit@20 0.2660`, `MRR 0.0871`
+- `Hit@1000 0.6967` with only 1 shallow/empty row out of 8000 turns
+
+Takeaways:
+- This is the best tracked v0+ candidate-coverage run, beating the previous `v0plus_compiler_all_devset` Hit@1000 (`0.6967` vs `0.6730`).
+- It is not the new canonical ranking config: top-20 quality is well below `v0plus_compiler_image_devset` (`0.1219` vs `0.1452` NDCG@20) and below the previous all-embeddings run (`0.1432`).
+- The failure mode is ranking/fusion noise, not extractor outage. The merged trace has 1 `extractor_returned_none` row; the remaining 7999 rows returned 1000 candidates.
+
+Linked report:
+- [`v0plus_compiler_all_retrievers_devset.md`](v0plus_compiler_all_retrievers_devset.md)
+
+Next step:
+- Treat this as a strong candidate-pool source for quota/survivor-set tuning or a reranker. Do not replace the image config for top-K retrieval without a downstream ranking fix.
+
+Status:
+- analyzed
