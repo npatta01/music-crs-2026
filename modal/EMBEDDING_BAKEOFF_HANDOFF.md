@@ -10,14 +10,23 @@ Modal + Hugging Face). The script already exists on this branch; your job is to
 
 ---
 
-## 1. The question
+## 1. The questions
 
-Does a **bigger metadata encoder** (Qwen3-Embedding 4B / 8B) retrieve better than
-the **0.6B** baseline the catalog was built with? An earlier comparison
-(`experiments/dense_qwen3_embedding_8b_devset.md`, leaderboard #9, NDCG@20 0.1025)
-only tracked **NDCG@20** — which can't see whether a bigger model improves **deep
-recall** (the real job of a first-stage retriever before reranking). This bake-off
-fixes that by reporting **Recall@100 / Recall@1000** alongside NDCG@20.
+**A — encoder size.** Does a **bigger metadata encoder** (Qwen3-Embedding 4B / 8B)
+retrieve better than the **0.6B** baseline the catalog was built with? An earlier
+comparison (`experiments/dense_qwen3_embedding_8b_devset.md`, leaderboard #9,
+NDCG@20 0.1025) only tracked **NDCG@20** — which can't see whether a bigger model
+improves **deep recall** (the real job of a first-stage retriever before reranking).
+This bake-off reports **Recall@100 / Recall@1000** alongside NDCG@20.
+
+**B — tags representation.** The attributes/tags branch *hurt* in the v0+ ablation.
+The hypothesis is that the raw **tag-dump** document template
+(`music attributes, tags :rock,melancholic,90s`) sits far from conversational
+queries. The bake-off renders each catalog track three ways — `metadata`,
+`attributes_raw` (the existing tag-dump), and `attributes_nl` (a natural-language
+rewrite of the same tags, `This is a rock, melancholic and 90s track.`) — so the
+clean test is **`attributes_raw` vs `attributes_nl`**: same tag info, different
+formatting, everything else held constant.
 
 ### Context you should know (from prior investigation)
 - **metadata_qwen3 (0.6B)** is a *positive* retrieval branch: +21% NDCG@20 vs BM25
@@ -56,11 +65,12 @@ modal run modal/embedding_bakeoff.py --num-sessions 10 --pool-size 2000
 # 2) FULLER comparison once smoke looks sane
 modal run modal/embedding_bakeoff.py --num-sessions 150 --pool-size 8000
 
-# optional: restrict models / query modes
-modal run modal/embedding_bakeoff.py --models 0.6B,8B --query-modes symmetric
+# focus the tags question only (raw tag-dump vs natural-language rewrite)
+modal run modal/embedding_bakeoff.py --doc-variants attributes_raw,attributes_nl --models 0.6B,8B
 ```
 
 **CLI flags** (`--flag value`): `--models` (default `0.6B,4B,8B`),
+`--doc-variants` (`metadata,attributes_raw,attributes_nl`),
 `--query-modes` (`symmetric,instruct`), `--num-sessions` (100), `--pool-size`
 (5000), `--max-turns` (8), `--batch-size` (32, auto-shrunk for 4B/8B),
 `--max-length` (512), `--seed` (0).
@@ -78,13 +88,17 @@ modal run modal/embedding_bakeoff.py --models 0.6B,8B --query-modes symmetric
    is the raw conversation (prior turns, music turns rendered to artist–title
    labels, then the current user message) — mirrors
    `mcrs/inference_utils.chat_history_parser`. The gold track is never in the query.
-3. Builds a **candidate pool** = all gold tracks + random negatives (`--pool-size`),
-   rendered via the canonical `talkplay_metadata_document_template`. Every encoder
-   ranks within this *same* pool.
-4. For each model: encodes the pool docs once, then queries in two modes —
-   `symmetric` (no instruct prefix; matches how the catalog was built and is
-   queried today) and `instruct` (Qwen3's asymmetric instruct prefix).
-5. Scores with the repo's own `evaluator.metrics.metrics_recsys.compute_metrics`.
+3. Builds a **candidate pool** = all gold tracks + random negatives (`--pool-size`).
+   Every (model × variant) ranks within this *same* pool.
+4. Renders each pool track under every **document variant** (`metadata`,
+   `attributes_raw`, `attributes_nl`) and reports per-variant **coverage**
+   (fraction of tracks with a non-empty doc — attribute variants are empty for
+   tracks with no tags).
+5. For each model: encodes queries once per mode — `symmetric` (no instruct;
+   matches how the catalog was built/queried today) and `instruct` (Qwen3's
+   asymmetric prefix) — then encodes each document variant and scores every
+   (variant × mode) combination with the repo's own
+   `evaluator.metrics.metrics_recsys.compute_metrics`.
 
 **Validity:** absolute recall is inflated because the pool is a subset, not the full
 47k catalog. **Only the relative ordering across models/modes is meaningful** — pool,
@@ -101,8 +115,11 @@ template, queries, and scoring are identical across models, so it's apples-to-ap
   comparison is fair; if it looks like it's hurting, re-run with `--max-length 1024`.
 - **Re-encoded 0.6B ≠ organizer's stored 0.6B vectors** (dtype/normalization differ
   slightly). That's intended — all three models go through one identical code path.
-- The bake-off measures the **metadata** branch only. It does **not** test the
-  tags/attributes question (that needs a template change, not a bigger model).
+- **Attribute variants are tags-only.** Tempo/key/chord aren't in the published
+  metadata, so `attributes_raw`/`attributes_nl` are built from `tag_list` alone.
+  Watch their **coverage** — tracks with no tags get an empty doc and can't be
+  retrieved by that variant, which caps its recall. Compare `attributes_raw` vs
+  `attributes_nl` against **each other** (same coverage), not against `metadata`.
 
 ---
 
@@ -119,6 +136,16 @@ template, queries, and scoring are identical across models, so it's apples-to-ap
   to the query/representation side (and the tags-template rewrite). **If 8B clearly
   wins on recall:** it justifies the cost of re-embedding the full catalog at the
   larger size; quantify the gap before committing to that.
+
+### Tags question (B)
+- Compare **`attributes_nl` vs `attributes_raw`** at the *same* model + query mode
+  (same coverage). If `attributes_nl` consistently wins, the tags branch was being
+  hurt by **formatting**, not by the tags themselves — a cheap, high-value fix
+  (rewrite the template, re-embed only the attributes column). If they're equal,
+  the problem is deeper than formatting (the tag *vocabulary* doesn't align with
+  conversational intents) and the branch likely stays demoted.
+- `metadata` is expected to beat both attribute variants — that's not the question;
+  it's the reference. The point is the raw-vs-NL delta.
 
 ---
 
@@ -143,6 +170,7 @@ template, queries, and scoring are identical across models, so it's apples-to-ap
   or rely on the GPU fallback list (H100 → A100-80GB → A100-40GB → L40S).
 - **`No scorable examples`** → `--num-sessions` too small or gold tracks not in
   catalog; raise `--num-sessions`.
-- **Want the tags question too** → ask; the harness can be extended with an
-  attributes-document variant (raw tag-dump vs natural-language rewrite) in the same
-  run.
+- **Low attribute coverage** → expected if many sampled tracks lack tags; it caps
+  attribute-variant recall but doesn't bias the raw-vs-NL comparison (same pool).
+- **Want a richer NL template** → edit `_render_attributes_nl` in
+  `modal/embedding_bakeoff.py` (e.g. separate genre vs mood phrasing) and re-run.
