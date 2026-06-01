@@ -1,0 +1,173 @@
+# v0+ ConversationState Compiler — ALL RETRIEVERS (devset)
+#
+# Exercises every retriever branch + the prompt_v4 extractor introduced in this
+# PR. Use this as the reference config for the new functionality.
+#
+# Retriever branches enabled here:
+#   - bm25 multi-field (track/artist/album/tag) with per-field boosts
+#   - bm25 year boost: release_year_range -> boosted release_date terms (additive)
+#   - dense (Qwen3-0.6B): metadata, lyrics, attributes
+#   - CLAP-text sonic branch: audio_laion_clap queried with a text encoder
+#   - centroid-only: image_siglip2, audio_laion_clap, cf_bpr (anchor + user)
+#   - resolved-artist discography
+#   - era / popularity (top-popularity tracks within extracted release_year_range)
+#   fused via weighted RRF.
+#
+# Preconditions:
+# 1. LanceDB table at lancedb.db_uri / table_name with FTS indexes
+#    (track_name, artist_name, album_name, tag_list, release_date) AND these
+#    vector columns: metadata_qwen3_embedding_0_6b, lyrics_qwen3_embedding_0_6b,
+#    attributes_qwen3_embedding_0_6b, audio_laion_clap, image_siglip2, cf_bpr.
+# 2. Modal app `music-crs` deployed with MultimodalTextEncoder (for clap_text).
+# 3. Env keys: OPENROUTER_API_KEY (extractor), DEEPINFRA_API_KEY (Qwen3 embed).
+# 4. HF auth (`uvx hf auth login`) for the catalog metadata + embeddings datasets.
+
+lm_type: "dummy"          # response generation is downstream of this experiment's scope
+retrieval_type: "bm25"    # placeholder — V0PlusCompilerQU owns its own retriever
+
+qu_type: "v0plus_compiler"
+qu_kwargs:
+  max_in_flight: 8
+
+  extractor:
+    # prompt_v4 extractor (this PR's headline). deepseek-v4-flash = best
+    # value in the routing bake-off (low null rate, strong lyric/feature F1).
+    model_name: "openrouter/deepseek/deepseek-v4-flash"
+    prompt_version: "v4"
+    temperature: 0.0
+    max_tokens: 8000
+    timeout_s: 120
+
+  catalog:
+    metadata_dataset: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
+    embeddings_dataset: "talkpl-ai/TalkPlayData-Challenge-Track-Embeddings"
+    metadata_split: "all_tracks"
+    embeddings_split: "all_tracks"
+
+  # Default encoder (Qwen3-0.6B via DeepInfra/LiteLLM) for the text dense branches.
+  encoder:
+    backend: "litellm"
+    model_name: "openai/Qwen/Qwen3-Embedding-0.6B"
+    api_base: "https://api.deepinfra.com/v1/openai"
+    batch_size: 32
+    encoding_format: "float"
+
+  # Named encoders referenced by dense_branches via `encoder_id`.
+  encoders:
+    default:
+      backend: "litellm"
+      model_name: "openai/Qwen/Qwen3-Embedding-0.6B"
+      api_base: "https://api.deepinfra.com/v1/openai"
+      batch_size: 32
+      encoding_format: "float"
+    clap_text:
+      backend: "modal_multimodal"
+      modal_app_name: "music-crs"
+      modal_cls_name: "MultimodalTextEncoder"
+      method: "embed_clap_text"
+
+  lancedb:
+    db_uri: "./cache/lancedb"
+    table_name: "music_track_catalog"
+
+  resolver:
+    score_cutoff: 80
+    artist_match_topk: 20
+    track_match_topk: 5
+
+  compiler:
+    branch_trace_topk: 1000
+    bm25_k: 1000
+    dense_k: 1000
+    rrf_k: 60
+    final_topk: 1000
+
+    field_boosts:
+      track_name: 3.0
+      artist_name: 3.0
+      album_name: 2.0
+      tag_list: 1.5
+
+    # Year as an additive BM25 boost (never excludes). See issue #75:
+    # real mid-depth (@200) coverage lever, flat at @100.
+    enable_release_year_bm25: true
+    release_year_bm25_boost: 1.5
+    release_year_bm25_max_span: 30
+
+    centroid_alpha:
+      refinement: 0.30
+      playlist_build: 0.30
+      pivot: 0.0
+      open_explore: 0.0
+    anchor_tag_expansion_n: 5
+    rejected_tag_multiplier: 0.5
+    positive_tag_multiplier_step: 0.15
+    same_artist_demote: 1.0
+
+    enable_dense: true
+    dense_branches:
+      - vector_field: "metadata_qwen3_embedding_0_6b"
+        weight: 1.0
+        distance_type: "cosine"
+      - vector_field: "lyrics_qwen3_embedding_0_6b"
+        weight: 1.0
+        query_id: "lyric"
+      - vector_field: "attributes_qwen3_embedding_0_6b"
+        weight: 1.0
+        query_id: "attributes"
+      - vector_field: "audio_laion_clap"
+        encoder_id: "clap_text"
+        query_id: "sonic"
+        weight: 1.0
+        distance_type: "cosine"
+
+    centroid_only_branches:
+      - vector_field: "image_siglip2"
+        weight: 1.0
+        topk: 1000
+        distance_type: "cosine"
+      - vector_field: "audio_laion_clap"
+        weight: 1.0
+        topk: 1000
+        distance_type: "cosine"
+      - vector_field: "cf_bpr"
+        weight: 1.0
+        topk: 1000
+        distance_type: "cosine"
+      - vector_field: "cf_bpr"
+        weight: 1.0
+        topk: 1000
+        distance_type: "cosine"
+        centroid_source: "user"
+
+    # No routing boosts — isolate raw branch coverage.
+    routing_boost: {}
+
+    # Resolved-artist discography branch.
+    enable_resolved_artist_discography: true
+    disco_weight: 1.0
+    disco_cap: 150
+    disco_confidence_threshold: 90.0
+    disco_gated_intents: ["pivot"]
+
+    # Era / popularity branch: top-popularity tracks within extracted year range.
+    enable_era_popularity: true
+    era_pop_weight: 1.0
+    era_pop_cap: 200
+
+test_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Dataset"
+item_db_name: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
+user_db_name: "talkpl-ai/TalkPlayData-Challenge-User-Metadata"
+track_split_types:
+  - "all_tracks"
+user_split_types:
+  - "all_users"
+corpus_types:
+  - "track_name"
+  - "artist_name"
+  - "album_name"
+  - "tag_list"
+cache_dir: "./cache"
+device: "cpu"
+attn_implementation: "eager"
+retrieval_topk: 1000
