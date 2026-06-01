@@ -7,8 +7,10 @@ an injected fake LiteLLMExtractor so the whole pipeline runs offline.
 from __future__ import annotations
 
 import asyncio
+import sys
 import time
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 
 import pytest
 
@@ -20,6 +22,7 @@ from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
 )
 from mcrs.qu_modules import load_qu_module
 from mcrs.qu_modules.compiler_v0plus_qu import (
+    LiteLLMExtractor,
     V0PlusCompilerQU,
     build_v0plus_compiler_qu,
     session_memory_to_conversation,
@@ -397,6 +400,165 @@ def test_batch_compile_track_ids_trace_handles_extractor_failure():
     assert t["state"] is None
     assert t["intent_mode"] is None
     assert t["compiler"]["extractor_returned_none"] is True
+
+
+def test_litellm_extractor_manually_stores_only_valid_responses(monkeypatch):
+    completion_kwargs = []
+    stored = []
+
+    class FakeCache:
+        def add_cache(self, result, **kwargs):
+            stored.append((result, kwargs))
+
+    response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(
+                    content='{"turn_intent": "more like Fugazi", "intent_mode": "refinement"}'
+                )
+            )
+        ],
+        model_dump_json=lambda: '{"cached": true}',
+    )
+
+    def fake_completion(**kwargs):
+        completion_kwargs.append(kwargs)
+        return response
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(completion=fake_completion, cache=FakeCache()),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    state = extractor.extract([{"turn": 1, "role": "user", "text": "x"}], [])
+
+    assert state is not None
+    assert state.turn_intent == "more like Fugazi"
+    assert completion_kwargs[0]["cache"] == {"no-store": True}
+    assert stored == [
+        (
+            '{"cached": true}',
+            {key: value for key, value in completion_kwargs[0].items() if key != "cache"},
+        )
+    ]
+
+
+def test_litellm_extractor_does_not_store_malformed_json(monkeypatch):
+    stored = []
+    completion_kwargs = []
+
+    class FakeCache:
+        def add_cache(self, result, **kwargs):
+            stored.append((result, kwargs))
+
+    def fake_completion(**kwargs):
+        completion_kwargs.append(kwargs)
+        return SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content='{"turn_intent": "broken"')
+                )
+            ]
+        )
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(completion=fake_completion, cache=FakeCache()),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    assert extractor.extract([{"turn": 1, "role": "user", "text": "x"}], []) is None
+    assert completion_kwargs[0]["cache"] == {"no-store": True}
+    assert stored == []
+
+
+def test_litellm_extractor_manually_stores_only_valid_responses_async(monkeypatch):
+    completion_kwargs = []
+    stored = []
+
+    class FakeCache:
+        async def async_add_cache(self, result, **kwargs):
+            stored.append((result, kwargs))
+
+    response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(
+                    content='{"turn_intent": "more like Fugazi", "intent_mode": "refinement"}'
+                )
+            )
+        ],
+        model_dump_json=lambda: '{"cached": true}',
+    )
+
+    async def fake_acompletion(**kwargs):
+        completion_kwargs.append(kwargs)
+        return response
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(acompletion=fake_acompletion, cache=FakeCache()),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    state = asyncio.run(extractor.aextract([{"turn": 1, "role": "user", "text": "x"}], []))
+
+    assert state is not None
+    assert state.turn_intent == "more like Fugazi"
+    assert completion_kwargs[0]["cache"] == {"no-store": True}
+    assert stored == [
+        (
+            '{"cached": true}',
+            {key: value for key, value in completion_kwargs[0].items() if key != "cache"},
+        )
+    ]
+
+
+def test_litellm_extractor_no_store_prevents_async_malformed_cache_write(monkeypatch):
+    deferred_bad_writes = []
+    completion_kwargs = []
+
+    async def fake_acompletion(**kwargs):
+        completion_kwargs.append(kwargs)
+        if kwargs.get("cache", {}).get("no-store") is not True:
+            async def deferred_write():
+                await asyncio.sleep(0)
+                deferred_bad_writes.append("bad-json-wrote-after-eviction")
+
+            asyncio.create_task(deferred_write())
+        return SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content='{"turn_intent": "broken"')
+                )
+            ]
+        )
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(acompletion=fake_acompletion, cache=SimpleNamespace()),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    async def exercise_extractor():
+        result = await extractor.aextract([{"turn": 1, "role": "user", "text": "x"}], [])
+        await asyncio.sleep(0)
+        return result
+
+    result = asyncio.run(exercise_extractor())
+
+    assert result is None
+    assert completion_kwargs[0]["cache"] == {"no-store": True}
+    assert deferred_bad_writes == []
 
 
 def test_batch_compile_track_ids_returns_results_in_input_order():

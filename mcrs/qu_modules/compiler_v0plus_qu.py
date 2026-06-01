@@ -97,6 +97,58 @@ from mcrs.retrieval_modules.base import Retriever
 logger = logging.getLogger(__name__)
 
 
+def _with_no_store_cache(call_kwargs: dict[str, Any]) -> dict[str, Any]:
+    request_kwargs = dict(call_kwargs)
+    cache_control = request_kwargs.get("cache")
+    cache_control = dict(cache_control) if isinstance(cache_control, dict) else {}
+    cache_control["no-store"] = True
+    request_kwargs["cache"] = cache_control
+    return request_kwargs
+
+
+def _response_for_cache(response: Any) -> Any:
+    model_dump_json = getattr(response, "model_dump_json", None)
+    if callable(model_dump_json):
+        return model_dump_json()
+    return response
+
+
+def _store_litellm_cache_entry(
+    litellm_module,
+    response: Any,
+    call_kwargs: dict[str, Any],
+) -> None:
+    cache = getattr(litellm_module, "cache", None)
+    add_cache = getattr(cache, "add_cache", None)
+    if add_cache is None:
+        return
+    try:
+        add_cache(_response_for_cache(response), **call_kwargs)
+    except Exception as exc:
+        logger.warning("v0+ extractor cache store failed: %s: %s", type(exc).__name__, exc)
+
+
+async def _async_store_litellm_cache_entry(
+    litellm_module,
+    response: Any,
+    call_kwargs: dict[str, Any],
+) -> None:
+    cache = getattr(litellm_module, "cache", None)
+    async_add_cache = getattr(cache, "async_add_cache", None)
+    if async_add_cache is not None:
+        try:
+            await async_add_cache(_response_for_cache(response), **call_kwargs)
+        except Exception as exc:
+            logger.warning(
+                "v0+ extractor async cache store failed: %s: %s",
+                type(exc).__name__,
+                exc,
+            )
+        return
+
+    await asyncio.to_thread(_store_litellm_cache_entry, litellm_module, response, call_kwargs)
+
+
 # ----------------------------------------------------------------------
 # Encoder factory — shared by single-encoder + encoder-map YAML schemas
 # ----------------------------------------------------------------------
@@ -301,10 +353,9 @@ class LiteLLMExtractor:
         if self.retry_temperature != self.temperature:
             temps.append(self.retry_temperature)
         for attempt, temp in enumerate(temps, start=1):
+            call_kwargs = self._build_kwargs(conversation, played_track_ids, temperature=temp)
             try:
-                response = litellm.completion(
-                    **self._build_kwargs(conversation, played_track_ids, temperature=temp)
-                )
+                response = litellm.completion(**_with_no_store_cache(call_kwargs))
                 raw = response.choices[0].message.content or ""
             except Exception as exc:
                 logger.warning(
@@ -313,7 +364,7 @@ class LiteLLMExtractor:
                 )
                 return None
             try:
-                return self._decode(raw)
+                state = self._decode(raw)
             except json.JSONDecodeError as exc:
                 logger.warning(
                     "v0+ extractor JSON decode failed (attempt %d, temp=%.2f): %s | raw=%r",
@@ -327,6 +378,8 @@ class LiteLLMExtractor:
                     attempt, temp, type(exc).__name__, exc, raw[:200],
                 )
                 return None
+            _store_litellm_cache_entry(litellm, response, call_kwargs)
+            return state
         return None
 
     async def aextract(
@@ -343,10 +396,9 @@ class LiteLLMExtractor:
         if self.retry_temperature != self.temperature:
             temps.append(self.retry_temperature)
         for attempt, temp in enumerate(temps, start=1):
+            call_kwargs = self._build_kwargs(conversation, played_track_ids, temperature=temp)
             try:
-                response = await litellm.acompletion(
-                    **self._build_kwargs(conversation, played_track_ids, temperature=temp)
-                )
+                response = await litellm.acompletion(**_with_no_store_cache(call_kwargs))
                 raw = response.choices[0].message.content or ""
             except Exception as exc:
                 logger.warning(
@@ -355,7 +407,7 @@ class LiteLLMExtractor:
                 )
                 return None
             try:
-                return self._decode(raw)
+                state = self._decode(raw)
             except json.JSONDecodeError as exc:
                 logger.warning(
                     "v0+ extractor JSON decode failed (async, attempt %d, temp=%.2f): %s | raw=%r",
@@ -368,6 +420,8 @@ class LiteLLMExtractor:
                     attempt, temp, type(exc).__name__, exc, raw[:200],
                 )
                 return None
+            await _async_store_litellm_cache_entry(litellm, response, call_kwargs)
+            return state
         return None
 
 

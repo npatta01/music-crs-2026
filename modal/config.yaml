@@ -4,13 +4,17 @@ volumes:
   hf_cache: "music-crs-hf-cache"
   results: "music-crs-results"
   models: "music-crs-models"
-  litellm_cache: "music-crs-litellm-cache"
+  # Volumes v2 cache volume; create fresh because existing music-crs-litellm-cache is v1.
+  litellm_cache: "music-crs-litellm-cache-v2"
 
 container:
   hf_cache_dir: "/root/.cache/huggingface"
   exp_dir: "/root/exp"
   models_dir: "/root/models"
   litellm_cache_dir: "/root/litellm-cache"
+
+litellm_cache:
+  backend: "file"
 
 inference:
   gpu:

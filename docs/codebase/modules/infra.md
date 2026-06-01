@@ -132,7 +132,7 @@ KIND_ALIASES = {
 | `volumes.hf_cache` | `"music-crs-hf-cache"` — HuggingFace model weights |
 | `volumes.results` | `"music-crs-results"` — inference outputs, scores, ground truth |
 | `volumes.models` | `"music-crs-models"` — LanceDB index |
-| `volumes.litellm_cache` | `"music-crs-litellm-cache"` — LiteLLM disk cache shared between `ModalLiteLLMService` and `_inference_*` containers |
+| `volumes.litellm_cache` | `"music-crs-litellm-cache-v2"` — Volumes v2 file-per-key LiteLLM cache shared between `ModalLiteLLMService` and `_inference_*` containers |
 | `container.exp_dir` | `"/root/exp"` — maps to `results_vol`; inference scripts write here |
 | `inference.gpu` | `["H200","H100","L40S","A100-80GB","A100-40GB"]` — fallback list for GPU jobs |
 | `inference.devset_batch_size` | `64` |
@@ -168,7 +168,7 @@ Used by inference functions to mount all four volumes simultaneously.
 1. User calls `python run_experiment.py --backend modal --tid <tid>`.
 2. `run_experiment.py:run_modal` builds the `modal run modal/app.py::run_inference` subprocess command and calls it.
 3. `run_inference` (local entrypoint, `modal/app.py:700`) checks `_tid_uses_cpu(tid)`: if `device: cpu` is set in `configs/{tid}.yaml`, it dispatches to `_inference_devset_cpu`, otherwise `_inference_devset`.
-4. The chosen function runs inside a Modal container (GPU or CPU+memory-sized) with all four volumes mounted. It assembles a `python run_inference_devset.py ...` subprocess command and calls `_run_inference_command`, which injects `MCRS_LANCEDB_URI` (CPU path only) and `MCRS_LITELLM_CACHE_DIR` into the environment.
+4. The chosen function runs inside a Modal container (GPU or CPU+memory-sized) with all four volumes mounted. It assembles a `python run_inference_devset.py ...` subprocess command and calls `_run_inference_command`, which injects `MCRS_LANCEDB_URI` (CPU path only), `MCRS_LITELLM_CACHE_BACKEND=file`, and `MCRS_LITELLM_CACHE_DIR` into the environment.
 5. After inference, the function calls `results_vol.commit()` to flush writes.
 6. Back locally, `run_experiment.py:run_modal` calls `modal/download_results.py` as a subprocess to pull the outputs to `evaluator/exp/`.
 7. `run_experiment.py` then calls `evaluator/make_ground_truth.py` (if needed) and `evaluator/evaluate_devset.py`.
@@ -248,7 +248,7 @@ Used by inference functions to mount all four volumes simultaneously.
 
 3. **`ModalRetrievalService` vs `query_lancedb`** — `ModalRetrievalService` is a persistent class (survives across calls within a container lifecycle, holds a retriever in memory) while `query_lancedb` is a stateless function that rebuilds `LANCEDB_MODEL` on every invocation. `ModalRetrievalService` is the production path; `query_lancedb` is kept for the `smoke_lancedb_query` entrypoint.
 
-4. **LiteLLM disk cache is shared between containers.** `LITELLM_CACHE_DIR` is mounted in `_VOLUME_MOUNTS` (used by all inference functions) and also in `ModalLiteLLMService`. Both classes read/write the same `music-crs-litellm-cache` volume, so LLM extraction calls cached during one inference run warm the cache for the next.
+4. **LiteLLM file cache is shared between containers.** `LITELLM_CACHE_DIR` is mounted in `_VOLUME_MOUNTS` (used by all inference functions) and also in `ModalLiteLLMService`. Both classes read/write distinct JSON files in the same `music-crs-litellm-cache-v2` volume, so LLM extraction calls cached during one inference run warm the cache for the next.
 
 5. **`_inference_devset_cpu` sets `MCRS_LANCEDB_URI`; `_inference_devset` does not.** GPU inference functions expect the retrieval config to embed the DB URI (via experiment config), while CPU functions inject it via environment variable (`DEFAULT_REMOTE_LANCEDB_URI = "/root/models/lancedb"`). This asymmetry means GPU and CPU configs may need different `db_uri` handling.
 
@@ -256,7 +256,7 @@ Used by inference functions to mount all four volumes simultaneously.
 
 7. **`_session_ids_file_arg` writes to `/tmp/session_ids.json`** (`modal/app.py:194`). If two Modal containers for different experiments run on the same instance simultaneously (unlikely given `max_containers=1` for most classes, but possible in sharded mode), they would share this temp file path.
 
-8. **`ModalLiteLLMService` is only used for smoke testing.** It is not in the hot inference path. Production inference containers use `MCRS_LITELLM_CACHE_DIR` to share the same disk cache but call LiteLLM directly via `mcrs.lm_modules`.
+8. **`ModalLiteLLMService` is only used for smoke testing.** It is not in the hot inference path. Production inference containers use `MCRS_LITELLM_CACHE_BACKEND=file` and `MCRS_LITELLM_CACHE_DIR` to share the same file cache but call LiteLLM directly via `mcrs.lm_modules`.
 
 9. **`infra/litellm/litellm_proxy.openrouter.yaml` is a local dev tool only.** The `scripts/litellm-proxy` shell script is not invoked by any automated path; it is for manual local development to hit OpenRouter models through an OpenAI-compatible interface.
 
