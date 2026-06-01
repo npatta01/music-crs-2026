@@ -209,7 +209,7 @@ The retrieval pool already contains 22% of GT tracks in top-20 and 41% in top-10
 
 ### Required infrastructure state
 
-- LanceDB index at `music-crs-models:/lancedb` must have `release_date` as `pa.date32()`. Rebuilding from older code (string release_date) silently breaks the filter mask. Rebuild via `python scripts/build_lancedb_index.py && modal run modal/app.py::upload_lancedb_index` (delete `/lancedb` from the volume first if it exists).
+- LanceDB index at `music-crs-models:/lancedb` must have `release_date` as `pa.date32()`. Rebuilding from older code (string release_date) silently breaks the filter mask. Rebuild via `uv run python scripts/build_lancedb_index.py --out-dir cache/lancedb --drop-existing && uv run modal run modal/app.py::upload_lancedb_index --local-db-dir cache/lancedb --remote-dir lancedb --overwrite`.
 - `DEEPINFRA_API_KEY` required in **worktree `.env`** (not project-root `.env`). Modal `Secret.from_dotenv(__file__)` walks up from `modal/app.py` and stops at the first `.env`.
 - LiteLLM disk cache lives on volume `music-crs-litellm-cache`, namespace `music-crs`. Wiping costs ~$5-10 to repopulate at OpenRouter rates.
 

@@ -825,15 +825,18 @@ def run_evaluate(
 def upload_lancedb_index(
     local_db_dir: str = "cache/lancedb",
     remote_dir: str = "lancedb",
+    overwrite: bool = False,
 ):
     """Upload a locally built LanceDB directory into the Modal models volume."""
-    local_path = Path(local_db_dir).resolve()
-    if not local_path.exists():
-        raise FileNotFoundError(f"Local LanceDB directory does not exist: {local_path}")
-    remote_path = f"/{remote_dir.strip('/')}"
-    with models_vol.batch_upload() as batch:
-        batch.put_directory(str(local_path), remote_path)
-    print(f"Uploaded {local_path} to volume {MODELS_VOLUME}:{remote_path}")
+    from mcrs.lancedb.modal_upload import upload_lancedb_directory_to_volume
+
+    upload_lancedb_directory_to_volume(
+        models_vol,
+        local_db_dir,
+        remote_dir=remote_dir,
+        overwrite=overwrite,
+        volume_name=MODELS_VOLUME,
+    )
 
 
 @app.local_entrypoint()
