@@ -47,6 +47,55 @@ from mcrs.retrieval_modules.base import FieldQuery, Retriever
 
 
 @dataclass
+class BranchPool:
+    """One retriever branch's contribution to fusion, retained for tracing.
+
+    `hits` is post-mask, post-hard-drop, capped at the compiler's final_topk.
+    Rank is the list index. A branch that did not fire on a turn is omitted
+    from CompileResult.branch_pools entirely (never emitted as an empty pool).
+    """
+
+    name: str
+    hits: list[tuple[str, float]] = field(default_factory=list)
+
+
+@dataclass
+class CompileResult:
+    """Structured output of `V0PlusCompiler._compile()`.
+
+    `ranked` is the exact list `compile()` returns (top-final_topk). The other
+    fields are the per-branch / fused / provenance artifacts the devset trace
+    persists for downstream rerank / explanation pickup.
+    """
+
+    ranked: list[str]
+    branch_pools: list[BranchPool] = field(default_factory=list)
+    fused: list[tuple[str, float]] = field(default_factory=list)
+    n_from_fusion: int = 0
+    n_from_backfill: int = 0
+    depth: int = 1000
+
+    def to_trace_dict(self) -> dict:
+        """Serialize to the `branches` trace schema (JSON-friendly)."""
+        return {
+            "depth": self.depth,
+            "pools": [
+                {"name": p.name, "hits": [[t, float(s)] for t, s in p.hits]}
+                for p in self.branch_pools
+            ],
+            "fused": [[t, float(s)] for t, s in self.fused],
+            "final": {
+                "track_ids": list(self.ranked),
+                "n_from_fusion": self.n_from_fusion,
+                "n_from_backfill": self.n_from_backfill,
+            },
+            "recommended": {
+                "top1_track_id": self.ranked[0] if self.ranked else None,
+            },
+        }
+
+
+@dataclass
 class DenseBranch:
     """One dense retrieval branch — a vector column to ANN-query against.
 
@@ -189,6 +238,14 @@ class V0PlusCompiler:
     # ------------------------------------------------------------------
 
     def compile(self, rs: ResolvedConversationState, user_id: str | None = None) -> list[str]:
+        """Public entry point. Returns top-final_topk track_ids (unchanged
+        output contract). Internally delegates to `_compile`, which also
+        retains the per-branch pools for tracing."""
+        return self._compile(rs, user_id=user_id).ranked
+
+    def _compile(
+        self, rs: ResolvedConversationState, user_id: str | None = None
+    ) -> CompileResult:
         state = rs.state
 
         # 1. Pre-fusion catalog mask from hard_filters.release_date
@@ -198,8 +255,11 @@ class V0PlusCompiler:
         bm25_clauses = self._build_bm25_clauses(rs)
         encoded_query = self._build_dense_query_text(rs) if self.cfg.enable_dense else None
 
-        # 3. Retrieval — 1 BM25 call + 1 search_embedding per enabled dense branch
+        # 3. Retrieval — 1 BM25 call + 1 search_embedding per enabled dense branch.
+        #    Track (name, hits) per branch so we can retain pools for tracing.
         bm25_hits = self.retriever.search(bm25_clauses, topk=self.cfg.bm25_k)
+        named_pools: list[tuple[str, list[tuple[str, float]]]] = [("bm25", bm25_hits)]
+
         dense_branch_results: list[list[tuple[str, float]]] = []
         if encoded_query is not None:
             for branch in self.cfg.dense_branches:
@@ -211,15 +271,9 @@ class V0PlusCompiler:
                     distance_type=branch.distance_type,
                 )
                 dense_branch_results.append(hits)
+                named_pools.append((f"dense:{branch.vector_field}", hits))
 
-        # 3b. Centroid-only branches — one `search_embedding` call per entry.
-        # Two centroid sources:
-        #  - "anchor_tracks": mean of positive-anchor track vectors. Skipped
-        #    when there are no anchors (turn 1, pure pivot turns).
-        #  - "user": the current user's precomputed vector. Fires every turn
-        #    so long as a user_id is supplied AND the user has a vector in
-        #    this field. Used for user_cf_bpr (only user-side modality in
-        #    TalkPlayData).
+        # 3b. Centroid-only branches — one search_embedding call per entry.
         centroid_branches = self._resolve_centroid_only_branches()
         centroid_branch_results: list[tuple[list[tuple[str, float]], float]] = []
         for cb in centroid_branches:
@@ -233,6 +287,8 @@ class V0PlusCompiler:
                 distance_type=cb.distance_type,
             )
             centroid_branch_results.append((hits, cb.weight))
+            prefix = "centroid_user" if cb.centroid_source == "user" else "centroid"
+            named_pools.append((f"{prefix}:{cb.vector_field}", hits))
 
         # 4. Apply pre-fusion mask (post-hoc until the retriever supports masks)
         bm25_hits = [(t, s) for t, s in bm25_hits if t in candidate_mask]
@@ -257,6 +313,16 @@ class V0PlusCompiler:
             for hits, w in centroid_branch_results
         ]
 
+        # 5b. Re-apply mask + hard-drop to the retained named pools, then cap
+        #     each at final_topk. `named_pools` contains exactly the branches
+        #     that fired (issued a search), so we keep all of them — a fired
+        #     branch left empty after filtering stays as an empty pool; only
+        #     non-firing branches are absent (they were never appended).
+        keep = lambda hits: [
+            (t, s) for t, s in hits if t in candidate_mask and t not in hard_drop
+        ][: self.cfg.final_topk]
+        branch_pools = [BranchPool(name=name, hits=keep(hits)) for name, hits in named_pools]
+
         # 6. Weighted RRF fusion (compiler-owned, cross-modal)
         weighted_pools: list[tuple[list[tuple[str, float]], float]] = [(bm25_hits, 1.0)]
         for hits, branch in zip(dense_branch_results, self.cfg.dense_branches):
@@ -267,14 +333,24 @@ class V0PlusCompiler:
         fused = self._rrf_fuse_weighted(weighted_pools, k=self.cfg.rrf_k)
 
         # 7. Soft (de)promotes
-        fused = self._apply_soft_adjustments(fused, rs)
+        adjusted = self._apply_soft_adjustments(fused, rs)
 
         # 8. Backfill to topk (popularity-sorted, mask + hard-drop-respecting)
-        ranked = [tid for tid, _ in fused]
+        ranked = [tid for tid, _ in adjusted]
+        n_from_fusion = min(len(ranked), self.cfg.final_topk)
         if len(ranked) < self.cfg.final_topk:
             ranked = self._backfill(ranked, candidate_mask, hard_drop)
+        ranked = ranked[: self.cfg.final_topk]
+        n_from_backfill = len(ranked) - n_from_fusion
 
-        return ranked[: self.cfg.final_topk]
+        return CompileResult(
+            ranked=ranked,
+            branch_pools=branch_pools,
+            fused=fused[: self.cfg.final_topk],
+            n_from_fusion=n_from_fusion,
+            n_from_backfill=n_from_backfill,
+            depth=self.cfg.final_topk,
+        )
 
     # ------------------------------------------------------------------
     # Query construction

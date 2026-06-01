@@ -9,7 +9,13 @@ from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
     MentionedEntity,
     TrackFeedback,
 )
-from mcrs.qu_modules.compiler_v0plus import CompilerConfig, V0PlusCompiler
+from mcrs.qu_modules.compiler_v0plus import (
+    BranchPool,
+    CompileResult,
+    CompilerConfig,
+    DenseBranch,
+    V0PlusCompiler,
+)
 from mcrs.qu_modules.fuzzy_matcher import RapidfuzzCatalogMatcher
 from mcrs.qu_modules.resolver_v0plus import V0PlusResolver
 from tests.v0plus_fakes import DictCatalog, FakeEmbeddingClient, FakeRetriever
@@ -531,7 +537,6 @@ def test_compiler_respects_custom_dense_branches_config():
             MentionedEntity(type="artist", value="Morphine", sentiment=1),
         ],
     )
-    from mcrs.qu_modules.compiler_v0plus import DenseBranch
     cfg = CompilerConfig(
         dense_branches=[
             DenseBranch(vector_field="metadata_qwen3_embedding_0_6b"),
@@ -540,3 +545,68 @@ def test_compiler_respects_custom_dense_branches_config():
     V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
     assert len(retriever.embedding_calls) == 1
     assert retriever.embedding_calls[0]["vector_field"] == "metadata_qwen3_embedding_0_6b"
+
+
+# ---------------------------------------------------------------------
+# CompileResult / BranchPool (Task 1)
+# ---------------------------------------------------------------------
+
+
+def _compiler_with_hits():
+    """Compiler whose BM25 + one dense branch return scripted hits."""
+    catalog = _catalog()
+    retriever = FakeRetriever(
+        text_hits_by_field={
+            "track_name": [("t-morphine-1", 5.0), ("t-fugazi-1", 3.0)],
+        },
+        embedding_hits=[("t-morphine-2", 0.9), ("t-fugazi-2", 0.8)],
+    )
+    cfg = CompilerConfig(
+        final_topk=10,
+        bm25_k=10,
+        dense_k=10,
+        dense_branches=[DenseBranch(vector_field="metadata_qwen3_embedding_0_6b")],
+    )
+    compiler = V0PlusCompiler(
+        catalog=catalog,
+        retriever=retriever,
+        encoder=FakeEmbeddingClient(),
+        config=cfg,
+    )
+    return compiler
+
+
+def _resolved_state_track_query():
+    """A resolved state with a free-text turn_intent so BM25 + dense both fire."""
+    catalog = _catalog()
+    state = _state(turn_intent="smoky lounge")
+    resolver = V0PlusResolver(RapidfuzzCatalogMatcher(catalog), catalog)
+    return resolver.resolve(state, played_track_ids=[])
+
+
+def test_compile_returns_list_of_str_unchanged():
+    compiler = _compiler_with_hits()
+    rs = _resolved_state_track_query()
+    out = compiler.compile(rs)
+    assert isinstance(out, list)
+    assert all(isinstance(t, str) for t in out)
+
+
+def test_internal_compile_returns_compileresult_with_ranked_equal_to_compile():
+    compiler = _compiler_with_hits()
+    rs = _resolved_state_track_query()
+    res = compiler._compile(rs)
+    assert isinstance(res, CompileResult)
+    assert res.ranked == compiler.compile(rs)
+
+
+def test_compile_result_has_named_branch_pools():
+    compiler = _compiler_with_hits()
+    rs = _resolved_state_track_query()
+    res = compiler._compile(rs)
+    names = [p.name for p in res.branch_pools]
+    assert "bm25" in names
+    assert "dense:metadata_qwen3_embedding_0_6b" in names
+    for p in res.branch_pools:
+        assert isinstance(p, BranchPool)
+        assert all(isinstance(t, str) and isinstance(s, float) for t, s in p.hits)
