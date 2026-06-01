@@ -144,6 +144,15 @@ class DictCatalog:
                 out.add(tid)
         return out
 
+    def release_year_of(self, track_id: str) -> int | None:
+        meta = self.tracks.get(track_id)
+        if meta is None:
+            return None
+        rd_str = str(meta.get("release_date") or "").strip()
+        if len(rd_str) >= 4 and rd_str[:4].isdigit():
+            return int(rd_str[:4])
+        return None
+
     def all_track_ids(self) -> list[str]:
         return list(self.tracks.keys())
 

@@ -111,6 +111,10 @@ class CompilerCatalog(Protocol):
         """
         ...
 
+    def release_year_of(self, track_id: str) -> int | None:
+        """Release year as an int, or None when the track has no parseable date."""
+        ...
+
     def all_track_ids(self) -> list[str]:
         """All track_ids in the catalog. Used for empty-filter and backfill paths."""
         ...

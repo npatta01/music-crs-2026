@@ -197,8 +197,9 @@ class CompilerConfig:
     branch_trace_topk: int = 0
 
     def __post_init__(self) -> None:
-        for field_name, boost in DEFAULT_FIELD_BOOSTS.items():
-            self.field_boosts.setdefault(field_name, boost)
+        # Partial config dicts inherit standard boosts without mutating the
+        # caller-owned mapping passed to the dataclass constructor.
+        self.field_boosts = {**DEFAULT_FIELD_BOOSTS, **self.field_boosts}
 
 
 class V0PlusCompiler:
@@ -448,27 +449,54 @@ class V0PlusCompiler:
             if term.strip()
         ]
 
-    @staticmethod
     def _release_year_range_bm25_terms(
+        self,
         state: ConversationStateV0Plus,
     ) -> list[tuple[str, str]]:
+        """Map soft year hints to coarse FTS clauses.
+
+        Exact closed ranges emit one `release_year` token. All wider closed or
+        open-ended ranges emit one `release_decade` token per overlapped decade.
+        Open-ended ranges are clamped to the catalog's observed min/max release
+        year. Ranges with no catalog-year overlap emit no FTS clauses; the
+        post-fusion `release_year_range` feature still handles their soft score.
+        """
         release_range = state.release_year_range
         if release_range is None:
             return []
 
         start = release_range.start
         end = release_range.end
-        if start is None or end is None:
-            return []
-
-        if start == end:
+        if start is not None and end is not None and start == end:
             return [("release_year", str(start))]
+
+        if start is None or end is None:
+            catalog_bounds = self._catalog_release_year_bounds()
+            if catalog_bounds is None:
+                return []
+            min_year, max_year = catalog_bounds
+            start = min_year if start is None else start
+            end = max_year if end is None else end
+
+        if start is None or end is None or start > end:
+            return []
 
         start_decade = (start // 10) * 10
         end_decade = (end // 10) * 10
-        if start_decade == end_decade:
-            return [("release_decade", f"{start_decade}s")]
-        return []
+        return [
+            ("release_decade", f"{decade}s")
+            for decade in range(start_decade, end_decade + 10, 10)
+        ]
+
+    def _catalog_release_year_bounds(self) -> tuple[int, int] | None:
+        years = [
+            year
+            for track_id in self.catalog.all_track_ids()
+            if (year := self.catalog.release_year_of(track_id)) is not None
+        ]
+        if not years:
+            return None
+        return min(years), max(years)
 
     # -- Dense query templates --------------------------------------------
     # Each builder takes the resolved state and returns a query STRING (or

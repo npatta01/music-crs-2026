@@ -357,6 +357,54 @@ def test_compiler_routes_exact_release_year_range_to_release_year_bm25():
     ] == [("release_year", "1995", 3.5)]
 
 
+def test_compiler_routes_cross_decade_release_year_range_to_each_decade_bm25():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 1995, "end": 2004},
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        field_boosts={"release_decade": 2.25},
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    assert [
+        (c.field, c.query, c.boost)
+        for c in clauses
+        if c.field in {"release_year", "release_decade"}
+    ] == [
+        ("release_decade", "1990s", 2.25),
+        ("release_decade", "2000s", 2.25),
+    ]
+
+
+def test_compiler_clamps_open_ended_release_year_range_to_catalog_decades():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 2000, "end": None},
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        field_boosts={"release_decade": 2.25},
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    assert [
+        (c.field, c.query, c.boost)
+        for c in clauses
+        if c.field in {"release_year", "release_decade"}
+    ] == [
+        ("release_decade", "2000s", 2.25),
+        ("release_decade", "2010s", 2.25),
+    ]
+
+
 def test_compiler_keeps_release_year_range_fts_disabled_by_default():
     catalog = _catalog()
     retriever = FakeRetriever()
@@ -371,6 +419,18 @@ def test_compiler_keeps_release_year_range_fts_disabled_by_default():
         c for c in clauses
         if c.field in {"release_year", "release_decade"}
     ] == []
+
+
+def test_compiler_config_merges_default_field_boosts_without_mutating_input():
+    field_boosts = {"tag_list": 9.0}
+
+    cfg = CompilerConfig(field_boosts=field_boosts)
+
+    assert field_boosts == {"tag_list": 9.0}
+    assert cfg.field_boosts["tag_list"] == 9.0
+    assert cfg.field_boosts["track_name"] == 3.0
+    assert cfg.field_boosts["release_year"] == 0.0
+    assert cfg.field_boosts["release_decade"] == 0.0
 
 
 # ---------------------------------------------------------------------
