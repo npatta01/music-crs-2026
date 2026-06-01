@@ -82,13 +82,6 @@ class FileCache(BaseCache):
     async def batch_cache_write(self, key, value, **kwargs):
         await self.async_set_cache(key, value, **kwargs)
 
-    async def delete_cache_keys(self, keys):
-        for key in keys:
-            try:
-                self._path(key).unlink()
-            except (FileNotFoundError, OSError, ValueError):
-                pass
-
     def get_ttl(self, **kwargs) -> None:
         return None
 

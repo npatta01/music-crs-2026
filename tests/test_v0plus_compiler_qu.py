@@ -447,20 +447,12 @@ def test_litellm_extractor_manually_stores_only_valid_responses(monkeypatch):
 
 
 def test_litellm_extractor_does_not_store_malformed_json(monkeypatch):
-    deleted_keys = []
     stored = []
     completion_kwargs = []
 
     class FakeCache:
-        def get_cache_key(self, **kwargs):
-            assert kwargs["model"] == "openrouter/fake"
-            return "bad-json-key"
-
         def add_cache(self, result, **kwargs):
             stored.append((result, kwargs))
-
-        async def delete_cache_keys(self, keys):
-            deleted_keys.extend(keys)
 
     def fake_completion(**kwargs):
         completion_kwargs.append(kwargs)
@@ -483,7 +475,6 @@ def test_litellm_extractor_does_not_store_malformed_json(monkeypatch):
     assert extractor.extract([{"turn": 1, "role": "user", "text": "x"}], []) is None
     assert completion_kwargs[0]["cache"] == {"no-store": True}
     assert stored == []
-    assert deleted_keys == ["bad-json-key"]
 
 
 def test_litellm_extractor_manually_stores_only_valid_responses_async(monkeypatch):
@@ -531,17 +522,8 @@ def test_litellm_extractor_manually_stores_only_valid_responses_async(monkeypatc
 
 
 def test_litellm_extractor_no_store_prevents_async_malformed_cache_write(monkeypatch):
-    deleted_keys = []
     deferred_bad_writes = []
     completion_kwargs = []
-
-    class FakeCache:
-        def get_cache_key(self, **kwargs):
-            assert kwargs["model"] == "openrouter/fake"
-            return "bad-json-key"
-
-        async def delete_cache_keys(self, keys):
-            deleted_keys.extend(keys)
 
     async def fake_acompletion(**kwargs):
         completion_kwargs.append(kwargs)
@@ -562,7 +544,7 @@ def test_litellm_extractor_no_store_prevents_async_malformed_cache_write(monkeyp
     monkeypatch.setitem(
         sys.modules,
         "litellm",
-        SimpleNamespace(acompletion=fake_acompletion, cache=FakeCache()),
+        SimpleNamespace(acompletion=fake_acompletion, cache=SimpleNamespace()),
     )
 
     extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
@@ -576,7 +558,6 @@ def test_litellm_extractor_no_store_prevents_async_malformed_cache_write(monkeyp
 
     assert result is None
     assert completion_kwargs[0]["cache"] == {"no-store": True}
-    assert deleted_keys == ["bad-json-key"]
     assert deferred_bad_writes == []
 
 

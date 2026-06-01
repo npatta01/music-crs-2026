@@ -76,22 +76,6 @@ def test_file_cache_async_set_cache_pipeline_writes_all_entries(tmp_path):
     asyncio.run(exercise_cache())
 
 
-def test_file_cache_delete_cache_keys_removes_entries(tmp_path):
-    from mcrs.litellm_cache import FileCache
-
-    async def exercise_cache():
-        cache = FileCache(tmp_path)
-        cache.set_cache("aaaabbbb", {"timestamp": 1, "response": "first"})
-        cache.set_cache("ccccdddd", {"timestamp": 2, "response": "second"})
-
-        await cache.delete_cache_keys(["aaaabbbb", "missing"])
-
-        assert cache.get_cache("aaaabbbb") is None
-        assert cache.get_cache("ccccdddd") == {"timestamp": 2, "response": "second"}
-
-    asyncio.run(exercise_cache())
-
-
 def test_file_cache_write_errors_degrade_to_skipped_write(tmp_path):
     from mcrs.litellm_cache import FileCache
 
