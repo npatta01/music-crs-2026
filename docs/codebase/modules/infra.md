@@ -44,7 +44,7 @@ The classes and functions below are the entry points that other modules (or `run
 | `run_inference_sharded` | `(tid, batch_size, num_shards, clear_cache)` — local entrypoint | Fans out devset inference across `num_shards` parallel Modal containers; each writes `{tid}.shard_{i}.json`. |
 | `run_inference_blindset` | `(tid, batch_size, eval_dataset)` — local entrypoint | Dispatches blindset inference to `_inference_blindset` or `_inference_blindset_cpu`. |
 | `run_evaluate` | `(tid, split)` — local entrypoint | Runs `evaluator/make_ground_truth.py` (if needed) and `evaluator/evaluate_devset.py` on the results volume. |
-| `upload_lancedb_index` | `(local_db_dir, remote_dir)` — local entrypoint | Uploads a locally built LanceDB directory to the `music-crs-models` Modal volume. |
+| `upload_lancedb_index` | `(local_db_dir, remote_dir, overwrite)` — local entrypoint | Uploads a locally built LanceDB directory to the `music-crs-models` Modal volume; `overwrite=True` removes the target directory first. |
 | `smoke_lancedb_query` | `(query, topk)` — local entrypoint | Calls `query_lancedb.remote` and prints returned track IDs. |
 | `query_lancedb` | `(query, topk, retrieval_config) -> list[str]` — Modal function | FTS-only LanceDB query on the models volume; raises `ValueError` if a `dense_vector` search is requested. `modal/app.py:631` |
 | `ModalRetrievalService` | Modal class | Stateful retrieval service backed by `LanceDbRetriever`; exposes `retrieve`, `retrieve_batch`, `embed_batch`. LRU cache of up to 8 `RetrievalService` instances keyed by serialised `retrieval_config`. `modal/app.py:344` |
@@ -183,7 +183,7 @@ Used by inference functions to mount all four volumes simultaneously.
 ### LanceDB index upload
 
 1. `scripts/build_lancedb_index.py` calls `mcrs.lancedb.indexing.build_track_lancedb_table` to produce `cache/lancedb/`.
-2. `upload_lancedb_index` (local entrypoint) calls `models_vol.batch_upload()` to push the directory to `/lancedb` inside the `music-crs-models` volume.
+2. `upload_lancedb_index` (local entrypoint) optionally removes the target directory when `--overwrite` is set, then calls `models_vol.batch_upload()` to push the local directory to `/lancedb` inside the `music-crs-models` volume. The entrypoint rejects `remote_dir=/` so overwrite cannot clear the volume root.
 
 ### Retrieval service (deployed, persistent)
 

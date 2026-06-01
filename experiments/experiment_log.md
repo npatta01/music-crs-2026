@@ -118,7 +118,7 @@ Linked reports:
 - `experiments/milvus_bm25_with_tag_list_devset.md`
 
 Next step:
-- Upload the rebuilt local `cache/lancedb` directory to the Modal models volume before Modal runs: `uv run modal run modal/app.py::upload_lancedb_index --local-db-dir cache/lancedb --remote-dir lancedb`.
+- Upload the rebuilt local `cache/lancedb` directory to the Modal models volume before Modal runs: `uv run modal run modal/app.py::upload_lancedb_index --local-db-dir cache/lancedb --remote-dir lancedb --overwrite`.
 - Use `lancedb_fts_with_tag_list_devset` as the LanceDB sparse anchor for future CPU sparse or sparse+dense comparisons.
 
 Status:

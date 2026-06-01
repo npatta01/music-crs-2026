@@ -72,9 +72,17 @@ LanceDB FTS runs do not need a GPU. Build the DB locally, upload it to the `musi
 
 ```bash
 uv run python scripts/build_lancedb_index.py --out-dir cache/lancedb --drop-existing
-uv run modal run modal/app.py::upload_lancedb_index --local-db-dir cache/lancedb --remote-dir lancedb
-python run_experiment.py --backend modal --tid lancedb_fts_with_tag_list_devset --num_sessions 5
+uv run modal run modal/app.py::upload_lancedb_index --local-db-dir cache/lancedb --remote-dir lancedb --overwrite
+uv run modal run modal/app.py::smoke_lancedb_query --query "dark atmospheric synthwave" --topk 3
+uv run python run_experiment.py --backend modal --tid lancedb_fts_with_tag_list_devset --num_sessions 5
 ```
+
+Use `--overwrite` when replacing an existing Modal index. Modal volume uploads
+do not overwrite LanceDB manifest files in place, so a rebuild upload can fail
+with `FileExistsError` unless the old `music-crs-models:/lancedb` directory is
+removed first. The upload entrypoint only removes the target directory when
+`--overwrite` is set and rejects `remote_dir=/` to avoid clearing the volume
+root.
 
 The same local build/upload/smoke flow is available as
 `notebooks/05_lancedb_indexing.ipynb`; the notebook calls the checked-in scripts

@@ -151,6 +151,65 @@ def test_build_lancedb_script_includes_embeddings_by_default():
     assert parser.parse_args(["--metadata-only"]).include_embeddings is False
 
 
+def test_upload_lancedb_directory_overwrite_removes_remote_target_first(tmp_path, capsys):
+    from mcrs.lancedb.modal_upload import upload_lancedb_directory_to_volume
+
+    local_db_dir = tmp_path / "lancedb"
+    local_db_dir.mkdir()
+
+    class FakeBatch:
+        def __init__(self, volume):
+            self.volume = volume
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def put_directory(self, local_path, remote_path):
+            self.volume.uploads.append((local_path, remote_path))
+
+    class FakeVolume:
+        def __init__(self):
+            self.removals = []
+            self.uploads = []
+
+        def remove_file(self, remote_path, recursive=False):
+            self.removals.append((remote_path, recursive))
+
+        def batch_upload(self):
+            return FakeBatch(self)
+
+    volume = FakeVolume()
+
+    remote_path = upload_lancedb_directory_to_volume(
+        volume,
+        local_db_dir,
+        remote_dir="lancedb",
+        overwrite=True,
+        volume_name="music-crs-models",
+    )
+
+    assert remote_path == "/lancedb"
+    assert volume.removals == [("/lancedb", True)]
+    assert volume.uploads == [(str(local_db_dir.resolve()), "/lancedb")]
+    assert "Removed existing volume path music-crs-models:/lancedb" in capsys.readouterr().out
+
+
+def test_upload_lancedb_directory_rejects_volume_root(tmp_path):
+    from mcrs.lancedb.modal_upload import upload_lancedb_directory_to_volume
+
+    local_db_dir = tmp_path / "lancedb"
+    local_db_dir.mkdir()
+
+    class FakeVolume:
+        pass
+
+    with pytest.raises(ValueError, match="remote_dir must not resolve to the volume root"):
+        upload_lancedb_directory_to_volume(FakeVolume(), local_db_dir, remote_dir="/", overwrite=True)
+
+
 def test_build_track_lancedb_table_defaults_to_embedding_columns(monkeypatch, tmp_path):
     metadata_row = {
         "track_id": "track-1",
@@ -238,6 +297,7 @@ def test_lancedb_indexing_notebook_delegates_to_checked_in_entrypoints():
 
     assert "scripts/build_lancedb_index.py" in source
     assert "modal/app.py::upload_lancedb_index" in source
+    assert "--overwrite" in source
     assert "scripts/smoke_lancedb_modal_query.py" in source
     assert "--metadata-only" in source
     assert "build_track_lancedb_table" not in source
