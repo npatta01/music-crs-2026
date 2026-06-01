@@ -51,6 +51,8 @@ LANCEDB_FTS_TEXT_FIELDS = (
     "artist_name_text",
     "album_name_text",
     "release_date_text",
+    "release_year_text",
+    "release_decade_text",
     "tag_list_text",
 )
 

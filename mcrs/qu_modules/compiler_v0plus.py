@@ -52,6 +52,17 @@ from mcrs.qu_modules.v0plus_catalog import CompilerCatalog
 from mcrs.retrieval_modules.base import FieldQuery, Retriever
 
 
+DEFAULT_FIELD_BOOSTS = {
+    "track_name": 3.0,
+    "artist_name": 3.0,
+    "album_name": 2.0,
+    "tag_list": 1.5,
+    # Disabled until a reindexed devset run proves neutral-or-better impact.
+    "release_year": 0.0,
+    "release_decade": 0.0,
+}
+
+
 @dataclass
 class DenseBranch:
     """One dense retrieval branch — a vector column to ANN-query against.
@@ -119,12 +130,7 @@ class CompilerConfig:
     final_topk: int = 1000
 
     field_boosts: dict[str, float] = field(
-        default_factory=lambda: {
-            "track_name": 3.0,
-            "artist_name": 3.0,
-            "album_name": 2.0,
-            "tag_list": 1.5,
-        }
+        default_factory=lambda: dict(DEFAULT_FIELD_BOOSTS)
     )
 
     # Anchor centroid mix α per intent_mode. 0 = no mixing. The same α is
@@ -189,6 +195,10 @@ class CompilerConfig:
     # Use for offline diagnostics like "where does the GT rank inside each
     # retriever?" Costs ~36 KB * branches * turns when on.
     branch_trace_topk: int = 0
+
+    def __post_init__(self) -> None:
+        for field_name, boost in DEFAULT_FIELD_BOOSTS.items():
+            self.field_boosts.setdefault(field_name, boost)
 
 
 class V0PlusCompiler:
@@ -409,6 +419,10 @@ class V0PlusCompiler:
             if anchor_tags:
                 per_field.setdefault("tag_list", []).extend(anchor_tags)
 
+        for field_name, term in self._release_year_range_bm25_terms(state):
+            if self.cfg.field_boosts.get(field_name, 0.0) > 0.0:
+                per_field.setdefault(field_name, []).append(term)
+
         # turn_intent: free text routed where mood/title vocabulary fits.
         # Avoid artist_name (prevents "Beat" verb → "Beatles" false pos) and
         # album_name (rarely contains mood/era words).
@@ -433,6 +447,28 @@ class V0PlusCompiler:
             for term in terms
             if term.strip()
         ]
+
+    @staticmethod
+    def _release_year_range_bm25_terms(
+        state: ConversationStateV0Plus,
+    ) -> list[tuple[str, str]]:
+        release_range = state.release_year_range
+        if release_range is None:
+            return []
+
+        start = release_range.start
+        end = release_range.end
+        if start is None or end is None:
+            return []
+
+        if start == end:
+            return [("release_year", str(start))]
+
+        start_decade = (start // 10) * 10
+        end_decade = (end // 10) * 10
+        if start_decade == end_decade:
+            return [("release_decade", f"{start_decade}s")]
+        return []
 
     # -- Dense query templates --------------------------------------------
     # Each builder takes the resolved state and returns a query STRING (or

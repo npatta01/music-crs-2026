@@ -315,6 +315,64 @@ def test_compiler_no_dense_call_when_query_string_is_empty():
     # BM25 may also be empty; that's fine — backfill handles it
 
 
+def test_compiler_routes_single_decade_release_year_range_to_release_decade_bm25():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 1990, "end": 1999},
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        field_boosts={"release_decade": 2.25},
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    assert [
+        (c.field, c.query, c.boost)
+        for c in clauses
+        if c.field in {"release_year", "release_decade"}
+    ] == [("release_decade", "1990s", 2.25)]
+
+
+def test_compiler_routes_exact_release_year_range_to_release_year_bm25():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 1995, "end": 1995},
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        field_boosts={"release_year": 3.5},
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    assert [
+        (c.field, c.query, c.boost)
+        for c in clauses
+        if c.field in {"release_year", "release_decade"}
+    ] == [("release_year", "1995", 3.5)]
+
+
+def test_compiler_keeps_release_year_range_fts_disabled_by_default():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 1990, "end": 1999},
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder()).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    assert [
+        c for c in clauses
+        if c.field in {"release_year", "release_decade"}
+    ] == []
+
+
 # ---------------------------------------------------------------------
 # Filtering
 # ---------------------------------------------------------------------

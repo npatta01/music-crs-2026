@@ -181,7 +181,15 @@ class FakeRetriever:
 
     @property
     def supported_text_fields(self) -> frozenset[str]:
-        return frozenset({"track_name", "artist_name", "album_name", "tag_list", "release_date"})
+        return frozenset({
+            "track_name",
+            "artist_name",
+            "album_name",
+            "tag_list",
+            "release_date",
+            "release_year",
+            "release_decade",
+        })
 
     @property
     def supported_vector_fields(self) -> frozenset[str]:
