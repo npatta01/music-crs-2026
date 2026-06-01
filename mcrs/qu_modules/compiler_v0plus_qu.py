@@ -84,6 +84,12 @@ def _resolve_prompt_fns(prompt_version: str):
             json_schema_for_response_format as schema,
         )
         return bm, schema
+    if pv == "v4":
+        from experiments.analysis.extractor_prompt_v2.prompts_v4 import (
+            build_messages as bm,
+            json_schema_for_response_format as schema,
+        )
+        return bm, schema
     raise ValueError(f"unknown extractor prompt_version: {prompt_version!r}")
 from mcrs.embeddings.base import EmbeddingClient
 from mcrs.embeddings.qwen3_embedding import Qwen3EmbeddingClient
@@ -306,15 +312,45 @@ class LiteLLMExtractor:
             "temperature": self.temperature if temperature is None else temperature,
             "max_tokens": self.max_tokens,
             "timeout": self.timeout_s,
-            "response_format": self._schema_fn(),
         }
         if self.api_base:
             kwargs["api_base"] = self.api_base
         if self.api_key:
             kwargs["api_key"] = self.api_key
-        # Non-OpenAI hybrid-reasoning models need this or they consume max_tokens on internal reasoning.
-        if self.model_name.startswith("openrouter/") and not self.model_name.startswith("openrouter/openai/"):
-            kwargs["extra_body"] = {"reasoning": {"enabled": False}}
+        schema = self._schema_fn()
+        # Google's Gemini structured-output validator (OpenAPI-3.0 subset, which
+        # OpenRouter routes `response_format` to for google/gemini-* models) is
+        # stricter than OpenAI/deepseek: it rejects our default Pydantic schema
+        # ("schema at properties.mentioned_entities.items requires unspecified
+        # property 'type'") because list items are a bare typeless $ref and
+        # Optional fields are a typeless {type:null} anyOf union. Rewrite the
+        # schema into the Gemini-safe subset (inline $refs, type every node,
+        # express Optionals via nullable). Gated on gemini ONLY so the
+        # deepseek/openai/gemma path that already works is untouched.
+        if self.model_name.startswith("openrouter/google/gemini"):
+            from experiments.analysis.extractor_prompt_v2.prompts_v4 import (
+                _to_gemini_schema,
+            )
+
+            schema = _to_gemini_schema(schema)
+        if self.model_name.startswith("openrouter/"):
+            # litellm's supports_response_schema() is False for OpenRouter models,
+            # so a TOP-LEVEL response_format is silently stripped before the call —
+            # the model then gets no schema and degenerates into an unterminated
+            # whitespace stutter on long outputs. Send response_format via
+            # extra_body so it reaches OpenRouter verbatim, and require_parameters
+            # so the request only routes to a provider that actually enforces the
+            # schema (fails loudly if none does, rather than silently degrading).
+            extra_body: dict[str, Any] = {
+                "response_format": schema,
+                "provider": {"require_parameters": True},
+            }
+            # Non-OpenAI hybrid-reasoning models otherwise burn max_tokens on reasoning.
+            if not self.model_name.startswith("openrouter/openai/"):
+                extra_body["reasoning"] = {"enabled": False}
+            kwargs["extra_body"] = extra_body
+        else:
+            kwargs["response_format"] = schema
         return kwargs
 
     def _decode(self, raw: str) -> ConversationStateV0Plus:
@@ -368,14 +404,14 @@ class LiteLLMExtractor:
             except json.JSONDecodeError as exc:
                 logger.warning(
                     "v0+ extractor JSON decode failed (attempt %d, temp=%.2f): %s | raw=%r",
-                    attempt, temp, exc, raw[:200],
+                    attempt, temp, exc, raw[:6000],
                 )
                 continue  # next temperature
             except Exception as exc:
                 # ValidationError or other schema mismatch — not retryable.
                 logger.warning(
                     "v0+ extractor schema validate failed (attempt %d, temp=%.2f): %s: %s | raw=%r",
-                    attempt, temp, type(exc).__name__, exc, raw[:200],
+                    attempt, temp, type(exc).__name__, exc, raw[:6000],
                 )
                 return None
             _store_litellm_cache_entry(litellm, response, call_kwargs)
@@ -411,13 +447,13 @@ class LiteLLMExtractor:
             except json.JSONDecodeError as exc:
                 logger.warning(
                     "v0+ extractor JSON decode failed (async, attempt %d, temp=%.2f): %s | raw=%r",
-                    attempt, temp, exc, raw[:200],
+                    attempt, temp, exc, raw[:6000],
                 )
                 continue
             except Exception as exc:
                 logger.warning(
                     "v0+ extractor schema validate failed (async, attempt %d, temp=%.2f): %s: %s | raw=%r",
-                    attempt, temp, type(exc).__name__, exc, raw[:200],
+                    attempt, temp, type(exc).__name__, exc, raw[:6000],
                 )
                 return None
             await _async_store_litellm_cache_entry(litellm, response, call_kwargs)
@@ -681,6 +717,17 @@ class V0PlusCompilerQU:
                 "positive_tags": positive_tags,
                 "played_track_ids": list(rs.played_track_ids),
             },
+            "resolved_targets": [
+                {
+                    "kind": t.kind,
+                    "source_text": t.source_text,
+                    "entity_id": t.entity_id,
+                    "confidence": t.confidence,
+                }
+                for t in rs.resolved_targets
+            ],
+            "routing_tags": state.routing_tags.model_dump(),
+            "lyrical_theme": state.lyrical_theme,
             "compiler": {
                 "n_candidates": len(track_ids),
                 "n_hard_filters": len(state.hard_filters),
@@ -951,6 +998,23 @@ def build_v0plus_compiler_qu(
                 "cf_bpr_vector_field",
                 "cf_bpr_distance_type",
                 "branch_trace_topk",
+                "enable_resolved_artist_discography",
+                "disco_weight",
+                "disco_cap",
+                "disco_confidence_threshold",
+                "disco_gated_intents",
+                "enable_era_popularity",
+                "era_pop_weight",
+                "era_pop_cap",
+                "enable_release_year_filter",
+                "release_year_filter_min_keep",
+                "routing_boost",
+                "enable_similar_artist_anchors",
+                "similar_artist_anchor_topk",
+                "similar_artist_confidence_threshold",
+                "similar_artist_max_artists",
+                "similar_artist_anchor_intents",
+                "similar_artist_anchor_on_exact_entity",
             }
         }
         if dense_branches is not None:
