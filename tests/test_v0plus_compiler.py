@@ -948,10 +948,10 @@ def test_branch_traces_use_distinct_keys_for_each_branch():
                     encoder_id="default", query_id="sonic_nl_enriched"),
         ],
     )
-    traces: dict[str, list[str]] = {}
-    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(
-        _resolve(state, catalog), branch_traces=traces
+    res = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg)._compile(
+        _resolve(state, catalog)
     )
+    traces = {p.name: [t for t, _ in p.hits] for p in res.branch_pools}
 
     dense_keys = [k for k in traces if k.startswith("dense.")]
     # Three branches => three distinct dense trace entries (NOT one collapsed).
@@ -965,21 +965,11 @@ def test_branch_traces_use_distinct_keys_for_each_branch():
 
 
 def test_branch_traces_off_by_default():
-    """`branch_trace_topk=0` (default) means no trace dict gets populated even
-    when the caller passes one — keeps the diagnostic free in prod."""
+    """`branch_trace_topk=0` (default) means branch_pools is empty — keeps the
+    diagnostic free in prod."""
     catalog = _catalog()
-    retriever = FakeRetriever(
-        text_hits_by_field={"artist_name": [("t-morphine-1", 5.0)]},
-        embedding_hits=[("t-morphine-1", 0.9)],
-    )
-    state = _state(
-        mentioned_entities=[MentionedEntity(type="tag", value="smoky", sentiment=1)],
-    )
-    traces: dict[str, list[str]] = {}
-    V0PlusCompiler(catalog, retriever, _fake_encoder()).compile(
-        _resolve(state, catalog), branch_traces=traces
-    )
-    assert traces == {}
+    res = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())._compile(_resolve(_state(), catalog))
+    assert res.branch_pools == []
 
 
 # ---------------------------------------------------------------------
@@ -1172,10 +1162,8 @@ def test_discography_branch_emits_artist_tracks_popularity_ordered():
     catalog = _catalog()
     state = _state(mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)])
     rs = _resolve(state, catalog)
-    traces: dict = {}
-    V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _disco_cfg()).compile(
-        rs, branch_traces=traces
-    )
+    res = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _disco_cfg())._compile(rs)
+    traces = {p.name: [t for t, _ in p.hits] for p in res.branch_pools}
     pool = traces["lookup.resolved_artist_discography"]
     assert pool[:2] == ["t-morphine-1", "t-morphine-2"]  # pop 70 before 55
 
@@ -1184,9 +1172,9 @@ def test_discography_branch_disabled_by_default():
     catalog = _catalog()
     state = _state(mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)])
     rs = _resolve(state, catalog)
-    traces: dict = {}
     cfg = CompilerConfig(branch_trace_topk=100)  # enable flag defaults False
-    V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg).compile(rs, branch_traces=traces)
+    res = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)._compile(rs)
+    traces = {p.name: [t for t, _ in p.hits] for p in res.branch_pools}
     assert "lookup.resolved_artist_discography" not in traces
 
 
@@ -1198,10 +1186,8 @@ def test_discography_branch_skips_below_confidence_threshold():
         resolved_targets=(ResolvedTarget(kind="artist", source_text="x",
                                          entity_id="a-morphine", confidence=50.0),),
     )
-    traces: dict = {}
-    V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _disco_cfg()).compile(
-        rs, branch_traces=traces
-    )
+    res = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _disco_cfg())._compile(rs)
+    traces = {p.name: [t for t, _ in p.hits] for p in res.branch_pools}
     assert "lookup.resolved_artist_discography" not in traces
 
 
@@ -1210,10 +1196,8 @@ def test_discography_branch_gated_off_on_pivot():
     state = _state(intent_mode="pivot",
                    mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)])
     rs = _resolve(state, catalog)
-    traces: dict = {}
-    V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _disco_cfg()).compile(
-        rs, branch_traces=traces
-    )
+    res = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _disco_cfg())._compile(rs)
+    traces = {p.name: [t for t, _ in p.hits] for p in res.branch_pools}
     assert "lookup.resolved_artist_discography" not in traces
 
 
@@ -1303,8 +1287,8 @@ def test_lyric_branch_fires_and_is_weighted_on_lyric_search():
     state = _state(lyrical_theme="late night loneliness",
                    routing_tags=RoutingTags(lyric_search=True))
     rs = _resolve(state, catalog)
-    traces: dict = {}
-    V0PlusCompiler(catalog, retr, enc, cfg).compile(rs, branch_traces=traces)
+    res = V0PlusCompiler(catalog, retr, enc, cfg)._compile(rs)
+    traces = {p.name: [t for t, _ in p.hits] for p in res.branch_pools}
     assert any(k.startswith("dense.") and "lyric" in k for k in traces)
     encoded = [t for call in enc.calls for t in call]
     assert "music lyrics :late night loneliness" in encoded

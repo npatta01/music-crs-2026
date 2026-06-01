@@ -93,7 +93,13 @@ def _resolve_prompt_fns(prompt_version: str):
     raise ValueError(f"unknown extractor prompt_version: {prompt_version!r}")
 from mcrs.embeddings.base import EmbeddingClient
 from mcrs.embeddings.qwen3_embedding import Qwen3EmbeddingClient
-from mcrs.qu_modules.compiler_v0plus import CentroidOnlyBranch, CompilerConfig, DenseBranch, V0PlusCompiler
+from mcrs.qu_modules.compiler_v0plus import (
+    CentroidOnlyBranch,
+    CompileResult,
+    CompilerConfig,
+    DenseBranch,
+    V0PlusCompiler,
+)
 from mcrs.qu_modules.user_embeddings import UserEmbeddings
 from mcrs.qu_modules.fuzzy_matcher import FuzzyMatcher, RapidfuzzCatalogMatcher
 from mcrs.qu_modules.resolver_v0plus import V0PlusResolver
@@ -650,16 +656,15 @@ class V0PlusCompilerQU:
         # the event loop. Inlining the resolver gives us `rs` for the trace.
         rs = self.resolver.resolve(state, played_track_ids=played)
 
-        # Per-branch ranking diagnostic. Populated by the compiler when
-        # `branch_trace_topk > 0` (config knob). Empty otherwise.
-        branch_traces: dict[str, list[str]] = {}
+        # Use _compile() (not compile()) to get the full CompileResult, which
+        # carries the per-branch pools + fused/final funnel for the trace when
+        # `branch_trace_topk > 0`. compile() is the thin public wrapper used by
+        # the submission/blindset path (only needs .ranked).
+        def _run_compile() -> CompileResult:
+            return self.compiler._compile(rs, user_id=user_id)
 
-        def _compile() -> list[str]:
-            return self.compiler.compile(
-                rs, user_id=user_id, branch_traces=branch_traces
-            )[:topk]
-
-        track_ids = await asyncio.to_thread(_compile)
+        compile_result = await asyncio.to_thread(_run_compile)
+        track_ids = compile_result.ranked[:topk]
         if not track_ids:
             logger.warning(
                 "v0+ empty result: compiler returned 0 candidates (async) | "
@@ -734,12 +739,13 @@ class V0PlusCompilerQU:
                 "n_explicit_rejections": len(state.explicit_rejections),
             },
         }
-        # Diagnostic: per-retriever top-K rankings. Only populated when
-        # CompilerConfig.branch_trace_topk > 0. Lets offline analysis answer
-        # "where did the GT rank inside each branch?" — useful for telling
+        # Diagnostic: per-retriever pools + fused/final funnel. Only populated
+        # when CompilerConfig.branch_trace_topk > 0. Lets offline analysis (see
+        # scripts/branch_diagnostics.py) answer "where did the GT rank inside
+        # each branch?" and "what's the fusion coverage ceiling?" — telling
         # apart "candidate missing from pool" vs "RRF mis-ranked the pool".
-        if branch_traces:
-            trace["branch_rankings"] = branch_traces
+        if compile_result.branch_pools:
+            trace["branches"] = compile_result.to_trace_dict()
         return idx, track_ids, trace
 
     def batch_compile_track_ids(

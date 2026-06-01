@@ -714,6 +714,23 @@ def test_build_qu_respects_mcrs_lancedb_uri_env_var(tmp_path, monkeypatch):
     assert qu.catalog.artist_id_of_name("EnvArtist") == "e"
 
 
+def test_trace_contains_branches_key():
+    """A v0+ QU run with branch tracing on populates trace['branches']."""
+    state = _state(
+        turn_intent="more like Morphine",
+        mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)],
+    )
+    qu = _build_qu(state)
+    qu.compiler.cfg.branch_trace_topk = 50  # enable per-branch tracing
+    qu.batch_compile_track_ids([[{"role": "user", "content": "hi"}]], topk=10)
+    branches = qu.last_traces[0]["branches"]
+
+    assert set(branches.keys()) == {"depth", "pools", "fused", "final", "recommended"}
+    names = [p["name"] for p in branches["pools"]]
+    assert "bm25" in names
+    assert branches["final"]["track_ids"][:1] == [branches["recommended"]["top1_track_id"]]
+
+
 def test_shard_slice_math_partitions_all_indices():
     """For any (total, num_shards), every index in [0, total) belongs to exactly one shard."""
     for total in (1, 100, 999, 1000, 1001):

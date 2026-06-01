@@ -64,6 +64,73 @@ DEFAULT_FIELD_BOOSTS = {
 
 
 @dataclass
+class BranchPool:
+    """One retriever branch's contribution, retained for tracing.
+
+    A branch appears in `CompileResult.branch_pools` only when it FIRED
+    (issued a retrieval call) on this turn AND per-branch tracing is enabled
+    (`CompilerConfig.branch_trace_topk > 0`). Branches that did not fire
+    (e.g. a dense branch with no query, or a centroid branch whose centroid
+    is None) are omitted.
+
+    `hits` are the branch's RAW top-`branch_trace_topk` `(track_id, score)`
+    pairs — captured BEFORE the release-date mask and hard-drop set are
+    applied, matching the per-retriever "did this branch surface the GT at
+    all" semantics. Rank is the list index.
+    """
+
+    name: str
+    hits: list[tuple[str, float]] = field(default_factory=list)
+
+
+@dataclass
+class CompileResult:
+    """Structured output of `V0PlusCompiler._compile()`.
+
+    `ranked` is the exact list `compile()` returns (top-final_topk). The other
+    fields are the per-branch / fused / provenance artifacts the devset trace
+    persists for downstream rerank / explanation pickup. They are only
+    populated when `CompilerConfig.branch_trace_topk > 0`; otherwise
+    `branch_pools` / `fused` are empty and `compile()` behaves exactly as
+    before (submission path unaffected).
+
+    `fused` is the RRF-fused list BEFORE soft (de)promotes; `ranked` is the
+    final list AFTER soft adjustments AND popularity backfill.
+
+    `n_from_fusion` counts how many of `ranked` came through the fusion
+    pipeline (RRF + soft (de)promotes, which also hard-drops resolved
+    rejections), NOT only the raw RRF step; `n_from_backfill` counts the
+    popularity-backfill remainder. The two always sum to `len(ranked)`.
+    """
+
+    ranked: list[str]
+    branch_pools: list[BranchPool] = field(default_factory=list)
+    fused: list[tuple[str, float]] = field(default_factory=list)
+    n_from_fusion: int = 0
+    n_from_backfill: int = 0
+    depth: int = 0
+
+    def to_trace_dict(self) -> dict:
+        """Serialize to the `branches` trace schema (JSON-friendly)."""
+        return {
+            "depth": self.depth,
+            "pools": [
+                {"name": p.name, "hits": [[t, float(s)] for t, s in p.hits]}
+                for p in self.branch_pools
+            ],
+            "fused": [[t, float(s)] for t, s in self.fused],
+            "final": {
+                "track_ids": list(self.ranked),
+                "n_from_fusion": self.n_from_fusion,
+                "n_from_backfill": self.n_from_backfill,
+            },
+            "recommended": {
+                "top1_track_id": self.ranked[0] if self.ranked else None,
+            },
+        }
+
+
+@dataclass
 class DenseBranch:
     """One dense retrieval branch — a vector column to ANN-query against.
 
@@ -189,11 +256,13 @@ class CompilerConfig:
     cf_bpr_vector_field: str = "cf_bpr"
     cf_bpr_distance_type: str = "cosine"
 
-    # Per-branch ranking diagnostic. When > 0, every `compile()` populates the
-    # trace's `branch_rankings` map with each branch's top-K candidate IDs
-    # (BM25 + each dense + each centroid-only). 0 means off (no trace cost).
-    # Use for offline diagnostics like "where does the GT rank inside each
-    # retriever?" Costs ~36 KB * branches * turns when on.
+    # Per-branch diagnostic depth. When > 0, `_compile()` retains each branch's
+    # RAW top-K `(track_id, score)` pool on the CompileResult (and the QU writes
+    # it to the trace's `branches` key — see scripts/branch_diagnostics.py).
+    # Covers BM25 + each dense + each centroid-only + lookup pools. 0 means off
+    # (no trace cost; submission path unchanged). Use for offline diagnostics
+    # like "where does the GT rank inside each retriever?" and the fusion
+    # coverage ceiling. Costs ~K * branches * turns of trace when on.
     branch_trace_topk: int = 0
 
     # Resolved-artist discography branch (issue #74 Stage A). Off by default.
@@ -289,23 +358,29 @@ class V0PlusCompiler:
     # Top-level
     # ------------------------------------------------------------------
 
-    def compile(
-        self,
-        rs: ResolvedConversationState,
-        user_id: str | None = None,
-        branch_traces: dict[str, list[str]] | None = None,
-    ) -> list[str]:
-        """Compile a resolved state into top-N ranked track_ids.
+    def compile(self, rs: ResolvedConversationState, user_id: str | None = None) -> list[str]:
+        """Public entry point. Returns top-final_topk track_ids (unchanged
+        output contract). Delegates to `_compile`, which also retains the
+        per-branch pools + fused/final funnel for tracing when
+        `CompilerConfig.branch_trace_topk > 0`."""
+        return self._compile(rs, user_id=user_id).ranked
 
-        When `branch_traces` is a dict, it is populated with each retriever
-        branch's top-K candidate IDs (K = self.cfg.branch_trace_topk).
-        Keys are stable identifiers ("bm25",
-        "dense.<encoder_id>.<query_id>.<vector_field>",
-        "centroid.<source>.<vector_field>") so downstream analysis can match
-        them across runs. No-op when branch_traces is None or topk is 0.
+    def _compile(
+        self, rs: ResolvedConversationState, user_id: str | None = None
+    ) -> CompileResult:
+        """Compile a resolved state into a CompileResult.
+
+        When `self.cfg.branch_trace_topk > 0`, each retriever branch's RAW
+        top-K `(track_id, score)` pool is retained on the result under a stable
+        name ("bm25", "dense.<encoder_id>.<query_id>.<vector_field>",
+        "centroid.<source>.<vector_field>", "lookup.resolved_artist_discography",
+        "lookup.era_popularity"), along with the pre-soft-adjust `fused` list,
+        the `final` recommendation (+ provenance), and the headline track. When
+        the knob is 0 those fields stay empty and only `ranked` is meaningful.
         """
         state = rs.state
-        _trace_k = self.cfg.branch_trace_topk if branch_traces is not None else 0
+        _trace_k = self.cfg.branch_trace_topk
+        named_pools: list[tuple[str, list[tuple[str, float]]]] = []
 
         # 1. Pre-fusion catalog mask from hard_filters.release_date
         candidate_mask = self._release_date_mask(state)
@@ -330,7 +405,7 @@ class V0PlusCompiler:
         # 3. Retrieval — 1 BM25 call + 1 search_embedding per enabled dense branch
         bm25_hits = self.retriever.search(bm25_clauses, topk=self.cfg.bm25_k)
         if _trace_k:
-            branch_traces["bm25"] = [t for t, _ in bm25_hits[:_trace_k]]
+            named_pools.append(("bm25", list(bm25_hits[:_trace_k])))
         # Cache encoded vectors by (encoder_id, query_id) so branches sharing
         # an encoder/query pair pay one encode call total.
         encoded_cache: dict[tuple[str, str], list[float]] = {}
@@ -366,10 +441,11 @@ class V0PlusCompiler:
                 if _trace_k:
                     # Include `query_id` so multiple branches sharing
                     # encoder_id + vector_field (e.g. v4's 3xCLAP) get
-                    # distinct trace keys instead of overwriting each other.
-                    branch_traces[
-                        f"dense.{branch.encoder_id}.{branch.query_id}.{branch.vector_field}"
-                    ] = [t for t, _ in hits[:_trace_k]]
+                    # distinct names instead of overwriting each other.
+                    named_pools.append((
+                        f"dense.{branch.encoder_id}.{branch.query_id}.{branch.vector_field}",
+                        list(hits[:_trace_k]),
+                    ))
 
         # 3b. Centroid-only branches — one `search_embedding` call per entry.
         # Two centroid sources:
@@ -413,9 +489,10 @@ class V0PlusCompiler:
                 (hits, cb.weight * self._routing_multiplier(kind, rs))
             )
             if _trace_k:
-                branch_traces[f"centroid.{cb.centroid_source}.{cb.vector_field}"] = (
-                    [t for t, _ in hits[:_trace_k]]
-                )
+                named_pools.append((
+                    f"centroid.{cb.centroid_source}.{cb.vector_field}",
+                    list(hits[:_trace_k]),
+                ))
 
         # 4. Apply pre-fusion mask (post-hoc until the retriever supports masks)
         bm25_hits = [(t, s) for t, s in bm25_hits if t in candidate_mask]
@@ -445,9 +522,10 @@ class V0PlusCompiler:
         # for fusion.
         disco_hits = self._resolved_artist_discography_pool(rs)
         if _trace_k and disco_hits:
-            branch_traces["lookup.resolved_artist_discography"] = [
-                t for t, _ in disco_hits[:_trace_k]
-            ]
+            named_pools.append((
+                "lookup.resolved_artist_discography",
+                list(disco_hits[:_trace_k]),
+            ))
         disco_hits = [
             (t, s) for t, s in disco_hits if t in candidate_mask and t not in hard_drop
         ]
@@ -475,7 +553,7 @@ class V0PlusCompiler:
             )
         era_hits = self._era_popularity_pool(rs)
         if _trace_k and era_hits:
-            branch_traces["lookup.era_popularity"] = [t for t, _ in era_hits[:_trace_k]]
+            named_pools.append(("lookup.era_popularity", list(era_hits[:_trace_k])))
         era_hits = [
             (t, s) for t, s in era_hits if t in candidate_mask and t not in hard_drop
         ]
@@ -486,14 +564,24 @@ class V0PlusCompiler:
         fused = self._rrf_fuse_weighted(weighted_pools, k=self.cfg.rrf_k)
 
         # 7. Soft (de)promotes
-        fused = self._apply_soft_adjustments(fused, rs)
+        adjusted = self._apply_soft_adjustments(fused, rs)
 
         # 8. Backfill to topk (popularity-sorted, mask + hard-drop-respecting)
-        ranked = [tid for tid, _ in fused]
+        ranked = [tid for tid, _ in adjusted]
+        n_from_fusion = min(len(ranked), self.cfg.final_topk)
         if len(ranked) < self.cfg.final_topk:
             ranked = self._backfill(ranked, candidate_mask, hard_drop)
+        ranked = ranked[: self.cfg.final_topk]
+        n_from_backfill = len(ranked) - n_from_fusion
 
-        return ranked[: self.cfg.final_topk]
+        return CompileResult(
+            ranked=ranked,
+            branch_pools=[BranchPool(name=n, hits=h) for n, h in named_pools],
+            fused=fused[: self.cfg.final_topk] if _trace_k else [],
+            n_from_fusion=n_from_fusion,
+            n_from_backfill=n_from_backfill,
+            depth=_trace_k,
+        )
 
     # ------------------------------------------------------------------
     # Query construction

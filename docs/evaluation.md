@@ -60,6 +60,37 @@ Higher is better for all metrics.
 
 ---
 
+## Branch diagnostics (per-retriever coverage)
+
+The v0+ devset trace sidecar (`exp/inference/devset/{tid}_trace.json`) carries a
+per-turn `branches` key when `CompilerConfig.branch_trace_topk > 0`: each
+retriever branch's RAW top-`branch_trace_topk` `(track_id, score)` pool keyed by
+a stable name (`bm25`, `dense.<encoder_id>.<query_id>.<vector_field>`,
+`centroid.<source>.<vector_field>`, `lookup.resolved_artist_discography`,
+`lookup.era_popularity`), the RRF `fused` list, the `final` recommendation (with
+`n_from_fusion` / `n_from_backfill` provenance), and `recommended.top1_track_id`
+(the headline track an explanation would target). The knob is 0 by default, so
+submission/blindset runs pay nothing and write no `branches`.
+
+`scripts/branch_diagnostics.py` reads the trace + ground truth and reports:
+
+- `hit@{1,20,50,100,200,1000}` over the final recommendation,
+- `unionhit@{20,50,100,200}` over the union of every branch's top-k (the coverage
+  ceiling if fusion were perfect), `union_size@k`, and `fusion_efficiency@k`,
+- per-branch `recall@{100,200,1000}` (denominator = turns the branch fired).
+
+```bash
+python scripts/branch_diagnostics.py \
+  --trace exp/inference/devset/{tid}_trace.json \
+  --ground-truth evaluator/exp/ground_truth/devset.json \
+  --out exp/diagnostics/devset/{tid}.json   # optional; always prints a table
+```
+
+This is a standalone tool — it does not modify the evaluator submodule and is
+independent of `evaluate_devset.py`.
+
+---
+
 ## Devset Leaderboard
 
 | Rank | Experiment | NDCG@1 | NDCG@10 | NDCG@20 | Catalog Diversity | Lexical Diversity |
