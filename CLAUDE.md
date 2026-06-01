@@ -8,6 +8,9 @@ Challenge: https://nlp4musa.github.io/music-crs-challenge/
 
 - [Data](docs/data.md) — dataset schemas, splits, sample rows, inference output format
 - [Baseline Architecture](docs/architectures/baseline.md) — pipeline, retrieval modules, LLM module, config
+- [v0+ Retrieval Pipeline](docs/architectures/v0plus_retrieval.md) — **retrievers, flow & fusion rankers** for the canonical `v0plus_compiler_*` path
+- [Session State](docs/architectures/session_state.md) — the `ConversationStateV0Plus` schema, extract→resolve pipeline, and how each field drives retrieval
+- [Explanation / Response Generation](docs/architectures/explanation_generation.md) — how the natural-language response is generated, what the code was vs. is now doing (dummy), and per-track explanation scaffolding
 - [Evaluation](docs/evaluation.md) — metrics, devset leaderboard
 - [Mac / Local Dev](docs/mac_dev.md) — local testing on Apple Silicon
 - [Modal Setup](docs/modal_setup.md) — cloud GPU authentication and smoke test
