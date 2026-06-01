@@ -54,6 +54,8 @@ BM25_EXPERIMENTAL_FIELDS = (
     "artist_name",
     "album_name",
     "release_date",
+    "release_year",
+    "release_decade",
     "tag_list",
 )
 BM25_COMPAT_TEXT_FIELD = "bm25_compat_text"
@@ -210,8 +212,30 @@ def _normalize_embedding(value: Any) -> list[float] | None:
     return vector
 
 
+def release_year_from_release_date(value: Any) -> int | None:
+    """Extract a 4-digit leading year from a raw catalog release_date value."""
+    if value is None:
+        return None
+    s = str(value).strip()
+    if len(s) >= 4 and s[:4].isdigit():
+        return int(s[:4])
+    return None
+
+
+def release_year_text_from_release_date(value: Any) -> str:
+    year = release_year_from_release_date(value)
+    return "" if year is None else str(year)
+
+
+def release_decade_text_from_release_date(value: Any) -> str:
+    year = release_year_from_release_date(value)
+    if year is None:
+        return ""
+    return f"{(year // 10) * 10}s"
+
+
 def render_bm25_text_fields(metadata_row: Mapping[str, Any]) -> dict[str, str]:
-    """Render BM25 text fields using the same formatter style as manual BM25."""
+    """Render BM25 text fields, with clean tokens for derived year fields."""
     formatter = load_corpus_formatter("default")
     metadata = dict(metadata_row)
     text_fields = {
@@ -219,7 +243,17 @@ def render_bm25_text_fields(metadata_row: Mapping[str, Any]) -> dict[str, str]:
         for corpus_fields, text_field in BM25_COMBINED_CORPUS_FIELDS.items()
     }
     for corpus_field in BM25_EXPERIMENTAL_FIELDS:
-        text_fields[bm25_text_field_name(corpus_field)] = formatter.format(metadata, [corpus_field])
+        text_field = bm25_text_field_name(corpus_field)
+        if corpus_field == "release_year":
+            text_fields[text_field] = release_year_text_from_release_date(
+                metadata.get("release_date")
+            )
+        elif corpus_field == "release_decade":
+            text_fields[text_field] = release_decade_text_from_release_date(
+                metadata.get("release_date")
+            )
+        else:
+            text_fields[text_field] = formatter.format(metadata, [corpus_field])
     return text_fields
 
 

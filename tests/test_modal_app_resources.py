@@ -110,7 +110,7 @@ def test_modal_lancedb_query_default_uses_schema_compatible_fts():
     assert '"kind": "fts_bm25s_compat"' not in source
 
 
-def test_modal_litellm_service_scales_to_zero_and_uses_cache_volume():
+def test_modal_litellm_service_scales_to_zero():
     keywords = _modal_class_decorator_keywords("ModalLiteLLMService")
 
     assert isinstance(keywords["min_containers"], ast.Constant)
@@ -121,7 +121,18 @@ def test_modal_litellm_service_scales_to_zero_and_uses_cache_volume():
     assert _name(keywords["max_containers"]) == "LITELLM_MAX_CONTAINERS"
 
 
-def test_modal_litellm_disk_cache_dependency_is_installed():
+def test_modal_litellm_cache_uses_file_backend_on_new_v2_volume():
+    config = OmegaConf.load(PROJECT_ROOT / "modal" / "config.yaml")
+    source = (PROJECT_ROOT / "modal" / "app.py").read_text(encoding="utf-8")
+
+    assert config.litellm_cache.backend == "file"
+    assert config.volumes.litellm_cache == "music-crs-litellm-cache-v2"
+    assert 'modal.Volume.from_name(LITELLM_CACHE_VOLUME, create_if_missing=True, version=2)' in source
+    assert '"MCRS_LITELLM_CACHE_BACKEND": "file"' in source
+    assert '"MCRS_LITELLM_CACHE_DIR": LITELLM_CACHE_DIR' in source
+
+
+def test_modal_litellm_cache_dependency_is_installed():
     pyproject = tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     dependencies = pyproject["project"]["dependencies"]
 

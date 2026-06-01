@@ -101,10 +101,11 @@ uv run python scripts/build_lancedb_index.py --out-dir cache/lancedb --drop-exis
 For Modal, upload the local DB directory to the models volume:
 
 ```bash
-uv run modal run modal/app.py::upload_lancedb_index --local-db-dir cache/lancedb --remote-dir lancedb
+uv run modal run modal/app.py::upload_lancedb_index --local-db-dir cache/lancedb --remote-dir lancedb --overwrite
+uv run modal run modal/app.py::smoke_lancedb_query --query "dark atmospheric synthwave" --topk 3
 ```
 
-The volume name is `music-crs-models`, mounted at `/root/models`; the remote DB path is `/root/models/lancedb`.
+The volume name is `music-crs-models`, mounted at `/root/models`; the remote DB path is `/root/models/lancedb`. Use `--overwrite` for rebuilds because Modal volume uploads do not replace existing LanceDB manifest files in place. The upload entrypoint removes only the target directory and rejects `remote_dir=/`.
 
 ## Query Paths
 
@@ -124,7 +125,8 @@ the normal Modal client credentials.
 
 Dense vector retrieval uses the same table and a `dense_vector` search entry.
 The query embedding must come from the same model family as the stored vector
-field.
+field. Supported LanceDB `distance_type` values are `cosine`, `dot`, and `l2`;
+retriever results are converted so higher scores always mean more similar.
 
 ```yaml
 retrieval_config:

@@ -22,6 +22,18 @@ Use this directory as the working surface for experiment history, status, and an
 - Update `experiments/experiment_log.md` when a wave produces a decision, takeaway, or next-step recommendation.
 - Use the shared status vocabulary from `experiments/README.md`: `planned`, `running`, `analyzed`, `done`, `superseded`.
 
+## Maintenance Checklist (run when an experiment lands)
+
+When a new run / wave produces results, update **all** of these in one pass so nothing drifts:
+
+1. **Run report** — `experiments/{tid}.md` (or a wave/ablation report for a batch). Use the same metric columns as siblings.
+2. **Cross-run log** — `experiments/experiment_log.md`: the takeaway, decision, or next step (not raw numbers).
+3. **Index** — `experiments/README.md`: update *Current Bests* / *Current Active Work* / the relevant *Wave* list and status vocabulary.
+4. **Leaderboard** — `../leaderboard.md`: add/update the row, keep it ranked by NDCG@20, only fill cells you have real numbers for (`—` otherwise).
+5. **Changelog** — `../changelog.md`: one hybrid entry tagged `Experiment` with the **PR link** so the result traces back to its code state.
+
+When a run is replaced, mark it `superseded` (don't delete) and move its config to `configs/archive/`. This checklist is the lightweight alternative to automation — there is no hook; an agent or you runs it.
+
 ## Agent Expectations
 
 - Read `experiments/README.md` before summarizing project experiment status.

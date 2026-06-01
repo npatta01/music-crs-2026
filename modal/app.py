@@ -57,6 +57,7 @@ HF_CACHE_DIR = _cfg.container.hf_cache_dir
 EXP_DIR = _cfg.container.exp_dir
 MODELS_DIR = _cfg.container.models_dir
 LITELLM_CACHE_DIR = _cfg.container.litellm_cache_dir
+LITELLM_CACHE_BACKEND = str(_cfg.litellm_cache.backend)
 INFERENCE_GPU = list(_cfg.inference.gpu)
 DEVSET_BATCH_SIZE = int(_cfg.inference.devset_batch_size)
 BLINDSET_BATCH_SIZE = int(_cfg.inference.blindset_batch_size)
@@ -88,7 +89,7 @@ app = modal.App(APP_NAME)
 hf_cache_vol = modal.Volume.from_name(HF_CACHE_VOLUME, create_if_missing=True)
 results_vol = modal.Volume.from_name(RESULTS_VOLUME, create_if_missing=True)
 models_vol = modal.Volume.from_name(MODELS_VOLUME, create_if_missing=True)
-litellm_cache_vol = modal.Volume.from_name(LITELLM_CACHE_VOLUME, create_if_missing=True)
+litellm_cache_vol = modal.Volume.from_name(LITELLM_CACHE_VOLUME, create_if_missing=True, version=2)
 
 # Build image: uv_sync reads pyproject.toml + uv.lock for reproducible installs.
 # Source files are copied separately (uv_sync uses --no-install-project).
@@ -101,7 +102,13 @@ image = (
         copy=True,
         ignore=[".*", "__pycache__", "*.pyc", ".venv", "exp", "cache", "submission*"],
     )
-    .env({"PYTHONPATH": "/app"})
+    .env(
+        {
+            "PYTHONPATH": "/app",
+            "MCRS_LITELLM_CACHE_BACKEND": "file",
+            "MCRS_LITELLM_CACHE_DIR": LITELLM_CACHE_DIR,
+        }
+    )
 )
 
 _VOLUME_MOUNTS = {
@@ -182,8 +189,9 @@ def _run_inference_command(cmd: list[str], *, lancedb_uri: str | None = None) ->
     env = os.environ.copy()
     if lancedb_uri:
         env["MCRS_LANCEDB_URI"] = lancedb_uri
-    # Tell run_inference_devset.py where to find the shared LiteLLM disk cache so
+    # Tell run_inference_devset.py where to find the shared LiteLLM file cache so
     # repeated LLM extraction calls on the same conversation are served from cache.
+    env["MCRS_LITELLM_CACHE_BACKEND"] = LITELLM_CACHE_BACKEND
     env["MCRS_LITELLM_CACHE_DIR"] = LITELLM_CACHE_DIR
 
     result = subprocess.run(cmd, cwd="/app", env=env)
@@ -484,14 +492,13 @@ class ModalLiteLLMService:
         import os
 
         import litellm
-        from litellm.caching.caching import Cache
+        from mcrs.litellm_cache import setup_litellm_cache
 
         litellm.success_callback = [self._track_cache_hit]
-        litellm.cache = Cache(
-            type="disk",
+        setup_litellm_cache(
+            backend=LITELLM_CACHE_BACKEND,
+            cache_dir=LITELLM_CACHE_DIR,
             supported_call_types=["completion", "acompletion", "embedding", "aembedding"],
-            namespace="music-crs",
-            disk_cache_dir=LITELLM_CACHE_DIR,
         )
         self.last_cache_hit = None
         self.hf_token = os.environ.get("HF_TOKEN")
@@ -740,9 +747,8 @@ def run_inference_sharded(
 
     # Fire shards in parallel via .spawn — returns immediately with a function
     # call handle for each. Then await all by calling .get() on each handle.
-    calls = []
-    for shard_id in range(num_shards):
-        call = inference_fn.spawn(
+    def _spawn(shard_id):
+        return inference_fn.spawn(
             tid=tid,
             batch_size=batch_size,
             num_sessions=0,
@@ -752,12 +758,45 @@ def run_inference_sharded(
             shard_id=shard_id,
             output_suffix=f".shard_{shard_id}",
         )
-        calls.append(call)
 
+    # Resilient join: a single shard failure must NOT raise out of this local
+    # entrypoint. An uncaught local exception makes Modal stop the whole app and
+    # SIGINT every other (healthy, in-progress) shard container — a cascade that
+    # loses the entire run over one transient (rate-limit / dropped connection
+    # under concurrency). So catch per shard, then retry the failures once.
+    def _join(pairs):
+        ok, bad = [], []
+        for shard_id, call in pairs:
+            try:
+                call.get()  # blocks until that shard finishes
+                ok.append(shard_id)
+                print(f"Shard {shard_id} complete.")
+            except Exception as e:  # noqa: BLE001 — report and continue, never abort the run
+                bad.append(shard_id)
+                print(f"Shard {shard_id} FAILED: {type(e).__name__}: {e}")
+        return ok, bad
+
+    calls = [(shard_id, _spawn(shard_id)) for shard_id in range(num_shards)]
     print(f"Spawned {num_shards} shards for {tid}.")
-    for shard_id, call in enumerate(calls):
-        call.get()  # blocks until that shard finishes
-        print(f"Shard {shard_id} complete.")
+    ok, failed = _join(calls)
+
+    if failed:
+        print(f"Retrying {len(failed)} failed shard(s): {failed}")
+        ok2, failed = _join([(shard_id, _spawn(shard_id)) for shard_id in failed])
+        ok += ok2
+
+    if failed:
+        # All spawns have been joined at this point — no healthy shard is still
+        # in flight, so raising here does NOT trigger the SIGINT cascade this PR
+        # fixes (that only happens when the entrypoint raises mid-run). Failing
+        # loudly is required: an incomplete sharded run must not exit 0, or a
+        # later merge silently picks up stale {tid}.shard_N.json files from a
+        # prior attempt and reports an incomplete run as successful.
+        raise RuntimeError(
+            f"{len(failed)}/{num_shards} shard(s) failed after retry: {failed}. "
+            f"Sharded run is INCOMPLETE — re-run these shard_ids (same "
+            f"--num-shards) before merging."
+        )
     print(f"All {num_shards} shards complete. Per-shard outputs: "
           f"inference/devset/{tid}.shard_{{0..{num_shards-1}}}.json")
 
@@ -786,15 +825,18 @@ def run_evaluate(
 def upload_lancedb_index(
     local_db_dir: str = "cache/lancedb",
     remote_dir: str = "lancedb",
+    overwrite: bool = False,
 ):
     """Upload a locally built LanceDB directory into the Modal models volume."""
-    local_path = Path(local_db_dir).resolve()
-    if not local_path.exists():
-        raise FileNotFoundError(f"Local LanceDB directory does not exist: {local_path}")
-    remote_path = f"/{remote_dir.strip('/')}"
-    with models_vol.batch_upload() as batch:
-        batch.put_directory(str(local_path), remote_path)
-    print(f"Uploaded {local_path} to volume {MODELS_VOLUME}:{remote_path}")
+    from mcrs.lancedb.modal_upload import upload_lancedb_directory_to_volume
+
+    upload_lancedb_directory_to_volume(
+        models_vol,
+        local_db_dir,
+        remote_dir=remote_dir,
+        overwrite=overwrite,
+        volume_name=MODELS_VOLUME,
+    )
 
 
 @app.local_entrypoint()
@@ -805,3 +847,342 @@ def smoke_lancedb_query(
     """Smoke-test the private Modal LanceDB query function."""
     track_ids = query_lancedb.remote(query=query, topk=topk)
     print(track_ids)
+
+
+# ---------------------------------------------------------------------------
+# Text-side encoder catalog convention verification (SigLIP-2 / CLAP music)
+# ---------------------------------------------------------------------------
+#
+# Sanity-checks before wiring SigLIP-text + CLAP-text branches into the v0+
+# compiler: for N sampled catalog tracks, encode a short text description
+# (artist + tags) and compare cosine similarity to the catalog's image /
+# audio embedding for the same track. Compare against random-pair baseline.
+#
+# This is NOT a quality benchmark — it verifies the text-side encoder lives
+# in the same shared space as the catalog vectors (catches normalization /
+# pooling / model-variant mismatch cheaply before any retrieval run).
+
+# SigLIP needs only the base image (transformers already there).
+# CLAP needs laion_clap, which pins numpy==1.23.5 (unbuildable on py3.12).
+# Install with --no-deps and rely on the base image's numpy / torch / transformers.
+# laion_clap's other small deps (progressbar2, wget, h5py, librosa, soundfile)
+# get added explicitly; we only call get_text_embedding so audio-I/O isn't on
+# the hot path but the package imports it at module load.
+# Clean Python 3.10 image — laion_clap's numpy==1.23.5 pin builds natively here
+# (vs Py3.12 where distutils is gone). Self-contained, doesn't inherit the
+# project's uv_sync env to avoid torch/torchaudio ABI conflicts.
+_clap_image = (
+    modal.Image.debian_slim(python_version="3.10")
+    .apt_install("git", "libsndfile1", "ffmpeg")
+    .pip_install(
+        # Match laion_clap repo's tested set: torch>=2.4, torchaudio>=2.4,
+        # torchvision>=0.19, transformers>=4.51.3. Older torch combos fail
+        # because modern transformers disables its PyTorch backend below 2.4.
+        "laion_clap==1.1.7",
+        "torch>=2.4,<2.5",
+        "torchaudio>=2.4,<2.5",
+        "torchvision>=0.19,<0.20",
+        # transformers 5.x removed top-level `from transformers import BertModel`,
+        # which laion_clap's clap_module/model.py still does. Pin below 5.
+        "transformers>=4.51.3,<5.0",
+        "datasets>=2.18",
+        "pyarrow",
+        "huggingface_hub[hf_xet]",
+        "numpy<2",
+        # Needed because modal/app.py imports OmegaConf at module load.
+        "omegaconf>=2.3",
+    )
+    .add_local_dir(
+        ".",
+        "/app",
+        copy=True,
+        ignore=[".*", "__pycache__", "*.pyc", ".venv", "exp", "cache", "submission*"],
+    )
+    .env({"PYTHONPATH": "/app"})
+)
+
+
+def _verify_textside_inner(
+    modality: str,
+    n: int,
+    seed: int,
+    normalize: bool,
+    clap_ckpt_repo: str,
+    clap_ckpt_filename: str,
+) -> dict:
+    """Cosine alignment check: text_for_track vs catalog_for_track."""
+    import os
+    import random
+
+    import numpy as np
+    import pyarrow.parquet as pq
+    from huggingface_hub import hf_hub_download, snapshot_download
+
+    os.environ.setdefault("HF_HOME", HF_CACHE_DIR)
+
+    # 1. Locate catalog files on the HF cache volume — populate via
+    #    snapshot_download (idempotent; no-op if already cached from
+    #    prior inference runs).
+    meta_dir = snapshot_download(
+        repo_id="talkpl-ai/TalkPlayData-Challenge-Track-Metadata",
+        repo_type="dataset",
+        allow_patterns=["data/all_tracks-*.parquet"],
+    )
+    emb_dir = snapshot_download(
+        repo_id="talkpl-ai/TalkPlayData-Challenge-Track-Embeddings",
+        repo_type="dataset",
+        allow_patterns=["data/all_tracks-*.parquet"],
+    )
+    meta_parquet = next(iter(Path(meta_dir).glob("data/all_tracks-*.parquet")))
+    emb_parquet = next(iter(Path(emb_dir).glob("data/all_tracks-*.parquet")))
+
+    meta = pq.read_table(
+        str(meta_parquet),
+        columns=["track_id", "track_name", "artist_name", "tag_list"],
+    ).to_pylist()
+
+    emb_col = "image-siglip2" if modality == "siglip2" else "audio-laion_clap"
+    emb_tbl = pq.read_table(str(emb_parquet), columns=["track_id", emb_col])
+    emb_by_id = dict(zip(emb_tbl["track_id"].to_pylist(), emb_tbl[emb_col].to_pylist()))
+
+    rng = random.Random(seed)
+    rng.shuffle(meta)
+
+    texts: list[str] = []
+    item_vecs: list[list[float]] = []
+    for row in meta:
+        if len(item_vecs) >= n:
+            break
+        v = emb_by_id.get(row["track_id"])
+        if not v:
+            continue
+        item_vecs.append(v)
+        artist = row.get("artist_name") or []
+        tags = row.get("tag_list") or []
+        parts = []
+        if artist:
+            parts.append(", ".join(artist))
+        if tags:
+            parts.append(", ".join(tags[:6]))
+        texts.append(" - ".join(parts) if parts else "")
+
+    print(f"[{modality}] sampled {len(item_vecs)} tracks, normalize={normalize}")
+
+    # 2. Load the text-side encoder and encode.
+    # Debug: confirm new modules made it into the image.
+    import sys
+    print(f"sys.path: {sys.path}")
+    try:
+        from pathlib import Path as _P
+        emb_dir_listing = sorted(p.name for p in _P("/app/mcrs/embeddings").iterdir()) if _P("/app/mcrs/embeddings").exists() else "(/app/mcrs/embeddings missing)"
+        print(f"/app/mcrs/embeddings contents: {emb_dir_listing}")
+    except Exception as e:
+        print(f"debug listing failed: {e}")
+    if modality == "siglip2":
+        from mcrs.embeddings.siglip2_text_embedding import SigLIP2TextEmbeddingClient
+
+        client = SigLIP2TextEmbeddingClient(
+            device="cuda",
+            l2_normalize=normalize,
+        )
+    elif modality == "clap":
+        # Download music checkpoint to the HF cache volume on first run.
+        ckpt_path = hf_hub_download(
+            repo_id=clap_ckpt_repo,
+            filename=clap_ckpt_filename,
+            cache_dir=HF_CACHE_DIR,
+        )
+        print(f"[clap] checkpoint at {ckpt_path}")
+        from mcrs.embeddings.clap_text_embedding import ClapTextEmbeddingClient
+
+        # CPU for verification (200 samples is fast; sidesteps torch/torchaudio
+        # CUDA ABI issues in the clean Py3.10 image).
+        client = ClapTextEmbeddingClient(
+            ckpt_path=ckpt_path,
+            device="cpu",
+            l2_normalize=normalize,
+        )
+    else:
+        raise ValueError(f"unknown modality: {modality}")
+
+    text_vecs = np.asarray(client.embed_batch(texts), dtype=np.float32)
+    item_arr = np.asarray(item_vecs, dtype=np.float32)
+
+    if text_vecs.shape != item_arr.shape:
+        raise RuntimeError(
+            f"dim mismatch: text={text_vecs.shape} catalog={item_arr.shape}"
+        )
+
+    # 3. Cosines: same-track and random pairing.
+    def _cosine_pairs(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+        a_n = a / (np.linalg.norm(a, axis=1, keepdims=True) + 1e-12)
+        b_n = b / (np.linalg.norm(b, axis=1, keepdims=True) + 1e-12)
+        return np.einsum("ij,ij->i", a_n, b_n)
+
+    cos_same = _cosine_pairs(text_vecs, item_arr)
+    perm = list(range(len(text_vecs)))
+    rng.shuffle(perm)
+    cos_random = _cosine_pairs(text_vecs[perm], item_arr)
+
+    stats = {
+        "modality": modality,
+        "n": len(item_vecs),
+        "normalize": normalize,
+        "text_dim": int(text_vecs.shape[1]),
+        "catalog_dim": int(item_arr.shape[1]),
+        "cos_same_mean": float(cos_same.mean()),
+        "cos_same_std": float(cos_same.std()),
+        "cos_same_p05": float(np.percentile(cos_same, 5)),
+        "cos_same_p95": float(np.percentile(cos_same, 95)),
+        "cos_random_mean": float(cos_random.mean()),
+        "lift_over_random": float(cos_same.mean() - cos_random.mean()),
+        "warning": [],
+    }
+    if stats["cos_same_mean"] < 0.05:
+        stats["warning"].append("mean cosine very low — likely convention mismatch")
+    if stats["lift_over_random"] < 0.02:
+        stats["warning"].append("no detectable lift over random — encoders may be misaligned")
+
+    print(f"[{modality}] result: {json.dumps(stats, indent=2)}")
+    return stats
+
+
+# SigLIP variant uses the base project image (transformers already installed).
+@app.function(
+    image=image,
+    gpu="T4",
+    volumes={HF_CACHE_DIR: hf_cache_vol},
+    secrets=[ENV_SECRET],
+    cpu=2.0,
+    memory=8192,
+    timeout=1200,
+)
+def verify_siglip_textside(
+    n: int = 200, seed: int = 42, normalize: bool = False
+) -> dict:
+    return _verify_textside_inner(
+        modality="siglip2",
+        n=n,
+        seed=seed,
+        normalize=normalize,
+        clap_ckpt_repo="",
+        clap_ckpt_filename="",
+    )
+
+
+# CLAP variant needs laion_clap installed. Verification runs on CPU
+# (200 samples is fast; avoids torch/torchaudio CUDA dependency in this image).
+@app.function(
+    image=_clap_image,
+    volumes={HF_CACHE_DIR: hf_cache_vol},
+    secrets=[ENV_SECRET],
+    cpu=4.0,
+    memory=16384,
+    timeout=1800,
+)
+def verify_clap_textside(
+    n: int = 200,
+    seed: int = 42,
+    normalize: bool = False,
+    clap_ckpt_repo: str = "lukewys/laion_clap",
+    clap_ckpt_filename: str = "music_audioset_epoch_15_esc_90.14.pt",
+) -> dict:
+    return _verify_textside_inner(
+        modality="clap",
+        n=n,
+        seed=seed,
+        normalize=normalize,
+        clap_ckpt_repo=clap_ckpt_repo,
+        clap_ckpt_filename=clap_ckpt_filename,
+    )
+
+
+@app.local_entrypoint()
+def verify_textside(
+    modality: str = "siglip2",
+    n: int = 200,
+    normalize: bool = False,
+):
+    """Run the text-side encoder catalog convention check on Modal.
+
+    Examples:
+        modal run modal/app.py::verify_textside --modality siglip2
+        modal run modal/app.py::verify_textside --modality clap
+        modal run modal/app.py::verify_textside --modality siglip2 --normalize
+    """
+    if modality == "siglip2":
+        result = verify_siglip_textside.remote(n=n, normalize=normalize)
+    elif modality == "clap":
+        result = verify_clap_textside.remote(n=n, normalize=normalize)
+    else:
+        raise SystemExit(f"unknown modality: {modality}")
+    print(json.dumps(result, indent=2))
+
+
+# ---------------------------------------------------------------------------
+# Production text-side encoder service: combined SigLIP-2 + CLAP music
+# ---------------------------------------------------------------------------
+#
+# Hosts both text encoders in one warm container so the v0+ compiler pays
+# one cold start (~45 s for SigLIP weight load + CLAP ckpt load) instead of
+# two, and one network hop per turn dispatches to the model that the branch
+# needs. Compiler clients live in `mcrs.embeddings.modal_multimodal_client`.
+#
+# Container resources: T4 (16 GB VRAM) easily fits both models (~1 GB total).
+# scaledown_window matches Qwen3Encoder so the smoke test pays no extra cold
+# starts mid-run.
+
+
+@app.cls(
+    image=_clap_image,  # cached; includes torch 2.4 + transformers <5 + laion_clap 1.1.7
+    gpu="T4",
+    volumes={HF_CACHE_DIR: hf_cache_vol},
+    secrets=[ENV_SECRET],
+    cpu=2.0,
+    memory=8192,
+    timeout=600,
+    min_containers=0,
+    max_containers=4,
+    scaledown_window=600,
+)
+class MultimodalTextEncoder:
+    """Text-side service for SigLIP-2 (image space) + CLAP music (audio space).
+
+    Per-call latency on T4 once warm: ~50 ms SigLIP, ~80 ms CLAP. Cold start:
+    SigLIP weights from HF cache + CLAP ckpt from HF cache → ~45 s total.
+    """
+
+    @modal.enter()
+    def setup(self) -> None:
+        import os
+
+        os.environ.setdefault("HF_HOME", HF_CACHE_DIR)
+        from huggingface_hub import hf_hub_download
+
+        from mcrs.embeddings.clap_text_embedding import ClapTextEmbeddingClient
+        from mcrs.embeddings.siglip2_text_embedding import (
+            SigLIP2TextEmbeddingClient,
+        )
+
+        self.siglip = SigLIP2TextEmbeddingClient(device="cuda")
+        self.siglip._ensure_loaded()
+
+        ckpt_path = hf_hub_download(
+            repo_id="lukewys/laion_clap",
+            filename="music_audioset_epoch_15_esc_90.14.pt",
+            cache_dir=HF_CACHE_DIR,
+        )
+        self.clap = ClapTextEmbeddingClient(ckpt_path=ckpt_path, device="cuda")
+        self.clap._ensure_loaded()
+
+    @modal.method()
+    def embed_siglip_text(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        return self.siglip.embed_batch(texts)
+
+    @modal.method()
+    def embed_clap_text(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        return self.clap.embed_batch(texts)

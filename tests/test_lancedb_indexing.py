@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from mcrs.lancedb.indexing import (
     BM25S_TOKENIZED_FTS_INDEX_OPTIONS,
     BM25_WITH_TAG_LIST_BM25S_TOKENIZED_TEXT_FIELD,
@@ -71,6 +73,8 @@ def test_build_track_record_preserves_bm25_with_tag_list_text_and_vectors():
     assert record[BM25_WITH_TAG_LIST_BM25S_TOKENIZED_TEXT_FIELD] == (
         "track_name song artist_name artist album_name album release_date 2006 12 06 tag_list calm ambient"
     )
+    assert record["release_year_text"] == "2006"
+    assert record["release_decade_text"] == "2000s"
     assert record["audio_laion_clap"] == [0.0, 0.0]
     assert record["metadata_qwen3_embedding_0_6b"] == [1.6, 1.7]
     assert record["has_audio_laion_clap"] is False
@@ -122,6 +126,8 @@ def test_lancedb_fts_fields_include_taglist_compat_and_per_field_text():
     assert "artist_name_text" in LANCEDB_FTS_TEXT_FIELDS
     assert "album_name_text" in LANCEDB_FTS_TEXT_FIELDS
     assert "release_date_text" in LANCEDB_FTS_TEXT_FIELDS
+    assert "release_year_text" in LANCEDB_FTS_TEXT_FIELDS
+    assert "release_decade_text" in LANCEDB_FTS_TEXT_FIELDS
     assert "tag_list_text" in LANCEDB_FTS_TEXT_FIELDS
 
 
@@ -143,6 +149,65 @@ def test_build_lancedb_script_includes_embeddings_by_default():
     assert parser.parse_args([]).include_embeddings is True
     assert parser.parse_args(["--include-embeddings"]).include_embeddings is True
     assert parser.parse_args(["--metadata-only"]).include_embeddings is False
+
+
+def test_upload_lancedb_directory_overwrite_removes_remote_target_first(tmp_path, capsys):
+    from mcrs.lancedb.modal_upload import upload_lancedb_directory_to_volume
+
+    local_db_dir = tmp_path / "lancedb"
+    local_db_dir.mkdir()
+
+    class FakeBatch:
+        def __init__(self, volume):
+            self.volume = volume
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def put_directory(self, local_path, remote_path):
+            self.volume.uploads.append((local_path, remote_path))
+
+    class FakeVolume:
+        def __init__(self):
+            self.removals = []
+            self.uploads = []
+
+        def remove_file(self, remote_path, recursive=False):
+            self.removals.append((remote_path, recursive))
+
+        def batch_upload(self):
+            return FakeBatch(self)
+
+    volume = FakeVolume()
+
+    remote_path = upload_lancedb_directory_to_volume(
+        volume,
+        local_db_dir,
+        remote_dir="lancedb",
+        overwrite=True,
+        volume_name="music-crs-models",
+    )
+
+    assert remote_path == "/lancedb"
+    assert volume.removals == [("/lancedb", True)]
+    assert volume.uploads == [(str(local_db_dir.resolve()), "/lancedb")]
+    assert "Removed existing volume path music-crs-models:/lancedb" in capsys.readouterr().out
+
+
+def test_upload_lancedb_directory_rejects_volume_root(tmp_path):
+    from mcrs.lancedb.modal_upload import upload_lancedb_directory_to_volume
+
+    local_db_dir = tmp_path / "lancedb"
+    local_db_dir.mkdir()
+
+    class FakeVolume:
+        pass
+
+    with pytest.raises(ValueError, match="remote_dir must not resolve to the volume root"):
+        upload_lancedb_directory_to_volume(FakeVolume(), local_db_dir, remote_dir="/", overwrite=True)
 
 
 def test_build_track_lancedb_table_defaults_to_embedding_columns(monkeypatch, tmp_path):
@@ -171,11 +236,15 @@ def test_build_track_lancedb_table_defaults_to_embedding_columns(monkeypatch, tm
 
     class FakeTable:
         def __init__(self, rows):
+            if hasattr(rows, "to_pylist"):
+                rows = rows.to_pylist()
             self.rows = list(rows)
             self.fts_indexes = []
             self.optimized = False
 
         def add(self, rows):
+            if hasattr(rows, "to_pylist"):
+                rows = rows.to_pylist()
             self.rows.extend(rows)
 
         def create_fts_index(self, text_field, replace=True, **kwargs):
@@ -216,8 +285,8 @@ def test_build_track_lancedb_table_defaults_to_embedding_columns(monkeypatch, tm
     assert fake_db.table is not None
     assert fake_db.table.optimized is True
     row = fake_db.table.rows[0]
-    assert row["audio_laion_clap"] == [0.1, 0.2]
-    assert row["metadata_qwen3_embedding_0_6b"] == [1.1, 1.2]
+    assert row["audio_laion_clap"] == pytest.approx([0.1, 0.2])
+    assert row["metadata_qwen3_embedding_0_6b"] == pytest.approx([1.1, 1.2])
     assert row["has_audio_laion_clap"] is True
 
 
@@ -228,6 +297,7 @@ def test_lancedb_indexing_notebook_delegates_to_checked_in_entrypoints():
 
     assert "scripts/build_lancedb_index.py" in source
     assert "modal/app.py::upload_lancedb_index" in source
+    assert "--overwrite" in source
     assert "scripts/smoke_lancedb_modal_query.py" in source
     assert "--metadata-only" in source
     assert "build_track_lancedb_table" not in source

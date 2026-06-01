@@ -45,6 +45,24 @@ def test_build_track_record_year_only_becomes_none_or_jan1():
     assert rec["release_date"] is None
 
 
+def test_build_track_record_year_only_still_emits_release_year_tokens():
+    rec = build_track_record(_minimal_metadata_row("t6", "2010"), include_embeddings=False)
+    assert rec["release_year_text"] == "2010"
+    assert rec["release_decade_text"] == "2010s"
+
+
+def test_build_track_record_year_month_emits_release_year_tokens():
+    rec = build_track_record(_minimal_metadata_row("t7", "2016-06"), include_embeddings=False)
+    assert rec["release_year_text"] == "2016"
+    assert rec["release_decade_text"] == "2010s"
+
+
+def test_build_track_record_empty_release_date_emits_blank_release_year_tokens():
+    rec = build_track_record(_minimal_metadata_row("t8", ""), include_embeddings=False)
+    assert rec["release_year_text"] == ""
+    assert rec["release_decade_text"] == ""
+
+
 def test_lancedb_table_schema_has_date32_release_date(tmp_path):
     """Write a tiny table via lancedb directly using the same dict shape build_track_record
     produces, and verify pyarrow infers date32 for release_date."""

@@ -46,13 +46,13 @@ from dataclasses import dataclass, field
 from typing import Any
 
 # `chat_history_parser` (mcrs/inference_utils.py) rewrites music-role content
-# from a bare track_id into a yaml-style metadata blob via
-# `MusicCatalogDB.id_to_metadata`, e.g.
-#   "track_id: 2445ed62-..., track_name: heart-shaped box, artist_name: nirvana, ..."
-# Other QU types want that prose form. The v0+ extractor wants clean
-# track_ids so the LLM has a clean `played_track_ids` list to reference.
-# We undo the rewrite here: pull the UUID off the front, then let the
-# catalog produce the human-readable label.
+# from a bare track_id into the line-oriented metadata blob returned by
+# `MusicCatalogDB.id_to_metadata`, starting with:
+#   "track_id: 2445ed62-...\ntrack_name: Heart-Shaped Box\n..."
+# Other QU types want that prose form. The v0+ extractor wants clean track_ids
+# so the LLM has a clean `played_track_ids` list to reference. We undo the
+# rewrite here: pull the UUID off the front, then let the catalog produce the
+# human-readable label.
 _METADATA_BLOB_TRACK_ID_RE = re.compile(r"^track_id:\s*([0-9a-fA-F\-]{36})\b")
 
 from experiments.analysis.conversation_state_extraction_bakeoff.prompts import (
@@ -62,6 +62,35 @@ from experiments.analysis.conversation_state_extraction_bakeoff.prompts import (
 from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
     ConversationStateV0Plus,
 )
+
+
+def _resolve_prompt_fns(prompt_version: str):
+    """Return (build_messages, json_schema_for_response_format) for a prompt
+    version. Default 'v1' is the original bakeoff prompt (back-compat). 'v3' is
+    the generous-extraction + catalog-bridging rewrite from the
+    extractor_prompt_v2 analysis package."""
+    pv = (prompt_version or "v1").lower()
+    if pv in ("v1", "bakeoff", "default"):
+        return build_messages, json_schema_for_response_format
+    if pv in ("v2", "v2c"):
+        from experiments.analysis.extractor_prompt_v2.prompts_v2 import (
+            build_messages as bm,
+            json_schema_for_response_format as schema,
+        )
+        return bm, schema
+    if pv == "v3":
+        from experiments.analysis.extractor_prompt_v2.prompts_v3 import (
+            build_messages as bm,
+            json_schema_for_response_format as schema,
+        )
+        return bm, schema
+    if pv == "v4":
+        from experiments.analysis.extractor_prompt_v2.prompts_v4 import (
+            build_messages as bm,
+            json_schema_for_response_format as schema,
+        )
+        return bm, schema
+    raise ValueError(f"unknown extractor prompt_version: {prompt_version!r}")
 from mcrs.embeddings.base import EmbeddingClient
 from mcrs.embeddings.qwen3_embedding import Qwen3EmbeddingClient
 from mcrs.qu_modules.compiler_v0plus import (
@@ -80,9 +109,170 @@ from mcrs.retrieval_modules.base import Retriever
 logger = logging.getLogger(__name__)
 
 
+def _with_no_store_cache(call_kwargs: dict[str, Any]) -> dict[str, Any]:
+    request_kwargs = dict(call_kwargs)
+    cache_control = request_kwargs.get("cache")
+    cache_control = dict(cache_control) if isinstance(cache_control, dict) else {}
+    cache_control["no-store"] = True
+    request_kwargs["cache"] = cache_control
+    return request_kwargs
+
+
+def _response_for_cache(response: Any) -> Any:
+    model_dump_json = getattr(response, "model_dump_json", None)
+    if callable(model_dump_json):
+        return model_dump_json()
+    return response
+
+
+def _store_litellm_cache_entry(
+    litellm_module,
+    response: Any,
+    call_kwargs: dict[str, Any],
+) -> None:
+    cache = getattr(litellm_module, "cache", None)
+    add_cache = getattr(cache, "add_cache", None)
+    if add_cache is None:
+        return
+    try:
+        add_cache(_response_for_cache(response), **call_kwargs)
+    except Exception as exc:
+        logger.warning("v0+ extractor cache store failed: %s: %s", type(exc).__name__, exc)
+
+
+async def _async_store_litellm_cache_entry(
+    litellm_module,
+    response: Any,
+    call_kwargs: dict[str, Any],
+) -> None:
+    cache = getattr(litellm_module, "cache", None)
+    async_add_cache = getattr(cache, "async_add_cache", None)
+    if async_add_cache is not None:
+        try:
+            await async_add_cache(_response_for_cache(response), **call_kwargs)
+        except Exception as exc:
+            logger.warning(
+                "v0+ extractor async cache store failed: %s: %s",
+                type(exc).__name__,
+                exc,
+            )
+        return
+
+    await asyncio.to_thread(_store_litellm_cache_entry, litellm_module, response, call_kwargs)
+
+
+# ----------------------------------------------------------------------
+# Encoder factory — shared by single-encoder + encoder-map YAML schemas
+# ----------------------------------------------------------------------
+
+
+def _build_encoder(enc_cfg: dict) -> EmbeddingClient:
+    """Build one EmbeddingClient from a YAML encoder spec.
+
+    Supported backends:
+      - `local` / (default): in-process Qwen3-0.6B (CPU/CUDA), good for tests.
+      - `litellm`: API call via LiteLLM SDK (e.g. DeepInfra Qwen3 endpoint).
+      - `modal`: deployed `Qwen3Encoder` Modal class (legacy single-encoder).
+      - `modal_multimodal`: shared `MultimodalTextEncoder` Modal class
+        exposing both SigLIP-2 text and CLAP-music text. Pick which method to
+        call by setting `method: "embed_siglip_text"` or `"embed_clap_text"`.
+    """
+    backend = str(enc_cfg.get("backend", "local")).lower()
+
+    if backend == "modal":
+        from mcrs.embeddings.modal_qwen3_client import ModalQwen3EmbeddingClient
+
+        return ModalQwen3EmbeddingClient(
+            app_name=enc_cfg.get("modal_app_name", "music-crs"),
+            cls_name=enc_cfg.get("modal_cls_name", "Qwen3Encoder"),
+        )
+
+    if backend == "modal_multimodal":
+        # Shared SigLIP-2 + CLAP-music text-side service. The `method` key
+        # picks which RPC the local client calls (`embed_siglip_text` /
+        # `embed_clap_text`). One container hosts both models so the smoke
+        # test pays one warm-up.
+        from mcrs.embeddings.modal_multimodal_client import (
+            ModalMultimodalTextEmbeddingClient,
+        )
+
+        method = str(enc_cfg.get("method", "")).strip()
+        if method not in {"embed_siglip_text", "embed_clap_text"}:
+            raise ValueError(
+                f"modal_multimodal encoder needs method=embed_siglip_text "
+                f"or method=embed_clap_text; got {method!r}"
+            )
+        return ModalMultimodalTextEmbeddingClient(
+            app_name=enc_cfg.get("modal_app_name", "music-crs"),
+            cls_name=enc_cfg.get("modal_cls_name", "MultimodalTextEncoder"),
+            method=method,
+        )
+
+    if backend == "litellm":
+        from mcrs.embeddings.litellm_client import LiteLLMEmbeddingClient
+
+        api_key = enc_cfg.get("api_key") or os.environ.get("DEEPINFRA_API_KEY")
+        return LiteLLMEmbeddingClient(
+            model_name=enc_cfg.get("model_name", "openai/Qwen/Qwen3-Embedding-0.6B"),
+            api_base=enc_cfg.get("api_base", "https://api.deepinfra.com/v1/openai"),
+            api_key=api_key,
+            batch_size=int(enc_cfg.get("batch_size", 32)),
+            encoding_format=enc_cfg.get("encoding_format", "float"),
+        )
+
+    if backend == "local":
+        return Qwen3EmbeddingClient(
+            model_name=enc_cfg.get("model_name", "Qwen/Qwen3-Embedding-0.6B"),
+            device=enc_cfg.get("device", "cpu"),
+            torch_dtype_name=enc_cfg.get("torch_dtype", "float32"),
+            max_length=int(enc_cfg.get("max_length", 512)),
+            batch_size=int(enc_cfg.get("batch_size", 8)),
+            padding_side=enc_cfg.get("padding_side", "left"),
+            query_instruct=enc_cfg.get("query_instruct", ""),
+        )
+
+    raise ValueError(
+        f"Unknown encoder.backend={backend!r}; expected one of "
+        f"'local', 'litellm', 'modal', 'modal_multimodal'."
+    )
+
+
 # ----------------------------------------------------------------------
 # Extractor LLM adapter
 # ----------------------------------------------------------------------
+
+
+def _hard_filter_is_valid(hf: Any) -> bool:
+    """A release_date filter is usable only if its bounds are well-formed."""
+    if not isinstance(hf, dict):
+        return False
+    op = hf.get("op")
+    s, e = hf.get("start"), hf.get("end")
+    if op == "between":
+        return isinstance(s, str) and isinstance(e, str) and s <= e
+    if op == ">":
+        return isinstance(s, str)
+    if op == "<":
+        return isinstance(e, str)
+    return False
+
+
+def _sanitize_parsed_state(parsed: Any) -> Any:
+    """Generic graceful degradation BEFORE schema validation: a single bad
+    optional field should never discard the whole turn's state (→ empty pool).
+
+    Currently: drop malformed `hard_filters` (e.g. a `between` with start > end)
+    rather than letting one bad entry fail validation of the entire state. Era /
+    decade handling lives in `release_year_range`, which the LLM fills using
+    world knowledge and the schema self-normalizes (swaps inverted bounds) — no
+    code-side date parsing.
+    """
+    if not isinstance(parsed, dict):
+        return parsed
+    hfs = parsed.get("hard_filters")
+    if isinstance(hfs, list):
+        parsed["hard_filters"] = [hf for hf in hfs if _hard_filter_is_valid(hf)]
+    return parsed
 
 
 @dataclass
@@ -98,6 +288,12 @@ class LiteLLMExtractor:
     max_tokens: int = 1500
     timeout_s: int = 90
 
+    # Which extraction prompt to use. "v1" = original bakeoff prompt (default,
+    # back-compat). "v3" = generous-extraction + catalog-bridging rewrite (see
+    # experiments/analysis/extractor_prompt_v2/). Resolved to functions in
+    # __post_init__.
+    prompt_version: str = "v1"
+
     # Temperature used for the JSON-decode retry. The LLM occasionally enters
     # a degenerative-output mode (one valid field followed by a stutter of
     # whitespace tokens until max_tokens), which is a deterministic function
@@ -106,28 +302,61 @@ class LiteLLMExtractor:
     # sampling trajectory off the degenerative path.
     retry_temperature: float = 0.3
 
+    def __post_init__(self):
+        self._build_messages_fn, self._schema_fn = _resolve_prompt_fns(self.prompt_version)
+
     def _build_kwargs(
         self,
         conversation: list[dict[str, Any]],
         played_track_ids: list[str],
         temperature: float | None = None,
     ) -> dict[str, Any]:
-        messages = build_messages(conversation, played_track_ids)
+        messages = self._build_messages_fn(conversation, played_track_ids)
         kwargs: dict[str, Any] = {
             "model": self.model_name,
             "messages": messages,
             "temperature": self.temperature if temperature is None else temperature,
             "max_tokens": self.max_tokens,
             "timeout": self.timeout_s,
-            "response_format": json_schema_for_response_format(),
         }
         if self.api_base:
             kwargs["api_base"] = self.api_base
         if self.api_key:
             kwargs["api_key"] = self.api_key
-        # Non-OpenAI hybrid-reasoning models need this or they consume max_tokens on internal reasoning.
-        if self.model_name.startswith("openrouter/") and not self.model_name.startswith("openrouter/openai/"):
-            kwargs["extra_body"] = {"reasoning": {"enabled": False}}
+        schema = self._schema_fn()
+        # Google's Gemini structured-output validator (OpenAPI-3.0 subset, which
+        # OpenRouter routes `response_format` to for google/gemini-* models) is
+        # stricter than OpenAI/deepseek: it rejects our default Pydantic schema
+        # ("schema at properties.mentioned_entities.items requires unspecified
+        # property 'type'") because list items are a bare typeless $ref and
+        # Optional fields are a typeless {type:null} anyOf union. Rewrite the
+        # schema into the Gemini-safe subset (inline $refs, type every node,
+        # express Optionals via nullable). Gated on gemini ONLY so the
+        # deepseek/openai/gemma path that already works is untouched.
+        if self.model_name.startswith("openrouter/google/gemini"):
+            from experiments.analysis.extractor_prompt_v2.prompts_v4 import (
+                _to_gemini_schema,
+            )
+
+            schema = _to_gemini_schema(schema)
+        if self.model_name.startswith("openrouter/"):
+            # litellm's supports_response_schema() is False for OpenRouter models,
+            # so a TOP-LEVEL response_format is silently stripped before the call —
+            # the model then gets no schema and degenerates into an unterminated
+            # whitespace stutter on long outputs. Send response_format via
+            # extra_body so it reaches OpenRouter verbatim, and require_parameters
+            # so the request only routes to a provider that actually enforces the
+            # schema (fails loudly if none does, rather than silently degrading).
+            extra_body: dict[str, Any] = {
+                "response_format": schema,
+                "provider": {"require_parameters": True},
+            }
+            # Non-OpenAI hybrid-reasoning models otherwise burn max_tokens on reasoning.
+            if not self.model_name.startswith("openrouter/openai/"):
+                extra_body["reasoning"] = {"enabled": False}
+            kwargs["extra_body"] = extra_body
+        else:
+            kwargs["response_format"] = schema
         return kwargs
 
     def _decode(self, raw: str) -> ConversationStateV0Plus:
@@ -149,6 +378,7 @@ class LiteLLMExtractor:
                 cleaned = cleaned[4:]
             cleaned = cleaned.rsplit("```", 1)[0].strip()
         parsed = json.loads(cleaned)
+        parsed = _sanitize_parsed_state(parsed)
         return ConversationStateV0Plus.model_validate(parsed)
 
     def extract(
@@ -165,10 +395,9 @@ class LiteLLMExtractor:
         if self.retry_temperature != self.temperature:
             temps.append(self.retry_temperature)
         for attempt, temp in enumerate(temps, start=1):
+            call_kwargs = self._build_kwargs(conversation, played_track_ids, temperature=temp)
             try:
-                response = litellm.completion(
-                    **self._build_kwargs(conversation, played_track_ids, temperature=temp)
-                )
+                response = litellm.completion(**_with_no_store_cache(call_kwargs))
                 raw = response.choices[0].message.content or ""
             except Exception as exc:
                 logger.warning(
@@ -177,20 +406,22 @@ class LiteLLMExtractor:
                 )
                 return None
             try:
-                return self._decode(raw)
+                state = self._decode(raw)
             except json.JSONDecodeError as exc:
                 logger.warning(
                     "v0+ extractor JSON decode failed (attempt %d, temp=%.2f): %s | raw=%r",
-                    attempt, temp, exc, raw[:200],
+                    attempt, temp, exc, raw[:6000],
                 )
                 continue  # next temperature
             except Exception as exc:
                 # ValidationError or other schema mismatch — not retryable.
                 logger.warning(
                     "v0+ extractor schema validate failed (attempt %d, temp=%.2f): %s: %s | raw=%r",
-                    attempt, temp, type(exc).__name__, exc, raw[:200],
+                    attempt, temp, type(exc).__name__, exc, raw[:6000],
                 )
                 return None
+            _store_litellm_cache_entry(litellm, response, call_kwargs)
+            return state
         return None
 
     async def aextract(
@@ -207,10 +438,9 @@ class LiteLLMExtractor:
         if self.retry_temperature != self.temperature:
             temps.append(self.retry_temperature)
         for attempt, temp in enumerate(temps, start=1):
+            call_kwargs = self._build_kwargs(conversation, played_track_ids, temperature=temp)
             try:
-                response = await litellm.acompletion(
-                    **self._build_kwargs(conversation, played_track_ids, temperature=temp)
-                )
+                response = await litellm.acompletion(**_with_no_store_cache(call_kwargs))
                 raw = response.choices[0].message.content or ""
             except Exception as exc:
                 logger.warning(
@@ -219,19 +449,21 @@ class LiteLLMExtractor:
                 )
                 return None
             try:
-                return self._decode(raw)
+                state = self._decode(raw)
             except json.JSONDecodeError as exc:
                 logger.warning(
                     "v0+ extractor JSON decode failed (async, attempt %d, temp=%.2f): %s | raw=%r",
-                    attempt, temp, exc, raw[:200],
+                    attempt, temp, exc, raw[:6000],
                 )
                 continue
             except Exception as exc:
                 logger.warning(
                     "v0+ extractor schema validate failed (async, attempt %d, temp=%.2f): %s: %s | raw=%r",
-                    attempt, temp, type(exc).__name__, exc, raw[:200],
+                    attempt, temp, type(exc).__name__, exc, raw[:6000],
                 )
                 return None
+            await _async_store_litellm_cache_entry(litellm, response, call_kwargs)
+            return state
         return None
 
 
@@ -425,8 +657,9 @@ class V0PlusCompilerQU:
         rs = self.resolver.resolve(state, played_track_ids=played)
 
         # Use _compile() (not compile()) to get the full CompileResult, which
-        # carries the per-branch pools for the trace. compile() is the thin
-        # public wrapper used by the submission/blindset path (only needs .ranked).
+        # carries the per-branch pools + fused/final funnel for the trace when
+        # `branch_trace_topk > 0`. compile() is the thin public wrapper used by
+        # the submission/blindset path (only needs .ranked).
         def _run_compile() -> CompileResult:
             return self.compiler._compile(rs, user_id=user_id)
 
@@ -489,13 +722,30 @@ class V0PlusCompilerQU:
                 "positive_tags": positive_tags,
                 "played_track_ids": list(rs.played_track_ids),
             },
+            "resolved_targets": [
+                {
+                    "kind": t.kind,
+                    "source_text": t.source_text,
+                    "entity_id": t.entity_id,
+                    "confidence": t.confidence,
+                }
+                for t in rs.resolved_targets
+            ],
+            "routing_tags": state.routing_tags.model_dump(),
+            "lyrical_theme": state.lyrical_theme,
             "compiler": {
                 "n_candidates": len(track_ids),
                 "n_hard_filters": len(state.hard_filters),
                 "n_explicit_rejections": len(state.explicit_rejections),
             },
-            "branches": compile_result.to_trace_dict(),
         }
+        # Diagnostic: per-retriever pools + fused/final funnel. Only populated
+        # when CompilerConfig.branch_trace_topk > 0. Lets offline analysis (see
+        # scripts/branch_diagnostics.py) answer "where did the GT rank inside
+        # each branch?" and "what's the fusion coverage ceiling?" — telling
+        # apart "candidate missing from pool" vs "RRF mis-ranked the pool".
+        if compile_result.branch_pools:
+            trace["branches"] = compile_result.to_trace_dict()
         return idx, track_ids, trace
 
     def batch_compile_track_ids(
@@ -601,51 +851,37 @@ def build_v0plus_compiler_qu(
     # ----- Matcher (prebakes catalog state) -----
     matcher: FuzzyMatcher = _overrides.get("matcher") or RapidfuzzCatalogMatcher(catalog)
 
-    # ----- Encoder (Qwen3-Embedding-0.6B) -----
-    # Three backends:
-    #   local  — in-process CPU/CUDA (~1-2 s/call); good for tests / no cloud creds
-    #   modal  — deployed T4 GPU class (~181 ms warm, ~30 s cold start); no caching
-    #   litellm — API call via LiteLLM SDK (e.g. DeepInfra $0.01/1M tokens, ~200 ms);
-    #             flows through the shared litellm disk cache so reruns are free
-    if "encoder" in _overrides:
-        encoder: EmbeddingClient = _overrides["encoder"]
+    # ----- Encoder(s) -----
+    # Two YAML schemas, both supported:
+    #
+    # Legacy single encoder (today's configs):
+    #   encoder:
+    #     backend: litellm
+    #     model_name: openai/Qwen/Qwen3-Embedding-0.6B
+    #
+    # New encoder map (multi-modal text-side configs):
+    #   encoders:
+    #     default:        { backend: litellm, model_name: ... }
+    #     siglip2_text:   { backend: modal, modal_cls_name: MultimodalTextEncoder, method: embed_siglip_text }
+    #     clap_text:      { backend: modal, modal_cls_name: MultimodalTextEncoder, method: embed_clap_text }
+    #
+    # Either accepted; mixing legacy + map promotes the legacy entry to `default`.
+    if "encoders" in _overrides:
+        encoders: dict[str, EmbeddingClient] = dict(_overrides["encoders"])
     else:
-        enc_cfg = dict(qu_kwargs.get("encoder") or {})
-        backend = str(enc_cfg.get("backend", "local")).lower()
-        if backend == "modal":
-            from mcrs.embeddings.modal_qwen3_client import ModalQwen3EmbeddingClient
-
-            encoder = ModalQwen3EmbeddingClient(
-                app_name=enc_cfg.get("modal_app_name", "music-crs"),
-                cls_name=enc_cfg.get("modal_cls_name", "Qwen3Encoder"),
-            )
-        elif backend == "litellm":
-            # API-backed encoder — cheaper than Modal GPU, no cold starts, cacheable.
-            # encoding_format="float" is mandatory for DeepInfra (422 without it).
-            from mcrs.embeddings.litellm_client import LiteLLMEmbeddingClient
-
-            api_key = enc_cfg.get("api_key") or os.environ.get("DEEPINFRA_API_KEY")
-            encoder = LiteLLMEmbeddingClient(
-                model_name=enc_cfg.get("model_name", "openai/Qwen/Qwen3-Embedding-0.6B"),
-                api_base=enc_cfg.get("api_base", "https://api.deepinfra.com/v1/openai"),
-                api_key=api_key,
-                batch_size=int(enc_cfg.get("batch_size", 32)),
-                encoding_format=enc_cfg.get("encoding_format", "float"),
-            )
-        elif backend == "local":
-            encoder = Qwen3EmbeddingClient(
-                model_name=enc_cfg.get("model_name", "Qwen/Qwen3-Embedding-0.6B"),
-                device=enc_cfg.get("device", "cpu"),
-                torch_dtype_name=enc_cfg.get("torch_dtype", "float32"),
-                max_length=int(enc_cfg.get("max_length", 512)),
-                batch_size=int(enc_cfg.get("batch_size", 8)),
-                padding_side=enc_cfg.get("padding_side", "left"),
-                query_instruct=enc_cfg.get("query_instruct", ""),
-            )
-        else:
-            raise ValueError(
-                f"Unknown encoder.backend={backend!r}; expected 'local', 'litellm', or 'modal'"
-            )
+        encoders = {}
+        legacy_cfg = qu_kwargs.get("encoder")
+        if legacy_cfg is not None:
+            encoders["default"] = _build_encoder(dict(legacy_cfg))
+        for name, sub_cfg in (qu_kwargs.get("encoders") or {}).items():
+            encoders[str(name)] = _build_encoder(dict(sub_cfg))
+        if "encoder" in _overrides:
+            encoders["default"] = _overrides["encoder"]
+        if not encoders:
+            # Back-compat default: build the legacy Qwen3 local encoder
+            # when the YAML supplies neither `encoder:` nor `encoders:`.
+            encoders["default"] = _build_encoder({})
+    encoder: EmbeddingClient = encoders.get("default") or next(iter(encoders.values()))
 
     # ----- Retriever (LanceDB) -----
     if "retriever" in _overrides:
@@ -685,6 +921,7 @@ def build_v0plus_compiler_qu(
             temperature=float(ex_cfg.get("temperature", 0.0)),
             max_tokens=int(ex_cfg.get("max_tokens", 1500)),
             timeout_s=int(ex_cfg.get("timeout_s", 90)),
+            prompt_version=str(ex_cfg.get("prompt_version", "v1")),
         )
 
     # ----- Resolver -----
@@ -721,6 +958,8 @@ def build_v0plus_compiler_qu(
                             vector_field=str(entry["vector_field"]),
                             weight=float(entry.get("weight", 1.0)),
                             distance_type=str(entry.get("distance_type", "cosine")),
+                            encoder_id=str(entry.get("encoder_id", "default")),
+                            query_id=str(entry.get("query_id", "intent")),
                         )
                     )
 
@@ -764,6 +1003,24 @@ def build_v0plus_compiler_qu(
                 "cf_bpr_topk",
                 "cf_bpr_vector_field",
                 "cf_bpr_distance_type",
+                "branch_trace_topk",
+                "enable_resolved_artist_discography",
+                "disco_weight",
+                "disco_cap",
+                "disco_confidence_threshold",
+                "disco_gated_intents",
+                "enable_era_popularity",
+                "era_pop_weight",
+                "era_pop_cap",
+                "enable_release_year_filter",
+                "release_year_filter_min_keep",
+                "routing_boost",
+                "enable_similar_artist_anchors",
+                "similar_artist_anchor_topk",
+                "similar_artist_confidence_threshold",
+                "similar_artist_max_artists",
+                "similar_artist_anchor_intents",
+                "similar_artist_anchor_on_exact_entity",
             }
         }
         if dense_branches is not None:
@@ -785,10 +1042,24 @@ def build_v0plus_compiler_qu(
                 splits=tuple(ue_cfg.get("splits") or ("train", "test_warm", "test_cold")),
             )
 
+        # Validate every branch's encoder_id resolves before constructing
+        # the compiler — fail-fast with a clear message instead of at first
+        # call from the inference loop.
+        if dense_branches:
+            unknown_ids = sorted(
+                {b.encoder_id for b in dense_branches} - set(encoders)
+            )
+            if unknown_ids:
+                raise KeyError(
+                    f"dense_branches reference encoder_id(s) {unknown_ids!r} "
+                    f"not present in `encoders` map. Available: {sorted(encoders)}."
+                )
+
         compiler = V0PlusCompiler(
             catalog,
             retriever,
-            encoder,
+            encoder=encoder,  # kept for back-compat with .encoder accessor
+            encoders=encoders,
             config=CompilerConfig(
                 bm25_k=int(comp_cfg.get("bm25_k", 1000)),
                 dense_k=int(comp_cfg.get("dense_k", 1000)),

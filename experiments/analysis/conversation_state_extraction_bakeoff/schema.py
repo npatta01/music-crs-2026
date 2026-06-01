@@ -26,6 +26,13 @@ class IntentMode(str, Enum):
     playlist_build = "playlist_build"
 
 
+class ExplorationPolicy(str, Enum):
+    exploit = "exploit"
+    diversify_artists = "diversify_artists"
+    diversify_albums = "diversify_albums"
+    balanced = "balanced"
+
+
 Sentiment = Literal[-1, 0, 1]
 
 # Production TalkPlay track_ids are UUID v4 strings, but tests and synthetic
@@ -145,21 +152,77 @@ class HardFilter(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def _check_required_per_op(self):
-        if self.op == "<":
-            if self.end is None:
-                raise ValueError("op='<' requires end")
-        elif self.op == ">":
-            if self.start is None:
-                raise ValueError("op='>' requires start")
-        elif self.op == "between":
-            if self.start is None:
-                raise ValueError("op='between' requires start")
-            if self.end is None:
-                raise ValueError("op='between' requires end")
-            if self.start > self.end:
-                raise ValueError(f"between: start ({self.start}) must be <= end ({self.end})")
+    def _check_consistent_bounds(self):
+        # Tolerant: missing-bound filters (e.g. `between` with start=None) are
+        # accepted at the schema level and treated as no-ops downstream by the
+        # compiler. The LLM occasionally emits these on hard turns; rejecting
+        # them at validation time used to blow up the whole turn's state
+        # (losing turn_intent, mentioned_entities, etc.) for a single bad
+        # filter. The compiler now skips non-actionable filters; the schema
+        # only enforces semantic consistency (inverted ranges).
+        if (
+            self.op == "between"
+            and self.start is not None
+            and self.end is not None
+            and self.start > self.end
+        ):
+            raise ValueError(f"between: start ({self.start}) must be <= end ({self.end})")
         return self
+
+
+class ReleaseYearRange(BaseModel):
+    """Soft temporal hint for a downstream reranker's date-boosting (NOT a hard
+    filter). The LLM converts any era/decade/century/year expression to integer
+    year bounds using world knowledge; the reranker boosts candidates whose
+    release year falls in (or near) this range. Either bound may be null = open.
+
+    Examples the LLM should produce:
+      "early 2010s"        -> {start: 2010, end: 2014}
+      "90s"                -> {start: 1990, end: 1999}
+      "19th century"       -> {start: 1801, end: 1900}
+      "after 19th century" -> {start: 1901, end: null}
+      "before 2000"        -> {start: null, end: 1999}
+    """
+
+    start: int | None = Field(default=None, description="Inclusive lower bound year, or null for open-ended.")
+    end: int | None = Field(default=None, description="Inclusive upper bound year, or null for open-ended.")
+
+    @model_validator(mode="after")
+    def _normalize(self):
+        # Safety net only: if the model inverts the bounds, swap rather than
+        # reject — a soft hint should never crash extraction. Correct mapping is
+        # the prompt's job; this just guarantees start <= end.
+        if self.start is not None and self.end is not None and self.start > self.end:
+            self.start, self.end = self.end, self.start
+        return self
+
+
+class ProcessConstraints(BaseModel):
+    """How aggressively to vary or stay-the-course on the next recommendation.
+
+    Orthogonal to `intent_mode`: intent says what the user is *doing*
+    (refining, pivoting, etc.), process_constraints says how the system
+    should *behave* along the artist/album axes. A user can be in
+    `intent_mode=refinement` AND `exploration_policy=diversify_artists` —
+    "more in this style, but different artists."
+    """
+
+    exploration_policy: ExplorationPolicy = Field(
+        default=ExplorationPolicy.balanced,
+        description=(
+            "exploit: stick with the current artist/album; the user signals continuation "
+            "of the same source ('more by them', 'another by this artist', 'more from this album'). "
+            "diversify_artists: keep the style/genre/era, but explicitly look for OTHER artists "
+            "('another <genre> track', 'more bands like this', 'something else in this vein'). "
+            "Most common when the user re-states a style descriptor instead of an artist anchor. "
+            "ALSO fires when the user rejects an artist by name (explicit_rejections.kind=artist) "
+            "and is still asking for continuation in the same style. "
+            "diversify_albums: same artist OK but prefer different albums ('another song by them, "
+            "different album', 'more from earlier in their career'). Rare. "
+            "balanced: default when the user gives no signal — e.g. 'more like this', 'something similar'. "
+            "Compiler can mix continuation and variation."
+        ),
+    )
 
 
 class ExplicitRejection(BaseModel):
@@ -168,6 +231,18 @@ class ExplicitRejection(BaseModel):
     )
     value: str = Field(..., description="Surface form. Compiler resolves to ids.")
     source_turn: int = Field(..., description="1-indexed turn number that introduced the rejection.")
+
+
+class RoutingTags(BaseModel):
+    """Additive compiler route flags (north-star routing_tags). Each true flag
+    up-weights the matching retrieval branch(es). All default False so old
+    states stay valid and routing is inert until the compiler is configured."""
+
+    exact_entity_probe: bool = Field(default=False, description="User names a specific artist/track/album to find. Routes to bm25 + resolved-artist discography.")
+    lyric_search: bool = Field(default=False, description="User asks by lyrical content / theme / words. Routes to the lyric branch.")
+    feature_articulation: bool = Field(default=False, description="User describes the SOUND/feel (sonic descriptors, mood, instrumentation). Routes to audio/CLAP + metadata.")
+    image_or_visual_search: bool = Field(default=False, description="User describes cover art or a visual. Routes to the image branch (deferred).")
+    hidden_target_search: bool = Field(default=False, description="User is recalling a half-remembered track. Routes to broad/recency + popularity.")
 
 
 class ConversationStateV0Plus(BaseModel):
@@ -241,6 +316,39 @@ class ConversationStateV0Plus(BaseModel):
             '"stop playing X", "different from X", "too heavy", "too gloomy". kind=artist excludes '
             "all tracks by that artist; kind=track excludes that track_id; kind=tag soft-demotes "
             "tracks whose tag_list overlaps."
+        ),
+    )
+
+    process_constraints: ProcessConstraints = Field(
+        default_factory=ProcessConstraints,
+        description=(
+            "How aggressively the compiler should vary vs continue along the artist/album/novelty "
+            "axes. Orthogonal to intent_mode. See ProcessConstraints field docs for the full "
+            "decision table."
+        ),
+    )
+
+    routing_tags: RoutingTags = Field(
+        default_factory=RoutingTags,
+        description="Per-turn route flags; each true flag up-weights its branch(es).",
+    )
+    lyrical_theme: str | None = Field(
+        default=None,
+        description=(
+            "What the user wants the lyrics to be ABOUT (theme/subject), when the turn is a "
+            "lyric request. Free text. The lyric branch queries the catalog's lyrics column as "
+            "'music lyrics :{lyrical_theme}'. Null when not a lyric request."
+        ),
+    )
+
+    release_year_range: ReleaseYearRange | None = Field(
+        default=None,
+        description=(
+            "Soft temporal hint when the user mentions any era / decade / century / year bound. "
+            "Convert the expression to integer year bounds using world knowledge (e.g. "
+            "'early 2010s' -> {2010, 2014}; '19th century' -> {1801, 1900}; 'after the 19th "
+            "century' -> {1901, null}). Either bound may be null for open-ended. null when the "
+            "user states no time period. This is a soft boost signal for the reranker, not a hard filter."
         ),
     )
 

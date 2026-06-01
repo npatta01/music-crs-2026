@@ -1,0 +1,35 @@
+{
+  "n": 80,
+  "category": {
+    "B": 14,
+    "C": 11,
+    "G": 9,
+    "D": 9,
+    "F": 8,
+    "H": 7,
+    "J": 6,
+    "E": 6,
+    "K": 4,
+    "A": 4,
+    "I": 2
+  },
+  "specificity": {
+    "LL": 27,
+    "HL": 23,
+    "LH": 21,
+    "HH": 9
+  },
+  "musical_culture": {
+    "American Hip-Hop Culture": 3,
+    "Japanese": 2,
+    "Brazilian": 2,
+    "Video Game Music Culture": 2,
+    "Western": 2,
+    "Metal Culture": 2,
+    "American Hip-Hop": 2,
+    "Korean Pop Culture": 1
+  },
+  "language": {
+    "English": 80
+  }
+}

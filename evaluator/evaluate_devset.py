@@ -44,7 +44,12 @@ REQUIRED_DIAGNOSTIC_DEPTH = max(K_VALUES)
 
 def df_filtering(df, session_id, turn_number):
     mask = (df["session_id"] == session_id) & (df["turn_number"] == turn_number)
-    return df[mask].iloc[0]
+    sub = df[mask]
+    if sub.empty:
+        raise KeyError(
+            f"No prediction for session_id={session_id} turn_number={turn_number}"
+        )
+    return sub.iloc[0]
 
 
 def _mean(xs):
@@ -68,52 +73,26 @@ def _depth_metadata(df_predictions):
     min_pool_depth = int(depths.min()) if len(depths) else 0
     max_pool_depth = int(depths.max()) if len(depths) else 0
     n_shallow_rows = int((depths < REQUIRED_DIAGNOSTIC_DEPTH).sum())
-    available_cutoffs = [k for k in K_VALUES if k <= min_pool_depth]
-    available_mrr_cutoffs = [k for k in MRR_K_VALUES if k <= min_pool_depth]
     return {
         "depths": depths,
         "min_pool_depth": min_pool_depth,
         "max_pool_depth": max_pool_depth,
         "n_shallow_rows": n_shallow_rows,
-        "available_cutoffs": available_cutoffs,
-        "available_mrr_cutoffs": available_mrr_cutoffs,
+        "available_cutoffs": list(K_VALUES),
+        "available_mrr_cutoffs": list(MRR_K_VALUES),
     }
 
 
-def _null_unsupported_metrics(metric_values: dict[str, float], depth: int) -> dict[str, float | None]:
-    nulled = dict(metric_values)
-    for k in K_VALUES:
-        if k > depth:
-            for prefix in ("ndcg", "hit", "recall"):
-                nulled[f"{prefix}@{k}"] = None
-    return nulled
-
-
-def _null_unsupported_rr(rr_by_k: dict[int, float], depth: int) -> dict[int, float | None]:
-    return {
-        k: (value if k <= depth else None)
-        for k, value in rr_by_k.items()
-    }
-
-
-def _aggregate_metric(df_turnwise: pd.DataFrame, column_name: str, available: bool):
-    if not available or column_name not in df_turnwise:
+def _aggregate_metric(df_turnwise: pd.DataFrame, column_name: str):
+    if column_name not in df_turnwise:
         return None
     return _safe_float(df_turnwise[column_name].mean())
 
 
-def _aggregate_group_metric(sub: pd.DataFrame, column_name: str, cutoff: int):
+def _aggregate_group_metric(sub: pd.DataFrame, column_name: str):
     if column_name not in sub:
         return None
-    min_group_depth = int(sub["pool_depth"].min()) if len(sub) else 0
-    if min_group_depth < cutoff:
-        return None
     return _safe_float(sub[column_name].mean())
-
-
-def _availability_for_cutoffs(available_cutoffs: list[int], cutoffs: list[int]) -> dict[int, bool]:
-    available = set(available_cutoffs)
-    return {k: k in available for k in cutoffs}
 
 
 def _format_metric(label: str, value, decimals: int = 4):
@@ -153,19 +132,13 @@ def evaluate(df_predictions, df_ground_truth):
         preds = pred["predicted_track_ids"]
         pred_depth = len(preds)
 
-        recsys_metrics = _null_unsupported_metrics(
-            compute_recsys_metrics(preds, [gt_id], K_VALUES),
-            pred_depth,
-        )
+        recsys_metrics = compute_recsys_metrics(preds, [gt_id], K_VALUES)
         rank = get_rank([gt_id], preds)
         rr_full = get_reciprocal_rank(gt_id, preds)
         if rank is not None:
             ranks_found.append(rank)
         rrs_full.append(rr_full)
-        rr_values = _null_unsupported_rr(
-            {k: get_reciprocal_rank(gt_id, preds, k=k) for k in MRR_K_VALUES},
-            pred_depth,
-        )
+        rr_values = {k: get_reciprocal_rank(gt_id, preds, k=k) for k in MRR_K_VALUES}
         for k in MRR_K_VALUES:
             rr_at_k[k].append(rr_values[k])
 
@@ -193,51 +166,45 @@ def evaluate(df_predictions, df_ground_truth):
     # published leaderboard semantics).
     df_turnwise = df_results[metric_cols + ["turn_number"]] \
         .groupby("turn_number").mean()
-    available_by_k = _availability_for_cutoffs(depth_meta["available_cutoffs"], K_VALUES)
-    available_by_mrr_k = _availability_for_cutoffs(depth_meta["available_mrr_cutoffs"], MRR_K_VALUES)
-
     # Per-turn breakdown (mean per turn_number, for diagnostics).
     per_turn = {}
     for tn, sub in df_results.groupby("turn_number"):
         per_turn[int(tn)] = {
             "n": int(len(sub)),
-            "ndcg@20": _aggregate_group_metric(sub, "ndcg@20", 20),
-            "hit@20": _aggregate_group_metric(sub, "hit@20", 20),
-            "hit@100": _aggregate_group_metric(sub, "hit@100", 100),
+            "ndcg@20": _aggregate_group_metric(sub, "ndcg@20"),
+            "hit@20": _aggregate_group_metric(sub, "hit@20"),
+            "hit@100": _aggregate_group_metric(sub, "hit@100"),
         }
 
     n_total = len(df_results)
     agg = {
         "n_turns_evaluated": n_total,
-        "require_full_diagnostic_depth": True,
+        "require_full_diagnostic_depth": False,
         "full_diagnostic_depth": REQUIRED_DIAGNOSTIC_DEPTH,
         "available_cutoffs": depth_meta["available_cutoffs"],
         "min_pool_depth": depth_meta["min_pool_depth"],
         "max_pool_depth": depth_meta["max_pool_depth"],
         "n_shallow_rows": depth_meta["n_shallow_rows"],
         # Headline metrics (turn-then-session macro avg) — match leaderboard
-        **{f"ndcg@{k}": _aggregate_metric(df_turnwise, f"ndcg@{k}", available_by_k[k]) for k in HEADLINE_K},
+        **{f"ndcg@{k}": _aggregate_metric(df_turnwise, f"ndcg@{k}") for k in HEADLINE_K},
         # Full metric sweep (same macro-avg semantics so all metrics are comparable)
-        **{f"ndcg@{k}": _aggregate_metric(df_turnwise, f"ndcg@{k}", available_by_k[k]) for k in K_VALUES},
-        **{f"hit@{k}": _aggregate_metric(df_turnwise, f"hit@{k}", available_by_k[k]) for k in K_VALUES},
-        **{f"recall@{k}": _aggregate_metric(df_turnwise, f"recall@{k}", available_by_k[k]) for k in K_VALUES},
+        **{f"ndcg@{k}": _aggregate_metric(df_turnwise, f"ndcg@{k}") for k in K_VALUES},
+        **{f"hit@{k}": _aggregate_metric(df_turnwise, f"hit@{k}") for k in K_VALUES},
+        **{f"recall@{k}": _aggregate_metric(df_turnwise, f"recall@{k}") for k in K_VALUES},
         "mrr": _mean(rrs_full),
-        **{
-            f"mrr@{k}": (_mean([value for value in rr_at_k[k] if value is not None]) if available_by_mrr_k[k] else None)
-            for k in MRR_K_VALUES
-        },
+        **{f"mrr@{k}": _mean(rr_at_k[k]) for k in MRR_K_VALUES},
         "mean_rank_when_found": _mean(ranks_found) if ranks_found else None,
         "median_rank_when_found": _median(ranks_found) if ranks_found else None,
         "pct_gt_not_in_top20":
             float((df_results["hit@20"] == 0).sum() / n_total) if n_total else 0.0,
         "pct_gt_not_in_top100":
-            (float((df_results["hit@100"] == 0).sum() / n_total) if n_total and available_by_k[100] else None),
+            float((df_results["hit@100"] == 0).sum() / n_total) if n_total else 0.0,
         "pct_gt_not_in_top200":
-            (float((df_results["hit@200"] == 0).sum() / n_total) if n_total and available_by_k[200] else None),
+            float((df_results["hit@200"] == 0).sum() / n_total) if n_total else 0.0,
         "pct_gt_not_in_top500":
-            (float((df_results["hit@500"] == 0).sum() / n_total) if n_total and available_by_k[500] else None),
+            float((df_results["hit@500"] == 0).sum() / n_total) if n_total else 0.0,
         "pct_gt_not_in_top1000":
-            (float((df_results["hit@1000"] == 0).sum() / n_total) if n_total and available_by_k[1000] else None),
+            float((df_results["hit@1000"] == 0).sum() / n_total) if n_total else 0.0,
         "per_turn": {str(k): v for k, v in sorted(per_turn.items())},
     }
     agg["_recommended_20"] = recommended_tracks_20
@@ -255,8 +222,8 @@ def print_report(m, tid):
         f"Shallow rows: {m['n_shallow_rows']}"
     )
     print(
-        f"Full diagnostic contract: require_full_diagnostic_depth={m['require_full_diagnostic_depth']} "
-        f"(need >={REQUIRED_DIAGNOSTIC_DEPTH}); available cutoffs: {m['available_cutoffs']}\n"
+        f"Full diagnostic depth required: {m['require_full_diagnostic_depth']} "
+        f"(target depth={REQUIRED_DIAGNOSTIC_DEPTH}); metric cutoffs: {m['available_cutoffs']}\n"
     )
 
     print("Ranking quality (macro avg: per-turn, then across turns)")
@@ -321,17 +288,8 @@ def main(args):
     total_catalog_size = len(music_catalog)
     recommended_20 = agg.pop("_recommended_20")
     recommended_100 = agg.pop("_recommended_100")
-    available_cutoffs = set(agg["available_cutoffs"])
-    agg["catalog_diversity"] = (
-        compute_catalog_diversity(recommended_20, total_catalog_size)
-        if 20 in available_cutoffs
-        else None
-    )
-    agg["catalog_diversity@100"] = (
-        compute_catalog_diversity(recommended_100, total_catalog_size)
-        if 100 in available_cutoffs
-        else None
-    )
+    agg["catalog_diversity"] = compute_catalog_diversity(recommended_20, total_catalog_size)
+    agg["catalog_diversity@100"] = compute_catalog_diversity(recommended_100, total_catalog_size)
     agg["lexical_diversity"] = compute_lexical_diversity(agg.pop("_responses"))
     agg["total_catalog_size"] = total_catalog_size
 

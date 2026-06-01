@@ -7,8 +7,10 @@ an injected fake LiteLLMExtractor so the whole pipeline runs offline.
 from __future__ import annotations
 
 import asyncio
+import sys
 import time
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 
 import pytest
 
@@ -20,6 +22,7 @@ from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
 )
 from mcrs.qu_modules import load_qu_module
 from mcrs.qu_modules.compiler_v0plus_qu import (
+    LiteLLMExtractor,
     V0PlusCompilerQU,
     build_v0plus_compiler_qu,
     session_memory_to_conversation,
@@ -399,6 +402,165 @@ def test_batch_compile_track_ids_trace_handles_extractor_failure():
     assert t["compiler"]["extractor_returned_none"] is True
 
 
+def test_litellm_extractor_manually_stores_only_valid_responses(monkeypatch):
+    completion_kwargs = []
+    stored = []
+
+    class FakeCache:
+        def add_cache(self, result, **kwargs):
+            stored.append((result, kwargs))
+
+    response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(
+                    content='{"turn_intent": "more like Fugazi", "intent_mode": "refinement"}'
+                )
+            )
+        ],
+        model_dump_json=lambda: '{"cached": true}',
+    )
+
+    def fake_completion(**kwargs):
+        completion_kwargs.append(kwargs)
+        return response
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(completion=fake_completion, cache=FakeCache()),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    state = extractor.extract([{"turn": 1, "role": "user", "text": "x"}], [])
+
+    assert state is not None
+    assert state.turn_intent == "more like Fugazi"
+    assert completion_kwargs[0]["cache"] == {"no-store": True}
+    assert stored == [
+        (
+            '{"cached": true}',
+            {key: value for key, value in completion_kwargs[0].items() if key != "cache"},
+        )
+    ]
+
+
+def test_litellm_extractor_does_not_store_malformed_json(monkeypatch):
+    stored = []
+    completion_kwargs = []
+
+    class FakeCache:
+        def add_cache(self, result, **kwargs):
+            stored.append((result, kwargs))
+
+    def fake_completion(**kwargs):
+        completion_kwargs.append(kwargs)
+        return SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content='{"turn_intent": "broken"')
+                )
+            ]
+        )
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(completion=fake_completion, cache=FakeCache()),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    assert extractor.extract([{"turn": 1, "role": "user", "text": "x"}], []) is None
+    assert completion_kwargs[0]["cache"] == {"no-store": True}
+    assert stored == []
+
+
+def test_litellm_extractor_manually_stores_only_valid_responses_async(monkeypatch):
+    completion_kwargs = []
+    stored = []
+
+    class FakeCache:
+        async def async_add_cache(self, result, **kwargs):
+            stored.append((result, kwargs))
+
+    response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(
+                    content='{"turn_intent": "more like Fugazi", "intent_mode": "refinement"}'
+                )
+            )
+        ],
+        model_dump_json=lambda: '{"cached": true}',
+    )
+
+    async def fake_acompletion(**kwargs):
+        completion_kwargs.append(kwargs)
+        return response
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(acompletion=fake_acompletion, cache=FakeCache()),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    state = asyncio.run(extractor.aextract([{"turn": 1, "role": "user", "text": "x"}], []))
+
+    assert state is not None
+    assert state.turn_intent == "more like Fugazi"
+    assert completion_kwargs[0]["cache"] == {"no-store": True}
+    assert stored == [
+        (
+            '{"cached": true}',
+            {key: value for key, value in completion_kwargs[0].items() if key != "cache"},
+        )
+    ]
+
+
+def test_litellm_extractor_no_store_prevents_async_malformed_cache_write(monkeypatch):
+    deferred_bad_writes = []
+    completion_kwargs = []
+
+    async def fake_acompletion(**kwargs):
+        completion_kwargs.append(kwargs)
+        if kwargs.get("cache", {}).get("no-store") is not True:
+            async def deferred_write():
+                await asyncio.sleep(0)
+                deferred_bad_writes.append("bad-json-wrote-after-eviction")
+
+            asyncio.create_task(deferred_write())
+        return SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content='{"turn_intent": "broken"')
+                )
+            ]
+        )
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(acompletion=fake_acompletion, cache=SimpleNamespace()),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    async def exercise_extractor():
+        result = await extractor.aextract([{"turn": 1, "role": "user", "text": "x"}], [])
+        await asyncio.sleep(0)
+        return result
+
+    result = asyncio.run(exercise_extractor())
+
+    assert result is None
+    assert completion_kwargs[0]["cache"] == {"no-store": True}
+    assert deferred_bad_writes == []
+
+
 def test_batch_compile_track_ids_returns_results_in_input_order():
     """`asyncio.gather` preserves order even when tasks complete out of order
     (variable per-call latency). Verify by giving each entry a distinguishable
@@ -503,6 +665,19 @@ def test_build_qu_constructs_lancedb_catalog_from_qu_kwargs(tmp_path, monkeypatc
     assert qu.catalog.artist_id_of("t1") == "a"
 
 
+def test_trace_includes_resolved_targets():
+    state = _state(
+        turn_intent="more like Morphine",
+        mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)],
+    )
+    qu = _build_qu(state)
+    qu.batch_compile_track_ids([[{"role": "user", "content": "hi"}]], topk=10)
+    trace = qu.last_traces[0]
+    rts = trace["resolved_targets"]
+    assert any(r["kind"] == "artist" and r["entity_id"] for r in rts)
+    assert all({"kind", "source_text", "entity_id", "confidence"} <= set(r) for r in rts)
+
+
 def test_build_qu_respects_mcrs_lancedb_uri_env_var(tmp_path, monkeypatch):
     """MCRS_LANCEDB_URI overrides qu_kwargs.lancedb.db_uri — matches the
     precedence used elsewhere in this factory (and on Modal)."""
@@ -540,12 +715,13 @@ def test_build_qu_respects_mcrs_lancedb_uri_env_var(tmp_path, monkeypatch):
 
 
 def test_trace_contains_branches_key():
-    """A v0+ QU run populates trace['branches'] with pools + fused + final."""
+    """A v0+ QU run with branch tracing on populates trace['branches']."""
     state = _state(
         turn_intent="more like Morphine",
         mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)],
     )
     qu = _build_qu(state)
+    qu.compiler.cfg.branch_trace_topk = 50  # enable per-branch tracing
     qu.batch_compile_track_ids([[{"role": "user", "content": "hi"}]], topk=10)
     branches = qu.last_traces[0]["branches"]
 
@@ -568,3 +744,58 @@ def test_shard_slice_math_partitions_all_indices():
                     seen.add(i)
             assert seen == set(range(total)), \
                 f"missed indices for total={total} S={num_shards}: {set(range(total)) - seen}"
+
+
+def test_trace_includes_routing_tags():
+    from experiments.analysis.conversation_state_extraction_bakeoff.schema import RoutingTags
+    state = _state(routing_tags=RoutingTags(lyric_search=True), lyrical_theme="rainy day blues")
+    qu = _build_qu(state)
+    qu.batch_compile_track_ids([[{"role": "user", "content": "hi"}]], topk=10)
+    tr = qu.last_traces[0]
+    assert tr["routing_tags"]["lyric_search"] is True
+    assert tr["lyrical_theme"] == "rainy day blues"
+
+
+def test_routing_boost_survives_yaml_allowlist():
+    """Guards the disco-branch gotcha: a routing_boost in qu_kwargs.compiler must
+    reach CompilerConfig, not be silently dropped by the allowlist filter."""
+    import tests.v0plus_fakes as fakes
+    catalog = _catalog()
+    qu = build_v0plus_compiler_qu(
+        qu_kwargs={"compiler": {"routing_boost": {"lyric_search": 4.0}}},
+        _overrides={
+            "catalog": catalog,
+            "matcher": RapidfuzzCatalogMatcher(catalog),
+            "encoder": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5]),
+            "retriever": FakeRetriever(),
+            "extractor": _FakeExtractor(state=_state()),
+        },
+    )
+    assert qu.compiler.cfg.routing_boost == {"lyric_search": 4.0}
+
+
+def test_resolve_prompt_fns_knows_v4():
+    from mcrs.qu_modules.compiler_v0plus_qu import _resolve_prompt_fns
+    from experiments.analysis.extractor_prompt_v2 import prompts_v4
+    bm, schema = _resolve_prompt_fns("v4")
+    assert bm is prompts_v4.build_messages
+    assert schema is prompts_v4.json_schema_for_response_format
+
+
+def test_openrouter_response_format_goes_in_extra_body_with_require_parameters():
+    """litellm strips a top-level response_format for OpenRouter models, so it
+    must ride in extra_body, with provider.require_parameters to force a
+    schema-enforcing provider. Non-OpenRouter models keep it top-level."""
+    from mcrs.qu_modules.compiler_v0plus_qu import LiteLLMExtractor
+    ex = LiteLLMExtractor(model_name="openrouter/google/gemma-4-26b-a4b-it", prompt_version="v4")
+    kw = ex._build_kwargs(conversation=[{"role": "user", "turn": 1, "text": "hi"}], played_track_ids=[])
+    assert "response_format" not in kw, "top-level response_format would be stripped by litellm"
+    eb = kw["extra_body"]
+    assert eb["response_format"]["type"] == "json_schema"
+    assert eb["provider"] == {"require_parameters": True}
+    assert eb["reasoning"] == {"enabled": False}
+
+    ex2 = LiteLLMExtractor(model_name="openai/gpt-4o", prompt_version="v4")
+    kw2 = ex2._build_kwargs(conversation=[{"role": "user", "turn": 1, "text": "hi"}], played_track_ids=[])
+    assert kw2["response_format"]["type"] == "json_schema"  # top-level for non-OpenRouter
+    assert "extra_body" not in kw2

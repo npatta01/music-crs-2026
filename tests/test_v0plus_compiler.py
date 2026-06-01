@@ -10,14 +10,17 @@ from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
     TrackFeedback,
 )
 from mcrs.qu_modules.compiler_v0plus import (
-    BranchPool,
-    CompileResult,
+    CentroidOnlyBranch,
     CompilerConfig,
     DenseBranch,
     V0PlusCompiler,
 )
 from mcrs.qu_modules.fuzzy_matcher import RapidfuzzCatalogMatcher
-from mcrs.qu_modules.resolver_v0plus import V0PlusResolver
+from mcrs.qu_modules.resolver_v0plus import (
+    ResolvedConversationState,
+    ResolvedTarget,
+    V0PlusResolver,
+)
 from tests.v0plus_fakes import DictCatalog, FakeEmbeddingClient, FakeRetriever
 
 
@@ -87,6 +90,16 @@ def _catalog() -> DictCatalog:
     )
 
 
+class CountingReleaseYearCatalog(DictCatalog):
+    def __post_init__(self) -> None:
+        self.release_year_calls = 0
+        super().__post_init__()
+
+    def release_year_of(self, track_id: str) -> int | None:
+        self.release_year_calls += 1
+        return super().release_year_of(track_id)
+
+
 def _fake_encoder():
     """Fresh FakeEmbeddingClient per test. Returns a fixed vector; tests
     assert on what the compiler does WITH the vector, not its contents."""
@@ -151,6 +164,34 @@ def test_compiler_routes_artist_mention_to_artist_name_channel():
     assert "more like" in by_field["tag_list"]
     # No turn_intent vocab leaks into artist_name — just the bound mention
     assert by_field["artist_name"] == "Morphine"  # would have "more like Morphine" if leaked
+
+
+def test_compiler_emits_one_bm25_clause_per_positive_entity():
+    """Multiple positive mentions of the same entity type should each get their
+    own FieldQuery, not be space-joined into a single multi-token query.
+
+    With the joined form, tantivy's BM25 systematically out-scores docs that
+    match a multi-token name (`"Rolling Stones"`) over docs that match a
+    single-token name (`"Beatles"`), regardless of user intent. Splitting per
+    entity gives each one an independent, normalized BM25 signal."""
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",  # keep intent out so we only see entity clauses
+        mentioned_entities=[
+            MentionedEntity(type="artist", value="Morphine", sentiment=1),
+            MentionedEntity(type="artist", value="Tom Waits", sentiment=1),
+        ],
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder()).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    artist_queries = [c.query for c in clauses if c.field == "artist_name"]
+    # Two separate artist mentions => two separate clauses, NOT one joined.
+    assert "Morphine" in artist_queries
+    assert "Tom Waits" in artist_queries
+    # And the buggy joined form must not appear.
+    assert "Morphine Tom Waits" not in artist_queries
 
 
 def test_compiler_skips_negative_sentiment_mentions_in_bm25():
@@ -234,6 +275,28 @@ def test_compiler_centroid_alpha_zero_on_pivot_means_no_mixing():
             assert abs(a - e) < 1e-9
 
 
+def test_compiler_skips_anchor_centroid_only_branches_on_pivot():
+    catalog = _catalog()
+    retriever = FakeRetriever(embedding_hits=[("t-morphine-2", 0.9)])
+    state = _state(
+        turn_intent="actually take me somewhere totally different",
+        intent_mode="pivot",
+        track_feedback=[
+            TrackFeedback(track_id="t-morphine-1", overall_sentiment=1, role="accepted"),
+        ],
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        centroid_only_branches=[
+            CentroidOnlyBranch(vector_field="metadata_qwen3_embedding_0_6b"),
+        ],
+    )
+
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    assert retriever.embedding_calls == []
+
+
 def test_compiler_centroid_alpha_positive_on_refinement_actually_mixes():
     catalog = _catalog()
     retriever = FakeRetriever()
@@ -265,6 +328,158 @@ def test_compiler_no_dense_call_when_query_string_is_empty():
 
     assert retriever.embedding_calls == []  # dense skipped
     # BM25 may also be empty; that's fine — backfill handles it
+
+
+def test_compiler_routes_single_decade_release_year_range_to_release_decade_bm25():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 1990, "end": 1999},
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        field_boosts={"release_decade": 2.25},
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    assert [
+        (c.field, c.query, c.boost)
+        for c in clauses
+        if c.field in {"release_year", "release_decade"}
+    ] == [("release_decade", "1990s", 2.25)]
+
+
+def test_compiler_routes_exact_release_year_range_to_release_year_bm25():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 1995, "end": 1995},
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        field_boosts={"release_year": 3.5},
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    assert [
+        (c.field, c.query, c.boost)
+        for c in clauses
+        if c.field in {"release_year", "release_decade"}
+    ] == [("release_year", "1995", 3.5)]
+
+
+def test_compiler_routes_cross_decade_release_year_range_to_each_decade_bm25():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 1995, "end": 2004},
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        field_boosts={"release_decade": 2.25},
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    assert [
+        (c.field, c.query, c.boost)
+        for c in clauses
+        if c.field in {"release_year", "release_decade"}
+    ] == [
+        ("release_decade", "1990s", 2.25),
+        ("release_decade", "2000s", 2.25),
+    ]
+
+
+def test_compiler_clamps_open_ended_release_year_range_to_catalog_decades():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 2000, "end": None},
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        field_boosts={"release_decade": 2.25},
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    assert [
+        (c.field, c.query, c.boost)
+        for c in clauses
+        if c.field in {"release_year", "release_decade"}
+    ] == [
+        ("release_decade", "2000s", 2.25),
+        ("release_decade", "2010s", 2.25),
+    ]
+
+
+def test_compiler_keeps_release_year_range_fts_disabled_by_default():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 1990, "end": 1999},
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder()).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    assert [
+        c for c in clauses
+        if c.field in {"release_year", "release_decade"}
+    ] == []
+
+
+def test_compiler_does_not_scan_release_year_bounds_when_fts_boosts_disabled():
+    catalog = CountingReleaseYearCatalog(tracks=_catalog().tracks)
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 2000, "end": None},
+    )
+    cfg = CompilerConfig(enable_dense=False)
+
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    assert catalog.release_year_calls == 0
+
+
+def test_compiler_reuses_catalog_release_year_bounds_for_open_ranges():
+    catalog = CountingReleaseYearCatalog(tracks=_catalog().tracks)
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 2000, "end": None},
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        field_boosts={"release_decade": 2.25},
+    )
+    compiler = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg)
+    resolved = _resolve(state, catalog)
+
+    compiler.compile(resolved)
+    compiler.compile(resolved)
+
+    assert catalog.release_year_calls == len(catalog.tracks)
+
+
+def test_compiler_config_merges_default_field_boosts_without_mutating_input():
+    field_boosts = {"tag_list": 9.0}
+
+    cfg = CompilerConfig(field_boosts=field_boosts)
+
+    assert field_boosts == {"tag_list": 9.0}
+    assert cfg.field_boosts["tag_list"] == 9.0
+    assert cfg.field_boosts["track_name"] == 3.0
+    assert cfg.field_boosts["release_year"] == 0.0
+    assert cfg.field_boosts["release_decade"] == 0.0
 
 
 # ---------------------------------------------------------------------
@@ -334,6 +549,32 @@ def test_compiler_hard_drops_resolved_artist_rejections():
     assert "t-fugazi-2" not in result
     # Morphine survives
     assert "t-morphine-1" in result
+
+
+def test_compiler_backfill_respects_artist_level_hard_exclusions():
+    """When a rejection resolves to BOTH track_ids and artist_ids (per the
+    `_apply_soft_adjustments` comment "kind='track' still resolves the owning
+    artist"), `_backfill` must also honor the artist-level exclusion. Otherwise
+    popularity-sorted backfill silently re-admits tracks by the rejected
+    artist, undoing the post-fusion hard exclusion."""
+    catalog = _catalog()
+    # Force backfill: BM25 returns no hits, so the only way the result list
+    # gets to 1000 is via the popularity-sorted backfill in _backfill.
+    retriever = FakeRetriever(text_hits_by_field={})
+    state = _state(
+        explicit_rejections=[
+            ExplicitRejection(kind="track", value="Cure for Pain", source_turn=2),
+        ],
+    )
+    result = V0PlusCompiler(catalog, retriever, _fake_encoder()).compile(
+        _resolve(state, catalog)
+    )
+
+    # Both morphine tracks must stay out: t-morphine-1 via the track id,
+    # t-morphine-2 via the artist id. Pre-fix, t-morphine-2 sneaks back in
+    # through popularity-sorted backfill.
+    assert "t-morphine-1" not in result
+    assert "t-morphine-2" not in result
 
 
 def test_compiler_release_date_filter_excludes_out_of_range_tracks():
@@ -475,6 +716,25 @@ def test_compiler_backfill_respects_hard_drops():
     assert "t-filler-1" not in result  # never re-introduced via backfill
 
 
+def test_compiler_skips_malformed_release_date_filter():
+    """A `between` filter with missing bounds should be a no-op, not blow up
+    the candidate pool. Regression: previously the catalog returned `set()`
+    for malformed filters and the compiler intersected → empty pool.
+    """
+    catalog = _catalog()
+    retriever = FakeRetriever(
+        text_hits_by_field={"tag_list": [("t-morphine-1", 5.0), ("t-tomwaits-1", 4.0)]},
+    )
+    # Construct a malformed filter the way the LLM occasionally does
+    bogus = HardFilter(field="release_date", op="between")
+    state = _state(hard_filters=[bogus])
+    result = V0PlusCompiler(catalog, retriever, _fake_encoder()).compile(_resolve(state, catalog))
+
+    # Pool should not be wiped by the malformed filter; both hits survive
+    assert "t-morphine-1" in result
+    assert "t-tomwaits-1" in result
+
+
 def test_compiler_backfill_respects_release_date_mask():
     catalog = _catalog()
     retriever = FakeRetriever(text_hits_by_field={"tag_list": [("t-morphine-1", 5.0)]})
@@ -537,6 +797,7 @@ def test_compiler_respects_custom_dense_branches_config():
             MentionedEntity(type="artist", value="Morphine", sentiment=1),
         ],
     )
+    from mcrs.qu_modules.compiler_v0plus import DenseBranch
     cfg = CompilerConfig(
         dense_branches=[
             DenseBranch(vector_field="metadata_qwen3_embedding_0_6b"),
@@ -548,102 +809,781 @@ def test_compiler_respects_custom_dense_branches_config():
 
 
 # ---------------------------------------------------------------------
-# CompileResult / BranchPool (Task 1)
+# Per-branch encoder / query-template dispatch (R1-R4 text-side work)
 # ---------------------------------------------------------------------
 
 
-def _compiler_with_hits():
-    """Compiler whose BM25 + one dense branch return scripted hits."""
+def _branch(**overrides):
+    """Shorthand for a DenseBranch — keeps tests readable when the branch
+    list contains many entries differing only in encoder_id / query_id."""
+    from mcrs.qu_modules.compiler_v0plus import DenseBranch
+    defaults = dict(vector_field="metadata_qwen3_embedding_0_6b")
+    defaults.update(overrides)
+    return DenseBranch(**defaults)
+
+
+def test_compiler_encodes_each_query_template_once_per_compile():
+    """When two branches share `(encoder_id, query_id)`, the compiler must
+    encode that query string exactly once and reuse the vector — even though
+    the branches point at different vector columns. This is the v4-shape
+    caching contract."""
     catalog = _catalog()
     retriever = FakeRetriever(
-        text_hits_by_field={
-            "track_name": [("t-morphine-1", 5.0), ("t-fugazi-1", 3.0)],
-        },
-        embedding_hits=[("t-morphine-2", 0.9), ("t-fugazi-2", 0.8)],
+        text_hits_by_field={"artist_name": [("t-morphine-1", 5.0)]},
+        embedding_hits=[("t-morphine-1", 0.9)],
+    )
+    state = _state(
+        mentioned_entities=[
+            MentionedEntity(type="tag", value="smoky", sentiment=1),
+        ],
+    )
+    encoder = FakeEmbeddingClient(vector=[0.1, 0.2, 0.3])
+    cfg = CompilerConfig(
+        dense_branches=[
+            _branch(vector_field="vec_a", encoder_id="default", query_id="sonic"),
+            _branch(vector_field="vec_b", encoder_id="default", query_id="sonic"),
+            _branch(vector_field="vec_c", encoder_id="default", query_id="sonic_nl"),
+        ]
+    )
+    V0PlusCompiler(catalog, retriever, encoder, cfg).compile(_resolve(state, catalog))
+
+    # 2 unique (encoder, query) pairs => 2 encode calls (NOT 3).
+    assert len(encoder.calls) == 2
+    # All three branches were searched.
+    assert len(retriever.embedding_calls) == 3
+
+
+def test_compiler_routes_each_branch_to_named_encoder():
+    """`encoder_id` dispatches to the corresponding entry in the encoders map.
+    Two branches naming different encoder_ids must hit different clients."""
+    catalog = _catalog()
+    retriever = FakeRetriever(
+        text_hits_by_field={"artist_name": [("t-morphine-1", 5.0)]},
+        embedding_hits=[("t-morphine-1", 0.9)],
+    )
+    state = _state(
+        mentioned_entities=[
+            MentionedEntity(type="tag", value="smoky", sentiment=1),
+        ],
+    )
+    qwen3 = FakeEmbeddingClient(vector=[1.0, 0.0, 0.0])
+    siglip = FakeEmbeddingClient(vector=[0.0, 1.0, 0.0])
+    clap = FakeEmbeddingClient(vector=[0.0, 0.0, 1.0])
+    cfg = CompilerConfig(
+        dense_branches=[
+            _branch(vector_field="metadata_qwen3_embedding_0_6b",
+                    encoder_id="default", query_id="intent"),
+            _branch(vector_field="image_siglip2",
+                    encoder_id="siglip2_text", query_id="visual"),
+            _branch(vector_field="audio_laion_clap",
+                    encoder_id="clap_text", query_id="sonic"),
+        ]
+    )
+    V0PlusCompiler(
+        catalog,
+        retriever,
+        encoders={"default": qwen3, "siglip2_text": siglip, "clap_text": clap},
+        config=cfg,
+    ).compile(_resolve(state, catalog))
+
+    assert len(qwen3.calls) == 1
+    assert len(siglip.calls) == 1
+    assert len(clap.calls) == 1
+
+
+def test_compiler_unknown_encoder_id_raises_keyerror():
+    """Branches referencing an encoder_id missing from the map must fail
+    fast with a clear message (caught at compile time, not silently dropped)."""
+    import pytest
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        mentioned_entities=[MentionedEntity(type="tag", value="smoky", sentiment=1)],
     )
     cfg = CompilerConfig(
-        final_topk=10,
-        bm25_k=10,
-        dense_k=10,
-        dense_branches=[DenseBranch(vector_field="metadata_qwen3_embedding_0_6b")],
+        dense_branches=[
+            _branch(encoder_id="missing_encoder", query_id="intent"),
+        ]
     )
-    compiler = V0PlusCompiler(
-        catalog=catalog,
-        retriever=retriever,
-        encoder=FakeEmbeddingClient(),
-        config=cfg,
-    )
-    return compiler
+    compiler = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg)
+    with pytest.raises(KeyError, match="missing_encoder"):
+        compiler.compile(_resolve(state, catalog))
 
 
-def _resolved_state_track_query():
-    """A resolved state with a free-text turn_intent so BM25 + dense both fire."""
+def test_compiler_unknown_query_id_raises_keyerror():
+    """Branches with a query_id that has no registered builder must fail fast."""
+    import pytest
     catalog = _catalog()
-    state = _state(turn_intent="smoky lounge")
-    resolver = V0PlusResolver(RapidfuzzCatalogMatcher(catalog), catalog)
-    return resolver.resolve(state, played_track_ids=[])
-
-
-def test_compile_returns_list_of_str_unchanged():
-    compiler = _compiler_with_hits()
-    rs = _resolved_state_track_query()
-    out = compiler.compile(rs)
-    assert isinstance(out, list)
-    assert all(isinstance(t, str) for t in out)
-
-
-def test_internal_compile_returns_compileresult_with_ranked_equal_to_compile():
-    compiler = _compiler_with_hits()
-    rs = _resolved_state_track_query()
-    out = compiler.compile(rs)
-    res = compiler._compile(rs)
-    assert isinstance(res, CompileResult)
-    assert res.ranked == out
-
-
-def test_compile_result_has_named_branch_pools():
-    compiler = _compiler_with_hits()
-    rs = _resolved_state_track_query()
-    res = compiler._compile(rs)
-    names = [p.name for p in res.branch_pools]
-    assert "bm25" in names
-    assert "dense:metadata_qwen3_embedding_0_6b" in names
-    for p in res.branch_pools:
-        assert isinstance(p, BranchPool)
-        assert all(isinstance(t, str) and isinstance(s, float) for t, s in p.hits)
-
-
-def test_to_trace_dict_shape_and_recommended():
-    compiler = _compiler_with_hits()
-    rs = _resolved_state_track_query()
-    res = compiler._compile(rs)
-    d = res.to_trace_dict()
-
-    assert set(d.keys()) == {"depth", "pools", "fused", "final", "recommended"}
-    assert d["depth"] == 10  # cfg.final_topk in _compiler_with_hits
-
-    # pools: list of {name, hits:[[id, score], ...]}
-    for pool in d["pools"]:
-        assert set(pool.keys()) == {"name", "hits"}
-        for hit in pool["hits"]:
-            assert len(hit) == 2 and isinstance(hit[0], str)
-
-    # final + recommended consistency
-    assert d["final"]["track_ids"] == res.ranked
-    assert d["recommended"]["top1_track_id"] == (res.ranked[0] if res.ranked else None)
-    assert d["final"]["n_from_fusion"] + d["final"]["n_from_backfill"] == len(res.ranked)
-
-
-def test_provenance_counts_pure_backfill_when_no_hits():
-    """No BM25/dense hits → final list is entirely popularity backfill."""
-    catalog = _catalog()
-    retriever = FakeRetriever()  # returns nothing
-    cfg = CompilerConfig(final_topk=5, dense_branches=[], enable_dense=False)
-    compiler = V0PlusCompiler(
-        catalog=catalog, retriever=retriever, encoder=FakeEmbeddingClient(), config=cfg
+    retriever = FakeRetriever()
+    state = _state()
+    cfg = CompilerConfig(
+        dense_branches=[_branch(query_id="not_a_real_template")],
     )
-    rs = _resolved_state_track_query()
-    res = compiler._compile(rs)
-    assert res.n_from_fusion == 0
-    assert res.n_from_backfill == len(res.ranked)
-    assert res.to_trace_dict()["recommended"]["top1_track_id"] == res.ranked[0]
+    compiler = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg)
+    with pytest.raises(KeyError, match="not_a_real_template"):
+        compiler.compile(_resolve(state, catalog))
+
+
+def test_branch_traces_use_distinct_keys_for_each_branch():
+    """v4 defines three CLAP branches that share (encoder_id, vector_field) and
+    differ only by query_id. The branch_rankings trace key MUST include
+    query_id so the three branches don't collapse to one entry — the bug
+    surfaced by reviewer audit before merge."""
+    catalog = _catalog()
+    retriever = FakeRetriever(
+        text_hits_by_field={"artist_name": [("t-morphine-1", 5.0)]},
+        embedding_hits=[("t-morphine-1", 0.9)],
+    )
+    state = _state(
+        mentioned_entities=[MentionedEntity(type="tag", value="smoky", sentiment=1)],
+    )
+    cfg = CompilerConfig(
+        branch_trace_topk=10,
+        dense_branches=[
+            _branch(vector_field="audio_laion_clap",
+                    encoder_id="default", query_id="sonic"),
+            _branch(vector_field="audio_laion_clap",
+                    encoder_id="default", query_id="sonic_nl"),
+            _branch(vector_field="audio_laion_clap",
+                    encoder_id="default", query_id="sonic_nl_enriched"),
+        ],
+    )
+    res = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg)._compile(
+        _resolve(state, catalog)
+    )
+    traces = {p.name: [t for t, _ in p.hits] for p in res.branch_pools}
+
+    dense_keys = [k for k in traces if k.startswith("dense.")]
+    # Three branches => three distinct dense trace entries (NOT one collapsed).
+    assert len(dense_keys) == 3
+    assert len(set(dense_keys)) == 3
+    # Each key includes both query_id and vector_field.
+    for qid in ("sonic", "sonic_nl", "sonic_nl_enriched"):
+        assert any(qid in k and "audio_laion_clap" in k for k in dense_keys), (
+            f"missing trace key for query_id={qid}: {dense_keys}"
+        )
+
+
+def test_branch_traces_off_by_default():
+    """`branch_trace_topk=0` (default) means branch_pools is empty — keeps the
+    diagnostic free in prod."""
+    catalog = _catalog()
+    res = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())._compile(_resolve(_state(), catalog))
+    assert res.branch_pools == []
+
+
+# ---------------------------------------------------------------------
+# Query template content (sonic / visual / sonic_nl / lyric)
+# ---------------------------------------------------------------------
+
+
+def _capture_query_text(state, query_id, encoder=None) -> str | None:
+    """Helper: run compile() with one dense branch using `query_id` and
+    return the string actually handed to the encoder (or None if the
+    branch was skipped)."""
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    encoder = encoder or FakeEmbeddingClient()
+    cfg = CompilerConfig(
+        dense_branches=[_branch(query_id=query_id)],
+    )
+    V0PlusCompiler(catalog, retriever, encoder, cfg).compile(_resolve(state, catalog))
+    if not encoder.calls:
+        return None
+    return encoder.calls[0][0]
+
+
+def test_sonic_query_uses_music_prefixed_tag_list():
+    """`sonic` (CLAP music) template: "music: {tags}; {turn_intent}"."""
+    state = _state(
+        turn_intent="energetic and intense",
+        mentioned_entities=[
+            MentionedEntity(type="tag", value="punk", sentiment=1),
+            MentionedEntity(type="tag", value="hardcore", sentiment=1),
+        ],
+    )
+    q = _capture_query_text(state, "sonic")
+    assert q is not None and q.startswith("music: ")
+    assert "punk" in q and "hardcore" in q
+    assert "energetic and intense" in q
+
+
+def test_visual_query_uses_album_cover_prefix():
+    """`visual` (SigLIP-2) template: "album cover, {tags}"."""
+    state = _state(
+        turn_intent="moody atmospheric",
+        mentioned_entities=[
+            MentionedEntity(type="tag", value="indie", sentiment=1),
+            MentionedEntity(type="tag", value="dreamy", sentiment=1),
+        ],
+    )
+    q = _capture_query_text(state, "visual")
+    assert q is not None and q.startswith("album cover, ")
+    assert "indie" in q and "dreamy" in q
+
+
+def test_sonic_nl_query_uses_natural_language_phrasing():
+    """`sonic_nl` template: "A song with {tags} sound, similar to {artists}"."""
+    state = _state(
+        mentioned_entities=[
+            MentionedEntity(type="tag", value="indie", sentiment=1),
+            MentionedEntity(type="artist", value="Fugazi", sentiment=1),
+        ],
+    )
+    q = _capture_query_text(state, "sonic_nl")
+    assert q is not None
+    assert "A song with indie sound" in q
+    assert "similar to Fugazi" in q
+
+
+def test_sonic_nl_query_skips_negative_sentiment_mentions():
+    """Negative-sentiment entities must not leak into the natural-language
+    query — they describe what the user does NOT want."""
+    state = _state(
+        mentioned_entities=[
+            MentionedEntity(type="tag", value="punk", sentiment=1),
+            MentionedEntity(type="tag", value="metal", sentiment=-1),
+            MentionedEntity(type="artist", value="Fugazi", sentiment=-1),
+        ],
+    )
+    q = _capture_query_text(state, "sonic_nl")
+    assert q is not None
+    assert "punk" in q
+    assert "metal" not in q
+    assert "Fugazi" not in q
+
+
+def test_lyric_query_skips_when_intent_has_no_lyric_signal():
+    """No hint vocabulary in state => `lyric` template returns None (the
+    compiler converts this to an empty hit list that RRF ignores)."""
+    state = _state(
+        turn_intent="upbeat dance music",
+        mentioned_entities=[
+            MentionedEntity(type="tag", value="dance", sentiment=1),
+            MentionedEntity(type="tag", value="electronic", sentiment=1),
+        ],
+    )
+    q = _capture_query_text(state, "lyric")
+    assert q is None
+
+
+def test_lyric_query_skipped_branch_does_not_emit_encode_call():
+    """When the lyric branch is skipped (no lyric signal), the compiler must
+    NOT encode anything for it — wasted Modal RPC otherwise."""
+    state = _state(
+        turn_intent="upbeat dance",
+        mentioned_entities=[MentionedEntity(type="tag", value="dance", sentiment=1)],
+    )
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    encoder = FakeEmbeddingClient()
+    cfg = CompilerConfig(
+        dense_branches=[_branch(query_id="lyric")],
+    )
+    V0PlusCompiler(catalog, retriever, encoder, cfg).compile(_resolve(state, catalog))
+    # No query string => no encode call AND no search_embedding call.
+    assert encoder.calls == []
+    assert retriever.embedding_calls == []
+
+
+# ---------------------------------------------------------------------
+# Resolver: ground positive mentioned_entities into resolved_targets
+# ---------------------------------------------------------------------
+
+
+def test_resolver_grounds_positive_artist_mention():
+    catalog = _catalog()
+    state = _state(mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)])
+    rs = _resolve(state, catalog)
+    arts = [t for t in rs.resolved_targets if t.kind == "artist"]
+    assert len(arts) == 1
+    assert arts[0].entity_id == "a-morphine"
+    assert arts[0].confidence >= 90
+    assert arts[0].source_text == "Morphine"
+
+
+def test_resolver_grounds_fuzzy_artist_spelling():
+    catalog = _catalog()
+    state = _state(mentioned_entities=[MentionedEntity(type="artist", value="morphine", sentiment=1)])
+    rs = _resolve(state, catalog)
+    assert any(t.kind == "artist" and t.entity_id == "a-morphine" for t in rs.resolved_targets)
+
+
+def test_resolver_grounds_exact_track_title():
+    catalog = _catalog()
+    state = _state(mentioned_entities=[MentionedEntity(type="track", value="Cure for Pain", sentiment=1)])
+    rs = _resolve(state, catalog)
+    tracks = [t for t in rs.resolved_targets if t.kind == "track"]
+    assert tracks and tracks[0].entity_id == "t-morphine-1"
+
+
+def test_resolver_does_not_ground_negative_sentiment_mention():
+    catalog = _catalog()
+    state = _state(mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=-1)])
+    rs = _resolve(state, catalog)
+    assert rs.resolved_targets == ()
+
+
+def test_resolver_grounds_nothing_for_unknown_surface_form():
+    catalog = _catalog()
+    state = _state(mentioned_entities=[MentionedEntity(type="artist", value="Zzqxwv Nobody", sentiment=1)])
+    rs = _resolve(state, catalog)
+    arts = [t for t in rs.resolved_targets if t.kind == "artist"]
+    assert len(arts) == 1
+    assert arts[0].entity_id is None
+    assert arts[0].confidence == 0.0
+    assert arts[0].candidates == ()
+
+
+def test_resolver_ignores_tag_and_album_for_grounding():
+    catalog = _catalog()
+    state = _state(mentioned_entities=[
+        MentionedEntity(type="tag", value="smoky", sentiment=1),
+        MentionedEntity(type="album", value="Cure for Pain", sentiment=1),
+    ])
+    rs = _resolve(state, catalog)
+    assert rs.resolved_targets == ()
+
+
+def _disco_cfg(**overrides):
+    base = dict(
+        enable_resolved_artist_discography=True,
+        disco_weight=1.0,
+        disco_cap=10,
+        disco_confidence_threshold=90.0,
+        disco_gated_intents=("pivot",),
+        branch_trace_topk=100,
+    )
+    base.update(overrides)
+    return CompilerConfig(**base)
+
+
+def test_discography_branch_emits_artist_tracks_popularity_ordered():
+    catalog = _catalog()
+    state = _state(mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)])
+    rs = _resolve(state, catalog)
+    res = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _disco_cfg())._compile(rs)
+    traces = {p.name: [t for t, _ in p.hits] for p in res.branch_pools}
+    pool = traces["lookup.resolved_artist_discography"]
+    assert pool[:2] == ["t-morphine-1", "t-morphine-2"]  # pop 70 before 55
+
+
+def test_discography_branch_disabled_by_default():
+    catalog = _catalog()
+    state = _state(mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)])
+    rs = _resolve(state, catalog)
+    cfg = CompilerConfig(branch_trace_topk=100)  # enable flag defaults False
+    res = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)._compile(rs)
+    traces = {p.name: [t for t, _ in p.hits] for p in res.branch_pools}
+    assert "lookup.resolved_artist_discography" not in traces
+
+
+def test_discography_branch_skips_below_confidence_threshold():
+    catalog = _catalog()
+    state = _state()
+    rs = ResolvedConversationState(
+        state=state,
+        resolved_targets=(ResolvedTarget(kind="artist", source_text="x",
+                                         entity_id="a-morphine", confidence=50.0),),
+    )
+    res = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _disco_cfg())._compile(rs)
+    traces = {p.name: [t for t, _ in p.hits] for p in res.branch_pools}
+    assert "lookup.resolved_artist_discography" not in traces
+
+
+def test_discography_branch_gated_off_on_pivot():
+    catalog = _catalog()
+    state = _state(intent_mode="pivot",
+                   mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)])
+    rs = _resolve(state, catalog)
+    res = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _disco_cfg())._compile(rs)
+    traces = {p.name: [t for t, _ in p.hits] for p in res.branch_pools}
+    assert "lookup.resolved_artist_discography" not in traces
+
+
+def test_discography_branch_respects_hard_drop():
+    catalog = _catalog()
+    state = _state(mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)])
+    rs = _resolve(state, catalog, played_track_ids=["t-morphine-1"])
+    result = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _disco_cfg()).compile(rs)
+    # Played track is hard-dropped from the final candidates; the other
+    # discography track is brought in.
+    assert "t-morphine-1" not in result
+    assert "t-morphine-2" in result
+
+
+def test_routing_tags_default_false_and_settable():
+    from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
+        ConversationStateV0Plus, RoutingTags,
+    )
+    s = _state()
+    assert isinstance(s.routing_tags, RoutingTags)
+    assert s.routing_tags.lyric_search is False
+    assert s.lyrical_theme is None
+    s2 = _state(routing_tags=RoutingTags(lyric_search=True), lyrical_theme="heartbreak and longing")
+    assert s2.routing_tags.lyric_search is True
+    assert s2.lyrical_theme == "heartbreak and longing"
+    # round-trips through a model_dump
+    assert ConversationStateV0Plus.model_validate(s2.model_dump()).routing_tags.lyric_search is True
+
+
+def test_lyric_query_uses_organizer_doc_format():
+    catalog = _catalog()
+    state = _state(lyrical_theme="heartbreak and city nights")
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())
+    q = compiler._build_lyric_query_string(rs)
+    assert q == "music lyrics :heartbreak and city nights"
+
+
+def test_lyric_query_none_without_theme():
+    catalog = _catalog()
+    rs = _resolve(_state(lyrical_theme=None), catalog)
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())
+    assert compiler._build_lyric_query_string(rs) is None
+
+
+def test_routing_multiplier_boosts_matching_branch():
+    from experiments.analysis.conversation_state_extraction_bakeoff.schema import RoutingTags
+    catalog = _catalog()
+    cfg = CompilerConfig(routing_boost={"lyric_search": 3.0, "exact_entity_probe": 2.0})
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)
+    rs = _resolve(_state(routing_tags=RoutingTags(lyric_search=True)), catalog)
+    assert compiler._routing_multiplier("dense.lyric", rs) == 3.0
+    assert compiler._routing_multiplier("bm25", rs) == 1.0          # exact_entity_probe not set
+    assert compiler._routing_multiplier("centroid.image", rs) == 1.0
+
+
+def test_routing_multiplier_default_one_when_unconfigured():
+    from experiments.analysis.conversation_state_extraction_bakeoff.schema import RoutingTags
+    catalog = _catalog()
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())  # no routing_boost
+    rs = _resolve(_state(routing_tags=RoutingTags(lyric_search=True, exact_entity_probe=True)), catalog)
+    assert compiler._routing_multiplier("dense.lyric", rs) == 1.0
+    assert compiler._routing_multiplier("bm25", rs) == 1.0
+
+
+def test_routing_multiplier_unmapped_kind_is_one():
+    from experiments.analysis.conversation_state_extraction_bakeoff.schema import RoutingTags
+    catalog = _catalog()
+    cfg = CompilerConfig(routing_boost={"lyric_search": 3.0})
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)
+    rs = _resolve(_state(routing_tags=RoutingTags(lyric_search=True)), catalog)
+    assert compiler._routing_multiplier("dense.other", rs) == 1.0
+
+
+def test_lyric_branch_fires_and_is_weighted_on_lyric_search():
+    from experiments.analysis.conversation_state_extraction_bakeoff.schema import RoutingTags
+    catalog = _catalog()
+    enc = _fake_encoder()  # FakeEmbeddingClient records every embed_batch() text in `.calls`
+    cfg = CompilerConfig(
+        enable_dense=True,
+        dense_branches=[DenseBranch(
+            vector_field="lyrics_qwen3_embedding_0_6b", weight=1.0, query_id="lyric")],
+        routing_boost={"lyric_search": 5.0},
+        branch_trace_topk=50,
+    )
+    retr = FakeRetriever(embedding_hits=[("t-morphine-1", 0.9)])
+    state = _state(lyrical_theme="late night loneliness",
+                   routing_tags=RoutingTags(lyric_search=True))
+    rs = _resolve(state, catalog)
+    res = V0PlusCompiler(catalog, retr, enc, cfg)._compile(rs)
+    traces = {p.name: [t for t, _ in p.hits] for p in res.branch_pools}
+    assert any(k.startswith("dense.") and "lyric" in k for k in traces)
+    encoded = [t for call in enc.calls for t in call]
+    assert "music lyrics :late night loneliness" in encoded
+
+
+# ---------------------------------------------------------------------
+# Similar-artist anchoring (Fix 1, issue #74)
+# ---------------------------------------------------------------------
+
+
+def _sa_catalog() -> DictCatalog:
+    """Catalog where the referenced artist (a-morphine) has 3 tracks of varied
+    popularity WITH cf_bpr vectors, plus an other-artist track. Lets us verify
+    similar-artist anchors feed the cf_bpr centroid even with no played
+    anchors (turn-1 / pivot)."""
+    return DictCatalog(
+        tracks={
+            "t-mor-1": {
+                "artist_id": "a-morphine", "artist_name": "Morphine",
+                "track_name": "Cure for Pain", "tag_list": ["alt-rock"],
+                "popularity": 100.0, "vectors": {"cf_bpr": [1.0, 0.0]},
+            },
+            "t-mor-2": {
+                "artist_id": "a-morphine", "artist_name": "Morphine",
+                "track_name": "Buena", "tag_list": ["alt-rock"],
+                "popularity": 50.0, "vectors": {"cf_bpr": [0.0, 1.0]},
+            },
+            "t-mor-3": {
+                "artist_id": "a-morphine", "artist_name": "Morphine",
+                "track_name": "Honey White", "tag_list": ["alt-rock"],
+                "popularity": 10.0, "vectors": {"cf_bpr": [1.0, 1.0]},
+            },
+            "t-other-1": {
+                "artist_id": "a-other", "artist_name": "Other Band",
+                "track_name": "Other Song", "tag_list": ["pop"],
+                "popularity": 75.0, "vectors": {"cf_bpr": [0.5, 0.5]},
+            },
+        }
+    )
+
+
+def _sa_rs(catalog=None, confidence=90.0, targets=None, intent_mode="open_explore",
+           routing_tags=None):
+    """ResolvedConversationState with NO played tracks (turn 1) and a resolved
+    reference artist, mirroring the disco tests. Defaults to an intent the
+    similar-artist gate ALLOWS (open_explore) so injection tests exercise
+    injection; the gate itself is covered separately."""
+    if targets is None:
+        targets = (
+            ResolvedTarget(kind="artist", source_text="Morphine",
+                           entity_id="a-morphine", confidence=confidence),
+        )
+    state_kwargs = dict(turn_intent="more bands like Morphine", intent_mode=intent_mode)
+    if routing_tags is not None:
+        state_kwargs["routing_tags"] = routing_tags
+    return ResolvedConversationState(
+        state=_state(**state_kwargs),
+        resolved_targets=tuple(targets),
+    )
+
+
+def _sa_cfg(**overrides):
+    """Similar-artist anchoring ON, one cf_bpr centroid branch, dense OFF."""
+    cfg = dict(
+        enable_dense=False,
+        enable_similar_artist_anchors=True,
+        similar_artist_anchor_topk=3,
+        similar_artist_confidence_threshold=90.0,
+        similar_artist_max_artists=5,
+        centroid_only_branches=[
+            CentroidOnlyBranch(vector_field="cf_bpr", weight=1.0, topk=1000),
+        ],
+        branch_trace_topk=50,
+    )
+    cfg.update(overrides)
+    return CompilerConfig(**cfg)
+
+
+def test_similar_artist_anchors_disabled_by_default():
+    # Flag off (default): no played tracks + a resolved artist must NOT produce
+    # a centroid — identical to baseline (no similar-artist tracks injected).
+    catalog = _sa_catalog()
+    retriever = FakeRetriever(embedding_hits=[("t-mor-1", 0.9)])
+    cfg = _sa_cfg(enable_similar_artist_anchors=False)
+    compiler = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg)
+    rs = _sa_rs(catalog)
+    assert compiler._similar_artist_anchor_track_ids(rs) == []
+    compiler.compile(rs)
+    # No anchors at all => centroid branch fires no embedding search.
+    assert retriever.embedding_calls == []
+
+
+def test_similar_artist_anchors_inject_referenced_artist_tracks():
+    # Flag on, a resolved artist (conf >= 90) and NO played tracks (turn 1) =>
+    # the centroid branch now PRODUCES a result from that artist's top tracks.
+    import pytest
+
+    catalog = _sa_catalog()
+    retriever = FakeRetriever(embedding_hits=[("t-mor-1", 0.9)])
+    compiler = V0PlusCompiler(catalog, retriever, _fake_encoder(), _sa_cfg())
+    rs = _sa_rs(catalog)
+    assert compiler._similar_artist_anchor_track_ids(rs) == [
+        "t-mor-1", "t-mor-2", "t-mor-3",
+    ]
+    compiler.compile(rs)
+    assert retriever.embedding_calls, "centroid branch should have fired"
+    call = retriever.embedding_calls[0]
+    assert call["vector_field"] == "cf_bpr"
+    # Centroid is the normalized mean of the 3 injected cf_bpr vectors:
+    # ([1,0] + [0,1] + [1,1]) / 3 = [2/3, 2/3] -> normalized = [1/sqrt2]*2.
+    inv = 1.0 / (2.0 ** 0.5)
+    assert call["query_vector"] == pytest.approx([inv, inv])
+
+
+def test_similar_artist_anchors_respect_confidence_threshold():
+    catalog = _sa_catalog()
+    retriever = FakeRetriever(embedding_hits=[("t-mor-1", 0.9)])
+    compiler = V0PlusCompiler(
+        catalog, retriever, _fake_encoder(),
+        _sa_cfg(similar_artist_confidence_threshold=90.0),
+    )
+    rs = _sa_rs(catalog, confidence=80.0)  # below threshold
+    assert compiler._similar_artist_anchor_track_ids(rs) == []
+    compiler.compile(rs)
+    assert retriever.embedding_calls == []  # no centroid without anchors
+
+
+def test_similar_artist_anchors_cap():
+    # 6 artists, 4 cf_bpr-vector tracks each; cap to 2 artists x 2 tracks.
+    tracks: dict[str, dict] = {}
+    for ai in range(6):
+        for ti in range(4):
+            tracks[f"t-{ai}-{ti}"] = {
+                "artist_id": f"a-{ai}", "artist_name": f"Artist {ai}",
+                "track_name": f"Song {ai}-{ti}", "tag_list": ["rock"],
+                "popularity": float(100 - ti),  # ti=0 most popular
+                "vectors": {"cf_bpr": [1.0, 0.0]},
+            }
+    catalog = DictCatalog(tracks=tracks)
+    retriever = FakeRetriever(embedding_hits=[("t-0-0", 0.9)])
+    compiler = V0PlusCompiler(
+        catalog, retriever, _fake_encoder(),
+        _sa_cfg(similar_artist_max_artists=2, similar_artist_anchor_topk=2),
+    )
+    targets = [
+        ResolvedTarget(kind="artist", source_text=f"Artist {ai}",
+                       entity_id=f"a-{ai}", confidence=95.0)
+        for ai in range(6)
+    ]
+    rs = _sa_rs(catalog, targets=targets)
+    ids = compiler._similar_artist_anchor_track_ids(rs)
+    # 2 artists (cap), 2 top-popularity tracks each (ti 0,1) => 4 ids.
+    assert ids == ["t-0-0", "t-0-1", "t-1-0", "t-1-1"]
+
+
+def test_similar_artist_anchors_do_not_change_tag_expansion():
+    # Tag expansion (the tag_list BM25 channel) stays based on PLAYED anchors
+    # only — similar-artist anchors are vector-centroid-only.
+    catalog = _sa_catalog()
+    retriever = FakeRetriever()
+    compiler = V0PlusCompiler(
+        catalog, retriever, _fake_encoder(), _sa_cfg(anchor_tag_expansion_n=5),
+    )
+    rs = _sa_rs(catalog)
+    # No played anchors => no anchor tags, even though similar-artist anchors
+    # exist for the centroid.
+    assert compiler._top_anchor_tags(rs, 5) == []
+    assert compiler._similar_artist_anchor_track_ids(rs) == [
+        "t-mor-1", "t-mor-2", "t-mor-3",
+    ]
+
+
+def test_similar_artist_anchors_intent_gate():
+    """Injection fires only when the named artist is the retrieval target this
+    turn: on the allowed intents (open_explore / pivot) or an exact_entity_probe
+    turn, and NOT on refinement / playlist_build (where the artist is a 'more
+    like X but different' comparison)."""
+    from experiments.analysis.conversation_state_extraction_bakeoff.schema import RoutingTags
+    catalog = _sa_catalog()
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _sa_cfg())
+    expect = ["t-mor-1", "t-mor-2", "t-mor-3"]
+    # allowed intents -> inject
+    for im in ("open_explore", "pivot"):
+        assert compiler._similar_artist_anchor_track_ids(
+            _sa_rs(catalog, intent_mode=im)) == expect
+    # excluded intents -> no injection
+    for im in ("refinement", "playlist_build"):
+        assert compiler._similar_artist_anchor_track_ids(
+            _sa_rs(catalog, intent_mode=im)) == []
+    # excluded intent BUT exact_entity_probe set -> inject
+    rs_eep = _sa_rs(catalog, intent_mode="refinement",
+                    routing_tags=RoutingTags(exact_entity_probe=True))
+    assert compiler._similar_artist_anchor_track_ids(rs_eep) == expect
+    # on_exact_entity knob off -> excluded intent stays empty even with EEP
+    compiler2 = V0PlusCompiler(
+        catalog, FakeRetriever(), _fake_encoder(),
+        _sa_cfg(similar_artist_anchor_on_exact_entity=False),
+    )
+    assert compiler2._similar_artist_anchor_track_ids(rs_eep) == []
+
+
+def test_attributes_query_matches_doc_format():
+    catalog = _catalog()
+    state = _state(mentioned_entities=[
+        MentionedEntity(type="tag", value="dark", sentiment=1),
+        MentionedEntity(type="tag", value="synthwave", sentiment=1),
+        MentionedEntity(type="artist", value="Kavinsky", sentiment=1),
+    ])
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())
+    q = compiler._build_attributes_query_string(rs)
+    # mirrors the catalog doc "music attributes, tags :..."; artist excluded
+    assert q == "music attributes, tags :dark, synthwave"
+
+
+def test_attributes_query_none_without_tags():
+    catalog = _catalog()
+    state = _state(mentioned_entities=[
+        MentionedEntity(type="artist", value="Kavinsky", sentiment=1),
+    ])
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())
+    assert compiler._build_attributes_query_string(rs) is None
+
+
+def _era_cfg(**overrides):
+    cfg = dict(enable_dense=False, enable_era_popularity=True, era_pop_cap=200,
+               branch_trace_topk=50)
+    cfg.update(overrides)
+    return CompilerConfig(**cfg)
+
+
+def test_era_popularity_pool_filters_by_year_and_orders_by_popularity():
+    catalog = _catalog()
+    # _catalog tracks span 1988-2010; restrict to the 1990s
+    state = _state(release_year_range={"start":1990,"end":1999})
+    rs = _resolve(state, catalog)
+    pool = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _era_cfg())._era_popularity_pool(rs)
+    ids = [t for t, _ in pool]
+    # Only 1990s tracks; ordered by popularity desc. From _catalog:
+    # Tom Waits Hold On 1999 pop90, Fugazi Repeater 1990 pop60, Morphine Buena 1995 pop55
+    assert ids[0] == "t-tomwaits-1"  # highest pop in-range
+    assert "t-fugazi-1" not in ids   # 1988, out of range
+    assert "t-filler-1" not in ids   # 2010, out of range
+
+
+def test_era_popularity_pool_empty_when_disabled_or_no_range():
+    catalog = _catalog()
+    # disabled
+    rs = _resolve(_state(release_year_range={"start":1990,"end":1999}), catalog)
+    assert V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _era_cfg(enable_era_popularity=False))._era_popularity_pool(rs) == []
+    # enabled but no range
+    rs2 = _resolve(_state(release_year_range=None), catalog)
+    assert V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _era_cfg())._era_popularity_pool(rs2) == []
+
+
+def _ryr_cfg(**overrides):
+    cfg = dict(enable_dense=False, enable_release_year_filter=True,
+               release_year_filter_min_keep=1)
+    cfg.update(overrides)
+    return CompilerConfig(**cfg)
+
+
+def test_release_year_filter_narrows_mask_to_in_range():
+    catalog = _catalog()  # tracks span 1988-2010
+    rs = _resolve(_state(release_year_range={"start": 1990, "end": 1999}), catalog)
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _ryr_cfg())
+    mask = compiler._release_date_mask(rs.state)
+    # only 1990s tracks: Morphine Buena 1995, Fugazi Repeater 1990, Tom Waits 1999
+    assert "t-morphine-2" in mask and "t-fugazi-2" in mask and "t-tomwaits-1" in mask
+    assert "t-fugazi-1" not in mask   # 1988
+    assert "t-filler-1" not in mask   # 2010
+
+
+def test_release_year_filter_off_by_default_keeps_all():
+    catalog = _catalog()
+    rs = _resolve(_state(release_year_range={"start": 1990, "end": 1999}), catalog)
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())  # default off
+    mask = compiler._release_date_mask(rs.state)
+    assert mask == set(catalog.all_track_ids())
+
+
+def test_release_year_filter_open_bounds():
+    catalog = _catalog()
+    rs = _resolve(_state(release_year_range={"start": 2000, "end": None}), catalog)
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _ryr_cfg())
+    mask = compiler._release_date_mask(rs.state)
+    assert mask == {"t-filler-1"}  # only 2010 is >= 2000
+
+
+def test_release_year_filter_skips_when_too_aggressive():
+    catalog = _catalog()
+    # a range matching 0 tracks would blank the pool -> skipped (min_keep guard)
+    rs = _resolve(_state(release_year_range={"start": 1700, "end": 1750}), catalog)
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(),
+                              _ryr_cfg(release_year_filter_min_keep=1))
+    mask = compiler._release_date_mask(rs.state)
+    assert mask == set(catalog.all_track_ids())  # unchanged (no in-range tracks)

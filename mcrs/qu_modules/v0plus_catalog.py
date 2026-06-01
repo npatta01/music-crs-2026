@@ -53,12 +53,27 @@ class CompilerCatalog(Protocol):
         """Primary artist_id for the track, or None if the track has no artist record."""
         ...
 
+    def album_id_of(self, track_id: str) -> str | None:
+        """Primary album_id for the track, or None if the track has no album record.
+        Used by post-fusion features (e.g. `exploration_policy=diversify_albums`)
+        to demote tracks sharing an album with prior-played anchors."""
+        ...
+
     def tracks_by_artist_id(self, artist_id: str) -> list[str]:
         """All track_ids attributed to this artist_id."""
         ...
 
     def tag_list(self, track_id: str) -> list[str]:
         """Genre / mood tags for the track (lowercase, deduped). Empty list if none."""
+        ...
+
+    def track_text(self, track_id: str) -> str:
+        """Rich text representation for cross-encoder rerankers.
+
+        Format: `"{artist} - {track} | {album} | tag1, tag2, ..."` (tag count capped).
+        Empty string if the track is unknown. Used as the candidate-doc side of
+        (query, doc) pairs scored by a cross-encoder.
+        """
         ...
 
     def track_label(self, track_id: str) -> str:
@@ -94,6 +109,10 @@ class CompilerCatalog(Protocol):
         For op='between' includes tracks with hf.start <= release_date <= hf.end.
         Tracks with missing or unparseable release_date are excluded.
         """
+        ...
+
+    def release_year_of(self, track_id: str) -> int | None:
+        """Release year as an int, or None when the track has no parseable date."""
         ...
 
     def all_track_ids(self) -> list[str]:

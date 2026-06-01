@@ -214,6 +214,14 @@ class LanceDbCatalog:
             return None
         return _first(row.get("artist_id"))
 
+    def album_id_of(self, track_id: str) -> str | None:
+        """Return the canonical album_id for a track. None if the catalog
+        row is missing or has no album_id (some tracks legitimately lack one)."""
+        row = self._per_track.get(track_id)
+        if row is None:
+            return None
+        return _first(row.get("album_id"))
+
     def tracks_by_artist_id(self, artist_id: str) -> list[str]:
         return list(self._tracks_by_artist_id.get(artist_id, []))
 
@@ -222,6 +230,20 @@ class LanceDbCatalog:
         if row is None:
             return []
         return _list_of_str(row.get("tag_list"))
+
+    def release_year_of(self, track_id: str) -> int | None:
+        """Year (int) of the track's release_date, or None if unknown/unparseable.
+        Used by the release_year_range post-fusion feature for soft date boosting."""
+        row = self._per_track.get(track_id)
+        if row is None:
+            return None
+        rd = _first(row.get("release_date")) if isinstance(row.get("release_date"), list) else row.get("release_date")
+        if not rd:
+            return None
+        s = str(rd).strip()
+        if len(s) >= 4 and s[:4].isdigit():
+            return int(s[:4])
+        return None
 
     def track_label(self, track_id: str) -> str:
         row = self._per_track.get(track_id)
@@ -232,6 +254,37 @@ class LanceDbCatalog:
         if artist and track:
             return f"{artist} - {track}"
         return track or artist
+
+    def track_text(self, track_id: str, *, max_tags: int = 5) -> str:
+        """Rich text representation for cross-encoder rerankers.
+
+        Format: `"{artist} - {track} | {album} | tag1, tag2, ..."`. Used by
+        the cross-encoder reranker as the candidate side of a (query, doc)
+        pair. Tags are capped to keep input length manageable.
+
+        Empty string if the track is unknown.
+        """
+        row = self._per_track.get(track_id)
+        if row is None:
+            return ""
+        artist = _first(row.get("artist_name")) or ""
+        track = _first(row.get("track_name")) or ""
+        album = _first(row.get("album_name")) or ""
+        tags = _list_of_str(row.get("tag_list"))[:max_tags]
+        parts: list[str] = []
+        if artist and track:
+            parts.append(f"{artist} - {track}")
+        elif track:
+            parts.append(track)
+        elif artist:
+            parts.append(artist)
+        else:
+            return ""
+        if album and album not in parts[0]:
+            parts.append(album)
+        if tags:
+            parts.append(", ".join(tags))
+        return " | ".join(parts)
 
     def vector(self, track_id: str, vector_field: str) -> list[float] | None:
         # Eager path: O(1) dict lookup if this field was preloaded at init.

@@ -66,6 +66,25 @@ FUTURE exclusions. Populate when the user says "not X", "no more X", "different 
 | `track` | that specific track_id |
 | `tag` | soft-demotes tracks whose tag_list overlaps |
 
+## process_constraints  (object)
+
+Orthogonal to `intent_mode` — `intent_mode` is what the user is doing; `process_constraints` is how the system should vary along the artist/album axes. A user can be in `refinement` AND `diversify_artists` at the same time ("more in this style, different artists").
+
+### exploration_policy
+
+| value | when |
+|---|---|
+| `exploit` | User signals SAME source: "more by them", "another by this artist", "more from this album", "got another track by Nirvana?" |
+| `diversify_artists` | User signals SAME style/genre/era, DIFFERENT artist: "another <style> track", "more bands like this", "something else in this vein", "more artists from this era". The user re-states a style descriptor instead of an artist anchor. **Also when the user rejects an artist by name and is still asking for continuation in the same style** (e.g., "Stop X — anything else like this"). |
+| `diversify_albums` | Same artist OK but prefer different album: "another song by them, different album", "earlier stuff from this artist". Rare. |
+| `balanced` | DEFAULT when no clear signal — "more like this", "something similar", or the user is silent on the artist axis. |
+
+Key heuristics:
+- The phrase "more <genre> tracks" / "another <genre> song" → `diversify_artists` (style is the anchor, artist is implicitly variable)
+- The phrase "more from <artist>" / "another <artist> song" → `exploit`
+- The phrase "more like <track>" / "more like that" without an explicit artist or style scope → `balanced`
+- **If `explicit_rejections` contains a `kind=artist` entry AND the user did not name a replacement artist target, set `exploration_policy=diversify_artists`.**
+
 ## hard_filters  (list)
 v0+ supports `release_date` only. Emit dates as YYYY-MM-DD into typed `start` / `end`.
 
@@ -120,6 +139,9 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
             "explicit_rejections": [
                 {"kind": "tag", "value": "heavy", "source_turn": 3}
             ],
+            "process_constraints": {
+                "exploration_policy": "balanced",
+            },
         },
     },
     # Example 2: pivot with release_date filter
@@ -146,6 +168,9 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
                 {"field": "release_date", "op": "<", "end": "2000-01-01"}
             ],
             "explicit_rejections": [],
+            "process_constraints": {
+                "exploration_policy": "balanced",
+            },
         },
     },
     # Example 3: explicit artist rejection (Fugazi pattern)
@@ -177,6 +202,71 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
             "explicit_rejections": [
                 {"kind": "artist", "value": "Fugazi", "source_turn": 2}
             ],
+            "process_constraints": {
+                "exploration_policy": "diversify_artists",
+            },
+        },
+    },
+    # Example 4: diversify_artists — user re-states style as anchor, no artist anchor
+    {
+        "user_prompt": {
+            "played_track_ids": [
+                "e5555555-5555-4555-8555-555555555555",  # Arctic Monkeys - Do I Wanna Know
+            ],
+            "conversation": [
+                {"turn": 1, "role": "user", "text": "Got any popular alternative rock?"},
+                {"turn": 1, "role": "assistant", "text": "Try this Arctic Monkeys track."},
+                {"turn": 1, "role": "music", "track_id": "e5555555-5555-4555-8555-555555555555", "label": "Arctic Monkeys - Do I Wanna Know"},
+                {"turn": 2, "role": "user", "text": "Great pick. Can you recommend another popular alternative rock track?"},
+            ],
+        },
+        "output": {
+            "turn_intent": "Another popular alternative rock track.",
+            "intent_mode": "refinement",
+            "track_feedback": [
+                {"track_id": "e5555555-5555-4555-8555-555555555555", "overall_sentiment": 1, "role": "accepted"}
+            ],
+            "referenced_track_ids": [],
+            "mentioned_entities": [
+                {"type": "artist", "value": "Arctic Monkeys", "sentiment": 1},
+                {"type": "tag", "value": "alternative rock", "sentiment": 1},
+                {"type": "tag", "value": "popular", "sentiment": 1},
+            ],
+            "hard_filters": [],
+            "explicit_rejections": [],
+            "process_constraints": {
+                "exploration_policy": "diversify_artists",
+            },
+        },
+    },
+    # Example 5: exploit — user wants more from the same artist
+    {
+        "user_prompt": {
+            "played_track_ids": [
+                "f6666666-6666-4666-8666-666666666666",  # Radiohead - Karma Police
+            ],
+            "conversation": [
+                {"turn": 1, "role": "user", "text": "Play me some Radiohead."},
+                {"turn": 1, "role": "assistant", "text": "Here's Karma Police."},
+                {"turn": 1, "role": "music", "track_id": "f6666666-6666-4666-8666-666666666666", "label": "Radiohead - Karma Police"},
+                {"turn": 2, "role": "user", "text": "Nice. Got another Radiohead track?"},
+            ],
+        },
+        "output": {
+            "turn_intent": "Another Radiohead track.",
+            "intent_mode": "refinement",
+            "track_feedback": [
+                {"track_id": "f6666666-6666-4666-8666-666666666666", "overall_sentiment": 1, "role": "accepted"}
+            ],
+            "referenced_track_ids": [],
+            "mentioned_entities": [
+                {"type": "artist", "value": "Radiohead", "sentiment": 1},
+            ],
+            "hard_filters": [],
+            "explicit_rejections": [],
+            "process_constraints": {
+                "exploration_policy": "exploit",
+            },
         },
     },
 ]

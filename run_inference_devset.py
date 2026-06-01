@@ -41,25 +41,19 @@ def _to_plain_dict(value):
 
 
 def _setup_litellm_cache() -> None:
-    """Configure litellm disk cache when MCRS_LITELLM_CACHE_DIR is set.
+    """Configure LiteLLM cache when MCRS_LITELLM_CACHE_DIR is set.
 
     The Modal inference container sets this env var to the path of the shared
     litellm-cache volume (same volume used by ModalLiteLLMService).  Caching
     here means repeated LLM extraction calls on identical conversations are
-    served from disk — no OpenRouter round-trip, no cost.
+    served locally — no OpenRouter round-trip, no cost.
     """
+    from mcrs.litellm_cache import setup_litellm_cache
+
     cache_dir = os.environ.get("MCRS_LITELLM_CACHE_DIR")
-    if not cache_dir:
-        return
-    import litellm
-    from litellm.caching.caching import Cache
-    litellm.cache = Cache(
-        type="disk",
-        supported_call_types=["completion", "acompletion"],
-        namespace="music-crs",
-        disk_cache_dir=cache_dir,
-    )
-    print(f"LiteLLM disk cache enabled at: {cache_dir}")
+    if setup_litellm_cache(cache_dir=cache_dir):
+        backend = os.environ.get("MCRS_LITELLM_CACHE_BACKEND", "file")
+        print(f"LiteLLM {backend} cache enabled at: {cache_dir}")
 
 
 def main(args):

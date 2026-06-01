@@ -5,9 +5,9 @@ returns a `ResolvedConversationState` with deterministic id annotations the
 Compiler needs:
 
 1. **Rejection resolution** — `explicit_rejections.kind == "artist" | "track"`
-   surface forms resolved to catalog ids via the `FuzzyMatcher`; artist ids
-   are then expanded to track_ids via the catalog. The Compiler hard-drops
-   these.
+   surface forms resolved to catalog ids via the `FuzzyMatcher`; artist
+   rejections resolve to artist ids, while track rejections resolve to both
+   track ids and their owning artist ids. The Compiler hard-drops these.
 2. **Same-artist annotation** — for each `track_feedback[i].track_id`, the
    artist_id so the Compiler can apply the same-artist demote on rejected
    feedback.
@@ -44,6 +44,19 @@ class ResolvedRejection:
 
 
 @dataclass(frozen=True)
+class ResolvedTarget:
+    """A grounded positive `mentioned_entities` entry: surface form + best
+    catalog match + confidence + full candidate list. The Compiler uses
+    high-confidence artist targets to fetch discography candidates."""
+
+    kind: str  # "artist" | "track"
+    source_text: str
+    entity_id: str | None
+    confidence: float
+    candidates: tuple[tuple[str, float], ...] = ()
+
+
+@dataclass(frozen=True)
 class ResolvedConversationState:
     """Sidecar struct wrapping a v0+ state with the Resolver's deterministic
     id annotations + the mechanical (non-LLM) fields the Compiler needs.
@@ -58,6 +71,7 @@ class ResolvedConversationState:
     played_track_ids: tuple[str, ...] = ()
     resolved_rejections: dict[int, ResolvedRejection] = field(default_factory=dict)
     track_feedback_artist_ids: dict[str, str | None] = field(default_factory=dict)
+    resolved_targets: tuple[ResolvedTarget, ...] = ()
 
 
 class V0PlusResolver:
@@ -98,11 +112,31 @@ class V0PlusResolver:
             tf.track_id: self.catalog.artist_id_of(tf.track_id)
             for tf in state.track_feedback
         }
+        resolved_targets = tuple(
+            self._ground_target(me.type, me.value)
+            for me in state.mentioned_entities
+            if me.sentiment >= 0 and me.type in ("artist", "track")
+        )
         return ResolvedConversationState(
             state=state,
             played_track_ids=tuple(played_track_ids or ()),
             resolved_rejections=resolved_rejections,
             track_feedback_artist_ids=tf_artists,
+            resolved_targets=resolved_targets,
+        )
+
+    def _ground_target(self, kind: str, value: str) -> ResolvedTarget:
+        topk = self.artist_match_topk if kind == "artist" else self.track_match_topk
+        matches = self.matcher.match(
+            value, kind, topk=topk, score_cutoff=self.score_cutoff
+        )
+        best_id, best_score = matches[0] if matches else (None, 0.0)
+        return ResolvedTarget(
+            kind=kind,
+            source_text=value,
+            entity_id=best_id,
+            confidence=float(best_score),
+            candidates=tuple((eid, float(s)) for eid, s in matches),
         )
 
     def _resolve_rejection(self, kind: str, value: str) -> ResolvedRejection:
@@ -121,5 +155,13 @@ class V0PlusResolver:
                 topk=self.track_match_topk,
                 score_cutoff=self.score_cutoff,
             )
-            return ResolvedRejection(track_ids=tuple(eid for eid, _ in matches))
+            track_ids = tuple(eid for eid, _ in matches)
+            artist_ids = tuple(
+                dict.fromkeys(
+                    artist_id
+                    for track_id in track_ids
+                    if (artist_id := self.catalog.artist_id_of(track_id)) is not None
+                )
+            )
+            return ResolvedRejection(artist_ids=artist_ids, track_ids=track_ids)
         return ResolvedRejection()

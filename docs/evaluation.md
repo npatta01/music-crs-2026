@@ -63,11 +63,14 @@ Higher is better for all metrics.
 ## Branch diagnostics (per-retriever coverage)
 
 The v0+ devset trace sidecar (`exp/inference/devset/{tid}_trace.json`) carries a
-per-turn `branches` key: each retriever branch's top-1000 `(track_id, score)`
-pool (`bm25`, `dense:<field>`, `centroid:<field>`, `centroid_user:<field>`), the
-RRF `fused` list, the `final` recommendation (with `n_from_fusion` /
-`n_from_backfill` provenance), and `recommended.top1_track_id` (the headline
-track an explanation would target). Submission/blindset runs do not write traces.
+per-turn `branches` key when `CompilerConfig.branch_trace_topk > 0`: each
+retriever branch's RAW top-`branch_trace_topk` `(track_id, score)` pool keyed by
+a stable name (`bm25`, `dense.<encoder_id>.<query_id>.<vector_field>`,
+`centroid.<source>.<vector_field>`, `lookup.resolved_artist_discography`,
+`lookup.era_popularity`), the RRF `fused` list, the `final` recommendation (with
+`n_from_fusion` / `n_from_backfill` provenance), and `recommended.top1_track_id`
+(the headline track an explanation would target). The knob is 0 by default, so
+submission/blindset runs pay nothing and write no `branches`.
 
 `scripts/branch_diagnostics.py` reads the trace + ground truth and reports:
 
@@ -126,5 +129,5 @@ When you run a new experiment, append one or more rows to the table above with t
   outputs remain unchanged (the leaderboard expects exactly 20 ids per turn).
 - Devset configs override `retrieval_topk: 1000` so the offline evaluator can
   report deep-cutoff diagnostics through `@1000`. The submission file format is independent.
-- The evaluator keeps `require_full_diagnostic_depth: true` as the diagnostic contract, but if a devset run returns a shallower pool it now emits `null` for unsupported deep metrics instead of failing or silently coercing them to zero.
+- The evaluator reports cutoff metrics even when a devset row returns fewer than 1000 candidates. A shallow row can still hit at deep cutoffs if the GT is present in the returned pool; otherwise the missing tail counts as a miss.
 - Score JSON files also include depth metadata such as `available_cutoffs`, `min_pool_depth`, `max_pool_depth`, and `n_shallow_rows` so raw native Milvus runs stay easy to compare.

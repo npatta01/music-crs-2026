@@ -1,0 +1,8 @@
+turn 1 n=1000 hit=0.549 union=0.598 rrf_loss=0.049
+turn 2 n=1000 hit=0.728 union=0.842 rrf_loss=0.114
+turn 3 n=1000 hit=0.692 union=0.815 rrf_loss=0.123
+turn 4 n=1000 hit=0.670 union=0.820 rrf_loss=0.150
+turn 5 n=1000 hit=0.634 union=0.781 rrf_loss=0.147
+turn 6 n=1000 hit=0.645 union=0.804 rrf_loss=0.159
+turn 7 n=1000 hit=0.615 union=0.788 rrf_loss=0.173
+turn 8 n=1000 hit=0.595 union=0.791 rrf_loss=0.196

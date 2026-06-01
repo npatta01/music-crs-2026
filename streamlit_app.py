@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 from datasets import load_dataset
+from mcrs.dashboard_paths import prediction_search_dir
 
 st.set_page_config(
     page_title="Music CRS Explorer",
@@ -312,7 +313,8 @@ with st.sidebar:
     is_devset = split_mode.startswith("Dev")
 
     # Discover prediction files for the selected split
-    search_dir = "exp/inference/devset" if is_devset else "exp/inference/blindset"
+    selected_split = "devset" if is_devset else "blindset_A"
+    search_dir = prediction_search_dir(selected_split)
     pred_files = sorted(glob.glob(f"{search_dir}/*.json"))
 
     if not pred_files:

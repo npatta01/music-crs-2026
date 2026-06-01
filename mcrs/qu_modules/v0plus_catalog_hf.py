@@ -224,6 +224,23 @@ class HFTalkPlayCatalog:
             return None
         return _first_or_none(meta.get("artist_id"))
 
+    def album_id_of(self, track_id: str) -> str | None:
+        meta = self.metadata.get(track_id)
+        if not meta:
+            return None
+        return _first_or_none(meta.get("album_id"))
+
+    def release_year_of(self, track_id: str) -> int | None:
+        """Year (int) of the track's release_date, or None if unknown."""
+        meta = self.metadata.get(track_id)
+        if not meta:
+            return None
+        rd = _first_or_none(meta.get("release_date"))
+        if not rd:
+            return None
+        s = str(rd).strip()
+        return int(s[:4]) if len(s) >= 4 and s[:4].isdigit() else None
+
     def tracks_by_artist_id(self, artist_id: str) -> list[str]:
         return list(self._tracks_by_artist_id.get(artist_id, []))
 
@@ -247,6 +264,41 @@ class HFTalkPlayCatalog:
         if artist and track:
             return f"{artist} - {track}"
         return track or artist
+
+    def track_text(self, track_id: str, *, max_tags: int = 5) -> str:
+        """Rich text representation for cross-encoder rerankers.
+
+        Format: `"{artist} - {track} | {album} | tag1, tag2, ..."`.
+        Empty string if the track is unknown.
+        """
+        meta = self.metadata.get(track_id)
+        if not meta:
+            return ""
+
+        def _first_str(field: str) -> str:
+            v = meta.get(field) or []
+            if isinstance(v, list):
+                return (str(v[0]).strip() if v else "")
+            return str(v).strip()
+
+        artist = _first_str("artist_name")
+        track = _first_str("track_name")
+        album = _first_str("album_name")
+        tags = self.tag_list(track_id)[:max_tags]
+        parts: list[str] = []
+        if artist and track:
+            parts.append(f"{artist} - {track}")
+        elif track:
+            parts.append(track)
+        elif artist:
+            parts.append(artist)
+        else:
+            return ""
+        if album and album not in parts[0]:
+            parts.append(album)
+        if tags:
+            parts.append(", ".join(tags))
+        return " | ".join(parts)
 
     def vector(self, track_id: str, vector_field: str) -> list[float] | None:
         store = self._vectors_by_field.get(vector_field)
