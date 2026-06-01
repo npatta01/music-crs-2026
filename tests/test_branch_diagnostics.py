@@ -67,3 +67,33 @@ def test_compute_metrics_aggregates():
     assert m["unionhit@20"] == 1.0     # union@20 cutoff present
     assert m["unionhit@50"] == 1.0     # union@50 cutoff present
     assert "fusion_efficiency@100" in m
+
+
+import json as _json
+
+from scripts.branch_diagnostics import align_turns, load_ground_truth, load_trace
+
+
+def test_align_turns_matches_on_session_and_turn():
+    trace = [
+        {"session_id": "s1", "turn_number": 1, "trace": {"branches": {"final": {"track_ids": ["gt"]},
+            "recommended": {"top1_track_id": "gt"}, "pools": [], "fused": [], "depth": 1000}}},
+        {"session_id": "s1", "turn_number": 2, "trace": {"branches": {"final": {"track_ids": ["x"]},
+            "recommended": {"top1_track_id": "x"}, "pools": [], "fused": [], "depth": 1000}}},
+    ]
+    gt = [
+        {"session_id": "s1", "turn_number": 1, "ground_truth_track_id": "gt"},
+        {"session_id": "s1", "turn_number": 2, "ground_truth_track_id": "y"},
+        {"session_id": "s9", "turn_number": 1, "ground_truth_track_id": "z"},  # no trace -> skipped
+    ]
+    aligned = align_turns(trace, load_ground_truth(gt))
+    assert len(aligned) == 2
+    assert aligned[0][1] == "gt"
+    assert aligned[1][1] == "y"
+
+
+def test_load_trace_rejects_missing_branches(tmp_path):
+    p = tmp_path / "t.json"
+    p.write_text(_json.dumps([{"session_id": "s1", "turn_number": 1, "trace": {"state": {}}}]))
+    with __import__("pytest").raises(SystemExit):
+        load_trace(str(p), require_branches=True)
