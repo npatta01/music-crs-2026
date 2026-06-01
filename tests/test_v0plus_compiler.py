@@ -1603,39 +1603,3 @@ def test_release_year_filter_skips_when_too_aggressive():
                               _ryr_cfg(release_year_filter_min_keep=1))
     mask = compiler._release_date_mask(rs.state)
     assert mask == set(catalog.all_track_ids())  # unchanged (no in-range tracks)
-
-
-def test_release_year_bm25_clause_emitted_with_year_tokens_and_boost():
-    catalog = _catalog()
-    cfg = CompilerConfig(enable_release_year_bm25=True, release_year_bm25_boost=1.5)
-    state = _state(turn_intent="80s rock", release_year_range={"start": 1980, "end": 1983})
-    rs = _resolve(state, catalog)
-    clauses = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)._build_bm25_clauses(rs)
-    yr = [c for c in clauses if c.field == "release_date"]
-    assert {c.query for c in yr} == {"1980", "1981", "1982", "1983"}  # one term per year
-    assert all(c.boost == 1.5 for c in yr)
-
-
-def test_release_year_bm25_off_by_default():
-    catalog = _catalog()
-    state = _state(release_year_range={"start": 1980, "end": 1989})
-    clauses = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())._build_bm25_clauses(_resolve(state, catalog))
-    assert not [c for c in clauses if c.field == "release_date"]
-
-
-def test_release_year_bm25_skips_wide_span():
-    catalog = _catalog()
-    cfg = CompilerConfig(enable_release_year_bm25=True, release_year_bm25_max_span=30)
-    # 19th century = 100 years > 30 -> skipped (avoid query bloat)
-    state = _state(release_year_range={"start": 1801, "end": 1900})
-    clauses = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)._build_bm25_clauses(_resolve(state, catalog))
-    assert not [c for c in clauses if c.field == "release_date"]
-
-
-def test_release_year_bm25_skips_open_bound():
-    catalog = _catalog()
-    cfg = CompilerConfig(enable_release_year_bm25=True)
-    # open-ended (only start) -> no finite token set -> skipped
-    state = _state(release_year_range={"start": 2015, "end": None})
-    clauses = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)._build_bm25_clauses(_resolve(state, catalog))
-    assert not [c for c in clauses if c.field == "release_date"]

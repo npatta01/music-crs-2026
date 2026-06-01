@@ -986,9 +986,6 @@ def build_v0plus_compiler_qu(
             for k, v in comp_cfg.items()
             if k in {
                 "field_boosts",
-                "enable_release_year_bm25",
-                "release_year_bm25_boost",
-                "release_year_bm25_max_span",
                 "centroid_alpha",
                 "anchor_tag_expansion_n",
                 "rejected_tag_multiplier",

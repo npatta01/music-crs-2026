@@ -15,7 +15,8 @@
 #
 # Preconditions:
 # 1. LanceDB table at lancedb.db_uri / table_name with FTS indexes
-#    (track_name, artist_name, album_name, tag_list, release_date) AND these
+#    (track_name, artist_name, album_name, tag_list, release_date,
+#    release_year, release_decade) AND these
 #    vector columns: metadata_qwen3_embedding_0_6b, lyrics_qwen3_embedding_0_6b,
 #    attributes_qwen3_embedding_0_6b, audio_laion_clap, image_siglip2, cf_bpr.
 # 2. Modal app `music-crs` deployed with MultimodalTextEncoder (for clap_text).
@@ -87,12 +88,14 @@ qu_kwargs:
       artist_name: 3.0
       album_name: 2.0
       tag_list: 1.5
-
-    # Year as an additive BM25 boost (never excludes). See issue #75:
-    # real mid-depth (@200) coverage lever, flat at @100.
-    enable_release_year_bm25: true
-    release_year_bm25_boost: 1.5
-    release_year_bm25_max_span: 30
+      # Year as an additive BM25 boost via the dedicated release_year (exact) /
+      # release_decade (bucketed) FTS fields added in #81 — clean year-only /
+      # decade tokens (no release_date doc-length dilution). Requires the table
+      # to carry release_year_text + release_decade_text (reindex). See issue
+      # #75: real mid-depth (@200) coverage lever, flat at @100. Default 0.0 on
+      # main pending a reindexed validation run; enabled here to exercise it.
+      release_year: 1.0
+      release_decade: 1.0
 
     centroid_alpha:
       refinement: 0.30
