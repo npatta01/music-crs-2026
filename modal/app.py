@@ -747,9 +747,8 @@ def run_inference_sharded(
 
     # Fire shards in parallel via .spawn — returns immediately with a function
     # call handle for each. Then await all by calling .get() on each handle.
-    calls = []
-    for shard_id in range(num_shards):
-        call = inference_fn.spawn(
+    def _spawn(shard_id):
+        return inference_fn.spawn(
             tid=tid,
             batch_size=batch_size,
             num_sessions=0,
@@ -759,14 +758,42 @@ def run_inference_sharded(
             shard_id=shard_id,
             output_suffix=f".shard_{shard_id}",
         )
-        calls.append(call)
 
+    # Resilient join: a single shard failure must NOT raise out of this local
+    # entrypoint. An uncaught local exception makes Modal stop the whole app and
+    # SIGINT every other (healthy, in-progress) shard container — a cascade that
+    # loses the entire run over one transient (rate-limit / dropped connection
+    # under concurrency). So catch per shard, then retry the failures once.
+    def _join(pairs):
+        ok, bad = [], []
+        for shard_id, call in pairs:
+            try:
+                call.get()  # blocks until that shard finishes
+                ok.append(shard_id)
+                print(f"Shard {shard_id} complete.")
+            except Exception as e:  # noqa: BLE001 — report and continue, never abort the run
+                bad.append(shard_id)
+                print(f"Shard {shard_id} FAILED: {type(e).__name__}: {e}")
+        return ok, bad
+
+    calls = [(shard_id, _spawn(shard_id)) for shard_id in range(num_shards)]
     print(f"Spawned {num_shards} shards for {tid}.")
-    for shard_id, call in enumerate(calls):
-        call.get()  # blocks until that shard finishes
-        print(f"Shard {shard_id} complete.")
-    print(f"All {num_shards} shards complete. Per-shard outputs: "
-          f"inference/devset/{tid}.shard_{{0..{num_shards-1}}}.json")
+    ok, failed = _join(calls)
+
+    if failed:
+        print(f"Retrying {len(failed)} failed shard(s): {failed}")
+        ok2, failed = _join([(shard_id, _spawn(shard_id)) for shard_id in failed])
+        ok += ok2
+
+    if failed:
+        print(
+            f"WARNING: {len(failed)}/{num_shards} shard(s) still failed after retry: "
+            f"{failed}. Re-run these shard_ids (same --num-shards) before merging — "
+            f"otherwise the merged output is missing their sessions."
+        )
+    else:
+        print(f"All {num_shards} shards complete. Per-shard outputs: "
+              f"inference/devset/{tid}.shard_{{0..{num_shards-1}}}.json")
 
 
 @app.local_entrypoint()
