@@ -595,9 +595,10 @@ def test_compile_returns_list_of_str_unchanged():
 def test_internal_compile_returns_compileresult_with_ranked_equal_to_compile():
     compiler = _compiler_with_hits()
     rs = _resolved_state_track_query()
+    out = compiler.compile(rs)
     res = compiler._compile(rs)
     assert isinstance(res, CompileResult)
-    assert res.ranked == compiler.compile(rs)
+    assert res.ranked == out
 
 
 def test_compile_result_has_named_branch_pools():

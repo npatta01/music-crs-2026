@@ -50,9 +50,14 @@ from mcrs.retrieval_modules.base import FieldQuery, Retriever
 class BranchPool:
     """One retriever branch's contribution to fusion, retained for tracing.
 
+    A branch appears in `CompileResult.branch_pools` if and only if it FIRED
+    (issued a retrieval call) on this turn. A fired branch whose hits are all
+    removed by the mask / hard-drop is still included as an empty pool.
+    Branches that did not fire (e.g. a dense branch when there is no encoded
+    query, or a centroid branch whose centroid is None) are omitted entirely.
+
     `hits` is post-mask, post-hard-drop, capped at the compiler's final_topk.
-    Rank is the list index. A branch that did not fire on a turn is omitted
-    from CompileResult.branch_pools entirely (never emitted as an empty pool).
+    Rank is the list index.
     """
 
     name: str
@@ -66,6 +71,9 @@ class CompileResult:
     `ranked` is the exact list `compile()` returns (top-final_topk). The other
     fields are the per-branch / fused / provenance artifacts the devset trace
     persists for downstream rerank / explanation pickup.
+
+    `fused` is the RRF-fused list BEFORE soft (de)promotes; `ranked` is the
+    final list AFTER soft adjustments AND popularity backfill.
     """
 
     ranked: list[str]
@@ -318,10 +326,14 @@ class V0PlusCompiler:
         #     that fired (issued a search), so we keep all of them — a fired
         #     branch left empty after filtering stays as an empty pool; only
         #     non-firing branches are absent (they were never appended).
-        keep = lambda hits: [
-            (t, s) for t, s in hits if t in candidate_mask and t not in hard_drop
-        ][: self.cfg.final_topk]
-        branch_pools = [BranchPool(name=name, hits=keep(hits)) for name, hits in named_pools]
+        def _filter_and_cap(hits: list[tuple[str, float]]) -> list[tuple[str, float]]:
+            return [
+                (t, s) for t, s in hits if t in candidate_mask and t not in hard_drop
+            ][: self.cfg.final_topk]
+
+        branch_pools = [
+            BranchPool(name=name, hits=_filter_and_cap(hits)) for name, hits in named_pools
+        ]
 
         # 6. Weighted RRF fusion (compiler-owned, cross-modal)
         weighted_pools: list[tuple[list[tuple[str, float]], float]] = [(bm25_hits, 1.0)]
