@@ -611,3 +611,39 @@ def test_compile_result_has_named_branch_pools():
     for p in res.branch_pools:
         assert isinstance(p, BranchPool)
         assert all(isinstance(t, str) and isinstance(s, float) for t, s in p.hits)
+
+
+def test_to_trace_dict_shape_and_recommended():
+    compiler = _compiler_with_hits()
+    rs = _resolved_state_track_query()
+    res = compiler._compile(rs)
+    d = res.to_trace_dict()
+
+    assert set(d.keys()) == {"depth", "pools", "fused", "final", "recommended"}
+    assert d["depth"] == 10  # cfg.final_topk in _compiler_with_hits
+
+    # pools: list of {name, hits:[[id, score], ...]}
+    for pool in d["pools"]:
+        assert set(pool.keys()) == {"name", "hits"}
+        for hit in pool["hits"]:
+            assert len(hit) == 2 and isinstance(hit[0], str)
+
+    # final + recommended consistency
+    assert d["final"]["track_ids"] == res.ranked
+    assert d["recommended"]["top1_track_id"] == (res.ranked[0] if res.ranked else None)
+    assert d["final"]["n_from_fusion"] + d["final"]["n_from_backfill"] == len(res.ranked)
+
+
+def test_provenance_counts_pure_backfill_when_no_hits():
+    """No BM25/dense hits → final list is entirely popularity backfill."""
+    catalog = _catalog()
+    retriever = FakeRetriever()  # returns nothing
+    cfg = CompilerConfig(final_topk=5, dense_branches=[], enable_dense=False)
+    compiler = V0PlusCompiler(
+        catalog=catalog, retriever=retriever, encoder=FakeEmbeddingClient(), config=cfg
+    )
+    rs = _resolved_state_track_query()
+    res = compiler._compile(rs)
+    assert res.n_from_fusion == 0
+    assert res.n_from_backfill == len(res.ranked)
+    assert res.to_trace_dict()["recommended"]["top1_track_id"] == res.ranked[0]
