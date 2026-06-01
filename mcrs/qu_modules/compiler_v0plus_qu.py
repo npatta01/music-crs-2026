@@ -64,7 +64,7 @@ from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
 )
 from mcrs.embeddings.base import EmbeddingClient
 from mcrs.embeddings.qwen3_embedding import Qwen3EmbeddingClient
-from mcrs.qu_modules.compiler_v0plus import CentroidOnlyBranch, CompilerConfig, DenseBranch, V0PlusCompiler
+from mcrs.qu_modules.compiler_v0plus import CentroidOnlyBranch, CompileResult, CompilerConfig, DenseBranch, V0PlusCompiler
 from mcrs.qu_modules.user_embeddings import UserEmbeddings
 from mcrs.qu_modules.fuzzy_matcher import FuzzyMatcher, RapidfuzzCatalogMatcher
 from mcrs.qu_modules.resolver_v0plus import V0PlusResolver
@@ -418,10 +418,11 @@ class V0PlusCompilerQU:
         # the event loop. Inlining the resolver gives us `rs` for the trace.
         rs = self.resolver.resolve(state, played_track_ids=played)
 
-        def _compile() -> list[str]:
-            return self.compiler.compile(rs, user_id=user_id)[:topk]
+        def _run_compile() -> CompileResult:
+            return self.compiler._compile(rs, user_id=user_id)
 
-        track_ids = await asyncio.to_thread(_compile)
+        compile_result = await asyncio.to_thread(_run_compile)
+        track_ids = compile_result.ranked[:topk]
         if not track_ids:
             logger.warning(
                 "v0+ empty result: compiler returned 0 candidates (async) | "
@@ -484,6 +485,7 @@ class V0PlusCompilerQU:
                 "n_hard_filters": len(state.hard_filters),
                 "n_explicit_rejections": len(state.explicit_rejections),
             },
+            "branches": compile_result.to_trace_dict(),
         }
         return idx, track_ids, trace
 
