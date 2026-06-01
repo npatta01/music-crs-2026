@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from collections import defaultdict
 
@@ -191,8 +192,6 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\n({skipped} traced turns skipped: no ground-truth entry)")
 
     if args.out:
-        import os
-
         os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
         with open(args.out, "w", encoding="utf-8") as f:
             json.dump(metrics, f, indent=2)

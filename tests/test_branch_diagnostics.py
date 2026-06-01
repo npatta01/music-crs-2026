@@ -2,9 +2,16 @@
 
 from __future__ import annotations
 
+import json as _json
+
+import pytest
+
 from scripts.branch_diagnostics import (
+    align_turns,
     compute_metrics,
     final_hit_at_k,
+    load_ground_truth,
+    load_trace,
     per_branch_recall,
     union_hit_at_k,
 )
@@ -69,11 +76,6 @@ def test_compute_metrics_aggregates():
     assert "fusion_efficiency@100" in m
 
 
-import json as _json
-
-from scripts.branch_diagnostics import align_turns, load_ground_truth, load_trace
-
-
 def test_align_turns_matches_on_session_and_turn():
     trace = [
         {"session_id": "s1", "turn_number": 1, "trace": {"branches": {"final": {"track_ids": ["gt"]},
@@ -95,5 +97,6 @@ def test_align_turns_matches_on_session_and_turn():
 def test_load_trace_rejects_missing_branches(tmp_path):
     p = tmp_path / "t.json"
     p.write_text(_json.dumps([{"session_id": "s1", "turn_number": 1, "trace": {"state": {}}}]))
-    with __import__("pytest").raises(SystemExit):
+    with pytest.raises(SystemExit) as exc:
         load_trace(str(p), require_branches=True)
+    assert exc.value.code == 2
