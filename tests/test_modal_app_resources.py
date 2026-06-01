@@ -110,7 +110,7 @@ def test_modal_lancedb_query_default_uses_schema_compatible_fts():
     assert '"kind": "fts_bm25s_compat"' not in source
 
 
-def test_modal_litellm_service_scales_to_zero_and_uses_cache_volume():
+def test_modal_litellm_service_scales_to_zero():
     keywords = _modal_class_decorator_keywords("ModalLiteLLMService")
 
     assert isinstance(keywords["min_containers"], ast.Constant)

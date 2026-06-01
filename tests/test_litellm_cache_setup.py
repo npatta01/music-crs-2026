@@ -92,6 +92,16 @@ def test_file_cache_delete_cache_keys_removes_entries(tmp_path):
     asyncio.run(exercise_cache())
 
 
+def test_file_cache_write_errors_degrade_to_skipped_write(tmp_path):
+    from mcrs.litellm_cache import FileCache
+
+    cache = FileCache(tmp_path)
+
+    cache.set_cache("aaaabbbb", {"not-json": object()})
+
+    assert cache.get_cache("aaaabbbb") is None
+
+
 def test_file_cache_concurrent_same_key_writes_leave_readable_json(tmp_path):
     from mcrs.litellm_cache import FileCache
 

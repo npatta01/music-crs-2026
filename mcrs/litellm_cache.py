@@ -19,7 +19,7 @@ class FileCache(BaseCache):
     """LiteLLM BaseCache backend storing one JSON file per cache key."""
 
     def __init__(self, directory: str | os.PathLike[str]):
-        super().__init__(default_ttl=0)
+        super().__init__()
         self.directory = Path(directory)
         self.directory.mkdir(parents=True, exist_ok=True)
 
@@ -44,10 +44,10 @@ class FileCache(BaseCache):
             return None
 
     def set_cache(self, key, value, **kwargs):
-        path = self._path(key)
-        path.parent.mkdir(parents=True, exist_ok=True)
         temp_path: str | None = None
         try:
+            path = self._path(key)
+            path.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile(
                 mode="w",
                 encoding="utf-8",
@@ -60,6 +60,8 @@ class FileCache(BaseCache):
                 json.dump(value, handle, separators=(",", ":"))
                 handle.flush()
             os.replace(temp_path, path)
+        except (OSError, TypeError, ValueError):
+            return None
         finally:
             if temp_path and os.path.exists(temp_path):
                 try:

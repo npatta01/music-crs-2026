@@ -402,18 +402,68 @@ def test_batch_compile_track_ids_trace_handles_extractor_failure():
     assert t["compiler"]["extractor_returned_none"] is True
 
 
-def test_litellm_extractor_evicts_malformed_json_from_cache(monkeypatch):
+def test_litellm_extractor_manually_stores_only_valid_responses(monkeypatch):
+    completion_kwargs = []
+    stored = []
+
+    class FakeCache:
+        def add_cache(self, result, **kwargs):
+            stored.append((result, kwargs))
+
+    response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(
+                    content='{"turn_intent": "more like Fugazi", "intent_mode": "refinement"}'
+                )
+            )
+        ],
+        model_dump_json=lambda: '{"cached": true}',
+    )
+
+    def fake_completion(**kwargs):
+        completion_kwargs.append(kwargs)
+        return response
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(completion=fake_completion, cache=FakeCache()),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    state = extractor.extract([{"turn": 1, "role": "user", "text": "x"}], [])
+
+    assert state is not None
+    assert state.turn_intent == "more like Fugazi"
+    assert completion_kwargs[0]["cache"] == {"no-store": True}
+    assert stored == [
+        (
+            '{"cached": true}',
+            {key: value for key, value in completion_kwargs[0].items() if key != "cache"},
+        )
+    ]
+
+
+def test_litellm_extractor_does_not_store_malformed_json(monkeypatch):
     deleted_keys = []
+    stored = []
+    completion_kwargs = []
 
     class FakeCache:
         def get_cache_key(self, **kwargs):
             assert kwargs["model"] == "openrouter/fake"
             return "bad-json-key"
 
+        def add_cache(self, result, **kwargs):
+            stored.append((result, kwargs))
+
         async def delete_cache_keys(self, keys):
             deleted_keys.extend(keys)
 
     def fake_completion(**kwargs):
+        completion_kwargs.append(kwargs)
         return SimpleNamespace(
             choices=[
                 SimpleNamespace(
@@ -431,11 +481,59 @@ def test_litellm_extractor_evicts_malformed_json_from_cache(monkeypatch):
     extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
 
     assert extractor.extract([{"turn": 1, "role": "user", "text": "x"}], []) is None
+    assert completion_kwargs[0]["cache"] == {"no-store": True}
+    assert stored == []
     assert deleted_keys == ["bad-json-key"]
 
 
-def test_litellm_extractor_evicts_malformed_json_from_cache_async(monkeypatch):
+def test_litellm_extractor_manually_stores_only_valid_responses_async(monkeypatch):
+    completion_kwargs = []
+    stored = []
+
+    class FakeCache:
+        async def async_add_cache(self, result, **kwargs):
+            stored.append((result, kwargs))
+
+    response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(
+                    content='{"turn_intent": "more like Fugazi", "intent_mode": "refinement"}'
+                )
+            )
+        ],
+        model_dump_json=lambda: '{"cached": true}',
+    )
+
+    async def fake_acompletion(**kwargs):
+        completion_kwargs.append(kwargs)
+        return response
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(acompletion=fake_acompletion, cache=FakeCache()),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    state = asyncio.run(extractor.aextract([{"turn": 1, "role": "user", "text": "x"}], []))
+
+    assert state is not None
+    assert state.turn_intent == "more like Fugazi"
+    assert completion_kwargs[0]["cache"] == {"no-store": True}
+    assert stored == [
+        (
+            '{"cached": true}',
+            {key: value for key, value in completion_kwargs[0].items() if key != "cache"},
+        )
+    ]
+
+
+def test_litellm_extractor_no_store_prevents_async_malformed_cache_write(monkeypatch):
     deleted_keys = []
+    deferred_bad_writes = []
+    completion_kwargs = []
 
     class FakeCache:
         def get_cache_key(self, **kwargs):
@@ -446,6 +544,13 @@ def test_litellm_extractor_evicts_malformed_json_from_cache_async(monkeypatch):
             deleted_keys.extend(keys)
 
     async def fake_acompletion(**kwargs):
+        completion_kwargs.append(kwargs)
+        if kwargs.get("cache", {}).get("no-store") is not True:
+            async def deferred_write():
+                await asyncio.sleep(0)
+                deferred_bad_writes.append("bad-json-wrote-after-eviction")
+
+            asyncio.create_task(deferred_write())
         return SimpleNamespace(
             choices=[
                 SimpleNamespace(
@@ -462,10 +567,17 @@ def test_litellm_extractor_evicts_malformed_json_from_cache_async(monkeypatch):
 
     extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
 
-    result = asyncio.run(extractor.aextract([{"turn": 1, "role": "user", "text": "x"}], []))
+    async def exercise_extractor():
+        result = await extractor.aextract([{"turn": 1, "role": "user", "text": "x"}], [])
+        await asyncio.sleep(0)
+        return result
+
+    result = asyncio.run(exercise_extractor())
 
     assert result is None
+    assert completion_kwargs[0]["cache"] == {"no-store": True}
     assert deleted_keys == ["bad-json-key"]
+    assert deferred_bad_writes == []
 
 
 def test_batch_compile_track_ids_returns_results_in_input_order():
