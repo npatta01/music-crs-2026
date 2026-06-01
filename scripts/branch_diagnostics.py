@@ -72,11 +72,15 @@ def per_branch_recall(turns: list[tuple[dict, str]], ks: list[int]) -> dict:
 
 
 def compute_metrics(turns: list[tuple[dict, str]]) -> dict:
-    """turns: list of (branches_dict, gt_track_id). Turns with gt is None or
-    no `branches` are excluded from the scored denominator."""
-    scored = [(b, gt) for b, gt in turns if gt is not None and b]
+    """turns: list of (branches_dict, gt_track_id). Every turn with a non-None
+    GT is scored. A turn whose `branches` is empty/falsy (e.g. an extractor
+    failure that produced no candidates) is kept in the denominator and scores
+    as a MISS for every hit@k / unionhit@k — dropping it would overstate the
+    metrics. Turns with gt is None (no ground truth) are excluded."""
+    scored = [(b, gt) for b, gt in turns if gt is not None]
     n = len(scored)
-    m: dict = {"n_turns": n}
+    n_failed = sum(1 for b, _ in scored if not b)
+    m: dict = {"n_turns": n, "n_failed_no_branches": n_failed}
     if n == 0:
         return m
 
@@ -128,17 +132,19 @@ def align_turns(
     trace_records: list[dict], gt: dict[tuple[str, int], str]
 ) -> list[tuple[dict, str]]:
     """Return [(branches_dict, gt_track_id)] for every trace turn that has a
-    `branches` payload AND a ground-truth entry. Turns missing either are
-    skipped (counted by the caller)."""
+    ground-truth entry. Turns whose trace lacks a `branches` payload (e.g. an
+    extractor failure that returned no candidates) are INCLUDED with an empty
+    `{}` so they score as misses — they are real evaluator misses and dropping
+    them would inflate hit@k / unionhit@k. Turns with no GT entry (or GT None)
+    are skipped (counted by the caller as n_skipped_no_gt)."""
     out: list[tuple[dict, str]] = []
     for r in trace_records:
-        tr = r.get("trace")
-        if not isinstance(tr, dict) or "branches" not in tr:
-            continue
         key = (r["session_id"], int(r["turn_number"]))
-        if key not in gt:
+        if key not in gt or gt[key] is None:
             continue
-        out.append((tr["branches"], gt[key]))
+        tr = r.get("trace")
+        branches = tr.get("branches") if isinstance(tr, dict) else None
+        out.append((branches or {}, gt[key]))
     return out
 
 
@@ -179,17 +185,25 @@ def main(argv: list[str] | None = None) -> int:
     trace = load_trace(args.trace, require_branches=True)
     gt = load_ground_truth_file(args.ground_truth)
     aligned = align_turns(trace, gt)
-    skipped = sum(
+    # Trace rows with no GT entry (or GT None) are not scoreable.
+    n_skipped_no_gt = sum(
         1
         for r in trace
-        if isinstance(r.get("trace"), dict) and "branches" in r["trace"]
-    ) - len(aligned)
+        if (r["session_id"], int(r["turn_number"])) not in gt
+        or gt[(r["session_id"], int(r["turn_number"]))] is None
+    )
 
     metrics = compute_metrics(aligned)
-    metrics["n_skipped_no_gt"] = skipped
+    metrics["n_skipped_no_gt"] = n_skipped_no_gt
     print(_format_report(metrics))
-    if skipped:
-        print(f"\n({skipped} traced turns skipped: no ground-truth entry)")
+    n_failed = metrics.get("n_failed_no_branches", 0)
+    if n_failed:
+        print(
+            f"\n({n_failed} of {metrics['n_turns']} scored turns had no branch "
+            "trace — extractor failure / empty candidates — counted as misses)"
+        )
+    if n_skipped_no_gt:
+        print(f"({n_skipped_no_gt} traced turns skipped: no ground-truth entry)")
 
     if args.out:
         os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)

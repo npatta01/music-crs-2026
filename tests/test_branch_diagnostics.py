@@ -100,3 +100,42 @@ def test_load_trace_rejects_missing_branches(tmp_path):
     with pytest.raises(SystemExit) as exc:
         load_trace(str(p), require_branches=True)
     assert exc.value.code == 2
+
+
+def test_failure_turn_counts_as_miss():
+    """A turn with empty/falsy branches (extractor failure -> no candidates)
+    stays in the scored denominator and counts as a miss, so hit@k /
+    unionhit@k are not overstated."""
+    hit = _turn(["gt", "a"], {"bm25": ["gt"]})
+    turns = [(hit, "gt"), ({}, "gt")]  # second turn = extractor failure
+    m = compute_metrics(turns)
+    assert m["n_turns"] == 2
+    assert m["n_failed_no_branches"] == 1
+    assert m["hit@1"] == 0.5         # 1 hit / 2 turns (failure scored as miss)
+    assert m["hit@20"] == 0.5
+    assert m["unionhit@100"] == 0.5
+    # failure turn contributes nothing to any branch's fired count
+    assert m["per_branch"]["bm25"]["fired"] == 1
+
+
+def test_align_turns_keeps_branchless_row_as_miss():
+    """A v0+ trace row with NO `branches` key (extractor returned None) but a
+    valid GT must be aligned as an empty-branches miss, not dropped."""
+    trace = [
+        {"session_id": "s1", "turn_number": 1, "trace": {"branches": {
+            "final": {"track_ids": ["gt"]}, "recommended": {"top1_track_id": "gt"},
+            "pools": [{"name": "bm25", "hits": [["gt", 1.0]]}], "fused": [], "depth": 50}}},
+        {"session_id": "s1", "turn_number": 2, "trace": {"state": None}},  # extractor failure
+        {"session_id": "s9", "turn_number": 1, "trace": {"branches": {}}},  # no GT -> skipped
+    ]
+    gt = [
+        {"session_id": "s1", "turn_number": 1, "ground_truth_track_id": "gt"},
+        {"session_id": "s1", "turn_number": 2, "ground_truth_track_id": "miss"},
+    ]
+    aligned = align_turns(trace, load_ground_truth(gt))
+    assert len(aligned) == 2                 # both s1 turns; s9 (no GT) dropped
+    assert aligned[1][0] == {}               # branchless failure -> empty dict
+    m = compute_metrics(aligned)
+    assert m["n_turns"] == 2
+    assert m["n_failed_no_branches"] == 1
+    assert m["hit@1"] == 0.5                 # turn1 hits, turn2 (failure) misses
