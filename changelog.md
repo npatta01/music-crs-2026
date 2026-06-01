@@ -6,6 +6,10 @@ Tags: `Added` `Changed` `Fixed` `Docs` `Experiment`. See [experiments/README.md]
 
 Repo: https://github.com/npatta01/music-conversational-music-recomender-2026
 
+## 2026-06
+
+- `Experiment` **Qwen3-Embedding bake-off — encoder size × tags template × query mode** — branch `claude/embedding-tags-metadata-nvrRM` (no PR yet). Subset-pool measurement, **two seeds**, 1200 turns / pool 8000. **Encoder size IS a recall lever** (contradicts prior): `metadata` Recall@100 0.30→0.48→0.53 and Recall@1000 0.53→0.77→0.84 for 0.6B→4B→8B; the 0.6B→4B jump is large, **4B→8B is deep-recall-only** (NDCG@20 flat). NL tags template beats the raw tag-dump at 0.6B/4B (gap closes at 8B); `instruct` query prefix beats `symmetric` on metadata (free, no re-embed). **No leaderboard row** — leaderboard is full-catalog devset NDCG@20; subset recall must not be read as a headline. [report](experiments/embedding_bakeoff_qwen3_subset.md)
+
 ## 2026-05
 
 - `Fixed` **Issue #70 code-audit bugs** — [#71](https://github.com/npatta01/music-conversational-music-recomender-2026/pull/71). Validate LanceDB distance types + convert `dot` distance back to higher-is-better similarity; skip anchor centroid-only branches on pivot turns; clear error on missing prediction keys in devset eval; dashboard points at `blindset_A` (`mcrs/dashboard_paths.py`); download `_trace.json` sidecars as trace artifacts. (`id_to_metadata` char-by-char bug was already fixed via the `DefaultFormatter` refactor.) Closes [#70](https://github.com/npatta01/music-conversational-music-recomender-2026/issues/70).

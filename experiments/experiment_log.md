@@ -601,3 +601,27 @@ Next step:
 
 Status:
 - analyzed
+
+
+## 2026-06-01 — Qwen3-Embedding bake-off (encoder size × tags template × query mode, subset pool)
+
+Question:
+Does a bigger metadata encoder (Qwen3 4B/8B vs the 0.6B the catalog ships with) improve **deep recall** (Recall@100/@1000, not just NDCG@20)? And was the attributes/tags branch hurt by **formatting** (raw tag-dump vs NL rewrite)?
+
+Method:
+- Subset-pool bake-off (no full re-embed): `modal/embedding_bakeoff.py`, 150 sessions / pool 8000 / 1200 turns, **two seeds**, H100. Relative ordering only — not leaderboard-comparable. Coverage ≈100% so attribute variants aren't recall-capped.
+
+Takeaways (both seeds agree; deltas ≫ seed wobble):
+- **Encoder size IS a recall lever** — contradicts the going-in prior. `metadata` Recall@100 (sym): 0.6B 0.30 → 4B 0.48 → 8B 0.53; Recall@1000: 0.53 → 0.77 → 0.84. The 0.6B→4B jump is large; **4B→8B is deep-recall-only** (NDCG@20 flat at ~0.13, Recall@1000 still climbs). 4B = sweet spot for head+recall; 8B only pays off if a reranker exploits the deeper @1000 tail.
+- **Tags branch was hurt by formatting at our encoder size.** `attributes_nl` > `attributes_raw` clearly at **0.6B and 4B** (4B sym Recall@100 0.412 vs 0.318), but the gap **vanishes at 8B** (strong encoder parses the tag-dump fine). Catalog runs 0.6B → NL rewrite is a cheap, high-value fix for the production attributes branch.
+- **Tags carry complementary deep recall:** at 0.6B/4B, `attributes_nl` Recall@1000 > `metadata` → keep an NL-tags branch as a *fusion recall* contributor, don't demote outright (its head NDCG stays weak, which is fine in fusion).
+- **instruct ≥ symmetric on metadata** across all models/seeds — a free query-side win (no re-embed). Adopt.
+
+Linked report:
+- `experiments/embedding_bakeoff_qwen3_subset.md` (artifacts in `experiments/analysis/embedding_bakeoff/`)
+
+Next step:
+- (1) Turn on Qwen3 instruct prefix for the dense-text/metadata branch (no re-embed). (2) Re-embed only the attributes column with the NL template; re-eval as a fusion recall branch. (3) Quantify full-catalog re-embed at 4B before committing; reserve 8B for a reranker-backed deep pool.
+
+Status:
+- analyzed
