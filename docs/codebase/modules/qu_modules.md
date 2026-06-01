@@ -1,5 +1,7 @@
 # `mcrs/qu_modules` — Query Understanding / Compiler
 
+> For the **retrievers, end-to-end flow, and fusion rankers** as a single reference (including the #80 CLAP-text / era-popularity / discography / year-BM25 branches), see [`docs/architectures/v0plus_retrieval.md`](../../architectures/v0plus_retrieval.md). This module doc covers per-file responsibilities; some line numbers below predate recent refactors.
+
 ## Purpose
 
 This module group is the **conversation-to-retrieval layer** of the Music-CRS pipeline. Its job is to transform a raw `session_memory` (a list of `{"role", "content"}` turns) into the top-1000 ranked `track_id` list that the challenge requires.
