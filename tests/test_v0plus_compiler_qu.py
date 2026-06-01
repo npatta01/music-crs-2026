@@ -7,8 +7,10 @@ an injected fake LiteLLMExtractor so the whole pipeline runs offline.
 from __future__ import annotations
 
 import asyncio
+import sys
 import time
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 
 import pytest
 
@@ -20,6 +22,7 @@ from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
 )
 from mcrs.qu_modules import load_qu_module
 from mcrs.qu_modules.compiler_v0plus_qu import (
+    LiteLLMExtractor,
     V0PlusCompilerQU,
     build_v0plus_compiler_qu,
     session_memory_to_conversation,
@@ -397,6 +400,72 @@ def test_batch_compile_track_ids_trace_handles_extractor_failure():
     assert t["state"] is None
     assert t["intent_mode"] is None
     assert t["compiler"]["extractor_returned_none"] is True
+
+
+def test_litellm_extractor_evicts_malformed_json_from_cache(monkeypatch):
+    deleted_keys = []
+
+    class FakeCache:
+        def get_cache_key(self, **kwargs):
+            assert kwargs["model"] == "openrouter/fake"
+            return "bad-json-key"
+
+        async def delete_cache_keys(self, keys):
+            deleted_keys.extend(keys)
+
+    def fake_completion(**kwargs):
+        return SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content='{"turn_intent": "broken"')
+                )
+            ]
+        )
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(completion=fake_completion, cache=FakeCache()),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    assert extractor.extract([{"turn": 1, "role": "user", "text": "x"}], []) is None
+    assert deleted_keys == ["bad-json-key"]
+
+
+def test_litellm_extractor_evicts_malformed_json_from_cache_async(monkeypatch):
+    deleted_keys = []
+
+    class FakeCache:
+        def get_cache_key(self, **kwargs):
+            assert kwargs["model"] == "openrouter/fake"
+            return "bad-json-key"
+
+        async def delete_cache_keys(self, keys):
+            deleted_keys.extend(keys)
+
+    async def fake_acompletion(**kwargs):
+        return SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content='{"turn_intent": "broken"')
+                )
+            ]
+        )
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(acompletion=fake_acompletion, cache=FakeCache()),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    result = asyncio.run(extractor.aextract([{"turn": 1, "role": "user", "text": "x"}], []))
+
+    assert result is None
+    assert deleted_keys == ["bad-json-key"]
 
 
 def test_batch_compile_track_ids_returns_results_in_input_order():

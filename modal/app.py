@@ -57,6 +57,7 @@ HF_CACHE_DIR = _cfg.container.hf_cache_dir
 EXP_DIR = _cfg.container.exp_dir
 MODELS_DIR = _cfg.container.models_dir
 LITELLM_CACHE_DIR = _cfg.container.litellm_cache_dir
+LITELLM_CACHE_BACKEND = str(_cfg.litellm_cache.backend)
 INFERENCE_GPU = list(_cfg.inference.gpu)
 DEVSET_BATCH_SIZE = int(_cfg.inference.devset_batch_size)
 BLINDSET_BATCH_SIZE = int(_cfg.inference.blindset_batch_size)
@@ -88,7 +89,7 @@ app = modal.App(APP_NAME)
 hf_cache_vol = modal.Volume.from_name(HF_CACHE_VOLUME, create_if_missing=True)
 results_vol = modal.Volume.from_name(RESULTS_VOLUME, create_if_missing=True)
 models_vol = modal.Volume.from_name(MODELS_VOLUME, create_if_missing=True)
-litellm_cache_vol = modal.Volume.from_name(LITELLM_CACHE_VOLUME, create_if_missing=True)
+litellm_cache_vol = modal.Volume.from_name(LITELLM_CACHE_VOLUME, create_if_missing=True, version=2)
 
 # Build image: uv_sync reads pyproject.toml + uv.lock for reproducible installs.
 # Source files are copied separately (uv_sync uses --no-install-project).
@@ -101,7 +102,13 @@ image = (
         copy=True,
         ignore=[".*", "__pycache__", "*.pyc", ".venv", "exp", "cache", "submission*"],
     )
-    .env({"PYTHONPATH": "/app"})
+    .env(
+        {
+            "PYTHONPATH": "/app",
+            "MCRS_LITELLM_CACHE_BACKEND": "file",
+            "MCRS_LITELLM_CACHE_DIR": LITELLM_CACHE_DIR,
+        }
+    )
 )
 
 _VOLUME_MOUNTS = {
@@ -182,8 +189,9 @@ def _run_inference_command(cmd: list[str], *, lancedb_uri: str | None = None) ->
     env = os.environ.copy()
     if lancedb_uri:
         env["MCRS_LANCEDB_URI"] = lancedb_uri
-    # Tell run_inference_devset.py where to find the shared LiteLLM disk cache so
+    # Tell run_inference_devset.py where to find the shared LiteLLM file cache so
     # repeated LLM extraction calls on the same conversation are served from cache.
+    env["MCRS_LITELLM_CACHE_BACKEND"] = LITELLM_CACHE_BACKEND
     env["MCRS_LITELLM_CACHE_DIR"] = LITELLM_CACHE_DIR
 
     result = subprocess.run(cmd, cwd="/app", env=env)
@@ -484,14 +492,13 @@ class ModalLiteLLMService:
         import os
 
         import litellm
-        from litellm.caching.caching import Cache
+        from mcrs.litellm_cache import setup_litellm_cache
 
         litellm.success_callback = [self._track_cache_hit]
-        litellm.cache = Cache(
-            type="disk",
+        setup_litellm_cache(
+            backend=LITELLM_CACHE_BACKEND,
+            cache_dir=LITELLM_CACHE_DIR,
             supported_call_types=["completion", "acompletion", "embedding", "aembedding"],
-            namespace="music-crs",
-            disk_cache_dir=LITELLM_CACHE_DIR,
         )
         self.last_cache_hit = None
         self.hf_token = os.environ.get("HF_TOKEN")

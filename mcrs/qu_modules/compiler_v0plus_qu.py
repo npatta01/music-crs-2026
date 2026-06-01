@@ -38,6 +38,7 @@ swap in fakes (see `tests/test_v0plus_compiler_qu.py`).
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
 import os
@@ -95,6 +96,43 @@ from mcrs.qu_modules.v0plus_catalog import CompilerCatalog
 from mcrs.retrieval_modules.base import Retriever
 
 logger = logging.getLogger(__name__)
+
+
+def _litellm_cache_key(litellm_module, call_kwargs: dict[str, Any]) -> str | None:
+    cache = getattr(litellm_module, "cache", None)
+    get_cache_key = getattr(cache, "get_cache_key", None)
+    if get_cache_key is None:
+        return None
+    try:
+        return get_cache_key(**call_kwargs)
+    except Exception as exc:
+        logger.warning("v0+ extractor cache-key lookup failed: %s: %s", type(exc).__name__, exc)
+        return None
+
+
+async def _async_evict_litellm_cache_entry(litellm_module, call_kwargs: dict[str, Any]) -> None:
+    key = _litellm_cache_key(litellm_module, call_kwargs)
+    if key is None:
+        return
+    cache = getattr(litellm_module, "cache", None)
+    delete_cache_keys = getattr(cache, "delete_cache_keys", None)
+    if delete_cache_keys is None:
+        return
+    try:
+        result = delete_cache_keys([key])
+        if inspect.isawaitable(result):
+            await result
+    except Exception as exc:
+        logger.warning("v0+ extractor cache eviction failed: %s: %s", type(exc).__name__, exc)
+
+
+def _evict_litellm_cache_entry(litellm_module, call_kwargs: dict[str, Any]) -> None:
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.run(_async_evict_litellm_cache_entry(litellm_module, call_kwargs))
+    else:
+        asyncio.create_task(_async_evict_litellm_cache_entry(litellm_module, call_kwargs))
 
 
 # ----------------------------------------------------------------------
@@ -301,10 +339,9 @@ class LiteLLMExtractor:
         if self.retry_temperature != self.temperature:
             temps.append(self.retry_temperature)
         for attempt, temp in enumerate(temps, start=1):
+            call_kwargs = self._build_kwargs(conversation, played_track_ids, temperature=temp)
             try:
-                response = litellm.completion(
-                    **self._build_kwargs(conversation, played_track_ids, temperature=temp)
-                )
+                response = litellm.completion(**call_kwargs)
                 raw = response.choices[0].message.content or ""
             except Exception as exc:
                 logger.warning(
@@ -319,6 +356,7 @@ class LiteLLMExtractor:
                     "v0+ extractor JSON decode failed (attempt %d, temp=%.2f): %s | raw=%r",
                     attempt, temp, exc, raw[:200],
                 )
+                _evict_litellm_cache_entry(litellm, call_kwargs)
                 continue  # next temperature
             except Exception as exc:
                 # ValidationError or other schema mismatch — not retryable.
@@ -326,6 +364,7 @@ class LiteLLMExtractor:
                     "v0+ extractor schema validate failed (attempt %d, temp=%.2f): %s: %s | raw=%r",
                     attempt, temp, type(exc).__name__, exc, raw[:200],
                 )
+                _evict_litellm_cache_entry(litellm, call_kwargs)
                 return None
         return None
 
@@ -343,10 +382,9 @@ class LiteLLMExtractor:
         if self.retry_temperature != self.temperature:
             temps.append(self.retry_temperature)
         for attempt, temp in enumerate(temps, start=1):
+            call_kwargs = self._build_kwargs(conversation, played_track_ids, temperature=temp)
             try:
-                response = await litellm.acompletion(
-                    **self._build_kwargs(conversation, played_track_ids, temperature=temp)
-                )
+                response = await litellm.acompletion(**call_kwargs)
                 raw = response.choices[0].message.content or ""
             except Exception as exc:
                 logger.warning(
@@ -361,12 +399,14 @@ class LiteLLMExtractor:
                     "v0+ extractor JSON decode failed (async, attempt %d, temp=%.2f): %s | raw=%r",
                     attempt, temp, exc, raw[:200],
                 )
+                await _async_evict_litellm_cache_entry(litellm, call_kwargs)
                 continue
             except Exception as exc:
                 logger.warning(
                     "v0+ extractor schema validate failed (async, attempt %d, temp=%.2f): %s: %s | raw=%r",
                     attempt, temp, type(exc).__name__, exc, raw[:200],
                 )
+                await _async_evict_litellm_cache_entry(litellm, call_kwargs)
                 return None
         return None
 

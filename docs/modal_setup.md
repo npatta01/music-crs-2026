@@ -113,9 +113,9 @@ intentionally paying for an always-warm retriever.
 ### LiteLLM cache service
 
 `ModalLiteLLMService` smoke-tests paid API caching for both embeddings and chat.
-It uses a separate `music-crs-litellm-cache` volume mounted at
-`/root/litellm-cache`, so LiteLLM cache files can be cleared without touching
-LanceDB or model artifacts.
+It uses the file-per-key LiteLLM cache on a separate Volumes v2 volume,
+`music-crs-litellm-cache-v2`, mounted at `/root/litellm-cache`, so LiteLLM
+cache files can be cleared without touching LanceDB or model artifacts.
 
 ```bash
 uv run modal deploy modal/app.py
