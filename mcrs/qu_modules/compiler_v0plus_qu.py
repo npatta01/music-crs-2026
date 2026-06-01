@@ -64,7 +64,13 @@ from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
 )
 from mcrs.embeddings.base import EmbeddingClient
 from mcrs.embeddings.qwen3_embedding import Qwen3EmbeddingClient
-from mcrs.qu_modules.compiler_v0plus import CentroidOnlyBranch, CompileResult, CompilerConfig, DenseBranch, V0PlusCompiler
+from mcrs.qu_modules.compiler_v0plus import (
+    CentroidOnlyBranch,
+    CompileResult,
+    CompilerConfig,
+    DenseBranch,
+    V0PlusCompiler,
+)
 from mcrs.qu_modules.user_embeddings import UserEmbeddings
 from mcrs.qu_modules.fuzzy_matcher import FuzzyMatcher, RapidfuzzCatalogMatcher
 from mcrs.qu_modules.resolver_v0plus import V0PlusResolver
@@ -418,6 +424,9 @@ class V0PlusCompilerQU:
         # the event loop. Inlining the resolver gives us `rs` for the trace.
         rs = self.resolver.resolve(state, played_track_ids=played)
 
+        # Use _compile() (not compile()) to get the full CompileResult, which
+        # carries the per-branch pools for the trace. compile() is the thin
+        # public wrapper used by the submission/blindset path (only needs .ranked).
         def _run_compile() -> CompileResult:
             return self.compiler._compile(rs, user_id=user_id)
 
