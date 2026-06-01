@@ -233,6 +233,18 @@ class ExplicitRejection(BaseModel):
     source_turn: int = Field(..., description="1-indexed turn number that introduced the rejection.")
 
 
+class RoutingTags(BaseModel):
+    """Additive compiler route flags (north-star routing_tags). Each true flag
+    up-weights the matching retrieval branch(es). All default False so old
+    states stay valid and routing is inert until the compiler is configured."""
+
+    exact_entity_probe: bool = Field(default=False, description="User names a specific artist/track/album to find. Routes to bm25 + resolved-artist discography.")
+    lyric_search: bool = Field(default=False, description="User asks by lyrical content / theme / words. Routes to the lyric branch.")
+    feature_articulation: bool = Field(default=False, description="User describes the SOUND/feel (sonic descriptors, mood, instrumentation). Routes to audio/CLAP + metadata.")
+    image_or_visual_search: bool = Field(default=False, description="User describes cover art or a visual. Routes to the image branch (deferred).")
+    hidden_target_search: bool = Field(default=False, description="User is recalling a half-remembered track. Routes to broad/recency + popularity.")
+
+
 class ConversationStateV0Plus(BaseModel):
     """The 7 LLM-extracted fields from iteration_1_minimal_schema.md."""
 
@@ -313,6 +325,19 @@ class ConversationStateV0Plus(BaseModel):
             "How aggressively the compiler should vary vs continue along the artist/album/novelty "
             "axes. Orthogonal to intent_mode. See ProcessConstraints field docs for the full "
             "decision table."
+        ),
+    )
+
+    routing_tags: RoutingTags = Field(
+        default_factory=RoutingTags,
+        description="Per-turn route flags; each true flag up-weights its branch(es).",
+    )
+    lyrical_theme: str | None = Field(
+        default=None,
+        description=(
+            "What the user wants the lyrics to be ABOUT (theme/subject), when the turn is a "
+            "lyric request. Free text. The lyric branch queries the catalog's lyrics column as "
+            "'music lyrics :{lyrical_theme}'. Null when not a lyric request."
         ),
     )
 

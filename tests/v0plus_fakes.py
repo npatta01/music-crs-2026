@@ -162,6 +162,13 @@ class DictCatalog:
             key=lambda tid: -float(self.tracks[tid].get("popularity", 0.0)),
         )
 
+    def release_year_of(self, track_id: str) -> int | None:
+        meta = self.tracks.get(track_id)
+        if meta is None:
+            return None
+        rd = str(meta.get("release_date") or "").strip()
+        return int(rd[:4]) if len(rd) >= 4 and rd[:4].isdigit() else None
+
 
 # ----------------------------------------------------------------------
 # Retriever fake
