@@ -234,6 +234,8 @@ class V0PlusCompiler:
         # uses `centroid_only_branches` with `centroid_source="user"`. None
         # otherwise, and the user branch is silently skipped.
         self.user_embeddings = user_embeddings
+        self._catalog_release_year_bounds_cached = False
+        self._catalog_release_year_bounds_cache: tuple[int, int] | None = None
 
     # ------------------------------------------------------------------
     # Top-level
@@ -420,9 +422,19 @@ class V0PlusCompiler:
             if anchor_tags:
                 per_field.setdefault("tag_list", []).extend(anchor_tags)
 
-        for field_name, term in self._release_year_range_bm25_terms(state):
-            if self.cfg.field_boosts.get(field_name, 0.0) > 0.0:
-                per_field.setdefault(field_name, []).append(term)
+        release_range = state.release_year_range
+        if release_range is not None:
+            year_boost = self.cfg.field_boosts.get("release_year", 0.0)
+            decade_boost = self.cfg.field_boosts.get("release_decade", 0.0)
+            exact_year = (
+                release_range.start is not None
+                and release_range.end is not None
+                and release_range.start == release_range.end
+            )
+            if (exact_year and year_boost > 0.0) or (not exact_year and decade_boost > 0.0):
+                for field_name, term in self._release_year_range_bm25_terms(state):
+                    if self.cfg.field_boosts.get(field_name, 0.0) > 0.0:
+                        per_field.setdefault(field_name, []).append(term)
 
         # turn_intent: free text routed where mood/title vocabulary fits.
         # Avoid artist_name (prevents "Beat" verb → "Beatles" false pos) and
@@ -489,14 +501,20 @@ class V0PlusCompiler:
         ]
 
     def _catalog_release_year_bounds(self) -> tuple[int, int] | None:
+        if self._catalog_release_year_bounds_cached:
+            return self._catalog_release_year_bounds_cache
+
         years = [
             year
             for track_id in self.catalog.all_track_ids()
             if (year := self.catalog.release_year_of(track_id)) is not None
         ]
         if not years:
-            return None
-        return min(years), max(years)
+            self._catalog_release_year_bounds_cache = None
+        else:
+            self._catalog_release_year_bounds_cache = (min(years), max(years))
+        self._catalog_release_year_bounds_cached = True
+        return self._catalog_release_year_bounds_cache
 
     # -- Dense query templates --------------------------------------------
     # Each builder takes the resolved state and returns a query STRING (or

@@ -85,6 +85,16 @@ def _catalog() -> DictCatalog:
     )
 
 
+class CountingReleaseYearCatalog(DictCatalog):
+    def __post_init__(self) -> None:
+        self.release_year_calls = 0
+        super().__post_init__()
+
+    def release_year_of(self, track_id: str) -> int | None:
+        self.release_year_calls += 1
+        return super().release_year_of(track_id)
+
+
 def _fake_encoder():
     """Fresh FakeEmbeddingClient per test. Returns a fixed vector; tests
     assert on what the compiler does WITH the vector, not its contents."""
@@ -419,6 +429,40 @@ def test_compiler_keeps_release_year_range_fts_disabled_by_default():
         c for c in clauses
         if c.field in {"release_year", "release_decade"}
     ] == []
+
+
+def test_compiler_does_not_scan_release_year_bounds_when_fts_boosts_disabled():
+    catalog = CountingReleaseYearCatalog(tracks=_catalog().tracks)
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 2000, "end": None},
+    )
+    cfg = CompilerConfig(enable_dense=False)
+
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    assert catalog.release_year_calls == 0
+
+
+def test_compiler_reuses_catalog_release_year_bounds_for_open_ranges():
+    catalog = CountingReleaseYearCatalog(tracks=_catalog().tracks)
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="",
+        release_year_range={"start": 2000, "end": None},
+    )
+    cfg = CompilerConfig(
+        enable_dense=False,
+        field_boosts={"release_decade": 2.25},
+    )
+    compiler = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg)
+    resolved = _resolve(state, catalog)
+
+    compiler.compile(resolved)
+    compiler.compile(resolved)
+
+    assert catalog.release_year_calls == len(catalog.tracks)
 
 
 def test_compiler_config_merges_default_field_boosts_without_mutating_input():
