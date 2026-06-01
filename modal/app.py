@@ -786,14 +786,19 @@ def run_inference_sharded(
         ok += ok2
 
     if failed:
-        print(
-            f"WARNING: {len(failed)}/{num_shards} shard(s) still failed after retry: "
-            f"{failed}. Re-run these shard_ids (same --num-shards) before merging — "
-            f"otherwise the merged output is missing their sessions."
+        # All spawns have been joined at this point — no healthy shard is still
+        # in flight, so raising here does NOT trigger the SIGINT cascade this PR
+        # fixes (that only happens when the entrypoint raises mid-run). Failing
+        # loudly is required: an incomplete sharded run must not exit 0, or a
+        # later merge silently picks up stale {tid}.shard_N.json files from a
+        # prior attempt and reports an incomplete run as successful.
+        raise RuntimeError(
+            f"{len(failed)}/{num_shards} shard(s) failed after retry: {failed}. "
+            f"Sharded run is INCOMPLETE — re-run these shard_ids (same "
+            f"--num-shards) before merging."
         )
-    else:
-        print(f"All {num_shards} shards complete. Per-shard outputs: "
-              f"inference/devset/{tid}.shard_{{0..{num_shards-1}}}.json")
+    print(f"All {num_shards} shards complete. Per-shard outputs: "
+          f"inference/devset/{tid}.shard_{{0..{num_shards-1}}}.json")
 
 
 @app.local_entrypoint()
