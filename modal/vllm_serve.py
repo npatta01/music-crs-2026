@@ -166,6 +166,22 @@ serve_qwen3_embedding_4b = _register_serve_endpoint("qwen3-embedding-4b")
 serve_qwen3_embedding_8b = _register_serve_endpoint("qwen3-embedding-8b")
 
 
+def endpoint_url(model_key: str) -> str:
+    """Resolve the live web URL for a deployed serve endpoint, with `/v1` suffix."""
+    fn = modal.Function.from_name(_registry["app_name"], _serve_fn_name(model_key))
+    base = fn.get_web_url().rstrip("/")
+    return base + "/v1"
+
+
+def resolve_vllm_endpoints_in_qu_kwargs(qu_kwargs: dict[str, Any]) -> dict[str, Any]:
+    """If encoder declares `vllm_endpoint: <key>`, replace it with a resolved
+    `api_base`. No-op when absent. Mutates and returns the dict in place."""
+    enc = qu_kwargs.get("encoder")
+    if isinstance(enc, dict) and enc.get("vllm_endpoint"):
+        enc["api_base"] = endpoint_url(enc.pop("vllm_endpoint"))
+    return qu_kwargs
+
+
 @app.function(image=_vllm_image, volumes=_VOLUMES, timeout=3600)
 def download(model: str = "qwen3-embedding-4b") -> str:
     """Optional pre-warm: download weights into the hf-cache volume and commit."""

@@ -74,3 +74,32 @@ def test_safe_vllm_token_regex():
     assert vllm_serve._SAFE_VLLM_TOKEN.match("8192")
     assert not vllm_serve._SAFE_VLLM_TOKEN.match("bad model")   # space
     assert not vllm_serve._SAFE_VLLM_TOKEN.match("a;rm -rf")    # metachar
+
+
+def test_endpoint_url_appends_v1(monkeypatch):
+    class _FakeFn:
+        def get_web_url(self):
+            return "https://ws--music-crs-vllm-serve-qwen3-embedding-4b.modal.run"
+
+    monkeypatch.setattr(
+        vllm_serve.modal.Function, "from_name", staticmethod(lambda *a, **k: _FakeFn())
+    )
+    url = vllm_serve.endpoint_url("qwen3-embedding-4b")
+    assert url.endswith("/v1")
+    assert "serve-qwen3-embedding-4b" in url
+
+
+def test_resolve_vllm_endpoints_rewrites_encoder(monkeypatch):
+    monkeypatch.setattr(
+        vllm_serve, "endpoint_url", lambda key: f"https://fake/{key}/v1"
+    )
+    qu = {"encoder": {"backend": "litellm", "vllm_endpoint": "qwen3-embedding-4b"}}
+    out = vllm_serve.resolve_vllm_endpoints_in_qu_kwargs(qu)
+    assert out["encoder"]["api_base"] == "https://fake/qwen3-embedding-4b/v1"
+    assert "vllm_endpoint" not in out["encoder"]
+
+
+def test_resolve_vllm_endpoints_noop_without_key():
+    qu = {"encoder": {"backend": "litellm", "api_base": "https://x/v1"}}
+    out = vllm_serve.resolve_vllm_endpoints_in_qu_kwargs(qu)
+    assert out["encoder"]["api_base"] == "https://x/v1"
