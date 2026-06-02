@@ -65,3 +65,32 @@ qwen3_encoder:
   # bfloat16 on T4 — same accuracy as fp32 for 0.6B at half the memory.
   torch_dtype: "bfloat16"
   batch_size: 32
+
+# vLLM OpenAI-compatible embedding services (separate Modal app "music-crs-vllm").
+# Scale-to-zero; weights lazy-downloaded to the hf-cache volume on first boot.
+vllm:
+  app_name: "music-crs-vllm"
+  # torch-compile / vLLM artifact cache volume (cold-start speedup).
+  cache_volume: "music-crs-vllm-cache"
+  cache_dir: "/root/.cache/vllm"
+  models:
+    qwen3-embedding-4b:
+      hf_id: "Qwen/Qwen3-Embedding-4B"
+      served_name: "Qwen/Qwen3-Embedding-4B"
+      task: "embed"
+      gpu: "L4"
+      dtype: "bfloat16"
+      max_model_len: 8192
+      max_inputs: 32
+      scaledown_window: 300
+      timeout: 1800
+    qwen3-embedding-8b:
+      hf_id: "Qwen/Qwen3-Embedding-8B"
+      served_name: "Qwen/Qwen3-Embedding-8B"
+      task: "embed"
+      gpu: "L40S"
+      dtype: "bfloat16"
+      max_model_len: 8192
+      max_inputs: 32
+      scaledown_window: 300
+      timeout: 1800

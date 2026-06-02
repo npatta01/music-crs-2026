@@ -1,0 +1,51 @@
+import importlib.util
+from pathlib import Path
+
+import pytest
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _load_vllm_serve_module():
+    spec = importlib.util.spec_from_file_location(
+        "vllm_serve_under_test", PROJECT_ROOT / "modal" / "vllm_serve.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+vllm_serve = _load_vllm_serve_module()
+
+
+def test_load_vllm_registry_has_both_models():
+    reg = vllm_serve.load_vllm_registry()
+    assert set(reg["models"]) == {"qwen3-embedding-4b", "qwen3-embedding-8b"}
+    assert reg["models"]["qwen3-embedding-4b"]["hf_id"] == "Qwen/Qwen3-Embedding-4B"
+    assert reg["app_name"] == "music-crs-vllm"
+
+
+def test_build_vllm_serve_cmd_embed_flags():
+    entry = {
+        "hf_id": "Qwen/Qwen3-Embedding-4B",
+        "served_name": "Qwen/Qwen3-Embedding-4B",
+        "task": "embed",
+        "dtype": "bfloat16",
+        "max_model_len": 8192,
+    }
+    cmd = vllm_serve._build_vllm_serve_cmd(entry, port=8000)
+    assert cmd[:2] == ["vllm", "serve"]
+    assert "Qwen/Qwen3-Embedding-4B" in cmd
+    assert "--task" in cmd and cmd[cmd.index("--task") + 1] == "embed"
+    assert cmd[cmd.index("--served-model-name") + 1] == "Qwen/Qwen3-Embedding-4B"
+    assert cmd[cmd.index("--port") + 1] == "8000"
+    assert cmd[cmd.index("--host") + 1] == "0.0.0.0"
+    assert cmd[cmd.index("--dtype") + 1] == "bfloat16"
+    assert cmd[cmd.index("--max-model-len") + 1] == "8192"
+    assert "--api-key" in cmd
+
+
+def test_serve_fn_name_maps_key():
+    assert vllm_serve._serve_fn_name("qwen3-embedding-4b") == "serve_qwen3_embedding_4b"
+    assert vllm_serve._serve_fn_name("qwen3-embedding-8b") == "serve_qwen3_embedding_8b"
