@@ -134,6 +134,10 @@ class CachedTextEmbedder:
 
         if misses:
             encoded = self._inner.embed_batch(misses)
+            if len(encoded) != len(misses):
+                raise ValueError(
+                    f"encoder returned {len(encoded)} vectors for {len(misses)} inputs"
+                )
             for t, vec in zip(misses, encoded):
                 self._store.set(keys[t], vec)
                 resolved[t] = vec

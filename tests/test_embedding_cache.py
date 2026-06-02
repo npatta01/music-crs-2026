@@ -106,7 +106,7 @@ def test_wrapper_preserves_input_order(tmp_path):
     cached = CachedTextEmbedder(enc, DiskVectorCache(tmp_path), "ns")
     texts = ["zzz", "y", "xx"]
     out = cached.embed_batch(texts)
-    expected = enc.embed_batch(texts)  # same deterministic fn, fresh encoder
+    expected = enc.embed_batch(texts)  # same deterministic formula -> expected vectors
     assert out == expected
 
 
@@ -124,3 +124,13 @@ def test_wrapper_empty_input(tmp_path):
     cached = CachedTextEmbedder(enc, DiskVectorCache(tmp_path), "ns")
     assert cached.embed_batch([]) == []
     assert enc.calls == []
+
+
+def test_wrapper_raises_on_length_mismatch(tmp_path):
+    class ShortEncoder:
+        def embed_batch(self, texts):
+            return [[0.0]]  # always one vector regardless of input length
+
+    cached = CachedTextEmbedder(ShortEncoder(), DiskVectorCache(tmp_path), "ns")
+    with pytest.raises(ValueError):
+        cached.embed_batch(["a", "b"])
