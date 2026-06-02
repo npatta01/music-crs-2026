@@ -56,3 +56,13 @@ def test_build_vllm_serve_cmd_omits_optional_flags():
     assert "--dtype" not in cmd
     assert "--max-model-len" not in cmd
     assert cmd[cmd.index("--tensor-parallel-size") + 1] == "1"
+
+
+def test_app_defines_both_serve_endpoints():
+    assert isinstance(vllm_serve.app, vllm_serve.modal.App)
+    assert vllm_serve.serve_qwen3_embedding_4b is not None
+    assert vllm_serve.serve_qwen3_embedding_8b is not None
+
+
+def test_image_is_modal_image():
+    assert isinstance(vllm_serve._vllm_image, vllm_serve.modal.Image)

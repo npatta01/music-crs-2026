@@ -14,6 +14,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import modal
 import yaml
 
 VLLM_PORT = 8000
@@ -80,3 +81,84 @@ def _build_vllm_serve_cmd(entry: dict[str, Any], *, port: int = VLLM_PORT) -> li
         cmd += ["--max-model-len", str(entry["max_model_len"])]
     cmd += ["--tensor-parallel-size", "1"]
     return cmd
+
+
+# ---------------------------------------------------------------------------
+# Modal app objects — image, volumes, scale-to-zero web endpoints, download
+# ---------------------------------------------------------------------------
+
+VLLM_VERSION = "0.9.1"  # latest stable release supporting Qwen3-Embedding pooling
+
+_registry = load_vllm_registry()
+_HF_CACHE_DIR = "/root/.cache/huggingface"
+_VLLM_CACHE_DIR = str(_registry.get("cache_dir", "/root/.cache/vllm"))
+
+app = modal.App(_registry["app_name"])
+
+ENV_SECRET = modal.Secret.from_dotenv(__file__)  # mirror modal/app.py
+
+_vllm_image = (
+    modal.Image.debian_slim(python_version="3.12")
+    .pip_install(f"vllm=={VLLM_VERSION}", "huggingface_hub[hf_transfer]", "pyyaml")
+    .env({"HF_HUB_ENABLE_HF_TRANSFER": "1", "VLLM_USE_V1": "1"})
+    .add_local_file("modal/config.yaml", "/app/modal/config.yaml")
+)
+
+hf_cache_vol = modal.Volume.from_name("music-crs-hf-cache", create_if_missing=True)
+vllm_cache_vol = modal.Volume.from_name(_registry["cache_volume"], create_if_missing=True)
+
+_VOLUMES = {_HF_CACHE_DIR: hf_cache_vol, _VLLM_CACHE_DIR: vllm_cache_vol}
+
+
+def _run_vllm_serve(model_key: str) -> None:
+    """Launch the vLLM OpenAI server for `model_key` (called inside the container)."""
+    import os
+    import subprocess
+
+    entry = _registry["models"][model_key]
+    cmd = _build_vllm_serve_cmd(entry, port=VLLM_PORT)
+    # shell=True so the literal $VLLM_API_KEY in the argv is expanded from the
+    # dotenv secret at exec time.
+    subprocess.Popen(" ".join(cmd), shell=True, env={**os.environ})
+
+
+# ---------------------------------------------------------------------------
+# Two explicit top-level endpoints — factory via _register_serve_endpoint.
+# name= on @app.function is supported in modal 1.4.2 (verified).
+# Decorator order: @app.function outermost, @modal.web_server innermost.
+# ---------------------------------------------------------------------------
+
+def _register_serve_endpoint(model_key: str):
+    entry = _registry["models"][model_key]
+
+    @app.function(
+        name=_serve_fn_name(model_key),
+        image=_vllm_image,
+        gpu=str(entry["gpu"]),
+        volumes=_VOLUMES,
+        secrets=[ENV_SECRET],
+        timeout=int(entry["timeout"]),
+        scaledown_window=int(entry["scaledown_window"]),
+        min_containers=0,
+    )
+    @modal.concurrent(max_inputs=int(entry["max_inputs"]))
+    @modal.web_server(port=VLLM_PORT, startup_timeout=10 * 60)
+    def _serve():
+        _run_vllm_serve(model_key)
+
+    return _serve
+
+
+serve_qwen3_embedding_4b = _register_serve_endpoint("qwen3-embedding-4b")
+serve_qwen3_embedding_8b = _register_serve_endpoint("qwen3-embedding-8b")
+
+
+@app.function(image=_vllm_image, volumes=_VOLUMES, timeout=3600)
+def download(model: str = "qwen3-embedding-4b") -> str:
+    """Optional pre-warm: download weights into the hf-cache volume and commit."""
+    from huggingface_hub import snapshot_download
+
+    entry = _registry["models"][model]
+    path = snapshot_download(entry["hf_id"])
+    hf_cache_vol.commit()
+    return path
