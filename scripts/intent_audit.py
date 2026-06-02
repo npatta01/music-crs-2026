@@ -4,7 +4,7 @@ import glob
 from collections import Counter, defaultdict
 from datasets import load_dataset
 
-TRACE_GLOB = "evaluator/exp/inference/devset/v0plus_compiler_image_devset.shard_*_trace.json"
+TRACE_GLOB = "evaluator/exp/inference/devset/v0plus_compiler_image_devset.shard_*_trace.jsonl"
 GT_PATH = "evaluator/exp/ground_truth/devset.json"
 
 
@@ -12,7 +12,7 @@ def load_traces():
     rows = []
     for path in sorted(glob.glob(TRACE_GLOB)):
         with open(path) as f:
-            rows.extend(json.load(f))
+            rows.extend(json.loads(line) for line in f if line.strip())
     return rows
 
 

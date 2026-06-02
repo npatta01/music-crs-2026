@@ -95,11 +95,23 @@ def test_align_turns_matches_on_session_and_turn():
 
 
 def test_load_trace_rejects_missing_branches(tmp_path):
-    p = tmp_path / "t.json"
-    p.write_text(_json.dumps([{"session_id": "s1", "turn_number": 1, "trace": {"state": {}}}]))
+    p = tmp_path / "t.jsonl"
+    p.write_text(_json.dumps({"session_id": "s1", "turn_number": 1, "trace": {"state": {}}}) + "\n")
     with pytest.raises(SystemExit) as exc:
         load_trace(str(p), require_branches=True)
     assert exc.value.code == 2
+
+
+def test_load_trace_reads_jsonl(tmp_path):
+    p = tmp_path / "t.jsonl"
+    rows = [
+        {"session_id": "s1", "turn_number": 1, "trace": {"branches": {"final": {"track_ids": ["gt"]}}}},
+        {"session_id": "s1", "turn_number": 2, "trace": {"branches": {"final": {"track_ids": ["x"]}}}},
+    ]
+    # trailing blank line must be tolerated
+    p.write_text("\n".join(_json.dumps(r) for r in rows) + "\n\n")
+    loaded = load_trace(str(p), require_branches=True)
+    assert loaded == rows
 
 
 def test_failure_turn_counts_as_miss():

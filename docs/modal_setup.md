@@ -176,7 +176,7 @@ python modal/download_results.py --kind scores
 The downloader mirrors the remote artifact tree under your chosen `--out-dir`:
 
 - `inference/<split>/<tid>.json`
-- `inference/<split>/<tid>_trace.json`
+- `inference/<split>/<tid>_trace.jsonl`
 - `inference/<split>/<tid>_rewrite_audit.jsonl`
 - `inference/<split>/<tid>_rewrite_stats.json`
 - `scores/<split>/<tid>.json`

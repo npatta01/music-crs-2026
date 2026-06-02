@@ -62,7 +62,7 @@ Higher is better for all metrics.
 
 ## Branch diagnostics (per-retriever coverage)
 
-The v0+ devset trace sidecar (`exp/inference/devset/{tid}_trace.json`) carries a
+The v0+ devset trace sidecar (`exp/inference/devset/{tid}_trace.jsonl`) carries a
 per-turn `branches` key when `CompilerConfig.branch_trace_topk > 0`: each
 retriever branch's RAW top-`branch_trace_topk` `(track_id, score)` pool keyed by
 a stable name (`bm25`, `dense.<encoder_id>.<query_id>.<vector_field>`,
@@ -81,7 +81,7 @@ submission/blindset runs pay nothing and write no `branches`.
 
 ```bash
 python scripts/branch_diagnostics.py \
-  --trace exp/inference/devset/{tid}_trace.json \
+  --trace exp/inference/devset/{tid}_trace.jsonl \
   --ground-truth evaluator/exp/ground_truth/devset.json \
   --out exp/diagnostics/devset/{tid}.json   # optional; always prints a table
 ```

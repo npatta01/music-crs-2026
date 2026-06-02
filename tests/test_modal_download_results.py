@@ -59,7 +59,7 @@ def test_discover_remote_files_includes_supported_artifact_kinds():
             "/inference": [_file("inference/devset", 0)],
             "/inference/devset": [
                 _file("inference/devset/foo_devset.json", 11),
-                _file("inference/devset/foo_devset_trace.json", 9),
+                _file("inference/devset/foo_devset_trace.jsonl", 9),
                 _file("inference/devset/foo_devset_rewrite_audit.jsonl", 7),
                 _file("inference/devset/foo_devset_rewrite_stats.json", 5),
             ],
@@ -77,7 +77,7 @@ def test_discover_remote_files_includes_supported_artifact_kinds():
         "inference/devset/foo_devset.json",
         "inference/devset/foo_devset_rewrite_audit.jsonl",
         "inference/devset/foo_devset_rewrite_stats.json",
-        "inference/devset/foo_devset_trace.json",
+        "inference/devset/foo_devset_trace.jsonl",
         "scores/devset/foo_devset.json",
     ]
 
@@ -86,7 +86,7 @@ def test_select_artifacts_for_tid_includes_prediction_and_traces():
     module = _load_module()
     artifacts = [
         module.RemoteArtifact("inference/devset/foo_devset.json", 10, "inference", "devset", "foo_devset"),
-        module.RemoteArtifact("inference/devset/foo_devset_trace.json", 6, "trace", "devset", "foo_devset"),
+        module.RemoteArtifact("inference/devset/foo_devset_trace.jsonl", 6, "trace", "devset", "foo_devset"),
         module.RemoteArtifact(
             "inference/devset/foo_devset_rewrite_audit.jsonl", 4, "trace", "devset", "foo_devset"
         ),
@@ -107,20 +107,20 @@ def test_select_artifacts_for_tid_includes_prediction_and_traces():
 
     assert [artifact.remote_path for artifact in selected] == [
         "inference/devset/foo_devset.json",
-        "inference/devset/foo_devset_trace.json",
+        "inference/devset/foo_devset_trace.jsonl",
         "inference/devset/foo_devset_rewrite_audit.jsonl",
         "inference/devset/foo_devset_rewrite_stats.json",
         "scores/devset/foo_devset.json",
     ]
 
 
-def test_trace_json_sidecar_uses_run_tid_and_trace_kind():
+def test_trace_jsonl_sidecar_uses_run_tid_and_trace_kind():
     module = _load_module()
 
-    kind = module._artifact_kind("inference/devset/foo_devset_trace.json")
+    kind = module._artifact_kind("inference/devset/foo_devset_trace.jsonl")
 
     assert kind == "trace"
-    assert module._artifact_tid("inference/devset/foo_devset_trace.json", kind) == "foo_devset"
+    assert module._artifact_tid("inference/devset/foo_devset_trace.jsonl", kind) == "foo_devset"
 
 
 def test_select_artifacts_skips_existing_files_by_default(tmp_path):

@@ -157,7 +157,7 @@ The single shallow row corresponds to the single `extractor_returned_none` trace
 ## Files
 
 - Inference predictions: `exp/inference/devset/v0plus_compiler_all_retrievers_devset.json`
-- Trace: `exp/inference/devset/v0plus_compiler_all_retrievers_devset_trace.json`
+- Trace: `exp/inference/devset/v0plus_compiler_all_retrievers_devset_trace.jsonl`
 - Per-shard predictions/traces: `exp/inference/devset/v0plus_compiler_all_retrievers_devset.shard_{0..4}*.json`
 - Aggregate scores: `exp/scores/devset/v0plus_compiler_all_retrievers_devset.json`
 - Per-sample metrics: `exp/scores/devset/v0plus_compiler_all_retrievers_devset_samples.csv`
