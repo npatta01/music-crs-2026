@@ -270,13 +270,18 @@ def _class_volume_dir_consts(class_name: str) -> set[str]:
             for decorator in node.decorator_list:
                 if isinstance(decorator, ast.Call):
                     for keyword in decorator.keywords:
-                        if keyword.arg == "volumes" and isinstance(keyword.value, ast.Dict):
+                        if keyword.arg == "volumes":
+                            if not isinstance(keyword.value, ast.Dict):
+                                raise AssertionError(
+                                    f"{class_name} volumes= is not a dict literal"
+                                )
                             return {
                                 k.id
                                 for k in keyword.value.keys
                                 if isinstance(k, ast.Name)
                             }
-    return set()
+            raise AssertionError(f"Could not find volumes= kwarg on {class_name} decorator")
+    raise AssertionError(f"Could not find class {class_name} in modal/app.py")
 
 
 def test_gpu_encoders_mount_embedding_cache():

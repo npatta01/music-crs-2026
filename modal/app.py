@@ -479,6 +479,7 @@ class Qwen3Encoder:
         )
 
         cache_enabled = os.environ.get("EMBEDDING_CACHE_ENABLED", "1") != "0"
+        self._cache_enabled = cache_enabled
         self.client = CachedTextEmbedder(
             self.client,
             DiskVectorCache(EMBEDDING_CACHE_DIR),
@@ -494,7 +495,8 @@ class Qwen3Encoder:
 
     @modal.exit()
     def _commit_embedding_cache(self):
-        embedding_cache_vol.commit()
+        if self._cache_enabled:
+            embedding_cache_vol.commit()
 
 
 @app.cls(
@@ -1204,6 +1206,7 @@ class MultimodalTextEncoder:
 
         store = DiskVectorCache(EMBEDDING_CACHE_DIR)
         cache_enabled = os.environ.get("EMBEDDING_CACHE_ENABLED", "1") != "0"
+        self._cache_enabled = cache_enabled
         self.siglip = CachedTextEmbedder(
             self.siglip,
             store,
@@ -1231,4 +1234,5 @@ class MultimodalTextEncoder:
 
     @modal.exit()
     def _commit_embedding_cache(self):
-        embedding_cache_vol.commit()
+        if self._cache_enabled:
+            embedding_cache_vol.commit()
