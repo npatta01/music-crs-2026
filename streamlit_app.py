@@ -320,8 +320,8 @@ with st.sidebar:
     if not pred_files:
         st.warning(
             f"No prediction files found in `{search_dir}/`.\n\n"
-            + ("Run `python run_inference_devset.py --tid llama1b_bm25_devset`" if is_devset
-               else "Run `python run_inference_blindset.py --tid llama1b_bm25_blindset_A`")
+            + ("Run `python run_inference_devset.py --tid v0plus_compiler_image_devset`" if is_devset
+               else "Run `python run_inference_blindset.py --tid v0plus_compiler_blindset_A`")
         )
         st.stop()
 

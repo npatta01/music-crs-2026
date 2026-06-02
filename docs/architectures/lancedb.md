@@ -1,16 +1,14 @@
 # LanceDB Architecture
 
-LanceDB is a CPU-only retrieval experiment for comparing native LanceDB FTS against the existing tag-list BM25 baselines:
-
-- direct BM25: `configs/bm25_devset_retrieval_only_with_tag_list.yaml`
-- Milvus BM25: `configs/milvus_bm25_with_tag_list_devset.yaml`
-- LanceDB FTS: `configs/lancedb_fts_with_tag_list_devset.yaml`
+LanceDB is the v0+ catalog source of truth and retrieval substrate. It started
+as a CPU-only FTS comparison against BM25/Milvus baselines; those old configs
+were pruned from the working tree and are now available only through Git
+history.
 
 The first LanceDB config is intentionally sparse/FTS-only at query time.
 LanceDB also supports dense vector lookup over stored embedding columns. The
 local index build stores precomputed track embeddings by default so the same DB
-can support dense or later hybrid LanceDB experiments, but
-`lancedb_fts_with_tag_list_devset` does not load a dense query encoder.
+can support dense and hybrid v0+ retrieval.
 
 This path should stay a pure LanceDB FTS comparison. Do not add a local
 candidate reranker to make it match direct `bm25s`; if top-1000 scores diverge,
@@ -63,7 +61,8 @@ Candidate overlap between LanceDB and direct BM25:
 | @100 | 0.9511 |
 | @1000 | 0.9582 |
 
-See `experiments/lancedb_fts_with_tag_list_devset.md` for the full report.
+The old standalone LanceDB FTS report was pruned; use Git history for that
+point-in-time comparison.
 
 ## Build And Storage
 

@@ -50,7 +50,7 @@ All three implement the same interface — `response_generation(system_prompt, c
 
 ## 3. What the code WAS doing vs. what it's doing NOW
 
-**Was (original baseline):** end-to-end *generative* recommendation. The challenge baseline shipped with `LLAMA_MODEL` (Llama-3.2-1B-Instruct) actually generating a response per turn, prompted by `response_generation.txt`. Those runs are the `llama1b_bm25_devset` / `llama1b_bert_devset` rows on the [leaderboard](../../leaderboard.md) (generative end-to-end, NDCG@20 0.082 / 0.006). `LITELLM_LM` was later added (#42) as a cheaper API alternative to running a local model.
+**Was (original baseline):** end-to-end *generative* recommendation. The challenge baseline shipped with `LLAMA_MODEL` (Llama-3.2-1B-Instruct) actually generating a response per turn, prompted by `response_generation.txt`. Historical `llama1b_*` rows were pruned from the current leaderboard but remain available in Git history. `LITELLM_LM` was later added (#42) as a cheaper API alternative to running a local model.
 
 **Now (current experiments):** generation is **deliberately disabled**. ~52 configs set `lm_type: "dummy"` — with the inline note *"response generation is downstream of this experiment's scope."* Only ~5 (archived) configs still use the Llama backend. The reasoning:
 
@@ -69,7 +69,7 @@ A richer explanation — *why this track, from which signal* — needs the retri
 - `fused` — the RRF-fused list before soft (de)promotes.
 - `n_from_fusion` / `n_from_backfill` — how much of the final list is real retrieval vs. popularity padding.
 
-The dataclass docstring states this is persisted *"for downstream rerank / explanation pickup."* That means a future explainer can answer "the top pick came from the **image-SigLIP2 centroid** branch (cover-art similarity to a track you liked) and was reinforced by **BM25** on the artist name" — grounded provenance instead of a hallucinated rationale. The trace is written to the devset trace's `branches` key (`CompileResult.to_trace_dict()`); `scripts/branch_diagnostics.py` already reads it for per-branch recall/hit diagnostics. See [`v0plus_retrieval.md`](v0plus_retrieval.md) §2 for branch names and [the trace design](../superpowers/specs/2026-06-01-retrieval-trace-and-branch-diagnostics-design.md).
+The dataclass docstring states this is persisted *"for downstream rerank / explanation pickup."* That means a future explainer can answer "the top pick came from the **image-SigLIP2 centroid** branch (cover-art similarity to a track you liked) and was reinforced by **BM25** on the artist name" — grounded provenance instead of a hallucinated rationale. The trace is written to the devset trace's `branches` key (`CompileResult.to_trace_dict()`); `scripts/branch_diagnostics.py` already reads it for per-branch recall/hit diagnostics. See [`v0plus_retrieval.md`](v0plus_retrieval.md) §2 for branch names.
 
 **Status:** the data exists; no module yet converts branch provenance into user-facing explanation text. This is the natural place for a future explanation feature to plug in.
 

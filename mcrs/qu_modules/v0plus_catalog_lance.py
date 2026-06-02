@@ -24,7 +24,7 @@ _NON_EMBEDDING_VECTOR_COLUMNS = (
 )
 
 if TYPE_CHECKING:
-    from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
+    from mcrs.conversation_state.schema import (
         HardFilter,
     )
 
@@ -36,9 +36,9 @@ import re as _re
 # dump-shaped strings the LLM extractor occasionally emits (those contain
 # quotes / colons / whitespace that would break the SQL WHERE clause in
 # `LanceDbCatalog.vector`). Schema-level validation in
-# `experiments/analysis/conversation_state_extraction_bakeoff/schema.py`
-# enforces the same rule so bad ids never reach this code path in production —
-# this is defense in depth for callers that bypass the schema.
+# `mcrs.conversation_state.schema` enforces the same rule so bad ids never reach
+# this code path in production; this is defense in depth for callers that bypass
+# the schema.
 _SAFE_ID_RE = _re.compile(r"^[A-Za-z0-9_\-]+$")
 
 

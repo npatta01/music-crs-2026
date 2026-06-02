@@ -29,7 +29,7 @@ Architecture (one call per branch, compiler-owned cross-modal fusion):
                        ▼
               top-1000 track_ids
 
-See: experiments/analysis/conversation_state_compiler_v0plus/README.md
+See: docs/architectures/v0plus_retrieval.md
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ from dataclasses import dataclass, field
 # `"deep" in "deepfake"` don't accidentally fire the lyric branch.
 _LYRIC_TOKEN_RE = re.compile(r"\w+")
 
-from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
+from mcrs.conversation_state.schema import (
     ConversationStateV0Plus,
 )
 from mcrs.embeddings.base import EmbeddingClient

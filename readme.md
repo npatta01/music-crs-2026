@@ -97,14 +97,14 @@ uv run modal run other/modal_get_started.py
 The preferred operator command is the unified experiment wrapper:
 
 ```bash
-# Local devset run + local evaluation
-python run_experiment.py --backend local --tid bm25_devset_retrieval_only_with_tag_list --batch_size 16
+# Current score-anchor devset run + local evaluation
+python run_experiment.py --backend local --tid v0plus_compiler_image_devset --batch_size 16
 
-# Modal devset run + download into local exp/ + local evaluation
-python run_experiment.py --backend modal --tid lancedb_fts_with_tag_list_devset --batch_size 64
+# Latest all-retrievers coverage run + download into local exp/ + local evaluation
+python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --batch_size 64
 
-# Local dense retriever run
-python run_experiment.py --backend local --tid dense_qwen3_embedding_8b_devset --batch_size 16
+# Blind A submission path
+python run_experiment.py --backend modal --tid v0plus_compiler_blindset_A --eval_dataset blindset_A --batch_size 64
 ```
 
 Devset runs write predictions to `exp/inference/devset/{tid}.json` and scores to `exp/scores/devset/{tid}.json`.
@@ -113,10 +113,10 @@ The low-level inference scripts remain available when you want to run only one s
 
 ```bash
 # Dev set inference only
-python run_inference_devset.py --tid bm25_devset_retrieval_only_with_tag_list --batch_size 16
+python run_inference_devset.py --tid v0plus_compiler_image_devset --batch_size 16
 
-# Blind set inference requires adding a split-specific config under configs/.
-python run_inference_blindset.py --tid my_blindset_A_config --eval_dataset blindset_A --batch_size 16
+# Blind set inference
+python run_inference_blindset.py --tid v0plus_compiler_blindset_A --eval_dataset blindset_A --batch_size 16
 ```
 
 ### Run Inference on the Development Set
@@ -137,11 +137,11 @@ If you do not use `all_tracks`, your evaluation may be considered invalid.
 
 
 ```bash
-# BM25 baseline
-python run_experiment.py --backend local --tid bm25_devset_retrieval_only_with_tag_list --batch_size 16
+# Current score anchor
+python run_experiment.py --backend local --tid v0plus_compiler_image_devset --batch_size 16
 
-# Dense retriever
-python run_experiment.py --backend local --tid dense_qwen3_embedding_8b_devset --batch_size 16
+# Latest coverage experiment
+python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --batch_size 64
 ```
 
 Results are saved under `exp/`.
@@ -156,7 +156,7 @@ To pull Modal-run artifacts back to your machine, use the bulk downloader:
 
 ```bash
 # Download one run (predictions, traces, and scores if present)
-python modal/download_results.py --tid bm25_devset_retrieval_only_with_tag_list
+python modal/download_results.py --tid v0plus_compiler_all_retrievers_devset
 
 # Sync all missing artifacts from the Modal volume into evaluator/exp/
 python modal/download_results.py
@@ -179,21 +179,28 @@ The downloader defaults to `evaluator/exp/` and mirrors any available remote:
 ### Run Inference on Blind Sets (for submission)
 
 ```bash
-# Add a split-specific config in configs/ first, then pass the blindset explicitly.
-python run_experiment.py --backend local --tid my_blindset_A_config --eval_dataset blindset_A --batch_size 16
+python run_experiment.py --backend modal --tid v0plus_compiler_blindset_A --eval_dataset blindset_A --batch_size 64
 ```
 
 ---
 
 ## Custom Configuration
 
-Create a config file in `configs/`:
+Create a config file in `configs/` or copy one of the current v0+ configs:
 
 ```yaml
 # configs/my_model.yaml
-lm_type: "Qwen/Qwen3-4B" # change llama to qwen3
+lm_type: "dummy"
 retrieval_type: "bm25"
-qu_type: "passthrough"
+qu_type: "v0plus_compiler"
+qu_kwargs:
+  extractor:
+    model_name: "openrouter/deepseek/deepseek-v4-flash"
+    prompt_version: "current"
+    temperature: 0.0
+  lancedb:
+    db_uri: "./cache/lancedb"
+    table_name: "music_track_catalog"
 test_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Dataset"
 item_db_name: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
 user_db_name: "talkpl-ai/TalkPlayData-Challenge-User-Metadata"
@@ -205,10 +212,10 @@ corpus_types:
   - "track_name"
   - "artist_name"
   - "album_name"
-  - "release_date"
+  - "tag_list"
 cache_dir: "./cache"
-device: "cuda"
-attn_implementation: "sdpa"
+device: "cpu"
+attn_implementation: "eager"
 ```
 
 Then run with your config:
@@ -217,24 +224,10 @@ Then run with your config:
 python run_experiment.py --backend local --tid my_model --eval_dataset devset
 ```
 
-For retrieval-only Wave 3 rewrite experiments, use `lm_type: "dummy"` and move the rewrite model into `qu_kwargs`:
-
-```yaml
-lm_type: "dummy"
-retrieval_type: "bm25"
-qu_type: "llm_rewrite"
-qu_kwargs:
-  model_name: "HuggingFaceTB/SmolLM2-1.7B-Instruct"
-  prompt_name: "preserve_entities_v1"
-  max_new_tokens: 96
-  audit_path: "./exp/inference/devset/<tid>_rewrite_audit.jsonl"
-  stats_path: "./exp/inference/devset/<tid>_rewrite_stats.json"
-corpus_types:
-  - "track_name"
-  - "artist_name"
-  - "album_name"
-  - "tag_list"
-```
+The current v0+ configs use `lm_type: "dummy"` because retrieval quality is the
+experiment scope; natural-language response generation is documented separately.
+For a new v0+ config, keep `track_split_types: ["all_tracks"]` and start from one
+of the existing `v0plus_compiler_*` YAML files.
 
 ---
 

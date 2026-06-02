@@ -254,7 +254,7 @@ def test_reranker_drops_zero_scored_tracks_from_output():
     assert dict(out)["t2"] == 0.3
 
 
-# --- release_year_range soft date feature (extractor_prompt_v2 follow-up) ---
+# --- release_year_range soft date feature (current extractor follow-up) ---
 
 from mcrs.qu_modules.post_fusion_features import ReleaseYearRangeFeature
 

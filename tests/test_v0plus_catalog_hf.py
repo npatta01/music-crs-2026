@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
+from mcrs.conversation_state.schema import (
     HardFilter,
 )
 from mcrs.qu_modules.v0plus_catalog import CompilerCatalog

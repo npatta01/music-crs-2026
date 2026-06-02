@@ -1,26 +1,20 @@
-# v0+ Compiler ablation: image_siglip2 branch ONLY (cf_bpr off).
+# v0+ score anchor: image_siglip2 branch ONLY (cf_bpr off).
 #
-# Adds a 4th retrieval branch on top of the v0plus_compiler_devset baseline:
-# a collaborative-filtering BPR centroid ANN over positive anchor tracks.
+# Uses a cover-art SigLIP2 centroid ANN over positive anchor tracks. This is the
+# current top-20 ranking anchor after the retrieval bugfix rerun.
 #
-# Rationale (see experiments/v0plus_compiler_devset.md failure analysis):
+# Rationale:
 #   - 64% of devset turns have a GT artist not seen in prior turns ("novel
 #     artist" cohort). On that cohort our text-based branches retrieve at
 #     Hit@20 = 0.091 vs 0.486 on continuation turns.
-#   - cf_bpr captures co-listening behavior — it returns tracks that real
-#     users listened to alongside the anchor track, regardless of whether
-#     they share artist/album/tag text. That's the signal text retrieval
-#     can't see.
+#   - image_siglip2 captures cover-art / visual-album neighborhood signal that
+#     text retrieval alone cannot see.
 #   - The branch is a no-op on turn 1 / pure-`pivot` turns (no anchors),
 #     so RRF naturally falls back to text branches in those cases.
 #
 # Preconditions:
-# 1. LanceDB table must have a `cf_bpr` column populated (variable-length
-#    list<double>, 128-d). Verify with `notebooks/05_lancedb_indexing.ipynb`.
-# 2. Compiler eagerly loads the cf_bpr column into RAM at init
-#    (~50 MB for 47k tracks at 128 floats each) and builds a normalized
-#    numpy matrix on first vector_ann call.
-# 3. Everything else identical to v0plus_compiler_devset.yaml.
+# 1. LanceDB table must have an `image_siglip2` vector column populated.
+# 2. Verify the local/Modal index with `notebooks/05_lancedb_indexing.ipynb`.
 
 lm_type: "dummy"
 retrieval_type: "bm25"
@@ -31,6 +25,7 @@ qu_kwargs:
 
   extractor:
     model_name: "openrouter/google/gemma-3-12b-it"
+    prompt_version: "current"
     temperature: 0.0
     max_tokens: 1500
     timeout_s: 90

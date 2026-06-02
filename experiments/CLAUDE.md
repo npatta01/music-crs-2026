@@ -1,41 +1,53 @@
 # Experiments Workspace Guide
 
-Use this directory as the working surface for experiment history, status, and analysis.
+This workspace is pruned on purpose. Historical reports, archived configs, and
+raw artifacts were removed because they confused agents about the current
+system. Git history is the archive.
 
-## Purpose
+## Source Of Truth
 
-- `experiments/README.md` is the main index for current bests, active work, analysis links, and status vocabulary.
-- `experiments/experiment_log.md` is the cross-run log for wave-level takeaways, decisions, and next steps.
-- `experiments/*.md` are per-run reports unless the filename is an index or log file.
-- `experiments/analysis/<analysis_name>/README.md` is the entrypoint for a self-contained analysis package.
+- `experiments/README.md` is the current experiment index.
+- `experiments/experiment_log.md` is the short current-state log.
+- `leaderboard.md` is the compact devset score table.
+- `changelog.md` links experiment outcomes to PRs.
+- `configs/` contains only runnable current configs.
 
-## Conventions
+## Current Config Policy
 
-- Create one report per run at `experiments/{tid}.md`.
-- Put cross-run conclusions in `experiments/experiment_log.md`, not in individual run reports.
-- Package deeper analysis as `experiments/analysis/<analysis_name>/README.md` with local artifacts in a sibling subdirectory such as `artifacts/`.
-- Keep analysis folders named by topic or deliverable, not by issue number alone.
+- Keep current runnable configs directly under `configs/`.
+- Do not recreate `configs/archive/`.
+- If a config is superseded, delete it from the working tree after preserving
+  the rationale in Git history or in a concise current-state note.
+- Prefer `v0plus_compiler_all_retrievers_devset` for the latest coverage
+  experiment and `v0plus_compiler_image_devset` for the current score anchor.
 
-## Status Updates
+## Report Policy
 
-- Update `experiments/README.md` when a new best, active workstream, or new analysis package should be discoverable quickly.
-- Update `experiments/experiment_log.md` when a wave produces a decision, takeaway, or next-step recommendation.
-- Use the shared status vocabulary from `experiments/README.md`: `planned`, `running`, `analyzed`, `done`, `superseded`.
+- Do not add one report per exploratory run by default.
+- Add a checked-in report only when it is the new current reference or the user
+  explicitly asks for a durable artifact.
+- Keep reports short and self-contained; avoid raw JSONL, traces, screenshots,
+  slide decks, or labeling files in `experiments/`.
+- Downloaded Modal artifacts belong under `exp/` or `evaluator/exp/`, not under
+  this directory.
 
-## Maintenance Checklist (run when an experiment lands)
+## Runtime Prompt Policy
 
-When a new run / wave produces results, update **all** of these in one pass so nothing drifts:
+Runtime ConversationState schema and extractor prompts do not live under
+`experiments/`. Keep this directory for one-off reports and concise experiment
+status only.
 
-1. **Run report** — `experiments/{tid}.md` (or a wave/ablation report for a batch). Use the same metric columns as siblings.
-2. **Cross-run log** — `experiments/experiment_log.md`: the takeaway, decision, or next step (not raw numbers).
-3. **Index** — `experiments/README.md`: update *Current Bests* / *Current Active Work* / the relevant *Wave* list and status vocabulary.
-4. **Leaderboard** — `../leaderboard.md`: add/update the row, keep it ranked by NDCG@20, only fill cells you have real numbers for (`—` otherwise).
-5. **Changelog** — `../changelog.md`: one hybrid entry tagged `Experiment` with the **PR link** so the result traces back to its code state.
+Use `mcrs/conversation_state/schema.py` for the Pydantic contract,
+`mcrs/conversation_state/prompts/current.py` for the production extractor
+prompt, and `mcrs/conversation_state/prompts/previous.py` for the single
+reference prompt kept for comparison or rollback.
 
-When a run is replaced, mark it `superseded` (don't delete) and move its config to `configs/archive/`. This checklist is the lightweight alternative to automation — there is no hook; an agent or you runs it.
+## Maintenance Checklist
 
-## Agent Expectations
+When a new run becomes important enough to keep:
 
-- Read `experiments/README.md` before summarizing project experiment status.
-- Prefer linking to the package README for analysis work, not directly to raw artifacts.
-- If you add a new experiment or analysis package, also update the relevant index so the next model can discover it in one hop.
+1. Update `experiments/README.md` with the current config/report status.
+2. Update `experiments/experiment_log.md` with one concise decision entry.
+3. Update `leaderboard.md` if the run changes the compact devset table.
+4. Update `changelog.md` with the PR-linked outcome.
+5. Keep old details in Git history instead of adding archive folders.

@@ -54,14 +54,14 @@ running through the local HF path — those slugs are not on OpenRouter.
 
 ## 4. End-to-end example
 
-`configs/archive/litellm_qwen3_8b_rewrite_emb3small_devset.yaml` is the archived config for litellm rewrite
-(`qwen3.5-9b`) plus litellm embeddings (`text-embedding-3-small`) together. Copy it back to `configs/` before rerunning it:
+The old checked-in LiteLLM rewrite config was pruned with the experiment
+archive. Recover it from Git history if you need that exact run, or create a
+fresh config under `configs/`:
 
 ```bash
 ./scripts/litellm-proxy &
-cp configs/archive/litellm_qwen3_8b_rewrite_emb3small_devset.yaml configs/
 python run_inference_devset.py \
-  --tid litellm_qwen3_8b_rewrite_emb3small_devset \
+  --tid my_litellm_rewrite_devset \
   --batch_size 16 --num_sessions 4
 ```
 

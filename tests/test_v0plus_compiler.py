@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
+from mcrs.conversation_state.schema import (
     ConversationStateV0Plus,
     ExplicitRejection,
     HardFilter,
@@ -1213,7 +1213,7 @@ def test_discography_branch_respects_hard_drop():
 
 
 def test_routing_tags_default_false_and_settable():
-    from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
+    from mcrs.conversation_state.schema import (
         ConversationStateV0Plus, RoutingTags,
     )
     s = _state()
@@ -1244,7 +1244,7 @@ def test_lyric_query_none_without_theme():
 
 
 def test_routing_multiplier_boosts_matching_branch():
-    from experiments.analysis.conversation_state_extraction_bakeoff.schema import RoutingTags
+    from mcrs.conversation_state.schema import RoutingTags
     catalog = _catalog()
     cfg = CompilerConfig(routing_boost={"lyric_search": 3.0, "exact_entity_probe": 2.0})
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)
@@ -1255,7 +1255,7 @@ def test_routing_multiplier_boosts_matching_branch():
 
 
 def test_routing_multiplier_default_one_when_unconfigured():
-    from experiments.analysis.conversation_state_extraction_bakeoff.schema import RoutingTags
+    from mcrs.conversation_state.schema import RoutingTags
     catalog = _catalog()
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())  # no routing_boost
     rs = _resolve(_state(routing_tags=RoutingTags(lyric_search=True, exact_entity_probe=True)), catalog)
@@ -1264,7 +1264,7 @@ def test_routing_multiplier_default_one_when_unconfigured():
 
 
 def test_routing_multiplier_unmapped_kind_is_one():
-    from experiments.analysis.conversation_state_extraction_bakeoff.schema import RoutingTags
+    from mcrs.conversation_state.schema import RoutingTags
     catalog = _catalog()
     cfg = CompilerConfig(routing_boost={"lyric_search": 3.0})
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)
@@ -1273,7 +1273,7 @@ def test_routing_multiplier_unmapped_kind_is_one():
 
 
 def test_lyric_branch_fires_and_is_weighted_on_lyric_search():
-    from experiments.analysis.conversation_state_extraction_bakeoff.schema import RoutingTags
+    from mcrs.conversation_state.schema import RoutingTags
     catalog = _catalog()
     enc = _fake_encoder()  # FakeEmbeddingClient records every embed_batch() text in `.calls`
     cfg = CompilerConfig(
@@ -1466,7 +1466,7 @@ def test_similar_artist_anchors_intent_gate():
     turn: on the allowed intents (open_explore / pivot) or an exact_entity_probe
     turn, and NOT on refinement / playlist_build (where the artist is a 'more
     like X but different' comparison)."""
-    from experiments.analysis.conversation_state_extraction_bakeoff.schema import RoutingTags
+    from mcrs.conversation_state.schema import RoutingTags
     catalog = _sa_catalog()
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _sa_cfg())
     expect = ["t-mor-1", "t-mor-2", "t-mor-3"]

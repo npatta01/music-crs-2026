@@ -25,7 +25,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
+from mcrs.conversation_state.schema import (
     ExplorationPolicy,
 )
 from mcrs.qu_modules.resolver_v0plus import ResolvedConversationState
