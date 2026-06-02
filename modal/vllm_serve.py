@@ -159,6 +159,7 @@ _ENTRY_8B = _registry["models"]["qwen3-embedding-8b"]
     timeout=int(_ENTRY_4B["timeout"]),
     scaledown_window=int(_ENTRY_4B["scaledown_window"]),
     min_containers=0,
+    max_containers=int(_ENTRY_4B.get("max_containers", 1)),
 )
 @modal.concurrent(max_inputs=int(_ENTRY_4B["max_inputs"]))
 @modal.web_server(port=VLLM_PORT, startup_timeout=10 * 60)
@@ -175,6 +176,7 @@ def serve_qwen3_embedding_4b():
     timeout=int(_ENTRY_8B["timeout"]),
     scaledown_window=int(_ENTRY_8B["scaledown_window"]),
     min_containers=0,
+    max_containers=int(_ENTRY_8B.get("max_containers", 1)),
 )
 @modal.concurrent(max_inputs=int(_ENTRY_8B["max_inputs"]))
 @modal.web_server(port=VLLM_PORT, startup_timeout=10 * 60)
