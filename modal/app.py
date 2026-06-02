@@ -53,10 +53,12 @@ HF_CACHE_VOLUME = _cfg.volumes.hf_cache
 RESULTS_VOLUME = _cfg.volumes.results
 MODELS_VOLUME = _cfg.volumes.models
 LITELLM_CACHE_VOLUME = _cfg.volumes.litellm_cache
+EMBEDDING_CACHE_VOLUME = _cfg.volumes.embedding_cache
 HF_CACHE_DIR = _cfg.container.hf_cache_dir
 EXP_DIR = _cfg.container.exp_dir
 MODELS_DIR = _cfg.container.models_dir
 LITELLM_CACHE_DIR = _cfg.container.litellm_cache_dir
+EMBEDDING_CACHE_DIR = _cfg.container.embedding_cache_dir
 LITELLM_CACHE_BACKEND = str(_cfg.litellm_cache.backend)
 INFERENCE_GPU = list(_cfg.inference.gpu)
 DEVSET_BATCH_SIZE = int(_cfg.inference.devset_batch_size)
@@ -90,6 +92,9 @@ hf_cache_vol = modal.Volume.from_name(HF_CACHE_VOLUME, create_if_missing=True)
 results_vol = modal.Volume.from_name(RESULTS_VOLUME, create_if_missing=True)
 models_vol = modal.Volume.from_name(MODELS_VOLUME, create_if_missing=True)
 litellm_cache_vol = modal.Volume.from_name(LITELLM_CACHE_VOLUME, create_if_missing=True, version=2)
+embedding_cache_vol = modal.Volume.from_name(
+    EMBEDDING_CACHE_VOLUME, create_if_missing=True, version=2
+)
 
 # Build image: uv_sync reads pyproject.toml + uv.lock for reproducible installs.
 # Source files are copied separately (uv_sync uses --no-install-project).
@@ -430,7 +435,7 @@ class ModalRetrievalService:
 @app.cls(
     image=image,
     gpu=QWEN3_ENCODER_GPU,
-    volumes={HF_CACHE_DIR: hf_cache_vol},
+    volumes={HF_CACHE_DIR: hf_cache_vol, EMBEDDING_CACHE_DIR: embedding_cache_vol},
     secrets=[ENV_SECRET],
     cpu=QWEN3_ENCODER_CPU,
     memory=QWEN3_ENCODER_MEMORY,
@@ -454,6 +459,7 @@ class Qwen3Encoder:
 
     @modal.enter()
     def setup(self):
+        self._cache_enabled = False  # set True after cache init; keeps @modal.exit() safe if setup raises
         import os
 
         os.environ.setdefault("HF_HOME", HF_CACHE_DIR)
@@ -468,11 +474,30 @@ class Qwen3Encoder:
         # pay the load tax on the request path.
         self.client._ensure_loaded()
 
+        from mcrs.embeddings.embedding_cache import (
+            CachedTextEmbedder,
+            DiskVectorCache,
+        )
+
+        cache_enabled = os.environ.get("EMBEDDING_CACHE_ENABLED", "1") != "0"
+        self._cache_enabled = cache_enabled
+        self.client = CachedTextEmbedder(
+            self.client,
+            DiskVectorCache(EMBEDDING_CACHE_DIR),
+            f"qwen3:Qwen3-Embedding-0.6B:dtype={QWEN3_ENCODER_TORCH_DTYPE}",
+            enabled=cache_enabled,
+        )
+
     @modal.method()
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
         return self.client.embed_batch(texts)
+
+    @modal.exit()
+    def _commit_embedding_cache(self):
+        if self._cache_enabled:
+            embedding_cache_vol.commit()
 
 
 @app.cls(
@@ -1136,7 +1161,7 @@ def verify_textside(
 @app.cls(
     image=_clap_image,  # cached; includes torch 2.4 + transformers <5 + laion_clap 1.1.7
     gpu="T4",
-    volumes={HF_CACHE_DIR: hf_cache_vol},
+    volumes={HF_CACHE_DIR: hf_cache_vol, EMBEDDING_CACHE_DIR: embedding_cache_vol},
     secrets=[ENV_SECRET],
     cpu=2.0,
     memory=8192,
@@ -1154,6 +1179,7 @@ class MultimodalTextEncoder:
 
     @modal.enter()
     def setup(self) -> None:
+        self._cache_enabled = False  # set True after cache init; keeps @modal.exit() safe if setup raises
         import os
 
         os.environ.setdefault("HF_HOME", HF_CACHE_DIR)
@@ -1175,6 +1201,27 @@ class MultimodalTextEncoder:
         self.clap = ClapTextEmbeddingClient(ckpt_path=ckpt_path, device="cuda")
         self.clap._ensure_loaded()
 
+        from mcrs.embeddings.embedding_cache import (
+            CachedTextEmbedder,
+            DiskVectorCache,
+        )
+
+        store = DiskVectorCache(EMBEDDING_CACHE_DIR)
+        cache_enabled = os.environ.get("EMBEDDING_CACHE_ENABLED", "1") != "0"
+        self._cache_enabled = cache_enabled
+        self.siglip = CachedTextEmbedder(
+            self.siglip,
+            store,
+            "siglip2:google/siglip2-base-patch16-224",
+            enabled=cache_enabled,
+        )
+        self.clap = CachedTextEmbedder(
+            self.clap,
+            store,
+            "clap:music_audioset_epoch_15_esc_90.14",
+            enabled=cache_enabled,
+        )
+
     @modal.method()
     def embed_siglip_text(self, texts: list[str]) -> list[list[float]]:
         if not texts:
@@ -1186,3 +1233,8 @@ class MultimodalTextEncoder:
         if not texts:
             return []
         return self.clap.embed_batch(texts)
+
+    @modal.exit()
+    def _commit_embedding_cache(self):
+        if self._cache_enabled:
+            embedding_cache_vol.commit()

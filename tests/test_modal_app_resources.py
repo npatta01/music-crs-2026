@@ -260,3 +260,30 @@ def test_query_lancedb_rejects_dense_vector_config():
         assert "query_lancedb is FTS-only" in str(exc)
     else:
         raise AssertionError("Expected dense_vector config to be rejected")
+
+
+def _class_volume_dir_consts(class_name: str) -> set[str]:
+    """Constant names used as keys in a Modal class's `volumes=` dict literal."""
+    tree = ast.parse((PROJECT_ROOT / "modal" / "app.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and node.name == class_name:
+            for decorator in node.decorator_list:
+                if isinstance(decorator, ast.Call):
+                    for keyword in decorator.keywords:
+                        if keyword.arg == "volumes":
+                            if not isinstance(keyword.value, ast.Dict):
+                                raise AssertionError(
+                                    f"{class_name} volumes= is not a dict literal"
+                                )
+                            return {
+                                k.id
+                                for k in keyword.value.keys
+                                if isinstance(k, ast.Name)
+                            }
+            raise AssertionError(f"Could not find volumes= kwarg on {class_name} decorator")
+    raise AssertionError(f"Could not find class {class_name} in modal/app.py")
+
+
+def test_gpu_encoders_mount_embedding_cache():
+    assert "EMBEDDING_CACHE_DIR" in _class_volume_dir_consts("Qwen3Encoder")
+    assert "EMBEDDING_CACHE_DIR" in _class_volume_dir_consts("MultimodalTextEncoder")
