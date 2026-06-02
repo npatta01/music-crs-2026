@@ -459,6 +459,7 @@ class Qwen3Encoder:
 
     @modal.enter()
     def setup(self):
+        self._cache_enabled = False  # set True after cache init; keeps @modal.exit() safe if setup raises
         import os
 
         os.environ.setdefault("HF_HOME", HF_CACHE_DIR)
@@ -1178,6 +1179,7 @@ class MultimodalTextEncoder:
 
     @modal.enter()
     def setup(self) -> None:
+        self._cache_enabled = False  # set True after cache init; keeps @modal.exit() safe if setup raises
         import os
 
         os.environ.setdefault("HF_HOME", HF_CACHE_DIR)
