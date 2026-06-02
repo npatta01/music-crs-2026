@@ -11,6 +11,7 @@ Smoke:    modal run modal/vllm_serve.py::smoke --model qwen3-embedding-4b
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -87,7 +88,12 @@ def _build_vllm_serve_cmd(entry: dict[str, Any], *, port: int = VLLM_PORT) -> li
 # Modal app objects — image, volumes, scale-to-zero web endpoints, download
 # ---------------------------------------------------------------------------
 
-VLLM_VERSION = "0.9.1"  # latest stable release supporting Qwen3-Embedding pooling
+VLLM_VERSION = "0.11.0"  # pinned; confirm --task embed + Qwen3-Embedding support at deploy (Task 8). Bump as needed.
+
+# argv tokens are space-joined into a shell command (shell=True is needed so the
+# literal $VLLM_API_KEY expands from the dotenv secret). Every other token must be
+# free of shell metacharacters/whitespace, or the command would mis-tokenize.
+_SAFE_VLLM_TOKEN = re.compile(r"^[\w./:@,=-]+$")
 
 _registry = load_vllm_registry()
 _HF_CACHE_DIR = "/root/.cache/huggingface"
@@ -117,6 +123,13 @@ def _run_vllm_serve(model_key: str) -> None:
 
     entry = _registry["models"][model_key]
     cmd = _build_vllm_serve_cmd(entry, port=VLLM_PORT)
+    for token in cmd:
+        if token == f"${VLLM_API_KEY_ENV}":
+            continue
+        if not _SAFE_VLLM_TOKEN.match(token):
+            raise ValueError(
+                f"Unsafe token in vLLM serve command (breaks shell=True): {token!r}"
+            )
     # shell=True so the literal $VLLM_API_KEY in the argv is expanded from the
     # dotenv secret at exec time.
     subprocess.Popen(" ".join(cmd), shell=True, env={**os.environ})

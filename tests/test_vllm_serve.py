@@ -66,3 +66,11 @@ def test_app_defines_both_serve_endpoints():
 
 def test_image_is_modal_image():
     assert isinstance(vllm_serve._vllm_image, vllm_serve.modal.Image)
+
+
+def test_safe_vllm_token_regex():
+    assert vllm_serve._SAFE_VLLM_TOKEN.match("Qwen/Qwen3-Embedding-4B")
+    assert vllm_serve._SAFE_VLLM_TOKEN.match("bfloat16")
+    assert vllm_serve._SAFE_VLLM_TOKEN.match("8192")
+    assert not vllm_serve._SAFE_VLLM_TOKEN.match("bad model")   # space
+    assert not vllm_serve._SAFE_VLLM_TOKEN.match("a;rm -rf")    # metachar
