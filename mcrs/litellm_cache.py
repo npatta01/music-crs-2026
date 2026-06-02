@@ -36,12 +36,6 @@ class FileCache(BaseCache):
         shard_a, shard_b = self._shard(key)
         return self.directory / shard_a / shard_b / f"{key}.json"
 
-    def _legacy_path(self, key: str) -> Path:
-        # Pre-fix layout (sharded on the namespaced key). Read-only fallback so
-        # caches written before the sharding fix remain readable.
-        key = self._validate_key(key)
-        return self.directory / key[:2] / key[2:4] / f"{key}.json"
-
     @staticmethod
     def _validate_key(key: str) -> str:
         if not isinstance(key, str) or not key:
@@ -54,18 +48,9 @@ class FileCache(BaseCache):
 
     def get_cache(self, key, **kwargs):
         try:
-            primary = self._path(key)
-            legacy = self._legacy_path(key)
-        except ValueError:
+            return json.loads(self._path(key).read_text(encoding="utf-8"))
+        except (FileNotFoundError, OSError, json.JSONDecodeError, UnicodeDecodeError, ValueError):
             return None
-        # Read the hash-sharded path first, then fall back to the pre-fix layout.
-        paths = [primary] if primary == legacy else [primary, legacy]
-        for path in paths:
-            try:
-                return json.loads(path.read_text(encoding="utf-8"))
-            except (FileNotFoundError, OSError, json.JSONDecodeError, UnicodeDecodeError, ValueError):
-                continue
-        return None
 
     def set_cache(self, key, value, **kwargs):
         temp_path: str | None = None
