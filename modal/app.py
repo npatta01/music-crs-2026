@@ -685,25 +685,6 @@ def query_lancedb(
 
 @app.function(
     image=image,
-    volumes={LITELLM_CACHE_DIR: litellm_cache_vol},
-    timeout=1800,
-)
-def migrate_litellm_cache() -> int:
-    """One-time: re-shard the LiteLLM file cache into the hash-sharded layout
-    after the FileCache sharding fix. Idempotent.
-
-        modal run modal/app.py::migrate_litellm_cache
-    """
-    from mcrs.litellm_cache import FileCache
-
-    moved = FileCache(LITELLM_CACHE_DIR).migrate_legacy_layout()
-    litellm_cache_vol.commit()
-    print(f"migrated {moved} litellm cache entries to the hash-sharded layout")
-    return moved
-
-
-@app.function(
-    image=image,
     volumes=_VOLUME_MOUNTS,
     secrets=[ENV_SECRET],
     timeout=3600,

@@ -74,27 +74,6 @@ def test_file_cache_shards_on_hash_not_namespace_prefix(tmp_path):
     assert cache._path(k1).name == f"{k1}.json"
 
 
-def test_file_cache_migrate_legacy_layout_moves_entries(tmp_path):
-    from mcrs.litellm_cache import FileCache
-
-    cache = FileCache(tmp_path)
-    key = "music-crs:ab12" + "0" * 60
-
-    # An entry written by the OLD layout (sharded on the namespaced key).
-    legacy = tmp_path / key[:2] / key[2:4] / f"{key}.json"
-    legacy.parent.mkdir(parents=True)
-    legacy.write_text('{"v": 1}', encoding="utf-8")
-
-    # get_cache reads only the hash-sharded path, so it misses pre-migration.
-    assert cache.get_cache(key) is None
-
-    moved = cache.migrate_legacy_layout()
-    assert moved == 1
-    assert cache.get_cache(key) == {"v": 1}  # now at the hash-sharded path
-    assert not legacy.exists()  # moved, not copied
-    assert cache.migrate_legacy_layout() == 0  # idempotent
-
-
 def test_file_cache_async_set_cache_pipeline_writes_all_entries(tmp_path):
     from mcrs.litellm_cache import FileCache
 

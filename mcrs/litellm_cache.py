@@ -36,20 +36,6 @@ class FileCache(BaseCache):
         shard_a, shard_b = self._shard(key)
         return self.directory / shard_a / shard_b / f"{key}.json"
 
-    def migrate_legacy_layout(self) -> int:
-        """Relocate entries written under the pre-fix layout (sharded on the
-        namespaced key, collapsed into one directory) into the hash-sharded
-        layout. One-time, idempotent; returns the number of files moved."""
-        moved = 0
-        for path in self.directory.rglob("*.json"):
-            target = self._path(path.stem)  # filename stem is the cache key
-            if path == target:
-                continue
-            target.parent.mkdir(parents=True, exist_ok=True)
-            os.replace(path, target)
-            moved += 1
-        return moved
-
     @staticmethod
     def _validate_key(key: str) -> str:
         if not isinstance(key, str) or not key:
