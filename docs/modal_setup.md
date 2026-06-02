@@ -183,3 +183,73 @@ The downloader mirrors the remote artifact tree under your chosen `--out-dir`:
 - `ground_truth/...`
 
 If remote `scores/` or `ground_truth/` directories do not exist yet, the downloader skips them cleanly.
+
+---
+
+## vLLM embedding services
+
+`modal/vllm_serve.py` deploys a separate Modal app (`music-crs-vllm`) serving Qwen3-Embedding-4B and 8B models behind scale-to-zero `/v1/embeddings` endpoints reachable through LiteLLM.
+
+### Deploy both endpoints
+
+```bash
+modal deploy modal/vllm_serve.py
+```
+
+This creates (or updates) two web endpoints: `serve_qwen3_embedding_4b` and `serve_qwen3_embedding_8b`.
+
+### Scale-to-zero behavior
+
+Both endpoints run with `min_containers=0`. The `scaledown_window` for each model is configured in the `vllm:` block of `modal/config.yaml`. When idle for longer than that window, the container shuts down. **The first request after an idle period pays a cold-start cost** (downloading/loading the model into GPU memory), which is why encoder configs set `extra_params.timeout: 600`.
+
+Because all calls go through LiteLLM, a cache hit (served from the local file cache) **never wakes the GPU** — the request never reaches Modal.
+
+### Secret setup
+
+`VLLM_API_KEY` must be present in your `.env` file (already in `.gitignore`). It is used both by the vLLM server (`--api-key`) and by the LiteLLM client. Copy the placeholder from `.env.example`:
+
+```
+VLLM_API_KEY=change-me   # replace with a strong random string
+```
+
+Modal reads `.env` automatically via `modal.Secret.from_dotenv()`.
+
+### Optional pre-warm
+
+To download model weights into the persistent `music-crs-hf-cache` volume before the first inference request (makes subsequent cold starts faster):
+
+```bash
+modal run modal/vllm_serve.py::download --model qwen3-embedding-4b
+modal run modal/vllm_serve.py::download --model qwen3-embedding-8b
+```
+
+### Smoke / cache verification
+
+To verify the endpoint is reachable and LiteLLM caching works end-to-end (embeds the same text twice and asserts the second call is a cache hit):
+
+```bash
+modal run modal/vllm_serve.py::smoke --model qwen3-embedding-4b
+```
+
+Expected output:
+
+```
+dim=2560 cache_hit_second=True vectors_match=True
+```
+
+**This wakes the GPU.** Only run it with explicit approval or after deploying a new model variant.
+
+### Using in experiment configs
+
+Set `encoder.vllm_endpoint: qwen3-embedding-4b` (or `qwen3-embedding-8b`) in a config YAML. At inference start, `resolve_vllm_endpoints_in_qu_kwargs` resolves this key to the live `api_base` URL. LiteLLM then routes embedding calls through the file cache first; only a cache miss reaches the vLLM endpoint (and wakes the GPU if it has scaled to zero).
+
+### Important caveat: re-indexing required for devset A/B runs
+
+The current canonical config (`v0plus_compiler_image_devset`) has `enable_dense: false`. Its dense LanceDB columns were indexed with the 0.6B model (1024-dim vectors).
+
+The provided A/B configs (`v0plus_compiler_image_qwen3emb4b_vllm_devset` / `_8b_`) point the encoder at the 4B (2560-dim) or 8B (4096-dim) Qwen3 models. **These configs will NOT exercise the text dense encoder during a devset run unless two conditions are met:**
+
+1. `enable_dense: true` is set in the config.
+2. The LanceDB catalog has been re-indexed with matching embedding columns (2560-dim for 4B, 4096-dim for 8B).
+
+Without re-indexing, the dense retrieval branch will either be skipped or produce dimension-mismatch errors. The `smoke` entrypoint is the direct, cost-controlled way to verify that serving and caching are working — do not expect meaningful devset A/B numbers without a full catalog re-index.

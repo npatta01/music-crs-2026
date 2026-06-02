@@ -191,3 +191,42 @@ def download(model: str = "qwen3-embedding-4b") -> str:
     path = snapshot_download(entry["hf_id"])
     hf_cache_vol.commit()
     return path
+
+
+@app.local_entrypoint()
+def smoke(model: str = "qwen3-embedding-4b", text: str = "a melancholic indie folk song"):
+    """Cost-gated GPU smoke test: embed `text` twice via LiteLLM against the vLLM
+    endpoint and assert the second call is a cache hit with matching vectors.
+
+    Run only with explicit approval (wakes a GPU):
+        modal deploy modal/vllm_serve.py
+        modal run modal/vllm_serve.py::smoke --model qwen3-embedding-4b
+    """
+    import os
+
+    import litellm
+
+    from mcrs.litellm_cache import setup_litellm_cache
+
+    cache_dir = os.environ.get("MCRS_LITELLM_CACHE_DIR", "/tmp/mcrs-vllm-smoke-cache")
+    setup_litellm_cache(cache_dir=cache_dir)
+
+    entry = _registry["models"][model]
+    api_base = endpoint_url(model)
+    kwargs = dict(
+        model=f"openai/{entry['served_name']}",
+        input=[text],
+        api_base=api_base,
+        api_key=os.environ.get(VLLM_API_KEY_ENV, "EMPTY"),
+        encoding_format="float",
+        timeout=600,
+    )
+
+    first = litellm.embedding(**kwargs)
+    second = litellm.embedding(**kwargs)
+    v1 = first.data[0]["embedding"]
+    v2 = second.data[0]["embedding"]
+    hit = bool(getattr(second, "_hidden_params", {}).get("cache_hit"))
+    print(f"dim={len(v1)} cache_hit_second={hit} vectors_match={v1 == v2}")
+    assert v1 == v2, "cached vector must match the fresh vector"
+    assert hit, "second identical embedding call should be a cache hit"
