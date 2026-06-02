@@ -90,6 +90,20 @@ def main(args):
         qu_kwargs = OmegaConf.to_container(raw_qu_kwargs, resolve=True) or {}
     else:
         qu_kwargs = dict(raw_qu_kwargs)
+    # Resolve any logical vLLM endpoint (encoder.vllm_endpoint) into a live Modal
+    # web URL (encoder.api_base). No-op when absent; only loads modal/vllm_serve.py
+    # (and the Modal SDK) when a vllm_endpoint is actually declared. modal/ is not an
+    # importable package, so load the file by path.
+    _enc = qu_kwargs.get("encoder")
+    if isinstance(_enc, dict) and _enc.get("vllm_endpoint"):
+        import importlib.util
+        from pathlib import Path as _Path
+
+        _vs_path = _Path(__file__).resolve().parent / "modal" / "vllm_serve.py"
+        _vs_spec = importlib.util.spec_from_file_location("mcrs_vllm_serve", _vs_path)
+        _vs_mod = importlib.util.module_from_spec(_vs_spec)
+        _vs_spec.loader.exec_module(_vs_mod)
+        _vs_mod.resolve_vllm_endpoints_in_qu_kwargs(qu_kwargs)
     music_crs = load_crs_baseline(
         lm_type=config.lm_type,
         retrieval_type=config.retrieval_type,
