@@ -22,7 +22,19 @@ VLLM_API_KEY_ENV = "VLLM_API_KEY"
 
 
 def _config_path() -> Path:
-    return Path(__file__).resolve().parent / "config.yaml"
+    """Find modal/config.yaml locally and when Modal imports this file in-container."""
+    candidates = [
+        Path(__file__).parent / "config.yaml",
+        Path.cwd() / "modal" / "config.yaml",
+        Path("/app/modal/config.yaml"),
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    raise FileNotFoundError(
+        "Could not find modal/config.yaml. Checked: "
+        + ", ".join(str(path) for path in candidates)
+    )
 
 
 def load_vllm_registry(config_path: Path | None = None) -> dict[str, Any]:
@@ -59,6 +71,7 @@ def _build_vllm_serve_cmd(entry: dict[str, Any], *, port: int = VLLM_PORT) -> li
         "--port",
         str(port),
         "--api-key",
+        # literal $VLLM_API_KEY — expanded by the shell at exec time (Task 2 runs with shell=True)
         f"${VLLM_API_KEY_ENV}",
     ]
     if entry.get("dtype"):

@@ -1,8 +1,6 @@
 import importlib.util
 from pathlib import Path
 
-import pytest
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -44,8 +42,17 @@ def test_build_vllm_serve_cmd_embed_flags():
     assert cmd[cmd.index("--dtype") + 1] == "bfloat16"
     assert cmd[cmd.index("--max-model-len") + 1] == "8192"
     assert "--api-key" in cmd
+    assert cmd[cmd.index("--api-key") + 1] == "$VLLM_API_KEY"
 
 
 def test_serve_fn_name_maps_key():
     assert vllm_serve._serve_fn_name("qwen3-embedding-4b") == "serve_qwen3_embedding_4b"
     assert vllm_serve._serve_fn_name("qwen3-embedding-8b") == "serve_qwen3_embedding_8b"
+
+
+def test_build_vllm_serve_cmd_omits_optional_flags():
+    entry = {"hf_id": "X/Y", "served_name": "X/Y", "task": "embed"}
+    cmd = vllm_serve._build_vllm_serve_cmd(entry, port=8000)
+    assert "--dtype" not in cmd
+    assert "--max-model-len" not in cmd
+    assert cmd[cmd.index("--tensor-parallel-size") + 1] == "1"
