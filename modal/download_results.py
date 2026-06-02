@@ -2,8 +2,8 @@
 Bulk-download artifacts from the music-crs-results Modal volume.
 
 Examples:
-    # Legacy one-off download still works
-    python modal/download_results.py --tid llama1b_bm25_devset
+    # Download one current run
+    python modal/download_results.py --tid v0plus_compiler_all_retrievers_devset
 
     # Download all missing remote artifacts into evaluator/exp
     python modal/download_results.py

@@ -2,7 +2,7 @@
 
 > **Scope:** the canonical conversational-retrieval path used by every `v0plus_compiler_*` config.
 > **Source of truth:** `mcrs/qu_modules/compiler_v0plus.py` (+ `resolver_v0plus.py`, `post_fusion_features.py`, `cross_encoder_reranker.py`, `v0plus_catalog_lance.py`).
-> **Reflects:** code at `1a8aee5` (#84), including the #80 prompt_v4 extractor + new retriever branches.
+> **Reflects:** code at `1a8aee5` (#84), including the current extractor prompt + new retriever branches.
 > Last verified: 2026-06-01.
 
 This doc answers three things: **what the retrievers are**, **how a conversation flows through them**, and **how their results are fused and ranked**. For per-file responsibilities see [`docs/codebase/modules/qu_modules.md`](../codebase/modules/qu_modules.md); for the dataset/embedding columns see [`docs/data.md`](../data.md).
@@ -17,7 +17,7 @@ A multi-turn conversation becomes a ranked top-1000 track list through these ord
 multi-turn conversation (session_memory)
   │
   1. EXTRACT   LiteLLMExtractor → ConversationStateV0Plus   (compiler_v0plus_qu.py)
-  │              LLM (prompt_v4) emits structured intent/entities/constraints
+  │              LLM (current prompt) emits structured intent/entities/constraints
   │
   2. RESOLVE   V0PlusResolver → ResolvedConversationState   (resolver_v0plus.py)
   │              fuzzy-match surface names → catalog artist/track IDs;
@@ -116,7 +116,7 @@ Feature weights default to 1.0; a disabled feature contributes 1.0 (no-op). Ties
 
 ### 3.4 Cross-encoder reranker — OPTIONAL, OFF by default
 
-`CrossEncoderReranker` (`cross_encoder_reranker.py`) exists but is **not wired into the default `_compile()` path**. When run, it re-scores the top `rerank_top_k` (default 200) `(query, candidate_text)` pairs with a cross-encoder backend (Sentence-Transformers MiniLM/bge, FlagEmbedding bge-gemma, or Qwen3-Reranker via DeepInfra). Fusion mode is either `replace` (xenc score wins) or `rrf` (rank-fuse xenc rank with the prior RRF rank). Deferred pending evidence it beats the cheaper post-fusion features — see [`docs/superpowers/plans/2026-05-27-cross-encoder-reranker.md`](../superpowers/plans/2026-05-27-cross-encoder-reranker.md).
+`CrossEncoderReranker` (`cross_encoder_reranker.py`) exists but is **not wired into the default `_compile()` path**. When run, it re-scores the top `rerank_top_k` (default 200) `(query, candidate_text)` pairs with a cross-encoder backend (Sentence-Transformers MiniLM/bge, FlagEmbedding bge-gemma, or Qwen3-Reranker via DeepInfra). Fusion mode is either `replace` (xenc score wins) or `rrf` (rank-fuse xenc rank with the prior RRF rank). Deferred pending evidence it beats the cheaper post-fusion features.
 
 ### 3.5 Backfill
 
@@ -126,7 +126,7 @@ If fusion + adjustments leave fewer than `final_topk` tracks, `_backfill()` pads
 
 ## 4. Intent & state knobs
 
-The extractor's structured `ConversationStateV0Plus` is what makes branch behavior conversation-aware. Enums live in the extraction schema (`experiments/analysis/conversation_state_extraction_bakeoff/schema.py`).
+The extractor's structured `ConversationStateV0Plus` is what makes branch behavior conversation-aware. Enums live in the extraction schema (`mcrs/conversation_state/schema.py`).
 
 - **`IntentMode`** — `open_explore` (broad, no anchor), `refinement` (tweak, keep anchors), `pivot` (deliberate change, drop anchors), `playlist_build` (cumulative, heavy anchors). Drives centroid-α, anchor-tag expansion, centroid-branch skipping, and discography gating.
 - **`ExplorationPolicy`** — `exploit`, `diversify_artists`, `diversify_albums`, `balanced`. Drives the SessionAnchor demotes in §3.3.
@@ -138,7 +138,7 @@ The extractor's structured `ConversationStateV0Plus` is what makes branch behavi
 
 | Knob | `image_devset` (canonical) | `all_retrievers` (frontier) |
 |---|---|---|
-| Extractor | gemma-3-12b | deepseek-v4-flash, `prompt_version: v4` |
+| Extractor | gemma-3-12b, `prompt_version: current` | deepseek-v4-flash, `prompt_version: current` |
 | `enable_dense` | `false` (BM25-only text) | `true` (metadata + attributes + lyrics + CLAP-text sonic) |
 | `centroid_only_branches` | `image_siglip2` | `image_siglip2`, `audio_laion_clap`, `cf_bpr` (anchor + user) |
 | `enable_resolved_artist_discography` | off | on |
@@ -155,5 +155,5 @@ See [`leaderboard.md`](../../leaderboard.md) for the full devset ranking and [`s
 
 - Per-file internals: [`docs/codebase/modules/qu_modules.md`](../codebase/modules/qu_modules.md), [`retrieval_modules.md`](../codebase/modules/retrieval_modules.md)
 - Catalog / embedding columns: [`docs/data.md`](../data.md), `mcrs/qu_modules/v0plus_catalog_lance.py`
-- Trace + diagnostics design: [`docs/superpowers/specs/2026-06-01-retrieval-trace-and-branch-diagnostics-design.md`](../superpowers/specs/2026-06-01-retrieval-trace-and-branch-diagnostics-design.md)
+- Trace diagnostics: [`scripts/branch_diagnostics.py`](../../scripts/branch_diagnostics.py)
 - Verified-bugs audit: [`docs/codebase/bugs.md`](../codebase/bugs.md)

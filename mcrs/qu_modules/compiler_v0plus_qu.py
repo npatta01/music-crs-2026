@@ -55,41 +55,20 @@ from typing import Any
 # human-readable label.
 _METADATA_BLOB_TRACK_ID_RE = re.compile(r"^track_id:\s*([0-9a-fA-F\-]{36})\b")
 
-from experiments.analysis.conversation_state_extraction_bakeoff.prompts import (
-    build_messages,
-    json_schema_for_response_format,
-)
-from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
+from mcrs.conversation_state.prompts import current as current_prompt
+from mcrs.conversation_state.prompts import previous as previous_prompt
+from mcrs.conversation_state.schema import (
     ConversationStateV0Plus,
 )
 
 
-def _resolve_prompt_fns(prompt_version: str):
-    """Return (build_messages, json_schema_for_response_format) for a prompt
-    version. Default 'v1' is the original bakeoff prompt (back-compat). 'v3' is
-    the generous-extraction + catalog-bridging rewrite from the
-    extractor_prompt_v2 analysis package."""
-    pv = (prompt_version or "v1").lower()
-    if pv in ("v1", "bakeoff", "default"):
-        return build_messages, json_schema_for_response_format
-    if pv in ("v2", "v2c"):
-        from experiments.analysis.extractor_prompt_v2.prompts_v2 import (
-            build_messages as bm,
-            json_schema_for_response_format as schema,
-        )
-        return bm, schema
-    if pv == "v3":
-        from experiments.analysis.extractor_prompt_v2.prompts_v3 import (
-            build_messages as bm,
-            json_schema_for_response_format as schema,
-        )
-        return bm, schema
-    if pv == "v4":
-        from experiments.analysis.extractor_prompt_v2.prompts_v4 import (
-            build_messages as bm,
-            json_schema_for_response_format as schema,
-        )
-        return bm, schema
+def _resolve_prompt_fns(prompt_version: str | None):
+    """Return prompt builders for the current extractor or prior reference."""
+    pv = (prompt_version or "current").lower()
+    if pv in ("current", "v4", "default"):
+        return current_prompt.build_messages, current_prompt.json_schema_for_response_format
+    if pv in ("previous", "reference", "v3"):
+        return previous_prompt.build_messages, previous_prompt.json_schema_for_response_format
     raise ValueError(f"unknown extractor prompt_version: {prompt_version!r}")
 from mcrs.embeddings.base import EmbeddingClient
 from mcrs.embeddings.qwen3_embedding import Qwen3EmbeddingClient
@@ -288,11 +267,9 @@ class LiteLLMExtractor:
     max_tokens: int = 1500
     timeout_s: int = 90
 
-    # Which extraction prompt to use. "v1" = original bakeoff prompt (default,
-    # back-compat). "v3" = generous-extraction + catalog-bridging rewrite (see
-    # experiments/analysis/extractor_prompt_v2/). Resolved to functions in
-    # __post_init__.
-    prompt_version: str = "v1"
+    # Which extraction prompt to use. "current" maps to the production prompt;
+    # "previous" keeps the prior prompt as a comparison/rollback reference.
+    prompt_version: str = "current"
 
     # Temperature used for the JSON-decode retry. The LLM occasionally enters
     # a degenerative-output mode (one valid field followed by a stutter of
@@ -334,7 +311,7 @@ class LiteLLMExtractor:
         # express Optionals via nullable). Gated on gemini ONLY so the
         # deepseek/openai/gemma path that already works is untouched.
         if self.model_name.startswith("openrouter/google/gemini"):
-            from experiments.analysis.extractor_prompt_v2.prompts_v4 import (
+            from mcrs.conversation_state.prompts.current import (
                 _to_gemini_schema,
             )
 
@@ -834,7 +811,7 @@ def build_v0plus_compiler_qu(
         from mcrs.qu_modules.v0plus_catalog_lance import LanceDbCatalog
         eager_fields = lance_cfg.get("eager_vector_fields")
         if eager_fields is None:
-            # Match the dense branches from configs/v0plus_compiler_devset.yaml — the
+            # Match the default dense/centroid branches — the
             # compiler queries these per-call during centroid mixing, so eager-load
             # them at startup to avoid per-call LanceDB queries.
             eager_fields = (
@@ -921,7 +898,7 @@ def build_v0plus_compiler_qu(
             temperature=float(ex_cfg.get("temperature", 0.0)),
             max_tokens=int(ex_cfg.get("max_tokens", 1500)),
             timeout_s=int(ex_cfg.get("timeout_s", 90)),
-            prompt_version=str(ex_cfg.get("prompt_version", "v1")),
+            prompt_version=str(ex_cfg.get("prompt_version", "current")),
         )
 
     # ----- Resolver -----

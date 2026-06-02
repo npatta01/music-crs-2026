@@ -1,5 +1,0 @@
-Q1 named=2754 state_has_artist=2339(85%,hit0.922) state_missing=415(15%,hit0.699)
-Q1b named_misses=307 of-which-state-HAD-artist=182(59%)
-Q2 never_reach=1761 tag_already_in_state=1183(67%)
-Q3 fusion_loss(no_state_needed)=1111
-Q4 misses=2872 barren(no artist & no tag match)=392(14%)

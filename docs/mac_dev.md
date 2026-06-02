@@ -15,7 +15,7 @@ uv run python scripts/create_local_split.py --n_per_tier 3 --seed 42
 ```bash
 uv run python run_experiment.py \
   --backend local \
-  --tid bm25_devset_retrieval_only_with_tag_list \
+  --tid v0plus_compiler_image_devset \
   --batch_size 2 \
   --exp_dir exp \
   --session_ids_file data/local_eval_split.json

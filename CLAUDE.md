@@ -29,14 +29,14 @@ uvx hf auth login   # HF access required for datasets + Llama
 
 ```bash
 # Preferred: unified experiment command (local)
-python run_experiment.py --backend local --tid llama1b_bm25_devset --batch_size 16
+python run_experiment.py --backend local --tid v0plus_compiler_image_devset --batch_size 16
 
 # Preferred: unified experiment command (Modal)
-python run_experiment.py --backend modal --tid llama1b_bm25_devset --batch_size 16
+python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --batch_size 64
 
 # Low-level inference scripts still work
-python run_inference_devset.py --tid llama1b_bm25_devset --batch_size 16
-python run_inference_blindset.py --tid llama1b_bm25_blindset_A --eval_dataset blindset_A --batch_size 16
+python run_inference_devset.py --tid v0plus_compiler_image_devset --batch_size 16
+python run_inference_blindset.py --tid v0plus_compiler_blindset_A --eval_dataset blindset_A --batch_size 16
 
 # Package submission
 bash prepare_submission.sh
@@ -59,8 +59,9 @@ See `tips/` for directions: better item representations, reranker modules, gener
 
 ## Experiments Workspace
 
-- Use [`experiments/README.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/README.md) as the main index for experiment reports, analysis packages, current bests, and status.
-- Use [`experiments/experiment_log.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md) for cross-run takeaways, decisions, and next steps.
-- [`leaderboard.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/leaderboard.md) is the ranked devset table (by NDCG@20); [`changelog.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/changelog.md) is the hybrid code+experiment log with PR links.
-- When a run lands, follow the **Maintenance Checklist** in [`experiments/CLAUDE.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/CLAUDE.md) to keep report, log, index, leaderboard, and changelog in sync.
-- If working inside `experiments/`, read the local [`experiments/CLAUDE.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/CLAUDE.md) and follow its conventions for report naming, analysis packaging, and status updates.
+- The experiment workspace is intentionally pruned. Do not treat deleted historical reports or `configs/archive/` as missing current context.
+- Use [`experiments/README.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/README.md) for the current config/report surface.
+- Use [`experiments/experiment_log.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md) for the concise current-state decision log.
+- [`leaderboard.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/leaderboard.md) is the compact devset table; [`changelog.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/changelog.md) links current outcomes to PRs.
+- Keep only current configs under `configs/`: `v0plus_compiler_image_devset`, `v0plus_compiler_all_retrievers_devset`, and `v0plus_compiler_blindset_A`.
+- If working inside `experiments/`, read the local [`experiments/CLAUDE.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/CLAUDE.md) and follow its prune-first conventions.

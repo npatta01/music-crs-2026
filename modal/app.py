@@ -10,13 +10,13 @@ Secret (.env in project root):
 
 Usage:
     # Smoke test (5 sessions, with matching local evaluation subset)
-    python run_experiment.py --backend modal --tid bm25_devset_retrieval_only_with_tag_list --num_sessions 5
+    python run_experiment.py --backend modal --tid v0plus_compiler_image_devset --num_sessions 5
 
-    # Full devset
-    python run_experiment.py --backend modal --tid lancedb_fts_with_tag_list_devset --batch_size 64
+    # Latest full devset coverage experiment
+    python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --batch_size 64
 
-    # Blindset, after adding a split-specific config under configs/
-    python run_experiment.py --backend modal --tid my_blindset_A_config --eval_dataset blindset_A
+    # Blindset
+    python run_experiment.py --backend modal --tid v0plus_compiler_blindset_A --eval_dataset blindset_A
 """
 
 import json
@@ -706,7 +706,7 @@ def _evaluate(tid: str, split: str):
 
 @app.local_entrypoint()
 def run_inference(
-    tid: str = "bm25_devset_retrieval_only_with_tag_list",
+    tid: str = "v0plus_compiler_image_devset",
     batch_size: int = DEVSET_BATCH_SIZE,
     num_sessions: int = 0,
     clear_cache: bool = False,
@@ -725,7 +725,7 @@ def run_inference(
 
 @app.local_entrypoint()
 def run_inference_sharded(
-    tid: str = "v0plus_compiler_devset",
+    tid: str = "v0plus_compiler_all_retrievers_devset",
     batch_size: int = DEVSET_BATCH_SIZE,
     num_shards: int = 4,
     clear_cache: bool = False,
@@ -803,7 +803,7 @@ def run_inference_sharded(
 
 @app.local_entrypoint()
 def run_inference_blindset(
-    tid: str = "bm25_devset_retrieval_only_with_tag_list",
+    tid: str = "v0plus_compiler_blindset_A",
     batch_size: int = BLINDSET_BATCH_SIZE,
     eval_dataset: str = "blindset_A",
 ):
@@ -814,7 +814,7 @@ def run_inference_blindset(
 
 @app.local_entrypoint()
 def run_evaluate(
-    tid: str = "bm25_devset_retrieval_only_with_tag_list",
+    tid: str = "v0plus_compiler_image_devset",
     split: str = "devset",
 ):
     """Score predictions using the evaluator submodule (CPU)."""

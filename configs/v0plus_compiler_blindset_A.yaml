@@ -1,8 +1,8 @@
 # v0+ ConversationState Compiler — blindset_A config
 #
-# Mirror of v0plus_compiler_devset.yaml with:
-#   - test_dataset_name → Blind-A
-#   - retrieval_topk    → 20 (submission format)
+# Submission config:
+#   - test_dataset_name -> Blind-A
+#   - retrieval_topk    -> 20 (submission format)
 
 lm_type: "dummy"  # response generation is downstream of this experiment's scope
 retrieval_type: "bm25"  # placeholder — V0PlusCompilerQU owns its own retriever
@@ -14,6 +14,7 @@ qu_kwargs:
 
   extractor:
     model_name: "openrouter/google/gemma-3-12b-it"
+    prompt_version: "current"
     temperature: 0.0
     max_tokens: 1500
     timeout_s: 90

@@ -1,7 +1,7 @@
 """Merge sharded inference outputs into a single per-tid JSON.
 
 Usage:
-    python scripts/merge_shard_results.py --tid v0plus_compiler_devset --num_shards 4 --exp-dir exp
+    python scripts/merge_shard_results.py --tid v0plus_compiler_all_retrievers_devset --num_shards 5 --exp-dir exp
 
 Behavior:
   - Reads shards 0..num_shards-1 for both predictions and traces.

@@ -120,7 +120,7 @@ Pre-bakes catalog name→id maps at init; `match` uses `rapidfuzz.fuzz.token_set
 
 ## Key Data Structures / Config
 
-### `ConversationStateV0Plus` (Pydantic — `experiments/analysis/conversation_state_extraction_bakeoff/schema.py:173`)
+### `ConversationStateV0Plus` (Pydantic — `mcrs/conversation_state/schema.py`)
 
 The 7 LLM-extracted fields that drive retrieval:
 
@@ -225,8 +225,9 @@ The following describes one call to `V0PlusCompilerQU.compile_track_ids` for a s
 | `mcrs/embeddings/qwen3_embedding.py` (`Qwen3EmbeddingClient`) | `build_v0plus_compiler_qu` (local encoder) |
 | `mcrs/embeddings/modal_qwen3_client.py` | `build_v0plus_compiler_qu` (modal encoder backend) |
 | `mcrs/embeddings/litellm_client.py` | `build_v0plus_compiler_qu` (litellm encoder backend) |
-| `experiments/analysis/conversation_state_extraction_bakeoff/schema.py` | `compiler_v0plus.py`, `resolver_v0plus.py`, `compiler_v0plus_qu.py` — `ConversationStateV0Plus`, `HardFilter`, etc. |
-| `experiments/analysis/conversation_state_extraction_bakeoff/prompts.py` | `LiteLLMExtractor._build_kwargs` — `build_messages`, `json_schema_for_response_format` |
+| `mcrs/conversation_state/schema.py` | `compiler_v0plus.py`, `resolver_v0plus.py`, `compiler_v0plus_qu.py` — `ConversationStateV0Plus`, `HardFilter`, etc. |
+| `mcrs/conversation_state/prompts/current.py` | `LiteLLMExtractor._build_kwargs` — `build_messages`, `json_schema_for_response_format` |
+| `mcrs/conversation_state/prompts/previous.py` | `_resolve_prompt_fns` — previous extractor prompt retained as reference/rollback |
 
 ### External libraries
 
@@ -235,7 +236,7 @@ The following describes one call to `V0PlusCompilerQU.compile_track_ids` for a s
 | `lancedb` | `LanceDbCatalog.__post_init__`, `LanceDbCatalog.vector` (cold path) |
 | `rapidfuzz` | `RapidfuzzCatalogMatcher.match` |
 | `litellm` | `LiteLLMExtractor.extract` / `aextract`, `LiteLLMTextAdapter.generate_batch` |
-| `pydantic` | `ConversationStateV0Plus` and related schema models (in experiments/) |
+| `pydantic` | `ConversationStateV0Plus` and related schema models |
 | `torch`, `transformers` | `TextCausalAdapter`, `Gemma4TextAdapter` in `llm_rewrite.py` |
 | `datasets` (HuggingFace) | `UserEmbeddings.__post_init__`, `HFTalkPlayCatalog` (test/init only) |
 | `asyncio` | `V0PlusCompilerQU.batch_compile_track_ids` async fan-out |
@@ -246,7 +247,7 @@ The following describes one call to `V0PlusCompilerQU.compile_track_ids` for a s
 
 1. **`HFTalkPlayCatalog` is test-only.** Despite living in `v0plus_catalog_hf.py` in the production source tree, this class should not be used in inference. Production code always gets `LanceDbCatalog`. The CLAUDE.md note "HF-backed `HFTalkPlayCatalog` is retained only for unit tests" applies here.
 
-2. **`experiments/` schema is a production dependency.** `compiler_v0plus.py`, `resolver_v0plus.py`, and `compiler_v0plus_qu.py` all import directly from `experiments/analysis/conversation_state_extraction_bakeoff/schema.py` and `prompts.py`. This is an intentional coupling — the schema lives there because that's where the design iteration happens — but it means changes to those files break production inference.
+2. **Runtime prompts live outside `experiments/`.** `experiments/` is for one-off reports and current-state notes only. Production schema/prompt code lives under `mcrs/conversation_state/`, with `current` as the extractor prompt and `previous` as the single reference prompt.
 
 3. **`enable_cf_bpr` is legacy back-compat.** `CompilerConfig.enable_cf_bpr` (`compiler_v0plus.py:160`) and its four companion knobs (`cf_bpr_topk`, `cf_bpr_weight`, etc.) are superseded by the more general `centroid_only_branches` list. They still work via `_resolve_centroid_only_branches` (`compiler_v0plus.py:553`) but should not be used in new configs.
 

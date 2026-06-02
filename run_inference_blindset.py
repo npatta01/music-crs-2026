@@ -116,8 +116,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tid",
         type=str,
-        default="bm25_devset_retrieval_only_with_tag_list",
-        help="Task identifier matching a config file (e.g., 'bm25_devset_retrieval_only_with_tag_list' loads configs/bm25_devset_retrieval_only_with_tag_list.yaml)"
+        default="v0plus_compiler_blindset_A",
+        help="Task identifier matching a config file (e.g., 'v0plus_compiler_blindset_A' loads configs/v0plus_compiler_blindset_A.yaml)"
     )
     parser.add_argument(
         "--eval_dataset",

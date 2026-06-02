@@ -14,7 +14,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
+from mcrs.conversation_state.schema import (
     ConversationStateV0Plus,
     ExplicitRejection,
     MentionedEntity,
@@ -747,7 +747,7 @@ def test_shard_slice_math_partitions_all_indices():
 
 
 def test_trace_includes_routing_tags():
-    from experiments.analysis.conversation_state_extraction_bakeoff.schema import RoutingTags
+    from mcrs.conversation_state.schema import RoutingTags
     state = _state(routing_tags=RoutingTags(lyric_search=True), lyrical_theme="rainy day blues")
     qu = _build_qu(state)
     qu.batch_compile_track_ids([[{"role": "user", "content": "hi"}]], topk=10)
@@ -774,12 +774,24 @@ def test_routing_boost_survives_yaml_allowlist():
     assert qu.compiler.cfg.routing_boost == {"lyric_search": 4.0}
 
 
-def test_resolve_prompt_fns_knows_v4():
+def test_resolve_prompt_fns_uses_current_prompt():
     from mcrs.qu_modules.compiler_v0plus_qu import _resolve_prompt_fns
-    from experiments.analysis.extractor_prompt_v2 import prompts_v4
-    bm, schema = _resolve_prompt_fns("v4")
-    assert bm is prompts_v4.build_messages
-    assert schema is prompts_v4.json_schema_for_response_format
+    from mcrs.conversation_state.prompts import current
+
+    for alias in ("current", "v4", None):
+        bm, schema = _resolve_prompt_fns(alias)
+        assert bm is current.build_messages
+        assert schema is current.json_schema_for_response_format
+
+
+def test_resolve_prompt_fns_keeps_previous_reference_prompt():
+    from mcrs.qu_modules.compiler_v0plus_qu import _resolve_prompt_fns
+    from mcrs.conversation_state.prompts import previous
+
+    for alias in ("previous", "reference", "v3"):
+        bm, schema = _resolve_prompt_fns(alias)
+        assert bm is previous.build_messages
+        assert schema is previous.json_schema_for_response_format
 
 
 def test_openrouter_response_format_goes_in_extra_body_with_require_parameters():

@@ -1,9 +1,0 @@
-{
-  "model": "openrouter/google/gemma-3-12b-it",
-  "n_turns": 50,
-  "n_errors": 0,
-  "n_with_at_least_one_recovered_token": 26,
-  "share_with_at_least_one_recovered": 0.52,
-  "mean_per_turn_recovery_rate": 0.4019047619047619,
-  "latency_p50_s": 12.72156766615808
-}

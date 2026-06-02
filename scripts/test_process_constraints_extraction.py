@@ -17,8 +17,8 @@ from pathlib import Path
 # Add repo root to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from experiments.analysis.conversation_state_extraction_bakeoff.prompts import build_messages, json_schema_for_response_format  # noqa: E402
-from experiments.analysis.conversation_state_extraction_bakeoff.schema import ConversationStateV0Plus  # noqa: E402
+from mcrs.conversation_state.prompts.current import build_messages, json_schema_for_response_format  # noqa: E402
+from mcrs.conversation_state.schema import ConversationStateV0Plus  # noqa: E402
 
 
 MODEL = "openrouter/google/gemma-3-12b-it"

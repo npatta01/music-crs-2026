@@ -146,7 +146,7 @@ Written only by `run_inference_devset.py` (`run_inference_devset.py:209`). Paral
 
 ## Internal Flow
 
-### Unified local devset run (`python run_experiment.py --backend local --tid llama1b_bm25_devset`)
+### Unified local devset run (`python run_experiment.py --backend local --tid v0plus_compiler_image_devset`)
 
 1. `main` (`run_experiment.py:284`) parses args, calls `require_config` to validate the config exists, `resolve_split` to determine `"devset"`, `validate_args` to check flag combinations.
 2. `run_local` (`run_experiment.py:172`) is invoked. If `--num_sessions > 0`, `materialize_num_sessions_file` samples session IDs and writes a subset JSON.
@@ -171,7 +171,7 @@ Written only by `run_inference_devset.py` (`run_inference_devset.py:209`). Paral
 ### Submission packaging
 
 ```bash
-bash prepare_submission.sh llama1b_bm25_blindset_A
+bash prepare_submission.sh v0plus_compiler_blindset_A
 ```
 
 1. Reads `exp/inference/blindset_A/{tid}.json`.

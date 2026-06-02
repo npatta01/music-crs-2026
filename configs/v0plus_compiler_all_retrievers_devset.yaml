@@ -1,7 +1,7 @@
 # v0+ ConversationState Compiler — ALL RETRIEVERS (devset)
 #
-# Exercises every retriever branch + the prompt_v4 extractor introduced in this
-# PR. Use this as the reference config for the new functionality.
+# Exercises every retriever branch + the current ConversationState extractor.
+# Use this as the reference config for the latest coverage experiment.
 #
 # Retriever branches enabled here:
 #   - bm25 multi-field (track/artist/album/tag) with per-field boosts
@@ -31,10 +31,10 @@ qu_kwargs:
   max_in_flight: 8
 
   extractor:
-    # prompt_v4 extractor (this PR's headline). deepseek-v4-flash = best
-    # value in the routing bake-off (low null rate, strong lyric/feature F1).
+    # Current extractor prompt. deepseek-v4-flash = best value in the routing
+    # bake-off (low null rate, strong lyric/feature F1).
     model_name: "openrouter/deepseek/deepseek-v4-flash"
-    prompt_version: "v4"
+    prompt_version: "current"
     temperature: 0.0
     max_tokens: 8000
     timeout_s: 120

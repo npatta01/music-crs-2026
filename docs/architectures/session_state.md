@@ -1,7 +1,7 @@
 # Session / Conversation State
 
 > **What it is:** the structured, per-turn understanding of the conversation that drives retrieval. An LLM reads the multi-turn `session_memory` and emits a `ConversationStateV0Plus`; a resolver then grounds its surface-form names to catalog IDs.
-> **Source of truth:** `experiments/analysis/conversation_state_extraction_bakeoff/schema.py` (the Pydantic models) + `mcrs/qu_modules/resolver_v0plus.py` (resolution) + `mcrs/qu_modules/compiler_v0plus_qu.py` (extractor wiring).
+> **Source of truth:** `mcrs/conversation_state/schema.py` (the Pydantic models) + `mcrs/conversation_state/prompts/current.py` (production prompt) + `mcrs/qu_modules/resolver_v0plus.py` (resolution) + `mcrs/qu_modules/compiler_v0plus_qu.py` (extractor wiring).
 > Last verified: 2026-06-01 (code at `1a8aee5`).
 
 Session state is the contract between the **conversation** and the **retriever**. Everything the compiler does (which branches fire, how they're weighted, what's filtered or demoted — see [`v0plus_retrieval.md`](v0plus_retrieval.md)) is a function of this object. Get the state wrong and no amount of reranking recovers it — fix representation here first.
@@ -15,7 +15,7 @@ session_memory  (list of {role, content} turns)
    │
    1. EXTRACT   LiteLLMExtractor (compiler_v0plus_qu.py)
    │              LLM call, JSON-schema-constrained to the Pydantic model,
-   │              prompt_version v3/v4 → ConversationStateV0Plus
+   │              prompt_version current/previous → ConversationStateV0Plus
    │
    2. RESOLVE   V0PlusResolver (resolver_v0plus.py)
    │              fuzzy-match surface names → catalog artist/track IDs;
@@ -24,7 +24,7 @@ session_memory  (list of {role, content} turns)
    → ResolvedConversationState   (what the compiler consumes)
 ```
 
-- **Extract** — `LiteLLMExtractor` sends the conversation + the JSON schema to an LLM (the production extractor is `deepseek-v4-flash` with `prompt_version: v4`; older configs use gemma/`v3`). The model returns a JSON object validated into `ConversationStateV0Plus`. Validation is deliberately *tolerant* (see §5) so one bad field never voids the whole turn.
+- **Extract** — `LiteLLMExtractor` sends the conversation + the JSON schema to an LLM (the production extractor uses `prompt_version: current`; `previous` is retained as the single reference prompt). The model returns a JSON object validated into `ConversationStateV0Plus`. Validation is deliberately *tolerant* (see §5) so one bad field never voids the whole turn.
 - **Resolve** — the raw state names entities as the user said them ("more like Radiohead"). `V0PlusResolver` turns those surface forms into catalog IDs via `FuzzyMatcher`, resolves rejections, annotates the artist IDs behind track feedback, and attaches the session's `played_track_ids`. The output `ResolvedConversationState` is what `V0PlusCompiler.compile()` actually reads.
 
 ---
@@ -104,7 +104,9 @@ Extraction is hostile-input-aware — the LLM occasionally hallucinates malforme
 ## Pointers
 
 - Retrieval consumption: [`v0plus_retrieval.md`](v0plus_retrieval.md)
-- Schema source: `experiments/analysis/conversation_state_extraction_bakeoff/schema.py`
+- Schema source: `mcrs/conversation_state/schema.py`
+- Prompt source: `mcrs/conversation_state/prompts/current.py`; previous reference: `mcrs/conversation_state/prompts/previous.py`
 - Resolver: `mcrs/qu_modules/resolver_v0plus.py`; extractor: `mcrs/qu_modules/compiler_v0plus_qu.py`
-- North-star schema (v3, with `relation.kind`, richer `process_constraints`): `experiments/analysis/conversation_state_design_v2/` — v0+ is a deliberate cut of it.
+- Historical north-star schema notes were pruned from the working tree; use Git
+  history if that design lineage is needed.
 - Per-module internals: [`docs/codebase/modules/qu_modules.md`](../codebase/modules/qu_modules.md)

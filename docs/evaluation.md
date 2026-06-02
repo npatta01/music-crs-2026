@@ -10,7 +10,7 @@ cd evaluator
 python make_ground_truth.py                      # once
 # Predictions are read from ./exp/inference/devset/<tid>.json
 # (symlink or copy from the main repo's exp/inference/devset/).
-python evaluate_devset.py --tid bm25_devset_retrieval_only_with_tag_list
+python evaluate_devset.py --tid v0plus_compiler_image_devset
 ```
 
 This writes `evaluator/exp/scores/devset/<tid>.json` and prints a grouped
@@ -93,29 +93,18 @@ independent of `evaluate_devset.py`.
 
 ## Devset Leaderboard
 
-| Rank | Experiment | NDCG@1 | NDCG@10 | NDCG@20 | Catalog Diversity | Lexical Diversity |
-|------|------------|--------|---------|---------|-------------------|-------------------|
-| 1 | dense_qwen3_embedding_8b | 0.0136 | **0.0804** | **0.1025** | 0.4123 | 0.0000 |
-| 2 | dense_qwen3_embedding_4b | **0.0175** | 0.0788 | 0.0994 | 0.3679 | 0.0000 |
-| 3 | bm25_devset_retrieval_only_with_tag_list | 0.0095 | 0.0752 | 0.0970 | 0.4542 | 0.0000 |
-| 4 | dense_e5_base_v2 | 0.0115 | 0.0728 | 0.0906 | 0.3612 | 0.0000 |
-| 5 | dense_e5_large_v2 | 0.0105 | 0.0725 | 0.0895 | 0.3509 | 0.0000 |
-| 6 | dense_bge_large_en_v1_5 | 0.0113 | 0.0689 | 0.0865 | 0.3316 | 0.0000 |
-| 7 | dense_qwen3_embedding_0_6b | 0.0169 | 0.0688 | 0.0849 | 0.3373 | 0.0000 |
-| 8 | dense_bge_base_en_v1_5 | 0.0110 | 0.0674 | 0.0836 | 0.3611 | 0.0000 |
-| 9 | llama1b_bm25 | 0.0098 | 0.0626 | 0.0815 | 0.3796 | 0.2554 |
-| 10 | llama1b_bert | 0.0018 | 0.0048 | 0.0063 | 0.0607 | 0.2069 |
-| 11 | popularity | 0.0005 | 0.0018 | 0.0024 | 0.0004 | 0.0000 |
-| 12 | random | 0.0000 | 0.0001 | 0.0001 | **0.9652** | 0.0000 |
+The compact current leaderboard lives in [`leaderboard.md`](../leaderboard.md).
+Historical BM25, dense-only, rewrite, Milvus, LanceDB, and generative baseline
+rows were pruned from the working tree and remain available in Git history.
 
 Catalog size: 47,071 tracks.
 
 **Notes:**
-- `dense_qwen3_embedding_8b` is the current relevance leader on the devset leaderboard, edging `dense_qwen3_embedding_4b` and the best sparse retrieval-only baseline.
-- `bm25_devset_retrieval_only_with_tag_list` remains the strongest sparse retrieval-only baseline and outperforms every dense run except the Qwen 4B and 8B variants.
-- Retrieval-only `lm_type: dummy` runs have `lexical_diversity = 0.0` by construction, so lexical diversity is only meaningful for generative runs such as `llama1b_bm25` and `llama1b_bert`.
-- `random` has the highest catalog diversity but near-zero relevance.
-- `popularity` returns the same 20 tracks for everyone — zero diversity.
+- `v0plus_compiler_image_devset` is the current top-20 score anchor.
+- `v0plus_compiler_all_retrievers_devset` is the latest deep-coverage run and
+  is useful for reranker/candidate-pool diagnostics.
+- Retrieval-only `lm_type: dummy` runs have lexical diversity of zero by
+  construction; prose generation is currently downstream of retrieval work.
 
 ---
 

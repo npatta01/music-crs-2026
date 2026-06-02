@@ -21,14 +21,14 @@ The Resolver owns no rapidfuzz code — it talks to a `FuzzyMatcher` Protocol,
 so the matching backend (in-memory rapidfuzz today, FST or SaaS tomorrow)
 can be swapped without touching the Resolver.
 
-See: experiments/analysis/conversation_state_compiler_v0plus/README.md
+See: docs/architectures/session_state.md
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from experiments.analysis.conversation_state_extraction_bakeoff.schema import (
+from mcrs.conversation_state.schema import (
     ConversationStateV0Plus,
 )
 from mcrs.qu_modules.fuzzy_matcher import FuzzyMatcher
@@ -61,8 +61,8 @@ class ResolvedConversationState:
     """Sidecar struct wrapping a v0+ state with the Resolver's deterministic
     id annotations + the mechanical (non-LLM) fields the Compiler needs.
 
-    The Pydantic LLM contract (`ConversationStateV0Plus`) covers only the 7
-    LLM-extracted fields per the v0+ schema doc; `played_track_ids` is
+    The Pydantic LLM contract (`ConversationStateV0Plus`) covers the
+    LLM-extracted fields; `played_track_ids` is
     mechanical (attached from the conversation log, not predicted by the LLM)
     so it lives here rather than on the LLM schema.
     """

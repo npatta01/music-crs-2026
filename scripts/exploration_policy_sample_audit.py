@@ -23,11 +23,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from datasets import load_dataset
 
-from experiments.analysis.conversation_state_extraction_bakeoff.prompts import (  # noqa: E402
+from mcrs.conversation_state.prompts.current import (  # noqa: E402
     build_messages,
     json_schema_for_response_format,
 )
-from experiments.analysis.conversation_state_extraction_bakeoff.schema import (  # noqa: E402
+from mcrs.conversation_state.schema import (  # noqa: E402
     ConversationStateV0Plus,
 )
 
