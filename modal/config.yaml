@@ -6,12 +6,15 @@ volumes:
   models: "music-crs-models"
   # Volumes v2 cache volume; create fresh because existing music-crs-litellm-cache is v1.
   litellm_cache: "music-crs-litellm-cache-v2"
+  # Volume v2 cache for GPU-native text embeddings (Qwen3, SigLIP-2, CLAP).
+  embedding_cache: "music-crs-embedding-cache"
 
 container:
   hf_cache_dir: "/root/.cache/huggingface"
   exp_dir: "/root/exp"
   models_dir: "/root/models"
   litellm_cache_dir: "/root/litellm-cache"
+  embedding_cache_dir: "/root/embedding-cache"
 
 litellm_cache:
   backend: "file"
