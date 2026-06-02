@@ -23,7 +23,22 @@ class FileCache(BaseCache):
         self.directory = Path(directory)
         self.directory.mkdir(parents=True, exist_ok=True)
 
+    @staticmethod
+    def _shard(key: str) -> tuple[str, str]:
+        # litellm keys look like "<namespace>:<sha256hex>". Shard on the hash, not
+        # the raw key — the namespace prefix is constant ("music-crs:"), so sharding
+        # on the key collapses every entry into a single directory (mu/si/).
+        digest = key.rsplit(":", 1)[-1]
+        return digest[:2], digest[2:4]
+
     def _path(self, key: str) -> Path:
+        key = self._validate_key(key)
+        shard_a, shard_b = self._shard(key)
+        return self.directory / shard_a / shard_b / f"{key}.json"
+
+    def _legacy_path(self, key: str) -> Path:
+        # Pre-fix layout (sharded on the namespaced key). Read-only fallback so
+        # caches written before the sharding fix remain readable.
         key = self._validate_key(key)
         return self.directory / key[:2] / key[2:4] / f"{key}.json"
 
@@ -39,9 +54,18 @@ class FileCache(BaseCache):
 
     def get_cache(self, key, **kwargs):
         try:
-            return json.loads(self._path(key).read_text(encoding="utf-8"))
-        except (FileNotFoundError, OSError, json.JSONDecodeError, UnicodeDecodeError, ValueError):
+            primary = self._path(key)
+            legacy = self._legacy_path(key)
+        except ValueError:
             return None
+        # Read the hash-sharded path first, then fall back to the pre-fix layout.
+        paths = [primary] if primary == legacy else [primary, legacy]
+        for path in paths:
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except (FileNotFoundError, OSError, json.JSONDecodeError, UnicodeDecodeError, ValueError):
+                continue
+        return None
 
     def set_cache(self, key, value, **kwargs):
         temp_path: str | None = None

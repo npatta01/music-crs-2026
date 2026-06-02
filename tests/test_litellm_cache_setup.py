@@ -57,6 +57,41 @@ def test_file_cache_uses_hash_prefixed_layout_and_rejects_path_separators(tmp_pa
         cache._path("ab/cd")
 
 
+def test_file_cache_shards_on_hash_not_namespace_prefix(tmp_path):
+    from mcrs.litellm_cache import FileCache
+
+    cache = FileCache(tmp_path)
+
+    # litellm keys are "<namespace>:<sha256hex>". Sharding must use the hash, not
+    # the constant namespace prefix — otherwise every entry collapses into one
+    # directory (e.g. all "music-crs:*" keys land in mu/si/).
+    k1 = "music-crs:ab12" + "0" * 60
+    k2 = "music-crs:cd34" + "0" * 60
+    assert cache._path(k1).parent == tmp_path / "ab" / "12"
+    assert cache._path(k2).parent == tmp_path / "cd" / "34"
+    assert cache._path(k1).parent != cache._path(k2).parent
+    # filename keeps the full namespaced key so different namespaces don't collide
+    assert cache._path(k1).name == f"{k1}.json"
+
+
+def test_file_cache_reads_legacy_namespace_prefixed_layout(tmp_path):
+    from mcrs.litellm_cache import FileCache
+
+    cache = FileCache(tmp_path)
+    key = "music-crs:ab12" + "0" * 60
+
+    # An entry written by the OLD layout (sharded on the namespaced key) must
+    # still be readable via fallback so existing caches aren't invalidated.
+    legacy = tmp_path / key[:2] / key[2:4] / f"{key}.json"
+    legacy.parent.mkdir(parents=True)
+    legacy.write_text('{"v": 1}', encoding="utf-8")
+
+    assert cache.get_cache(key) == {"v": 1}
+    # new writes land in the hash-sharded layout
+    cache.set_cache(key, {"v": 2})
+    assert cache._path(key).read_text(encoding="utf-8")  # exists at new path
+
+
 def test_file_cache_async_set_cache_pipeline_writes_all_entries(tmp_path):
     from mcrs.litellm_cache import FileCache
 
