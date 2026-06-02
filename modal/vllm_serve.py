@@ -136,34 +136,47 @@ def _run_vllm_serve(model_key: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Two explicit top-level endpoints — factory via _register_serve_endpoint.
-# name= on @app.function is supported in modal 1.4.2 (verified).
+# Two explicit top-level endpoints. Modal requires the decorated function to be
+# defined in *global* scope (a nested/closure function raises LocalFunctionError
+# at deploy unless serialized=True), so these are written out per-model rather
+# than produced by a factory. Per-model resource args come from the registry.
 # Decorator order: @app.function outermost, @modal.web_server innermost.
 # ---------------------------------------------------------------------------
 
-def _register_serve_endpoint(model_key: str):
-    entry = _registry["models"][model_key]
-
-    @app.function(
-        name=_serve_fn_name(model_key),
-        image=_vllm_image,
-        gpu=str(entry["gpu"]),
-        volumes=_VOLUMES,
-        secrets=[ENV_SECRET],
-        timeout=int(entry["timeout"]),
-        scaledown_window=int(entry["scaledown_window"]),
-        min_containers=0,
-    )
-    @modal.concurrent(max_inputs=int(entry["max_inputs"]))
-    @modal.web_server(port=VLLM_PORT, startup_timeout=10 * 60)
-    def _serve():
-        _run_vllm_serve(model_key)
-
-    return _serve
+_ENTRY_4B = _registry["models"]["qwen3-embedding-4b"]
+_ENTRY_8B = _registry["models"]["qwen3-embedding-8b"]
 
 
-serve_qwen3_embedding_4b = _register_serve_endpoint("qwen3-embedding-4b")
-serve_qwen3_embedding_8b = _register_serve_endpoint("qwen3-embedding-8b")
+@app.function(
+    name=_serve_fn_name("qwen3-embedding-4b"),
+    image=_vllm_image,
+    gpu=str(_ENTRY_4B["gpu"]),
+    volumes=_VOLUMES,
+    secrets=[ENV_SECRET],
+    timeout=int(_ENTRY_4B["timeout"]),
+    scaledown_window=int(_ENTRY_4B["scaledown_window"]),
+    min_containers=0,
+)
+@modal.concurrent(max_inputs=int(_ENTRY_4B["max_inputs"]))
+@modal.web_server(port=VLLM_PORT, startup_timeout=10 * 60)
+def serve_qwen3_embedding_4b():
+    _run_vllm_serve("qwen3-embedding-4b")
+
+
+@app.function(
+    name=_serve_fn_name("qwen3-embedding-8b"),
+    image=_vllm_image,
+    gpu=str(_ENTRY_8B["gpu"]),
+    volumes=_VOLUMES,
+    secrets=[ENV_SECRET],
+    timeout=int(_ENTRY_8B["timeout"]),
+    scaledown_window=int(_ENTRY_8B["scaledown_window"]),
+    min_containers=0,
+)
+@modal.concurrent(max_inputs=int(_ENTRY_8B["max_inputs"]))
+@modal.web_server(port=VLLM_PORT, startup_timeout=10 * 60)
+def serve_qwen3_embedding_8b():
+    _run_vllm_serve("qwen3-embedding-8b")
 
 
 def endpoint_url(model_key: str) -> str:
