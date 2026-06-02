@@ -236,6 +236,26 @@ def smoke(model: str = "qwen3-embedding-4b", text: str = "a melancholic indie fo
 
     from mcrs.litellm_cache import setup_litellm_cache
 
+    # local_entrypoint runs on the client, so `secrets=[ENV_SECRET]` does NOT apply
+    # here — load VLLM_API_KEY from the same .env the deployed server reads, unless
+    # it's already exported. Without this the client would send "EMPTY" and the
+    # deployed endpoint (started with --api-key $VLLM_API_KEY) returns 401.
+    if VLLM_API_KEY_ENV not in os.environ:
+        env_path = Path(__file__).resolve().parent.parent / ".env"
+        if env_path.exists():
+            for raw in env_path.read_text(encoding="utf-8").splitlines():
+                raw = raw.strip()
+                if raw.startswith(f"{VLLM_API_KEY_ENV}="):
+                    os.environ[VLLM_API_KEY_ENV] = raw.split("=", 1)[1]
+                    break
+
+    api_key = os.environ.get(VLLM_API_KEY_ENV)
+    if not api_key:
+        raise RuntimeError(
+            f"{VLLM_API_KEY_ENV} not found in the environment or {Path(__file__).resolve().parent.parent / '.env'}; "
+            "set it so the smoke client matches the deployed endpoint's --api-key."
+        )
+
     cache_dir = os.environ.get("MCRS_LITELLM_CACHE_DIR", "/tmp/mcrs-vllm-smoke-cache")
     setup_litellm_cache(cache_dir=cache_dir)
 
@@ -245,7 +265,7 @@ def smoke(model: str = "qwen3-embedding-4b", text: str = "a melancholic indie fo
         model=f"openai/{entry['served_name']}",
         input=[text],
         api_base=api_base,
-        api_key=os.environ.get(VLLM_API_KEY_ENV, "EMPTY"),
+        api_key=api_key,
         encoding_format="float",
         timeout=600,
     )
