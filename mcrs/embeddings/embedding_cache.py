@@ -91,3 +91,51 @@ class DiskVectorCache:
                     os.unlink(temp_path)
                 except OSError:
                     pass
+
+
+class CachedTextEmbedder:
+    """Wraps an `embed_batch` encoder with a persistent vector cache.
+
+    On each call: dedup inputs, serve cached texts from `store`, encode only
+    the misses via `inner.embed_batch`, persist them, and reassemble results
+    in the original input order (duplicates fanned back to every position).
+    When `enabled` is False it is a pure pass-through to `inner`.
+    """
+
+    def __init__(
+        self,
+        inner,
+        store: KeyValueStore,
+        namespace: str,
+        enabled: bool = True,
+    ):
+        self._inner = inner
+        self._store = store
+        self._namespace = namespace
+        self._enabled = enabled
+
+    def embed_batch(self, texts: list[str]) -> list[Vector]:
+        if not texts:
+            return []
+        if not self._enabled:
+            return self._inner.embed_batch(list(texts))
+
+        unique = list(dict.fromkeys(texts))  # dedup, first-seen order
+        keys = {t: make_key(self._namespace, t) for t in unique}
+
+        resolved: dict[str, Vector] = {}
+        misses: list[str] = []
+        for t in unique:
+            hit = self._store.get(keys[t])
+            if hit is None:
+                misses.append(t)
+            else:
+                resolved[t] = hit
+
+        if misses:
+            encoded = self._inner.embed_batch(misses)
+            for t, vec in zip(misses, encoded):
+                self._store.set(keys[t], vec)
+                resolved[t] = vec
+
+        return [resolved[t] for t in texts]
