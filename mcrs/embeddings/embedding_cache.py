@@ -62,7 +62,10 @@ class DiskVectorCache:
     def get(self, key: str) -> Vector | None:
         try:
             return json.loads(self._path(key).read_text(encoding="utf-8"))
-        except (FileNotFoundError, OSError, json.JSONDecodeError, UnicodeDecodeError, ValueError):
+        except (FileNotFoundError, OSError, json.JSONDecodeError, UnicodeDecodeError):
+            # Missing file / unreadable / corrupt JSON or UTF-8 -> treat as miss.
+            # A bare ValueError (invalid key from _validate_key) is NOT caught here:
+            # it is a programming error and must propagate, matching set()'s behavior.
             return None
 
     def set(self, key: str, vec: Vector) -> None:

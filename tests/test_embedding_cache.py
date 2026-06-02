@@ -54,3 +54,9 @@ def test_disk_cache_rejects_bad_key(tmp_path: Path):
     store = DiskVectorCache(tmp_path)
     with pytest.raises(ValueError):
         store.set("bad/key", [1.0])
+
+
+def test_disk_cache_rejects_bad_key_on_get(tmp_path: Path):
+    store = DiskVectorCache(tmp_path)
+    with pytest.raises(ValueError):
+        store.get("bad/key")
