@@ -57,7 +57,7 @@ def load_traces(path: Path) -> tuple[dict[tuple[str, int], dict], dict[tuple[str
       `trace.resolver.played_track_ids` (the canonical place; `state.played_track_ids`
       doesn't exist in saved traces).
     """
-    rows = json.loads(path.read_text())
+    rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
     states: dict[tuple[str, int], dict] = {}
     played: dict[tuple[str, int], list[str]] = {}
     for r in rows:
@@ -326,7 +326,7 @@ def main():
 
     exp_dir = Path(args.exp_dir)
     base_pred_path = exp_dir / "inference" / "devset" / f"{args.base_tid}.json"
-    base_trace_path = exp_dir / "inference" / "devset" / f"{args.base_tid}_trace.json"
+    base_trace_path = exp_dir / "inference" / "devset" / f"{args.base_tid}_trace.jsonl"
     if not base_pred_path.exists():
         raise SystemExit(f"predictions not found: {base_pred_path}")
     if not base_trace_path.exists():

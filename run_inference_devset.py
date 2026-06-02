@@ -198,13 +198,16 @@ def main(args):
     # `output_suffix` is sharding-time metadata; programmatic callers may not set it.
     output_suffix = getattr(args, "output_suffix", "")
     out_path = f"{args.exp_dir}/inference/devset/{args.tid}{output_suffix}.json"
-    # Trace sidecar — `default=str` handles datetime.date fields inside the
-    # extracted v0+ state's hard_filters.start/end without a custom encoder.
-    trace_path = f"{args.exp_dir}/inference/devset/{args.tid}{output_suffix}_trace.json"
+    # Trace sidecar — JSONL (one record per line) so it streams/diffs cheaply
+    # and shards concatenate by appending lines. `default=str` handles
+    # datetime.date fields inside the extracted v0+ state's hard_filters.start/end
+    # without a custom encoder.
+    trace_path = f"{args.exp_dir}/inference/devset/{args.tid}{output_suffix}_trace.jsonl"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(inference_results, f, ensure_ascii=False)
     with open(trace_path, "w", encoding="utf-8") as f:
-        json.dump(trace_results, f, ensure_ascii=False, default=str)
+        for record in trace_results:
+            f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

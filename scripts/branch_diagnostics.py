@@ -1,6 +1,6 @@
 """Branch-level retrieval diagnostics for v0+ devset trace files.
 
-Reads a trace sidecar (exp/inference/devset/{tid}_trace.json) plus the
+Reads a trace sidecar (exp/inference/devset/{tid}_trace.jsonl) plus the
 evaluator ground truth (evaluator/exp/ground_truth/devset.json) and reports:
 
   - hit@{1,20,50,100,200,1000}     over the FINAL recommendation
@@ -98,7 +98,7 @@ def compute_metrics(turns: list[tuple[dict, str]]) -> dict:
 
 def load_trace(path: str, require_branches: bool = True) -> list[dict]:
     with open(path, encoding="utf-8") as f:
-        records = json.load(f)
+        records = [json.loads(line) for line in f if line.strip()]
     if require_branches:
         has_any = any(
             isinstance(r.get("trace"), dict) and "branches" in r["trace"]
@@ -173,7 +173,7 @@ def _format_report(metrics: dict) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="v0+ branch retrieval diagnostics")
-    ap.add_argument("--trace", required=True, help="path to {tid}_trace.json")
+    ap.add_argument("--trace", required=True, help="path to {tid}_trace.jsonl")
     ap.add_argument(
         "--ground-truth",
         required=True,

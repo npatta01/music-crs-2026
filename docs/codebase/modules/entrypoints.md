@@ -18,7 +18,7 @@ Two levels of abstraction exist:
 | File | Responsibility |
 |---|---|
 | `run_experiment.py` | Unified local/Modal orchestrator: resolves split, validates args, calls the right low-level script or Modal function, downloads results, and invokes the evaluator. |
-| `run_inference_devset.py` | Low-level devset batch inference: loads config + model + all 8 turns per session, writes `exp/inference/devset/{tid}[{suffix}].json` and a `_trace.json` sidecar. |
+| `run_inference_devset.py` | Low-level devset batch inference: loads config + model + all 8 turns per session, writes `exp/inference/devset/{tid}[{suffix}].json` and a `_trace.jsonl` sidecar. |
 | `run_inference_blindset.py` | Low-level blindset batch inference: identical pipeline but uses only the last turn per session (no ground truth) and writes to `exp/inference/{eval_dataset}/{tid}.json`. |
 | `streamlit_app.py` | Interactive prediction explorer: browses saved JSON predictions, displays per-turn and aggregate metrics (NDCG, Recall, MRR, Diversity, Distinct-N), and renders track cards alongside the conversation. |
 | `prepare_submission.sh` | Packages a blindset prediction file as `submission/submission_{tid}_{date}.zip` for challenge upload. |
@@ -127,19 +127,13 @@ List of records, one per `(session, turn)`:
 ]
 ```
 
-### Trace sidecar (`exp/inference/devset/{tid}_trace.json`)
+### Trace sidecar (`exp/inference/devset/{tid}_trace.jsonl`)
 
-Written only by `run_inference_devset.py` (`run_inference_devset.py:209`). Parallel array to the main output. The `trace` field is populated only when `V0PlusCompilerQU` is active; otherwise `null`.
+Written only by `run_inference_devset.py` (`run_inference_devset.py:209`). JSONL — one record per line, parallel to the main output (one line per predictions row, same order). The `trace` field is populated only when `V0PlusCompilerQU` is active; otherwise `null`.
 
-```json
-[
-  {
-    "session_id": "<uuid>",
-    "user_id": "<uuid>",
-    "turn_number": 3,
-    "trace": { ... }
-  }
-]
+```jsonl
+{"session_id": "<uuid>", "user_id": "<uuid>", "turn_number": 3, "trace": { ... }}
+{"session_id": "<uuid>", "user_id": "<uuid>", "turn_number": 4, "trace": { ... }}
 ```
 
 ---
@@ -152,7 +146,7 @@ Written only by `run_inference_devset.py` (`run_inference_devset.py:209`). Paral
 2. `run_local` (`run_experiment.py:172`) is invoked. If `--num_sessions > 0`, `materialize_num_sessions_file` samples session IDs and writes a subset JSON.
 3. `run_command` (`run_experiment.py:115`) spawns `python run_inference_devset.py --tid ... --batch_size ... [--session_ids_file ...]`.
 4. Inside `run_inference_devset.main` (`run_inference_devset.py:65`): config is loaded, `load_crs_baseline` constructs the CRS pipeline, the HF dataset is loaded and optionally filtered, all sessions × 8 turns are materialized into flat `batch_data` + `metadata` lists, then processed in `batch_size` chunks via `music_crs.batch_chat`.
-5. Results are written to `exp/inference/devset/{tid}.json`; trace sidecar to `exp/inference/devset/{tid}_trace.json`.
+5. Results are written to `exp/inference/devset/{tid}.json`; trace sidecar to `exp/inference/devset/{tid}_trace.jsonl`.
 6. Back in `run_local`: `ensure_ground_truth` runs `evaluator/make_ground_truth.py` if needed, then `run_evaluation` invokes `evaluator/evaluate_devset.py`.
 
 ### Unified Modal devset run (`python run_experiment.py --backend modal --tid ...`)

@@ -25,14 +25,20 @@ def _key(row: dict) -> tuple:
     return (row["session_id"], row["turn_number"])
 
 
-def _load_shards(base: Path, tid: str, num_shards: int, kind: str) -> list[tuple[int, Path, list[dict]]]:
+def _load_shards(
+    base: Path, tid: str, num_shards: int, suffix: str, jsonl: bool
+) -> list[tuple[int, Path, list[dict]]]:
     out = []
     for shard_id in range(num_shards):
-        shard_path = base / f"{tid}.shard_{shard_id}{kind}.json"
+        shard_path = base / f"{tid}.shard_{shard_id}{suffix}"
         if not shard_path.exists():
             raise FileNotFoundError(f"Missing shard output: {shard_path}")
         with open(shard_path) as f:
-            out.append((shard_id, shard_path, json.load(f)))
+            if jsonl:
+                rows = [json.loads(line) for line in f if line.strip()]
+            else:
+                rows = json.load(f)
+        out.append((shard_id, shard_path, rows))
     return out
 
 
@@ -87,13 +93,18 @@ def main():
     args = parser.parse_args()
 
     base = Path(args.exp_dir) / "inference" / args.split
-    for kind in ("", "_trace"):
-        label = "predictions" if kind == "" else "traces"
-        shards = _load_shards(base, args.tid, args.num_shards, kind)
+    # (output_suffix, label, jsonl): predictions are a JSON array; the trace
+    # sidecar is JSONL (one record per line).
+    for suffix, label, jsonl in ((".json", "predictions", False), ("_trace.jsonl", "traces", True)):
+        shards = _load_shards(base, args.tid, args.num_shards, suffix, jsonl)
         rows = _merge(shards, label=label, tid=args.tid)
-        out_path = base / f"{args.tid}{kind}.json"
+        out_path = base / f"{args.tid}{suffix}"
         with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(rows, f, ensure_ascii=False)
+            if jsonl:
+                for row in rows:
+                    f.write(json.dumps(row, ensure_ascii=False) + "\n")
+            else:
+                json.dump(rows, f, ensure_ascii=False)
         print(f"Wrote {out_path}  ({len(rows)} unique rows from {args.num_shards} shards)")
 
 

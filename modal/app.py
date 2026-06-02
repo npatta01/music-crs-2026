@@ -758,7 +758,7 @@ def run_inference_sharded(
     """Run devset inference in parallel across `num_shards` Modal containers.
 
     Each shard processes len(devset)/num_shards sessions and writes its own
-    `{tid}.shard_{i}.json` + `{tid}.shard_{i}_trace.json` on the results volume.
+    `{tid}.shard_{i}.json` + `{tid}.shard_{i}_trace.jsonl` on the results volume.
     No concatenation step here — pull the per-shard files with download_results
     or merge them locally with scripts/merge_shard_results.py.
 
