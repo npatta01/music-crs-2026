@@ -88,7 +88,10 @@ def _build_vllm_serve_cmd(entry: dict[str, Any], *, port: int = VLLM_PORT) -> li
 # Modal app objects — image, volumes, scale-to-zero web endpoints, download
 # ---------------------------------------------------------------------------
 
-VLLM_VERSION = "0.11.0"  # pinned; confirm --task embed + Qwen3-Embedding support at deploy (Task 8). Bump as needed.
+# 0.11.2 (not 0.11.0): 0.11.0 pins only `transformers>=4.55.2`, so pip pulls
+# transformers 5.x which removed `all_special_tokens_extended` and crashes vLLM's
+# tokenizer at startup. 0.11.2 pins `transformers<5,>=4.56.0`, forcing a compatible 4.x.
+VLLM_VERSION = "0.11.2"
 
 # argv tokens are space-joined into a shell command (shell=True is needed so the
 # literal $VLLM_API_KEY expands from the dotenv secret). Every other token must be
@@ -193,6 +196,16 @@ def resolve_vllm_endpoints_in_qu_kwargs(qu_kwargs: dict[str, Any]) -> dict[str, 
     if isinstance(enc, dict) and enc.get("vllm_endpoint"):
         enc["api_base"] = endpoint_url(enc.pop("vllm_endpoint"))
     return qu_kwargs
+
+
+@app.function(image=_vllm_image, timeout=120)
+def resolve_check(model: str = "qwen3-embedding-4b") -> str:
+    """In-container check that the deployed endpoint URL resolves from inside a
+    Modal container (the same cross-app Function.from_name lookup the inference
+    app performs). Run: modal run modal/vllm_serve.py::resolve_check"""
+    url = endpoint_url(model)
+    print(f"in-container endpoint_url({model}) = {url}")
+    return url
 
 
 @app.function(image=_vllm_image, volumes=_VOLUMES, timeout=3600)
