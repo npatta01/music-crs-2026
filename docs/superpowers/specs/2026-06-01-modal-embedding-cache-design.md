@@ -121,3 +121,4 @@ Unit tests (no Modal) for `CachedTextEmbedder` + `DiskVectorCache` against a tem
 - Client-side cache to also skip the `.remote()` round-trip.
 - `modal.Dict` backend for live within-run cross-container sharing.
 - Reusing the wrapper on the local CPU/MPS encode path.
+- **Generalize beyond embeddings** to other GPU-native Modal calls (e.g. chat/completions): the `KeyValueStore` + namespaced `sha256(input)` key + atomic-disk-store pattern is reusable as-is; only the value type and the wrapped method change. `CachedTextEmbedder` is the embeddings-specific instance of a more general "cache a deterministic model call" wrapper. Designed so this is an additive extension, not a rewrite — scoped out for now.
