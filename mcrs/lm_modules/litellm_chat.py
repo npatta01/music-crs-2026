@@ -34,29 +34,41 @@ class LITELLM_LM:
         api_key: str | None = None,
         temperature: float = 0.7,
         max_tokens: int = 512,
+        completion_kwargs: dict | None = None,
         **_unused,
     ):
         self.model_name = model_name
-        self.api_base = api_base or os.environ.get("LITELLM_PROXY_BASE", "http://localhost:4000")
-        self.api_key = api_key or os.environ.get("LITELLM_PROXY_KEY", "sk-anything")
+        # Only use a proxy base when explicitly configured (arg or env).
+        # No hardcoded localhost fallback — lets direct openrouter/... calls
+        # authenticate via OPENROUTER_API_KEY (issue #96 §4).
+        self.api_base = api_base or os.environ.get("LITELLM_PROXY_BASE")
+        self.api_key = api_key or os.environ.get("LITELLM_PROXY_KEY")
         self.temperature = temperature
         self.max_tokens = max_tokens
+        self.completion_kwargs = dict(completion_kwargs or {})
 
     def _completion_kwargs(self, max_new_tokens: int | None) -> dict:
-        return {
+        kwargs = {
             "model": self.model_name,
-            "api_base": self.api_base,
-            "api_key": self.api_key,
             "temperature": self.temperature,
             "max_tokens": int(max_new_tokens) if max_new_tokens is not None else self.max_tokens,
         }
+        if self.api_base:
+            kwargs["api_base"] = self.api_base
+        if self.api_key:
+            kwargs["api_key"] = self.api_key
+        # User-supplied params (reasoning_effort, extra_body, top_p, ...) win,
+        # but cannot clobber model/messages (messages set at call time).
+        kwargs.update(self.completion_kwargs)
+        kwargs.pop("messages", None)
+        return kwargs
 
     def response_generation(
         self,
         sys_prompt: str,
         chat_history: list,
         recommend_item: Any,
-        max_new_tokens: int = 512,
+        max_new_tokens: int | None = None,
         response_format=None,
     ) -> str:
         import litellm
