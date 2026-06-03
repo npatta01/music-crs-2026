@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,6 +31,24 @@ KIND_ALIASES = {
     "ground-truth": {"ground-truth"},
 }
 
+# Run-scoped shard suffix, e.g. ".run_20260603T074512Z-a3f91c.shard_0".
+# run_id contains no dots (UTC stamp + hex, hyphen-joined); tids contain no dots.
+_RUN_SHARD_RE = re.compile(r"\.run_(?P<run_id>[^.]+)\.shard_\d+$")
+
+
+def _strip_run_shard(stem: str) -> str:
+    return _RUN_SHARD_RE.sub("", stem)
+
+
+def _run_id_from_name(name: str) -> str | None:
+    stem = name
+    for suffix in ("_trace.jsonl", "_rewrite_audit.jsonl", "_rewrite_stats.json", ".json"):
+        if stem.endswith(suffix):
+            stem = stem[: -len(suffix)]
+            break
+    match = _RUN_SHARD_RE.search(stem)
+    return match.group("run_id") if match else None
+
 
 @dataclass(frozen=True)
 class RemoteArtifact:
@@ -38,6 +57,7 @@ class RemoteArtifact:
     kind: str
     split: str | None
     tid: str | None
+    run_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -77,6 +97,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--out-dir",
         default="evaluator/exp",
         help="Local output base directory. Defaults to evaluator/exp.",
+    )
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help="Only download artifacts whose filename carries this run id "
+             "(run-scoped shard files: {tid}.run_{run_id}.shard_N.json).",
     )
     parser.add_argument(
         "--overwrite",
@@ -180,9 +206,9 @@ def _artifact_tid(remote_path: str, kind: str) -> str | None:
     if kind == "trace":
         for suffix in ("_trace.jsonl", "_rewrite_audit.jsonl", "_rewrite_stats.json"):
             if name.endswith(suffix):
-                return name[: -len(suffix)]
+                return _strip_run_shard(name[: -len(suffix)])
     if kind in {"inference", "scores"} and name.endswith(".json"):
-        return name[:-5]
+        return _strip_run_shard(name[:-5])
     return None
 
 
@@ -230,6 +256,7 @@ def discover_remote_artifacts(volume, splits: set[str] | None, verbose: bool) ->
                     kind=kind,
                     split=split_name,
                     tid=_artifact_tid(remote_path, kind),
+                    run_id=_run_id_from_name(Path(remote_path).name),
                 )
             )
 
@@ -251,6 +278,7 @@ def discover_remote_artifacts(volume, splits: set[str] | None, verbose: bool) ->
                     kind=kind,
                     split=split_name,
                     tid=_artifact_tid(remote_path, kind),
+                    run_id=_run_id_from_name(Path(remote_path).name),
                 )
             )
 
@@ -282,12 +310,15 @@ def select_artifacts(
     kinds: set[str],
     overwrite: bool,
     out_dir: Path,
+    run_id: str | None = None,
 ) -> list[RemoteArtifact]:
     selected: list[RemoteArtifact] = []
     for artifact in artifacts:
         if artifact.kind not in kinds:
             continue
         if tids is not None and artifact.tid not in tids:
+            continue
+        if run_id is not None and artifact.run_id != run_id:
             continue
         local_path = out_dir / artifact.remote_path
         if not overwrite and local_path.exists():
@@ -346,6 +377,7 @@ def main(argv: list[str] | None = None) -> int:
         kinds=kinds,
         overwrite=args.overwrite,
         out_dir=out_dir,
+        run_id=args.run_id,
     )
     if not selected:
         print("No matching artifacts to download.")

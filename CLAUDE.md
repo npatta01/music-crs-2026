@@ -34,6 +34,9 @@ python run_experiment.py --backend local --tid v0plus_compiler_all_retrievers_de
 # Preferred: unified experiment command (Modal)
 python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --batch_size 64
 
+# Sharded Modal run (parallel session shards; devset or blindset)
+python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --batch_size 64 --num_shards 5
+
 # Low-level inference scripts still work
 python run_inference_devset.py --tid v0plus_compiler_all_retrievers_devset --batch_size 16
 python run_inference_blindset.py --tid v0plus_compiler_blindset_A --eval_dataset blindset_A --batch_size 16

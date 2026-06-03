@@ -4,8 +4,10 @@ import argparse
 import json
 import random
 import re
+import secrets
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from datasets import load_dataset
@@ -65,6 +67,19 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Clear cached retrieval artifacts before inference when supported.",
     )
+    parser.add_argument(
+        "--num_shards",
+        type=int,
+        default=1,
+        help="Number of parallel Modal shards. >1 runs session-sharded inference "
+             "(Modal backend only). Default 1 = single run.",
+    )
+    parser.add_argument(
+        "--run_id",
+        default=None,
+        help="Optional run id override for a sharded run (retry/resume). "
+             "Generated automatically when omitted.",
+    )
     return parser
 
 
@@ -87,6 +102,16 @@ def resolve_exp_dir(exp_dir: str) -> Path:
     if not path.is_absolute():
         path = PROJECT_ROOT / path
     return path
+
+
+def make_run_id() -> str:
+    """One run id per sharded run: {UTC timestamp}-{short random hex}.
+
+    Example: 20260603T074512Z-a3f91c. Scopes every shard's artifacts so a
+    re-run never collides with — or silently merges — a prior run's files.
+    """
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return f"{stamp}-{secrets.token_hex(3)}"
 
 
 def require_config(tid: str) -> Path:
@@ -167,6 +192,19 @@ def validate_args(args: argparse.Namespace, split: str) -> None:
         raise ValueError(
             "--clear_cache is not supported for Modal blindset runs."
         )
+    if args.num_shards < 1:
+        raise ValueError("--num_shards must be >= 1.")
+    if args.num_shards > 1 and args.backend != "modal":
+        raise ValueError("--num_shards > 1 requires --backend modal.")
+    if args.num_shards > 1 and args.num_sessions:
+        raise ValueError(
+            "--num_sessions cannot be combined with --num_shards > 1: "
+            "run a smoke test (--num_sessions) OR a sharded full run, not both."
+        )
+    if args.run_id and args.num_shards == 1:
+        raise ValueError(
+            "--run_id only applies to sharded runs (--num_shards > 1)."
+        )
 
 
 def run_local(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
@@ -208,6 +246,69 @@ def run_local(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
     if args.clear_cache:
         cmd.append("--clear_cache")
     run_command(cmd, cwd=PROJECT_ROOT)
+
+
+def run_modal_sharded(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
+    run_id = args.run_id or make_run_id()
+    print(f"Sharded run_id: {run_id} (re-run with --run_id {run_id} to retry)")
+
+    sharded_cmd = [
+        sys.executable,
+        "-m",
+        "modal",
+        "run",
+        "modal/app.py::run_inference_sharded",
+        "--tid",
+        args.tid,
+        "--eval-dataset",
+        split,
+        "--num-shards",
+        str(args.num_shards),
+        "--run-id",
+        run_id,
+        "--batch-size",
+        str(args.batch_size),
+    ]
+    if args.clear_cache:
+        sharded_cmd.append("--clear-cache")
+    run_command(sharded_cmd, cwd=PROJECT_ROOT)
+
+    run_command(
+        [
+            sys.executable,
+            "modal/download_results.py",
+            "--tid",
+            args.tid,
+            "--split",
+            split,
+            "--run-id",
+            run_id,
+            "--out-dir",
+            str(exp_dir),
+        ],
+        cwd=PROJECT_ROOT,
+    )
+    run_command(
+        [
+            sys.executable,
+            "scripts/merge_shard_results.py",
+            "--tid",
+            args.tid,
+            "--num_shards",
+            str(args.num_shards),
+            "--run_id",
+            run_id,
+            "--split",
+            split,
+            "--exp-dir",
+            str(exp_dir),
+        ],
+        cwd=PROJECT_ROOT,
+    )
+
+    if split == "devset":
+        ensure_ground_truth(exp_dir)
+        run_evaluation(args.tid, exp_dir, split)
 
 
 def run_modal(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
@@ -292,6 +393,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.backend == "local":
         run_local(args, split, exp_dir)
+    elif args.num_shards > 1:
+        run_modal_sharded(args, split, exp_dir)
     else:
         run_modal(args, split, exp_dir)
 

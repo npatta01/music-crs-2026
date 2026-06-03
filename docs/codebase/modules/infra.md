@@ -22,7 +22,7 @@ The main interaction points with the rest of the system:
 | `modal/download_results.py` | Bulk-downloads artifacts from the `music-crs-results` Modal volume to a local `evaluator/exp/` tree; supports filtering by `tid`, split, and artifact kind (inference, traces, scores, ground-truth). |
 | `scripts/build_lancedb_index.py` | CLI wrapper around `mcrs.lancedb.indexing.build_track_lancedb_table`; builds the 47k-track LanceDB index locally (with or without embeddings). |
 | `scripts/create_local_split.py` | Creates a difficulty-stratified eval subset (`data/local_eval_split.json`) by scoring devset sessions on mean ground-truth track popularity. |
-| `scripts/merge_shard_results.py` | Merges `{tid}.shard_N.json` prediction and trace outputs from sharded Modal runs into a single `{tid}.json` file; warns on key overlap. |
+| `scripts/merge_shard_results.py` | Merges run-id-scoped shard outputs into a single `{tid}.json`; takes `--run_id` to select `{tid}.run_{run_id}.shard_N.json` files (omit for legacy unscoped files); merges traces only when all shards have a `_trace.json` sidecar (devset); blindset shards have none; warns on key overlap. |
 | `scripts/smoke_lancedb_modal_query.py` | Smoke-tests the deployed `ModalRetrievalService` via `LanceDbModalClient`; prints returned track IDs. |
 | `scripts/smoke_litellm_modal_cache.py` | Smoke-tests the deployed `ModalLiteLLMService`; calls both embedding and chat twice and asserts the second call is a LiteLLM disk-cache hit. |
 | `scripts/litellm-proxy` | Shell script that starts a local LiteLLM proxy (OpenAI-compatible) backed by OpenRouter, using `infra/litellm/litellm_proxy.openrouter.yaml`. |
@@ -41,7 +41,7 @@ The classes and functions below are the entry points that other modules (or `run
 | Symbol | Signature | Description |
 |---|---|---|
 | `run_inference` | `(tid, batch_size, num_sessions, clear_cache, session_ids_json)` — local entrypoint | Dispatches devset inference to `_inference_devset` (GPU) or `_inference_devset_cpu` (CPU) based on whether the config sets `device: cpu`. |
-| `run_inference_sharded` | `(tid, batch_size, num_shards, clear_cache)` — local entrypoint | Fans out devset inference across `num_shards` parallel Modal containers; each writes `{tid}.shard_{i}.json`. |
+| `run_inference_sharded` | `(tid, eval_dataset, num_shards, run_id, batch_size, clear_cache)` — local entrypoint | Split-generic: `eval_dataset == "devset"` fans out devset workers; anything else fans out blindset workers. GPU vs CPU chosen internally via `_tid_uses_cpu`. Each shard writes run-id-scoped artifacts `inference/{split}/{tid}.run_{run_id}.shard_{i}.json` (plus a `_trace.json` sidecar for devset). Requires a non-empty `run_id`. |
 | `run_inference_blindset` | `(tid, batch_size, eval_dataset)` — local entrypoint | Dispatches blindset inference to `_inference_blindset` or `_inference_blindset_cpu`. |
 | `run_evaluate` | `(tid, split)` — local entrypoint | Runs `evaluator/make_ground_truth.py` (if needed) and `evaluator/evaluate_devset.py` on the results volume. |
 | `upload_lancedb_index` | `(local_db_dir, remote_dir, overwrite)` — local entrypoint | Uploads a locally built LanceDB directory to the `music-crs-models` Modal volume; `overwrite=True` removes the target directory first. |
@@ -173,12 +173,13 @@ Used by inference functions to mount all four volumes simultaneously.
 6. Back locally, `run_experiment.py:run_modal` calls `modal/download_results.py` as a subprocess to pull the outputs to `evaluator/exp/`.
 7. `run_experiment.py` then calls `evaluator/make_ground_truth.py` (if needed) and `evaluator/evaluate_devset.py`.
 
-### Sharded devset inference
+### Sharded inference (devset or blindset)
 
-1. `run_inference_sharded` (local entrypoint, `modal/app.py:719`) loops over `shard_id` in `range(num_shards)`.
-2. It calls `.spawn(...)` on the chosen inference function for each shard; this returns immediately with a call handle.
-3. The `output_suffix=f".shard_{shard_id}"` argument causes each shard to write `{tid}.shard_{N}.json` on the results volume.
-4. After all `.get()` calls complete, the user runs `scripts/merge_shard_results.py` locally to combine shards.
+1. `run_inference_sharded` (local entrypoint, `modal/app.py:773`) receives `eval_dataset` and `run_id`; it selects the devset or blindset inference function and applies `_tid_uses_cpu(tid)` to choose GPU vs CPU — callers do not pick a resource flavor.
+2. It loops over `shard_id` in `range(num_shards)`, calling `.spawn(...)` for each; this returns immediately with a call handle.
+3. `output_suffix=f".run_{run_id}.shard_{shard_id}"` causes each shard to write `inference/{split}/{tid}.run_{run_id}.shard_{N}.json` (plus a `_trace.json` sidecar for devset shards).
+4. A resilient join collects results: failed shards are retried once; any remaining failures abort loudly after all shards have been awaited.
+5. When invoked via `run_experiment.py --num_shards N`, the wrapper auto-runs `modal/download_results.py` (run-scoped) → `scripts/merge_shard_results.py` → evaluator (devset only). The manual `scripts/merge_shard_results.py` path remains available for direct `modal run` use.
 
 ### LanceDB index upload
 
@@ -252,7 +253,7 @@ Used by inference functions to mount all four volumes simultaneously.
 
 5. **`_inference_devset_cpu` sets `MCRS_LANCEDB_URI`; `_inference_devset` does not.** GPU inference functions expect the retrieval config to embed the DB URI (via experiment config), while CPU functions inject it via environment variable (`DEFAULT_REMOTE_LANCEDB_URI = "/root/models/lancedb"`). This asymmetry means GPU and CPU configs may need different `db_uri` handling.
 
-6. **Sharded runs produce per-shard files only.** `run_inference_sharded` does not merge shards — callers must run `scripts/merge_shard_results.py` separately. The local entrypoint prints a reminder but does not enforce this.
+6. **`run_experiment.py --num_shards N` auto-runs download → merge → evaluate.** `run_inference_sharded` itself only writes per-shard artifacts and does not merge them. The `run_experiment.py` wrapper handles the full pipeline automatically (download run-scoped shards, merge, evaluate for devset). For direct `modal run modal/app.py::run_inference_sharded` usage, callers must run `scripts/merge_shard_results.py --run_id <run_id>` manually.
 
 7. **`_session_ids_file_arg` writes to `/tmp/session_ids.json`** (`modal/app.py:194`). If two Modal containers for different experiments run on the same instance simultaneously (unlikely given `max_containers=1` for most classes, but possible in sharded mode), they would share this temp file path.
 

@@ -316,7 +316,14 @@ def _inference_devset_cpu(
     secrets=[ENV_SECRET],
     timeout=7200,
 )
-def _inference_blindset(tid: str, batch_size: int, eval_dataset: str):
+def _inference_blindset(
+    tid: str,
+    batch_size: int,
+    eval_dataset: str,
+    num_shards: int = 1,
+    shard_id: int = 0,
+    output_suffix: str = "",
+):
     import sys
 
     cmd = [
@@ -326,9 +333,13 @@ def _inference_blindset(tid: str, batch_size: int, eval_dataset: str):
         "--eval_dataset", eval_dataset,
         "--exp_dir", EXP_DIR,
     ]
+    if num_shards > 1:
+        cmd += ["--num_shards", str(num_shards), "--shard_id", str(shard_id)]
+    if output_suffix:
+        cmd += ["--output_suffix", output_suffix]
     _run_inference_command(cmd)
     results_vol.commit()
-    print(f"Results saved to volume: inference/{eval_dataset}/{tid}.json")
+    print(f"Results saved to volume: inference/{eval_dataset}/{tid}{output_suffix}.json")
 
 
 @app.function(
@@ -339,7 +350,14 @@ def _inference_blindset(tid: str, batch_size: int, eval_dataset: str):
     memory=LANCEDB_INFERENCE_MEMORY,
     timeout=7200,
 )
-def _inference_blindset_cpu(tid: str, batch_size: int, eval_dataset: str):
+def _inference_blindset_cpu(
+    tid: str,
+    batch_size: int,
+    eval_dataset: str,
+    num_shards: int = 1,
+    shard_id: int = 0,
+    output_suffix: str = "",
+):
     import sys
 
     cmd = [
@@ -349,9 +367,13 @@ def _inference_blindset_cpu(tid: str, batch_size: int, eval_dataset: str):
         "--eval_dataset", eval_dataset,
         "--exp_dir", EXP_DIR,
     ]
+    if num_shards > 1:
+        cmd += ["--num_shards", str(num_shards), "--shard_id", str(shard_id)]
+    if output_suffix:
+        cmd += ["--output_suffix", output_suffix]
     _run_inference_command(cmd, lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI)
     results_vol.commit()
-    print(f"CPU results saved to volume: inference/{eval_dataset}/{tid}.json")
+    print(f"CPU results saved to volume: inference/{eval_dataset}/{tid}{output_suffix}.json")
 
 
 @app.cls(
@@ -1050,49 +1072,69 @@ def run_inference(
 @app.local_entrypoint()
 def run_inference_sharded(
     tid: str = "v0plus_compiler_all_retrievers_devset",
-    batch_size: int = DEVSET_BATCH_SIZE,
+    eval_dataset: str = "devset",
     num_shards: int = 4,
+    run_id: str = "",
+    batch_size: int = DEVSET_BATCH_SIZE,
     clear_cache: bool = False,
 ):
-    """Run devset inference in parallel across `num_shards` Modal containers.
+    """Run split-oriented, session-sharded inference across `num_shards` containers.
 
-    Each shard processes len(devset)/num_shards sessions and writes its own
-    `{tid}.shard_{i}.json` + `{tid}.shard_{i}_trace.jsonl` on the results volume.
-    No concatenation step here — pull the per-shard files with download_results
-    or merge them locally with scripts/merge_shard_results.py.
+    Generic over split: `eval_dataset == "devset"` runs the devset worker,
+    anything else runs the blindset worker. GPU vs CPU is chosen internally
+    from the tid's config (`_tid_uses_cpu`) — callers never pick a resource
+    flavor. Each shard writes run-scoped artifacts:
+        inference/{split}/{tid}.run_{run_id}.shard_{i}.json
+        inference/{split}/{tid}.run_{run_id}.shard_{i}_trace.jsonl   (devset only)
+    Merge them with scripts/merge_shard_results.py --run_id {run_id}.
 
-    Args:
-        tid: experiment id (config file in configs/{tid}.yaml).
-        batch_size: per-shard batch size (default DEVSET_BATCH_SIZE).
-        num_shards: number of parallel Modal containers.
-        clear_cache: pass --clear_cache through to each shard's run_inference_devset.
+    A non-empty `run_id` is required (the run_experiment.py wrapper always
+    passes one) so stale shard files from prior runs can never be merged in.
     """
-    inference_fn = _inference_devset_cpu if _tid_uses_cpu(tid) else _inference_devset
+    if not run_id:
+        raise ValueError(
+            "run_inference_sharded requires a non-empty --run-id "
+            "(run_experiment.py generates one automatically)."
+        )
 
-    # Fire shards in parallel via .spawn — returns immediately with a function
-    # call handle for each. Then await all by calling .get() on each handle.
+    is_devset = eval_dataset == "devset"
+    uses_cpu = _tid_uses_cpu(tid)
+    if is_devset:
+        inference_fn = _inference_devset_cpu if uses_cpu else _inference_devset
+    else:
+        inference_fn = _inference_blindset_cpu if uses_cpu else _inference_blindset
+
     def _spawn(shard_id):
+        output_suffix = f".run_{run_id}.shard_{shard_id}"
+        if is_devset:
+            return inference_fn.spawn(
+                tid=tid,
+                batch_size=batch_size,
+                num_sessions=0,
+                clear_cache=clear_cache,
+                session_ids_json=None,
+                num_shards=num_shards,
+                shard_id=shard_id,
+                output_suffix=output_suffix,
+            )
         return inference_fn.spawn(
             tid=tid,
             batch_size=batch_size,
-            num_sessions=0,
-            clear_cache=clear_cache,
-            session_ids_json=None,
+            eval_dataset=eval_dataset,
             num_shards=num_shards,
             shard_id=shard_id,
-            output_suffix=f".shard_{shard_id}",
+            output_suffix=output_suffix,
         )
 
     # Resilient join: a single shard failure must NOT raise out of this local
-    # entrypoint. An uncaught local exception makes Modal stop the whole app and
-    # SIGINT every other (healthy, in-progress) shard container — a cascade that
-    # loses the entire run over one transient (rate-limit / dropped connection
-    # under concurrency). So catch per shard, then retry the failures once.
+    # entrypoint mid-run, or Modal SIGINTs every other in-progress shard
+    # container (a cascade that loses the whole run over one transient error).
+    # Catch per shard, retry the failures once, then fail loudly if any remain.
     def _join(pairs):
         ok, bad = [], []
         for shard_id, call in pairs:
             try:
-                call.get()  # blocks until that shard finishes
+                call.get()
                 ok.append(shard_id)
                 print(f"Shard {shard_id} complete.")
             except Exception as e:  # noqa: BLE001 — report and continue, never abort the run
@@ -1101,7 +1143,7 @@ def run_inference_sharded(
         return ok, bad
 
     calls = [(shard_id, _spawn(shard_id)) for shard_id in range(num_shards)]
-    print(f"Spawned {num_shards} shards for {tid}.")
+    print(f"Spawned {num_shards} shards for {tid} (split={eval_dataset}, run_id={run_id}).")
     ok, failed = _join(calls)
 
     if failed:
@@ -1110,19 +1152,18 @@ def run_inference_sharded(
         ok += ok2
 
     if failed:
-        # All spawns have been joined at this point — no healthy shard is still
-        # in flight, so raising here does NOT trigger the SIGINT cascade this PR
-        # fixes (that only happens when the entrypoint raises mid-run). Failing
-        # loudly is required: an incomplete sharded run must not exit 0, or a
-        # later merge silently picks up stale {tid}.shard_N.json files from a
-        # prior attempt and reports an incomplete run as successful.
+        # All spawns joined — no healthy shard is still in flight, so raising
+        # here does not trigger the SIGINT cascade. Fail loudly: an incomplete
+        # run must not exit 0, or a later merge silently picks up a partial set.
         raise RuntimeError(
             f"{len(failed)}/{num_shards} shard(s) failed after retry: {failed}. "
-            f"Sharded run is INCOMPLETE — re-run these shard_ids (same "
-            f"--num-shards) before merging."
+            f"Sharded run is INCOMPLETE — re-run with the same --num-shards and "
+            f"--run-id {run_id} before merging."
         )
-    print(f"All {num_shards} shards complete. Per-shard outputs: "
-          f"inference/devset/{tid}.shard_{{0..{num_shards-1}}}.json")
+    print(
+        f"All {num_shards} shards complete. Per-shard outputs: "
+        f"inference/{eval_dataset}/{tid}.run_{run_id}.shard_{{0..{num_shards-1}}}.json"
+    )
 
 
 @app.local_entrypoint()

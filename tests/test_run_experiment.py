@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re as _re
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -634,3 +635,186 @@ def test_main_reports_catalog_diversity_for_shallow_cutoffs(tmp_path, monkeypatc
     assert payload["available_cutoffs"] == module.K_VALUES
     assert payload["catalog_diversity"] == pytest.approx(20 / 3)
     assert payload["catalog_diversity@100"] == pytest.approx(20 / 3)
+
+
+def test_make_run_id_format():
+    module = _load_module("run_experiment_module_runid", "run_experiment.py")
+    run_id = module.make_run_id()
+    assert _re.fullmatch(r"\d{8}T\d{6}Z-[0-9a-f]{6}", run_id), run_id
+
+
+def test_local_sharding_rejected(tmp_path):
+    module = _load_module("run_experiment_module_local_shard_reject", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+    module.PROJECT_ROOT = project_root
+    with pytest.raises(ValueError, match="requires --backend modal"):
+        module.main([
+            "--backend", "local", "--tid", "foo_devset", "--num_shards", "5",
+        ])
+
+
+def test_num_sessions_with_sharding_rejected(tmp_path):
+    module = _load_module("run_experiment_module_smoke_shard_reject", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+    module.PROJECT_ROOT = project_root
+    with pytest.raises(ValueError, match="cannot be combined with --num_shards"):
+        module.main([
+            "--backend", "modal", "--tid", "foo_devset",
+            "--num_shards", "5", "--num_sessions", "3",
+        ])
+
+
+def test_run_id_requires_sharding(tmp_path):
+    module = _load_module("run_experiment_module_runid_reject", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+    module.PROJECT_ROOT = project_root
+    with pytest.raises(ValueError, match="--run_id only applies"):
+        module.main([
+            "--backend", "modal", "--tid", "foo_devset", "--run_id", "abc",
+        ])
+
+
+_FIXED_RUN_ID = "20260603T074512Z-a3f91c"
+
+
+def test_modal_sharded_devset_builds_command_then_download_merge_eval(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_shard_devset", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+
+    commands: list[tuple[list[str], Path]] = []
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(module, "make_run_id", lambda: _FIXED_RUN_ID)
+    monkeypatch.setattr(
+        module, "run_command",
+        lambda cmd, cwd=None: commands.append(([str(p) for p in cmd], Path(cwd))),
+    )
+
+    exp = project_root / "artifacts"
+    exit_code = module.main([
+        "--backend", "modal", "--tid", "foo_devset",
+        "--batch_size", "64", "--num_shards", "5", "--exp_dir", str(exp),
+    ])
+
+    assert exit_code == 0
+    assert commands[0][0] == [
+        "/usr/bin/python3", "-m", "modal", "run",
+        "modal/app.py::run_inference_sharded",
+        "--tid", "foo_devset",
+        "--eval-dataset", "devset",
+        "--num-shards", "5",
+        "--run-id", _FIXED_RUN_ID,
+        "--batch-size", "64",
+    ]
+    assert commands[1][0] == [
+        "/usr/bin/python3", "modal/download_results.py",
+        "--tid", "foo_devset",
+        "--split", "devset",
+        "--run-id", _FIXED_RUN_ID,
+        "--out-dir", str(exp),
+    ]
+    assert commands[2][0] == [
+        "/usr/bin/python3", "scripts/merge_shard_results.py",
+        "--tid", "foo_devset",
+        "--num_shards", "5",
+        "--run_id", _FIXED_RUN_ID,
+        "--split", "devset",
+        "--exp-dir", str(exp),
+    ]
+    # devset -> ground truth then evaluation
+    assert commands[3][0][:2] == ["/usr/bin/python3", "evaluator/make_ground_truth.py"]
+    assert commands[4][0][:2] == ["/usr/bin/python3", "evaluator/evaluate_devset.py"]
+
+
+def test_modal_sharded_blindset_merges_without_eval(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_shard_blindset", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_blindset_A")
+
+    commands: list[tuple[list[str], Path]] = []
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(module, "make_run_id", lambda: _FIXED_RUN_ID)
+    monkeypatch.setattr(
+        module, "run_command",
+        lambda cmd, cwd=None: commands.append(([str(p) for p in cmd], Path(cwd))),
+    )
+
+    exp = project_root / "artifacts"
+    exit_code = module.main([
+        "--backend", "modal", "--tid", "foo_blindset_A",
+        "--eval_dataset", "blindset_A", "--batch_size", "64",
+        "--num_shards", "5", "--exp_dir", str(exp),
+    ])
+
+    assert exit_code == 0
+    assert commands[0][0] == [
+        "/usr/bin/python3", "-m", "modal", "run",
+        "modal/app.py::run_inference_sharded",
+        "--tid", "foo_blindset_A",
+        "--eval-dataset", "blindset_A",
+        "--num-shards", "5",
+        "--run-id", _FIXED_RUN_ID,
+        "--batch-size", "64",
+    ]
+    assert commands[1][0][:6] == [
+        "/usr/bin/python3", "modal/download_results.py",
+        "--tid", "foo_blindset_A", "--split", "blindset_A",
+    ]
+    assert commands[2][0][:2] == ["/usr/bin/python3", "scripts/merge_shard_results.py"]
+    # No ground truth, no evaluation for blindset.
+    assert len(commands) == 3
+
+
+def test_modal_sharded_run_id_override_threaded(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_shard_override", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_blindset_A")
+
+    commands: list[tuple[list[str], Path]] = []
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(
+        module, "run_command",
+        lambda cmd, cwd=None: commands.append(([str(p) for p in cmd], Path(cwd))),
+    )
+
+    module.main([
+        "--backend", "modal", "--tid", "foo_blindset_A",
+        "--eval_dataset", "blindset_A", "--num_shards", "3",
+        "--run_id", "CUSTOMID", "--exp_dir", str(project_root / "artifacts"),
+    ])
+
+    assert "--run-id" in commands[0][0]
+    assert commands[0][0][commands[0][0].index("--run-id") + 1] == "CUSTOMID"
+    assert commands[1][0][commands[1][0].index("--run-id") + 1] == "CUSTOMID"
+    assert commands[2][0][commands[2][0].index("--run_id") + 1] == "CUSTOMID"
+
+
+def test_modal_default_num_shards_uses_single_run_entrypoint(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_modal_single", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+
+    commands: list[tuple[list[str], Path]] = []
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(
+        module, "run_command",
+        lambda cmd, cwd=None: commands.append(([str(p) for p in cmd], Path(cwd))),
+    )
+
+    module.main([
+        "--backend", "modal", "--tid", "foo_devset",
+        "--exp_dir", str(project_root / "artifacts"),
+    ])
+
+    # Single-run path: the plain run_inference entrypoint, never the sharded one.
+    assert commands[0][0][:5] == [
+        "/usr/bin/python3", "-m", "modal", "run", "modal/app.py::run_inference",
+    ]
+    assert all("run_inference_sharded" not in part for part in commands[0][0])
