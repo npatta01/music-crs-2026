@@ -249,6 +249,49 @@ def test_main_reads_tid_file_for_bulk_selection(tmp_path, monkeypatch):
     assert not (tmp_path / "exp" / "inference" / "devset" / "baz_devset.json").exists()
 
 
+def test_artifact_tid_strips_run_shard_suffix():
+    module = _load_module()
+    name = "inference/devset/foo_devset.run_20260603T074512Z-a3f91c.shard_0.json"
+    assert module._artifact_kind(name) == "inference"
+    assert module._artifact_tid(name, "inference") == "foo_devset"
+    tname = "inference/devset/foo_devset.run_20260603T074512Z-a3f91c.shard_0_trace.json"
+    assert module._artifact_kind(tname) == "trace"
+    assert module._artifact_tid(tname, "trace") == "foo_devset"
+
+
+def test_run_id_from_name_extracts_run_id():
+    module = _load_module()
+    name = "foo_devset.run_20260603T074512Z-a3f91c.shard_2.json"
+    assert module._run_id_from_name(name) == "20260603T074512Z-a3f91c"
+    assert module._run_id_from_name("foo_devset.json") is None
+
+
+def test_select_artifacts_filters_by_run_id():
+    module = _load_module()
+    rid = "20260603T074512Z-a3f91c"
+    arts = [
+        module.RemoteArtifact(
+            remote_path=f"inference/devset/foo_devset.run_{rid}.shard_0.json",
+            size=1, kind="inference", split="devset", tid="foo_devset", run_id=rid,
+        ),
+        module.RemoteArtifact(
+            remote_path="inference/devset/foo_devset.run_OLD.shard_0.json",
+            size=1, kind="inference", split="devset", tid="foo_devset", run_id="OLD",
+        ),
+        module.RemoteArtifact(
+            remote_path="inference/devset/foo_devset.json",
+            size=1, kind="inference", split="devset", tid="foo_devset", run_id=None,
+        ),
+    ]
+    selected = module.select_artifacts(
+        arts, tids={"foo_devset"}, kinds={"inference"}, overwrite=True,
+        out_dir=Path("/tmp/does-not-exist"), run_id=rid,
+    )
+    assert [a.remote_path for a in selected] == [
+        f"inference/devset/foo_devset.run_{rid}.shard_0.json"
+    ]
+
+
 def test_download_artifacts_skill_references_downloader_script():
     skill_path = Path(__file__).resolve().parents[1] / ".claude" / "skills" / "download-artifacts" / "SKILL.md"
     content = skill_path.read_text(encoding="utf-8")
