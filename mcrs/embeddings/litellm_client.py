@@ -30,6 +30,7 @@ class LiteLLMEmbeddingClient:
     # Set to "float" when using DeepInfra or any provider that requires explicit format.
     encoding_format: str | None = None
     cache: dict[str, Any] | None = None
+    query_instruct: str = ""
     extra_params: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -40,9 +41,13 @@ class LiteLLMEmbeddingClient:
             raise ValueError("model_name must be a non-empty string")
 
     def build_request_kwargs(self, texts: list[str]) -> dict[str, Any]:
+        rendered_texts = [
+            f"{self.query_instruct}{text}" if self.query_instruct else text
+            for text in texts
+        ]
         kwargs: dict[str, Any] = {
             "model": self.model_name,
-            "input": texts,
+            "input": rendered_texts,
         }
         if self.api_base:
             kwargs["api_base"] = self.api_base

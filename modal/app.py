@@ -125,6 +125,8 @@ _VOLUME_MOUNTS = {
 
 DEFAULT_REMOTE_LANCEDB_URI = f"{MODELS_DIR}/lancedb"
 RETRIEVAL_SERVICE_CACHE_SIZE = 8
+QWEN_GENERATED_MODEL_SIZES = ("4b", "8b")
+QWEN_GENERATED_DOCUMENT_KINDS = ("metadata", "attributes")
 
 
 def _default_lancedb_retrieval_config(topk: int = 1000) -> dict:
@@ -176,6 +178,15 @@ def _api_key_for_litellm_model(
     if model_name.startswith("huggingface/"):
         return hf_token
     return None
+
+
+def _vllm_serve_fn_name(model_key: str) -> str:
+    return "serve_" + model_key.replace("-", "_")
+
+
+def _vllm_endpoint_url(model_key: str) -> str:
+    fn = modal.Function.from_name(str(_cfg.vllm.app_name), _vllm_serve_fn_name(model_key))
+    return fn.get_web_url().rstrip("/") + "/v1"
 
 
 def _tid_config(tid: str):
@@ -561,7 +572,7 @@ class ModalLiteLLMService:
             api_base=selected_api_base,
             api_key=self._api_key_for_model(selected_model, selected_api_base),
             batch_size=8,
-            cache={"ttl": 86400},
+            cache={},
         )
         self.last_cache_hit = None
         cache_hit_before = self._cache_hit_before_call(embedder.build_request_kwargs([text]))
@@ -597,7 +608,7 @@ class ModalLiteLLMService:
         )
         self.last_cache_hit = None
         messages = [{"role": "user", "content": prompt}]
-        cache_control = {"ttl": 86400}
+        cache_control = {}
         cache_hit_before = self._cache_hit_before_call(
             chat_client.build_request_kwargs(messages=messages, cache=cache_control)
         )
@@ -727,6 +738,294 @@ def _evaluate(tid: str, split: str):
     if result.returncode != 0:
         raise RuntimeError(f"Evaluation failed (exit {result.returncode})")
     results_vol.commit()
+
+
+def _qwen_generated_embedding_field(document_kind: str, model_size: str) -> str:
+    if document_kind not in QWEN_GENERATED_DOCUMENT_KINDS:
+        raise ValueError(f"Unsupported Qwen document kind: {document_kind!r}")
+    normalized_size = model_size.lower()
+    if normalized_size not in QWEN_GENERATED_MODEL_SIZES:
+        raise ValueError(f"Unsupported Qwen model size: {model_size!r}")
+    return f"{document_kind}-qwen3_embedding_{normalized_size}"
+
+
+def _qwen_generated_model_name(model_size: str) -> str:
+    normalized_size = model_size.lower()
+    if normalized_size == "4b":
+        return "openai/Qwen/Qwen3-Embedding-4B"
+    if normalized_size == "8b":
+        return "openai/Qwen/Qwen3-Embedding-8B"
+    raise ValueError(f"Unsupported Qwen model size: {model_size!r}")
+
+
+def _render_qwen_item_document(metadata_row: dict, document_kind: str) -> str:
+    from mcrs.embeddings.qwen3_embedding import (
+        talkplay_attributes_document_template,
+        talkplay_metadata_document_template,
+    )
+
+    if document_kind == "metadata":
+        return talkplay_metadata_document_template(metadata_row) or "music track"
+    if document_kind == "attributes":
+        attributes = {
+            "tags": metadata_row.get("tag_list") or metadata_row.get("tags") or [],
+            "tempo": metadata_row.get("tempo") or [],
+            "key": metadata_row.get("key") or [],
+            "chord": metadata_row.get("chord") or [],
+        }
+        return talkplay_attributes_document_template(attributes) or "music attributes"
+    raise ValueError(f"Unsupported Qwen document kind: {document_kind!r}")
+
+
+def _embedding_from_litellm_cached_response(value) -> list[float] | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            return None
+    if not isinstance(value, dict):
+        return None
+
+    response = value.get("response", value)
+    if isinstance(response, str):
+        try:
+            response = json.loads(response)
+        except json.JSONDecodeError:
+            return None
+    if not isinstance(response, dict):
+        return None
+    data = response.get("data")
+    if not data:
+        return None
+    first = data[0]
+    embedding = first.get("embedding") if isinstance(first, dict) else getattr(first, "embedding", None)
+    if embedding is None:
+        return None
+    return [float(number) for number in embedding]
+
+
+def _cached_litellm_embedding_vector(request_kwargs: dict) -> list[float] | None:
+    import litellm
+
+    cache = getattr(litellm, "cache", None)
+    get_cache = getattr(cache, "get_cache", None)
+    if get_cache is None:
+        return None
+    try:
+        return _embedding_from_litellm_cached_response(get_cache(**request_kwargs))
+    except Exception as exc:  # noqa: BLE001 - cache read failures should degrade to API calls
+        print(f"LiteLLM embedding cache lookup failed: {type(exc).__name__}: {exc}")
+        return None
+
+
+def _build_generated_qwen_embedding_rows(
+    metadata_rows: list[dict],
+    *,
+    model_sizes: tuple[str, ...] = QWEN_GENERATED_MODEL_SIZES,
+    document_kinds: tuple[str, ...] = QWEN_GENERATED_DOCUMENT_KINDS,
+    api_base_by_model_size: dict[str, str],
+    api_key: str,
+    client_factory=None,
+    request_delay_s: float = 0.0,
+    timeout_s: int = 600,
+    max_in_flight: int = 1,
+) -> tuple[list[dict], dict]:
+    from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+    import time
+
+    from mcrs.embeddings import LiteLLMEmbeddingClient
+
+    client_factory = client_factory or LiteLLMEmbeddingClient
+    clients = {
+        model_size: client_factory(
+            model_name=_qwen_generated_model_name(model_size),
+            api_base=api_base_by_model_size[model_size],
+            api_key=api_key,
+            batch_size=1,
+            encoding_format="float",
+            cache={},
+            extra_params={"timeout": int(timeout_s)},
+        )
+        for model_size in model_sizes
+    }
+    stats = {
+        "rows": len(metadata_rows),
+        "cache_hits": 0,
+        "endpoint_requests": 0,
+    }
+    generated_rows: list[dict] = [
+        {"track_id": str(metadata_row["track_id"])}
+        for metadata_row in metadata_rows
+    ]
+    total_expected = len(metadata_rows) * len(model_sizes) * len(document_kinds)
+
+    def _tasks():
+        for row_index, metadata_row in enumerate(metadata_rows):
+            track_id = str(metadata_row["track_id"])
+            for model_size in model_sizes:
+                for document_kind in document_kinds:
+                    document = _render_qwen_item_document(metadata_row, document_kind)
+                    yield row_index, track_id, model_size, document_kind, document
+
+    def _embed_task(row_index: int, track_id: str, model_size: str, document_kind: str, document: str):
+        client = clients[model_size]
+        request_kwargs = client.build_request_kwargs([document])
+        cached_vector = _cached_litellm_embedding_vector(request_kwargs)
+        field_name = _qwen_generated_embedding_field(document_kind, model_size)
+        if cached_vector is not None:
+            return row_index, track_id, field_name, cached_vector, True
+
+        vector = client.embed_one(document)
+        if request_delay_s > 0:
+            time.sleep(float(request_delay_s))
+        return row_index, track_id, field_name, vector, False
+
+    def _handle_result(result) -> None:
+        row_index, track_id, field_name, vector, cache_hit = result
+        generated_rows[row_index][field_name] = vector
+        if cache_hit:
+            stats["cache_hits"] += 1
+        else:
+            stats["endpoint_requests"] += 1
+        completed = stats["cache_hits"] + stats["endpoint_requests"]
+        if completed == 1 or completed % 2048 == 0 or completed == total_expected:
+            print(
+                "vLLM Qwen catalog embeddings: "
+                f"{completed}/{total_expected} requests "
+                f"({track_id}); endpoint_requests={stats['endpoint_requests']} "
+                f"cache_hits={stats['cache_hits']}"
+            )
+
+    task_iter = _tasks()
+    max_workers = max(1, int(max_in_flight))
+    if max_workers == 1:
+        for task in task_iter:
+            _handle_result(_embed_task(*task))
+        return generated_rows, stats
+
+    # Count lazily without materializing all futures. Submit only a bounded
+    # window so a full-catalog rebuild does not hold 188k Future objects.
+    pending = set()
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        while len(pending) < max_workers:
+            try:
+                task = next(task_iter)
+            except StopIteration:
+                break
+            pending.add(pool.submit(_embed_task, *task))
+
+        while pending:
+            done, pending = wait(pending, return_when=FIRST_COMPLETED)
+            for future in done:
+                _handle_result(future.result())
+            while len(pending) < max_workers:
+                try:
+                    task = next(task_iter)
+                except StopIteration:
+                    break
+                pending.add(pool.submit(_embed_task, *task))
+
+    return generated_rows, stats
+
+
+@app.function(
+    image=image,
+    volumes=_VOLUME_MOUNTS,
+    secrets=[ENV_SECRET],
+    cpu=8.0,
+    memory=131072,
+    timeout=24 * 3600,
+)
+def _build_lancedb_with_vllm_qwen_embeddings(
+    model_sizes: list[str] | None = None,
+    document_kinds: list[str] | None = None,
+    request_delay_s: float = 0.0,
+    max_in_flight: int = 16,
+):
+    import os
+    import shutil
+
+    from mcrs.lancedb.indexing import (
+        GENERATED_QWEN_EMBEDDING_FIELDS,
+        build_track_lancedb_table,
+    )
+    from mcrs.litellm_cache import setup_litellm_cache
+    from mcrs.milvus.indexing import TRACK_METADATA_DATASET, TRACK_SPLIT, load_track_metadata_rows
+
+    selected_model_sizes = tuple(model_sizes or QWEN_GENERATED_MODEL_SIZES)
+    selected_document_kinds = tuple(document_kinds or QWEN_GENERATED_DOCUMENT_KINDS)
+    generated_fields = tuple(
+        _qwen_generated_embedding_field(document_kind, model_size)
+        for model_size in selected_model_sizes
+        for document_kind in selected_document_kinds
+    )
+    missing_expected_fields = set(generated_fields) - set(GENERATED_QWEN_EMBEDDING_FIELDS)
+    if missing_expected_fields:
+        raise ValueError(f"Generated field(s) are not registered in LanceDB indexing: {sorted(missing_expected_fields)}")
+
+    api_key = os.environ.get("VLLM_API_KEY")
+    if not api_key:
+        raise RuntimeError("VLLM_API_KEY is required to call the self-hosted vLLM embedding endpoints")
+
+    setup_litellm_cache(
+        backend=LITELLM_CACHE_BACKEND,
+        cache_dir=LITELLM_CACHE_DIR,
+        supported_call_types=["embedding", "aembedding"],
+    )
+
+    api_base_by_model_size = {
+        model_size: _vllm_endpoint_url(f"qwen3-embedding-{model_size}")
+        for model_size in selected_model_sizes
+    }
+    metadata_rows = [
+        dict(row)
+        for row in load_track_metadata_rows(TRACK_METADATA_DATASET, TRACK_SPLIT)
+    ]
+    generated_rows, stats = _build_generated_qwen_embedding_rows(
+        metadata_rows,
+        model_sizes=selected_model_sizes,
+        document_kinds=selected_document_kinds,
+        api_base_by_model_size=api_base_by_model_size,
+        api_key=api_key,
+        request_delay_s=request_delay_s,
+        max_in_flight=max_in_flight,
+    )
+    litellm_cache_vol.commit()
+
+    # LanceDB commits via atomic rename; Modal Volume mounts can reject that
+    # rename. Build on container-local disk first, then copy the finished DB
+    # directory into the models volume.
+    local_build_uri = "/tmp/mcrs-lancedb-vllm-qwen-build"
+    summary = build_track_lancedb_table(
+        db_uri=local_build_uri,
+        table_name="music_track_catalog",
+        include_embeddings=True,
+        drop_existing=True,
+        extra_embedding_rows=generated_rows,
+        extra_embedding_fields=generated_fields,
+    )
+
+    remote_path = Path(DEFAULT_REMOTE_LANCEDB_URI)
+    if remote_path.exists():
+        shutil.rmtree(remote_path)
+    remote_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(local_build_uri, remote_path)
+    models_vol.commit()
+    hf_cache_vol.commit()
+    return {
+        "summary": dict(
+            db_uri=DEFAULT_REMOTE_LANCEDB_URI,
+            table_name=summary.table_name,
+            inserted_rows=summary.inserted_rows,
+            metadata_row_count=summary.metadata_row_count,
+            metadata_only_row_count=summary.metadata_only_row_count,
+            include_embeddings=summary.include_embeddings,
+        ),
+        "stats": stats,
+        "generated_fields": list(generated_fields),
+    }
 
 
 @app.local_entrypoint()
@@ -862,6 +1161,31 @@ def upload_lancedb_index(
         overwrite=overwrite,
         volume_name=MODELS_VOLUME,
     )
+
+
+@app.local_entrypoint()
+def build_lancedb_with_vllm_qwen_embeddings(
+    model_sizes: str = "4b,8b",
+    document_kinds: str = "metadata,attributes",
+    request_delay_s: float = 0.0,
+    max_in_flight: int = 16,
+):
+    """Rebuild Modal LanceDB with per-item cached vLLM Qwen 4B/8B item vectors.
+
+    Each catalog item/document/model is sent as a separate LiteLLM embedding
+    request so the file cache key is per item. Re-running the rebuild with the
+    same text/model/api_base/api_key request shape should hit cache and skip the
+    endpoint for already-cached items.
+    """
+    selected_model_sizes = [item.strip().lower() for item in model_sizes.split(",") if item.strip()]
+    selected_document_kinds = [item.strip().lower() for item in document_kinds.split(",") if item.strip()]
+    result = _build_lancedb_with_vllm_qwen_embeddings.remote(
+        model_sizes=selected_model_sizes,
+        document_kinds=selected_document_kinds,
+        request_delay_s=request_delay_s,
+        max_in_flight=max_in_flight,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
 
 
 @app.local_entrypoint()

@@ -197,6 +197,8 @@ def _build_encoder(enc_cfg: dict) -> EmbeddingClient:
             api_key=api_key,
             batch_size=int(enc_cfg.get("batch_size", 32)),
             encoding_format=enc_cfg.get("encoding_format", "float"),
+            cache=enc_cfg.get("cache"),
+            query_instruct=enc_cfg.get("query_instruct", ""),
             extra_params=dict(enc_cfg.get("extra_params") or {}),
         )
 

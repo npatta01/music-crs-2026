@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import json
 import sys
 import tomllib
 from pathlib import Path
@@ -260,6 +261,109 @@ def test_query_lancedb_rejects_dense_vector_config():
         assert "query_lancedb is FTS-only" in str(exc)
     else:
         raise AssertionError("Expected dense_vector config to be rejected")
+
+
+def test_vllm_catalog_embedding_rows_use_single_item_requests_and_litellm_cache(monkeypatch):
+    module = _load_modal_app_module()
+
+    class FakeCache:
+        def __init__(self):
+            self.values = {}
+            self.lookups = []
+
+        @staticmethod
+        def _key(kwargs):
+            return json.dumps(kwargs, sort_keys=True)
+
+        def get_cache(self, **kwargs):
+            self.lookups.append(kwargs)
+            return self.values.get(self._key(kwargs))
+
+        def store(self, kwargs, vector):
+            self.values[self._key(kwargs)] = {
+                "response": {"data": [{"embedding": vector}]}
+            }
+
+    fake_cache = FakeCache()
+    monkeypatch.setitem(sys.modules, "litellm", SimpleNamespace(cache=fake_cache))
+    calls = []
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+        def build_request_kwargs(self, texts):
+            return {
+                "model": self.kwargs["model_name"],
+                "input": list(texts),
+                "api_base": self.kwargs["api_base"],
+                "api_key": self.kwargs["api_key"],
+                "encoding_format": self.kwargs["encoding_format"],
+                "cache": self.kwargs["cache"],
+                **self.kwargs["extra_params"],
+            }
+
+        def embed_one(self, text):
+            kwargs = self.build_request_kwargs([text])
+            calls.append(kwargs)
+            vector = [float(len(calls)), float(len(text))]
+            fake_cache.store(kwargs, vector)
+            return vector
+
+    def fake_client_factory(**kwargs):
+        return FakeClient(**kwargs)
+
+    metadata_rows = [
+        {
+            "track_id": "track-1",
+            "track_name": ["A Song"],
+            "artist_name": ["An Artist"],
+            "album_name": ["An Album"],
+            "tag_list": ["calm", "ambient"],
+        }
+    ]
+
+    first_rows, first_stats = module._build_generated_qwen_embedding_rows(
+        metadata_rows,
+        model_sizes=("4b",),
+        document_kinds=("metadata", "attributes"),
+        api_base_by_model_size={"4b": "https://vllm.example/4b/v1"},
+        api_key="vllm-key",
+        client_factory=fake_client_factory,
+        request_delay_s=0.0,
+    )
+    second_rows, second_stats = module._build_generated_qwen_embedding_rows(
+        metadata_rows,
+        model_sizes=("4b",),
+        document_kinds=("metadata", "attributes"),
+        api_base_by_model_size={"4b": "https://vllm.example/4b/v1"},
+        api_key="vllm-key",
+        client_factory=fake_client_factory,
+        request_delay_s=0.0,
+    )
+
+    assert first_rows == second_rows
+    assert first_stats["endpoint_requests"] == 2
+    assert second_stats["endpoint_requests"] == 0
+    assert second_stats["cache_hits"] == 2
+    assert "empty_documents" not in first_stats
+    assert "empty_documents" not in second_stats
+    assert all(call["cache"] == {} for call in calls)
+    assert all(len(call["input"]) == 1 for call in calls)
+    assert first_rows == [
+        {
+            "track_id": "track-1",
+            "metadata-qwen3_embedding_4b": [1.0, 59.0],
+            "attributes-qwen3_embedding_4b": [2.0, 36.0],
+        }
+    ]
+
+
+def test_vllm_qwen_item_documents_have_raw_empty_fallbacks():
+    module = _load_modal_app_module()
+
+    assert module._render_qwen_item_document({}, "metadata") == "music track"
+    assert module._render_qwen_item_document({"tag_list": []}, "attributes") == "music attributes"
 
 
 def _class_volume_dir_consts(class_name: str) -> set[str]:

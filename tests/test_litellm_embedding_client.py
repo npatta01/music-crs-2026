@@ -97,6 +97,45 @@ def test_litellm_embedding_client_builds_public_request_kwargs():
     }
 
 
+def test_litellm_embedding_client_applies_query_instruct_to_cached_request(monkeypatch):
+    calls = []
+
+    def fake_embedding(**kwargs):
+        calls.append(kwargs)
+        return SimpleNamespace(data=[{"embedding": [3.0, 4.0]}])
+
+    monkeypatch.setitem(sys.modules, "litellm", SimpleNamespace(embedding=fake_embedding))
+
+    from mcrs.embeddings.litellm_client import LiteLLMEmbeddingClient
+
+    instruct = (
+        "Instruct: Given a music recommendation conversation, retrieve relevant "
+        "track metadata passages.\nQuery: "
+    )
+    client = LiteLLMEmbeddingClient(
+        model_name="openai/Qwen/Qwen3-Embedding-4B",
+        api_base="https://vllm.example/v1",
+        api_key="vllm-key",
+        encoding_format="float",
+        cache={"ttl": 86400},
+        query_instruct=instruct,
+        extra_params={"timeout": 600},
+    )
+
+    assert client.embed_one("conversation state text") == [3.0, 4.0]
+    assert calls == [
+        {
+            "model": "openai/Qwen/Qwen3-Embedding-4B",
+            "input": [instruct + "conversation state text"],
+            "api_base": "https://vllm.example/v1",
+            "api_key": "vllm-key",
+            "encoding_format": "float",
+            "cache": {"ttl": 86400},
+            "timeout": 600,
+        }
+    ]
+
+
 def test_litellm_embedding_client_rejects_empty_batch_size():
     import pytest
 

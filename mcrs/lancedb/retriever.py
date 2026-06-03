@@ -12,6 +12,7 @@ from lancedb.query import BooleanQuery, MatchQuery, Occur
 from mcrs.lancedb.indexing import (
     BM25S_TOKENIZED_TEXT_FIELDS,
     DEFAULT_LANCEDB_TABLE_NAME,
+    GENERATED_QWEN_EMBEDDING_FIELDS,
     connect_lancedb,
 )
 from mcrs.milvus.indexing import (
@@ -24,7 +25,10 @@ from mcrs.milvus.indexing import (
 )
 from mcrs.retrieval_modules.base import FieldQuery
 
-LANCEDB_VECTOR_FIELDS = frozenset(milvus_safe_field_name(name) for name in EMBEDDING_FIELDS)
+LANCEDB_VECTOR_FIELDS = frozenset(
+    milvus_safe_field_name(name)
+    for name in tuple(EMBEDDING_FIELDS) + tuple(GENERATED_QWEN_EMBEDDING_FIELDS)
+)
 LANCEDB_DISTANCE_TYPES = frozenset({"l2", "cosine", "dot"})
 
 
