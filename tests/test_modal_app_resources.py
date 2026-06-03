@@ -122,13 +122,17 @@ def test_modal_litellm_service_scales_to_zero():
     assert _name(keywords["max_containers"]) == "LITELLM_MAX_CONTAINERS"
 
 
-def test_modal_litellm_cache_uses_file_backend_on_new_v2_volume():
+def test_modal_litellm_cache_uses_file_backend_on_unified_v2_volume():
     config = OmegaConf.load(PROJECT_ROOT / "modal" / "config.yaml")
     source = (PROJECT_ROOT / "modal" / "app.py").read_text(encoding="utf-8")
 
     assert config.litellm_cache.backend == "file"
-    assert config.volumes.litellm_cache == "music-crs-litellm-cache-v2"
-    assert 'modal.Volume.from_name(LITELLM_CACHE_VOLUME, create_if_missing=True, version=2)' in source
+    # LiteLLM + GPU-encoder caches are unified onto one v2 volume; the LiteLLM
+    # file cache lives under a subdir of the shared mount.
+    assert config.volumes.cache == "music-crs-cache"
+    assert config.container.litellm_cache_dir.startswith(config.container.cache_dir)
+    assert config.container.embedding_cache_dir.startswith(config.container.cache_dir)
+    assert 'modal.Volume.from_name(CACHE_VOLUME, create_if_missing=True, version=2)' in source
     assert '"MCRS_LITELLM_CACHE_BACKEND": "file"' in source
     assert '"MCRS_LITELLM_CACHE_DIR": LITELLM_CACHE_DIR' in source
 
@@ -388,9 +392,11 @@ def _class_volume_dir_consts(class_name: str) -> set[str]:
     raise AssertionError(f"Could not find class {class_name} in modal/app.py")
 
 
-def test_gpu_encoders_mount_embedding_cache():
-    assert "EMBEDDING_CACHE_DIR" in _class_volume_dir_consts("Qwen3Encoder")
-    assert "EMBEDDING_CACHE_DIR" in _class_volume_dir_consts("MultimodalTextEncoder")
+def test_gpu_encoders_mount_unified_cache_volume():
+    # The GPU-native encoders write their DiskVectorCache under EMBEDDING_CACHE_DIR,
+    # which is a subdir of the unified cache volume mounted at CACHE_DIR.
+    assert "CACHE_DIR" in _class_volume_dir_consts("Qwen3Encoder")
+    assert "CACHE_DIR" in _class_volume_dir_consts("MultimodalTextEncoder")
 
 
 class _FakeLiteLLMCache:

@@ -22,7 +22,7 @@ import sys
 from collections import defaultdict
 
 FINAL_KS = [1, 20, 50, 100, 200, 1000]
-UNION_KS = [20, 50, 100, 200]
+UNION_KS = [20, 50, 100, 200, 1000]
 BRANCH_KS = [100, 200, 1000]
 
 

@@ -10,7 +10,7 @@ better for all metrics.
 | Rank | Run / config | Role | NDCG@20 | Hit@20 | Hit@1000 | MRR | Report |
 |---:|---|---|---:|---:|---:|---:|---|
 | 1 | `v0plus_compiler_image_devset` | Current score anchor | **0.1452** | 0.299 | 0.626 | 0.106 | [report](experiments/v0plus_compiler_image_devset.md) |
-| 2 | `v0plus_compiler_all_retrievers_devset` | Latest coverage experiment | 0.1219 | 0.266 | **0.6967** | 0.087 | [report](experiments/v0plus_compiler_all_retrievers_devset.md) |
+| 2 | `v0plus_compiler_all_retrievers_devset` | Latest coverage experiment (fresh DB + 8B dense, 2026-06-03) | 0.1255 | 0.274 | **0.7289** | 0.090 | [report](experiments/v0plus_compiler_all_retrievers_devset.md) |
 
 ## Interpretation
 

@@ -132,7 +132,7 @@ KIND_ALIASES = {
 | `volumes.hf_cache` | `"music-crs-hf-cache"` — HuggingFace model weights |
 | `volumes.results` | `"music-crs-results"` — inference outputs, scores, ground truth |
 | `volumes.models` | `"music-crs-models"` — LanceDB index |
-| `volumes.litellm_cache` | `"music-crs-litellm-cache-v2"` — Volumes v2 file-per-key LiteLLM cache shared between `ModalLiteLLMService` and `_inference_*` containers |
+| `volumes.cache` | `"music-crs-cache"` — unified Volumes v2 cache mounted at `container.cache_dir` (`/root/cache`); holds the file-per-key LiteLLM cache (`/root/cache/litellm`, shared between `ModalLiteLLMService` and `_inference_*`) and the GPU-encoder DiskVectorCache (`/root/cache/embedding`) |
 | `container.exp_dir` | `"/root/exp"` — maps to `results_vol`; inference scripts write here |
 | `inference.gpu` | `["H200","H100","L40S","A100-80GB","A100-40GB"]` — fallback list for GPU jobs |
 | `inference.devset_batch_size` | `64` |
@@ -249,7 +249,7 @@ Used by inference functions to mount all four volumes simultaneously.
 
 3. **`ModalRetrievalService` vs `query_lancedb`** — `ModalRetrievalService` is a persistent class (survives across calls within a container lifecycle, holds a retriever in memory) while `query_lancedb` is a stateless function that rebuilds `LANCEDB_MODEL` on every invocation. `ModalRetrievalService` is the production path; `query_lancedb` is kept for the `smoke_lancedb_query` entrypoint.
 
-4. **LiteLLM file cache is shared between containers.** `LITELLM_CACHE_DIR` is mounted in `_VOLUME_MOUNTS` (used by all inference functions) and also in `ModalLiteLLMService`. Both classes read/write distinct JSON files in the same `music-crs-litellm-cache-v2` volume, so LLM extraction calls cached during one inference run warm the cache for the next.
+4. **LiteLLM file cache is shared between containers.** The unified `music-crs-cache` volume is mounted at `CACHE_DIR` (`/root/cache`) in `_VOLUME_MOUNTS` (used by all inference functions) and in `ModalLiteLLMService`; the LiteLLM file cache lives under `LITELLM_CACHE_DIR` (`/root/cache/litellm`). Both classes read/write distinct JSON files there, so LLM extraction calls cached during one inference run warm the cache for the next. The GPU encoders share the same volume under `EMBEDDING_CACHE_DIR` (`/root/cache/embedding`).
 
 5. **`_inference_devset_cpu` sets `MCRS_LANCEDB_URI`; `_inference_devset` does not.** GPU inference functions expect the retrieval config to embed the DB URI (via experiment config), while CPU functions inject it via environment variable (`DEFAULT_REMOTE_LANCEDB_URI = "/root/models/lancedb"`). This asymmetry means GPU and CPU configs may need different `db_uri` handling.
 
