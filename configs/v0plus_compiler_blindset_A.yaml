@@ -1,6 +1,6 @@
 # v0+ Blind-A config.
 #
-# Mirrors the canonical devset retrieval stack, with submission topk.
+# Mirrors `v0plus_compiler_all_retrievers_devset`, with submission topk.
 # Dense encoder IDs are explicit:
 #   - qwen_0_6b -> metadata/attributes/lyrics_qwen3_embedding_0_6b
 #   - qwen_8b   -> metadata/attributes_qwen3_embedding_8b
