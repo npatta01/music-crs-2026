@@ -842,6 +842,80 @@ def _cached_litellm_embedding_vector(request_kwargs: dict) -> list[float] | None
         return None
 
 
+# Per-process state for the ProcessPoolExecutor fan-out. A fresh catalog build
+# is dominated by ~188k per-item embedding cache lookups whose hot work (litellm
+# machinery + JSON vector decode) holds the GIL, so a ThreadPoolExecutor pins
+# everything to one core. ProcessPoolExecutor gives each worker its own
+# interpreter/GIL so the container's CPUs are actually used. Each worker process
+# configures its own litellm cache (via the initializer) and lazily builds one
+# embedding client per model size; clients/cache cannot be pickled across the
+# process boundary, so they are rebuilt inside the worker rather than passed in.
+_QWEN_WORKER_CTX: dict = {}
+
+
+def _init_qwen_embed_worker(
+    cache_backend,
+    cache_dir,
+    api_base_by_model_size,
+    api_key,
+    timeout_s,
+    request_delay_s,
+    client_factory=None,
+    setup_cache=True,
+):
+    """ProcessPoolExecutor initializer: set up the litellm cache + clients once per process."""
+    from mcrs.embeddings import LiteLLMEmbeddingClient
+
+    if setup_cache:
+        from mcrs.litellm_cache import setup_litellm_cache
+
+        setup_litellm_cache(
+            backend=cache_backend,
+            cache_dir=cache_dir,
+            supported_call_types=["embedding", "aembedding"],
+        )
+
+    factory = client_factory or LiteLLMEmbeddingClient
+    _QWEN_WORKER_CTX.clear()
+    _QWEN_WORKER_CTX["clients"] = {
+        model_size: factory(
+            model_name=_qwen_generated_model_name(model_size),
+            api_base=api_base,
+            api_key=api_key,
+            batch_size=1,
+            encoding_format="float",
+            cache={},
+            extra_params={"timeout": int(timeout_s)},
+        )
+        for model_size, api_base in api_base_by_model_size.items()
+    }
+    _QWEN_WORKER_CTX["request_delay_s"] = float(request_delay_s)
+
+
+def _qwen_embed_worker(task):
+    """ProcessPoolExecutor worker: cache lookup first, endpoint on miss.
+
+    Returns ``(row_index, track_id, field_name, vector, cache_hit)``. Relies on
+    ``_QWEN_WORKER_CTX`` populated by :func:`_init_qwen_embed_worker`.
+    """
+    import time
+
+    row_index, track_id, model_size, document_kind, document = task
+    client = _QWEN_WORKER_CTX["clients"][model_size]
+    request_kwargs = client.build_request_kwargs([document])
+    field_name = _qwen_generated_embedding_field(document_kind, model_size)
+
+    cached_vector = _cached_litellm_embedding_vector(request_kwargs)
+    if cached_vector is not None:
+        return row_index, track_id, field_name, cached_vector, True
+
+    vector = client.embed_one(document)
+    request_delay_s = _QWEN_WORKER_CTX.get("request_delay_s", 0.0)
+    if request_delay_s > 0:
+        time.sleep(float(request_delay_s))
+    return row_index, track_id, field_name, vector, False
+
+
 def _build_generated_qwen_embedding_rows(
     metadata_rows: list[dict],
     *,
@@ -853,25 +927,37 @@ def _build_generated_qwen_embedding_rows(
     request_delay_s: float = 0.0,
     timeout_s: int = 600,
     max_in_flight: int = 1,
+    cache_backend: str | None = None,
+    cache_dir: str | None = None,
+    executor_factory=None,
 ) -> tuple[list[dict], dict]:
-    from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+    from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, ThreadPoolExecutor, wait
     import time
 
     from mcrs.embeddings import LiteLLMEmbeddingClient
 
-    client_factory = client_factory or LiteLLMEmbeddingClient
-    clients = {
-        model_size: client_factory(
-            model_name=_qwen_generated_model_name(model_size),
-            api_base=api_base_by_model_size[model_size],
-            api_key=api_key,
-            batch_size=1,
-            encoding_format="float",
-            cache={},
-            extra_params={"timeout": int(timeout_s)},
-        )
-        for model_size in model_sizes
-    }
+    max_workers = max(1, int(max_in_flight))
+    # A ProcessPoolExecutor cannot carry an injected client_factory (closures are
+    # not picklable / monkeypatches do not cross the process boundary), so the
+    # injected-factory case stays in-process on threads. Real Modal builds pass no
+    # factory and fan out across processes to use every CPU.
+    use_processes = client_factory is None and max_workers > 1
+
+    clients = {}
+    if not use_processes:
+        client_factory = client_factory or LiteLLMEmbeddingClient
+        clients = {
+            model_size: client_factory(
+                model_name=_qwen_generated_model_name(model_size),
+                api_base=api_base_by_model_size[model_size],
+                api_key=api_key,
+                batch_size=1,
+                encoding_format="float",
+                cache={},
+                extra_params={"timeout": int(timeout_s)},
+            )
+            for model_size in model_sizes
+        }
     stats = {
         "rows": len(metadata_rows),
         "cache_hits": 0,
@@ -921,33 +1007,61 @@ def _build_generated_qwen_embedding_rows(
             )
 
     task_iter = _tasks()
-    max_workers = max(1, int(max_in_flight))
     if max_workers == 1:
         for task in task_iter:
             _handle_result(_embed_task(*task))
         return generated_rows, stats
 
+    worker_count = min(max_workers, total_expected) or 1
+    if use_processes:
+        # Each worker process rebuilds its own clients + litellm cache via the
+        # initializer; submit the bare 5-tuple task to the module-level worker.
+        if executor_factory is None:
+            def executor_factory():
+                return ProcessPoolExecutor(
+                    max_workers=worker_count,
+                    initializer=_init_qwen_embed_worker,
+                    initargs=(
+                        cache_backend,
+                        cache_dir,
+                        dict(api_base_by_model_size),
+                        api_key,
+                        int(timeout_s),
+                        float(request_delay_s),
+                    ),
+                )
+
+        def submit_one(pool, task):
+            return pool.submit(_qwen_embed_worker, task)
+    else:
+        if executor_factory is None:
+            def executor_factory():
+                return ThreadPoolExecutor(max_workers=worker_count)
+
+        def submit_one(pool, task):
+            return pool.submit(_embed_task, *task)
+
     # Count lazily without materializing all futures. Submit only a bounded
     # window so a full-catalog rebuild does not hold 188k Future objects.
     pending = set()
-    with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        while len(pending) < max_workers:
+    with executor_factory() as pool:
+        while len(pending) < worker_count:
             try:
                 task = next(task_iter)
             except StopIteration:
                 break
-            pending.add(pool.submit(_embed_task, *task))
+            pending.add(submit_one(pool, task))
 
         while pending:
             done, pending = wait(pending, return_when=FIRST_COMPLETED)
             for future in done:
                 _handle_result(future.result())
-            while len(pending) < max_workers:
+            while len(pending) < worker_count:
                 try:
                     task = next(task_iter)
                 except StopIteration:
                     break
-                pending.add(pool.submit(_embed_task, *task))
+                pending.add(submit_one(pool, task))
 
     return generated_rows, stats
 
@@ -1013,6 +1127,8 @@ def _build_lancedb_with_vllm_qwen_embeddings(
         api_key=api_key,
         request_delay_s=request_delay_s,
         max_in_flight=max_in_flight,
+        cache_backend=LITELLM_CACHE_BACKEND,
+        cache_dir=LITELLM_CACHE_DIR,
     )
     litellm_cache_vol.commit()
 
