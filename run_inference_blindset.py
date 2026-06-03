@@ -75,6 +75,24 @@ def main(args):
         lm_kwargs=_to_plain_dict(config.get("lm_kwargs")),
     )
     db = load_dataset(config.test_dataset_name, split="test")
+    # Sharding kwargs were added later; programmatic callers (tests, Modal) may
+    # not set them. Read defensively so the script stays backward-compatible.
+    num_shards = getattr(args, "num_shards", 1)
+    shard_id = getattr(args, "shard_id", 0)
+    if num_shards > 1:
+        if not (0 <= shard_id < num_shards):
+            raise ValueError(
+                f"shard_id={shard_id} out of range for num_shards={num_shards}"
+            )
+        # Each blindset row IS one session — contiguous index slicing partitions
+        # the session list. Turn selection (last turn) happens below, after the
+        # partition, so a session's turns never split across shards.
+        total = len(db)
+        start = (shard_id * total) // num_shards
+        end = ((shard_id + 1) * total) // num_shards
+        db = db.select(range(start, end))
+        print(f"Shard {shard_id}/{num_shards}: {len(db)} sessions "
+              f"(indices [{start}, {end}))")
     # Prepare all batch data at once
     batch_data, metadata = [], []
     for item in db:
@@ -105,8 +123,10 @@ def main(args):
                 "predicted_track_ids": result['retrieval_items'],
                 "predicted_response": result["response"]
             })
+    output_suffix = getattr(args, "output_suffix", "")
     os.makedirs(f"{args.exp_dir}/inference/{args.eval_dataset}", exist_ok=True)
-    with open(f"{args.exp_dir}/inference/{args.eval_dataset}/{args.tid}.json", "w", encoding="utf-8") as f:
+    out_path = f"{args.exp_dir}/inference/{args.eval_dataset}/{args.tid}{output_suffix}.json"
+    with open(out_path, "w", encoding="utf-8") as f:
         json.dump(inference_results, f, ensure_ascii=False)
 
 if __name__ == "__main__":
@@ -142,6 +162,25 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Wipe the cache directory before running (forces re-indexing)"
+    )
+    parser.add_argument(
+        "--num_shards",
+        type=int,
+        default=1,
+        help="Total number of shards. >1 enables sharded mode (must pair with --shard_id).",
+    )
+    parser.add_argument(
+        "--shard_id",
+        type=int,
+        default=0,
+        help="0-based shard index. Only this shard's slice of sessions is processed.",
+    )
+    parser.add_argument(
+        "--output_suffix",
+        type=str,
+        default="",
+        help="Optional suffix appended to the output filename "
+             "(e.g. '.run_RID.shard_3' -> '{tid}.run_RID.shard_3.json').",
     )
     args = parser.parse_args()
     main(args)

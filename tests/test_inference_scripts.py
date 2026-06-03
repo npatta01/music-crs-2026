@@ -1,3 +1,6 @@
+import importlib.util
+import json
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -304,6 +307,75 @@ def test_run_inference_devset_passes_lancedb_retrieval_config_unchanged(monkeypa
     assert captured["device"] == "cpu"
     assert captured["retrieval_config"]["db_uri"] == "./cache/lancedb"
     assert captured["retrieval_config"]["fusion"] == {"method": "weighted_rrf"}
+
+
+def test_blindset_shard_slice_keeps_each_session_in_one_shard():
+    """Contiguous index slicing partitions blindset sessions with no overlap."""
+    total = 47
+    seen = set()
+    for num_shards in (1, 3, 5, 8):
+        seen.clear()
+        for shard_id in range(num_shards):
+            start = (shard_id * total) // num_shards
+            end = ((shard_id + 1) * total) // num_shards
+            for i in range(start, end):
+                assert i not in seen
+                seen.add(i)
+        assert seen == set(range(total))
+
+
+def _load_blindset_module():
+    module_path = Path(__file__).resolve().parents[1] / "run_inference_blindset.py"
+    sys.path.insert(0, str(module_path.parent))
+    spec = importlib.util.spec_from_file_location("run_inference_blindset_mod", module_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_blindset_main_writes_suffixed_shard_output(tmp_path, monkeypatch):
+    module = _load_blindset_module()
+
+    rows = [
+        {"user_id": f"u{i}", "session_id": f"s{i}",
+         "conversations": [{"role": "user", "content": "hi", "turn_number": 1}]}
+        for i in range(4)
+    ]
+
+    class _FakeDB(list):
+        def select(self, idx):
+            return _FakeDB(self[i] for i in idx)
+
+    monkeypatch.setattr(module, "load_dataset", lambda *a, **k: _FakeDB(rows))
+
+    class _FakeCRS:
+        def batch_chat(self, batch):
+            return [{"retrieval_items": ["t1"], "response": "r"} for _ in batch]
+
+    monkeypatch.setattr(module, "load_crs_baseline", lambda **k: _FakeCRS())
+    monkeypatch.setattr(module, "chat_history_parser", lambda conv, crs, tn: ([], "q"))
+
+    cfg = {
+        "lm_type": "dummy", "retrieval_type": "dummy", "item_db_name": "x",
+        "user_db_name": "x", "track_split_types": [], "user_split_types": [],
+        "corpus_types": [], "cache_dir": "./cache", "device": "cpu",
+        "attn_implementation": "eager", "test_dataset_name": "x",
+    }
+    monkeypatch.setattr(module.OmegaConf, "load", lambda p: OmegaConf.create(cfg))
+
+    args = SimpleNamespace(
+        tid="foo_blindset_A", eval_dataset="blindset_A", batch_size=2,
+        exp_dir=str(tmp_path), clear_cache=False,
+        num_shards=2, shard_id=0, output_suffix=".run_RID.shard_0",
+    )
+    module.main(args)
+
+    out = tmp_path / "inference" / "blindset_A" / "foo_blindset_A.run_RID.shard_0.json"
+    assert out.exists()
+    data = json.loads(out.read_text())
+    assert {r["session_id"] for r in data} == {"s0", "s1"}  # shard 0 of 2 over 4 sessions
 
 
 def test_blindset_chat_history_parser_resolves_music_turns():
