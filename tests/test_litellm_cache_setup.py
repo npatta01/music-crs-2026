@@ -122,6 +122,23 @@ def test_file_cache_concurrent_same_key_writes_leave_readable_json(tmp_path):
     assert isinstance(stored["response"]["index"], int)
 
 
+def test_setup_litellm_cache_suppresses_provider_debug_info(monkeypatch):
+    # OpenRouter non-OpenAI models (e.g. our deepseek-v4-flash extractor) flood
+    # logs with "Provider List: https://docs.litellm.ai/docs/providers"
+    # (BerriAI/litellm#23879). Suppress it on every setup path, including the
+    # cache-disabled early return.
+    from mcrs.litellm_cache import setup_litellm_cache
+
+    import litellm
+
+    monkeypatch.setattr(litellm, "suppress_debug_info", False, raising=False)
+
+    configured = setup_litellm_cache(backend="none")
+
+    assert configured is False
+    assert litellm.suppress_debug_info is True
+
+
 def test_setup_litellm_cache_file_backend_installs_file_storage(tmp_path, monkeypatch):
     from mcrs.litellm_cache import FileCache, setup_litellm_cache
 

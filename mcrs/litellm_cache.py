@@ -123,6 +123,12 @@ def setup_litellm_cache(
 
     import litellm
 
+    # Silence litellm's per-call "Provider List: https://docs.litellm.ai/docs/providers"
+    # banner, which floods logs for non-OpenAI OpenRouter models like our
+    # deepseek-v4-flash extractor (BerriAI/litellm#23879). Set before the
+    # backend branch so it applies even when caching is disabled.
+    litellm.suppress_debug_info = True
+
     cache_dir_value = str(cache_dir or os.environ.get("MCRS_LITELLM_CACHE_DIR") or "")
     backend_value = (backend or os.environ.get("MCRS_LITELLM_CACHE_BACKEND") or "").strip().lower()
     if not backend_value:

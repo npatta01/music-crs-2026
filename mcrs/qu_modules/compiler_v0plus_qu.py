@@ -174,6 +174,7 @@ def _build_encoder(enc_cfg: dict) -> EmbeddingClient:
         # test pays one warm-up.
         from mcrs.embeddings.modal_multimodal_client import (
             ModalMultimodalTextEmbeddingClient,
+            cache_wrap,
         )
 
         method = str(enc_cfg.get("method", "")).strip()
@@ -182,10 +183,20 @@ def _build_encoder(enc_cfg: dict) -> EmbeddingClient:
                 f"modal_multimodal encoder needs method=embed_siglip_text "
                 f"or method=embed_clap_text; got {method!r}"
             )
-        return ModalMultimodalTextEmbeddingClient(
+        client = ModalMultimodalTextEmbeddingClient(
             app_name=enc_cfg.get("modal_app_name", "music-crs"),
             cls_name=enc_cfg.get("modal_cls_name", "MultimodalTextEncoder"),
             method=method,
+        )
+        # Client-side vector cache so repeated query texts never re-issue a
+        # Modal RPC (the raw client embeds one text per `.remote()` against a
+        # cold, container-capped GPU pool). `cache: false` opts out per-encoder.
+        cache_enabled = enc_cfg.get("cache")
+        return cache_wrap(
+            client,
+            method,
+            cache_dir=enc_cfg.get("cache_dir"),
+            enabled=None if cache_enabled is None else bool(cache_enabled),
         )
 
     if backend == "litellm":
