@@ -58,7 +58,7 @@ The `main` function is also called directly by Modal workers and test harnesses 
 
 | Symbol | Signature | Description |
 |---|---|---|
-| `main` | `(args: argparse.Namespace) -> None` | Core blindset inference loop. Accepts `tid`, `eval_dataset`, `batch_size`, `exp_dir`, `clear_cache`. Unlike the devset script, no sharding or trace sidecar. `run_inference_blindset.py:22` |
+| `main` | `(args: argparse.Namespace) -> None` | Core blindset inference loop. Accepts `tid`, `eval_dataset`, `batch_size`, `exp_dir`, `clear_cache`, `num_shards`, `shard_id`, `output_suffix`. Sharding fields are read with `getattr(..., default)` for backward compatibility with programmatic callers (tests, Modal) that pass a `SimpleNamespace`. Each blindset row is one session; shards are contiguous index slices. No trace sidecar. `run_inference_blindset.py:23` |
 
 ### `streamlit_app.py`
 
@@ -217,7 +217,7 @@ bash prepare_submission.sh v0plus_compiler_blindset_A
 
 2. **Sharding and `--num_sessions` are mutually exclusive** (`run_inference_devset.py:137–151`). Combining them raises `ValueError` because each shard would independently random-sample the corpus. The Modal sharded entry point (`modal/app.py::run_inference_sharded`) always passes `num_sessions=0`.
 
-3. **`run_inference_blindset.py` has no sharding, no trace sidecar, and no logging setup** — it is a stripped-down copy of the devset script. `_setup_logging` and `_setup_litellm_cache` present in the devset script are absent here.
+3. **`run_inference_blindset.py` has no trace sidecar** — it mirrors the devset script's sharding interface (`--num_shards`, `--shard_id`, `--output_suffix`, read with `getattr` defaults) but does not write a `_trace.json` sidecar. `_setup_logging` and `_setup_litellm_cache` are imported from `run_inference_devset` and called at the start of `main`.
 
 4. **`--output_suffix` and `num_shards`/`shard_id` are read with `getattr` defaults** (`run_inference_devset.py:133–135`, `run_inference_devset.py:204–205`) — these arguments were added after the initial arg surface. Programmatic callers (tests, Modal) that pass a `SimpleNamespace` without these fields still work.
 
