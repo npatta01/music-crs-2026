@@ -7,6 +7,7 @@ from mcrs.lancedb.indexing import (
     BM25S_TOKENIZED_FTS_INDEX_OPTIONS,
     BM25_WITH_TAG_LIST_BM25S_TOKENIZED_TEXT_FIELD,
     DEFAULT_LANCEDB_TABLE_NAME,
+    GENERATED_QWEN_EMBEDDING_FIELDS,
     LANCEDB_FTS_TEXT_FIELDS,
     build_track_lancedb_table,
     build_track_record,
@@ -79,6 +80,65 @@ def test_build_track_record_preserves_bm25_with_tag_list_text_and_vectors():
     assert record["metadata_qwen3_embedding_0_6b"] == [1.6, 1.7]
     assert record["has_audio_laion_clap"] is False
     assert record["has_metadata_qwen3_embedding_0_6b"] is True
+
+
+def test_build_track_record_supports_generated_qwen_4b_8b_vectors():
+    metadata_row = {
+        "track_id": "track-generated",
+        "track_name": ["A Song"],
+        "artist_name": ["An Artist"],
+        "album_name": ["An Album"],
+        "tag_list": ["calm"],
+        "popularity": 39.0,
+        "release_date": "2006-12-06",
+        "duration": 300920,
+        "ISRC": [],
+        "artist_id": [],
+        "album_id": [],
+    }
+    embedding_row = {
+        "track_id": "track-generated",
+        "audio-laion_clap": [0.1, 0.2],
+        "image-siglip2": [0.3, 0.4],
+        "cf-bpr": [0.5, 0.6],
+        "attributes-qwen3_embedding_0.6b": [0.7, 0.8],
+        "lyrics-qwen3_embedding_0.6b": [0.9, 1.0],
+        "metadata-qwen3_embedding_0.6b": [1.1, 1.2],
+        "metadata-qwen3_embedding_4b": [2.1, 2.2, 2.3],
+        "attributes-qwen3_embedding_4b": [3.1, 3.2, 3.3],
+        "metadata-qwen3_embedding_8b": [4.1, 4.2, 4.3],
+        "attributes-qwen3_embedding_8b": [5.1, 5.2, 5.3],
+    }
+    vector_dims = {
+        "audio_laion_clap": 2,
+        "image_siglip2": 2,
+        "cf_bpr": 2,
+        "attributes_qwen3_embedding_0_6b": 2,
+        "lyrics_qwen3_embedding_0_6b": 2,
+        "metadata_qwen3_embedding_0_6b": 2,
+        "metadata_qwen3_embedding_4b": 3,
+        "attributes_qwen3_embedding_4b": 3,
+        "metadata_qwen3_embedding_8b": 3,
+        "attributes_qwen3_embedding_8b": 3,
+    }
+
+    record = build_track_record(
+        metadata_row,
+        embedding_row,
+        vector_dims=vector_dims,
+        embedding_fields=tuple(EMBEDDING_FIELDS) + tuple(GENERATED_QWEN_EMBEDDING_FIELDS),
+    )
+
+    assert GENERATED_QWEN_EMBEDDING_FIELDS == (
+        "metadata-qwen3_embedding_4b",
+        "attributes-qwen3_embedding_4b",
+        "metadata-qwen3_embedding_8b",
+        "attributes-qwen3_embedding_8b",
+    )
+    assert record["metadata_qwen3_embedding_4b"] == [2.1, 2.2, 2.3]
+    assert record["attributes_qwen3_embedding_8b"] == [5.1, 5.2, 5.3]
+    assert record["has_metadata_qwen3_embedding_4b"] is True
+    assert record["has_attributes_qwen3_embedding_8b"] is True
 
 
 def test_build_track_record_supports_metadata_only_rows():
@@ -288,6 +348,100 @@ def test_build_track_lancedb_table_defaults_to_embedding_columns(monkeypatch, tm
     assert row["audio_laion_clap"] == pytest.approx([0.1, 0.2])
     assert row["metadata_qwen3_embedding_0_6b"] == pytest.approx([1.1, 1.2])
     assert row["has_audio_laion_clap"] is True
+
+
+def test_build_track_lancedb_table_merges_generated_qwen_embedding_rows(monkeypatch, tmp_path):
+    import mcrs.lancedb.indexing as lancedb_indexing
+
+    metadata_row = {
+        "track_id": "track-1",
+        "track_name": ["A Song"],
+        "artist_name": ["An Artist"],
+        "album_name": ["An Album"],
+        "tag_list": ["calm"],
+        "popularity": 39.0,
+        "release_date": "2006-12-06",
+        "duration": 300920,
+        "ISRC": [],
+        "artist_id": [],
+        "album_id": [],
+    }
+    embedding_row = {
+        "track_id": "track-1",
+        "audio-laion_clap": [0.1, 0.2],
+        "image-siglip2": [0.3, 0.4],
+        "cf-bpr": [0.5, 0.6],
+        "attributes-qwen3_embedding_0.6b": [0.7, 0.8],
+        "lyrics-qwen3_embedding_0.6b": [0.9, 1.0],
+        "metadata-qwen3_embedding_0.6b": [1.1, 1.2],
+    }
+    generated_row = {
+        "track_id": "track-1",
+        "metadata-qwen3_embedding_4b": [2.1, 2.2, 2.3],
+        "attributes-qwen3_embedding_4b": [3.1, 3.2, 3.3],
+        "metadata-qwen3_embedding_8b": [4.1, 4.2, 4.3],
+        "attributes-qwen3_embedding_8b": [5.1, 5.2, 5.3],
+    }
+
+    class FakeTable:
+        def __init__(self, rows):
+            self.rows = rows.to_pylist() if hasattr(rows, "to_pylist") else list(rows)
+            self.optimized = False
+
+        def add(self, rows):
+            self.rows.extend(rows.to_pylist() if hasattr(rows, "to_pylist") else rows)
+
+        def create_fts_index(self, *args, **kwargs):
+            pass
+
+        def optimize(self):
+            self.optimized = True
+
+    class FakeDb:
+        def __init__(self):
+            self.table = None
+
+        def create_table(self, table_name, data, mode):
+            self.table = FakeTable(data)
+            return self.table
+
+    fake_db = FakeDb()
+    monkeypatch.setattr(
+        "mcrs.lancedb.indexing.load_track_metadata_rows",
+        lambda *args, **kwargs: [metadata_row],
+    )
+    monkeypatch.setattr(
+        "mcrs.lancedb.indexing.load_track_embedding_rows",
+        lambda *args, **kwargs: [embedding_row],
+    )
+    monkeypatch.setattr("mcrs.lancedb.indexing.connect_lancedb", lambda _: fake_db)
+    inferred_embedding_fields = []
+    original_infer_extra_vector_dims = lancedb_indexing._infer_extra_vector_dims
+
+    def capture_inferred_embedding_fields(embedding_rows, embedding_fields, vector_dims):
+        inferred_embedding_fields.extend(embedding_fields)
+        return original_infer_extra_vector_dims(embedding_rows, embedding_fields, vector_dims)
+
+    monkeypatch.setattr(
+        "mcrs.lancedb.indexing._infer_extra_vector_dims",
+        capture_inferred_embedding_fields,
+    )
+
+    summary = build_track_lancedb_table(
+        db_uri=str(tmp_path / "lancedb"),
+        drop_existing=True,
+        extra_embedding_rows=[generated_row],
+        extra_embedding_fields=GENERATED_QWEN_EMBEDDING_FIELDS,
+    )
+
+    assert summary.inserted_rows == 1
+    assert fake_db.table is not None
+    row = fake_db.table.rows[0]
+    assert row["metadata_qwen3_embedding_4b"] == pytest.approx([2.1, 2.2, 2.3])
+    assert row["attributes_qwen3_embedding_8b"] == pytest.approx([5.1, 5.2, 5.3])
+    assert row["has_metadata_qwen3_embedding_4b"] is True
+    assert row["has_attributes_qwen3_embedding_8b"] is True
+    assert tuple(inferred_embedding_fields) == GENERATED_QWEN_EMBEDDING_FIELDS
 
 
 def test_lancedb_indexing_notebook_delegates_to_checked_in_entrypoints():

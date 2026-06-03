@@ -809,6 +809,30 @@ def test_litellm_encoder_forwards_extra_params():
     assert enc.extra_params == {"timeout": 600}
 
 
+def test_litellm_encoder_forwards_cache_and_query_instruct():
+    from mcrs.qu_modules.compiler_v0plus_qu import _build_encoder
+
+    instruct = (
+        "Instruct: Given a music recommendation conversation, retrieve relevant "
+        "track metadata passages.\nQuery: "
+    )
+    enc = _build_encoder(
+        {
+            "backend": "litellm",
+            "model_name": "openai/Qwen/Qwen3-Embedding-8B",
+            "api_base": "https://fake/v1",
+            "api_key": "k",
+            "encoding_format": "float",
+            "cache": {"ttl": 86400},
+            "query_instruct": instruct,
+        }
+    )
+
+    assert enc.cache == {"ttl": 86400}
+    assert enc.query_instruct == instruct
+    assert enc.build_request_kwargs(["state query"])["input"] == [instruct + "state query"]
+
+
 def test_openrouter_response_format_goes_in_extra_body_with_require_parameters():
     """litellm strips a top-level response_format for OpenRouter models, so it
     must ride in extra_body, with provider.require_parameters to force a

@@ -1504,6 +1504,27 @@ def test_attributes_query_matches_doc_format():
     assert q == "music attributes, tags :dark, synthwave"
 
 
+def test_metadata_query_excludes_explicit_state_tags():
+    catalog = _catalog()
+    state = _state(
+        turn_intent="find something similar",
+        mentioned_entities=[
+            MentionedEntity(type="tag", value="dark", sentiment=1),
+            MentionedEntity(type="artist", value="Kavinsky", sentiment=1),
+            MentionedEntity(type="album", value="Nightcall", sentiment=1),
+            MentionedEntity(type="track", value="Roadgame", sentiment=1),
+        ],
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())
+
+    q = compiler._build_metadata_query_string(rs)
+
+    assert q == "find something similar; artists: Kavinsky; albums: Nightcall; tracks: Roadgame"
+    assert "dark" not in q
+    assert "tags:" not in q
+
+
 def test_attributes_query_none_without_tags():
     catalog = _catalog()
     state = _state(mentioned_entities=[
