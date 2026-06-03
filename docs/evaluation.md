@@ -74,9 +74,10 @@ a stable name (`bm25`, `dense.<encoder_id>.<query_id>.<vector_field>`,
 Inside `branches`, ranker-first diagnostics include `branch_queries`,
 `branch_status`, and `candidate_filter_summary`: exact query/source descriptors,
 fired/skipped status with skip reasons, and compact candidate-filter counts. The
-trace never writes dense vectors or full per-candidate ranker feature rows. The
-knob is 0 by default, so submission/blindset runs pay nothing and write no
-`branches`.
+candidate-filter counts are over the traced top-`branch_trace_topk` slice per
+branch, not the full candidate pools used by fusion. The trace never writes dense
+vectors or full per-candidate ranker feature rows. The knob is 0 by default, so
+submission/blindset runs pay nothing and write no `branches`.
 
 `scripts/branch_diagnostics.py` reads the trace + ground truth and reports:
 

@@ -55,8 +55,11 @@ def _qu_kwargs_has_vllm_endpoint(qu_kwargs: dict) -> bool:
     return any(_encoder_has_vllm_endpoint(value) for value in encoders.values())
 
 
-def _config_hash(config) -> str:
-    plain = OmegaConf.to_container(config, resolve=True)
+def _config_hash(config) -> str | None:
+    try:
+        plain = OmegaConf.to_container(config, resolve=True)
+    except Exception:
+        return None
     encoded = json.dumps(plain, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 

@@ -1036,6 +1036,34 @@ def test_branch_trace_includes_queries_status_and_filter_summary():
     assert summary["explicit_rejection_dropped"] == 2
 
 
+def test_candidate_filter_summary_counts_traced_topk_slice():
+    """The compact filter summary mirrors the trace payload, not full pools."""
+    catalog = _catalog()
+    retriever = FakeRetriever(
+        text_hits_by_field={
+            "track_name": [
+                ("t-morphine-1", 3.0),
+                ("t-fugazi-1", 2.0),
+                ("t-filler-1", 1.0),
+            ],
+        },
+    )
+    cfg = CompilerConfig(branch_trace_topk=1)
+
+    res = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg)._compile(
+        _resolve(_state(turn_intent="smoky lounge"), catalog)
+    )
+    trace = res.to_trace_dict()
+
+    assert trace["depth"] == 1
+    assert trace["pools"][0]["name"] == "bm25"
+    assert trace["pools"][0]["hits"] == [["t-morphine-1", 9.0]]
+    summary = trace["candidate_filter_summary"]
+    assert summary["raw_union_size"] == 1
+    assert summary["eligible_union_size"] == 1
+    assert summary["release_date_mask_dropped"] == 0
+
+
 # ---------------------------------------------------------------------
 # Query template content (sonic / visual / sonic_nl / lyric)
 # ---------------------------------------------------------------------

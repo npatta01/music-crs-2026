@@ -795,10 +795,17 @@ class V0PlusCompiler:
             ),
         }
 
-    def _explicit_rejection_drop_set(
+    def _resolved_rejection_drop_set(
         self,
         rs: ResolvedConversationState,
     ) -> set[str]:
+        """Tracks dropped by resolved explicit rejections.
+
+        Expand both track_ids and artist_ids for every resolved rejection,
+        regardless of `er.kind`. The resolver may attach owning-artist ids to
+        a kind="track" rejection (and vice versa); honoring only one side lets
+        backfill silently re-admit tracks that soft adjustments excluded.
+        """
         drop: set[str] = set()
         for rej in rs.resolved_rejections.values():
             drop.update(rej.track_ids)
@@ -813,6 +820,11 @@ class V0PlusCompiler:
         hard_drop: set[str],
         rs: ResolvedConversationState,
     ) -> dict[str, int]:
+        """Compact filter counts over the traced top-k branch pools.
+
+        `named_pools` has already been bounded by `branch_trace_topk`; this is
+        a summary of what the trace carries, not the full fusion candidate set.
+        """
         raw_union = {
             track_id
             for _name, hits in named_pools
@@ -820,7 +832,7 @@ class V0PlusCompiler:
         }
         after_mask = raw_union & candidate_mask
         played = set(rs.played_track_ids)
-        explicit_rejections = self._explicit_rejection_drop_set(rs)
+        explicit_rejections = self._resolved_rejection_drop_set(rs)
         played_dropped = after_mask & played
         explicit_dropped = (after_mask - played_dropped) & explicit_rejections
         other_hard_dropped = (
@@ -1306,15 +1318,7 @@ class V0PlusCompiler:
             if tf.role == "rejected":
                 drop.add(tf.track_id)
 
-        # Expand BOTH track_ids and artist_ids for every resolved rejection,
-        # regardless of `er.kind`. The resolver may attach owning-artist ids
-        # to a kind="track" rejection (and vice versa); honoring only one
-        # side of that pairing here lets step-8 backfill silently re-admit
-        # tracks that step-7 `_apply_soft_adjustments` excluded.
-        for rej in rs.resolved_rejections.values():
-            drop.update(rej.track_ids)
-            for aid in rej.artist_ids:
-                drop.update(self.catalog.tracks_by_artist_id(aid))
+        drop.update(self._resolved_rejection_drop_set(rs))
 
         return drop
 
