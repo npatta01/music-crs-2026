@@ -52,11 +52,11 @@ APP_NAME = _cfg.app_name
 HF_CACHE_VOLUME = _cfg.volumes.hf_cache
 RESULTS_VOLUME = _cfg.volumes.results
 MODELS_VOLUME = _cfg.volumes.models
-LITELLM_CACHE_VOLUME = _cfg.volumes.litellm_cache
-EMBEDDING_CACHE_VOLUME = _cfg.volumes.embedding_cache
+CACHE_VOLUME = _cfg.volumes.cache
 HF_CACHE_DIR = _cfg.container.hf_cache_dir
 EXP_DIR = _cfg.container.exp_dir
 MODELS_DIR = _cfg.container.models_dir
+CACHE_DIR = _cfg.container.cache_dir
 LITELLM_CACHE_DIR = _cfg.container.litellm_cache_dir
 EMBEDDING_CACHE_DIR = _cfg.container.embedding_cache_dir
 LITELLM_CACHE_BACKEND = str(_cfg.litellm_cache.backend)
@@ -91,10 +91,10 @@ app = modal.App(APP_NAME)
 hf_cache_vol = modal.Volume.from_name(HF_CACHE_VOLUME, create_if_missing=True)
 results_vol = modal.Volume.from_name(RESULTS_VOLUME, create_if_missing=True)
 models_vol = modal.Volume.from_name(MODELS_VOLUME, create_if_missing=True)
-litellm_cache_vol = modal.Volume.from_name(LITELLM_CACHE_VOLUME, create_if_missing=True, version=2)
-embedding_cache_vol = modal.Volume.from_name(
-    EMBEDDING_CACHE_VOLUME, create_if_missing=True, version=2
-)
+# Single unified cache volume. Mounted at CACHE_DIR; the LiteLLM file cache lives
+# under LITELLM_CACHE_DIR and the GPU-encoder DiskVectorCache under
+# EMBEDDING_CACHE_DIR, both subdirs of CACHE_DIR.
+cache_vol = modal.Volume.from_name(CACHE_VOLUME, create_if_missing=True, version=2)
 
 # Build image: uv_sync reads pyproject.toml + uv.lock for reproducible installs.
 # Source files are copied separately (uv_sync uses --no-install-project).
@@ -120,7 +120,7 @@ _VOLUME_MOUNTS = {
     HF_CACHE_DIR: hf_cache_vol,
     EXP_DIR: results_vol,
     MODELS_DIR: models_vol,
-    LITELLM_CACHE_DIR: litellm_cache_vol,  # shared with ModalLiteLLMService for LLM call caching
+    CACHE_DIR: cache_vol,  # unified LiteLLM (LLM + embeddings) + GPU-encoder cache
 }
 
 DEFAULT_REMOTE_LANCEDB_URI = f"{MODELS_DIR}/lancedb"
@@ -468,7 +468,7 @@ class ModalRetrievalService:
 @app.cls(
     image=image,
     gpu=QWEN3_ENCODER_GPU,
-    volumes={HF_CACHE_DIR: hf_cache_vol, EMBEDDING_CACHE_DIR: embedding_cache_vol},
+    volumes={HF_CACHE_DIR: hf_cache_vol, CACHE_DIR: cache_vol},
     secrets=[ENV_SECRET],
     cpu=QWEN3_ENCODER_CPU,
     memory=QWEN3_ENCODER_MEMORY,
@@ -530,12 +530,12 @@ class Qwen3Encoder:
     @modal.exit()
     def _commit_embedding_cache(self):
         if self._cache_enabled:
-            embedding_cache_vol.commit()
+            cache_vol.commit()
 
 
 @app.cls(
     image=image,
-    volumes={LITELLM_CACHE_DIR: litellm_cache_vol},
+    volumes={CACHE_DIR: cache_vol},
     secrets=[ENV_SECRET],
     cpu=LITELLM_CPU,
     memory=LITELLM_MEMORY,
@@ -1130,7 +1130,7 @@ def _build_lancedb_with_vllm_qwen_embeddings(
         cache_backend=LITELLM_CACHE_BACKEND,
         cache_dir=LITELLM_CACHE_DIR,
     )
-    litellm_cache_vol.commit()
+    cache_vol.commit()
 
     # LanceDB commits via atomic rename; Modal Volume mounts can reject that
     # rename. Build on container-local disk first, then copy the finished DB
@@ -1642,13 +1642,15 @@ def verify_textside(
 @app.cls(
     image=_clap_image,  # cached; includes torch 2.4 + transformers <5 + laion_clap 1.1.7
     gpu="T4",
-    volumes={HF_CACHE_DIR: hf_cache_vol, EMBEDDING_CACHE_DIR: embedding_cache_vol},
+    volumes={HF_CACHE_DIR: hf_cache_vol, CACHE_DIR: cache_vol},
     secrets=[ENV_SECRET],
     cpu=2.0,
     memory=8192,
     timeout=600,
     min_containers=0,
-    max_containers=4,
+    # Part of the 10-GPU project budget (Qwen3Encoder 4 + vllm-8b 4 + this 2 = 10);
+    # clap_text / SigLIP branches route here. min=0 keeps scale-to-zero.
+    max_containers=2,
     scaledown_window=600,
 )
 class MultimodalTextEncoder:
@@ -1718,4 +1720,4 @@ class MultimodalTextEncoder:
     @modal.exit()
     def _commit_embedding_cache(self):
         if self._cache_enabled:
-            embedding_cache_vol.commit()
+            cache_vol.commit()

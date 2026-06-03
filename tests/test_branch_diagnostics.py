@@ -9,6 +9,7 @@ import pytest
 from scripts.branch_diagnostics import (
     align_turns,
     compute_metrics,
+    compute_metrics_streaming,
     final_hit_at_k,
     load_ground_truth,
     load_trace,
@@ -128,6 +129,38 @@ def test_failure_turn_counts_as_miss():
     assert m["unionhit@100"] == 0.5
     # failure turn contributes nothing to any branch's fired count
     assert m["per_branch"]["bm25"]["fired"] == 1
+
+
+def test_streaming_matches_in_memory(tmp_path):
+    """compute_metrics_streaming (one pass, O(1) memory) must produce the same
+    metrics as compute_metrics(align_turns(...)) on the same data."""
+    rows = [
+        {"session_id": "s1", "turn_number": 1,
+         "trace": {"branches": _turn(["gt", "a", "b"], {"bm25": ["gt"], "dense:f": ["a"]})}},
+        {"session_id": "s1", "turn_number": 2,
+         "trace": {"branches": _turn(["a", "b", "gt"], {"bm25": ["a"], "dense:f": ["gt"]})}},
+        {"session_id": "s1", "turn_number": 3, "trace": {"state": None}},   # extractor failure
+        {"session_id": "s9", "turn_number": 1,
+         "trace": {"branches": _turn(["x"], {"bm25": ["x"]})}},            # no GT -> skipped
+    ]
+    trace_path = tmp_path / "t_trace.jsonl"
+    trace_path.write_text("\n".join(_json.dumps(r) for r in rows) + "\n")
+    gt_records = [
+        {"session_id": "s1", "turn_number": 1, "ground_truth_track_id": "gt"},
+        {"session_id": "s1", "turn_number": 2, "ground_truth_track_id": "gt"},
+        {"session_id": "s1", "turn_number": 3, "ground_truth_track_id": "miss"},
+    ]
+    gt = load_ground_truth(gt_records)
+
+    streamed = compute_metrics_streaming(str(trace_path), gt)
+    reference = compute_metrics(align_turns(rows, gt))
+
+    for key in ("n_turns", "n_failed_no_branches", "hit@1", "hit@20",
+                "unionhit@100", "unionhit@1000", "fusion_efficiency@100"):
+        assert streamed.get(key) == reference.get(key), key
+    assert streamed["n_turns"] == 3            # 2 real + 1 failure; s9 (no GT) excluded
+    assert streamed["n_skipped_no_gt"] == 1    # s9
+    assert streamed["per_branch"] == reference["per_branch"]
 
 
 def test_align_turns_keeps_branchless_row_as_miss():

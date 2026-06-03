@@ -22,7 +22,7 @@ import sys
 from collections import defaultdict
 
 FINAL_KS = [1, 20, 50, 100, 200, 1000]
-UNION_KS = [20, 50, 100, 200]
+UNION_KS = [20, 50, 100, 200, 1000]
 BRANCH_KS = [100, 200, 1000]
 
 
@@ -93,6 +93,87 @@ def compute_metrics(turns: list[tuple[dict, str]]) -> dict:
         m[f"fusion_efficiency@{k}"] = (m[f"hit@{k}"] / uh) if uh > 0 else None
 
     m["per_branch"] = per_branch_recall(scored, BRANCH_KS)
+    return m
+
+
+def iter_trace(path: str):
+    """Yield trace records one at a time (streaming; O(1) memory).
+
+    The full-devset trace is multiple GB (per-turn top-1000 branch pools), so
+    loading it all into memory (`load_trace`) OOMs. This reads line-by-line.
+    """
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                yield json.loads(line)
+
+
+def compute_metrics_streaming(trace_path: str, gt: dict[tuple[str, int], str]) -> dict:
+    """Single-pass equivalent of compute_metrics(align_turns(trace, gt)).
+
+    Reads the trace via iter_trace and accumulates hit@k / unionhit@k /
+    union_size@k / per-branch recall without materializing the trace or the
+    aligned-turn list — so it scales to the full-devset trace. Returns the same
+    metric keys as compute_metrics plus `n_skipped_no_gt` and `saw_branches`.
+    """
+    n = 0
+    n_failed = 0
+    n_skipped = 0
+    saw_branches = False
+    hit = {k: 0 for k in FINAL_KS}
+    uhit = {k: 0 for k in UNION_KS}
+    usize = {k: 0 for k in UNION_KS}
+    fired: dict[str, int] = defaultdict(int)
+    bhits: dict[str, dict[int, int]] = defaultdict(lambda: {k: 0 for k in BRANCH_KS})
+
+    for r in iter_trace(trace_path):
+        key = (r["session_id"], int(r["turn_number"]))
+        g = gt.get(key)
+        if key not in gt or g is None:
+            n_skipped += 1
+            continue
+        tr = r.get("trace")
+        branches = tr.get("branches") if isinstance(tr, dict) else None
+        if branches:
+            saw_branches = True
+        branches = branches or {}
+        n += 1
+        if not branches:
+            n_failed += 1
+        for k in FINAL_KS:
+            if final_hit_at_k(branches, g, k):
+                hit[k] += 1
+        for k in UNION_KS:
+            u = union_at_k(branches, k)
+            if g in u:
+                uhit[k] += 1
+            usize[k] += len(u)
+        for pool in branches.get("pools", []):
+            name = pool["name"]
+            fired[name] += 1
+            for k in BRANCH_KS:
+                if g in _branch_topk_ids(pool, k):
+                    bhits[name][k] += 1
+
+    m: dict = {"n_turns": n, "n_failed_no_branches": n_failed, "n_skipped_no_gt": n_skipped,
+               "saw_branches": saw_branches}
+    if n == 0:
+        return m
+    for k in FINAL_KS:
+        m[f"hit@{k}"] = hit[k] / n
+    for k in UNION_KS:
+        m[f"unionhit@{k}"] = uhit[k] / n
+        m[f"union_size@{k}"] = usize[k] / n
+        uh = m[f"unionhit@{k}"]
+        m[f"fusion_efficiency@{k}"] = (m[f"hit@{k}"] / uh) if uh > 0 else None
+    per: dict[str, dict] = {}
+    for name, nf in fired.items():
+        row = {"fired": nf}
+        for k in BRANCH_KS:
+            row[f"recall@{k}"] = (bhits[name][k] / nf) if nf else 0.0
+        per[name] = row
+    m["per_branch"] = per
     return m
 
 
@@ -182,19 +263,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", default=None, help="optional path to dump metrics JSON")
     args = ap.parse_args(argv)
 
-    trace = load_trace(args.trace, require_branches=True)
     gt = load_ground_truth_file(args.ground_truth)
-    aligned = align_turns(trace, gt)
-    # Trace rows with no GT entry (or GT None) are not scoreable.
-    n_skipped_no_gt = sum(
-        1
-        for r in trace
-        if (r["session_id"], int(r["turn_number"])) not in gt
-        or gt[(r["session_id"], int(r["turn_number"]))] is None
-    )
-
-    metrics = compute_metrics(aligned)
-    metrics["n_skipped_no_gt"] = n_skipped_no_gt
+    # Streaming single pass — the full-devset trace is multi-GB and won't fit in
+    # memory. compute_metrics_streaming returns the same keys as compute_metrics.
+    metrics = compute_metrics_streaming(args.trace, gt)
+    if metrics.get("n_turns", 0) > 0 and not metrics.get("saw_branches"):
+        sys.stderr.write(
+            f"ERROR: no per-turn `branches` found in {args.trace}. This trace was "
+            "produced by a non-v0+ run or before branch tracing was added. "
+            "Re-run devset inference with the v0+ compiler QU.\n"
+        )
+        raise SystemExit(2)
+    n_skipped_no_gt = metrics.get("n_skipped_no_gt", 0)
     print(_format_report(metrics))
     n_failed = metrics.get("n_failed_no_branches", 0)
     if n_failed:

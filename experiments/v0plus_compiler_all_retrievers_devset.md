@@ -1,34 +1,36 @@
 # Experiment: v0plus_compiler_all_retrievers_devset
 
-**Date:** 2026-06-01
+**Date:** 2026-06-03
 **Config:** `configs/v0plus_compiler_all_retrievers_devset.yaml`
 **Backend:** Modal, 5-shard full devset run
-**Prediction git head:** `9f4904aece3ff96a397e365bac4252dbb5ac0d0f`
-**Modal app:** `ap-S5AIqzgpDsonLgw1NcW0K9`
+**Prediction git head:** `d0209b727077df5f98cf5576e7bf03e89f172360`
+**Modal app:** `ap-WB5UDBDs84zxDO0wOIjkAW` (run id `20260603T110031Z-f985d4`)
 **Status:** `analyzed`
 
 ## Summary
 
-This run exercises the prompt-v4 extractor plus every currently wired v0+ retriever branch:
-BM25 field boosts, release-year BM25 boosts, Qwen3 metadata/lyrics/attributes dense text,
-CLAP text-to-audio, image/audio/cf-bpr centroid branches, user cf-bpr centroid, resolved-artist
-discography, and era/popularity retrieval.
+Full devset (1000 sessions, 8000 turns) on the **freshly rebuilt LanceDB catalog**
+(metadata + FTS + 0.6B/4B/8B Qwen embedding columns). This is the first full-devset
+validation of the catalog's 4B/8B Qwen dense columns end-to-end — all dense branches
+(`qwen_0_6b`, `qwen_8b`, `clap_text`) plus the centroid/discography/era branches ran
+with no missing-vector-field errors and zero shallow/extractor-none rows out of 8000.
 
-The result is the best v0+ candidate coverage so far, but not the best top-20 ranking. Hit@1000
-improves over the prior `v0plus_compiler_all_devset` coverage run (`0.6967` vs `0.6730`), while
-NDCG@20 falls well below the image-only canonical config (`0.1219` vs `0.1452`). More branches are
-finding more gold tracks somewhere in the 1000-deep pool, but the fused order is too noisy for
-headline top-K quality.
+It improves on the prior all-retrievers run across the board — most notably candidate
+**coverage** (Hit@1000 0.6967 → **0.7289**) — but top-20 ranking still trails the
+image-only canonical config. More branches recover more gold tracks somewhere in the
+1000-deep pool; the fused order remains the bottleneck for headline top-K quality.
 
 | Comparison | NDCG@20 | Hit@20 | Hit@1000 | MRR |
 |---|---:|---:|---:|---:|
 | `v0plus_compiler_image_devset` | 0.1452 | 0.2989 | 0.6261 | 0.1062 |
 | `v0plus_compiler_all_devset` | 0.1432 | 0.3090 | 0.6730 | 0.1010 |
-| `v0plus_compiler_all_retrievers_devset` | 0.1219 | 0.2660 | 0.6967 | 0.0871 |
+| `all_retrievers` (2026-06-01, 0.6B dense only) | 0.1219 | 0.2660 | 0.6967 | 0.0871 |
+| **`all_retrievers` (2026-06-03, fresh DB + 8B dense)** | **0.1255** | **0.2742** | **0.7289** | **0.0897** |
 
-Verdict: keep this run as the best coverage / candidate-pool reference, not as the canonical
-ranking config. The natural follow-up is branch quota/survivor-set tuning or a reranker over this
-larger pool.
+Verdict: keep as the best coverage / candidate-pool reference, not the canonical ranking
+config. The Branch Union Coverage below quantifies the headroom: the gold track is
+*reachable* far more often than it *survives* fusion — so the next lever is fusion/
+survivor-set tuning or a reranker over this pool, not more branch recall.
 
 ## Configuration
 
@@ -36,10 +38,10 @@ larger pool.
 |---|---|
 | lm_type | dummy |
 | qu_type | v0plus_compiler |
-| retrieval_type | bm25 |
+| retrieval_type | bm25 *(vestigial — V0PlusCompilerQU owns retrieval; the baseline retriever is built but unused)* |
 | retrieval_topk | 1000 |
 | compiler.final_topk | 1000 |
-| dense branches | `metadata_qwen3_embedding_0_6b`, `lyrics_qwen3_embedding_0_6b`, `attributes_qwen3_embedding_0_6b`, `audio_laion_clap` via CLAP text |
+| dense branches | `metadata`/`attributes` × `qwen_0_6b` **and** `qwen_8b`; `clap_text` (CLAP text→audio) |
 | centroid-only branches | `image_siglip2`, `audio_laion_clap`, `cf_bpr`, `cf_bpr:user` |
 | extra branches | resolved-artist discography, era/popularity |
 
@@ -50,114 +52,125 @@ larger pool.
 | Turns evaluated | 8000 |
 | require_full_diagnostic_depth | false |
 | Target diagnostic depth | 1000 |
-| Min pool depth | 0 |
-| Max pool depth | 1000 |
-| Shallow rows | 1 |
-| Extractor returned None | 1 |
-| Available cutoffs | 1, 5, 10, 20, 50, 100, 200, 500, 1000 |
+| Min / Max pool depth | 1000 / 1000 |
+| Shallow rows | 0 |
 
-The single shallow row corresponds to the single `extractor_returned_none` trace row. The other
-7999 turns returned a 1000-candidate pool.
+All 8000 turns returned a full 1000-candidate pool — no shallow rows or extractor-none
+this run.
 
 ## Ranking Quality
 
 | Metric | Value |
 |---|---:|
-| NDCG@1 | 0.0380 |
-| NDCG@5 | 0.0817 |
-| NDCG@10 | 0.1024 |
-| NDCG@20 | 0.1219 |
-| NDCG@50 | 0.1430 |
-| NDCG@100 | 0.1556 |
-| NDCG@200 | 0.1653 |
-| NDCG@500 | 0.1771 |
-| NDCG@1000 | 0.1855 |
-| MRR | 0.0871 |
-| MRR@100 | 0.0861 |
-| MRR@200 | 0.0866 |
-| MRR@500 | 0.0869 |
-| MRR@1000 | 0.0871 |
+| NDCG@1 | 0.0394 |
+| NDCG@5 | 0.0839 |
+| NDCG@10 | 0.1047 |
+| NDCG@20 | 0.1255 |
+| NDCG@50 | 0.1479 |
+| NDCG@100 | 0.1614 |
+| NDCG@200 | 0.1724 |
+| NDCG@500 | 0.1847 |
+| NDCG@1000 | 0.1929 |
+| MRR | 0.0897 |
+| MRR@100 | 0.0887 |
+| MRR@200 | 0.0892 |
+| MRR@500 | 0.0896 |
+| MRR@1000 | 0.0897 |
 
 ## Retrieval Coverage
 
 | Metric | Value |
 |---|---:|
-| Hit@1 | 0.0380 |
-| Hit@5 | 0.1241 |
-| Hit@10 | 0.1884 |
-| Hit@20 | 0.2660 |
-| Hit@50 | 0.3719 |
-| Hit@100 | 0.4496 |
-| Hit@200 | 0.5192 |
-| Hit@500 | 0.6167 |
-| Hit@1000 | 0.6967 |
-| % GT not in top-20 | 73.4% |
-| % GT not in top-100 | 55.0% |
-| % GT not in top-200 | 48.1% |
-| % GT not in top-500 | 38.3% |
-| % GT not in top-1000 | 30.3% |
-| Mean rank when found | 159.9 |
-| Median rank when found | 41.0 |
+| Hit@1 | 0.0394 |
+| Hit@5 | 0.1274 |
+| Hit@10 | 0.1919 |
+| Hit@20 | 0.2742 |
+| Hit@50 | 0.3871 |
+| Hit@100 | 0.4705 |
+| Hit@200 | 0.5490 |
+| Hit@500 | 0.6518 |
+| Hit@1000 | 0.7289 |
+| % GT not in top-20 | 72.6% |
+| % GT not in top-100 | 53.0% |
+| % GT not in top-200 | 45.1% |
+| % GT not in top-500 | 34.8% |
+| % GT not in top-1000 | 27.1% |
+| Mean rank when found | 154.9 |
+| Median rank when found | 43.0 |
+
+## Branch Union Coverage
+
+Fraction of turns where **some** retriever branch surfaces the GT in its top-k
+(pre-fusion), versus the final fused/ranked hit@k, with
+`fusion_efficiency = hit@k / unionhit@k` (how much reachable GT the fusion+rank stage
+keeps). Computed from the per-turn branch pools in the devset trace.
+
+| k | union@k | final hit@k | fusion efficiency |
+|---|---:|---:|---:|
+| 20 | 0.4768 | 0.2742 | 0.575 |
+| 100 | 0.6620 | 0.4705 | 0.711 |
+| 200 | 0.7432 | 0.5490 | 0.739 |
+| 1000 | 0.9051 | 0.7289 | 0.805 |
+
+**Read:** at depth 1000, 90.5% of GTs are reachable by some branch but only 72.9% survive
+to the final list — the fusion/rerank stage, not branch recall, is the binding constraint
+on the deep tail. At depth 200, union 0.743 vs final 0.549 (efficiency 0.739) → ~26% of
+reachable GT is dropped by fusion/ranking. This is the quantified case for a reranker /
+survivor-set policy over this pool.
 
 ## Diversity
 
 | Metric | Value |
 |---|---:|
-| Catalog diversity @20 | 0.5261 |
-| Catalog diversity @100 | 0.8924 |
-| Lexical diversity | 0.0000 |
+| Catalog diversity @20 | 0.5314 |
+| Catalog diversity @100 | 0.8968 |
+| Lexical diversity | 0.0000 *(response generation is the dummy path — no response text to diversify)* |
 
 ## Per-Turn Breakdown
 
 | Turn | NDCG@20 | Hit@20 | Hit@100 | N |
 |---:|---:|---:|---:|---:|
-| 1 | 0.1552 | 0.2900 | 0.4360 | 1000 |
-| 2 | 0.1909 | 0.3970 | 0.5790 | 1000 |
-| 3 | 0.1503 | 0.3260 | 0.5370 | 1000 |
-| 4 | 0.1263 | 0.2800 | 0.4760 | 1000 |
-| 5 | 0.1019 | 0.2370 | 0.4280 | 1000 |
-| 6 | 0.0916 | 0.2170 | 0.4050 | 1000 |
-| 7 | 0.0869 | 0.2070 | 0.3880 | 1000 |
-| 8 | 0.0722 | 0.1740 | 0.3480 | 1000 |
+| 1 | 0.1671 | 0.3180 | 0.4800 | 1000 |
+| 2 | 0.1981 | 0.4030 | 0.6050 | 1000 |
+| 3 | 0.1553 | 0.3430 | 0.5600 | 1000 |
+| 4 | 0.1278 | 0.2910 | 0.5000 | 1000 |
+| 5 | 0.1001 | 0.2340 | 0.4420 | 1000 |
+| 6 | 0.0922 | 0.2170 | 0.4140 | 1000 |
+| 7 | 0.0935 | 0.2170 | 0.3920 | 1000 |
+| 8 | 0.0699 | 0.1710 | 0.3710 | 1000 |
+
+Ranking quality peaks at turns 1–2 (most explicit query signal) and decays monotonically
+as conversations deepen and intent drifts — same shape as the prior run, slightly higher
+at every turn.
 
 ## Findings
 
-1. Coverage improved, ranking did not.
+1. **Coverage improved again; ranking nudged up but is still the bottleneck.**
+   Hit@1000 reaches 0.7289 (best tracked v0+ coverage), and adding the 8B dense branches on
+   the fresh catalog lifts every metric vs the 0.6B-only 2026-06-01 run. But Hit@20 is still
+   0.2742 — the extra branches mostly add recoverable candidates at mid/deep ranks.
 
-   The all-retrievers pool recovers the gold track at top-1000 on 69.7% of turns, the best number
-   in the tracked v0+ runs. But Hit@20 is only 26.6%, below both image-only and the previous
-   all-embeddings run. The extra branches are mostly adding recoverable candidates at mid/deep
-   ranks rather than promoting them into the top 20.
+2. **Fusion efficiency is the headline diagnostic.** union@1000 0.905 vs final 0.729 means
+   ~18% of reachable gold is lost between branch pools and the final list; at @200 the loss is
+   ~26%. The candidate reservoir is rich — the ranking/fusion stage is where the points are.
 
-2. Turn-2 is strong; late-turn precision still decays.
+3. **Clean run.** Zero shallow rows / extractor-none out of 8000; the noisy LiteLLM
+   provider-list log footers are benign (the 50-session smoke showed them too and scored fine).
 
-   Turn 2 reaches `NDCG@20 0.1909` / `Hit@20 0.3970`, but by turn 8 the run is down to
-   `NDCG@20 0.0722` / `Hit@20 0.1740`. This is the opposite shape from the canonical image config,
-   whose late turns stay much flatter. The branch set appears to over-broaden as history accumulates.
-
-3. Extractor reliability was acceptable.
-
-   The Modal logs showed noisy LiteLLM provider-list footers and a few schema/JSON warnings, but the
-   merged trace has only one `extractor_returned_none` row out of 8000. The metric drop is therefore
-   not an extractor-outage artifact.
-
-4. This is useful as a reranker input.
-
-   Hit@1000 `0.6967` gives a bigger candidate reservoir than the prior tracked configs. If a reranker
-   or survivor-set policy can preserve the high-value branch candidates while suppressing noisy tails,
-   this run is a better source pool than its NDCG@20 alone suggests.
+4. **Best reranker input to date.** With the largest candidate reservoir of the tracked
+   configs and quantified fusion headroom, this run is the natural source pool for a reranker
+   or survivor-set experiment.
 
 ## Operational Notes
 
-- Successful full run: `uv run python -m modal run modal/app.py::run_inference_sharded --tid v0plus_compiler_all_retrievers_devset --num-shards 5 --batch-size 64`.
-- A first full attempt with `--batch-size 4` was stopped early because each shard had 400 batches and projected too close to the Modal timeout. No shard artifacts were left behind.
-- Sharded inference completed in about 39 minutes wall time, then shards were downloaded and merged locally.
-- The worktree needed an ignored `.env` symlink to the main project checkout for Modal secrets; it was removed after the run.
+- Run: `python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --num_shards 5 --batch_size 64` (auto download → merge → evaluate).
+- First full-devset run on the rebuilt catalog (cached Qwen 0.6B/4B/8B columns); the catalog rebuild used the process-pool embedding path (PR #104).
+- Union@k comes from `scripts/branch_diagnostics.py`, which streams the trace (one pass, O(1) memory) so it scales to the full-devset trace. `run_experiment.py` runs it automatically after devset evaluation and folds `union@k` / `fusion_efficiency@k` into the scores JSON, so future devset runs capture these without a manual step.
 
 ## Files
 
 - Inference predictions: `exp/inference/devset/v0plus_compiler_all_retrievers_devset.json`
 - Trace: `exp/inference/devset/v0plus_compiler_all_retrievers_devset_trace.jsonl`
-- Per-shard predictions/traces: `exp/inference/devset/v0plus_compiler_all_retrievers_devset.shard_{0..4}*.json`
+- Per-shard predictions/traces: `exp/inference/devset/v0plus_compiler_all_retrievers_devset.run_20260603T110031Z-f985d4.shard_{0..4}*.json`
 - Aggregate scores: `exp/scores/devset/v0plus_compiler_all_retrievers_devset.json`
 - Per-sample metrics: `exp/scores/devset/v0plus_compiler_all_retrievers_devset_samples.csv`

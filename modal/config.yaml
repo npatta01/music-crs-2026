@@ -4,17 +4,20 @@ volumes:
   hf_cache: "music-crs-hf-cache"
   results: "music-crs-results"
   models: "music-crs-models"
-  # Volumes v2 cache volume; create fresh because existing music-crs-litellm-cache is v1.
-  litellm_cache: "music-crs-litellm-cache-v2"
-  # Volume v2 cache for GPU-native text embeddings (Qwen3, SigLIP-2, CLAP).
-  embedding_cache: "music-crs-embedding-cache"
+  # Unified Volumes-v2 cache: one volume holding both the LiteLLM file cache
+  # (LLM completions + vLLM-endpoint embeddings) and the GPU-native encoder
+  # vectors (Qwen3-0.6B, SigLIP-2, CLAP), under separate subdirs. Replaces the
+  # former split music-crs-litellm-cache-v2 + music-crs-embedding-cache volumes.
+  cache: "music-crs-cache"
 
 container:
   hf_cache_dir: "/root/.cache/huggingface"
   exp_dir: "/root/exp"
   models_dir: "/root/models"
-  litellm_cache_dir: "/root/litellm-cache"
-  embedding_cache_dir: "/root/embedding-cache"
+  # Both cache subsystems live under one mounted volume (container.cache_dir).
+  cache_dir: "/root/cache"
+  litellm_cache_dir: "/root/cache/litellm"
+  embedding_cache_dir: "/root/cache/embedding"
 
 litellm_cache:
   backend: "file"
@@ -61,6 +64,11 @@ qwen3_encoder:
   memory: 8192
   timeout: 600
   scaledown_window: 300
+  # GPU budget: the project cap is 10 concurrent GPUs. The 3 GPU pools active
+  # during a v0+ run must sum to <=10 so they don't starve each other:
+  #   Qwen3Encoder(0.6B)=4 + vllm-8b=4 + MultimodalTextEncoder(clap)=2 = 10.
+  # (vllm-4b is idle for the canonical config.) The 0.6B encoder gets the
+  # largest slice since several dense branches route to it.
   max_containers: 4
   # bfloat16 on T4 — same accuracy as fp32 for 0.6B at half the memory.
   torch_dtype: "bfloat16"
@@ -82,7 +90,9 @@ vllm:
       dtype: "bfloat16"
       max_model_len: 8192
       max_inputs: 64  # max concurrent inputs per replica for the vLLM endpoint (@modal.concurrent)
-      max_containers: 10  # autoscale ceiling; min stays 0 (scale-to-zero)
+      # Idle for the canonical config (no 4b branch). Kept low as a guard so the
+      # 10-GPU project budget isn't blown if a config ever enables a 4b branch.
+      max_containers: 2  # autoscale ceiling; min stays 0 (scale-to-zero)
       scaledown_window: 300
       timeout: 1800
     qwen3-embedding-8b:
@@ -93,6 +103,7 @@ vllm:
       dtype: "bfloat16"
       max_model_len: 8192
       max_inputs: 64
-      max_containers: 10
+      # Part of the 10-GPU budget: 8b gets 4 (see qwen3_encoder comment).
+      max_containers: 4
       scaledown_window: 300
       timeout: 1800
