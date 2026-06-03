@@ -32,8 +32,7 @@ from mcrs.rerank import train as tr
 
 def _catalog(db_uri: str, table_name: str):
     from mcrs.qu_modules.v0plus_catalog_lance import LanceDbCatalog
-    eager = tuple(ft.G_MODALITIES.values())
-    return LanceDbCatalog(db_uri=db_uri, table_name=table_name, eager_vector_fields=eager)
+    return LanceDbCatalog(db_uri=db_uri, table_name=table_name)
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:

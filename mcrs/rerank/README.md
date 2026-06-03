@@ -27,8 +27,8 @@ python run_rerank_phase1.py --max-pool-depth 250 --out-root exp/rerank/devset
 ```
 
 Prereqs: `pip install -e .[rerank]` and a LanceDB catalog at `cache/lancedb`
-(`python scripts/build_lancedb_index.py --include-embeddings`). With a **metadata-only**
-catalog the pipeline still runs — block G (embedding centroids) simply emits NaN columns.
+(`python scripts/build_lancedb_index.py --metadata-only` is enough — the feature set needs only
+catalog metadata, no embedding vectors).
 
 ## Feature blocks (first cut, locked 2026-06-03)
 
@@ -40,7 +40,10 @@ catalog the pipeline still runs — block G (embedding centroids) simply emits N
 | D  | `intent_mode`,`exploration_policy` (categorical), `q__routing_*` (×5), `q__n_*`, `q__frac_through_session`, `q__resolved_*_confidence`, … | group-constant; help via interactions |
 | E  | `e__{artist_match_anchor,artist_match_resolved_target,is_resolved_target_track,is_anchor_track,same_artist_as_rejected,is_rejected_track,is_played_already,tag_overlap_positive,tag_overlap_rejected,in_release_year_range,years_outside_range}` | learned routing-multiplier replacement |
 | F  | `{branch}__score_{gap,ratio}_to_top`, `f__n_same_artist_in_union`, `f__artist_best_rank_in_union`, `f__jaccard_tag_overlap`, `f__n_candidate_tags_not_in_positive` | cheap structural signals |
-| G  | `g__{cos_to_accepted,cos_to_rejected,accepted_minus_rejected}__{cf_bpr,audio_clap,metadata_qwen3}` | sentiment-split centroids from as-of-turn `track_feedback`; NaN if vectors absent |
+
+**Tested and dropped:** block G (sentiment-split embedding relevance — cos to accepted/rejected
+centroid + margin over cf_bpr/audio_clap/metadata_qwen3) added only +0.001 NDCG@20 on devset,
+redundant with the `centroid.*` branches, at ~5× the feature-build cost. See git history.
 
 **Deferred** (post-gate iteration): `turns_since_last_*` recency/staleness; full dense
 cross-scoring; inter-candidate diversity. Branch registry & canonical names: `branches.py`.

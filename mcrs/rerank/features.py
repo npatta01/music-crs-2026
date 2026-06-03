@@ -11,11 +11,13 @@ design doc, with the first-cut decisions locked 2026-06-03:
 * E   query x item match (the learned routing-multiplier replacement)
 * F   cheap structural signals (score gap/ratio to top, within-union artist concentration,
       conversation position, query specificity, tag jaccard/novelty)
-* G   sentiment-split embedding relevance (cos to accepted/rejected centroid + margin),
-      built from the as-of-turn ``track_feedback``; degrades to NaN when vectors are absent.
 
 artist_id / album_id are used internally for match features but are **never emitted** as
 model columns (memorisation/leakage guard).
+
+Block G (sentiment-split embedding relevance) was prototyped and dropped: on devset it added
+only +0.001 NDCG@20 over this set (redundant with the ``centroid.{cf_bpr,audio_clap,user.cf_bpr}``
+branches, which already encode anchor similarity) at ~5x the feature-build cost. See git history.
 """
 
 from __future__ import annotations
@@ -44,13 +46,6 @@ from mcrs.rerank.branches import (
 )
 
 GROUP_KEYS = ["session_id", "turn_number"]
-
-# Modalities used for the sentiment-split centroids (block G). Short label -> catalog field.
-G_MODALITIES: dict[str, str] = {
-    "cf_bpr": "cf_bpr",
-    "audio_clap": "audio_laion_clap",
-    "metadata_qwen3": "metadata_qwen3_embedding_0_6b",
-}
 
 
 # ----------------------------------------------------------------- catalog metadata frame
@@ -294,67 +289,6 @@ def _block_e_and_f_union(df: pd.DataFrame, groups: pd.DataFrame, meta: pd.DataFr
     return pd.DataFrame(cols, index=df.index)
 
 
-def _block_g(df: pd.DataFrame, groups: pd.DataFrame, catalog: Any) -> pd.DataFrame:
-    """Sentiment-split embedding relevance. NaN columns when a modality has no vectors."""
-    available = {label: field for label, field in G_MODALITIES.items()
-                 if field in getattr(catalog, "_vector_columns_available", set())}
-    n = len(df)
-    cols: dict[str, np.ndarray] = {}
-    for label in G_MODALITIES:
-        cols[f"g__cos_to_accepted__{label}"] = np.full(n, np.nan)
-        cols[f"g__cos_to_rejected__{label}"] = np.full(n, np.nan)
-        cols[f"g__accepted_minus_rejected__{label}"] = np.full(n, np.nan)
-    if not available:
-        return pd.DataFrame(cols, index=df.index)
-
-    grp_state = groups.set_index([groups["session_id"], groups["turn_number"]])
-    df = df.reset_index(drop=True)
-
-    def centroid(track_ids: list[str], field: str) -> np.ndarray | None:
-        vecs = [catalog.vector(t, field) for t in track_ids]
-        vecs = [np.asarray(v, dtype=float) for v in vecs if v is not None]
-        if not vecs:
-            return None
-        c = np.mean(vecs, axis=0)
-        norm = np.linalg.norm(c)
-        return c / norm if norm else None
-
-    for (sid, turn), sub in df.groupby(GROUP_KEYS, sort=False):
-        gs = grp_state.loc[(sid, turn)]
-        if isinstance(gs, pd.DataFrame):
-            gs = gs.iloc[0]
-        tf = gs["track_feedback"] or []
-        acc = [f["track_id"] for f in tf
-               if f.get("role") in ("accepted", "seed") or (f.get("overall_sentiment") or 0) > 0]
-        rej = [f["track_id"] for f in tf
-               if f.get("role") == "rejected" or (f.get("overall_sentiment") or 0) < 0]
-        if not acc and not rej:
-            continue
-        idx = sub.index.to_numpy()
-        tids = sub["track_id"].to_numpy()
-        for label, field in available.items():
-            c_acc = centroid(acc, field) if acc else None
-            c_rej = centroid(rej, field) if rej else None
-            if c_acc is None and c_rej is None:
-                continue
-            for j, t in zip(idx, tids):
-                v = catalog.vector(t, field)
-                if v is None:
-                    continue
-                v = np.asarray(v, dtype=float)
-                vn = np.linalg.norm(v)
-                if not vn:
-                    continue
-                v = v / vn
-                ca = float(np.dot(v, c_acc)) if c_acc is not None else np.nan
-                cr = float(np.dot(v, c_rej)) if c_rej is not None else np.nan
-                cols[f"g__cos_to_accepted__{label}"][j] = ca
-                cols[f"g__cos_to_rejected__{label}"][j] = cr
-                if c_acc is not None and c_rej is not None:
-                    cols[f"g__accepted_minus_rejected__{label}"][j] = ca - cr
-    return pd.DataFrame(cols, index=df.index)
-
-
 # ------------------------------------------------------------------------------- assembly
 
 def build_features(dataset_dir: str | Path, catalog: Any) -> pd.DataFrame:
@@ -369,13 +303,12 @@ def build_features(dataset_dir: str | Path, catalog: Any) -> pd.DataFrame:
     c = _block_c(df, meta)
     d = _block_d(df, groups)
     e_f = _block_e_and_f_union(df, groups, meta, a_agg["agg__min_rank"])
-    g = _block_g(df, groups, catalog)
 
     out = pd.concat(
         [df[GROUP_KEYS + ["track_id", "label"]].reset_index(drop=True),
          a_f.reset_index(drop=True), a_agg.reset_index(drop=True),
          c.reset_index(drop=True), d.reset_index(drop=True),
-         e_f.reset_index(drop=True), g.reset_index(drop=True)],
+         e_f.reset_index(drop=True)],
         axis=1,
     )
     return out
@@ -390,7 +323,7 @@ def feature_columns(frame: pd.DataFrame) -> list[str]:
 
 
 def monotone_constraints(feature_cols: list[str]) -> list[int]:
-    """+1 on trustworthy branch scores (per registry) and the G accepted/margin signals."""
+    """+1 on the trustworthy raw branch scores (per registry); 0 elsewhere."""
     cons = []
     for col in feature_cols:
         c = 0
@@ -398,10 +331,6 @@ def monotone_constraints(feature_cols: list[str]) -> list[int]:
             key = col[: -len("__score")]
             if key in BRANCH_BY_KEY:
                 c = BRANCH_BY_KEY[key].score_monotone
-        elif col.startswith("g__cos_to_accepted") or col.startswith("g__accepted_minus_rejected"):
-            c = 1
-        elif col.startswith("g__cos_to_rejected"):
-            c = -1
         cons.append(c)
     return cons
 
@@ -426,8 +355,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--table-name", default="music_track_catalog")
     args = p.parse_args(argv)
 
-    eager = tuple(G_MODALITIES.values())
-    catalog = LanceDbCatalog(db_uri=args.db_uri, table_name=args.table_name, eager_vector_fields=eager)
+    catalog = LanceDbCatalog(db_uri=args.db_uri, table_name=args.table_name)
     frame = build_features(args.dataset_dir, catalog)
     out = Path(args.out) if args.out else Path(args.dataset_dir) / "features.parquet"
     frame.to_parquet(out, index=False)
