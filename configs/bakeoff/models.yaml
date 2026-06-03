@@ -1,0 +1,47 @@
+# Response-generation bake-off candidate registry. All via OpenRouter
+# (OPENROUTER_API_KEY). All generators run non-thinking.
+generators:
+  - tag: llama-1b
+    model_name: openrouter/meta-llama/llama-3.2-1b-instruct
+    completion_kwargs: {}
+  - tag: gemma-4b
+    model_name: openrouter/google/gemma-3-4b-it
+    completion_kwargs: {}
+  - tag: llama-3b
+    model_name: openrouter/meta-llama/llama-3.2-3b-instruct
+    completion_kwargs: {}
+  - tag: qwen3-8b
+    model_name: openrouter/qwen/qwen3-8b
+    completion_kwargs:
+      extra_body:
+        reasoning:
+          enabled: false
+  - tag: deepseek-flash
+    model_name: openrouter/deepseek/deepseek-v4-flash
+    completion_kwargs: {}
+  - tag: gemma-12b
+    model_name: openrouter/google/gemma-3-12b-it
+    completion_kwargs: {}
+  - tag: gemma-27b
+    model_name: openrouter/google/gemma-3-27b-it
+    completion_kwargs: {}
+  - tag: qwen3-30b-a3b
+    model_name: openrouter/qwen/qwen3-30b-a3b-instruct-2507
+    completion_kwargs: {}
+  - tag: gpt5-nano
+    model_name: openrouter/openai/gpt-5-nano
+    completion_kwargs:
+      reasoning_effort: minimal
+  - tag: gemini-flash-lite
+    model_name: openrouter/google/gemini-2.5-flash-lite
+    completion_kwargs: {}
+
+judges:
+  gemini:
+    model_name: openrouter/google/gemini-2.5-flash
+  neutral:
+    model_name: openrouter/openai/gpt-5-mini
+
+defaults:
+  temperature: 0.7
+  max_tokens: 256
