@@ -165,7 +165,7 @@ at every turn.
 
 - Run: `python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --num_shards 5 --batch_size 64` (auto download → merge → evaluate).
 - First full-devset run on the rebuilt catalog (cached Qwen 0.6B/4B/8B columns); the catalog rebuild used the process-pool embedding path (PR #104).
-- Union@k was computed via a streaming pass over the 5.5 GB trace; `scripts/branch_diagnostics.py` loads the whole trace into memory, impractical at full-devset scale (follow-up: make it stream).
+- Union@k comes from `scripts/branch_diagnostics.py`, which streams the trace (one pass, O(1) memory) so it scales to the full-devset trace. `run_experiment.py` runs it automatically after devset evaluation and folds `union@k` / `fusion_efficiency@k` into the scores JSON, so future devset runs capture these without a manual step.
 
 ## Files
 

@@ -175,6 +175,58 @@ def run_evaluation(
     if session_ids_file:
         cmd.extend(["--session_ids_file", session_ids_file])
     run_command(cmd, cwd=PROJECT_ROOT)
+    if split == "devset":
+        augment_scores_with_branch_diagnostics(tid, exp_dir, split)
+
+
+def augment_scores_with_branch_diagnostics(tid: str, exp_dir: Path, split: str) -> None:
+    """Fold branch union coverage into the scores JSON so every devset run
+    captures union@k / fusion_efficiency@k (not just the evaluator's hit@k).
+
+    Runs scripts/branch_diagnostics.py (streaming, so it scales to the full
+    trace) against the trace sidecar + ground truth, writes the full diagnostics
+    sidecar, and merges the headline union metrics into {tid}.json. Best-effort:
+    a missing trace or a non-v0+ run (no branch payload) is logged and skipped,
+    never fails the experiment.
+    """
+    trace = exp_dir / "inference" / split / f"{tid}_trace.jsonl"
+    ground_truth = exp_dir / "ground_truth" / "devset.json"
+    scores = exp_dir / "scores" / split / f"{tid}.json"
+    if not (trace.exists() and ground_truth.exists() and scores.exists()):
+        print(f"[branch-diagnostics] skipped: trace/ground-truth/scores not all present for {tid}")
+        return
+
+    sidecar = exp_dir / "scores" / split / f"{tid}_branch_diagnostics.json"
+    try:
+        run_command(
+            [
+                sys.executable,
+                "scripts/branch_diagnostics.py",
+                "--trace", str(trace),
+                "--ground-truth", str(ground_truth),
+                "--out", str(sidecar),
+            ],
+            cwd=PROJECT_ROOT,
+        )
+    except subprocess.CalledProcessError:
+        print("[branch-diagnostics] skipped: non-v0+ trace or diagnostics error (union@k not added)")
+        return
+
+    try:
+        diag = json.loads(sidecar.read_text(encoding="utf-8"))
+        sc = json.loads(scores.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"[branch-diagnostics] skipped: could not merge metrics: {exc}")
+        return
+
+    for k in (20, 50, 100, 200, 1000):
+        if f"unionhit@{k}" in diag:
+            sc[f"union@{k}"] = diag[f"unionhit@{k}"]
+        eff = diag.get(f"fusion_efficiency@{k}")
+        if eff is not None:
+            sc[f"fusion_efficiency@{k}"] = eff
+    scores.write_text(json.dumps(sc, indent=2), encoding="utf-8")
+    print(f"[branch-diagnostics] merged union@k / fusion_efficiency@k into {scores}")
 
 
 def validate_args(args: argparse.Namespace, split: str) -> None:
