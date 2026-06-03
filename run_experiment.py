@@ -248,6 +248,69 @@ def run_local(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
     run_command(cmd, cwd=PROJECT_ROOT)
 
 
+def run_modal_sharded(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
+    run_id = args.run_id or make_run_id()
+    print(f"Sharded run_id: {run_id} (re-run with --run_id {run_id} to retry)")
+
+    sharded_cmd = [
+        sys.executable,
+        "-m",
+        "modal",
+        "run",
+        "modal/app.py::run_inference_sharded",
+        "--tid",
+        args.tid,
+        "--eval-dataset",
+        split,
+        "--num-shards",
+        str(args.num_shards),
+        "--run-id",
+        run_id,
+        "--batch-size",
+        str(args.batch_size),
+    ]
+    if args.clear_cache:
+        sharded_cmd.append("--clear-cache")
+    run_command(sharded_cmd, cwd=PROJECT_ROOT)
+
+    run_command(
+        [
+            sys.executable,
+            "modal/download_results.py",
+            "--tid",
+            args.tid,
+            "--split",
+            split,
+            "--run-id",
+            run_id,
+            "--out-dir",
+            str(exp_dir),
+        ],
+        cwd=PROJECT_ROOT,
+    )
+    run_command(
+        [
+            sys.executable,
+            "scripts/merge_shard_results.py",
+            "--tid",
+            args.tid,
+            "--num_shards",
+            str(args.num_shards),
+            "--run_id",
+            run_id,
+            "--split",
+            split,
+            "--exp-dir",
+            str(exp_dir),
+        ],
+        cwd=PROJECT_ROOT,
+    )
+
+    if split == "devset":
+        ensure_ground_truth(exp_dir)
+        run_evaluation(args.tid, exp_dir, split)
+
+
 def run_modal(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
     if split == "devset":
         session_ids_file = None
@@ -330,6 +393,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.backend == "local":
         run_local(args, split, exp_dir)
+    elif args.num_shards > 1:
+        run_modal_sharded(args, split, exp_dir)
     else:
         run_modal(args, split, exp_dir)
 
