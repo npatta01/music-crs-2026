@@ -76,7 +76,13 @@ def main() -> None:
     convs_by_session = {r["session_id"]: r["conversations"] for r in ds}
 
     judge_clients = {
-        name: LiteLLMChatClient(model_name=spec["model_name"], temperature=0.0, max_tokens=32)
+        # 512 (not 32): reasoning judges (e.g. gpt-5-mini) spend the token budget
+        # on hidden reasoning and return empty content at small caps. Overridable
+        # per judge via `max_tokens` in models.yaml.
+        name: LiteLLMChatClient(
+            model_name=spec["model_name"], temperature=0.0,
+            max_tokens=spec.get("max_tokens", 512),
+        )
         for name, spec in judges.items()
     }
 
