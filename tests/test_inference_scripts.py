@@ -206,6 +206,28 @@ def test_run_inference_blindset_passes_qu_kwargs(monkeypatch, tmp_path):
     )
 
 
+def test_vllm_endpoint_detection_checks_named_encoders():
+    qu_kwargs = {
+        "encoder": {
+            "backend": "litellm",
+            "api_base": "https://api.deepinfra.com/v1/openai",
+        },
+        "encoders": {
+            "qwen_0_6b": {
+                "backend": "litellm",
+                "api_base": "https://api.deepinfra.com/v1/openai",
+            },
+            "qwen_8b": {
+                "backend": "litellm",
+                "vllm_endpoint": "qwen3-embedding-8b",
+            },
+        },
+    }
+
+    assert run_inference_devset._qu_kwargs_has_vllm_endpoint(qu_kwargs) is True
+    assert run_inference_blindset._qu_kwargs_has_vllm_endpoint(qu_kwargs) is True
+
+
 def test_run_inference_devset_handles_missing_qu_kwargs(monkeypatch, tmp_path):
     captured = {}
 

@@ -191,12 +191,23 @@ def endpoint_url(model_key: str) -> str:
     return base + "/v1"
 
 
+def _resolve_encoder_vllm_endpoint(enc_cfg: Any) -> None:
+    if isinstance(enc_cfg, dict) and enc_cfg.get("vllm_endpoint"):
+        enc_cfg["api_base"] = endpoint_url(enc_cfg.pop("vllm_endpoint"))
+
+
 def resolve_vllm_endpoints_in_qu_kwargs(qu_kwargs: dict[str, Any]) -> dict[str, Any]:
-    """If encoder declares `vllm_endpoint: <key>`, replace it with a resolved
-    `api_base`. No-op when absent. Mutates and returns the dict in place."""
-    enc = qu_kwargs.get("encoder")
-    if isinstance(enc, dict) and enc.get("vllm_endpoint"):
-        enc["api_base"] = endpoint_url(enc.pop("vllm_endpoint"))
+    """Resolve logical vLLM endpoint keys in top-level and named encoders.
+
+    If an encoder declares `vllm_endpoint: <key>`, replace it with a live Modal
+    OpenAI-compatible `api_base`. No-op when absent. Mutates and returns the dict
+    in place.
+    """
+    _resolve_encoder_vllm_endpoint(qu_kwargs.get("encoder"))
+    encoders = qu_kwargs.get("encoders")
+    if isinstance(encoders, dict):
+        for enc_cfg in encoders.values():
+            _resolve_encoder_vllm_endpoint(enc_cfg)
     return qu_kwargs
 
 

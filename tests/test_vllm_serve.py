@@ -99,6 +99,30 @@ def test_resolve_vllm_endpoints_rewrites_encoder(monkeypatch):
     assert "vllm_endpoint" not in out["encoder"]
 
 
+def test_resolve_vllm_endpoints_rewrites_named_encoders(monkeypatch):
+    monkeypatch.setattr(
+        vllm_serve, "endpoint_url", lambda key: f"https://fake/{key}/v1"
+    )
+    qu = {
+        "encoders": {
+            "qwen_0_6b": {
+                "backend": "litellm",
+                "api_base": "https://api.deepinfra.com/v1/openai",
+            },
+            "qwen_8b": {
+                "backend": "litellm",
+                "vllm_endpoint": "qwen3-embedding-8b",
+            },
+        }
+    }
+
+    out = vllm_serve.resolve_vllm_endpoints_in_qu_kwargs(qu)
+
+    assert out["encoders"]["qwen_8b"]["api_base"] == "https://fake/qwen3-embedding-8b/v1"
+    assert "vllm_endpoint" not in out["encoders"]["qwen_8b"]
+    assert out["encoders"]["qwen_0_6b"]["api_base"] == "https://api.deepinfra.com/v1/openai"
+
+
 def test_resolve_vllm_endpoints_noop_without_key():
     qu = {"encoder": {"backend": "litellm", "api_base": "https://x/v1"}}
     out = vllm_serve.resolve_vllm_endpoints_in_qu_kwargs(qu)
