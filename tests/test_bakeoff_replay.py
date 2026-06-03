@@ -34,8 +34,9 @@ def test_build_turn_inputs_history_and_recommend_item():
     )
     assert sys_prompt == "SYS"
     roles = [m["role"] for m in chat_history]
-    assert roles == ["user", "music", "assistant"]
-    assert "Buena" in chat_history[1]["content"]
+    assert roles == ["user", "assistant", "assistant"]
+    assert all(r in {"system", "user", "assistant"} for r in roles)
+    assert "Buena" in chat_history[1]["content"]  # t1 (music turn) rewritten via lookup, role normalized
     assert "Rec" in recommend_item
 
 
@@ -51,3 +52,15 @@ def test_generate_for_model_uses_lm():
     recs = generate_for_model(FakeLM(), turns, "SYS", _lookup(), convs)
     assert recs[0]["response"].startswith("resp:")
     assert recs[0]["session_id"] == "s1"
+
+
+def test_build_turn_inputs_normalizes_invalid_roles():
+    _, chat_history, _ = build_turn_inputs(
+        conversations=_conversations(),
+        target_turn_number=2,
+        top_track_id="t9",
+        lookup=_lookup(),
+        system_prompt="SYS",
+    )
+    # no 'music' (or any non-standard) role survives — would 422 on OpenRouter
+    assert all(m["role"] in {"system", "user", "assistant"} for m in chat_history)

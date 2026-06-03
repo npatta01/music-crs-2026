@@ -7,6 +7,12 @@ from typing import Any
 from mcrs.bakeoff.track_lookup import TrackMetadataLookup
 from mcrs.inference_utils import chat_history_parser
 
+_VALID_ROLES = {"system", "user", "assistant"}
+
+
+def _normalize_role(role: str) -> str:
+    return role if role in _VALID_ROLES else "assistant"
+
 
 def build_turn_inputs(
     conversations: list[dict],
@@ -21,6 +27,11 @@ def build_turn_inputs(
     chat_history, _user_query = chat_history_parser(
         conversations, music_crs, target_turn_number
     )
+    # Normalize non-standard roles (e.g., 'music') to 'assistant' for chat API compatibility
+    chat_history = [
+        {"role": _normalize_role(m["role"]), "content": m["content"]}
+        for m in chat_history
+    ]
     recommend_item = lookup.id_to_metadata(top_track_id)
     return system_prompt, chat_history, recommend_item
 
