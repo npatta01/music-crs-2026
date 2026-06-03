@@ -146,6 +146,20 @@ def _lancedb_config():
     )
 
 
+def test_trace_run_metadata_includes_tid_git_sha_and_config_hash(monkeypatch):
+    monkeypatch.setattr(run_inference_devset, "_git_sha", lambda: "abc123")
+    left = OmegaConf.create({"b": 2, "a": {"x": 1}})
+    right = OmegaConf.create({"a": {"x": 1}, "b": 2})
+
+    meta = run_inference_devset._build_trace_run_metadata("ranker_tid", left)
+    same = run_inference_devset._build_trace_run_metadata("ranker_tid", right)
+
+    assert meta["tid"] == "ranker_tid"
+    assert meta["git_sha"] == "abc123"
+    assert len(meta["config_hash"]) == 64
+    assert meta["config_hash"] == same["config_hash"]
+
+
 def test_run_inference_devset_passes_qu_kwargs(monkeypatch, tmp_path):
     captured = {}
 

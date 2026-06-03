@@ -69,8 +69,14 @@ a stable name (`bm25`, `dense.<encoder_id>.<query_id>.<vector_field>`,
 `centroid.<source>.<vector_field>`, `lookup.resolved_artist_discography`,
 `lookup.era_popularity`), the RRF `fused` list, the `final` recommendation (with
 `n_from_fusion` / `n_from_backfill` provenance), and `recommended.top1_track_id`
-(the headline track an explanation would target). The knob is 0 by default, so
-submission/blindset runs pay nothing and write no `branches`.
+(the headline track an explanation would target). Devset trace rows also carry a
+`trace_schema_version` and `run` metadata (`tid`, `git_sha`, `config_hash`).
+Inside `branches`, ranker-first diagnostics include `branch_queries`,
+`branch_status`, and `candidate_filter_summary`: exact query/source descriptors,
+fired/skipped status with skip reasons, and compact candidate-filter counts. The
+trace never writes dense vectors or full per-candidate ranker feature rows. The
+knob is 0 by default, so submission/blindset runs pay nothing and write no
+`branches`.
 
 `scripts/branch_diagnostics.py` reads the trace + ground truth and reports:
 

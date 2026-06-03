@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from mcrs.conversation_state.schema import (
     ConversationStateV0Plus,
     ExplicitRejection,
@@ -970,6 +972,68 @@ def test_branch_traces_off_by_default():
     catalog = _catalog()
     res = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())._compile(_resolve(_state(), catalog))
     assert res.branch_pools == []
+
+
+def test_branch_trace_includes_queries_status_and_filter_summary():
+    """Branch tracing should preserve the runtime facts needed to rebuild
+    ranker datasets offline without depending on RRF-derived features."""
+    catalog = _catalog()
+    retriever = FakeRetriever(
+        text_hits_by_field={
+            "track_name": [
+                ("t-fugazi-1", 4.0),      # release-date filtered
+                ("t-tomwaits-1", 3.0),    # played hard-drop
+                ("t-morphine-1", 2.0),    # explicit artist rejection
+            ],
+            "tag_list": [
+                ("t-morphine-2", 1.0),    # explicit artist rejection
+            ],
+        },
+        embedding_hits=[
+            ("t-filler-1", 0.9),          # release-date filtered
+            ("t-morphine-1", 0.8),        # explicit artist rejection
+        ],
+    )
+    state = _state(
+        turn_intent="smoky lounge",
+        hard_filters=[
+            HardFilter(
+                field="release_date",
+                op="between",
+                start=date(1990, 1, 1),
+                end=date(1999, 12, 31),
+            )
+        ],
+        explicit_rejections=[
+            ExplicitRejection(kind="artist", value="Morphine", source_turn=1),
+        ],
+    )
+    cfg = CompilerConfig(
+        enable_dense=True,
+        branch_trace_topk=10,
+        dense_branches=[
+            DenseBranch(vector_field="metadata_qwen3_embedding_0_6b", query_id="intent"),
+            DenseBranch(vector_field="lyrics_qwen3_embedding_0_6b", query_id="lyric"),
+        ],
+    )
+
+    rs = _resolve(state, catalog, played_track_ids=["t-tomwaits-1"])
+    res = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg)._compile(rs)
+    trace = res.to_trace_dict()
+
+    assert trace["branch_queries"]["bm25"]["clauses"]
+    dense_key = "dense.default.intent.metadata_qwen3_embedding_0_6b"
+    assert trace["branch_queries"][dense_key]["query_text"] == "smoky lounge"
+    lyric_key = "dense.default.lyric.lyrics_qwen3_embedding_0_6b"
+    assert trace["branch_status"][lyric_key]["fired"] is False
+    assert trace["branch_status"][lyric_key]["skip_reason"] == "no_query"
+
+    summary = trace["candidate_filter_summary"]
+    assert summary["raw_union_size"] == 5
+    assert summary["eligible_union_size"] == 0
+    assert summary["release_date_mask_dropped"] == 2
+    assert summary["played_track_dropped"] == 1
+    assert summary["explicit_rejection_dropped"] == 2
 
 
 # ---------------------------------------------------------------------
