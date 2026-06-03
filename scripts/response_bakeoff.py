@@ -44,6 +44,9 @@ def _load_system_prompt(prompts_dir: Path) -> str:
 
 
 def main() -> None:
+    import os
+    if not os.environ.get("OPENROUTER_API_KEY"):
+        raise SystemExit("OPENROUTER_API_KEY is not set; required for OpenRouter model calls.")
     ap = argparse.ArgumentParser()
     ap.add_argument("--predictions", required=True)
     ap.add_argument("--slice", required=True)

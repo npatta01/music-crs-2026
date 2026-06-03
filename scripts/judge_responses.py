@@ -23,12 +23,11 @@ from mcrs.bakeoff.judge import (
 
 
 def _conversation_text(convs: list[dict], turn_number: int) -> str:
-    lines = []
-    for c in convs:
-        if c["turn_number"] >= turn_number:
-            break
-        if c["role"] in ("user", "assistant"):
-            lines.append(f"{c['role']}: {c['content']}")
+    lines = [
+        f"{c['role']}: {c['content']}"
+        for c in convs
+        if c["turn_number"] < turn_number and c["role"] in ("user", "assistant")
+    ]
     return "\n".join(lines)
 
 
@@ -56,6 +55,9 @@ def render_markdown(reports: list[dict]) -> str:
 
 
 def main() -> None:
+    import os
+    if not os.environ.get("OPENROUTER_API_KEY"):
+        raise SystemExit("OPENROUTER_API_KEY is not set; required for OpenRouter model calls.")
     ap = argparse.ArgumentParser()
     ap.add_argument("--responses_dir", default="exp/bakeoff/responses")
     ap.add_argument("--models", default="configs/bakeoff/models.yaml")
