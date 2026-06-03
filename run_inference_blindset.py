@@ -11,6 +11,7 @@ from datasets import load_dataset
 from tqdm import tqdm
 from omegaconf import OmegaConf
 from mcrs.inference_utils import chat_history_parser, resolve_qu_kwargs_placeholders
+from run_inference_devset import _setup_logging, _setup_litellm_cache
 
 
 def _to_plain_dict(value):
@@ -21,23 +22,30 @@ def _to_plain_dict(value):
 
 def main(args):
     """
-    Run batch inference on TalkPlayData-2 test dataset.
+    Run batch inference on a blindset split of TalkPlayData-2.
 
     Args:
         args: Namespace object containing:
             - tid (str): Task/configuration identifier
+            - eval_dataset (str): Evaluation dataset name (e.g. 'blindset_A')
             - batch_size (int): Batch size for inference
-            - save_path (str): Output directory (currently unused)
+            - exp_dir (str): Base directory for saving results
+            - clear_cache (bool): Wipe cache before running
+            - num_shards (int): Total shards (1 = no sharding)
+            - shard_id (int): 0-based shard index
+            - output_suffix (str): Optional suffix appended to output filename
 
     Returns:
-        None. Results are saved to exp/inference/{tid}.json
+        None. Results are saved to {exp_dir}/inference/{eval_dataset}/{tid}{output_suffix}.json
 
     Processing:
         - Loads model configuration from configs/{tid}.yaml
-        - Processes all sessions × 8 turns in batches
+        - Processes each session's final turn in batches
         - Tracks progress with tqdm progress bar
         - Saves comprehensive results for evaluation
     """
+    _setup_logging()
+    _setup_litellm_cache()
     config = OmegaConf.load(f"configs/{args.tid}.yaml")
     if args.clear_cache:
         cache_dir = config.get("cache_dir", "./cache")

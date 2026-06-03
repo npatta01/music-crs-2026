@@ -378,6 +378,41 @@ def test_blindset_main_writes_suffixed_shard_output(tmp_path, monkeypatch):
     assert {r["session_id"] for r in data} == {"s0", "s1"}  # shard 0 of 2 over 4 sessions
 
 
+def test_blindset_main_rejects_out_of_range_shard_id(monkeypatch, tmp_path):
+    module = _load_blindset_module()
+
+    rows = [
+        {"user_id": "u0", "session_id": "s0",
+         "conversations": [{"role": "user", "content": "hi", "turn_number": 1}]}
+    ]
+
+    class _FakeDB(list):
+        def select(self, idx):
+            return _FakeDB(self[i] for i in idx)
+
+    monkeypatch.setattr(module, "load_dataset", lambda *a, **k: _FakeDB(rows))
+    monkeypatch.setattr(module, "load_crs_baseline", lambda **k: object())
+    monkeypatch.setattr(module, "chat_history_parser", lambda conv, crs, tn: ([], "q"))
+
+    cfg = {
+        "lm_type": "dummy", "retrieval_type": "dummy", "item_db_name": "x",
+        "user_db_name": "x", "track_split_types": [], "user_split_types": [],
+        "corpus_types": [], "cache_dir": "./cache", "device": "cpu",
+        "attn_implementation": "eager", "test_dataset_name": "x",
+    }
+    from omegaconf import OmegaConf
+    monkeypatch.setattr(module.OmegaConf, "load", lambda p: OmegaConf.create(cfg))
+
+    import pytest
+    args = SimpleNamespace(
+        tid="foo_blindset_A", eval_dataset="blindset_A", batch_size=2,
+        exp_dir=str(tmp_path), clear_cache=False,
+        num_shards=3, shard_id=5, output_suffix="",
+    )
+    with pytest.raises(ValueError, match="out of range"):
+        module.main(args)
+
+
 def test_blindset_chat_history_parser_resolves_music_turns():
     fake_crs = _FakeCRS()
     conversations = [
