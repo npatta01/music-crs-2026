@@ -142,18 +142,21 @@ KIND_ALIASES = {
 | `litellm.chat_model` | `"openrouter/google/gemma-3-4b-it"` |
 | `litellm.embedding_model` | `"openrouter/openai/text-embedding-3-small"` |
 
-### `_VOLUME_MOUNTS` (`modal/app.py:107`)
+### `_VOLUME_MOUNTS` (`modal/app.py:119`)
 
 ```python
 _VOLUME_MOUNTS = {
-    HF_CACHE_DIR:      hf_cache_vol,
-    EXP_DIR:           results_vol,
-    MODELS_DIR:        models_vol,
-    LITELLM_CACHE_DIR: litellm_cache_vol,
+    HF_CACHE_DIR: hf_cache_vol,
+    EXP_DIR:      results_vol,
+    MODELS_DIR:   models_vol,
+    CACHE_DIR:    cache_vol,   # unified LiteLLM + GPU-encoder cache (/root/cache)
 }
 ```
 
-Used by inference functions to mount all four volumes simultaneously.
+Used by inference functions to mount all four volumes simultaneously. The
+unified `cache_vol` (`music-crs-cache`) is mounted at `CACHE_DIR` (`/root/cache`);
+the LiteLLM file cache lives under `LITELLM_CACHE_DIR` (`/root/cache/litellm`) and
+the GPU-encoder vectors under `EMBEDDING_CACHE_DIR` (`/root/cache/embedding`).
 
 ### `DEFAULT_REMOTE_LANCEDB_URI` (`modal/app.py:114`)
 
