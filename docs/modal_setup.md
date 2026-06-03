@@ -47,7 +47,7 @@ Modal reads this automatically via `modal.Secret.from_dotenv()`. Volumes are cre
 **Smoke test (5 random sessions, fast)**
 
 ```bash
-python run_experiment.py --backend modal --tid v0plus_compiler_image_devset --num_sessions 5
+python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --num_sessions 5
 ```
 
 **Full devset**
@@ -74,7 +74,7 @@ LanceDB FTS runs do not need a GPU. Build the DB locally, upload it to the `musi
 uv run python scripts/build_lancedb_index.py --out-dir cache/lancedb --drop-existing
 uv run modal run modal/app.py::upload_lancedb_index --local-db-dir cache/lancedb --remote-dir lancedb --overwrite
 uv run modal run modal/app.py::smoke_lancedb_query --query "dark atmospheric synthwave" --topk 3
-uv run python run_experiment.py --backend modal --tid v0plus_compiler_image_devset --num_sessions 5
+uv run python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --num_sessions 5
 ```
 
 Use `--overwrite` when replacing an existing Modal index. Modal volume uploads
@@ -149,7 +149,7 @@ uv run python scripts/smoke_litellm_modal_cache.py --skip-embedding --chat-profi
 If you want to bypass the unified wrapper, the underlying Modal entrypoints are still available:
 
 ```bash
-modal run modal/app.py::run_inference --tid v0plus_compiler_image_devset --batch-size 16
+modal run modal/app.py::run_inference --tid v0plus_compiler_all_retrievers_devset --batch-size 16
 modal run modal/app.py::run_inference_blindset --tid v0plus_compiler_blindset_A --batch-size 16 --eval-dataset blindset_A
 ```
 
@@ -241,15 +241,15 @@ dim=2560 cache_hit_second=True vectors_match=True
 
 ### Using in experiment configs
 
-Set `encoder.vllm_endpoint: qwen3-embedding-4b` (or `qwen3-embedding-8b`) in a config YAML. At inference start, `resolve_vllm_endpoints_in_qu_kwargs` resolves this key to the live `api_base` URL. LiteLLM then routes embedding calls through the file cache first; only a cache miss reaches the vLLM endpoint (and wakes the GPU if it has scaled to zero).
+Set `vllm_endpoint: qwen3-embedding-4b` (or `qwen3-embedding-8b`) on a named encoder in a config YAML. At inference start, `resolve_vllm_endpoints_in_qu_kwargs` resolves this key to the live `api_base` URL. LiteLLM then routes embedding calls through the file cache first; only a cache miss reaches the vLLM endpoint (and wakes the GPU if it has scaled to zero).
 
 ### Important caveat: re-indexing required for devset A/B runs
 
-The current canonical config (`v0plus_compiler_image_devset`) has `enable_dense: false`. Its dense LanceDB columns were indexed with the 0.6B model (1024-dim vectors).
+The current canonical config (`v0plus_compiler_all_retrievers_devset`) enables dense branches for both the shipped 0.6B Qwen columns and the generated 8B Qwen columns.
 
-The provided A/B configs (`v0plus_compiler_image_qwen3emb4b_vllm_devset` / `_8b_`) point the encoder at the 4B (2560-dim) or 8B (4096-dim) Qwen3 models. **These configs will NOT exercise the text dense encoder during a devset run unless two conditions are met:**
+The 8B branches will not run correctly unless both conditions are met:
 
 1. `enable_dense: true` is set in the config.
-2. The LanceDB catalog has been re-indexed with matching embedding columns (2560-dim for 4B, 4096-dim for 8B).
+2. The LanceDB catalog has been re-indexed with matching `metadata_qwen3_embedding_8b` and `attributes_qwen3_embedding_8b` columns.
 
-Without re-indexing, the dense retrieval branch will either be skipped or produce dimension-mismatch errors. The `smoke` entrypoint is the direct, cost-controlled way to verify that serving and caching are working — do not expect meaningful devset A/B numbers without a full catalog re-index.
+Without re-indexing, compiler construction fails fast with a missing vector-field error. The `smoke` entrypoint is the direct, cost-controlled way to verify that serving and caching are working; do not expect meaningful devset numbers without a full catalog re-index.

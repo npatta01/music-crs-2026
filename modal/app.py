@@ -10,7 +10,7 @@ Secret (.env in project root):
 
 Usage:
     # Smoke test (5 sessions, with matching local evaluation subset)
-    python run_experiment.py --backend modal --tid v0plus_compiler_image_devset --num_sessions 5
+    python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --num_sessions 5
 
     # Latest full devset coverage experiment
     python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --batch_size 64
@@ -1030,7 +1030,7 @@ def _build_lancedb_with_vllm_qwen_embeddings(
 
 @app.local_entrypoint()
 def run_inference(
-    tid: str = "v0plus_compiler_image_devset",
+    tid: str = "v0plus_compiler_all_retrievers_devset",
     batch_size: int = DEVSET_BATCH_SIZE,
     num_sessions: int = 0,
     clear_cache: bool = False,
@@ -1138,7 +1138,7 @@ def run_inference_blindset(
 
 @app.local_entrypoint()
 def run_evaluate(
-    tid: str = "v0plus_compiler_image_devset",
+    tid: str = "v0plus_compiler_all_retrievers_devset",
     split: str = "devset",
 ):
     """Score predictions using the evaluator submodule (CPU)."""

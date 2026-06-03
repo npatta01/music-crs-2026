@@ -241,8 +241,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tid",
         type=str,
-        default="v0plus_compiler_image_devset",
-        help="Task identifier matching a config file (e.g., 'v0plus_compiler_image_devset' loads configs/v0plus_compiler_image_devset.yaml)"
+        default="v0plus_compiler_all_retrievers_devset",
+        help="Task identifier matching a config file (e.g., 'v0plus_compiler_all_retrievers_devset' loads configs/v0plus_compiler_all_retrievers_devset.yaml)"
     )
     parser.add_argument(
         "--batch_size",

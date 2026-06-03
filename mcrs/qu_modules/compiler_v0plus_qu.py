@@ -1035,6 +1035,23 @@ def build_v0plus_compiler_qu(
                     f"not present in `encoders` map. Available: {sorted(encoders)}."
                 )
 
+        # Validate configured vector fields before the inference loop starts.
+        # A stale LanceDB table missing newly generated embedding columns would
+        # otherwise fail on the first ANN query after extractor/encoder work.
+        configured_vector_fields: set[str] = set()
+        if comp_cfg.get("enable_dense", True):
+            configured_vector_fields.update(b.vector_field for b in dense_branches or [])
+        configured_vector_fields.update(b.vector_field for b in centroid_only_branches or [])
+        if configured_vector_fields:
+            supported_vector_fields = set(retriever.supported_vector_fields)
+            missing_vector_fields = sorted(configured_vector_fields - supported_vector_fields)
+            if missing_vector_fields:
+                raise ValueError(
+                    "Configured v0+ vector field(s) are missing from the LanceDB index: "
+                    f"{missing_vector_fields}. Rebuild/re-upload the LanceDB catalog with "
+                    "matching embedding columns before running this config."
+                )
+
         compiler = V0PlusCompiler(
             catalog,
             retriever,
