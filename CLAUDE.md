@@ -29,7 +29,7 @@ uvx hf auth login   # HF access required for datasets + Llama
 
 ```bash
 # Preferred: unified experiment command (local)
-python run_experiment.py --backend local --tid v0plus_compiler_image_devset --batch_size 16
+python run_experiment.py --backend local --tid v0plus_compiler_all_retrievers_devset --batch_size 16
 
 # Preferred: unified experiment command (Modal)
 python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --batch_size 64
@@ -38,7 +38,7 @@ python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_de
 python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --batch_size 64 --num_shards 5
 
 # Low-level inference scripts still work
-python run_inference_devset.py --tid v0plus_compiler_image_devset --batch_size 16
+python run_inference_devset.py --tid v0plus_compiler_all_retrievers_devset --batch_size 16
 python run_inference_blindset.py --tid v0plus_compiler_blindset_A --eval_dataset blindset_A --batch_size 16
 
 # Package submission
@@ -66,5 +66,5 @@ See `tips/` for directions: better item representations, reranker modules, gener
 - Use [`experiments/README.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/README.md) for the current config/report surface.
 - Use [`experiments/experiment_log.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md) for the concise current-state decision log.
 - [`leaderboard.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/leaderboard.md) is the compact devset table; [`changelog.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/changelog.md) links current outcomes to PRs.
-- Keep only current configs under `configs/`: `v0plus_compiler_image_devset`, `v0plus_compiler_all_retrievers_devset`, and `v0plus_compiler_blindset_A`.
+- Keep only current configs under `configs/`: `v0plus_compiler_all_retrievers_devset` and `v0plus_compiler_blindset_A`.
 - If working inside `experiments/`, read the local [`experiments/CLAUDE.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/CLAUDE.md) and follow its prune-first conventions.

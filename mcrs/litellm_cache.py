@@ -23,9 +23,18 @@ class FileCache(BaseCache):
         self.directory = Path(directory)
         self.directory.mkdir(parents=True, exist_ok=True)
 
+    @staticmethod
+    def _shard(key: str) -> tuple[str, str]:
+        # litellm keys look like "<namespace>:<sha256hex>". Shard on the hash, not
+        # the raw key — the namespace prefix is constant ("music-crs:"), so sharding
+        # on the key collapses every entry into a single directory (mu/si/).
+        digest = key.rsplit(":", 1)[-1]
+        return digest[:2], digest[2:4]
+
     def _path(self, key: str) -> Path:
         key = self._validate_key(key)
-        return self.directory / key[:2] / key[2:4] / f"{key}.json"
+        shard_a, shard_b = self._shard(key)
+        return self.directory / shard_a / shard_b / f"{key}.json"
 
     @staticmethod
     def _validate_key(key: str) -> str:

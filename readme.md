@@ -97,8 +97,8 @@ uv run modal run other/modal_get_started.py
 The preferred operator command is the unified experiment wrapper:
 
 ```bash
-# Current score-anchor devset run + local evaluation
-python run_experiment.py --backend local --tid v0plus_compiler_image_devset --batch_size 16
+# Current all-retrievers devset run + local evaluation
+python run_experiment.py --backend local --tid v0plus_compiler_all_retrievers_devset --batch_size 16
 
 # Latest all-retrievers coverage run + download into local exp/ + local evaluation
 python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --batch_size 64
@@ -113,7 +113,7 @@ The low-level inference scripts remain available when you want to run only one s
 
 ```bash
 # Dev set inference only
-python run_inference_devset.py --tid v0plus_compiler_image_devset --batch_size 16
+python run_inference_devset.py --tid v0plus_compiler_all_retrievers_devset --batch_size 16
 
 # Blind set inference
 python run_inference_blindset.py --tid v0plus_compiler_blindset_A --eval_dataset blindset_A --batch_size 16
@@ -137,8 +137,8 @@ If you do not use `all_tracks`, your evaluation may be considered invalid.
 
 
 ```bash
-# Current score anchor
-python run_experiment.py --backend local --tid v0plus_compiler_image_devset --batch_size 16
+# Current all-retrievers devset run
+python run_experiment.py --backend local --tid v0plus_compiler_all_retrievers_devset --batch_size 16
 
 # Latest coverage experiment
 python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --batch_size 64
@@ -150,7 +150,7 @@ Rewrite-based QU experiments may also emit sidecars alongside the prediction fil
 
 - `exp/inference/devset/{tid}_rewrite_audit.jsonl`
 - `exp/inference/devset/{tid}_rewrite_stats.json`
-- Modal shard runs may also emit `exp/inference/devset/{tid}_trace.json`
+- Modal shard runs may also emit `exp/inference/devset/{tid}_trace.jsonl`
 
 To pull Modal-run artifacts back to your machine, use the bulk downloader:
 
@@ -170,7 +170,7 @@ If you are using Codex with this repo, the `download-artifacts` skill wraps the 
 The downloader defaults to `evaluator/exp/` and mirrors any available remote:
 
 - `inference/<split>/<tid>.json`
-- `inference/<split>/<tid>_trace.json`
+- `inference/<split>/<tid>_trace.jsonl`
 - `inference/<split>/<tid>_rewrite_audit.jsonl`
 - `inference/<split>/<tid>_rewrite_stats.json`
 - `scores/<split>/<tid>.json`

@@ -26,15 +26,19 @@ def _key(row: dict) -> tuple:
 
 
 def _load_shards(
-    base: Path, tid: str, run_scope: str, num_shards: int, kind: str
+    base: Path, tid: str, run_scope: str, num_shards: int, suffix: str, jsonl: bool
 ) -> list[tuple[int, Path, list[dict]]]:
     out = []
     for shard_id in range(num_shards):
-        shard_path = base / f"{tid}{run_scope}.shard_{shard_id}{kind}.json"
+        shard_path = base / f"{tid}{run_scope}.shard_{shard_id}{suffix}"
         if not shard_path.exists():
             raise FileNotFoundError(f"Missing shard output: {shard_path}")
         with open(shard_path) as f:
-            out.append((shard_id, shard_path, json.load(f)))
+            if jsonl:
+                rows = [json.loads(line) for line in f if line.strip()]
+            else:
+                rows = json.load(f)
+        out.append((shard_id, shard_path, rows))
     return out
 
 
@@ -45,7 +49,7 @@ def _traces_present(base: Path, tid: str, run_scope: str, num_shards: int) -> bo
     set (some shards have traces, some don't) means a corrupt/incomplete run,
     so fail loudly rather than silently merging a subset.
     """
-    paths = [base / f"{tid}{run_scope}.shard_{i}_trace.json" for i in range(num_shards)]
+    paths = [base / f"{tid}{run_scope}.shard_{i}_trace.jsonl" for i in range(num_shards)]
     present = [p for p in paths if p.exists()]
     if not present:
         return False
@@ -116,21 +120,23 @@ def main(argv: list[str] | None = None):
     base = Path(args.exp_dir) / "inference" / args.split
     run_scope = f".run_{args.run_id}" if args.run_id else ""
 
-    # Predictions are always required.
-    pred_shards = _load_shards(base, args.tid, run_scope, args.num_shards, "")
+    # Predictions are always required (a JSON array per shard).
+    pred_shards = _load_shards(base, args.tid, run_scope, args.num_shards, ".json", False)
     pred_rows = _merge(pred_shards, label="predictions", tid=args.tid)
     pred_out = base / f"{args.tid}.json"
     with open(pred_out, "w", encoding="utf-8") as f:
         json.dump(pred_rows, f, ensure_ascii=False)
     print(f"Wrote {pred_out}  ({len(pred_rows)} unique rows from {args.num_shards} shards)")
 
-    # Traces are optional (devset has them; blindset does not).
+    # Traces are optional: devset writes a JSONL sidecar per shard; blindset
+    # writes none. Merge them as JSONL when present.
     if _traces_present(base, args.tid, run_scope, args.num_shards):
-        trace_shards = _load_shards(base, args.tid, run_scope, args.num_shards, "_trace")
+        trace_shards = _load_shards(base, args.tid, run_scope, args.num_shards, "_trace.jsonl", True)
         trace_rows = _merge(trace_shards, label="traces", tid=args.tid)
-        trace_out = base / f"{args.tid}_trace.json"
+        trace_out = base / f"{args.tid}_trace.jsonl"
         with open(trace_out, "w", encoding="utf-8") as f:
-            json.dump(trace_rows, f, ensure_ascii=False)
+            for row in trace_rows:
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
         print(f"Wrote {trace_out}  ({len(trace_rows)} unique rows from {args.num_shards} shards)")
     else:
         print(f"No trace shards for {args.tid} — skipping trace merge.")

@@ -40,6 +40,19 @@ def _to_plain_dict(value):
     return OmegaConf.to_container(value, resolve=True)
 
 
+def _encoder_has_vllm_endpoint(value) -> bool:
+    return isinstance(value, dict) and bool(value.get("vllm_endpoint"))
+
+
+def _qu_kwargs_has_vllm_endpoint(qu_kwargs: dict) -> bool:
+    if _encoder_has_vllm_endpoint(qu_kwargs.get("encoder")):
+        return True
+    encoders = qu_kwargs.get("encoders")
+    if not isinstance(encoders, dict):
+        return False
+    return any(_encoder_has_vllm_endpoint(value) for value in encoders.values())
+
+
 def _setup_litellm_cache() -> None:
     """Configure LiteLLM cache when MCRS_LITELLM_CACHE_DIR is set.
 
@@ -90,6 +103,18 @@ def main(args):
         qu_kwargs = OmegaConf.to_container(raw_qu_kwargs, resolve=True) or {}
     else:
         qu_kwargs = dict(raw_qu_kwargs)
+    # Resolve logical vLLM endpoints into live Modal web URLs. No-op when absent;
+    # only loads modal/vllm_serve.py (and Modal SDK) when a vllm_endpoint is
+    # declared on either the legacy top-level encoder or a named encoder.
+    if _qu_kwargs_has_vllm_endpoint(qu_kwargs):
+        import importlib.util
+        from pathlib import Path as _Path
+
+        _vs_path = _Path(__file__).resolve().parent / "modal" / "vllm_serve.py"
+        _vs_spec = importlib.util.spec_from_file_location("mcrs_vllm_serve", _vs_path)
+        _vs_mod = importlib.util.module_from_spec(_vs_spec)
+        _vs_spec.loader.exec_module(_vs_mod)
+        _vs_mod.resolve_vllm_endpoints_in_qu_kwargs(qu_kwargs)
     music_crs = load_crs_baseline(
         lm_type=config.lm_type,
         retrieval_type=config.retrieval_type,
@@ -198,13 +223,16 @@ def main(args):
     # `output_suffix` is sharding-time metadata; programmatic callers may not set it.
     output_suffix = getattr(args, "output_suffix", "")
     out_path = f"{args.exp_dir}/inference/devset/{args.tid}{output_suffix}.json"
-    # Trace sidecar — `default=str` handles datetime.date fields inside the
-    # extracted v0+ state's hard_filters.start/end without a custom encoder.
-    trace_path = f"{args.exp_dir}/inference/devset/{args.tid}{output_suffix}_trace.json"
+    # Trace sidecar — JSONL (one record per line) so it streams/diffs cheaply
+    # and shards concatenate by appending lines. `default=str` handles
+    # datetime.date fields inside the extracted v0+ state's hard_filters.start/end
+    # without a custom encoder.
+    trace_path = f"{args.exp_dir}/inference/devset/{args.tid}{output_suffix}_trace.jsonl"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(inference_results, f, ensure_ascii=False)
     with open(trace_path, "w", encoding="utf-8") as f:
-        json.dump(trace_results, f, ensure_ascii=False, default=str)
+        for record in trace_results:
+            f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -213,8 +241,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tid",
         type=str,
-        default="v0plus_compiler_image_devset",
-        help="Task identifier matching a config file (e.g., 'v0plus_compiler_image_devset' loads configs/v0plus_compiler_image_devset.yaml)"
+        default="v0plus_compiler_all_retrievers_devset",
+        help="Task identifier matching a config file (e.g., 'v0plus_compiler_all_retrievers_devset' loads configs/v0plus_compiler_all_retrievers_devset.yaml)"
     )
     parser.add_argument(
         "--batch_size",

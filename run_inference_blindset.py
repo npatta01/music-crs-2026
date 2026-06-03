@@ -20,6 +20,19 @@ def _to_plain_dict(value):
     return OmegaConf.to_container(value, resolve=True)
 
 
+def _encoder_has_vllm_endpoint(value) -> bool:
+    return isinstance(value, dict) and bool(value.get("vllm_endpoint"))
+
+
+def _qu_kwargs_has_vllm_endpoint(qu_kwargs: dict) -> bool:
+    if _encoder_has_vllm_endpoint(qu_kwargs.get("encoder")):
+        return True
+    encoders = qu_kwargs.get("encoders")
+    if not isinstance(encoders, dict):
+        return False
+    return any(_encoder_has_vllm_endpoint(value) for value in encoders.values())
+
+
 def main(args):
     """
     Run batch inference on a blindset split of TalkPlayData-2.
@@ -60,6 +73,18 @@ def main(args):
         qu_kwargs = OmegaConf.to_container(raw_qu_kwargs, resolve=True) or {}
     else:
         qu_kwargs = dict(raw_qu_kwargs)
+    # Resolve logical vLLM endpoints into live Modal web URLs. No-op when absent;
+    # only loads modal/vllm_serve.py (and Modal SDK) when a vllm_endpoint is
+    # declared on either the legacy top-level encoder or a named encoder.
+    if _qu_kwargs_has_vllm_endpoint(qu_kwargs):
+        import importlib.util
+        from pathlib import Path as _Path
+
+        _vs_path = _Path(__file__).resolve().parent / "modal" / "vllm_serve.py"
+        _vs_spec = importlib.util.spec_from_file_location("mcrs_vllm_serve", _vs_path)
+        _vs_mod = importlib.util.module_from_spec(_vs_spec)
+        _vs_spec.loader.exec_module(_vs_mod)
+        _vs_mod.resolve_vllm_endpoints_in_qu_kwargs(qu_kwargs)
     music_crs = load_crs_baseline(
         lm_type=config.lm_type,
         retrieval_type=config.retrieval_type,

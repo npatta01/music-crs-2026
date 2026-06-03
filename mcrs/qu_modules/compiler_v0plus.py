@@ -742,6 +742,41 @@ class V0PlusCompiler:
             return None
         return "; ".join(text_parts)
 
+    def _build_metadata_query_string(self, rs: ResolvedConversationState) -> str | None:
+        """`query_id="metadata"` — metadata-column query string.
+
+        Matches catalog metadata documents (track title, artist, album) while
+        keeping explicit extracted tags out of this branch. Tags stay in the
+        attributes branch, whose item documents are tag-list based.
+        """
+        state = rs.state
+        text_parts: list[str] = []
+        if state.turn_intent.strip():
+            text_parts.append(state.turn_intent.strip())
+
+        artists = [
+            me.value for me in state.mentioned_entities
+            if me.sentiment >= 0 and me.type == "artist"
+        ]
+        albums = [
+            me.value for me in state.mentioned_entities
+            if me.sentiment >= 0 and me.type == "album"
+        ]
+        tracks = [
+            me.value for me in state.mentioned_entities
+            if me.sentiment >= 0 and me.type == "track"
+        ]
+        if artists:
+            text_parts.append("artists: " + ", ".join(artists))
+        if albums:
+            text_parts.append("albums: " + ", ".join(albums))
+        if tracks:
+            text_parts.append("tracks: " + ", ".join(tracks))
+
+        if not text_parts:
+            return None
+        return "; ".join(text_parts)
+
     def _build_sonic_query_string(self, rs: ResolvedConversationState) -> str | None:
         """`query_id="sonic"` — CLAP-music-shaped query string.
 
@@ -940,6 +975,7 @@ class V0PlusCompiler:
         """
         return {
             "intent": self._build_dense_query_string,
+            "metadata": self._build_metadata_query_string,
             "sonic": self._build_sonic_query_string,
             "visual": self._build_visual_query_string,
             "sonic_nl": self._build_sonic_nl_query_string,

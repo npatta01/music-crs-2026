@@ -774,6 +774,34 @@ def test_routing_boost_survives_yaml_allowlist():
     assert qu.compiler.cfg.routing_boost == {"lyric_search": 4.0}
 
 
+def test_build_qu_rejects_missing_configured_vector_fields():
+    catalog = _catalog()
+
+    with pytest.raises(ValueError, match="metadata_qwen3_embedding_8b"):
+        build_v0plus_compiler_qu(
+            qu_kwargs={
+                "compiler": {
+                    "enable_dense": True,
+                    "dense_branches": [
+                        {
+                            "vector_field": "metadata_qwen3_embedding_8b",
+                            "encoder_id": "qwen_8b",
+                            "query_id": "metadata",
+                        }
+                    ],
+                }
+            },
+            _overrides={
+                "catalog": catalog,
+                "matcher": RapidfuzzCatalogMatcher(catalog),
+                "encoders": {"qwen_8b": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5])},
+                # FakeRetriever only advertises metadata_qwen3_embedding_0_6b.
+                "retriever": FakeRetriever(),
+                "extractor": _FakeExtractor(state=_state()),
+            },
+        )
+
+
 def test_resolve_prompt_fns_uses_current_prompt():
     from mcrs.qu_modules.compiler_v0plus_qu import _resolve_prompt_fns
     from mcrs.conversation_state.prompts import current
@@ -792,6 +820,45 @@ def test_resolve_prompt_fns_keeps_previous_reference_prompt():
         bm, schema = _resolve_prompt_fns(alias)
         assert bm is previous.build_messages
         assert schema is previous.json_schema_for_response_format
+
+
+def test_litellm_encoder_forwards_extra_params():
+    from mcrs.qu_modules.compiler_v0plus_qu import _build_encoder
+
+    enc = _build_encoder(
+        {
+            "backend": "litellm",
+            "model_name": "openai/Qwen/Qwen3-Embedding-4B",
+            "api_base": "https://fake/v1",
+            "api_key": "k",
+            "extra_params": {"timeout": 600},
+        }
+    )
+    assert enc.extra_params == {"timeout": 600}
+
+
+def test_litellm_encoder_forwards_cache_and_query_instruct():
+    from mcrs.qu_modules.compiler_v0plus_qu import _build_encoder
+
+    instruct = (
+        "Instruct: Given a music recommendation conversation, retrieve relevant "
+        "track metadata passages.\nQuery: "
+    )
+    enc = _build_encoder(
+        {
+            "backend": "litellm",
+            "model_name": "openai/Qwen/Qwen3-Embedding-8B",
+            "api_base": "https://fake/v1",
+            "api_key": "k",
+            "encoding_format": "float",
+            "cache": {"ttl": 86400},
+            "query_instruct": instruct,
+        }
+    )
+
+    assert enc.cache == {"ttl": 86400}
+    assert enc.query_instruct == instruct
+    assert enc.build_request_kwargs(["state query"])["input"] == [instruct + "state query"]
 
 
 def test_openrouter_response_format_goes_in_extra_body_with_require_parameters():

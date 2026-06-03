@@ -294,6 +294,10 @@ def test_supported_text_and_vector_fields_exposed(monkeypatch):
 
     assert retriever.supported_text_fields == frozenset(BM25_EXPERIMENTAL_FIELDS)
     assert "metadata_qwen3_embedding_0_6b" in retriever.supported_vector_fields
+    assert "metadata_qwen3_embedding_4b" in retriever.supported_vector_fields
+    assert "attributes_qwen3_embedding_4b" in retriever.supported_vector_fields
+    assert "metadata_qwen3_embedding_8b" in retriever.supported_vector_fields
+    assert "attributes_qwen3_embedding_8b" in retriever.supported_vector_fields
 
 
 def test_lancedb_retriever_satisfies_retriever_protocol(monkeypatch):

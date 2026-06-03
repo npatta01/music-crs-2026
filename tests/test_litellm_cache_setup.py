@@ -57,6 +57,23 @@ def test_file_cache_uses_hash_prefixed_layout_and_rejects_path_separators(tmp_pa
         cache._path("ab/cd")
 
 
+def test_file_cache_shards_on_hash_not_namespace_prefix(tmp_path):
+    from mcrs.litellm_cache import FileCache
+
+    cache = FileCache(tmp_path)
+
+    # litellm keys are "<namespace>:<sha256hex>". Sharding must use the hash, not
+    # the constant namespace prefix — otherwise every entry collapses into one
+    # directory (e.g. all "music-crs:*" keys land in mu/si/).
+    k1 = "music-crs:ab12" + "0" * 60
+    k2 = "music-crs:cd34" + "0" * 60
+    assert cache._path(k1).parent == tmp_path / "ab" / "12"
+    assert cache._path(k2).parent == tmp_path / "cd" / "34"
+    assert cache._path(k1).parent != cache._path(k2).parent
+    # filename keeps the full namespaced key so different namespaces don't collide
+    assert cache._path(k1).name == f"{k1}.json"
+
+
 def test_file_cache_async_set_cache_pipeline_writes_all_entries(tmp_path):
     from mcrs.litellm_cache import FileCache
 

@@ -23,6 +23,13 @@ def _write(base: Path, name: str, rows: list[dict]) -> None:
     (base / name).write_text(json.dumps(rows), encoding="utf-8")
 
 
+def _write_jsonl(base: Path, name: str, rows: list[dict]) -> None:
+    base.mkdir(parents=True, exist_ok=True)
+    (base / name).write_text(
+        "".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8"
+    )
+
+
 def _pred(session_id: str, turn: int) -> dict:
     return {"session_id": session_id, "turn_number": turn,
             "predicted_track_ids": ["t1"], "predicted_response": "r"}
@@ -38,8 +45,8 @@ def test_merge_run_scoped_devset_predictions_and_traces(tmp_path):
     rid = "20260603T074512Z-a3f91c"
     _write(base, f"foo_devset.run_{rid}.shard_0.json", [_pred("s0", 1)])
     _write(base, f"foo_devset.run_{rid}.shard_1.json", [_pred("s1", 1)])
-    _write(base, f"foo_devset.run_{rid}.shard_0_trace.json", [_trace("s0", 1)])
-    _write(base, f"foo_devset.run_{rid}.shard_1_trace.json", [_trace("s1", 1)])
+    _write_jsonl(base, f"foo_devset.run_{rid}.shard_0_trace.jsonl", [_trace("s0", 1)])
+    _write_jsonl(base, f"foo_devset.run_{rid}.shard_1_trace.jsonl", [_trace("s1", 1)])
 
     module.main([
         "--tid", "foo_devset", "--num_shards", "2", "--run_id", rid,
@@ -47,7 +54,8 @@ def test_merge_run_scoped_devset_predictions_and_traces(tmp_path):
     ])
 
     preds = json.loads((base / "foo_devset.json").read_text())
-    traces = json.loads((base / "foo_devset_trace.json").read_text())
+    trace_lines = (base / "foo_devset_trace.jsonl").read_text().splitlines()
+    traces = [json.loads(line) for line in trace_lines if line.strip()]
     assert {r["session_id"] for r in preds} == {"s0", "s1"}
     assert {r["session_id"] for r in traces} == {"s0", "s1"}
 
@@ -81,4 +89,4 @@ def test_merge_blindset_without_traces(tmp_path):
 
     preds = json.loads((base / "foo_blindset_A.json").read_text())
     assert {r["session_id"] for r in preds} == {"s0", "s1"}
-    assert not (base / "foo_blindset_A_trace.json").exists()
+    assert not (base / "foo_blindset_A_trace.jsonl").exists()

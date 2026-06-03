@@ -55,6 +55,12 @@ LANCEDB_FTS_TEXT_FIELDS = (
     "release_decade_text",
     "tag_list_text",
 )
+GENERATED_QWEN_EMBEDDING_FIELDS = (
+    "metadata-qwen3_embedding_4b",
+    "attributes-qwen3_embedding_4b",
+    "metadata-qwen3_embedding_8b",
+    "attributes-qwen3_embedding_8b",
+)
 
 
 @dataclass(frozen=True)
@@ -129,6 +135,7 @@ def build_track_record(
     embedding_row: Mapping[str, Any] | None = None,
     vector_dims: Mapping[str, int] | None = None,
     include_embeddings: bool = True,
+    embedding_fields: Iterable[str] = EMBEDDING_FIELDS,
 ) -> dict[str, Any]:
     """Merge one metadata row and optional embedding row into a LanceDB record."""
     record: dict[str, Any] = {"track_id": str(metadata_row["track_id"])}
@@ -146,7 +153,7 @@ def build_track_record(
     if not include_embeddings:
         return record
 
-    for raw_name in EMBEDDING_FIELDS:
+    for raw_name in embedding_fields:
         field_name = milvus_safe_field_name(raw_name)
         vector = None if embedding_row is None else _normalize_embedding(embedding_row.get(raw_name))
         has_vector = vector is not None
@@ -165,6 +172,7 @@ def iter_track_records(
     embedding_rows: Iterable[Mapping[str, Any]] | None = None,
     vector_dims: Mapping[str, int] | None = None,
     include_embeddings: bool = False,
+    embedding_fields: Iterable[str] = EMBEDDING_FIELDS,
 ):
     """Yield LanceDB records, preserving metadata-only rows."""
     metadata_map = {str(row["track_id"]): row for row in metadata_rows}
@@ -190,6 +198,7 @@ def iter_track_records(
             embedding_row,
             vector_dims=vector_dims,
             include_embeddings=True,
+            embedding_fields=embedding_fields,
         )
 
     for track_id, metadata_row in metadata_map.items():
@@ -199,6 +208,7 @@ def iter_track_records(
                 embedding_row=None,
                 vector_dims=vector_dims,
                 include_embeddings=True,
+                embedding_fields=embedding_fields,
             )
 
 
@@ -230,6 +240,51 @@ def _write_manifest(db_uri: str, summary: LanceDbBuildSummary) -> None:
     path.write_text(json.dumps(asdict(summary), indent=2), encoding="utf-8")
 
 
+def _merge_extra_embedding_rows(
+    embedding_rows: Iterable[Mapping[str, Any]],
+    extra_embedding_rows: Iterable[Mapping[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    rows_by_track_id: dict[str, dict[str, Any]] = {
+        str(row["track_id"]): dict(row) for row in embedding_rows
+    }
+    if extra_embedding_rows is None:
+        return list(rows_by_track_id.values())
+
+    for row in extra_embedding_rows:
+        track_id = str(row["track_id"])
+        merged = rows_by_track_id.setdefault(track_id, {"track_id": track_id})
+        merged.update(dict(row))
+    return list(rows_by_track_id.values())
+
+
+def _infer_extra_vector_dims(
+    embedding_rows: Iterable[Mapping[str, Any]],
+    embedding_fields: Iterable[str],
+    vector_dims: dict[str, int],
+) -> None:
+    for row in embedding_rows:
+        for raw_name in embedding_fields:
+            field_name = milvus_safe_field_name(raw_name)
+            vector = _normalize_embedding(row.get(raw_name))
+            if vector is None:
+                continue
+            if field_name not in vector_dims:
+                vector_dims[field_name] = len(vector)
+            elif vector_dims[field_name] != len(vector):
+                raise ValueError(
+                    f"Inconsistent dimension for {raw_name}: "
+                    f"expected {vector_dims[field_name]}, got {len(vector)}"
+                )
+
+    missing_dims = [
+        raw_name
+        for raw_name in embedding_fields
+        if milvus_safe_field_name(raw_name) not in vector_dims
+    ]
+    if missing_dims:
+        raise ValueError(f"Unable to infer dimensions for embedding fields: {missing_dims}")
+
+
 def build_track_lancedb_table(
     db_uri: str = DEFAULT_LANCEDB_URI,
     table_name: str = DEFAULT_LANCEDB_TABLE_NAME,
@@ -239,6 +294,8 @@ def build_track_lancedb_table(
     include_embeddings: bool = True,
     drop_existing: bool = False,
     batch_size: int = 1024,
+    extra_embedding_rows: Iterable[Mapping[str, Any]] | None = None,
+    extra_embedding_fields: Iterable[str] | None = None,
 ) -> LanceDbBuildSummary:
     """Build a local LanceDB table and FTS indexes for the track catalog."""
     db_path = Path(db_uri)
@@ -250,10 +307,16 @@ def build_track_lancedb_table(
     embedding_rows = None
     vector_dims = None
     metadata_only_row_count = 0
+    embedding_fields = tuple(EMBEDDING_FIELDS)
     if include_embeddings:
-        embedding_rows = list(load_track_embedding_rows(embeddings_dataset_name, split))
-        plan = build_track_collection_plan(metadata_rows, embedding_rows)
-        vector_dims = plan.vector_dims
+        base_embedding_rows = list(load_track_embedding_rows(embeddings_dataset_name, split))
+        plan = build_track_collection_plan(metadata_rows, base_embedding_rows)
+        embedding_rows = _merge_extra_embedding_rows(base_embedding_rows, extra_embedding_rows)
+        extra_embedding_fields = tuple(extra_embedding_fields or ())
+        embedding_fields = tuple(EMBEDDING_FIELDS) + extra_embedding_fields
+        vector_dims = dict(plan.vector_dims)
+        if extra_embedding_fields:
+            _infer_extra_vector_dims(embedding_rows, extra_embedding_fields, vector_dims)
         metadata_only_row_count = plan.metadata_only_row_count
 
     db = connect_lancedb(str(db_path))
@@ -263,6 +326,7 @@ def build_track_lancedb_table(
             embedding_rows=embedding_rows,
             vector_dims=vector_dims,
             include_embeddings=include_embeddings,
+            embedding_fields=embedding_fields,
         ),
         batch_size=batch_size,
     )

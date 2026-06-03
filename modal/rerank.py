@@ -301,7 +301,7 @@ def rerank(
 
     base_dir = Path(exp_dir) / "inference" / "devset"
     pred_path = base_dir / f"{base_tid}.json"
-    trace_path = base_dir / f"{base_tid}_trace.json"
+    trace_path = base_dir / f"{base_tid}_trace.jsonl"
     if not pred_path.exists():
         raise SystemExit(f"predictions not found: {pred_path}")
     if not trace_path.exists():
@@ -310,7 +310,7 @@ def rerank(
     print(f"loading predictions: {pred_path}")
     preds = json.loads(pred_path.read_text())
     print(f"loading traces:      {trace_path}")
-    trace_rows = json.loads(trace_path.read_text())
+    trace_rows = [json.loads(line) for line in trace_path.read_text().splitlines() if line.strip()]
 
     states: dict = {}
     played_by_turn: dict = {}
