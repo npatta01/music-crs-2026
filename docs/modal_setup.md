@@ -253,3 +253,31 @@ The 8B branches will not run correctly unless both conditions are met:
 2. The LanceDB catalog has been re-indexed with matching `metadata_qwen3_embedding_8b` and `attributes_qwen3_embedding_8b` columns.
 
 Without re-indexing, compiler construction fails fast with a missing vector-field error. The `smoke` entrypoint is the direct, cost-controlled way to verify that serving and caching are working; do not expect meaningful devset numbers without a full catalog re-index.
+
+### Fresh catalog build (Qwen embedding columns)
+
+Rebuild the Modal LanceDB catalog from scratch — metadata + FTS + the shipped
+0.6B Qwen columns + generated 4B/8B Qwen embedding columns — with per-item
+vLLM-cached embeddings, then copy it into the `music-crs-models` volume:
+
+```bash
+scripts/build_db_modal.sh                      # defaults: 4b,8b × metadata,attributes
+scripts/build_db_modal.sh --max-in-flight 48   # pass-through args to the entrypoint
+```
+
+**Always launch the build through `scripts/build_db_modal.sh`, not a bare
+`modal run`.** The wrapper hard-codes `modal run --detach`. The build is
+long-running (~188k per-item embedding lookups) while the local client only
+streams logs; a plain `modal run` ties the run's lifetime to the local client,
+so a heartbeat drop / disconnect / closed terminal kills it mid-build. Detached
+mode keeps the run alive on Modal regardless. Track or re-attach with:
+
+```bash
+modal app list | grep ephemeral   # find the running build
+modal app logs <app-id>           # stream its logs (app-id printed at launch)
+```
+
+Per-item embeddings are served from the LiteLLM file cache where present; only
+cache misses reach the vLLM endpoints (and wake the GPUs). A fully-cached
+rebuild never touches the GPU — its wall-clock is bound by the per-item cache
+lookups (litellm overhead + JSON vector decode), not by inference.

@@ -391,3 +391,133 @@ def _class_volume_dir_consts(class_name: str) -> set[str]:
 def test_gpu_encoders_mount_embedding_cache():
     assert "EMBEDDING_CACHE_DIR" in _class_volume_dir_consts("Qwen3Encoder")
     assert "EMBEDDING_CACHE_DIR" in _class_volume_dir_consts("MultimodalTextEncoder")
+
+
+class _FakeLiteLLMCache:
+    """In-process stand-in for ``litellm.cache`` keyed on request kwargs."""
+
+    def __init__(self):
+        self.values = {}
+
+    @staticmethod
+    def _key(kwargs):
+        return json.dumps(kwargs, sort_keys=True)
+
+    def get_cache(self, **kwargs):
+        return self.values.get(self._key(kwargs))
+
+    def store(self, kwargs, vector):
+        self.values[self._key(kwargs)] = {"response": {"data": [{"embedding": vector}]}}
+
+
+def _fake_embedding_client_factory(calls, fake_cache):
+    class FakeClient:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+        def build_request_kwargs(self, texts):
+            return {
+                "model": self.kwargs["model_name"],
+                "input": list(texts),
+                "api_base": self.kwargs["api_base"],
+            }
+
+        def embed_one(self, text):
+            kwargs = self.build_request_kwargs([text])
+            calls.append(kwargs)
+            vector = [float(len(calls)), float(len(text))]
+            fake_cache.store(kwargs, vector)
+            return vector
+
+    return lambda **kwargs: FakeClient(**kwargs)
+
+
+def test_qwen_embed_worker_prefers_cache_then_endpoint(monkeypatch):
+    """The module-level process worker hits the litellm cache before the endpoint."""
+    module = _load_modal_app_module()
+
+    fake_cache = _FakeLiteLLMCache()
+    monkeypatch.setitem(sys.modules, "litellm", SimpleNamespace(cache=fake_cache))
+    calls = []
+
+    module._init_qwen_embed_worker(
+        "none",  # cache_backend
+        "",  # cache_dir
+        {"4b": "https://vllm.example/4b/v1"},
+        "vllm-key",
+        600,  # timeout_s
+        0.0,  # request_delay_s
+        _fake_embedding_client_factory(calls, fake_cache),
+        False,  # setup_cache — keep the monkeypatched fake cache in place
+    )
+
+    field = module._qwen_generated_embedding_field("metadata", "4b")
+    task = (0, "track-1", "4b", "metadata", "hello world")
+
+    first = module._qwen_embed_worker(task)
+    assert first == (0, "track-1", field, [1.0, 11.0], False)
+
+    second = module._qwen_embed_worker(task)
+    assert second == (0, "track-1", field, [1.0, 11.0], True)
+
+    assert len(calls) == 1  # second call served from cache, no endpoint hit
+
+
+def test_vllm_catalog_embedding_rows_process_path_matches_thread_path(monkeypatch):
+    """The process fan-out (no injected client_factory) produces the same rows/stats.
+
+    Exercised through an injected executor that runs the real module-level worker
+    on threads in-process, so the bounded-window loop, task shape, initializer
+    wiring, and result handling are all covered without spawning subprocesses or
+    hitting the network.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    module = _load_modal_app_module()
+
+    fake_cache = _FakeLiteLLMCache()
+    monkeypatch.setitem(sys.modules, "litellm", SimpleNamespace(cache=fake_cache))
+    calls = []
+    factory = _fake_embedding_client_factory(calls, fake_cache)
+
+    metadata_rows = [
+        {
+            "track_id": "track-1",
+            "track_name": ["A Song"],
+            "artist_name": ["An Artist"],
+            "album_name": ["An Album"],
+            "tag_list": ["calm", "ambient"],
+        }
+    ]
+    common = dict(
+        model_sizes=("4b",),
+        document_kinds=("metadata", "attributes"),
+        api_base_by_model_size={"4b": "https://vllm.example/4b/v1"},
+        api_key="vllm-key",
+        request_delay_s=0.0,
+    )
+
+    # Thread/serial path (client_factory injected) is the correctness oracle.
+    expected_rows, _ = module._build_generated_qwen_embedding_rows(
+        metadata_rows, client_factory=factory, max_in_flight=1, **common
+    )
+
+    # Process path: no client_factory, but route the worker through a thread-backed
+    # executor that pre-initializes the worker context in this process.
+    calls.clear()
+    fake_cache.values.clear()
+
+    def executor_factory():
+        module._init_qwen_embed_worker(
+            "none", "", common["api_base_by_model_size"], common["api_key"],
+            600, 0.0, factory, False,
+        )
+        return ThreadPoolExecutor(max_workers=2)
+
+    process_rows, process_stats = module._build_generated_qwen_embedding_rows(
+        metadata_rows, max_in_flight=2, executor_factory=executor_factory, **common
+    )
+
+    assert process_rows == expected_rows
+    assert process_stats["endpoint_requests"] == 2
+    assert process_stats["cache_hits"] == 0
