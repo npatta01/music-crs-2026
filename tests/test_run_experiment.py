@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re as _re
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -634,3 +635,43 @@ def test_main_reports_catalog_diversity_for_shallow_cutoffs(tmp_path, monkeypatc
     assert payload["available_cutoffs"] == module.K_VALUES
     assert payload["catalog_diversity"] == pytest.approx(20 / 3)
     assert payload["catalog_diversity@100"] == pytest.approx(20 / 3)
+
+
+def test_make_run_id_format():
+    module = _load_module("run_experiment_module_runid", "run_experiment.py")
+    run_id = module.make_run_id()
+    assert _re.fullmatch(r"\d{8}T\d{6}Z-[0-9a-f]{6}", run_id), run_id
+
+
+def test_local_sharding_rejected(tmp_path):
+    module = _load_module("run_experiment_module_local_shard_reject", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+    module.PROJECT_ROOT = project_root
+    with pytest.raises(ValueError, match="requires --backend modal"):
+        module.main([
+            "--backend", "local", "--tid", "foo_devset", "--num_shards", "5",
+        ])
+
+
+def test_num_sessions_with_sharding_rejected(tmp_path):
+    module = _load_module("run_experiment_module_smoke_shard_reject", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+    module.PROJECT_ROOT = project_root
+    with pytest.raises(ValueError, match="cannot be combined with --num_shards"):
+        module.main([
+            "--backend", "modal", "--tid", "foo_devset",
+            "--num_shards", "5", "--num_sessions", "3",
+        ])
+
+
+def test_run_id_requires_sharding(tmp_path):
+    module = _load_module("run_experiment_module_runid_reject", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+    module.PROJECT_ROOT = project_root
+    with pytest.raises(ValueError, match="--run_id only applies"):
+        module.main([
+            "--backend", "modal", "--tid", "foo_devset", "--run_id", "abc",
+        ])
