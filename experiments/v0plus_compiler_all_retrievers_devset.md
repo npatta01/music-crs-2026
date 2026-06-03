@@ -2,10 +2,23 @@
 
 **Date:** 2026-06-03
 **Config:** `configs/v0plus_compiler_all_retrievers_devset.yaml`
-**Backend:** Modal, 5-shard full devset run
-**Prediction git head:** `d0209b727077df5f98cf5576e7bf03e89f172360`
-**Modal app:** `ap-WB5UDBDs84zxDO0wOIjkAW` (run id `20260603T110031Z-f985d4`)
+**Backend:** Modal, 10-shard full devset run (8 CPU cores/shard)
+**Modal app:** `ap-M8QUeyndYED7iCGjQYUXL8` (run id `20260603T174341Z-78c558`)
 **Status:** `analyzed`
+
+> **Reproduced 2026-06-03 17:43** (run id `20260603T174341Z-78c558`, 10 shards × 8 cores)
+> after three results-neutral infra changes: (1) **client-side DiskVectorCache** on the
+> `modal_multimodal` CLAP/SigLIP encoder so repeated query texts skip the Modal RPC
+> (mirrors the litellm Qwen cache); (2) `litellm.suppress_debug_info` to silence the
+> OpenRouter "Provider List" log flood (BerriAI/litellm#23879); (3) inference container
+> specs `inference_cpu 2→6`, `inference_memory 16→32 GiB` (measured: ~4 cores used —
+> the per-turn fusion is GIL-bound, so cores beyond ~6 idle; RAM bursts to ~25 GiB).
+> Metrics matched the prior 5-shard run within rounding noise (NDCG@20 0.1253, Hit@1000
+> 0.7289), confirming the changes affect only speed/cost, not retrieval. With the litellm +
+> embedding caches warm (PR #105 had covered these query texts), this run issued **no GPU
+> encoder calls and no OpenRouter calls** — all embeds/extractions were cache hits — yet
+> `dense.clap_text` and `dense.qwen_8b` still `fired=8000` with non-zero recall, proving the
+> cache served the branches rather than silently skipping them.
 
 ## Summary
 

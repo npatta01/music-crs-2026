@@ -209,6 +209,10 @@ def _run_inference_command(cmd: list[str], *, lancedb_uri: str | None = None) ->
     # repeated LLM extraction calls on the same conversation are served from cache.
     env["MCRS_LITELLM_CACHE_BACKEND"] = LITELLM_CACHE_BACKEND
     env["MCRS_LITELLM_CACHE_DIR"] = LITELLM_CACHE_DIR
+    # Point the client-side multimodal (CLAP / SigLIP) vector cache at the same
+    # shared volume dir the encoder service commits to, so repeated query texts
+    # are served without a Modal RPC and prior committed vectors are reused.
+    env["MCRS_EMBEDDING_CACHE_DIR"] = EMBEDDING_CACHE_DIR
 
     result = subprocess.run(cmd, cwd="/app", env=env)
     if result.returncode != 0:
@@ -1689,19 +1693,25 @@ class MultimodalTextEncoder:
             DiskVectorCache,
         )
 
+        from mcrs.embeddings.modal_multimodal_client import (
+            cache_namespace_for_method,
+        )
+
         store = DiskVectorCache(EMBEDDING_CACHE_DIR)
         cache_enabled = os.environ.get("EMBEDDING_CACHE_ENABLED", "1") != "0"
         self._cache_enabled = cache_enabled
+        # Namespaces are shared with the client-side cache so both back the same
+        # files on the cache volume (see mcrs/embeddings/modal_multimodal_client).
         self.siglip = CachedTextEmbedder(
             self.siglip,
             store,
-            "siglip2:google/siglip2-base-patch16-224",
+            cache_namespace_for_method("embed_siglip_text"),
             enabled=cache_enabled,
         )
         self.clap = CachedTextEmbedder(
             self.clap,
             store,
-            "clap:music_audioset_epoch_15_esc_90.14",
+            cache_namespace_for_method("embed_clap_text"),
             enabled=cache_enabled,
         )
 
