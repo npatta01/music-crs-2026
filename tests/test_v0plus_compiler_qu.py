@@ -723,12 +723,26 @@ def test_trace_contains_branches_key():
     qu = _build_qu(state)
     qu.compiler.cfg.branch_trace_topk = 50  # enable per-branch tracing
     qu.batch_compile_track_ids([[{"role": "user", "content": "hi"}]], topk=10)
-    branches = qu.last_traces[0]["branches"]
+    trace = qu.last_traces[0]
+    branches = trace["branches"]
 
-    assert set(branches.keys()) == {"depth", "pools", "fused", "final", "recommended"}
+    assert trace["trace_schema_version"] == "v0plus-ranker-trace-v1"
+    assert set(branches.keys()) == {
+        "depth",
+        "pools",
+        "fused",
+        "final",
+        "recommended",
+        "branch_queries",
+        "branch_status",
+        "candidate_filter_summary",
+    }
     names = [p["name"] for p in branches["pools"]]
     assert "bm25" in names
     assert branches["final"]["track_ids"][:1] == [branches["recommended"]["top1_track_id"]]
+    assert branches["branch_queries"]["bm25"]["clauses"]
+    assert branches["branch_status"]["bm25"]["fired"] is True
+    assert "raw_union_size" in branches["candidate_filter_summary"]
 
 
 def test_shard_slice_math_partitions_all_indices():

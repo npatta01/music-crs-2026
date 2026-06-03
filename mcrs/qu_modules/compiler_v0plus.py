@@ -109,6 +109,9 @@ class CompileResult:
     n_from_fusion: int = 0
     n_from_backfill: int = 0
     depth: int = 0
+    branch_queries: dict[str, dict] = field(default_factory=dict)
+    branch_status: dict[str, dict] = field(default_factory=dict)
+    candidate_filter_summary: dict[str, int] = field(default_factory=dict)
 
     def to_trace_dict(self) -> dict:
         """Serialize to the `branches` trace schema (JSON-friendly)."""
@@ -127,6 +130,9 @@ class CompileResult:
             "recommended": {
                 "top1_track_id": self.ranked[0] if self.ranked else None,
             },
+            "branch_queries": self.branch_queries,
+            "branch_status": self.branch_status,
+            "candidate_filter_summary": self.candidate_filter_summary,
         }
 
 
@@ -381,12 +387,20 @@ class V0PlusCompiler:
         state = rs.state
         _trace_k = self.cfg.branch_trace_topk
         named_pools: list[tuple[str, list[tuple[str, float]]]] = []
+        trace_enabled = _trace_k > 0
+        branch_queries: dict[str, dict] = {}
+        branch_status: dict[str, dict] = {}
 
         # 1. Pre-fusion catalog mask from hard_filters.release_date
         candidate_mask = self._release_date_mask(state)
 
         # 2. Build queries
         bm25_clauses = self._build_bm25_clauses(rs)
+        if trace_enabled:
+            branch_queries["bm25"] = {
+                "kind": "bm25",
+                "clauses": [self._field_query_to_trace(c) for c in bm25_clauses],
+            }
         # query_id -> query string (None when the state has no positive signal
         # for that template). Only build templates referenced by some branch
         # so unused builders never run. Reject unknown query_ids early.
@@ -404,20 +418,46 @@ class V0PlusCompiler:
 
         # 3. Retrieval — 1 BM25 call + 1 search_embedding per enabled dense branch
         bm25_hits = self.retriever.search(bm25_clauses, topk=self.cfg.bm25_k)
-        if _trace_k:
+        if trace_enabled:
+            branch_status["bm25"] = {
+                "configured": True,
+                "fired": True,
+                "n_raw_hits": len(bm25_hits),
+            }
             named_pools.append(("bm25", list(bm25_hits[:_trace_k])))
         # Cache encoded vectors by (encoder_id, query_id) so branches sharing
         # an encoder/query pair pay one encode call total.
         encoded_cache: dict[tuple[str, str], list[float]] = {}
         dense_branch_results: list[list[tuple[str, float]]] = []
+        if trace_enabled and not self.cfg.enable_dense:
+            for branch in self.cfg.dense_branches:
+                name = self._dense_branch_trace_name(branch)
+                branch_queries[name] = self._dense_branch_query_trace(branch)
+                branch_status[name] = {
+                    "configured": True,
+                    "fired": False,
+                    "skip_reason": "disabled",
+                }
         if self.cfg.enable_dense:
             for branch in self.cfg.dense_branches:
+                branch_name = self._dense_branch_trace_name(branch)
                 q_text = query_strings.get(branch.query_id)
+                if trace_enabled:
+                    query_trace = self._dense_branch_query_trace(branch)
+                    if q_text is not None:
+                        query_trace["query_text"] = q_text
+                    branch_queries[branch_name] = query_trace
                 if q_text is None:
                     # Either query_id unknown OR state had no positive signal.
                     # Append empty hits to keep dense_branch_results aligned
                     # with self.cfg.dense_branches for the RRF fusion zip().
                     dense_branch_results.append([])
+                    if trace_enabled:
+                        branch_status[branch_name] = {
+                            "configured": True,
+                            "fired": False,
+                            "skip_reason": "no_query",
+                        }
                     continue
                 cache_key = (branch.encoder_id, branch.query_id)
                 if cache_key not in encoded_cache:
@@ -438,12 +478,17 @@ class V0PlusCompiler:
                     distance_type=branch.distance_type,
                 )
                 dense_branch_results.append(hits)
-                if _trace_k:
+                if trace_enabled:
+                    branch_status[branch_name] = {
+                        "configured": True,
+                        "fired": True,
+                        "n_raw_hits": len(hits),
+                    }
                     # Include `query_id` so multiple branches sharing
                     # encoder_id + vector_field (e.g. v4's 3xCLAP) get
                     # distinct names instead of overwriting each other.
                     named_pools.append((
-                        f"dense.{branch.encoder_id}.{branch.query_id}.{branch.vector_field}",
+                        branch_name,
                         list(hits[:_trace_k]),
                     ))
 
@@ -458,6 +503,22 @@ class V0PlusCompiler:
         centroid_branches = self._resolve_centroid_only_branches()
         centroid_branch_results: list[tuple[list[tuple[str, float]], float]] = []
         for cb in centroid_branches:
+            branch_name = self._centroid_branch_trace_name(cb)
+            source_track_ids: list[str] = []
+            if trace_enabled:
+                query_trace = {
+                    "kind": "centroid",
+                    "centroid_source": cb.centroid_source,
+                    "vector_field": cb.vector_field,
+                    "distance_type": cb.distance_type,
+                    "weight": float(cb.weight),
+                }
+                if cb.centroid_source == "anchor_tracks":
+                    source_track_ids = self._centroid_source_track_ids(rs)
+                    query_trace["source_track_ids"] = list(source_track_ids)
+                elif cb.centroid_source == "user":
+                    query_trace["user_id_present"] = user_id is not None
+                branch_queries[branch_name] = query_trace
             # On pivot turns the anchor set is intentionally cleared (the user
             # changed direction), so an anchor-sourced centroid would be stale
             # — skip it. Exception (issue #74 Fix 1): when similar-artist
@@ -472,9 +533,35 @@ class V0PlusCompiler:
                     and self._similar_artist_anchor_track_ids(rs)
                 )
             ):
+                if trace_enabled:
+                    branch_status[branch_name] = {
+                        "configured": True,
+                        "fired": False,
+                        "skip_reason": "pivot_skip",
+                    }
                 continue
             centroid = self._centroid_for_branch(rs, user_id, cb)
             if centroid is None:
+                if trace_enabled:
+                    if cb.centroid_source == "anchor_tracks":
+                        skip_reason = (
+                            "no_anchors"
+                            if not source_track_ids
+                            else "missing_embedding"
+                        )
+                    elif cb.centroid_source == "user":
+                        skip_reason = (
+                            "missing_user_id"
+                            if user_id is None
+                            else "missing_user_vector"
+                        )
+                    else:
+                        skip_reason = "no_query"
+                    branch_status[branch_name] = {
+                        "configured": True,
+                        "fired": False,
+                        "skip_reason": skip_reason,
+                    }
                 continue
             hits = self.retriever.search_embedding(
                 query_vector=centroid,
@@ -488,9 +575,14 @@ class V0PlusCompiler:
             centroid_branch_results.append(
                 (hits, cb.weight * self._routing_multiplier(kind, rs))
             )
-            if _trace_k:
+            if trace_enabled:
+                branch_status[branch_name] = {
+                    "configured": True,
+                    "fired": True,
+                    "n_raw_hits": len(hits),
+                }
                 named_pools.append((
-                    f"centroid.{cb.centroid_source}.{cb.vector_field}",
+                    branch_name,
                     list(hits[:_trace_k]),
                 ))
 
@@ -520,10 +612,31 @@ class V0PlusCompiler:
         # 5b. Resolved-artist discography pool. Trace the RAW pool (pre-mask/
         # hard-drop) to match bm25/dense/centroid trace semantics, then filter
         # for fusion.
+        disco_branch_name = "lookup.resolved_artist_discography"
+        if trace_enabled and self.cfg.enable_resolved_artist_discography:
+            branch_queries[disco_branch_name] = self._discography_query_trace(rs)
         disco_hits = self._resolved_artist_discography_pool(rs)
-        if _trace_k and disco_hits:
+        if trace_enabled and self.cfg.enable_resolved_artist_discography:
+            if disco_hits:
+                branch_status[disco_branch_name] = {
+                    "configured": True,
+                    "fired": True,
+                    "n_raw_hits": len(disco_hits),
+                }
+            else:
+                reason = (
+                    "gated_by_intent"
+                    if rs.state.intent_mode.value in self.cfg.disco_gated_intents
+                    else "no_query"
+                )
+                branch_status[disco_branch_name] = {
+                    "configured": True,
+                    "fired": False,
+                    "skip_reason": reason,
+                }
+        if trace_enabled and disco_hits:
             named_pools.append((
-                "lookup.resolved_artist_discography",
+                disco_branch_name,
                 list(disco_hits[:_trace_k]),
             ))
         disco_hits = [
@@ -552,8 +665,28 @@ class V0PlusCompiler:
                 (disco_hits, self.cfg.disco_weight * self._routing_multiplier("lookup.discography", rs))
             )
         era_hits = self._era_popularity_pool(rs)
-        if _trace_k and era_hits:
-            named_pools.append(("lookup.era_popularity", list(era_hits[:_trace_k])))
+        era_branch_name = "lookup.era_popularity"
+        if trace_enabled and self.cfg.enable_era_popularity:
+            branch_queries[era_branch_name] = self._era_popularity_query_trace(rs)
+            if era_hits:
+                branch_status[era_branch_name] = {
+                    "configured": True,
+                    "fired": True,
+                    "n_raw_hits": len(era_hits),
+                }
+            else:
+                branch_status[era_branch_name] = {
+                    "configured": True,
+                    "fired": False,
+                    "skip_reason": "no_query",
+                }
+        if trace_enabled and era_hits:
+            named_pools.append((era_branch_name, list(era_hits[:_trace_k])))
+        candidate_filter_summary = (
+            self._candidate_filter_summary(named_pools, candidate_mask, hard_drop, rs)
+            if trace_enabled
+            else {}
+        )
         era_hits = [
             (t, s) for t, s in era_hits if t in candidate_mask and t not in hard_drop
         ]
@@ -581,11 +714,138 @@ class V0PlusCompiler:
             n_from_fusion=n_from_fusion,
             n_from_backfill=n_from_backfill,
             depth=_trace_k,
+            branch_queries=branch_queries,
+            branch_status=branch_status,
+            candidate_filter_summary=candidate_filter_summary,
         )
 
     # ------------------------------------------------------------------
     # Query construction
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _field_query_to_trace(clause: FieldQuery) -> dict:
+        return {
+            "field": clause.field,
+            "query": clause.query,
+            "boost": float(clause.boost),
+        }
+
+    @staticmethod
+    def _dense_branch_trace_name(branch: DenseBranch) -> str:
+        return f"dense.{branch.encoder_id}.{branch.query_id}.{branch.vector_field}"
+
+    @staticmethod
+    def _centroid_branch_trace_name(branch: CentroidOnlyBranch) -> str:
+        return f"centroid.{branch.centroid_source}.{branch.vector_field}"
+
+    @staticmethod
+    def _dense_branch_query_trace(branch: DenseBranch) -> dict:
+        return {
+            "kind": "dense",
+            "query_id": branch.query_id,
+            "encoder_id": branch.encoder_id,
+            "vector_field": branch.vector_field,
+            "distance_type": branch.distance_type,
+            "weight": float(branch.weight),
+        }
+
+    def _centroid_source_track_ids(self, rs: ResolvedConversationState) -> list[str]:
+        """Track ids that will be used to build an anchor-sourced centroid.
+
+        Mirrors `_anchor_centroid_for_field`: played/reference anchors first,
+        then optional similar-artist anchor tracks. This trace helper returns
+        ids only; it never serializes vectors.
+        """
+        ids = list(self._anchor_track_ids(rs.state))
+        seen = set(ids)
+        for tid in self._similar_artist_anchor_track_ids(rs):
+            if tid not in seen:
+                seen.add(tid)
+                ids.append(tid)
+        return ids
+
+    def _discography_query_trace(self, rs: ResolvedConversationState) -> dict:
+        targets = [
+            {
+                "source_text": t.source_text,
+                "entity_id": t.entity_id,
+                "confidence": float(t.confidence),
+            }
+            for t in rs.resolved_targets
+            if t.kind == "artist"
+        ]
+        return {
+            "kind": "lookup",
+            "lookup_type": "resolved_artist_discography",
+            "confidence_threshold": float(self.cfg.disco_confidence_threshold),
+            "targets": targets,
+        }
+
+    @staticmethod
+    def _era_popularity_query_trace(rs: ResolvedConversationState) -> dict:
+        ryr = rs.state.release_year_range
+        return {
+            "kind": "lookup",
+            "lookup_type": "era_popularity",
+            "release_year_range": (
+                None
+                if ryr is None
+                else {"start": ryr.start, "end": ryr.end}
+            ),
+        }
+
+    def _resolved_rejection_drop_set(
+        self,
+        rs: ResolvedConversationState,
+    ) -> set[str]:
+        """Tracks dropped by resolved explicit rejections.
+
+        Expand both track_ids and artist_ids for every resolved rejection,
+        regardless of `er.kind`. The resolver may attach owning-artist ids to
+        a kind="track" rejection (and vice versa); honoring only one side lets
+        backfill silently re-admit tracks that soft adjustments excluded.
+        """
+        drop: set[str] = set()
+        for rej in rs.resolved_rejections.values():
+            drop.update(rej.track_ids)
+            for aid in rej.artist_ids:
+                drop.update(self.catalog.tracks_by_artist_id(aid))
+        return drop
+
+    def _candidate_filter_summary(
+        self,
+        named_pools: list[tuple[str, list[tuple[str, float]]]],
+        candidate_mask: set[str],
+        hard_drop: set[str],
+        rs: ResolvedConversationState,
+    ) -> dict[str, int]:
+        """Compact filter counts over the traced top-k branch pools.
+
+        `named_pools` has already been bounded by `branch_trace_topk`; this is
+        a summary of what the trace carries, not the full fusion candidate set.
+        """
+        raw_union = {
+            track_id
+            for _name, hits in named_pools
+            for track_id, _score in hits
+        }
+        after_mask = raw_union & candidate_mask
+        played = set(rs.played_track_ids)
+        explicit_rejections = self._resolved_rejection_drop_set(rs)
+        played_dropped = after_mask & played
+        explicit_dropped = (after_mask - played_dropped) & explicit_rejections
+        other_hard_dropped = (
+            after_mask - played_dropped - explicit_dropped
+        ) & hard_drop
+        return {
+            "raw_union_size": len(raw_union),
+            "eligible_union_size": len(after_mask - hard_drop),
+            "release_date_mask_dropped": len(raw_union - candidate_mask),
+            "played_track_dropped": len(played_dropped),
+            "explicit_rejection_dropped": len(explicit_dropped),
+            "other_hard_drop_dropped": len(other_hard_dropped),
+        }
 
     def _build_bm25_clauses(self, rs: ResolvedConversationState) -> list[FieldQuery]:
         """Build the Solr-style multi-field BM25 query. Blank-query clauses are
@@ -1058,15 +1318,7 @@ class V0PlusCompiler:
             if tf.role == "rejected":
                 drop.add(tf.track_id)
 
-        # Expand BOTH track_ids and artist_ids for every resolved rejection,
-        # regardless of `er.kind`. The resolver may attach owning-artist ids
-        # to a kind="track" rejection (and vice versa); honoring only one
-        # side of that pairing here lets step-8 backfill silently re-admit
-        # tracks that step-7 `_apply_soft_adjustments` excluded.
-        for rej in rs.resolved_rejections.values():
-            drop.update(rej.track_ids)
-            for aid in rej.artist_ids:
-                drop.update(self.catalog.tracks_by_artist_id(aid))
+        drop.update(self._resolved_rejection_drop_set(rs))
 
         return drop
 

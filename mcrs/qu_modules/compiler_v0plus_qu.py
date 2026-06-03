@@ -86,6 +86,7 @@ from mcrs.qu_modules.v0plus_catalog import CompilerCatalog
 from mcrs.retrieval_modules.base import Retriever
 
 logger = logging.getLogger(__name__)
+TRACE_SCHEMA_VERSION = "v0plus-ranker-trace-v1"
 
 
 def _with_no_store_cache(call_kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -618,6 +619,7 @@ class V0PlusCompilerQU:
                 next((c["text"] for c in reversed(conv) if c.get("role") == "user"), "")[:120],
             )
             trace = {
+                "trace_schema_version": TRACE_SCHEMA_VERSION,
                 "idx": idx,
                 "intent_mode": None,
                 "state": None,
@@ -690,6 +692,7 @@ class V0PlusCompilerQU:
             if me.sentiment > 0 and me.type == "artist" and me.value
         ]
         trace = {
+            "trace_schema_version": TRACE_SCHEMA_VERSION,
             "idx": idx,
             "intent_mode": getattr(state.intent_mode, "value", str(state.intent_mode)),
             "state": state.model_dump(mode="json"),

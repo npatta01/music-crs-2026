@@ -4,8 +4,10 @@ Batch inference script for Music CRS.
 
 import os
 import json
+import hashlib
 import logging
 import shutil
+import subprocess
 import torch
 import argparse
 from mcrs import load_crs_baseline
@@ -53,6 +55,41 @@ def _qu_kwargs_has_vllm_endpoint(qu_kwargs: dict) -> bool:
     return any(_encoder_has_vllm_endpoint(value) for value in encoders.values())
 
 
+def _config_hash(config) -> str | None:
+    try:
+        plain = OmegaConf.to_container(config, resolve=True)
+    except Exception:
+        return None
+    encoded = json.dumps(plain, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _git_sha() -> str | None:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except Exception:
+        return None
+
+
+def _build_trace_run_metadata(tid: str, config) -> dict:
+    return {
+        "tid": tid,
+        "git_sha": _git_sha(),
+        "config_hash": _config_hash(config),
+    }
+
+
+def _with_trace_run_metadata(trace, run_metadata: dict):
+    if isinstance(trace, dict):
+        trace = dict(trace)
+        trace["run"] = dict(run_metadata)
+    return trace
+
+
 def _setup_litellm_cache() -> None:
     """Configure LiteLLM cache when MCRS_LITELLM_CACHE_DIR is set.
 
@@ -91,6 +128,7 @@ def main(args):
     _setup_logging()
     _setup_litellm_cache()
     config = OmegaConf.load(f"configs/{args.tid}.yaml")
+    trace_run_metadata = _build_trace_run_metadata(args.tid, config)
     if args.clear_cache:
         cache_dir = config.get("cache_dir", "./cache")
         if os.path.exists(cache_dir):
@@ -217,7 +255,10 @@ def main(args):
                 "session_id": batch_metadata[j]['session_id'],
                 "user_id": batch_metadata[j]['user_id'],
                 "turn_number": batch_metadata[j]['turn_number'],
-                "trace": result.get("trace"),
+                "trace": _with_trace_run_metadata(
+                    result.get("trace"),
+                    trace_run_metadata,
+                ),
             })
     os.makedirs(f"{args.exp_dir}/inference/devset", exist_ok=True)
     # `output_suffix` is sharding-time metadata; programmatic callers may not set it.
