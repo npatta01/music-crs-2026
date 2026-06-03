@@ -311,7 +311,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Evaluate music recommendation system predictions"
     )
-    parser.add_argument("--tid", type=str, default="v0plus_compiler_image_devset",
+    parser.add_argument("--tid", type=str, default="v0plus_compiler_all_retrievers_devset",
                         help="Experiment id (matches prediction file stem).")
     parser.add_argument("--eval_dataset", type=str, default="devset")
     parser.add_argument("--session_ids_file", type=str, default=None,

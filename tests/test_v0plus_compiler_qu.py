@@ -774,6 +774,34 @@ def test_routing_boost_survives_yaml_allowlist():
     assert qu.compiler.cfg.routing_boost == {"lyric_search": 4.0}
 
 
+def test_build_qu_rejects_missing_configured_vector_fields():
+    catalog = _catalog()
+
+    with pytest.raises(ValueError, match="metadata_qwen3_embedding_8b"):
+        build_v0plus_compiler_qu(
+            qu_kwargs={
+                "compiler": {
+                    "enable_dense": True,
+                    "dense_branches": [
+                        {
+                            "vector_field": "metadata_qwen3_embedding_8b",
+                            "encoder_id": "qwen_8b",
+                            "query_id": "metadata",
+                        }
+                    ],
+                }
+            },
+            _overrides={
+                "catalog": catalog,
+                "matcher": RapidfuzzCatalogMatcher(catalog),
+                "encoders": {"qwen_8b": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5])},
+                # FakeRetriever only advertises metadata_qwen3_embedding_0_6b.
+                "retriever": FakeRetriever(),
+                "extractor": _FakeExtractor(state=_state()),
+            },
+        )
+
+
 def test_resolve_prompt_fns_uses_current_prompt():
     from mcrs.qu_modules.compiler_v0plus_qu import _resolve_prompt_fns
     from mcrs.conversation_state.prompts import current
