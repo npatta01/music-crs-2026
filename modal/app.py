@@ -246,6 +246,8 @@ def _inference_devset(
     num_shards: int = 1,
     shard_id: int = 0,
     output_suffix: str = "",
+    hf_split: str = "test",
+    out_split: str = "devset",
 ):
     import sys
 
@@ -265,10 +267,11 @@ def _inference_devset(
         cmd += ["--num_shards", str(num_shards), "--shard_id", str(shard_id)]
     if output_suffix:
         cmd += ["--output_suffix", output_suffix]
+    cmd += ["--hf_split", hf_split, "--out_split", out_split]
 
     _run_inference_command(cmd)
     results_vol.commit()
-    print(f"Results saved to volume: inference/devset/{tid}{output_suffix}.json")
+    print(f"Results saved to volume: inference/{out_split}/{tid}{output_suffix}.json")
 
 
 @app.function(
@@ -288,6 +291,8 @@ def _inference_devset_cpu(
     num_shards: int = 1,
     shard_id: int = 0,
     output_suffix: str = "",
+    hf_split: str = "test",
+    out_split: str = "devset",
 ):
     import sys
 
@@ -307,10 +312,11 @@ def _inference_devset_cpu(
         cmd += ["--num_shards", str(num_shards), "--shard_id", str(shard_id)]
     if output_suffix:
         cmd += ["--output_suffix", output_suffix]
+    cmd += ["--hf_split", hf_split, "--out_split", out_split]
 
     _run_inference_command(cmd, lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI)
     results_vol.commit()
-    print(f"CPU results saved to volume: inference/devset/{tid}{output_suffix}.json")
+    print(f"CPU results saved to volume: inference/{out_split}/{tid}{output_suffix}.json")
 
 
 @app.function(
@@ -1177,8 +1183,11 @@ def run_inference(
     num_sessions: int = 0,
     clear_cache: bool = False,
     session_ids_json: str | None = None,
+    hf_split: str = "test",
+    out_split: str = "devset",
 ):
-    """Run devset inference on the configured fast GPU fallback policy."""
+    """Run single-container inference. Defaults to devset; pass --hf-split train --out-split
+    train (with --num-sessions for a smoke) to exercise the train split."""
     inference_fn = _inference_devset_cpu if _tid_uses_cpu(tid) else _inference_devset
     inference_fn.remote(
         tid=tid,
@@ -1186,6 +1195,8 @@ def run_inference(
         num_sessions=num_sessions,
         clear_cache=clear_cache,
         session_ids_json=session_ids_json,
+        hf_split=hf_split,
+        out_split=out_split,
     )
 
 
@@ -1217,16 +1228,19 @@ def run_inference_sharded(
             "(run_experiment.py generates one automatically)."
         )
 
-    is_devset = eval_dataset == "devset"
+    # "devset" and "train" are multi-turn splits handled by the devset worker (train just loads
+    # the HF "train" split and writes under inference/train/); blindset splits use their own worker.
+    is_devset_style = eval_dataset in ("devset", "train")
+    hf_split = "train" if eval_dataset == "train" else "test"
     uses_cpu = _tid_uses_cpu(tid)
-    if is_devset:
+    if is_devset_style:
         inference_fn = _inference_devset_cpu if uses_cpu else _inference_devset
     else:
         inference_fn = _inference_blindset_cpu if uses_cpu else _inference_blindset
 
     def _spawn(shard_id):
         output_suffix = f".run_{run_id}.shard_{shard_id}"
-        if is_devset:
+        if is_devset_style:
             return inference_fn.spawn(
                 tid=tid,
                 batch_size=batch_size,
@@ -1236,6 +1250,8 @@ def run_inference_sharded(
                 num_shards=num_shards,
                 shard_id=shard_id,
                 output_suffix=output_suffix,
+                hf_split=hf_split,
+                out_split=eval_dataset,
             )
         return inference_fn.spawn(
             tid=tid,

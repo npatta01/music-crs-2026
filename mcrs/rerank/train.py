@@ -23,6 +23,7 @@ from sklearn.model_selection import GroupKFold, GroupShuffleSplit
 
 from mcrs.rerank.features import (
     CATEGORICAL_FEATURES,
+    CATEGORICAL_LEVELS,
     feature_columns,
     monotone_constraints,
 )
@@ -55,7 +56,8 @@ def to_model_matrix(frame: pd.DataFrame, feat_cols: list[str]) -> pd.DataFrame:
     out = {}
     for c in feat_cols:
         if c in CATEGORICAL_FEATURES:
-            out[c] = frame[c].astype("category")
+            # Pinned levels => identical category codes at train and serve time.
+            out[c] = pd.Categorical(frame[c], categories=CATEGORICAL_LEVELS[c])
         else:
             out[c] = frame[c].astype("float32")
     return pd.DataFrame(out, index=frame.index)
@@ -158,10 +160,68 @@ def train_cv(
     return summary
 
 
+def train_single(
+    frame: pd.DataFrame,
+    out_dir: str | Path,
+    params: dict[str, Any] | None = None,
+    val_frac: float = 0.1,
+    early_stopping_rounds: int = 50,
+    seed: int = 42,
+    max_pool_depth: int | None = None,
+) -> dict[str, Any]:
+    """Train ONE deployable model on all turns (no CV); save model.txt + model.features.json.
+
+    Used for the deployable Phase-2 model (trained on the train split; devset is the held-out
+    report). An inner session split is held out only for early stopping. ``max_pool_depth`` (the
+    per-branch cap used to build the training dataset) is recorded in the model card so the
+    online reranker serves with the SAME cap -- within-group features (z-scores, aggregates)
+    depend on the candidate set, so a serve/train cap mismatch silently corrupts the ranking.
+    """
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    params = {**DEFAULT_PARAMS, **(params or {})}
+    feat_cols = feature_columns(frame)
+    mono = monotone_constraints(feat_cols)
+    cat_feats = [c for c in CATEGORICAL_FEATURES if c in feat_cols]
+
+    frame = frame[_has_positive(frame)]
+    gss = GroupShuffleSplit(n_splits=1, test_size=val_frac, random_state=seed)
+    fit_pos, es_pos = next(gss.split(frame, groups=frame["session_id"].to_numpy()))
+    fit = frame.iloc[fit_pos].sort_values(GROUP_KEYS, kind="stable")
+    es = frame.iloc[es_pos].sort_values(GROUP_KEYS, kind="stable")
+
+    model = lgb.LGBMRanker(**params, monotone_constraints=mono)
+    model.fit(
+        to_model_matrix(fit, feat_cols), fit["label"].to_numpy(),
+        group=_ordered_group_sizes(fit),
+        eval_set=[(to_model_matrix(es, feat_cols), es["label"].to_numpy())],
+        eval_group=[_ordered_group_sizes(es)],
+        eval_at=[20], categorical_feature=cat_feats,
+        callbacks=[lgb.early_stopping(early_stopping_rounds, verbose=False),
+                   lgb.log_evaluation(period=0)],
+    )
+    model.booster_.save_model(str(out / "model.txt"))
+    with open(out / "model.features.json", "w") as fh:
+        json.dump({"feature_columns": feat_cols, "categorical_features": cat_feats,
+                   "n_features": len(feat_cols), "max_pool_depth": max_pool_depth}, fh, indent=2)
+    summary = {
+        "model_path": str(out / "model.txt"),
+        "n_features": len(feat_cols),
+        "best_iteration": int(model.best_iteration_ or params["n_estimators"]),
+        "inner_val_ndcg@20": float(model.best_score_.get("valid_0", {}).get("ndcg@20", float("nan"))),
+        "n_fit_rows": int(len(fit)),
+    }
+    with open(out / "train_single_summary.json", "w") as fh:
+        json.dump(summary, fh, indent=2)
+    return summary
+
+
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description="Train the LambdaMART reranker (session CV).")
+    p = argparse.ArgumentParser(description="Train the LambdaMART reranker.")
     p.add_argument("--features", default="exp/rerank/dataset/features.parquet")
     p.add_argument("--out-dir", default="exp/rerank/model")
+    p.add_argument("--single", action="store_true",
+                   help="Train ONE deployable model (model.txt + model.features.json) instead of CV.")
     p.add_argument("--n-splits", type=int, default=5)
     p.add_argument("--num-leaves", type=int, default=None)
     p.add_argument("--n-estimators", type=int, default=None)
@@ -174,8 +234,17 @@ def main(argv: list[str] | None = None) -> int:
         overrides["num_leaves"] = args.num_leaves
     if args.n_estimators is not None:
         overrides["n_estimators"] = args.n_estimators
-    summary = train_cv(frame, args.out_dir, n_splits=args.n_splits,
-                        params=overrides, early_stopping_rounds=args.early_stopping)
+    if args.single:
+        # Carry the dataset's per-branch cap into the model card (serve must match train).
+        cap = None
+        summary_path = Path(args.features).parent / "build_summary.json"
+        if summary_path.exists():
+            cap = json.loads(summary_path.read_text()).get("max_pool_depth")
+        summary = train_single(frame, args.out_dir, params=overrides,
+                               early_stopping_rounds=args.early_stopping, max_pool_depth=cap)
+    else:
+        summary = train_cv(frame, args.out_dir, n_splits=args.n_splits,
+                           params=overrides, early_stopping_rounds=args.early_stopping)
     print(json.dumps(summary, indent=2))
     return 0
 

@@ -37,6 +37,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 from dataclasses import dataclass, field
+from typing import Any
 
 # Word-boundary tokenizer for lyric-hint detection. Splits on any
 # non-word character so substring matches like `"story" in "history"` or
@@ -190,6 +191,60 @@ class CentroidOnlyBranch:
     centroid_source: str = "anchor_tracks"  # or "user"
 
 
+def build_state_record(state, rs) -> dict:
+    """Per-turn ``{state, resolver, resolved_targets}`` record for the reranker / trace.
+
+    Single source of truth for mapping the extracted ``state`` + resolved ``rs`` into the
+    structure the rerank feature pipeline consumes. Used by **both** the QU trace builder
+    (``compiler_v0plus_qu``, which writes the training trace) and the online reranker
+    (``compiler._compile`` via ``mcrs.rerank.online``), so training and serving see identical
+    state — there is no second copy to drift.
+    """
+    rejected_track_ids: list[str] = []
+    rejected_artist_ids: list[str] = []
+    for rej in rs.resolved_rejections.values():
+        rejected_track_ids.extend(rej.track_ids)
+        rejected_artist_ids.extend(rej.artist_ids)
+    for tf in state.track_feedback:
+        if tf.role == "rejected":
+            aid = rs.track_feedback_artist_ids.get(tf.track_id)
+            if aid is not None:
+                rejected_artist_ids.append(aid)
+    rejected_tags = [
+        er.value for er in state.explicit_rejections if er.kind == "tag" and er.value
+    ]
+    positive_tags = [
+        me.value for me in state.mentioned_entities
+        if me.sentiment > 0 and me.type == "tag" and me.value
+    ]
+    anchor_track_ids: list[str] = []
+    for tf in state.track_feedback:
+        if tf.role in ("accepted", "seed") and tf.overall_sentiment > 0:
+            anchor_track_ids.append(tf.track_id)
+    anchor_track_ids.extend(state.referenced_track_ids)
+    anchor_artist_ids = [
+        me.value for me in state.mentioned_entities
+        if me.sentiment > 0 and me.type == "artist" and me.value
+    ]
+    return {
+        "state": state.model_dump(mode="json"),
+        "resolver": {
+            "anchor_track_ids": anchor_track_ids,
+            "anchor_artist_ids": anchor_artist_ids,
+            "rejected_track_ids": rejected_track_ids,
+            "rejected_artist_ids": rejected_artist_ids,
+            "rejected_tags": rejected_tags,
+            "positive_tags": positive_tags,
+            "played_track_ids": list(rs.played_track_ids),
+        },
+        "resolved_targets": [
+            {"kind": t.kind, "source_text": t.source_text,
+             "entity_id": t.entity_id, "confidence": t.confidence}
+            for t in rs.resolved_targets
+        ],
+    }
+
+
 @dataclass
 class CompilerConfig:
     """Configuration for the v0+ Compiler.
@@ -270,6 +325,14 @@ class CompilerConfig:
     # like "where does the GT rank inside each retriever?" and the fusion
     # coverage ceiling. Costs ~K * branches * turns of trace when on.
     branch_trace_topk: int = 0
+
+    # Final ranker over the branch-pool union. "rrf" = weighted Reciprocal Rank Fusion
+    # (`_rrf_fuse_weighted` + soft adjustments, the historical default). "lambdamart" = the
+    # trained LightGBM reranker (mcrs/rerank), which replaces fusion + soft-adjustments and owns
+    # all ordering; hard-drop + popularity backfill still apply. Requires `branch_trace_topk > 0`
+    # (the reranker scores the per-branch pools) and `reranker_model_path`.
+    ranker: str = "rrf"
+    reranker_model_path: str | None = None
 
     # Resolved-artist discography branch (issue #74 Stage A). Off by default.
     enable_resolved_artist_discography: bool = False
@@ -359,6 +422,33 @@ class V0PlusCompiler:
         self.user_embeddings = user_embeddings
         self._catalog_release_year_bounds_cached = False
         self._catalog_release_year_bounds_cache: tuple[int, int] | None = None
+        # Lazily-loaded LambdaMART reranker (only when cfg.ranker == "lambdamart").
+        self._reranker: Any = None
+
+    def _get_reranker(self) -> Any:
+        """Load (once) the trained reranker named by `cfg.reranker_model_path`."""
+        if self._reranker is None:
+            if not self.cfg.reranker_model_path:
+                raise ValueError("ranker='lambdamart' requires cfg.reranker_model_path")
+            from mcrs.rerank.online import TurnReranker
+            self._reranker = TurnReranker.from_path(self.cfg.reranker_model_path, self.catalog)
+        return self._reranker
+
+    def _reranker_ranked(self, rs: "ResolvedConversationState",
+                         named_pools: list[tuple[str, list[tuple[str, float]]]]) -> list[str]:
+        """Order the deduped branch-pool union with the trained model (pre mask/hard-drop)."""
+        entry = {
+            "session_id": "_",
+            "turn_number": 0,
+            "trace": {
+                **build_state_record(rs.state, rs),
+                "branches": {"pools": [
+                    {"name": name, "hits": [[t, float(s)] for t, s in hits]}
+                    for name, hits in named_pools
+                ]},
+            },
+        }
+        return self._get_reranker().rank(entry)
 
     # ------------------------------------------------------------------
     # Top-level
@@ -696,11 +786,23 @@ class V0PlusCompiler:
             )
         fused = self._rrf_fuse_weighted(weighted_pools, k=self.cfg.rrf_k)
 
-        # 7. Soft (de)promotes
-        adjusted = self._apply_soft_adjustments(fused, rs)
+        # 7. Order the union. RRF (fusion + soft adjustments) is the historical default; the
+        #    trained LambdaMART reranker is an alternative that owns all ordering. It scores the
+        #    RAW branch-pool union (matching its training distribution), then we re-apply the
+        #    release-date mask + hard-drop so the output respects the same hard constraints.
+        if self.cfg.ranker == "lambdamart":
+            if not trace_enabled:
+                raise ValueError(
+                    "ranker='lambdamart' requires branch_trace_topk > 0 (the reranker scores "
+                    "the per-branch pools, which are only retained when tracing is enabled)."
+                )
+            reranked = self._reranker_ranked(rs, named_pools)
+            ranked = [t for t in reranked if t in candidate_mask and t not in hard_drop]
+        else:
+            adjusted = self._apply_soft_adjustments(fused, rs)
+            ranked = [tid for tid, _ in adjusted]
 
         # 8. Backfill to topk (popularity-sorted, mask + hard-drop-respecting)
-        ranked = [tid for tid, _ in adjusted]
         n_from_fusion = min(len(ranked), self.cfg.final_topk)
         if len(ranked) < self.cfg.final_topk:
             ranked = self._backfill(ranked, candidate_mask, hard_drop)

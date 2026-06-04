@@ -53,16 +53,34 @@ def load_ground_truth(path: str | Path) -> dict[tuple[str, int], str]:
 
 
 def iter_trace(path: str | Path) -> Iterator[dict[str, Any]]:
-    """Stream top-level array entries of the branch-trace JSON one at a time.
+    """Stream branch-trace entries one at a time, from **JSONL or a JSON array**.
 
-    ``use_float=True`` yields native ``float``/``int`` instead of ``Decimal`` so records
-    are directly JSON-serialisable. A **truncated** trace (the devset trace was cut off
-    mid-write at ~6.9k/8k turns) is tolerated: every complete entry before the break is
-    yielded and the dangling fragment is dropped with a warning, rather than failing the run.
+    The current harness writes traces as JSONL (one object per line); older artifacts are a
+    single JSON array. Format is auto-detected from the first non-whitespace byte (``{`` =
+    JSONL, ``[`` = array). Both tolerate a truncated tail: a malformed final line / dangling
+    array fragment is dropped with a warning rather than failing the run.
     """
     import sys
 
-    with open(path, "rb") as fh:
+    p = str(path)
+    with open(p, "rb") as fh:
+        head = fh.read(64).lstrip()
+    is_jsonl = p.endswith(".jsonl") or head[:1] == b"{"
+
+    if is_jsonl:
+        with open(p) as fh:
+            for i, line in enumerate(fh):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    yield json.loads(line)
+                except json.JSONDecodeError:
+                    print(f"[build_dataset] warning: skipping malformed/truncated JSONL line {i}.",
+                          file=sys.stderr)
+        return
+
+    with open(p, "rb") as fh:  # legacy JSON array
         items = ijson.items(fh, "item", use_float=True)
         n = 0
         while True:

@@ -24,3 +24,4 @@ artifacts/catalog_embeddings/
 # Local Dev Folders
 .vscode
 .claude/plans
+.claude/scheduled_tasks.lock

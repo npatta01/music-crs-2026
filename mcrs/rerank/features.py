@@ -167,11 +167,10 @@ def _block_d(df: pd.DataFrame, groups: pd.DataFrame) -> pd.DataFrame:
     for rk in ["exact_entity_probe", "lyric_search", "feature_articulation",
                "image_or_visual_search", "hidden_target_search"]:
         d[f"q__routing_{rk}"] = routing[rk].astype("int8")
-    d["q__turn_number"] = g["turn_number"].astype("int16")
-    n_turns = g.groupby("session_id")["turn_number"].transform("max")
-    d["q__n_turns"] = n_turns.astype("int16")
-    d["q__frac_through_session"] = (g["turn_number"] / n_turns).astype(float)
-    d["q__is_last_turn"] = (g["turn_number"] == n_turns).astype("int8")
+    # Excluded by design (serving constraints):
+    #  - n_turns / frac_through_session / is_last_turn: total session length is future info.
+    #  - turn_number: group-constant, low-importance, and plumbing the true turn index through
+    #    the live inference path isn't worth it; the reranker stays a pure fn of (state, pools).
     d["q__n_anchors"] = g["n_anchors"].astype("int16")
     d["q__has_seed"] = g["has_seed"].astype("int8")
     d["q__n_rejections"] = g["n_rejections"].astype("int16")
@@ -291,12 +290,22 @@ def _block_e_and_f_union(df: pd.DataFrame, groups: pd.DataFrame, meta: pd.DataFr
 
 # ------------------------------------------------------------------------------- assembly
 
-def build_features(dataset_dir: str | Path, catalog: Any) -> pd.DataFrame:
-    """Assemble the full feature frame (keys + label + features) for one dataset dir."""
-    ddir = Path(dataset_dir)
-    df = pd.read_parquet(ddir / "candidates.parquet")
-    groups = load_groups(ddir)
-    meta = catalog_metadata_frame(catalog)
+def features_from_frames(
+    candidates: pd.DataFrame,
+    groups: pd.DataFrame,
+    catalog: Any,
+    meta: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    """Assemble the feature frame from in-memory candidate + group frames.
+
+    Shared by the offline batch builder (``build_features``) and the **online** compiler
+    reranker (``mcrs.rerank.online``) so training and serving features are byte-identical.
+    Pass a precomputed ``meta`` (``catalog_metadata_frame``) to avoid rebuilding the 47k-row
+    catalog frame per call in the online path.
+    """
+    df = candidates
+    if meta is None:
+        meta = catalog_metadata_frame(catalog)
 
     a_f = _block_a_and_f_branch(df, groups)
     a_agg = _block_a_aggregates(a_f)
@@ -304,8 +313,9 @@ def build_features(dataset_dir: str | Path, catalog: Any) -> pd.DataFrame:
     d = _block_d(df, groups)
     e_f = _block_e_and_f_union(df, groups, meta, a_agg["agg__min_rank"])
 
+    key_cols = GROUP_KEYS + ["track_id"] + (["label"] if "label" in df.columns else [])
     out = pd.concat(
-        [df[GROUP_KEYS + ["track_id", "label"]].reset_index(drop=True),
+        [df[key_cols].reset_index(drop=True),
          a_f.reset_index(drop=True), a_agg.reset_index(drop=True),
          c.reset_index(drop=True), d.reset_index(drop=True),
          e_f.reset_index(drop=True)],
@@ -314,8 +324,24 @@ def build_features(dataset_dir: str | Path, catalog: Any) -> pd.DataFrame:
     return out
 
 
+def build_features(dataset_dir: str | Path, catalog: Any) -> pd.DataFrame:
+    """Assemble the full feature frame (keys + label + features) for one dataset dir."""
+    ddir = Path(dataset_dir)
+    df = pd.read_parquet(ddir / "candidates.parquet")
+    groups = load_groups(ddir)
+    return features_from_frames(df, groups, catalog)
+
+
 NON_FEATURE_COLS = set(GROUP_KEYS + ["track_id", "label"])
 CATEGORICAL_FEATURES = ["intent_mode", "exploration_policy"]
+# Fixed category levels (from the schema enums). pandas categoricals encode by *code* (the
+# position in the categories list), so train and serve MUST share the same ordered levels --
+# otherwise a single-turn serving frame (one intent_mode) assigns different codes than the
+# multi-category training frame and the model reads the wrong category. Pin them here.
+CATEGORICAL_LEVELS: dict[str, list[str]] = {
+    "intent_mode": ["open_explore", "refinement", "pivot", "playlist_build"],
+    "exploration_policy": ["exploit", "diversify_artists", "diversify_albums", "balanced"],
+}
 
 
 def feature_columns(frame: pd.DataFrame) -> list[str]:
