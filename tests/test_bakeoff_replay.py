@@ -67,3 +67,19 @@ def test_build_turn_inputs_normalizes_invalid_roles():
     )
     # no 'music' (or any non-standard) role survives — would 422 on OpenRouter
     assert all(m["role"] in {"system", "user", "assistant"} for m in chat_history)
+
+
+def test_generate_for_model_state_uses_state_block():
+    from mcrs.bakeoff.replay import generate_for_model_state
+
+    class FakeLM:
+        def response_generation(self, sys_p, history, item, max_new_tokens=2048):
+            return history[0]["content"]  # echo the state block we fed
+
+    turns = [{"session_id": "s1", "turn_number": 1, "top_track_id": "t9", "user_id": "u1"}]
+    states = {("s1", 1): {"turn_intent": "play something jazzy"}}
+    recs = generate_for_model_state(
+        FakeLM(), turns, lambda uid: "SYS", states, _lookup(),
+    )
+    assert "play something jazzy" in recs[0]["response"]
+    assert "[LISTENER CONTEXT]" in recs[0]["response"]

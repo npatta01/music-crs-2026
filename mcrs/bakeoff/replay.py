@@ -53,3 +53,22 @@ def generate_for_model(lm: Any, turns: list[dict], build_system_prompt,
         resp = lm.response_generation(sys_p, history, item, max_new_tokens=max_new_tokens)
         out.append({**t, "response": resp})
     return out
+
+
+def generate_for_model_state(lm: Any, turns: list[dict], build_system_prompt,
+                             states_by_key: dict, lookup: TrackMetadataLookup,
+                             max_new_tokens: int = 2048) -> list[dict]:
+    """Like generate_for_model, but conditions on the compact structured state
+    block instead of the raw transcript. `states_by_key[(session_id, turn_number)]`
+    holds the state dict."""
+    from mcrs.bakeoff.state_context import format_state_block
+    out = []
+    for t in turns:
+        state = states_by_key.get((t["session_id"], t["turn_number"]))
+        block = format_state_block(state, lookup)
+        history = [{"role": "user", "content": block}]
+        item = lookup.id_to_metadata(t["top_track_id"])
+        system_prompt = build_system_prompt(t.get("user_id"))
+        resp = lm.response_generation(system_prompt, history, item, max_new_tokens=max_new_tokens)
+        out.append({**t, "response": resp})
+    return out

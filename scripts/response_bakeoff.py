@@ -50,6 +50,9 @@ def main() -> None:
     ap.add_argument("--out_dir", default="exp/bakeoff/responses")
     ap.add_argument("--only", default=None, help="comma-separated tags to run")
     ap.add_argument("--response_prompt", default="configs/bakeoff/prompts/response_generation.txt")
+    ap.add_argument("--mode", choices=["transcript", "state"], default="transcript")
+    ap.add_argument("--trace", default=None,
+                    help="trace jsonl with per-turn state (required for --mode state)")
     args = ap.parse_args()
 
     predictions = json.loads(Path(args.predictions).read_text())
@@ -59,15 +62,24 @@ def main() -> None:
     turns = collect_turns(predictions, session_ids)
     print(f"slice sessions={len(session_ids)} turns={len(turns)}")
 
-    from datasets import load_dataset
     from mcrs.bakeoff.track_lookup import TrackMetadataLookup
     from mcrs.bakeoff.replay import generate_for_model
     from mcrs.lm_modules.litellm_chat import LITELLM_LM
     from mcrs.db_user.user_profile import UserProfileDB
 
-    ds = load_dataset("talkpl-ai/TalkPlayData-Challenge-Dataset", split="test")
-    convs_by_session = {r["session_id"]: r["conversations"]
-                        for r in ds if r["session_id"] in session_ids}
+    convs_by_session = None
+    states = None
+    if args.mode == "state":
+        if not args.trace:
+            raise SystemExit("--trace is required for --mode state")
+        from mcrs.bakeoff.state_context import load_states
+        states = load_states(args.trace, session_ids)
+        print(f"loaded states for {len(states)} (session,turn) keys")
+    else:
+        from datasets import load_dataset
+        ds = load_dataset("talkpl-ai/TalkPlayData-Challenge-Dataset", split="test")
+        convs_by_session = {r["session_id"]: r["conversations"]
+                            for r in ds if r["session_id"] in session_ids}
     lookup = TrackMetadataLookup.from_hf()
     user_db = UserProfileDB(
         dataset_name="talkpl-ai/TalkPlayData-Challenge-User-Metadata",
@@ -101,10 +113,17 @@ def main() -> None:
             max_tokens=defaults.get("max_tokens", 2048),
             completion_kwargs=g.get("completion_kwargs") or {},
         )
-        recs = generate_for_model(
-            lm, turns, build_system_prompt, lookup, convs_by_session,
-            max_new_tokens=defaults.get("max_tokens", 2048),
-        )
+        if args.mode == "state":
+            from mcrs.bakeoff.replay import generate_for_model_state
+            recs = generate_for_model_state(
+                lm, turns, build_system_prompt, states, lookup,
+                max_new_tokens=defaults.get("max_tokens", 2048),
+            )
+        else:
+            recs = generate_for_model(
+                lm, turns, build_system_prompt, lookup, convs_by_session,
+                max_new_tokens=defaults.get("max_tokens", 2048),
+            )
         (out_dir / f"{g['tag']}.json").write_text(json.dumps(recs, indent=2))
         print(f"   wrote {len(recs)} responses -> {out_dir / (g['tag'] + '.json')}")
 
