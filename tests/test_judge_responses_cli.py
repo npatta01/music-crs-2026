@@ -24,3 +24,16 @@ def test_render_markdown_table_sorts_by_combined_desc():
     md = mod.render_markdown(reports)
     assert md.index("strong") < md.index("weak")
     assert "Distinct-2" in md and "Combined" in md
+
+
+def test_conversation_text_includes_current_user_ask():
+    convs = [
+        {"turn_number": 1, "role": "user", "content": "hi"},
+        {"turn_number": 1, "role": "assistant", "content": "hello"},
+        {"turn_number": 2, "role": "user", "content": "the current ask"},
+        {"turn_number": 2, "role": "assistant", "content": "should-not-appear"},
+    ]
+    txt = mod._conversation_text(convs, 2)
+    assert "the current ask" in txt
+    assert "should-not-appear" not in txt
+    assert "hi" in txt and "hello" in txt

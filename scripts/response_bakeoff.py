@@ -32,15 +32,10 @@ def collect_turns(predictions: list[dict], session_ids: set[str]) -> list[dict]:
             "session_id": r["session_id"],
             "turn_number": r["turn_number"],
             "top_track_id": ids[0],
+            "user_id": r.get("user_id"),
         })
     turns.sort(key=lambda t: (t["session_id"], t["turn_number"]))
     return turns
-
-
-def _load_system_prompt(prompts_dir: Path) -> str:
-    roleplay = (prompts_dir / "roleplay.txt").read_text(encoding="utf-8")
-    response = (prompts_dir / "response_generation.txt").read_text(encoding="utf-8")
-    return roleplay + response
 
 
 def main() -> None:
@@ -54,6 +49,7 @@ def main() -> None:
     ap.add_argument("--prompts_dir", default="mcrs/system_prompts")
     ap.add_argument("--out_dir", default="exp/bakeoff/responses")
     ap.add_argument("--only", default=None, help="comma-separated tags to run")
+    ap.add_argument("--response_prompt", default="configs/bakeoff/prompts/response_generation.txt")
     args = ap.parse_args()
 
     predictions = json.loads(Path(args.predictions).read_text())
@@ -67,12 +63,29 @@ def main() -> None:
     from mcrs.bakeoff.track_lookup import TrackMetadataLookup
     from mcrs.bakeoff.replay import generate_for_model
     from mcrs.lm_modules.litellm_chat import LITELLM_LM
+    from mcrs.db_user.user_profile import UserProfileDB
 
     ds = load_dataset("talkpl-ai/TalkPlayData-Challenge-Dataset", split="test")
     convs_by_session = {r["session_id"]: r["conversations"]
                         for r in ds if r["session_id"] in session_ids}
     lookup = TrackMetadataLookup.from_hf()
-    system_prompt = _load_system_prompt(Path(args.prompts_dir))
+    user_db = UserProfileDB(
+        dataset_name="talkpl-ai/TalkPlayData-Challenge-User-Metadata",
+        split_types=["all_users"],
+    )
+    prompts_dir = Path(args.prompts_dir)
+    roleplay = (prompts_dir / "roleplay.txt").read_text(encoding="utf-8")
+    response = Path(args.response_prompt).read_text(encoding="utf-8")
+    personalization = (prompts_dir / "personalization.txt").read_text(encoding="utf-8")
+
+    def build_system_prompt(user_id):
+        sp = roleplay + response
+        if user_id:
+            try:
+                sp += personalization + "\n" + user_db.id_to_profile_str(user_id)
+            except KeyError:
+                pass  # unknown user_id -> no profile segment
+        return sp
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -85,12 +98,12 @@ def main() -> None:
         lm = LITELLM_LM(
             model_name=g["model_name"],
             temperature=defaults.get("temperature", 0.7),
-            max_tokens=defaults.get("max_tokens", 256),
+            max_tokens=defaults.get("max_tokens", 2048),
             completion_kwargs=g.get("completion_kwargs") or {},
         )
         recs = generate_for_model(
-            lm, turns, system_prompt, lookup, convs_by_session,
-            max_new_tokens=defaults.get("max_tokens", 256),
+            lm, turns, build_system_prompt, lookup, convs_by_session,
+            max_new_tokens=defaults.get("max_tokens", 2048),
         )
         (out_dir / f"{g['tag']}.json").write_text(json.dumps(recs, indent=2))
         print(f"   wrote {len(recs)} responses -> {out_dir / (g['tag'] + '.json')}")

@@ -28,6 +28,12 @@ def _conversation_text(convs: list[dict], turn_number: int) -> str:
         for c in convs
         if c["turn_number"] < turn_number and c["role"] in ("user", "assistant")
     ]
+    # include the current turn's user ask — the request the reply must address
+    lines += [
+        f"user: {c['content']}"
+        for c in convs
+        if c["turn_number"] == turn_number and c["role"] == "user"
+    ]
     return "\n".join(lines)
 
 

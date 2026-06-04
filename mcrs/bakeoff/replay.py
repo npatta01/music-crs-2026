@@ -22,28 +22,31 @@ def build_turn_inputs(
     system_prompt: str,
 ) -> tuple[str, list[dict], str]:
     """Return (system_prompt, chat_history, recommend_item) for one turn,
-    reusing the production chat_history_parser with `lookup` as item_db."""
+    reusing the production chat_history_parser with `lookup` as item_db.
+    The current-turn user query is appended last, matching crs_baseline.batch_chat."""
     music_crs = SimpleNamespace(item_db=lookup)
-    chat_history, _user_query = chat_history_parser(
+    chat_history, user_query = chat_history_parser(
         conversations, music_crs, target_turn_number
     )
-    # Normalize non-standard roles (e.g., 'music') to 'assistant' for chat API compatibility
     chat_history = [
         {"role": _normalize_role(m["role"]), "content": m["content"]}
         for m in chat_history
     ]
+    chat_history.append({"role": "user", "content": user_query})
     recommend_item = lookup.id_to_metadata(top_track_id)
     return system_prompt, chat_history, recommend_item
 
 
-def generate_for_model(lm: Any, turns: list[dict], system_prompt: str,
+def generate_for_model(lm: Any, turns: list[dict], build_system_prompt,
                        lookup: TrackMetadataLookup, conversations_by_session: dict,
-                       max_new_tokens: int = 256) -> list[dict]:
-    """For each turn record {session_id, turn_number, top_track_id}, generate a
-    response with `lm` (a LITELLM_LM). Returns enriched records with `response`."""
+                       max_new_tokens: int = 2048) -> list[dict]:
+    """For each turn record {session_id, turn_number, top_track_id, user_id}, generate
+    a response with `lm`. `build_system_prompt(user_id) -> str` produces the per-turn
+    system prompt (so the user profile can be injected like production)."""
     out = []
     for t in turns:
         convs = conversations_by_session[t["session_id"]]
+        system_prompt = build_system_prompt(t.get("user_id"))
         sys_p, history, item = build_turn_inputs(
             convs, t["turn_number"], t["top_track_id"], lookup, system_prompt
         )
