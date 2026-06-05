@@ -36,6 +36,18 @@ def test_build_judge_prompt_contains_response_and_axes():
     assert "explanation" in p.lower()
 
 
+def test_build_judge_prompt_includes_profile_when_given():
+    p = build_judge_prompt(conversation="user: hi", response="r", track="t",
+                           profile="age_group: 40s\ncountry_name: Peru")
+    assert "[LISTENER PROFILE]" in p
+    assert "Peru" in p
+
+
+def test_build_judge_prompt_omits_profile_when_none():
+    p = build_judge_prompt(conversation="user: hi", response="r", track="t")
+    assert "[LISTENER PROFILE]" not in p
+
+
 def test_aggregate_model_report_averages_axes_and_panel():
     per_turn = [
         {"turn": 1, "judges": {"gemini": {"personalization": 5, "explanation": 5},

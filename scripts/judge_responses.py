@@ -56,6 +56,9 @@ def render_markdown(reports: list[dict]) -> str:
                 for jn in sorted(r["personalization_by_judge"])
             )
         )
+    out += ["", "## Judge parse failures", ""]
+    for r in rows:
+        out.append(f"- **{r['tag']}**: {r.get('parse_failures', 0)}")
     out += ["", "_Proxy judge — relative ranking only; official Gemini prompt is undisclosed._"]
     return "\n".join(out)
 
@@ -72,6 +75,20 @@ def main() -> None:
 
     cfg = yaml.safe_load(Path(args.models).read_text())
     judges = cfg["judges"]
+
+    from mcrs.db_user.user_profile import UserProfileDB
+    user_db = UserProfileDB(
+        dataset_name="talkpl-ai/TalkPlayData-Challenge-User-Metadata",
+        split_types=["all_users"],
+    )
+
+    def _profile(user_id):
+        if not user_id:
+            return None
+        try:
+            return user_db.id_to_profile_str(user_id)
+        except KeyError:
+            return None
 
     from datasets import load_dataset
     from mcrs.lm_modules.litellm_client import LiteLLMChatClient
@@ -93,26 +110,44 @@ def main() -> None:
     }
 
     reports = []
+    audit_dir = Path(args.out_dir) / "audit"
+    audit_dir.mkdir(parents=True, exist_ok=True)
     for resp_file in sorted(Path(args.responses_dir).glob("*.json")):
         tag = resp_file.stem
         recs = json.loads(resp_file.read_text())
         per_turn = []
+        audit = []
+        parse_failures = 0
         for rec in recs:
             convs = convs_by_session.get(rec["session_id"], [])
             conv_text = _conversation_text(convs, rec["turn_number"])
             track = lookup.id_to_metadata(rec["top_track_id"])
-            prompt = build_judge_prompt(conv_text, rec["response"], track)
+            profile = _profile(rec.get("user_id"))
+            prompt = build_judge_prompt(conv_text, rec["response"], track, profile)
             judges_scores = {}
+            raw_by_judge = {}
             for jn, client in judge_clients.items():
                 raw = client.chat(messages=[{"role": "user", "content": prompt}])
+                raw_by_judge[jn] = raw
                 try:
                     judges_scores[jn] = parse_judge_json(raw)
                 except ValueError:
+                    parse_failures += 1
                     judges_scores[jn] = {"personalization": 1, "explanation": 1}
             per_turn.append({"turn": rec["turn_number"], "judges": judges_scores})
+            audit.append({
+                "session_id": rec["session_id"],
+                "turn": rec["turn_number"],
+                "response": rec["response"],
+                "scores": judges_scores,
+                "raw": raw_by_judge,
+            })
         distinct2 = compute_lexical_diversity([r["response"] for r in recs])
-        reports.append(aggregate_model_report(tag, per_turn, distinct2))
-        print(f"judged {tag}: combined={reports[-1]['combined']:.3f}")
+        report = aggregate_model_report(tag, per_turn, distinct2)
+        report["parse_failures"] = parse_failures
+        reports.append(report)
+        (audit_dir / f"{tag}.json").write_text(json.dumps(audit, indent=2))
+        print(f"judged {tag}: combined={report['combined']:.3f} parse_failures={parse_failures}")
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

@@ -26,6 +26,18 @@ def test_render_markdown_table_sorts_by_combined_desc():
     assert "Distinct-2" in md and "Combined" in md
 
 
+def test_render_markdown_shows_parse_failures():
+    reports = [
+        {"tag": "m", "distinct2": 0.5, "personalization_panel": 0.5,
+         "explanation_panel": 0.5, "combined": 0.5, "n_turns": 8,
+         "personalization_by_judge": {"gemini": 0.5}, "explanation_by_judge": {"gemini": 0.5},
+         "parse_failures": 3},
+    ]
+    md = mod.render_markdown(reports)
+    assert "parse failures" in md.lower()
+    assert "3" in md
+
+
 def test_conversation_text_includes_current_user_ask():
     convs = [
         {"turn_number": 1, "role": "user", "content": "hi"},

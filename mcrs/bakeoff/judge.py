@@ -21,9 +21,11 @@ JUDGE_SYSTEM = (
 )
 
 
-def build_judge_prompt(conversation: str, response: str, track: str) -> str:
+def build_judge_prompt(conversation: str, response: str, track: str, profile: str | None = None) -> str:
+    profile_block = f"[LISTENER PROFILE]\n{profile}\n\n" if profile else ""
     return (
         f"{JUDGE_SYSTEM}\n\n"
+        f"{profile_block}"
         f"[CONVERSATION SO FAR]\n{conversation}\n\n"
         f"[RECOMMENDED TRACK]\n{track}\n\n"
         f"[CHATBOT REPLY TO SCORE]\n{response}\n\n"
