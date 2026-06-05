@@ -309,6 +309,12 @@ def run_modal_sharded(args: argparse.Namespace, split: str, exp_dir: Path) -> No
         "-m",
         "modal",
         "run",
+        # Detached: a long sharded run (esp. with the slower LambdaMART reranker) can outlast
+        # the local client connection; --detach keeps the Modal app + shards alive if the
+        # client drops, instead of tearing every shard down on disconnect. `modal run` still
+        # blocks until completion while connected, so the download/merge/eval steps below run
+        # in order as before.
+        "--detach",
         "modal/app.py::run_inference_sharded",
         "--tid",
         args.tid,

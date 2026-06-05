@@ -101,6 +101,10 @@ cache_vol = modal.Volume.from_name(CACHE_VOLUME, create_if_missing=True, version
 image = (
     modal.Image.debian_slim(python_version="3.12")
     .uv_sync(".")
+    # Serve-time dep for the LambdaMART reranker (compiler.ranker=lambdamart). It lives in
+    # the [rerank] optional extra, which uv_sync(".") does not install, so add it explicitly.
+    # Use uv (not pip): the uv_sync env has no pip.
+    .uv_pip_install("lightgbm>=4.5")
     .add_local_dir(
         ".",
         "/app",

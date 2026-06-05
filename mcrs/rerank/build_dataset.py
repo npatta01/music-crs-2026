@@ -21,9 +21,9 @@ import json
 from pathlib import Path
 from typing import Any, Iterator
 
-import ijson
-import pyarrow as pa
-import pyarrow.parquet as pq
+# ijson / pyarrow are imported lazily (inside the functions that use them) so the online
+# serving path (mcrs.rerank.online imports _parse_pools/_candidate_rows/build_group_record
+# from here) doesn't drag the offline-only trace/parquet toolchain into the Modal image.
 
 from mcrs.rerank.branches import (
     BRANCH_KEYS,
@@ -79,6 +79,8 @@ def iter_trace(path: str | Path) -> Iterator[dict[str, Any]]:
                     print(f"[build_dataset] warning: skipping malformed/truncated JSONL line {i}.",
                           file=sys.stderr)
         return
+
+    import ijson  # offline-only; lazy so serving doesn't require it
 
     with open(p, "rb") as fh:  # legacy JSON array
         items = ijson.items(fh, "item", use_float=True)
@@ -181,14 +183,18 @@ def build_group_record(entry: dict[str, Any], gt_tid: str | None) -> dict[str, A
 
 # ------------------------------------------------------------------------- candidate rows
 
-_CAND_SCHEMA = pa.schema(
-    [pa.field("session_id", pa.string()),
-     pa.field("turn_number", pa.int32()),
-     pa.field("track_id", pa.string()),
-     pa.field("label", pa.int8())]
-    + [pa.field(raw_rank_col(k), pa.int32()) for k in BRANCH_KEYS]
-    + [pa.field(raw_score_col(k), pa.float32()) for k in BRANCH_KEYS]
-)
+def _cand_schema():
+    """Parquet schema for candidates.parquet. Built lazily (imports pyarrow)."""
+    import pyarrow as pa
+
+    return pa.schema(
+        [pa.field("session_id", pa.string()),
+         pa.field("turn_number", pa.int32()),
+         pa.field("track_id", pa.string()),
+         pa.field("label", pa.int8())]
+        + [pa.field(raw_rank_col(k), pa.int32()) for k in BRANCH_KEYS]
+        + [pa.field(raw_score_col(k), pa.float32()) for k in BRANCH_KEYS]
+    )
 
 
 def _candidate_rows(
@@ -274,11 +280,15 @@ def build_dataset(
     max_neg_per_group: int | None = None,
     flush_rows: int = 500_000,
 ) -> dict[str, Any]:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     gt = load_ground_truth(ground_truth_path)
 
-    writer = pq.ParquetWriter(out / "candidates.parquet", _CAND_SCHEMA)
+    cand_schema = _cand_schema()
+    writer = pq.ParquetWriter(out / "candidates.parquet", cand_schema)
     groups_fh = open(out / "groups.jsonl", "w")
 
     buffer: list[dict[str, Any]] = []
@@ -292,8 +302,8 @@ def build_dataset(
         nonlocal buffer
         if not buffer:
             return
-        cols = {f.name: [r.get(f.name) for r in buffer] for f in _CAND_SCHEMA}
-        writer.write_table(pa.table(cols, schema=_CAND_SCHEMA))
+        cols = {f.name: [r.get(f.name) for r in buffer] for f in cand_schema}
+        writer.write_table(pa.table(cols, schema=cand_schema))
         buffer = []
 
     try:

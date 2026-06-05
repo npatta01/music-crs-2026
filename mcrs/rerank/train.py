@@ -19,7 +19,8 @@ from typing import Any
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import GroupKFold, GroupShuffleSplit
+# sklearn is imported lazily inside train_cv / train_single so the online serving path
+# (which imports `to_model_matrix` from here) doesn't require scikit-learn in the Modal image.
 
 from mcrs.rerank.features import (
     CATEGORICAL_FEATURES,
@@ -59,7 +60,11 @@ def to_model_matrix(frame: pd.DataFrame, feat_cols: list[str]) -> pd.DataFrame:
             # Pinned levels => identical category codes at train and serve time.
             out[c] = pd.Categorical(frame[c], categories=CATEGORICAL_LEVELS[c])
         else:
-            out[c] = frame[c].astype("float32")
+            # NA-safe cast: the raw online feature frame can carry object/nullable columns
+            # containing <NA> (the offline parquet round-trip masked this, and older pandas
+            # raises on `.astype("float32")` over NAType). `to_numeric(coerce)` maps any NA /
+            # non-numeric to NaN first, which LightGBM handles natively.
+            out[c] = pd.to_numeric(frame[c], errors="coerce").astype("float32")
     return pd.DataFrame(out, index=frame.index)
 
 
@@ -82,6 +87,8 @@ def train_cv(
     inner_val_frac: float = 0.1,
     seed: int = 42,
 ) -> dict[str, Any]:
+    from sklearn.model_selection import GroupKFold, GroupShuffleSplit
+
     out = Path(out_dir)
     (out / "models").mkdir(parents=True, exist_ok=True)
     params = {**DEFAULT_PARAMS, **(params or {})}
@@ -177,6 +184,8 @@ def train_single(
     online reranker serves with the SAME cap -- within-group features (z-scores, aggregates)
     depend on the candidate set, so a serve/train cap mismatch silently corrupts the ranking.
     """
+    from sklearn.model_selection import GroupShuffleSplit
+
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     params = {**DEFAULT_PARAMS, **(params or {})}
