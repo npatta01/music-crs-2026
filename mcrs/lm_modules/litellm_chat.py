@@ -3,6 +3,14 @@
 import os
 from typing import Any
 
+_VALID_ROLES = {"system", "user", "assistant"}
+
+
+def _normalize_role(role: str) -> str:
+    """Map non-standard roles (e.g. 'music' from chat_history_parser) to 'assistant'
+    so OpenAI-style chat APIs don't 422 on an unknown role."""
+    return role if role in _VALID_ROLES else "assistant"
+
 
 def _format_recommend_item(recommend_item: Any) -> str:
     if isinstance(recommend_item, dict):
@@ -13,7 +21,10 @@ def _format_recommend_item(recommend_item: Any) -> str:
 def _build_messages(sys_prompt: str, chat_history: list, recommend_item: Any) -> list[dict]:
     item_text = _format_recommend_item(recommend_item)
     messages = [{"role": "system", "content": sys_prompt}]
-    messages.extend(chat_history)
+    messages.extend(
+        {"role": _normalize_role(m["role"]), "content": m["content"]}
+        for m in chat_history
+    )
     messages.append(
         {
             "role": "user",
@@ -83,7 +94,7 @@ class LITELLM_LM:
         sys_prompts: list[str],
         chat_histories: list[list],
         recommend_items: list,
-        max_new_tokens: int = 64,
+        max_new_tokens: int | None = None,
     ) -> list[str]:
         import litellm
 
