@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="398" viewBox="0 0 1000 398" role="img" aria-label="Failure buckets by union/final boundary">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="28" y="34" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#172033">Failure buckets by union/final boundary</text>
+<text x="306" y="88" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">union200 deep miss</text>
+<rect x="320" y="72" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="72" width="151.7" height="22" rx="6" fill="#0f766e"/>
+<text x="479.7" y="88" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">8.2%</text>
+<text x="306" y="130" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">union20 postfusion or final loss</text>
+<rect x="320" y="114" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="114" width="159.5" height="22" rx="6" fill="#2563eb"/>
+<text x="487.5" y="130" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">8.6%</text>
+<text x="306" y="172" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">not in any branch top1000</text>
+<rect x="320" y="156" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="156" width="175.8" height="22" rx="6" fill="#c2410c"/>
+<text x="503.8" y="172" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">9.5%</text>
+<text x="306" y="214" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">union20 fusion loss</text>
+<rect x="320" y="198" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="198" width="243.1" height="22" rx="6" fill="#0f766e"/>
+<text x="571.1" y="214" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">13.1%</text>
+<text x="306" y="256" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">union1000 deep miss</text>
+<rect x="320" y="240" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="240" width="300.0" height="22" rx="6" fill="#0f766e"/>
+<text x="628.0" y="256" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">16.1%</text>
+<text x="306" y="298" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">union100 near miss</text>
+<rect x="320" y="282" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="282" width="320.0" height="22" rx="6" fill="#0f766e"/>
+<text x="648.0" y="298" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">17.2%</text>
+<text x="306" y="340" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">final top20 hit</text>
+<rect x="320" y="324" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="324" width="508.5" height="22" rx="6" fill="#2563eb"/>
+<text x="836.5" y="340" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">27.4%</text>
+</svg>

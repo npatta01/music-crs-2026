@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ranker Agent Report</title>
+<style>
+:root {
+  --ink: #172033;
+  --muted: #5f6b7a;
+  --line: #dbe2ea;
+  --paper: #f6f7f9;
+  --panel: #ffffff;
+  --blue: #2662d9;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+header {
+  padding: 24px clamp(18px, 4vw, 42px) 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+h1 {
+  margin: 14px 0 8px;
+  font-size: clamp(26px, 3.5vw, 42px);
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+p { max-width: 860px; color: var(--muted); line-height: 1.5; }
+.markdown-body {
+  max-width: 980px;
+  margin: 0 auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: clamp(18px, 3vw, 34px);
+  box-shadow: 0 1px 2px rgba(30, 42, 62, 0.05);
+}
+.markdown-body > :first-child { margin-top: 0; }
+.markdown-body h1 {
+  margin: 0 0 16px;
+  font-size: 32px;
+  line-height: 1.12;
+}
+.markdown-body h2 {
+  margin: 30px 0 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 23px;
+  line-height: 1.2;
+}
+.markdown-body h3 {
+  margin: 22px 0 8px;
+  font-size: 17px;
+  line-height: 1.25;
+}
+.markdown-body h4 {
+  margin: 18px 0 6px;
+  font-size: 14px;
+  line-height: 1.3;
+  color: #334155;
+}
+.markdown-body p,
+.markdown-body li {
+  color: var(--ink);
+  line-height: 1.58;
+}
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 24px;
+}
+.markdown-body li + li {
+  margin-top: 5px;
+}
+.markdown-body code {
+  background: #eef2f6;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  overflow-wrap: anywhere;
+}
+.markdown-body pre {
+  margin: 14px 0;
+  padding: 14px;
+  overflow: auto;
+  white-space: pre;
+  background: #0f172a;
+  color: #f8fafc;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.markdown-body pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+.table-wrap {
+  margin: 14px 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.markdown-body th,
+.markdown-body td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.markdown-body th {
+  background: #f8fafc;
+  color: #465163;
+  font-size: 12px;
+}
+.markdown-body blockquote {
+  margin: 16px 0;
+  padding: 10px 14px;
+  border-left: 4px solid var(--blue);
+  background: #f8fafc;
+  border-radius: 6px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+a {
+  color: var(--blue);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 11px;
+  background: #fff;
+  text-decoration: none;
+  font-size: 13px;
+}
+main {
+  padding: 18px clamp(18px, 4vw, 42px) 42px;
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="actions">
+    <a href="../index.html#report-map">Back to report map</a>
+    <a href="agent_report.md">Raw markdown source</a>
+  </div>
+  <h1>Ranker Agent Report</h1>
+  <p>This page renders the markdown artifact as standalone HTML while preserving the raw source link for agent review.</p>
+</header>
+<main>
+  <article class="markdown-body">
+<h1>Music CRS Recall Gap Decision Report</h1>
+<p>Generated: 2026-06-06 16:33:52 UTC TID: <code>v0plus_compiler_all_retrievers_devset</code></p>
+<h2>Technical Summary</h2>
+<ul>
+<li>Official-score context: NDCG@10 is 10.5%; NDCG@20 is 12.5%.</li>
+<li>Final Hit@20 is 27.4%; union@20 is 47.7%.</li>
+<li>52.3% of turns are not in union@20, so candidate generation/state/retrieval is a real gap.</li>
+<li>The union@20 to final@20 opportunity is 20.3 pp, so current fusion/post-fusion/ranking is also a real gap.</li>
+<li>Union@100 is 66.2%; a trained ranker over union@100/200 is justified, but cannot fix not-in-union cases.</li>
+<li>Organizer metadata sharpens the diagnosis: LL final@20 is 20.2% vs HH final@20 41.9%; turn 8 final@20 is 17.0% while union@20 is 43.9%.</li>
+<li>Public challenge scoring dimensions include nDCG@20, catalog diversity, Distinct-2 lexical diversity, and Gemini LLM-as-a-judge response quality. Codabench publishes the composite formula: 0.50*nDCG@20 + 0.10*CatalogDiversity + 0.10*LexicalDiversity + 0.30*LLM-Judge. The challenge website lists the same dimensions but says the exact formula is not published there, so use Codabench as the formula source.</li>
+<li>Response-generation gap: This run is retrieval-only (<code>lm_type=dummy</code>), so generated responses are empty/unanalyzed. That leaves the 0.30 LLM-Judge and 0.10 LexicalDiversity lanes unoptimized, plus CatalogDiversity as a track-list diversity lane.</li>
+</ul>
+<h2>Response Generation And Scoring Context</h2>
+<ul>
+<li>Public dimensions: nDCG@20, catalog diversity, Distinct-2 lexical diversity, and Gemini LLM-as-a-judge response quality.</li>
+<li>Formula caveat: Codabench publishes the composite formula: 0.50*nDCG@20 + 0.10*CatalogDiversity + 0.10*LexicalDiversity + 0.30*LLM-Judge. The challenge website lists the same dimensions but says the exact formula is not published there, so use Codabench as the formula source.</li>
+<li>Current gap: This run is retrieval-only (<code>lm_type=dummy</code>), so generated responses are empty/unanalyzed. That leaves the 0.30 LLM-Judge and 0.10 LexicalDiversity lanes unoptimized, plus CatalogDiversity as a track-list diversity lane.</li>
+<li>Next test: Run a real response generator on dev predictions, then measure Distinct-2 and inspect Gemini-judge style/explanation quality before optimizing prose prompts.</li>
+</ul>
+<h2>Task-Mode And State Audit Addendum</h2>
+<ul>
+<li>Honest first-stage ranker ceiling: union@100 = 66.2%; gap@100 = 33.8% (2,701 turns).</li>
+<li>This preserves the user&#x27;s union@20 concern, but makes union@100 the practical shallow-pool ceiling for first-stage ranker design.</li>
+</ul>
+<h3>What This Adds To The Plan</h3>
+<ul>
+<li>Use union@100 as the honest first-stage ranker ceiling while keeping union@20 as the primary gap boundary.</li>
+<li>Split the work by turn-level mode: continuation is mostly ranking/within-artist selection; new-artist is the largest candidate-generation gap.</li>
+<li>Add relation-typed state for named artists: seed, satisfied, contrast, history, rejected. Binary positive/negative anchoring is too blunt.</li>
+<li>Treat category/specificity and raw demographics as session-level context, not as candidate-varying ranker features.</li>
+<li>Promote album-affinity, artist-recency, is_new_artist, user-CF, and genre/popularity priors into the first ranker feature set.</li>
+</ul>
+<h3>Caveats before acting</h3>
+<ul>
+<li>Do not use union@1000 as the headline ranker target; it is an oracle over thousands of candidates.</li>
+<li>The continuation/new-artist taxonomy is partly GT-defined, so validate it with current-turn intent labels before training against it.</li>
+<li>New-artist popularity/CF fixes are plausible but not counterfactually verified yet.</li>
+<li>Album-affinity has a measured rescue pool, but the report itself corrects the upside to a prototype-before-commit estimate.</li>
+<li>Response text quality is a separate scored gap: Codabench weights LLM-Judge at 0.30 and LexicalDiversity at 0.10, while current lm_type=dummy produces empty responses.</li>
+</ul>
+<h3>Task Mode Split</h3>
+<div class="table-wrap"><table><thead><tr><th>Mode</th><th>Meaning</th><th>Turns</th><th>Share</th><th>Hit@20</th><th>NDCG@20</th><th>Gap@50</th><th>Miss share</th><th>Verdict</th></tr></thead><tbody><tr><td>EXACT-named</td><td>GT = the song they named</td><td>113</td><td>1.4%</td><td>94.7%</td><td>70.9%</td><td>3.5%</td><td>0.1%</td><td>solved</td></tr><tr><td>CONTINUATION</td><td>GT = deeper cut by an already-heard artist</td><td>3,176</td><td>39.7%</td><td>45.6%</td><td>20.5%</td><td>9.2%</td><td>29.8%</td><td>reranker — GT in pool, ranking problem</td></tr><tr><td>NEW-ARTIST</td><td>GT = a brand-new artist</td><td>3,765</td><td>47.1%</td><td>9.8%</td><td>3.9%</td><td>67.1%</td><td>58.4%</td><td>biggest+hardest — retrieval gap, intent-conditioned candidate generation</td></tr><tr><td>COLD-OPEN</td><td>turn 1, no history</td><td>946</td><td>11.8%</td><td>28.1%</td><td>12.9%</td><td>53.0%</td><td>11.7%</td><td>cold start — popularity + cross-session CF</td></tr></tbody></table></div>
+<p>Task-mode note: Mode mix is ~identical across all 11 categories (~46-50% NEW-ARTIST each). Category/specificity does NOT predict mode -&gt; cannot route by category; routing must be turn-level (continuation vs novelty).</p>
+<h3>Relation-Aware State Taxonomy</h3>
+<div class="table-wrap"><table><thead><tr><th>Cue</th><th>Role</th><th>Current state</th><th>Ideal state</th></tr></thead><tbody><tr><td>&quot;similar to / like / in the vein of X&quot;</td><td><code>SEED</code></td><td>+1 → anchored</td><td>anchor ON (this is the one case binary gets right)</td></tr><tr><td>&quot;X was great, now more / other / else&quot;</td><td><code>SATISFIED</code></td><td>+1 → anchored</td><td>anchor OFF, decay — user got X, wants beyond it</td></tr><tr><td>&quot;different from / not like / besides / instead of X&quot;</td><td><code>CONTRAST</code></td><td>+1 → anchored</td><td>anchor OFF, optionally repel</td></tr><tr><td>X named in an earlier turn, NOT this one</td><td><code>HISTORY</code></td><td>+1 → anchored</td><td>DROP entirely from current targets</td></tr><tr><td>&quot;not X / no more X / stop X&quot;</td><td><code>REJECTED</code></td><td>-1 → hard drop</td><td>hard drop (already correct)</td></tr></tbody></table></div>
+<h3>State Bugs And Checks To Add</h3>
+<div class="table-wrap"><table><thead><tr><th>Item</th><th>Verdict</th><th>Stat</th><th>Detail</th></tr></thead><tbody><tr><td>Genre/mood tags</td><td><code>good</code></td><td>78% match</td><td>positive_tags overlap a GT tag on 78% of valid turns. Extraction vocab is fine.</td></tr><tr><td>Negative refs excluded</td><td><code>good</code></td><td>code-verified</td><td>resolver drops sentiment&lt;0 from anchors; negatives only feed hard-drops.</td></tr><tr><td>Entity over-extraction</td><td><code>bad</code></td><td>0.5 → 2.3 / turn</td><td>positive artist targets climb to ~2.3 by turn 3+ vs ~1 actually referenced forward. Carries old artists forward.</td></tr><tr><td>Contrast as positive</td><td><code>bad</code></td><td>qualitative</td><td>&quot;not as intense as Pink Floyd&quot; → Pink Floyd tagged +1 → became an anchor. Extractor sentiment/role error.</td></tr><tr><td>Year filter over-fires</td><td><code>bad</code></td><td>29% drop GT</td><td>of turns with a year_range set, GT falls OUTSIDE it 29% of the time (580 miss@20). Soft-penalizes valid answers.</td></tr><tr><td>hidden_target_search</td><td><code>inert</code></td><td>391 fires; 0 weighted-routing consumption</td><td>The routing tag fires in the trace, but routing_boost is empty, so the bug is non-consumption rather than non-extraction.</td></tr><tr><td>Rejection enforcement</td><td><code>dead</code></td><td>~5% leak</td><td>769 of 14,780 returned slots were a rejected artist/track despite &quot;hard drop&quot;. Needs verification (multi-artist) but &quot;no Bon Jovi → Bon Jovi&quot; happens.</td></tr></tbody></table></div>
+<h3>Feature Catalog From This Audit</h3>
+<div class="table-wrap"><table><thead><tr><th>Feature</th><th>Evidence</th><th>Target slice</th></tr></thead><tbody><tr><td>album-affinity</td><td>measured about +6pp Hit@20 ceiling; prototype before commit</td><td>continuation 62%</td></tr><tr><td>artist-recency (most-recent, weighted)</td><td>—</td><td>continuation diff-album</td></tr><tr><td>user-CF / demographic-popularity</td><td>—</td><td>new-artist popular ~23% of misses</td></tr><tr><td>genre/era-conditioned popularity</td><td>—</td><td>new-artist popular</td></tr><tr><td>is_new_artist</td><td>+1% reranker</td><td>novelty</td></tr><tr><td>constraint-satisfaction (year/reject/rarity-tag)</td><td>year drops GT 29%</td><td>discovery</td></tr></tbody></table></div>
+<p>Do not over-invest in:</p>
+<ul>
+<li>category</li>
+<li>specificity</li>
+<li>musical_culture</li>
+<li>raw demographics</li>
+<li>intent_mode — all candidate-constant → 0 ranking lift; only condition retrieval</li>
+</ul>
+<h2>What To Work On First</h2>
+<h3>P0: Train the ranker on true branch union@200, with candidate-varying state features</h3>
+<p>Why: Union@20 is 47.7% while final@20 is 27.4%; turn 8 has final@20 17.0% but union@20 43.9%.</p>
+<p>Do: Build candidates from raw branch union@200, not branches.final. Add branch ranks, branch-count features, popularity, tag overlap, release distance, album/artist recency, candidate artist role, and candidate-varying goal/culture affinity. Keep raw category/specificity/demographics as slices or routing conditioners, not direct within-turn ranking features.</p>
+<p>Proof: Session-grouped CV must beat the current fusion baseline on NDCG@20/Hit@20 and on LL + turn 5-8 slices; also report whether raw session constants add any lift.</p>
+<h3>P0: Pass organizer goal/profile metadata into routing and candidate features</h3>
+<p>Why: LL goals have final@20 20.2%; HH goals have 41.9%. The field is available in dev/test and Blind-A, but current inference only passes user_query, user_id, and session_memory.</p>
+<p>Do: Extend the batch item and compiler input with conversation_goal.category/specificity/listener_goal plus preferred_musical_culture. Use listener_goal as retrieval/routing text and transform profile/category signals into candidate-varying affinity or popularity features.</p>
+<p>Proof: Metadata-aware routing/candidate features should improve LL/category C/K/J slices without regressing HH exact-title slices; raw constants alone are expected to be a no-lift baseline.</p>
+<h3>P1: Build goal-family retrievers for the low-union slices</h3>
+<p>Why: LL/category C/K/I/J have low union@20 or union@100, so a ranker cannot recover enough by itself.</p>
+<p>Do: For cover-art goals, add image/album-cover text routing; for broad instrumental/film-score goals, add mood+instrumental+OST tag-popularity retrieval; for popular/exact goals, add canonical popularity and exact-entity probes.</p>
+<p>Proof: Raise union@20/100 for LL and categories C/K/J before evaluating final ranking.</p>
+<h3>P1: Fix late-turn state carryover and post-fusion suppression</h3>
+<p>Why: Turns 5-8 keep decent union@20 but lose final@20, so final policy is over-demoting or over-trusting stale context.</p>
+<p>Do: Add trusted survivor slots and learn same-artist/album diversity instead of fixed demotions. Add state QA for stale tags and release-year carryover.</p>
+<p>Proof: Turn 5-8 final@20 and fusion_efficiency@20 should rise while turn 1-3 does not regress.</p>
+<h2>Measured Ranker And Feature Evidence</h2>
+<ul>
+<li>Adjacent reranker bakeoff: NDCG@20 0.1415 -&gt; 0.1594 (12.7% relative); Hit@20 0.3098 -&gt; 0.3325.</li>
+<li>Scope caveat: Adjacent full-devset reranker bakeoff on v0plus_compiler_bm25_image_audio_cfbpr_metadata_devset, not the all-retrievers trace in this report.</li>
+<li>Decision: rank fusion helps; pure score replacement was reported as structurally harmful. Revalidate on this report&#x27;s all-retrievers union pool before shipping.</li>
+</ul>
+<ul>
+<li>Album-affinity / album completion: measured counterfactual; 479 of 964 same-album misses are rescuable from fused rank 21-100; 326 sit at 101-1000 and 159 are absent. Reported ceiling: about +6pp Hit@20. Decision: Keep as a P0 ranker feature: same_album_recent plus artist_recency, with continuation and new-artist guardrails.</li>
+<li>Current trace album fused-rank anatomy: trace recount; Primary-album misses=978; fused&lt;=20/final-missed=454, fused 21-100=301, fused 101-1000=90, absent=133; bucket sum=978. Decision: Read fused&lt;=20 as post-fusion/finalization loss, not album-retrieval absence.</li>
+<li>Baseline-fused cross-encoder reranker: measured adjacent-pool bakeoff; NDCG@20 0.1415 -&gt; 0.1594 (12.7% relative); Hit@20 0.3098 -&gt; 0.3325. Scope: Adjacent full-devset reranker bakeoff on v0plus_compiler_bm25_image_audio_cfbpr_metadata_devset, not the all-retrievers trace in this report. Decision: Use rank fusion or a trained scorer over current-fusion/branch features; do not replace current fusion with raw cross-encoder score.</li>
+<li>Candidate-level is_new_artist feature: measured small positive; +1% reranker on novelty Decision: Use as a ranker feature, but still fix candidate generation because new-artist GTs are often outside union@20.</li>
+<li>Raw session/category/demographic features in a within-turn ranker: measured no lift; 0 lift — candidate-constant within a turn. Decision: Do not feed raw constants directly; derive candidate-varying culture/user-CF/popularity affinity or use them for routing/slicing.</li>
+<li>Rarity-weighted / IDF tags: measured negative; WORSE than raw; tags cap ~0.19 hit@50. Decision: Do not prioritize IDF-tag weighting; tags are useful, but role/routing and candidate-varying behavioral features are stronger.</li>
+</ul>
+<h2>Organizer Metadata Slices</h2>
+<div class="table-wrap"><table><thead><tr><th>Slice</th><th>n</th><th>Final@20</th><th>Union@20</th><th>Union@100</th><th>Rank gap</th><th>Not union@20</th></tr></thead><tbody><tr><td>specificity=LL</td><td>2,224</td><td>20.2%</td><td>40.5%</td><td>60.5%</td><td>20.3 pp</td><td>59.5%</td></tr><tr><td>specificity=LH</td><td>2,504</td><td>29.9%</td><td>47.8%</td><td>65.6%</td><td>17.9 pp</td><td>52.2%</td></tr><tr><td>specificity=HL</td><td>2,456</td><td>26.4%</td><td>50.0%</td><td>68.8%</td><td>23.6 pp</td><td>50.0%</td></tr><tr><td>specificity=HH</td><td>816</td><td>41.9%</td><td>59.7%</td><td>76.1%</td><td>17.8 pp</td><td>40.3%</td></tr><tr><td>assessment=DOES_NOT_MOVE_TOWARD_GOAL</td><td>816</td><td>16.1%</td><td>38.4%</td><td>54.7%</td><td>22.3 pp</td><td>61.6%</td></tr><tr><td>assessment=MOVES_TOWARD_GOAL</td><td>6,184</td><td>28.1%</td><td>50.2%</td><td>69.0%</td><td>22.1 pp</td><td>49.8%</td></tr><tr><td>assessment=TURN1_OR_NONE</td><td>1,000</td><td>32.0%</td><td>39.6%</td><td>58.6%</td><td>7.6 pp</td><td>60.4%</td></tr></tbody></table></div>
+<h3>Goal Categories</h3>
+<div class="table-wrap"><table><thead><tr><th>Category</th><th>n</th><th>Example organizer goals</th><th>Final@20</th><th>Union@20</th><th>Union@100</th></tr></thead><tbody><tr><td>I</td><td>144</td><td>play a specific globally popular song by exact title and artist</td><td>find modern electronic dance music that blends deep house grooves with soulful vocal elements or jazz influences.</td><td>22.2%</td><td>43.1%</td></tr><tr><td>K</td><td>1,248</td><td>discover multiple instrumental pieces from a broad era, particularly film scores or contemporary classical works, that evoke a timeless or classic feel.</td><td>discover multiple chill, instrumental lo-fi hip-hop tracks fro...</td><td>24.0%</td><td>42.6%</td></tr><tr><td>C</td><td>464</td><td>find one specific album remembered by its distinctive, dark, and abstract or unsettling cover art.</td><td>find one specific heavy metal album remembered by its distinctive, often dark or fantastical, cover art</td><td>24.3%</td><td>42.2%</td></tr><tr><td>G</td><td>616</td><td>find some positive and uplifting hip-hop tracks to boost my energy and put me in a good mood.</td><td>find multiple songs that convey intense emotional drama, particularly those expressing feelings of profound sadness, grie...</td><td>25.0%</td><td>45.5%</td></tr><tr><td>J</td><td>616</td><td>play one specific song that is known for its high popularity within its genre or era.</td><td>find a specific song from the early 90s that was a massive hit and widely recognized, but I can&#x27;t recall the title or artist.</td><td>26.5%</td><td>45.0%</td></tr><tr><td>B</td><td>1,136</td><td>find a specific song by its exact lyrical phrase</td><td>find multiple songs by Anitta that focus on themes of female empowerment and self-confidence.</td><td>27.2%</td><td>48.1%</td></tr><tr><td>E</td><td>760</td><td>progress through a specific musical journey from classic EBM to modern synthpop and futurepop, emphasizing melodic elements and avoiding overly harsh industrial sounds</td><td>progress through a specific musical journey wit...</td><td>27.9%</td><td>48.9%</td></tr><tr><td>D</td><td>688</td><td>find one specific song from the Moana soundtrack that evokes a sense of epic journey and exploration, but the listener can&#x27;t remember its exact title.</td><td>find one specific high-energy hip-hop song perfect for driving,...</td><td>27.9%</td><td>47.7%</td></tr><tr><td>A</td><td>488</td><td>find one specific instrumental track from &quot;The Elder Scrolls Online Original Game Soundtrack&quot; remembered by its distinctive orchestral sound, mood, or thematic quality (e.g., a battle theme, an exploration piece, or a...</td><td>28.3%</td><td>51.0%</td><td>69.1%</td></tr><tr><td>F</td><td>760</td><td>find multiple electronic/dance tracks from the late 90s and early 2000s with specific characteristics (e.g., energetic, downtempo, vocal-focused)</td><td>find a specific Linkin Park song from a particular album and its orig...</td><td>31.2%</td><td>56.6%</td></tr><tr><td>H</td><td>1,080</td><td>find multiple songs from punk and hardcore punk artists with specific sub-genre characteristics, lyrical themes, or historical periods.</td><td>identify one specific artist (VNV Nation) or find their defining song(s) from a...</td><td>31.5%</td><td>50.1%</td></tr></tbody></table></div>
+<h2>Standalone Glossary For Hard Slices</h2>
+<p>The repo docs and HF schema expose conversation_goal.category, specificity, and listener_goal, but do not provide official human-readable names for category codes. The descriptions below are derived from the observed listener_goal examples in this devset.</p>
+<p>LL and categories C/K/I/J are called out because their union@20 or union@100 rates show a candidate-generation problem. A trained ranker can recover near misses, but it cannot recover turns where the gold track never enters the union pool.</p>
+<h3>Specificity Codes</h3>
+<div class="table-wrap"><table><thead><tr><th>Code</th><th>Plain meaning</th><th>Observed goal shape</th><th>n</th><th>Final@20</th><th>Union@20</th><th>Union@100</th><th>Why it matters</th></tr></thead><tbody><tr><td><code>LL</code></td><td>Low / low specificity</td><td>Observed goals are broad discovery or multi-item asks with weak exact-entity constraints. Example: discover multiple instrumental pieces from a broad era or explore ambient/downtempo music.</td><td>2,224</td><td>20.2%</td><td>40.5%</td><td>60.5%</td><td>This is the worst specificity slice: a ranker helps only after better candidates enter union@20/100.</td></tr><tr><td><code>LH</code></td><td>Low / high specificity</td><td>Observed goals often name a hidden target type or specific memory, but the surface clue is vague. Example: find one album remembered by cover art, or identify a composer/song from vague soundtrack memory.</td><td>2,504</td><td>29.9%</td><td>47.8%</td><td>65.6%</td><td>Needs better goal-conditioned retrieval and structured metadata, not only exact text matching.</td></tr><tr><td><code>HL</code></td><td>High / low specificity</td><td>Observed goals have concrete genres, artists, eras, or journey constraints, but still ask for multiple possible tracks. Example: find multiple punk/hardcore songs with era and lyrical-theme constraints.</td><td>2,456</td><td>26.4%</td><td>50.0%</td><td>68.8%</td><td>Candidate generation is decent, but final ranking/policy still loses many recoverable items.</td></tr><tr><td><code>HH</code></td><td>High / high specificity</td><td>Observed goals often identify exact titles, artists, lyrics, albums, or strongly constrained targets. Example: play a specific globally popular song by exact title and artist.</td><td>816</td><td>41.9%</td><td>59.7%</td><td>76.1%</td><td>This is the easiest slice; it is the guardrail when adding broad-goal retrievers or metadata features.</td></tr></tbody></table></div>
+<h3>Focus Categories C/K/I/J</h3>
+<h4>Category C: Visual / cover-art remembered album targets.</h4>
+<ul>
+<li>Metrics: n=464; Final@20=24.3%; Union@20=42.2%; Union@100=57.5%.</li>
+<li>Why it gaps: The user clue is often visual or remembered-art based, while current retrieval is mostly text/tags/embeddings from track metadata.</li>
+<li>Work on: Add cover-art caption/visual retrieval and album-level matching, then rerank with visual-goal features.</li>
+<li>Observed goals: find one specific album remembered by its distinctive, dark, and abstract or unsettling cover art. | find one specific heavy metal album remembered by its distinctive, often dark or fantastical, cover art | find one specific album remembered by its distinctive or unusual cover art, often featuring surreal or eye-catching imagery from the 70s/80s.</li>
+</ul>
+<h4>Category K: Broad instrumental, soundtrack, mood, era, or aesthetic discovery.</h4>
+<ul>
+<li>Metrics: n=1,248; Final@20=24.0%; Union@20=42.6%; Union@100=62.8%.</li>
+<li>Why it gaps: The goal is latent and multi-answer; exact entity recall is weak and generic dense branches often bury the intended target.</li>
+<li>Work on: Add instrumental/OST/mood/tag-popularity retrievers and use goal text plus state tags as candidate generators.</li>
+<li>Observed goals: discover multiple instrumental pieces from a broad era, particularly film scores or contemporary classical works, that evoke a timeless or classic feel. | discover multiple chill, instrumental lo-fi hip-hop tracks from the mid-2010s that evoke a relaxed and nostalgic atmosphere | discover multiple songs that evoke a retro-futuristic or 80s electronic aesthetic, without needing specific constraints initially.</li>
+</ul>
+<h4>Category I: Small mixed slice: exact global-hit requests plus nuanced modern genre/style asks.</h4>
+<ul>
+<li>Metrics: n=144; Final@20=22.2%; Union@20=43.1%; Union@100=60.4%.</li>
+<li>Why it gaps: It combines exact popularity/canonicality with style-matching, so one generic routing strategy misses both ends.</li>
+<li>Work on: Split routing between exact-popular probes and style/genre candidate generation; do not rely on equal current fusion weights.</li>
+<li>Observed goals: play a specific globally popular song by exact title and artist | find modern electronic dance music that blends deep house grooves with soulful vocal elements or jazz influences. | find one specific catchy international pop hit from the mid-2010s that gained widespread recognition.</li>
+</ul>
+<h4>Category J: Popularity, canonicality, or widely-recognized song requests within an era/genre/community.</h4>
+<ul>
+<li>Metrics: n=616; Final@20=26.5%; Union@20=45.0%; Union@100=64.1%.</li>
+<li>Why it gaps: The clue is often &#x27;popular/recognized&#x27; rather than a track title, but popularity is not a calibrated final-ranker feature.</li>
+<li>Work on: Add popularity/canonicality features and genre-community popularity lookups; train the ranker to trust them only when state asks for it.</li>
+<li>Observed goals: play one specific song that is known for its high popularity within its genre or era. | find a specific song from the early 90s that was a massive hit and widely recognized, but I can&#x27;t recall the title or artist. | find multiple songs that are popular within specific niche music communities or subgenres.</li>
+</ul>
+<h2>User Metadata Field Map</h2>
+<ul>
+<li>Live inline <code>user_profile</code> fields: <code>age</code>, <code>age_group</code>, <code>country_code</code>, <code>country_name</code>, <code>gender</code>, <code>preferred_language</code>, <code>preferred_musical_culture</code>, <code>user_id</code>, <code>user_split</code>.</li>
+<li>Standalone user metadata fields: <code>age</code>, <code>age_group</code>, <code>country_code</code>, <code>country_name</code>, <code>gender</code>, <code>user_id</code>.</li>
+<li>Compact report example profile fields: <code>age_group</code>, <code>country_name</code>, <code>preferred_musical_culture</code>.</li>
+<li>Current pipeline summary: Current inference passes user_id and session_memory into the compiler. UserProfileDB renders only user_id, age_group, gender, and country_name for response generation; preferred_musical_culture and preferred_language are not used by retrieval/ranking.</li>
+<li>Ranker summary: For the trained-ranker path, preferred_musical_culture is the most actionable user-profile field. country_name/country_code can be weak context; age, age_group, and gender should be diagnostics or guarded weak features.</li>
+</ul>
+<div class="table-wrap"><table><thead><tr><th>Field</th><th>Where it appears</th><th>Meaning</th><th>Current use</th><th>Better use</th></tr></thead><tbody><tr><td><code>age</code></td><td>inline user_profile and standalone User Metadata</td><td>Exact user age.</td><td>Available, but not rendered by the default UserProfileDB prompt string.</td><td>Low-priority weak feature or slice only; avoid hard personalization from demographics.</td></tr><tr><td><code>age_group</code></td><td>inline user_profile, standalone User Metadata, and report examples</td><td>Decade bucket such as 20s or 30s.</td><td>Rendered into the response-generation profile string; carried in report examples and slices.</td><td>Use as a weak/calibrated feature and diagnostic slice, not as a filter.</td></tr><tr><td><code>country_code</code></td><td>inline user_profile and standalone User Metadata</td><td>ISO country code.</td><td>Available, but not rendered by the default profile string.</td><td>Use for geography/culture diagnostics or cautious localization features.</td></tr><tr><td><code>country_name</code></td><td>inline user_profile, standalone User Metadata, and report examples</td><td>Full country name.</td><td>Rendered into the response-generation profile string; report slices also track country.</td><td>Use cautiously for cultural priors or localized music requests; never override explicit user intent.</td></tr><tr><td><code>gender</code></td><td>inline user_profile and standalone User Metadata</td><td>Organizer-provided gender label.</td><td>Rendered into the response-generation profile string; not used by retrieval/ranking.</td><td>Prefer diagnostics/guardrails only; avoid ranking decisions driven by gender.</td></tr><tr><td><code>preferred_language</code></td><td>inline user_profile in conversation rows</td><td>Preferred language for the session/user.</td><td>Available in organizer rows but not passed into compiler retrieval/ranking.</td><td>Useful for response style and multilingual/local music cues; weak ranking feature if explicit request is ambiguous.</td></tr><tr><td><code>preferred_musical_culture</code></td><td>inline user_profile and report examples</td><td>Organizer cultural/music-affinity label, such as Punk/Hardcore Subculture.</td><td>Used only for this report&#x27;s examples/slices; not used by current retrieval/ranking.</td><td>Highest-value user metadata feature to test for ranker/router personalization, especially culture-specific genre asks.</td></tr><tr><td><code>user_id</code></td><td>inline user_profile and standalone User Metadata</td><td>Stable user join key.</td><td>Passed into inference; UserProfileDB uses it to join the standalone profile.</td><td>Use only as a join key for profile/user-embedding features; avoid identity memorization in devset CV.</td></tr><tr><td><code>user_split</code></td><td>inline user_profile in live HF rows</td><td>Organizer split marker such as test_warm.</td><td>Not used by retrieval/ranking; not present in the standalone user metadata table.</td><td>Diagnostic only; do not train deployable ranking behavior on split labels.</td></tr></tbody></table></div>
+<h2>State And Retriever Findings</h2>
+<h3>What The State Object Looks Like</h3>
+<p>The v0+ pipeline extracts a structured <code>ConversationStateV0Plus</code>, resolves surface names to catalog IDs, then compiles that state into BM25, dense, lookup, centroid, masking, fusion, and post-fusion signals.</p>
+<div class="table-wrap"><table><thead><tr><th>State field</th><th>Meaning</th><th>Retrieval/ranking use</th><th>Where to see it in examples</th></tr></thead><tbody><tr><td><code>turn_intent</code></td><td>Natural-language active ask for this turn.</td><td>Main BM25 and dense-query text.</td><td>Shown as State turn_intent in each failed example.</td></tr><tr><td><code>intent_mode</code></td><td>open_explore, refinement, pivot, or playlist_build.</td><td>Controls anchor mixing and whether prior accepted tracks should influence retrieval.</td><td>Shown in the rank/evidence strip and state audit.</td></tr><tr><td><code>track_feedback / anchors</code></td><td>Played tracks and whether the user accepted, rejected, seeded, or reacted neutrally.</td><td>Accepted/seed tracks become centroid anchors; rejected tracks can demote artists/tracks.</td><td>The report shows n_anchor, n_played, and anchor_artist_ids when available.</td></tr><tr><td><code>mentioned_entities</code></td><td>Artists, albums, tracks, and tags named by the user with sentiment.</td><td>Feeds BM25 clauses, resolver targets, discography lookup, tag boosts, and state QA.</td><td>Shown as mentioned and resolved entities in failed-example details.</td></tr><tr><td><code>positive / rejected tags</code></td><td>Tag-like constraints extracted from the user turn and history.</td><td>Positive tags boost matching candidates; rejected tags can demote.</td><td>Shown as positive_tags, gt_tag_overlap, and rejected tags.</td></tr><tr><td><code>release_year_range / hard_filters</code></td><td>Soft era hints and hard catalog constraints.</td><td>Era lookup, year boosts, and candidate masks. Era should be soft because many misses are release-date mismatches.</td><td>Shown as release bucket, release year, year_range, and hard_filters.</td></tr><tr><td><code>explicit_rejections</code></td><td>Artists, tracks, or tags the user explicitly wants excluded.</td><td>Hard drops or post-fusion demotions.</td><td>Shown in state audit when present.</td></tr><tr><td><code>process_constraints.exploration_policy</code></td><td>Whether to exploit, diversify artists/albums, or stay balanced.</td><td>Post-fusion same-artist/same-album demotion policy.</td><td>Shown as policy; many recoverable misses are under diversify_artists.</td></tr><tr><td><code>routing_tags</code></td><td>Flags such as exact_entity_probe, lyric_search, feature_articulation, image_or_visual_search, hidden_target_search.</td><td>Should steer branch weighting/routing; current routing boost is limited.</td><td>Shown as routing in the example details.</td></tr><tr><td><code>lyrical_theme</code></td><td>Theme or subject requested for lyrics.</td><td>Lyric dense branch query when lyric intent is detected.</td><td>Shown in state audit when available.</td></tr></tbody></table></div>
+<h3>What Failed Examples Contain</h3>
+<div class="table-wrap"><table><thead><tr><th>Evidence</th><th>What we have</th><th>Why it matters</th></tr></thead><tbody><tr><td>Raw conversation</td><td>Current user turn, previous user turn, and recent conversation messages joined from the HF test split.</td><td>Lets us see whether the extracted state dropped constraints or over-carried stale context.</td></tr><tr><td>Organizer metadata</td><td>conversation_goal.category, specificity, listener_goal, goal_progress_assessments, and compact user profile.</td><td>Gives goal family and deployable metadata features for routing/ranking.</td></tr><tr><td>Ground truth and ranks</td><td>GT track/artist, final rank, fused rank, best branch, min branch rank, and per-branch ranks.</td><td>Separates candidate-generation gaps from current-fusion/post-fusion/finalization losses.</td></tr><tr><td>Extracted/resolved state audit</td><td>intent mode, mentioned/resolved entities, positive/rejected tags, hard filters, year range, lyrical theme, anchors, played count, and anchor artists.</td><td>Shows whether state is wrong, incomplete, stale, or simply not used strongly enough.</td></tr><tr><td>Action label</td><td>Case bucket, diagnosis, and smallest next test.</td><td>Turns examples into work items: retriever/state gap, ranker gap, or policy/demotion gap.</td></tr></tbody></table></div>
+<h3>State often lacks the target entity</h3>
+<p>5,046 turns (63.1%) have no gold track or artist grounded in state.</p>
+<p>Implication: This is a state/retriever coverage problem, not just a current-fusion problem. The next state should expose latent canonicality, goal, and continuation intent.</p>
+<h3>Post-fusion policy is suppressing recoverable items</h3>
+<p>In fused-top20 demotions, same_artist_as_played appears in 659 cases and diversify_artists in 626.</p>
+<p>Implication: Keep diversity as a feature, but stop letting it erase high-confidence branch survivors without a calibrated ranker.</p>
+<h3>Era extraction can become a penalty</h3>
+<p>634 turns are marked release_range_excludes_gt in the current slice table.</p>
+<p>Implication: Treat era as soft positive evidence or catalog-normalized original-era evidence, not a hard-ish demotion from release_date alone.</p>
+<h3>Unresolved mentions are small; latent asks are bigger</h3>
+<p>Only 27 turns mention the gold artist name unresolved, while no-target-in-state is much larger.</p>
+<p>Implication: The larger miss is not fuzzy matching names. It is representing broad requests like &#x27;popular alternative rock&#x27; as candidate generators.</p>
+<h2>Recommended Experiments</h2>
+<h3>P0: Trusted survivor and demotion ablation</h3>
+<p>Why: Gold items already in fused top-20 or branch top-20 should not vanish before final top-20.</p>
+<p>How: Reserve 3-5 slots for high-confidence exact/discography/BM25/dense winners, and sweep diversify_artists and release-range demotion strengths.</p>
+<p>Success: Raises final@20 without lowering union@20; inspect same-artist and release-excluded slices.</p>
+<h3>P0: Train a first-stage ranker over union@200</h3>
+<p>Why: Union@20 exceeds final@20 by 20.3 pp; union@100 gives a 66.2% ceiling.</p>
+<p>How: Use LambdaMART or logistic pairwise scoring with branch ranks, branch counts, state features, tag/release/popularity features, and policy multipliers.</p>
+<p>Success: Improves final Hit@20/NDCG@20 and fusion_efficiency@20 on session-held-out dev evaluation.</p>
+<h3>P1: Popularity-aware latent-target retrievers</h3>
+<p>Why: 52.3% of turns are not in union@20, and 33.8% are not in union@100.</p>
+<p>How: Add tag+popularity, goal-conditioned, and similar-artist expansion retrievers keyed by raw user turn plus cleaned state tags.</p>
+<p>Success: Raises union@20/100 before any ranker changes, especially broad popular/canonical requests.</p>
+<h3>P1: State audit with raw conversation alignment</h3>
+<p>Why: Raw user turns expose sticky tags, lost constraints, and policy mistakes that compact state hides.</p>
+<p>How: Add an audit that compares current user text, conversation_goal, prior accepted tracks, extracted state, and gold branch ranks.</p>
+<p>Success: Reduces no_gt_track_or_artist_in_state and release_range_excludes_gt miss rates in targeted slices.</p>
+<h2>Example Gaps</h2>
+<h3>not_in_any_branch_top1000 - Fluorescent Adolescent by Arctic Monkeys</h3>
+<ul>
+<li>Session/turn: <code>ba3da7b0-1e81-4d2a-90fa-65ee1f4d7348</code> / <code>2</code></li>
+<li>User turn: Perfect! That was the popular song I was looking for. Now, what are some other highly popular alternative rock tracks you have?</li>
+<li>Organizer goal: category <code>J</code>, specificity <code>HH</code>, listener_goal: play one specific song that is known for its high popularity within its genre or era.</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;30s&#x27;, &#x27;country_name&#x27;: &#x27;Mexico&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;Anglo-American Rock&#x27;}</code></li>
+<li>State intent: Now, what are some other highly popular alternative rock tracks you have?</li>
+<li>State audit: intent_mode <code>open_explore</code>, mentioned <code>[[&#x27;artist&#x27;, &#x27;Nirvana&#x27;, 1], [&#x27;track&#x27;, &#x27;Heart-Shaped Box&#x27;, 1], [&#x27;tag&#x27;, &#x27;popular&#x27;, 1], [&#x27;tag&#x27;, &#x27;alternative rock&#x27;, 1], [&#x27;tag&#x27;, &#x27;rock&#x27;, 1], [&#x27;tag&#x27;, &#x27;grunge&#x27;, 1], [&#x27;tag&#x27;, &#x27;90s&#x27;, 1]]</code>, resolved <code>[[&#x27;artist&#x27;, &#x27;Nirvana&#x27;], [&#x27;track&#x27;, &#x27;Heart-Shaped Box&#x27;]]</code>, pos_tags <code>[&#x27;popular&#x27;, &#x27;alternative rock&#x27;, &#x27;rock&#x27;, &#x27;grunge&#x27;, &#x27;90s&#x27;]</code>, rejected tags <code>[]</code>, year_range <code>None</code>, anchors <code>[&#x27;Nirvana&#x27;]</code>.</li>
+<li>Ranks: final <code>None</code>, fused <code>None</code>, best branch <code>None</code> via <code>NONE</code></li>
+<li>Anatomy: n_pools <code>11</code>, n_anchor_tracks <code>1</code>, n_resolved_targets <code>2</code>, per_branch_rank <code>{&#x27;bm25&#x27;: None, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: None, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: None, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: None, &#x27;centroid.anchor_tracks.image_siglip2&#x27;: None, &#x27;centroid.anchor_tracks.audio_laion_clap&#x27;: None, &#x27;centroid.anchor_tracks.cf_bpr&#x27;: None, &#x27;centroid.user.cf_bpr&#x27;: None, &#x27;lookup.resolved_artist_discography&#x27;: None}</code>.</li>
+<li>Classification: candidate-generation gap</li>
+<li>Diagnosis: No exact gold track or gold artist is grounded in state.; The ask has a popularity/canonicality signal, but final ranking has no calibrated popularity feature.; Prior-era tag appears sticky relative to the current user turn.; No retriever branch found the gold in top-1000, so a ranker cannot recover this case.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Add a tag+popularity or goal-conditioned lookup retriever and check whether the gold enters union@100.</li>
+</ul>
+<h3>not_in_any_branch_top1000 - Run Like Hell by Pink Floyd</h3>
+<ul>
+<li>Session/turn: <code>ba3da7b0-1e81-4d2a-90fa-65ee1f4d7348</code> / <code>5</code></li>
+<li>User turn: Yes, &quot;Mysterious Ways&quot; is a fantastic choice! U2 is definitely a classic. Can you suggest another highly popular alternative rock track, perhaps something with a more introspective or atmospheric vibe, but still widely recognized?</li>
+<li>Organizer goal: category <code>J</code>, specificity <code>HH</code>, listener_goal: play one specific song that is known for its high popularity within its genre or era.</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;30s&#x27;, &#x27;country_name&#x27;: &#x27;Mexico&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;Anglo-American Rock&#x27;}</code></li>
+<li>State intent: Another highly popular alternative rock track, perhaps something with a more introspective or atmospheric vibe, but still widely recognized.</li>
+<li>State audit: intent_mode <code>refinement</code>, mentioned <code>[[&#x27;tag&#x27;, &#x27;popular&#x27;, 1], [&#x27;tag&#x27;, &#x27;alternative rock&#x27;, 1], [&#x27;tag&#x27;, &#x27;introspective&#x27;, 1], [&#x27;tag&#x27;, &#x27;atmospheric&#x27;, 1], [&#x27;tag&#x27;, &#x27;widely recognized&#x27;, 1]]</code>, resolved <code>[]</code>, pos_tags <code>[&#x27;popular&#x27;, &#x27;alternative rock&#x27;, &#x27;introspective&#x27;, &#x27;atmospheric&#x27;, &#x27;widely recognized&#x27;]</code>, rejected tags <code>[]</code>, year_range <code>None</code>, anchors <code>[]</code>.</li>
+<li>Ranks: final <code>None</code>, fused <code>None</code>, best branch <code>None</code> via <code>NONE</code></li>
+<li>Anatomy: n_pools <code>10</code>, n_anchor_tracks <code>4</code>, n_resolved_targets <code>0</code>, per_branch_rank <code>{&#x27;bm25&#x27;: None, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: None, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: None, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: None, &#x27;centroid.anchor_tracks.image_siglip2&#x27;: None, &#x27;centroid.anchor_tracks.audio_laion_clap&#x27;: None, &#x27;centroid.anchor_tracks.cf_bpr&#x27;: None, &#x27;centroid.user.cf_bpr&#x27;: None}</code>.</li>
+<li>Classification: candidate-generation gap</li>
+<li>Diagnosis: No exact gold track or gold artist is grounded in state.; The ask has a popularity/canonicality signal, but final ranking has no calibrated popularity feature.; No retriever branch found the gold in top-1000, so a ranker cannot recover this case.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Add a tag+popularity or goal-conditioned lookup retriever and check whether the gold enters union@100.</li>
+</ul>
+<h3>not_in_any_branch_top1000 - On Mercury by Red Hot Chili Peppers</h3>
+<ul>
+<li>Session/turn: <code>ba3da7b0-1e81-4d2a-90fa-65ee1f4d7348</code> / <code>6</code></li>
+<li>User turn: Pink Floyd is iconic, and &quot;Run Like Hell&quot; is definitely popular. However, it&#x27;s a bit more intense than the introspective vibe I was thinking of. Can you recommend another highly popular alternative rock track that truly has a more reflective or atmospheric quality?</li>
+<li>Organizer goal: category <code>J</code>, specificity <code>HH</code>, listener_goal: play one specific song that is known for its high popularity within its genre or era.</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;30s&#x27;, &#x27;country_name&#x27;: &#x27;Mexico&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;Anglo-American Rock&#x27;}</code></li>
+<li>State intent: Another highly popular alternative rock track with a more reflective or atmospheric quality, not as intense as Pink Floyd - Run Like Hell.</li>
+<li>State audit: intent_mode <code>refinement</code>, mentioned <code>[[&#x27;artist&#x27;, &#x27;Pink Floyd&#x27;, 1], [&#x27;track&#x27;, &#x27;Run Like Hell&#x27;, -1], [&#x27;tag&#x27;, &#x27;popular&#x27;, 1], [&#x27;tag&#x27;, &#x27;alternative rock&#x27;, 1], [&#x27;tag&#x27;, &#x27;rock&#x27;, 1], [&#x27;tag&#x27;, &#x27;reflective&#x27;, 1], [&#x27;tag&#x27;, &#x27;atmospheric&#x27;, 1], [&#x27;tag&#x27;, &#x27;introspective&#x27;, 1], [&#x27;tag&#x27;, &#x27;intense&#x27;, -1]]</code>, resolved <code>[[&#x27;artist&#x27;, &#x27;Pink Floyd&#x27;]]</code>, pos_tags <code>[&#x27;popular&#x27;, &#x27;alternative rock&#x27;, &#x27;rock&#x27;, &#x27;reflective&#x27;, &#x27;atmospheric&#x27;, &#x27;introspective&#x27;]</code>, rejected tags <code>[&#x27;intense&#x27;]</code>, year_range <code>None</code>, anchors <code>[&#x27;Pink Floyd&#x27;]</code>.</li>
+<li>Ranks: final <code>None</code>, fused <code>None</code>, best branch <code>None</code> via <code>NONE</code></li>
+<li>Anatomy: n_pools <code>11</code>, n_anchor_tracks <code>4</code>, n_resolved_targets <code>1</code>, per_branch_rank <code>{&#x27;bm25&#x27;: None, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: None, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: None, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: None, &#x27;centroid.anchor_tracks.image_siglip2&#x27;: None, &#x27;centroid.anchor_tracks.audio_laion_clap&#x27;: None, &#x27;centroid.anchor_tracks.cf_bpr&#x27;: None, &#x27;centroid.user.cf_bpr&#x27;: None, &#x27;lookup.resolved_artist_discography&#x27;: None}</code>.</li>
+<li>Classification: candidate-generation gap</li>
+<li>Diagnosis: No exact gold track or gold artist is grounded in state.; The ask has a popularity/canonicality signal, but final ranking has no calibrated popularity feature.; No retriever branch found the gold in top-1000, so a ranker cannot recover this case.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Add a tag+popularity or goal-conditioned lookup retriever and check whether the gold enters union@100.</li>
+</ul>
+<h3>not_in_any_branch_top1000 - Perpetual by VNV Nation</h3>
+<ul>
+<li>Session/turn: <code>8741b1b4-cd87-42fc-a56d-483e7f66494c</code> / <code>1</code></li>
+<li>User turn: I&#x27;m trying to remember an electronic band with a really powerful, almost anthemic sound.</li>
+<li>Organizer goal: category <code>H</code>, specificity <code>LH</code>, listener_goal: identify one specific artist (VNV Nation) or find their defining song(s) from a vague description of their electronic, epic, and introspective style.</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;20s&#x27;, &#x27;country_name&#x27;: &#x27;Argentina&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;Gothic/Industrial&#x27;}</code></li>
+<li>State intent: An electronic band with a powerful, anthemic sound.</li>
+<li>State audit: intent_mode <code>open_explore</code>, mentioned <code>[[&#x27;tag&#x27;, &#x27;electronic&#x27;, 1], [&#x27;tag&#x27;, &#x27;powerful&#x27;, 1], [&#x27;tag&#x27;, &#x27;anthemic&#x27;, 1]]</code>, resolved <code>[]</code>, pos_tags <code>[&#x27;electronic&#x27;, &#x27;powerful&#x27;, &#x27;anthemic&#x27;]</code>, rejected tags <code>[]</code>, year_range <code>None</code>, anchors <code>[]</code>.</li>
+<li>Ranks: final <code>None</code>, fused <code>None</code>, best branch <code>None</code> via <code>NONE</code></li>
+<li>Anatomy: n_pools <code>6</code>, n_anchor_tracks <code>0</code>, n_resolved_targets <code>0</code>, per_branch_rank <code>{&#x27;bm25&#x27;: None, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: None, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: None, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: None}</code>.</li>
+<li>Classification: candidate-generation gap</li>
+<li>Diagnosis: No exact gold track or gold artist is grounded in state.; No retriever branch found the gold in top-1000, so a ranker cannot recover this case.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Add a tag+popularity or goal-conditioned lookup retriever and check whether the gold enters union@100.</li>
+</ul>
+<h3>union20_fusion_loss - Hard Times by Cro-Mags</h3>
+<ul>
+<li>Session/turn: <code>0979c6fc-c382-4c14-be3e-2a4711fcc532</code> / <code>1</code></li>
+<li>User turn: I&#x27;m looking for 80s American hardcore punk bands known for their raw energy and short, intense songs.</li>
+<li>Organizer goal: category <code>H</code>, specificity <code>HL</code>, listener_goal: find multiple songs from punk and hardcore punk artists with specific sub-genre characteristics, lyrical themes, or historical periods.</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;20s&#x27;, &#x27;country_name&#x27;: &#x27;South Africa&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;Punk/Hardcore Subculture&#x27;}</code></li>
+<li>State intent: 80s American hardcore punk bands known for their raw energy and short, intense songs.</li>
+<li>State audit: intent_mode <code>open_explore</code>, mentioned <code>[[&#x27;tag&#x27;, &#x27;hardcore punk&#x27;, 1], [&#x27;tag&#x27;, &#x27;punk&#x27;, 1], [&#x27;tag&#x27;, &#x27;raw&#x27;, 1], [&#x27;tag&#x27;, &#x27;energetic&#x27;, 1], [&#x27;tag&#x27;, &#x27;short&#x27;, 1], [&#x27;tag&#x27;, &#x27;intense&#x27;, 1], [&#x27;tag&#x27;, &#x27;80s&#x27;, 1], [&#x27;tag&#x27;, &#x27;American&#x27;, 1]]</code>, resolved <code>[]</code>, pos_tags <code>[&#x27;hardcore punk&#x27;, &#x27;punk&#x27;, &#x27;raw&#x27;, &#x27;energetic&#x27;, &#x27;short&#x27;, &#x27;intense&#x27;, &#x27;80s&#x27;, &#x27;American&#x27;]</code>, rejected tags <code>[]</code>, year_range <code>{&#x27;start&#x27;: 1980, &#x27;end&#x27;: 1989}</code>, anchors <code>[]</code>.</li>
+<li>Ranks: final <code>134</code>, fused <code>60</code>, best branch <code>6</code> via <code>dense.qwen_8b.metadata.metadata_qwen3_embedding_8b</code></li>
+<li>Anatomy: n_pools <code>8</code>, n_anchor_tracks <code>0</code>, n_resolved_targets <code>0</code>, per_branch_rank <code>{&#x27;bm25&#x27;: 215, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: 491, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: 6, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: 299, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: None, &#x27;centroid.user.cf_bpr&#x27;: None, &#x27;lookup.era_popularity&#x27;: None}</code>.</li>
+<li>Classification: current-fusion gap</li>
+<li>Diagnosis: No exact gold track or gold artist is grounded in state.; Extracted era/range excludes the catalog release year of the gold item.; A branch found the gold in top-20, but the current fusion stack did not trust that branch enough.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Score union@200 with a lightweight ranker using branch rank and state features; compare final@20 against the current fusion baseline.</li>
+</ul>
+<h3>union20_fusion_loss - Electronic World Transmission - Reconstructed by [:SITD:] by Rotersand</h3>
+<ul>
+<li>Session/turn: <code>1f1947c0-1c27-4520-9577-66af51c463f3</code> / <code>2</code></li>
+<li>User turn: That&#x27;s a good artist and the EBM sound is right, but the cover isn&#x27;t quite what I&#x27;m looking for. It&#x27;s a bit too literal, like a weather map. I&#x27;m thinking of something with a series of different, unsettling images, not just one big picture. Almost like a collage of dark, abstract scenes.</li>
+<li>Organizer goal: category <code>C</code>, specificity <code>LH</code>, listener_goal: find one specific album remembered by its distinctive, dark, and abstract or unsettling cover art.</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;20s&#x27;, &#x27;country_name&#x27;: &#x27;Argentina&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;Industrial/Gothic/Electronic&#x27;}</code></li>
+<li>State intent: An electronic/EBM album with dark, abstract cover art that is a collage of unsettling images, not a single literal picture like a weather map — Covenant&#x27;s sound is right but their cover is too literal.</li>
+<li>State audit: intent_mode <code>refinement</code>, mentioned <code>[[&#x27;artist&#x27;, &#x27;Covenant&#x27;, 1], [&#x27;tag&#x27;, &#x27;EBM&#x27;, 1], [&#x27;tag&#x27;, &#x27;electronic&#x27;, 1], [&#x27;tag&#x27;, &#x27;dark&#x27;, 1], [&#x27;tag&#x27;, &#x27;abstract&#x27;, 1], [&#x27;tag&#x27;, &#x27;unsettling&#x27;, 1], [&#x27;tag&#x27;, &#x27;collage&#x27;, 1]]</code>, resolved <code>[[&#x27;artist&#x27;, &#x27;Covenant&#x27;]]</code>, pos_tags <code>[&#x27;EBM&#x27;, &#x27;electronic&#x27;, &#x27;dark&#x27;, &#x27;abstract&#x27;, &#x27;unsettling&#x27;, &#x27;collage&#x27;]</code>, rejected tags <code>[&#x27;literal&#x27;]</code>, year_range <code>None</code>, anchors <code>[&#x27;Covenant&#x27;]</code>.</li>
+<li>Ranks: final <code>35</code>, fused <code>45</code>, best branch <code>8</code> via <code>bm25</code></li>
+<li>Anatomy: n_pools <code>7</code>, n_anchor_tracks <code>0</code>, n_resolved_targets <code>1</code>, per_branch_rank <code>{&#x27;bm25&#x27;: 8, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: 167, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: None, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: None, &#x27;lookup.resolved_artist_discography&#x27;: None}</code>.</li>
+<li>Classification: current-fusion gap</li>
+<li>Diagnosis: No exact gold track or gold artist is grounded in state.; A branch found the gold in top-20, but the current fusion stack did not trust that branch enough.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Score union@200 with a lightweight ranker using branch rank and state features; compare final@20 against the current fusion baseline.</li>
+</ul>
+<h3>union20_fusion_loss - Ignite by Diorama</h3>
+<ul>
+<li>Session/turn: <code>1f1947c0-1c27-4520-9577-66af51c463f3</code> / <code>5</code></li>
+<li>User turn: The Great Depression&quot; is excellent! Aesthetic Perfection delivers that powerful EBM sound I love. I&#x27;m really enjoying these recommendations. Can you suggest another track that&#x27;s on the darker, more atmospheric side of EBM, but still keeps that strong beat?</li>
+<li>Organizer goal: category <code>C</code>, specificity <code>LH</code>, listener_goal: find one specific album remembered by its distinctive, dark, and abstract or unsettling cover art.</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;20s&#x27;, &#x27;country_name&#x27;: &#x27;Argentina&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;Industrial/Gothic/Electronic&#x27;}</code></li>
+<li>State intent: Another track that&#x27;s on the darker, more atmospheric side of EBM, but still keeps that strong beat.</li>
+<li>State audit: intent_mode <code>refinement</code>, mentioned <code>[[&#x27;artist&#x27;, &#x27;Covenant&#x27;, 1], [&#x27;artist&#x27;, &#x27;Rotersand&#x27;, 1], [&#x27;artist&#x27;, &#x27;Combichrist&#x27;, 1], [&#x27;artist&#x27;, &#x27;Aesthetic Perfection&#x27;, 1], [&#x27;tag&#x27;, &#x27;EBM&#x27;, 1], [&#x27;tag&#x27;, &#x27;electronic body music&#x27;, 1], [&#x27;tag&#x27;, &#x27;dark&#x27;, 1], [&#x27;tag&#x27;, &#x27;atmospheric&#x27;, 1], [&#x27;tag&#x27;, &#x27;strong beat&#x27;, 1], [&#x27;tag&#x27;, &#x27;driving&#x27;, 1], [&#x27;tag&#x27;, &#x27;high-energy&#x27;, 1]]</code>, resolved <code>[[&#x27;artist&#x27;, &#x27;Covenant&#x27;], [&#x27;artist&#x27;, &#x27;Rotersand&#x27;], [&#x27;artist&#x27;, &#x27;Combichrist&#x27;], [&#x27;artist&#x27;, &#x27;Aesthetic Perfection&#x27;]]</code>, pos_tags <code>[&#x27;EBM&#x27;, &#x27;electronic body music&#x27;, &#x27;dark&#x27;, &#x27;atmospheric&#x27;, &#x27;strong beat&#x27;, &#x27;driving&#x27;, &#x27;high-energy&#x27;]</code>, rejected tags <code>[]</code>, year_range <code>None</code>, anchors <code>[&#x27;Covenant&#x27;, &#x27;Rotersand&#x27;, &#x27;Combichrist&#x27;, &#x27;Aesthetic Perfection&#x27;]</code>.</li>
+<li>Ranks: final <code>35</code>, fused <code>50</code>, best branch <code>4</code> via <code>centroid.anchor_tracks.audio_laion_clap</code></li>
+<li>Anatomy: n_pools <code>10</code>, n_anchor_tracks <code>4</code>, n_resolved_targets <code>4</code>, per_branch_rank <code>{&#x27;bm25&#x27;: 133, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: None, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: 47, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: 294, &#x27;centroid.anchor_tracks.image_siglip2&#x27;: None, &#x27;centroid.anchor_tracks.audio_laion_clap&#x27;: 4, &#x27;centroid.anchor_tracks.cf_bpr&#x27;: None, &#x27;lookup.resolved_artist_discography&#x27;: None}</code>.</li>
+<li>Classification: current-fusion gap</li>
+<li>Diagnosis: No exact gold track or gold artist is grounded in state.; A branch found the gold in top-20, but the current fusion stack did not trust that branch enough.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Score union@200 with a lightweight ranker using branch rank and state features; compare final@20 against the current fusion baseline.</li>
+</ul>
+<h3>union20_fusion_loss - Architect by Aesthetic Perfection</h3>
+<ul>
+<li>Session/turn: <code>1f1947c0-1c27-4520-9577-66af51c463f3</code> / <code>6</code></li>
+<li>User turn: Ignite&quot; by Diorama is great! That&#x27;s exactly the kind of dark, atmospheric EBM I was looking for. The melancholic vibe is really good. Do you have anything similar but maybe with a slightly more industrial or harsh edge to it?</li>
+<li>Organizer goal: category <code>C</code>, specificity <code>LH</code>, listener_goal: find one specific album remembered by its distinctive, dark, and abstract or unsettling cover art.</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;20s&#x27;, &#x27;country_name&#x27;: &#x27;Argentina&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;Industrial/Gothic/Electronic&#x27;}</code></li>
+<li>State intent: Another track similar to &#x27;Ignite&#x27; by Diorama but with a more industrial or harsh edge, keeping the dark, atmospheric EBM sound.</li>
+<li>State audit: intent_mode <code>refinement</code>, mentioned <code>[[&#x27;artist&#x27;, &#x27;Diorama&#x27;, 1], [&#x27;track&#x27;, &#x27;Ignite&#x27;, 1], [&#x27;tag&#x27;, &#x27;dark&#x27;, 1], [&#x27;tag&#x27;, &#x27;atmospheric&#x27;, 1], [&#x27;tag&#x27;, &#x27;EBM&#x27;, 1], [&#x27;tag&#x27;, &#x27;Electronic Body Music&#x27;, 1], [&#x27;tag&#x27;, &#x27;industrial&#x27;, 1], [&#x27;tag&#x27;, &#x27;harsh&#x27;, 1], [&#x27;tag&#x27;, &#x27;aggressive&#x27;, 1], [&#x27;tag&#x27;, &#x27;industrial metal&#x27;, 1]]</code>, resolved <code>[[&#x27;artist&#x27;, &#x27;Diorama&#x27;], [&#x27;track&#x27;, &#x27;Ignite&#x27;]]</code>, pos_tags <code>[&#x27;dark&#x27;, &#x27;atmospheric&#x27;, &#x27;EBM&#x27;, &#x27;Electronic Body Music&#x27;, &#x27;industrial&#x27;, &#x27;harsh&#x27;, &#x27;aggressive&#x27;, &#x27;industrial metal&#x27;]</code>, rejected tags <code>[]</code>, year_range <code>None</code>, anchors <code>[&#x27;Diorama&#x27;]</code>.</li>
+<li>Ranks: final <code>36</code>, fused <code>28</code>, best branch <code>20</code> via <code>bm25</code></li>
+<li>Anatomy: n_pools <code>10</code>, n_anchor_tracks <code>6</code>, n_resolved_targets <code>2</code>, per_branch_rank <code>{&#x27;bm25&#x27;: 20, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: 898, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: 20, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: 553, &#x27;centroid.anchor_tracks.image_siglip2&#x27;: None, &#x27;centroid.anchor_tracks.audio_laion_clap&#x27;: 65, &#x27;centroid.anchor_tracks.cf_bpr&#x27;: None, &#x27;lookup.resolved_artist_discography&#x27;: None}</code>.</li>
+<li>Classification: current-fusion gap</li>
+<li>Diagnosis: No exact gold track or gold artist is grounded in state.; A branch found the gold in top-20, but the current fusion stack did not trust that branch enough.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Score union@200 with a lightweight ranker using branch rank and state features; compare final@20 against the current fusion baseline.</li>
+</ul>
+<h3>union20_postfusion_or_final_loss - Too Drunk to Fuck by Dead Kennedys</h3>
+<ul>
+<li>Session/turn: <code>0979c6fc-c382-4c14-be3e-2a4711fcc532</code> / <code>4</code></li>
+<li>User turn: Dead Kennedys, yes! &quot;California Uber Alles&quot; is perfect for that politically charged, critical punk sound. They&#x27;re legends. Now that we&#x27;ve explored that, how about some more 80s American hardcore punk bands that incorporated a bit more melody or even some metallic influences into their sound, while still keeping that raw energy?</li>
+<li>Organizer goal: category <code>H</code>, specificity <code>HL</code>, listener_goal: find multiple songs from punk and hardcore punk artists with specific sub-genre characteristics, lyrical themes, or historical periods.</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;20s&#x27;, &#x27;country_name&#x27;: &#x27;South Africa&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;Punk/Hardcore Subculture&#x27;}</code></li>
+<li>State intent: More 80s American hardcore punk bands that incorporated a bit more melody or even some metallic influences into their sound, while still keeping that raw energy.</li>
+<li>State audit: intent_mode <code>refinement</code>, mentioned <code>[[&#x27;artist&#x27;, &#x27;Dead Kennedys&#x27;, 1], [&#x27;tag&#x27;, &#x27;80s&#x27;, 1], [&#x27;tag&#x27;, &#x27;American hardcore punk&#x27;, 1], [&#x27;tag&#x27;, &#x27;hardcore punk&#x27;, 1], [&#x27;tag&#x27;, &#x27;punk&#x27;, 1], [&#x27;tag&#x27;, &#x27;raw energy&#x27;, 1], [&#x27;tag&#x27;, &#x27;raw&#x27;, 1], [&#x27;tag&#x27;, &#x27;melodic&#x27;, 1], [&#x27;tag&#x27;, &#x27;melody&#x27;, 1], [&#x27;tag&#x27;, &#x27;metallic&#x27;, 1], [&#x27;tag&#x27;, &#x27;metal&#x27;, 1], [&#x27;tag&#x27;, &#x27;crossover thrash&#x27;, 1]]</code>, resolved <code>[[&#x27;artist&#x27;, &#x27;Dead Kennedys&#x27;]]</code>, pos_tags <code>[&#x27;80s&#x27;, &#x27;American hardcore punk&#x27;, &#x27;hardcore punk&#x27;, &#x27;punk&#x27;, &#x27;raw energy&#x27;, &#x27;raw&#x27;, &#x27;melodic&#x27;, &#x27;melody&#x27;, &#x27;metallic&#x27;, &#x27;metal&#x27;, &#x27;crossover thrash&#x27;]</code>, rejected tags <code>[]</code>, year_range <code>{&#x27;start&#x27;: 1980, &#x27;end&#x27;: 1989}</code>, anchors <code>[&#x27;Dead Kennedys&#x27;]</code>.</li>
+<li>Ranks: final <code>74</code>, fused <code>13</code>, best branch <code>4</code> via <code>dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b</code></li>
+<li>Anatomy: n_pools <code>12</code>, n_anchor_tracks <code>3</code>, n_resolved_targets <code>1</code>, per_branch_rank <code>{&#x27;bm25&#x27;: 100, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: 4, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: 400, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: 126, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: 260, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: None, &#x27;centroid.anchor_tracks.image_siglip2&#x27;: 4, &#x27;centroid.anchor_tracks.audio_laion_clap&#x27;: None, &#x27;centroid.anchor_tracks.cf_bpr&#x27;: 685, &#x27;centroid.user.cf_bpr&#x27;: None, &#x27;lookup.resolved_artist_discography&#x27;: 13, &#x27;lookup.era_popularity&#x27;: None}</code>.</li>
+<li>Classification: post-fusion or finalization gap</li>
+<li>Diagnosis: Gold survives fusion top-20, then post-fusion/final policy removes it from top-20.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Run a post-fusion ablation with trusted survivor slots and weaker same-artist/album demotion.</li>
+</ul>
+<h3>union20_postfusion_or_final_loss - Bad Mouth by Fugazi</h3>
+<ul>
+<li>Session/turn: <code>0979c6fc-c382-4c14-be3e-2a4711fcc532</code> / <code>7</code></li>
+<li>User turn: Fugazi is legendary, and &quot;Waiting Room&quot; is a classic, but I was looking for something a bit more sonically chaotic and abrasive for that distinct 80s American hardcore sound. Can you recommend bands that pushed the boundaries with noise, feedback, or a more unhinged, dissonant style within that scene?</li>
+<li>Organizer goal: category <code>H</code>, specificity <code>HL</code>, listener_goal: find multiple songs from punk and hardcore punk artists with specific sub-genre characteristics, lyrical themes, or historical periods.</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;20s&#x27;, &#x27;country_name&#x27;: &#x27;South Africa&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;Punk/Hardcore Subculture&#x27;}</code></li>
+<li>State intent: Fugazi is legendary, and &#x27;Waiting Room&#x27; is a classic, but I was looking for something a bit more sonically chaotic and abrasive for that distinct 80s American hardcore sound. Can you recommend bands that pushed the boundaries with noise, feedback, or a more un</li>
+<li>State audit: intent_mode <code>refinement</code>, mentioned <code>[[&#x27;artist&#x27;, &#x27;Fugazi&#x27;, 1], [&#x27;track&#x27;, &#x27;Waiting Room&#x27;, 1], [&#x27;tag&#x27;, &#x27;80s&#x27;, 1], [&#x27;tag&#x27;, &#x27;American hardcore punk&#x27;, 1], [&#x27;tag&#x27;, &#x27;hardcore punk&#x27;, 1], [&#x27;tag&#x27;, &#x27;punk&#x27;, 1], [&#x27;tag&#x27;, &#x27;chaotic&#x27;, 1], [&#x27;tag&#x27;, &#x27;noisy&#x27;, 1], [&#x27;tag&#x27;, &#x27;abrasive&#x27;, 1], [&#x27;tag&#x27;, &#x27;noise&#x27;, 1], [&#x27;tag&#x27;, &#x27;feedback&#x27;, 1], [&#x27;tag&#x27;, &#x27;unhinged&#x27;, 1], [&#x27;tag&#x27;, &#x27;dissonant&#x27;, 1]]</code>, resolved <code>[[&#x27;artist&#x27;, &#x27;Fugazi&#x27;], [&#x27;track&#x27;, &#x27;Waiting Room&#x27;]]</code>, pos_tags <code>[&#x27;80s&#x27;, &#x27;American hardcore punk&#x27;, &#x27;hardcore punk&#x27;, &#x27;punk&#x27;, &#x27;chaotic&#x27;, &#x27;noisy&#x27;, &#x27;abrasive&#x27;, &#x27;noise&#x27;, &#x27;feedback&#x27;, &#x27;unhinged&#x27;, &#x27;dissonant&#x27;]</code>, rejected tags <code>[]</code>, year_range <code>{&#x27;start&#x27;: 1980, &#x27;end&#x27;: 1989}</code>, anchors <code>[&#x27;Fugazi&#x27;]</code>.</li>
+<li>Ranks: final <code>47</code>, fused <code>5</code>, best branch <code>7</code> via <code>lookup.resolved_artist_discography</code></li>
+<li>Anatomy: n_pools <code>12</code>, n_anchor_tracks <code>5</code>, n_resolved_targets <code>2</code>, per_branch_rank <code>{&#x27;bm25&#x27;: 17, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: 43, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: 15, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: None, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: 808, &#x27;centroid.anchor_tracks.image_siglip2&#x27;: 60, &#x27;centroid.anchor_tracks.audio_laion_clap&#x27;: 278, &#x27;centroid.anchor_tracks.cf_bpr&#x27;: None, &#x27;centroid.user.cf_bpr&#x27;: None, &#x27;lookup.resolved_artist_discography&#x27;: 7, &#x27;lookup.era_popularity&#x27;: None}</code>.</li>
+<li>Classification: post-fusion or finalization gap</li>
+<li>Diagnosis: Gold survives fusion top-20, then post-fusion/final policy removes it from top-20.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Run a post-fusion ablation with trusted survivor slots and weaker same-artist/album demotion.</li>
+</ul>
+<h3>union20_postfusion_or_final_loss - WTF Is Wrong With You People? by Combichrist</h3>
+<ul>
+<li>Session/turn: <code>1f1947c0-1c27-4520-9577-66af51c463f3</code> / <code>7</code></li>
+<li>User turn: Yes, &quot;Architect&quot; definitely has that industrial edge I was looking for! It&#x27;s a fantastic track and exactly what I like. Thank you. Can you recommend something from a different artist with a similar dark, heavy industrial electronic sound?</li>
+<li>Organizer goal: category <code>C</code>, specificity <code>LH</code>, listener_goal: find one specific album remembered by its distinctive, dark, and abstract or unsettling cover art.</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;20s&#x27;, &#x27;country_name&#x27;: &#x27;Argentina&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;Industrial/Gothic/Electronic&#x27;}</code></li>
+<li>State intent: Recommend something from a different artist with a similar dark, heavy industrial electronic sound.</li>
+<li>State audit: intent_mode <code>refinement</code>, mentioned <code>[[&#x27;tag&#x27;, &#x27;dark&#x27;, 1], [&#x27;tag&#x27;, &#x27;heavy&#x27;, 1], [&#x27;tag&#x27;, &#x27;industrial&#x27;, 1], [&#x27;tag&#x27;, &#x27;electronic&#x27;, 1], [&#x27;tag&#x27;, &#x27;industrial electronic&#x27;, 1], [&#x27;tag&#x27;, &#x27;EBM&#x27;, 1]]</code>, resolved <code>[]</code>, pos_tags <code>[&#x27;dark&#x27;, &#x27;heavy&#x27;, &#x27;industrial&#x27;, &#x27;electronic&#x27;, &#x27;industrial electronic&#x27;, &#x27;EBM&#x27;]</code>, rejected tags <code>[]</code>, year_range <code>None</code>, anchors <code>[]</code>.</li>
+<li>Ranks: final <code>126</code>, fused <code>16</code>, best branch <code>2</code> via <code>centroid.anchor_tracks.image_siglip2</code></li>
+<li>Anatomy: n_pools <code>9</code>, n_anchor_tracks <code>4</code>, n_resolved_targets <code>0</code>, per_branch_rank <code>{&#x27;bm25&#x27;: 312, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: 696, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: None, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: 4, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: None, &#x27;centroid.anchor_tracks.image_siglip2&#x27;: 2, &#x27;centroid.anchor_tracks.audio_laion_clap&#x27;: 135, &#x27;centroid.anchor_tracks.cf_bpr&#x27;: None}</code>.</li>
+<li>Classification: post-fusion or finalization gap</li>
+<li>Diagnosis: No exact gold track or gold artist is grounded in state.; Gold survives fusion top-20, then post-fusion/final policy removes it from top-20.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Run a post-fusion ablation with trusted survivor slots and weaker same-artist/album demotion.</li>
+</ul>
+<h3>union20_postfusion_or_final_loss - Moons of Evening Star by Brad Derrick</h3>
+<ul>
+<li>Session/turn: <code>55327e13-612b-4ca0-b12c-cbfa493cd687</code> / <code>8</code></li>
+<li>User turn: Yes, &#x27;Echoes of Aldmeris&#x27; is exactly the kind of mysterious and atmospheric track I was thinking of! It&#x27;s fantastic for those ancient ruin explorations. You&#x27;ve nailed it with all these recommendations from The Elder Scrolls Online. Thanks for all the great music!</li>
+<li>Organizer goal: category <code>A</code>, specificity <code>LH</code>, listener_goal: find one specific instrumental track from &quot;The Elder Scrolls Online Original Game Soundtrack&quot; remembered by its distinctive orchestral sound, mood, or thematic quality (e.g., a battle theme, an exploration piece, or a solemn melody).</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;20s&#x27;, &#x27;country_name&#x27;: &#x27;Netherlands&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;Gaming Culture&#x27;}</code></li>
+<li>State intent: Another track from The Elder Scrolls Online soundtrack that is grand and epic, but more about an inspiring journey or grand discovery, rather than a direct battle.</li>
+<li>State audit: intent_mode <code>playlist_build</code>, mentioned <code>[[&#x27;tag&#x27;, &#x27;grand&#x27;, 1], [&#x27;tag&#x27;, &#x27;epic&#x27;, 1], [&#x27;tag&#x27;, &#x27;orchestral&#x27;, 1], [&#x27;tag&#x27;, &#x27;inspiring journey&#x27;, 1], [&#x27;tag&#x27;, &#x27;grand discovery&#x27;, 1], [&#x27;tag&#x27;, &#x27;adventure&#x27;, 1], [&#x27;tag&#x27;, &#x27;expansive&#x27;, 1], [&#x27;tag&#x27;, &#x27;game soundtrack&#x27;, 1], [&#x27;tag&#x27;, &#x27;video game music&#x27;, 1], [&#x27;tag&#x27;, &#x27;The Elder Scrolls Online&#x27;, 1], [&#x27;tag&#x27;, &#x27;Elder Scrolls Online&#x27;, 1]]</code>, resolved <code>[]</code>, pos_tags <code>[&#x27;grand&#x27;, &#x27;epic&#x27;, &#x27;orchestral&#x27;, &#x27;inspiring journey&#x27;, &#x27;grand discovery&#x27;, &#x27;adventure&#x27;, &#x27;expansive&#x27;, &#x27;game soundtrack&#x27;, &#x27;video game music&#x27;, &#x27;The Elder Scrolls Online&#x27;, &#x27;Elder Scrolls Online&#x27;]</code>, rejected tags <code>[]</code>, year_range <code>None</code>, anchors <code>[]</code>.</li>
+<li>Ranks: final <code>69</code>, fused <code>13</code>, best branch <code>15</code> via <code>centroid.anchor_tracks.image_siglip2</code></li>
+<li>Anatomy: n_pools <code>9</code>, n_anchor_tracks <code>7</code>, n_resolved_targets <code>0</code>, per_branch_rank <code>{&#x27;bm25&#x27;: None, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: 49, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: 22, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: 18, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: 116, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: 951, &#x27;centroid.anchor_tracks.image_siglip2&#x27;: 15, &#x27;centroid.anchor_tracks.audio_laion_clap&#x27;: 754, &#x27;centroid.anchor_tracks.cf_bpr&#x27;: 47}</code>.</li>
+<li>Classification: post-fusion or finalization gap</li>
+<li>Diagnosis: No exact gold track or gold artist is grounded in state.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Run a post-fusion ablation with trusted survivor slots and weaker same-artist/album demotion.</li>
+</ul>
+<h3>union100_near_miss - Fuck Authority by Wasted Youth</h3>
+<ul>
+<li>Session/turn: <code>0979c6fc-c382-4c14-be3e-2a4711fcc532</code> / <code>2</code></li>
+<li>User turn: Yes, Cro-Mags is a great pick for that raw, intense 80s hardcore sound. Can you recommend a few more bands with that same kind of aggressive, no-frills energy and short song structures?</li>
+<li>Organizer goal: category <code>H</code>, specificity <code>HL</code>, listener_goal: find multiple songs from punk and hardcore punk artists with specific sub-genre characteristics, lyrical themes, or historical periods.</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;20s&#x27;, &#x27;country_name&#x27;: &#x27;South Africa&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;Punk/Hardcore Subculture&#x27;}</code></li>
+<li>State intent: Recommend a few more bands with the same aggressive, no-frills energy and short song structures as Cro-Mags, from 80s American hardcore punk.</li>
+<li>State audit: intent_mode <code>refinement</code>, mentioned <code>[[&#x27;artist&#x27;, &#x27;Cro-Mags&#x27;, 1], [&#x27;tag&#x27;, &#x27;80s&#x27;, 1], [&#x27;tag&#x27;, &#x27;American hardcore punk&#x27;, 1], [&#x27;tag&#x27;, &#x27;hardcore punk&#x27;, 1], [&#x27;tag&#x27;, &#x27;punk&#x27;, 1], [&#x27;tag&#x27;, &#x27;raw&#x27;, 1], [&#x27;tag&#x27;, &#x27;intense&#x27;, 1], [&#x27;tag&#x27;, &#x27;aggressive&#x27;, 1], [&#x27;tag&#x27;, &#x27;no-frills&#x27;, 1], [&#x27;tag&#x27;, &#x27;short songs&#x27;, 1], [&#x27;tag&#x27;, &#x27;energetic&#x27;, 1]]</code>, resolved <code>[[&#x27;artist&#x27;, &#x27;Cro-Mags&#x27;]]</code>, pos_tags <code>[&#x27;80s&#x27;, &#x27;American hardcore punk&#x27;, &#x27;hardcore punk&#x27;, &#x27;punk&#x27;, &#x27;raw&#x27;, &#x27;intense&#x27;, &#x27;aggressive&#x27;, &#x27;no-frills&#x27;, &#x27;short songs&#x27;, &#x27;energetic&#x27;]</code>, rejected tags <code>[]</code>, year_range <code>{&#x27;start&#x27;: 1980, &#x27;end&#x27;: 1989}</code>, anchors <code>[&#x27;Cro-Mags&#x27;]</code>.</li>
+<li>Ranks: final <code>137</code>, fused <code>110</code>, best branch <code>24</code> via <code>dense.qwen_8b.attributes.attributes_qwen3_embedding_8b</code></li>
+<li>Anatomy: n_pools <code>12</code>, n_anchor_tracks <code>1</code>, n_resolved_targets <code>1</code>, per_branch_rank <code>{&#x27;bm25&#x27;: None, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: None, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: 24, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: None, &#x27;centroid.anchor_tracks.image_siglip2&#x27;: None, &#x27;centroid.anchor_tracks.audio_laion_clap&#x27;: 33, &#x27;centroid.anchor_tracks.cf_bpr&#x27;: None, &#x27;centroid.user.cf_bpr&#x27;: None, &#x27;lookup.resolved_artist_discography&#x27;: None, &#x27;lookup.era_popularity&#x27;: None}</code>.</li>
+<li>Classification: retriever depth or state gap</li>
+<li>Diagnosis: No exact gold track or gold artist is grounded in state.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Evaluate union@100 ranker recovery and branch-specific calibration before adding a new retriever.</li>
+</ul>
+<h3>union100_near_miss - Former Self by Icon Of Coil</h3>
+<ul>
+<li>Session/turn: <code>8741b1b4-cd87-42fc-a56d-483e7f66494c</code> / <code>8</code></li>
+<li>User turn: Sentinal&quot; is fantastic, I love the energy and the powerful synths! &#x27;Of Faith, Power and Glory&#x27; sounds like another must-listen. You&#x27;ve given me so many great VNV Nation tracks already. What other bands or artists have a similar powerful EBM/futurepop sound to VNV Nation that you think I might enjoy?</li>
+<li>Organizer goal: category <code>H</code>, specificity <code>LH</code>, listener_goal: identify one specific artist (VNV Nation) or find their defining song(s) from a vague description of their electronic, epic, and introspective style.</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;20s&#x27;, &#x27;country_name&#x27;: &#x27;Argentina&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;Gothic/Industrial&#x27;}</code></li>
+<li>State intent: What other bands or artists have a similar powerful EBM/futurepop sound to VNV Nation that you think I might enjoy?</li>
+<li>State audit: intent_mode <code>playlist_build</code>, mentioned <code>[[&#x27;artist&#x27;, &#x27;VNV Nation&#x27;, 1], [&#x27;track&#x27;, &#x27;Perpetual&#x27;, 1], [&#x27;track&#x27;, &#x27;Arclight&#x27;, 1], [&#x27;track&#x27;, &#x27;Fearless&#x27;, 1], [&#x27;track&#x27;, &#x27;Carbon&#x27;, 1], [&#x27;track&#x27;, &#x27;The Farthest Star&#x27;, 1], [&#x27;track&#x27;, &#x27;Momentum&#x27;, 1], [&#x27;track&#x27;, &#x27;Sentinal&#x27;, 1], [&#x27;album&#x27;, &#x27;Empires&#x27;, 1], [&#x27;album&#x27;, &#x27;Futureperfect&#x27;, 1], [&#x27;album&#x27;, &#x27;Judgement&#x27;, 1], [&#x27;album&#x27;, &#x27;Of Faith, Power and Glory&#x27;, 1], [&#x27;tag&#x27;, &#x27;powerful&#x27;, 1], [&#x27;tag&#x27;, &#x27;anthemic&#x27;, 1], [&#x27;tag&#x27;, &#x27;epic&#x27;, 1], [&#x27;tag&#x27;, &#x27;driving&#x27;, 1], [&#x27;tag&#x27;, &#x27;introspective&#x27;, 1], [&#x27;tag&#x27;, &#x27;atmospheric&#x27;, 1], [&#x27;tag&#x27;, &#x27;dark&#x27;, 1], [&#x27;tag&#x27;, &#x27;synths&#x27;, 1], [&#x27;tag&#x27;, &#x27;EBM&#x27;, 1], [&#x27;tag&#x27;, &#x27;futurepop&#x27;, 1], [&#x27;tag&#x27;, &#x27;electronic&#x27;, 1], [&#x27;tag&#x27;, &#x27;early 2000s&#x27;, 1]]</code>, resolved <code>[[&#x27;artist&#x27;, &#x27;VNV Nation&#x27;], [&#x27;track&#x27;, &#x27;Perpetual&#x27;], [&#x27;track&#x27;, &#x27;Arclight&#x27;], [&#x27;track&#x27;, &#x27;Fearless&#x27;], [&#x27;track&#x27;, &#x27;Carbon&#x27;], [&#x27;track&#x27;, &#x27;The Farthest Star&#x27;], [&#x27;track&#x27;, &#x27;Momentum&#x27;], [&#x27;track&#x27;, &#x27;Sentinal&#x27;]]</code>, pos_tags <code>[&#x27;powerful&#x27;, &#x27;anthemic&#x27;, &#x27;epic&#x27;, &#x27;driving&#x27;, &#x27;introspective&#x27;, &#x27;atmospheric&#x27;, &#x27;dark&#x27;, &#x27;synths&#x27;, &#x27;EBM&#x27;, &#x27;futurepop&#x27;, &#x27;electronic&#x27;, &#x27;early 2000s&#x27;]</code>, rejected tags <code>[]</code>, year_range <code>None</code>, anchors <code>[&#x27;VNV Nation&#x27;]</code>.</li>
+<li>Ranks: final <code>27</code>, fused <code>30</code>, best branch <code>35</code> via <code>bm25</code></li>
+<li>Anatomy: n_pools <code>10</code>, n_anchor_tracks <code>7</code>, n_resolved_targets <code>8</code>, per_branch_rank <code>{&#x27;bm25&#x27;: 35, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: 54, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: None, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: 133, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: None, &#x27;centroid.anchor_tracks.image_siglip2&#x27;: None, &#x27;centroid.anchor_tracks.audio_laion_clap&#x27;: 48, &#x27;centroid.anchor_tracks.cf_bpr&#x27;: None, &#x27;lookup.resolved_artist_discography&#x27;: None}</code>.</li>
+<li>Classification: retriever depth or state gap</li>
+<li>Diagnosis: No exact gold track or gold artist is grounded in state.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Evaluate union@100 ranker recovery and branch-specific calibration before adding a new retriever.</li>
+</ul>
+<h3>union100_near_miss - Eple by Röyksopp</h3>
+<ul>
+<li>Session/turn: <code>a510a742-18e9-4098-83a2-7e7f9a25aca7</code> / <code>5</code></li>
+<li>User turn: Oh, &quot;Teardrop&quot; is fantastic! That&#x27;s exactly the kind of deep, atmospheric electronic track with a prominent bassline I was hoping for. You&#x27;re nailing these! How about something from the late 90s/early 2000s electronic scene that&#x27;s more instrumental and perhaps a bit more melodic?</li>
+<li>Organizer goal: category <code>F</code>, specificity <code>HL</code>, listener_goal: find multiple electronic/dance tracks from the late 90s and early 2000s with specific characteristics (e.g., energetic, downtempo, vocal-focused)</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;20s&#x27;, &#x27;country_name&#x27;: &#x27;Argentina&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;British Electronic&#x27;}</code></li>
+<li>State intent: Something from the late 90s/early 2000s electronic scene that&#x27;s more instrumental and perhaps a bit more melodic.</li>
+<li>State audit: intent_mode <code>refinement</code>, mentioned <code>[[&#x27;tag&#x27;, &#x27;late 90s&#x27;, 1], [&#x27;tag&#x27;, &#x27;early 2000s&#x27;, 1], [&#x27;tag&#x27;, &#x27;electronic&#x27;, 1], [&#x27;tag&#x27;, &#x27;instrumental&#x27;, 1], [&#x27;tag&#x27;, &#x27;melodic&#x27;, 1]]</code>, resolved <code>[]</code>, pos_tags <code>[&#x27;late 90s&#x27;, &#x27;early 2000s&#x27;, &#x27;electronic&#x27;, &#x27;instrumental&#x27;, &#x27;melodic&#x27;]</code>, rejected tags <code>[]</code>, year_range <code>{&#x27;start&#x27;: 1995, &#x27;end&#x27;: 2004}</code>, anchors <code>[]</code>.</li>
+<li>Ranks: final <code>65</code>, fused <code>195</code>, best branch <code>51</code> via <code>centroid.anchor_tracks.cf_bpr</code></li>
+<li>Anatomy: n_pools <code>10</code>, n_anchor_tracks <code>4</code>, n_resolved_targets <code>0</code>, per_branch_rank <code>{&#x27;bm25&#x27;: None, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: 360, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: 289, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: None, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: None, &#x27;centroid.anchor_tracks.image_siglip2&#x27;: None, &#x27;centroid.anchor_tracks.audio_laion_clap&#x27;: None, &#x27;centroid.anchor_tracks.cf_bpr&#x27;: 51, &#x27;lookup.era_popularity&#x27;: None}</code>.</li>
+<li>Classification: retriever depth or state gap</li>
+<li>Diagnosis: No exact gold track or gold artist is grounded in state.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Evaluate union@100 ranker recovery and branch-specific calibration before adding a new retriever.</li>
+</ul>
+<h3>union100_near_miss - Miura by Metro Area</h3>
+<ul>
+<li>Session/turn: <code>a510a742-18e9-4098-83a2-7e7f9a25aca7</code> / <code>6</code></li>
+<li>User turn: Yes, &quot;Eple&quot; is fantastic! Röyksopp always delivers with those melodic, instrumental tracks. That&#x27;s a perfect addition to my playlist. I&#x27;m really enjoying this journey through the late 90s and early 2000s electronic scene. Could you suggest a few more electronic tracks from that period that have a really strong, driving beat, maybe something that leans more towards house or techno?</li>
+<li>Organizer goal: category <code>F</code>, specificity <code>HL</code>, listener_goal: find multiple electronic/dance tracks from the late 90s and early 2000s with specific characteristics (e.g., energetic, downtempo, vocal-focused)</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;20s&#x27;, &#x27;country_name&#x27;: &#x27;Argentina&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;British Electronic&#x27;}</code></li>
+<li>State intent: A few more electronic tracks from the late 90s/early 2000s with a really strong, driving beat, leaning more towards house or techno.</li>
+<li>State audit: intent_mode <code>refinement</code>, mentioned <code>[[&#x27;artist&#x27;, &#x27;Daft Punk&#x27;, 1], [&#x27;artist&#x27;, &#x27;LCD Soundsystem&#x27;, 1], [&#x27;artist&#x27;, &#x27;The Orb&#x27;, 1], [&#x27;artist&#x27;, &#x27;Massive Attack&#x27;, 1], [&#x27;artist&#x27;, &#x27;Röyksopp&#x27;, 1], [&#x27;tag&#x27;, &#x27;electronic&#x27;, 1], [&#x27;tag&#x27;, &#x27;late 90s&#x27;, 1], [&#x27;tag&#x27;, &#x27;early 2000s&#x27;, 1], [&#x27;tag&#x27;, &#x27;dance party&#x27;, 1], [&#x27;tag&#x27;, &#x27;energetic&#x27;, 1], [&#x27;tag&#x27;, &#x27;strong driving beat&#x27;, 1], [&#x27;tag&#x27;, &#x27;driving&#x27;, 1], [&#x27;tag&#x27;, &#x27;house&#x27;, 1], [&#x27;tag&#x27;, &#x27;techno&#x27;, 1]]</code>, resolved <code>[[&#x27;artist&#x27;, &#x27;Daft Punk&#x27;], [&#x27;artist&#x27;, &#x27;LCD Soundsystem&#x27;], [&#x27;artist&#x27;, &#x27;The Orb&#x27;], [&#x27;artist&#x27;, &#x27;Massive Attack&#x27;], [&#x27;artist&#x27;, &#x27;Röyksopp&#x27;]]</code>, pos_tags <code>[&#x27;electronic&#x27;, &#x27;late 90s&#x27;, &#x27;early 2000s&#x27;, &#x27;dance party&#x27;, &#x27;energetic&#x27;, &#x27;strong driving beat&#x27;, &#x27;driving&#x27;, &#x27;house&#x27;, &#x27;techno&#x27;]</code>, rejected tags <code>[]</code>, year_range <code>{&#x27;start&#x27;: 1995, &#x27;end&#x27;: 2005}</code>, anchors <code>[&#x27;Daft Punk&#x27;, &#x27;LCD Soundsystem&#x27;, &#x27;The Orb&#x27;, &#x27;Massive Attack&#x27;, &#x27;Röyksopp&#x27;]</code>.</li>
+<li>Ranks: final <code>138</code>, fused <code>143</code>, best branch <code>22</code> via <code>dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b</code></li>
+<li>Anatomy: n_pools <code>11</code>, n_anchor_tracks <code>5</code>, n_resolved_targets <code>5</code>, per_branch_rank <code>{&#x27;bm25&#x27;: 221, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: 22, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: 562, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: None, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: 448, &#x27;centroid.anchor_tracks.image_siglip2&#x27;: None, &#x27;centroid.anchor_tracks.audio_laion_clap&#x27;: None, &#x27;centroid.anchor_tracks.cf_bpr&#x27;: None, &#x27;lookup.resolved_artist_discography&#x27;: None, &#x27;lookup.era_popularity&#x27;: None}</code>.</li>
+<li>Classification: retriever depth or state gap</li>
+<li>Diagnosis: No exact gold track or gold artist is grounded in state.; Extracted era/range excludes the catalog release year of the gold item.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Evaluate union@100 ranker recovery and branch-specific calibration before adding a new retriever.</li>
+</ul>
+<h3>union200_deep_miss - California Uber Alles by Dead Kennedys</h3>
+<ul>
+<li>Session/turn: <code>0979c6fc-c382-4c14-be3e-2a4711fcc532</code> / <code>3</code></li>
+<li>User turn: Yes, Wasted Youth&#x27;s &quot;Fuck Authority&quot; is absolutely spot on! That&#x27;s exactly the kind of aggressive, no-frills 80s hardcore I&#x27;m into. These bands truly represent the core of classic punk. What about some other bands from that same era that had a particularly strong political or socially critical edge in their lyrics, even if they weren&#x27;t exclusively hardcore?</li>
+<li>Organizer goal: category <code>H</code>, specificity <code>HL</code>, listener_goal: find multiple songs from punk and hardcore punk artists with specific sub-genre characteristics, lyrical themes, or historical periods.</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;20s&#x27;, &#x27;country_name&#x27;: &#x27;South Africa&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;Punk/Hardcore Subculture&#x27;}</code></li>
+<li>State intent: What about some other bands from that same era that had a particularly strong political or socially critical edge in their lyrics, even if they weren&#x27;t exclusively hardcore?</li>
+<li>State audit: intent_mode <code>refinement</code>, mentioned <code>[[&#x27;artist&#x27;, &#x27;Cro-Mags&#x27;, 1], [&#x27;artist&#x27;, &#x27;Wasted Youth&#x27;, 1], [&#x27;tag&#x27;, &#x27;80s&#x27;, 1], [&#x27;tag&#x27;, &#x27;hardcore punk&#x27;, 1], [&#x27;tag&#x27;, &#x27;hardcore&#x27;, 1], [&#x27;tag&#x27;, &#x27;punk&#x27;, 1], [&#x27;tag&#x27;, &#x27;raw&#x27;, 1], [&#x27;tag&#x27;, &#x27;aggressive&#x27;, 1], [&#x27;tag&#x27;, &#x27;no-frills&#x27;, 1], [&#x27;tag&#x27;, &#x27;short songs&#x27;, 1], [&#x27;tag&#x27;, &#x27;intense&#x27;, 1], [&#x27;tag&#x27;, &#x27;political&#x27;, 1], [&#x27;tag&#x27;, &#x27;socially critical&#x27;, 1], [&#x27;tag&#x27;, &#x27;American&#x27;, 1]]</code>, resolved <code>[[&#x27;artist&#x27;, &#x27;Cro-Mags&#x27;], [&#x27;artist&#x27;, &#x27;Wasted Youth&#x27;]]</code>, pos_tags <code>[&#x27;80s&#x27;, &#x27;hardcore punk&#x27;, &#x27;hardcore&#x27;, &#x27;punk&#x27;, &#x27;raw&#x27;, &#x27;aggressive&#x27;, &#x27;no-frills&#x27;, &#x27;short songs&#x27;, &#x27;intense&#x27;, &#x27;political&#x27;, &#x27;socially critical&#x27;, &#x27;American&#x27;]</code>, rejected tags <code>[]</code>, year_range <code>{&#x27;start&#x27;: 1980, &#x27;end&#x27;: 1989}</code>, anchors <code>[&#x27;Cro-Mags&#x27;, &#x27;Wasted Youth&#x27;]</code>.</li>
+<li>Ranks: final <code>62</code>, fused <code>161</code>, best branch <code>137</code> via <code>dense.qwen_8b.attributes.attributes_qwen3_embedding_8b</code></li>
+<li>Anatomy: n_pools <code>12</code>, n_anchor_tracks <code>2</code>, n_resolved_targets <code>2</code>, per_branch_rank <code>{&#x27;bm25&#x27;: 143, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: 519, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: 212, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: 137, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: 927, &#x27;centroid.anchor_tracks.image_siglip2&#x27;: 573, &#x27;centroid.anchor_tracks.audio_laion_clap&#x27;: 229, &#x27;centroid.anchor_tracks.cf_bpr&#x27;: 910, &#x27;centroid.user.cf_bpr&#x27;: None, &#x27;lookup.resolved_artist_discography&#x27;: None, &#x27;lookup.era_popularity&#x27;: None}</code>.</li>
+<li>Classification: retriever depth or state gap</li>
+<li>Diagnosis: No exact gold track or gold artist is grounded in state.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Improve candidate generation for this state slice, then rerank over the wider union pool.</li>
+</ul>
+<h3>union200_deep_miss - High Hopes by Gorilla Biscuits</h3>
+<ul>
+<li>Session/turn: <code>0979c6fc-c382-4c14-be3e-2a4711fcc532</code> / <code>5</code></li>
+<li>User turn: Another Dead Kennedys classic, awesome! I appreciate the continued focus on politically charged punk. But I was hoping for something with a bit more *melody* or even some *metallic* influences mixed into that 80s hardcore sound. Any bands come to mind that blended those elements, keeping the raw energy intact?</li>
+<li>Organizer goal: category <code>H</code>, specificity <code>HL</code>, listener_goal: find multiple songs from punk and hardcore punk artists with specific sub-genre characteristics, lyrical themes, or historical periods.</li>
+<li>Profile: <code>{&#x27;age_group&#x27;: &#x27;20s&#x27;, &#x27;country_name&#x27;: &#x27;South Africa&#x27;, &#x27;preferred_musical_culture&#x27;: &#x27;Punk/Hardcore Subculture&#x27;}</code></li>
+<li>State intent: Another Dead Kennedys classic, awesome! I appreciate the continued focus on politically charged punk. But I was hoping for something with a bit more *melody* or even some *metallic* influences mixed into that 80s hardcore sound. Any bands come to mind that ble</li>
+<li>State audit: intent_mode <code>refinement</code>, mentioned <code>[[&#x27;artist&#x27;, &#x27;Dead Kennedys&#x27;, 1], [&#x27;tag&#x27;, &#x27;80s&#x27;, 1], [&#x27;tag&#x27;, &#x27;American hardcore punk&#x27;, 1], [&#x27;tag&#x27;, &#x27;hardcore punk&#x27;, 1], [&#x27;tag&#x27;, &#x27;punk&#x27;, 1], [&#x27;tag&#x27;, &#x27;raw energy&#x27;, 1], [&#x27;tag&#x27;, &#x27;raw&#x27;, 1], [&#x27;tag&#x27;, &#x27;energetic&#x27;, 1], [&#x27;tag&#x27;, &#x27;melody&#x27;, 1], [&#x27;tag&#x27;, &#x27;melodic&#x27;, 1], [&#x27;tag&#x27;, &#x27;metallic&#x27;, 1], [&#x27;tag&#x27;, &#x27;metal&#x27;, 1], [&#x27;tag&#x27;, &#x27;politically charged&#x27;, 1], [&#x27;tag&#x27;, &#x27;political&#x27;, 1], [&#x27;tag&#x27;, &#x27;socially critical&#x27;, 1]]</code>, resolved <code>[[&#x27;artist&#x27;, &#x27;Dead Kennedys&#x27;]]</code>, pos_tags <code>[&#x27;80s&#x27;, &#x27;American hardcore punk&#x27;, &#x27;hardcore punk&#x27;, &#x27;punk&#x27;, &#x27;raw energy&#x27;, &#x27;raw&#x27;, &#x27;energetic&#x27;, &#x27;melody&#x27;, &#x27;melodic&#x27;, &#x27;metallic&#x27;, &#x27;metal&#x27;, &#x27;politically charged&#x27;, &#x27;political&#x27;, &#x27;socially critical&#x27;]</code>, rejected tags <code>[]</code>, year_range <code>{&#x27;start&#x27;: 1980, &#x27;end&#x27;: 1989}</code>, anchors <code>[&#x27;Dead Kennedys&#x27;]</code>.</li>
+<li>Ranks: final <code>208</code>, fused <code>277</code>, best branch <code>169</code> via <code>dense.qwen_8b.attributes.attributes_qwen3_embedding_8b</code></li>
+<li>Anatomy: n_pools <code>12</code>, n_anchor_tracks <code>4</code>, n_resolved_targets <code>1</code>, per_branch_rank <code>{&#x27;bm25&#x27;: 198, &#x27;dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b&#x27;: None, &#x27;dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;: 516, &#x27;dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;: 169, &#x27;dense.clap_text.sonic.audio_laion_clap&#x27;: None, &#x27;centroid.anchor_tracks.image_siglip2&#x27;: 987, &#x27;centroid.anchor_tracks.audio_laion_clap&#x27;: 170, &#x27;centroid.anchor_tracks.cf_bpr&#x27;: None, &#x27;centroid.user.cf_bpr&#x27;: None, &#x27;lookup.resolved_artist_discography&#x27;: None, &#x27;lookup.era_popularity&#x27;: None}</code>.</li>
+<li>Classification: retriever depth or state gap</li>
+<li>Diagnosis: No exact gold track or gold artist is grounded in state.; State is a compressed rewrite; audit for lost constraints against the raw user turn.</li>
+<li>Smallest next test: Improve candidate generation for this state slice, then rerank over the wider union pool.</li>
+</ul>
+<h2>Data Fields To Use Better</h2>
+<ul>
+<li><code>conversation_goal.category/specificity/listener_goal</code>: Available in dev/test and Blind-A HF rows; current inference batch does not pass it into retrieval/compiler state. Better use: Use listener_goal as goal text for broad latent-target retrieval; use category/specificity mostly as routing conditioners, slices, or candidate-varying goal compatibility rather than raw within-turn ranker constants.</li>
+<li><code>raw current user turn and recent user turns</code>: Used to produce state, but not preserved in the compact recall-gap report until this join. Better use: Use for state QA and as a second ranker text feature beside state.turn_intent.</li>
+<li><code>user_profile preferred_musical_culture/country/age_group</code>: UserProfileDB renders only user_id, age_group, gender, country_name; preferred_musical_culture is not used by retrieval/ranking. Better use: Add cautious personalization features and slice checks, especially for culture-specific genres.</li>
+<li><code>goal_progress_assessments</code>: Available from organizer data in dev/test and Blind-A, but not passed into the compiler. Better use: Use previous-turn progress labels as state/ranking features when available; use current-turn labels only for diagnostics/training labels.</li>
+<li><code>track popularity</code>: Used in lookup/backfill paths, not as a calibrated final ranker feature across all candidates. Better use: Model popularity/canonicality explicitly for asks like &#x27;highly popular&#x27; or &#x27;widely recognized&#x27;.</li>
+<li><code>track tag_list and tag overlap</code>: Used by BM25 and post-fusion boosts; ranker does not learn tag precision by slice. Better use: Use overlap count, exact tag matches, tag rarity, and missed-positive-tag features.</li>
+<li><code>artist_id/album_id continuity</code>: Used for demotion/discography; policy is mostly rule-based. Better use: Learn when same-artist continuation is good, neutral, or bad instead of fixed demotion.</li>
+<li><code>audio/image/CF/text embeddings</code>: Used as branch retrievers; ranker mostly sees their current-fusion positions, not calibrated similarities. Better use: Expose branch ranks, raw distances where safe, modality coverage flags, and cross-branch agreement.</li>
+<li><code>Qwen 8B LanceDB fields</code>: Trace/config use 8B branches; local source cache is missing: attributes_qwen3_embedding_8b, metadata_qwen3_embedding_8b. Better use: Use Modal LanceDB for reproducible schema/ranker feature extraction when training the ranker.</li>
+</ul>
+<h2>Reusable Prompt</h2>
+<pre><code class="language-text">Build a decision-ready Music CRS devset recall-gap report for v0plus_compiler_all_retrievers_devset.
+
+Sources to inspect:
+- exp/inference/devset/v0plus_compiler_all_retrievers_devset_trace.jsonl
+- exp/inference/devset/v0plus_compiler_all_retrievers_devset.json
+- evaluator/exp/ground_truth/devset.json
+- reports/devset_recall_gap_interactive/recall_gap_data.json
+- reports/devset_recall_gap_interactive/branch_diagnostics.json
+- configs/v0plus_compiler_all_retrievers_devset.yaml
+- docs/data.md, docs/architectures/session_state.md, docs/architectures/v0plus_retrieval.md
+- Hugging Face TalkPlayData-Challenge-Dataset test split for raw conversation turns
+- Hugging Face organizer metadata: conversation_goal.category/specificity/listener_goal, goal_progress_assessments, user_profile.preferred_musical_culture
+- Hugging Face Blind-A schema check to determine whether organizer metadata is usable at inference time
+- Local or Modal LanceDB catalog when schema/ranker feature fields are needed
+
+Central questions:
+1. Treat union@20 as the first decision boundary. If gold is not in union@20, classify it as a candidate-generation/state/retriever gap. If gold is in union@20 but not final top-20, classify it as fusion, ranker, post-fusion, or finalization loss.
+2. Also report union@100 and union@1000 so we can separate near misses from deep retriever misses.
+3. Diagnose whether misses come from state being wrong or incomplete. Compare raw user turns and recent conversation against trace.state.turn_intent, mentioned_entities, release_year_range, routing_tags, resolver anchors, and exploration_policy.
+4. Check whether fields in the data are not being used enough: conversation_goal, user_profile, profile culture, track popularity, tags, duration, artist/album IDs, track/user embeddings, and LanceDB vector fields.
+5. Decide whether the next step should be better state, better use of state, better retrievers, post-fusion fixes, or replacing the current fusion stage with a trained ranker.
+6. Include concrete examples of gaps or bugs. Each example should show session_id, turn_number, raw user turn, recent context, ground-truth track/artist, final/fused/branch ranks, state fields, branch ranks, post-fusion symptoms, classification, and the smallest fix or experiment.
+7. Separate confirmed bugs/config gaps from plausible gaps. Do not call something a bug unless the code/config/artifact proves it.
+
+Output:
+- Primary: visually clear HTML report with charts and an example explorer.
+- Companion: Markdown report for future agents.
+- Include the full prompt and source/caveat notes.</code></pre>
+  </article>
+</main>
+</body>
+</html>
