@@ -2655,7 +2655,7 @@ def main() -> int:
     parser.add_argument(
         "--out-dir",
         type=Path,
-        default=Path("reports/devset_recall_gap_interactive"),
+        default=Path("experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06"),
     )
     args = parser.parse_args()
 

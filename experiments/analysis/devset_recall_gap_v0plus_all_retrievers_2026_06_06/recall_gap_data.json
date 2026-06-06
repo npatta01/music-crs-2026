@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-06 12:43:13",
+  "generated_at": "2026-06-06 12:48:42",
   "tid": "v0plus_compiler_all_retrievers_devset",
   "snapshot_contract": {
     "status": "Baseline snapshot, not evergreen product documentation.",
@@ -10713,8 +10713,8 @@
   ],
   "state_companion": {
     "available": true,
-    "path": "reports/devset_recall_gap_interactive/state_focus/state_report_data.json",
-    "generated_at": "2026-06-06 16:42:05 UTC",
+    "path": "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_focus/state_report_data.json",
+    "generated_at": "2026-06-06 16:47:46 UTC",
     "headline": {
       "n": 8000,
       "share": 1.0,

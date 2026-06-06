@@ -4,8 +4,8 @@ Sources to inspect:
 - exp/inference/devset/v0plus_compiler_all_retrievers_devset_trace.jsonl
 - exp/inference/devset/v0plus_compiler_all_retrievers_devset.json
 - evaluator/exp/ground_truth/devset.json
-- reports/devset_recall_gap_interactive/recall_gap_data.json
-- reports/devset_recall_gap_interactive/branch_diagnostics.json
+- experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/recall_gap_data.json
+- experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/branch_diagnostics.json
 - configs/v0plus_compiler_all_retrievers_devset.yaml
 - docs/data.md, docs/architectures/session_state.md, docs/architectures/v0plus_retrieval.md
 - Hugging Face TalkPlayData-Challenge-Dataset test split for raw conversation turns

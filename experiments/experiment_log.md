@@ -23,3 +23,24 @@ Next step:
 - When a new run lands, update only `experiments/README.md`, this file,
   `leaderboard.md`, and `changelog.md` with a concise current-state entry.
   Avoid adding checked-in raw artifacts unless explicitly requested.
+
+## 2026-06-06 - Devset Recall-Gap Baseline Snapshot
+
+Decision:
+
+- Keep the durable recall-gap analysis under `experiments/analysis/` instead of
+  a top-level `reports/` folder so it is clearly an experiment snapshot.
+- Treat the HTML/JSON/Markdown package as a replay contract for follow-up state,
+  routing, and ranker work, not as evergreen product documentation.
+
+Current read:
+
+- The snapshot is scoped to `v0plus_compiler_all_retrievers_devset` and the
+  devset trace/prediction/ground-truth artifacts available at generation time.
+- Rerun the report after extractor, retriever, ranker/fusion, catalog/index, or
+  split changes before acting on old cohort counts or example diagnoses.
+
+Next step:
+
+- Use the included state experiment packs for small before/after tests, then
+  update or replace this snapshot if the new system changes the conclusions.

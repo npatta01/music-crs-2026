@@ -22,7 +22,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 DEFAULT_SOURCE_ROOT = Path("/Users/npatta01/data/projects/music-conversational-music-recomender-2026")
-DEFAULT_REPORT_ROOT = Path("reports/devset_recall_gap_interactive")
+DEFAULT_REPORT_ROOT = Path("experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06")
 DEFAULT_OUT_DIR = DEFAULT_REPORT_ROOT / "state_focus"
 DEFAULT_TID = "v0plus_compiler_all_retrievers_devset"
 
