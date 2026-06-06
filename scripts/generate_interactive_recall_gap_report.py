@@ -1422,6 +1422,18 @@ def analyze(source_root: Path, tid: str) -> dict[str, Any]:
     return {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "tid": tid,
+        "snapshot_contract": {
+            "status": "Baseline snapshot, not evergreen product documentation.",
+            "applies_to": f"{tid} devset predictions, trace, config, and ground truth at generation time.",
+            "valid_until": (
+                "Rerun after changing state extraction, retriever routing, candidate generation, "
+                "fusion/finalization, ranker features, catalog/index contents, or evaluation split."
+            ),
+            "how_to_use": (
+                "Treat work items as experiment hypotheses and replay contracts. After an implementation, "
+                "compare this baseline to a regenerated report before acting on old counts or examples."
+            ),
+        },
         "paths": {
             "source_root": str(source_root),
             "trace": str(trace_path),
@@ -2251,6 +2263,9 @@ a {{ color: var(--blue); }}
   <section id="overview" class="summary">
     <div class="panel">
       <h2>Executive Summary</h2>
+      <div class="callout">
+        <strong>Snapshot contract:</strong> This is a baseline report for <code>{html.escape(data["tid"])}</code> generated at <code>{html.escape(data["generated_at"])}</code>. The decisions are valid as experiment hypotheses and replay tests for this exact trace/config; after extractor, routing, retriever, ranker, catalog, or split changes, rerun the report and compare before treating old counts as current.
+      </div>
       <ul class="takeaways">
         <li><strong>The largest opportunity is not a new retriever by itself.</strong> Final Hit@20 is 27.4%, but branch union@100 is 66.2%; the target design is a state-aware candidate scorer over the retrieved pool, not another tweak to the current equal-rank fusion baseline.</li>
         <li><strong>Union@20 and union@100 expose two different problems.</strong> Union@20 misses are often ranker/final-policy losses; union@100 misses are more often weak retrieval or latent target failures where the GT entity is absent from state.</li>
@@ -2453,6 +2468,7 @@ a {{ color: var(--blue); }}
 
   <section id="evidence-notes" class="panel">
     <h2>Evidence Notes</h2>
+    <p class="note"><strong>Scope:</strong> {html.escape(data["snapshot_contract"]["status"])} {html.escape(data["snapshot_contract"]["valid_until"])} {html.escape(data["snapshot_contract"]["how_to_use"])}</p>
     <p class="note">Sources: <code>{html.escape(data["paths"]["trace"])}</code>, <code>{html.escape(data["paths"]["predictions"])}</code>, <code>{html.escape(data["paths"]["ground_truth"])}</code>, <code>{html.escape(data["paths"]["config"])}</code>. The report streams the trace and uses LanceDB catalog metadata only for lightweight GT labels, artist matching, tags, release years, and popularity buckets.</p>
   </section>
 </main>

@@ -1,6 +1,12 @@
 {
-  "generated_at": "2026-06-06 16:33:43 UTC",
+  "generated_at": "2026-06-06 16:42:05 UTC",
   "tid": "v0plus_compiler_all_retrievers_devset",
+  "snapshot_contract": {
+    "status": "Baseline state-audit snapshot, not a permanent schema spec.",
+    "applies_to": "v0plus_compiler_all_retrievers_devset devset trace, predictions, organizer metadata, and Hugging Face conversation rows at generation time.",
+    "valid_until": "Rerun after changing the extractor prompt/schema, resolver, routing profile, ranker features, finalization rules, catalog/index, or evaluation split.",
+    "how_to_use": "Use ideal states and replay packs as small-batch experiments. Once a fix lands, regenerate this report and compare stale-state, novelty-anchor, temporal, rejection, union@20, and final@20 slices."
+  },
   "headline": {
     "n": 8000,
     "share": 1.0,

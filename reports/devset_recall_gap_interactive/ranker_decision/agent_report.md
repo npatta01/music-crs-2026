@@ -1,7 +1,14 @@
 # Music CRS Recall Gap Decision Report
 
-Generated: 2026-06-06 16:33:52 UTC
+Generated: 2026-06-06 16:42:16 UTC
 TID: `v0plus_compiler_all_retrievers_devset`
+
+## Snapshot Contract
+
+- Status: Baseline ranker/retriever decision snapshot, not a permanent ranking policy.
+- Applies to: v0plus_compiler_all_retrievers_devset compact recall data, branch diagnostics, state-focus data, config, and sampled conversations at generation time.
+- Valid until: Rerun after changing candidate generation, retriever routing, fusion/finalization, ranker features, state extraction, catalog/index contents, or evaluation split.
+- How to use: Use recommendations as A/B experiment hypotheses. After implementing a scorer or retriever change, regenerate and compare union@20/100, final@20, nDCG, guardrail slices, and case-study examples.
 
 ## Technical Summary
 

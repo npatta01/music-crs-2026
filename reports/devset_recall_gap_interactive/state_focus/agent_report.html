@@ -168,7 +168,14 @@ main {
 <main>
   <article class="markdown-body">
 <h1>Music CRS State Focus Report</h1>
-<p>Generated: 2026-06-06 16:33:43 UTC TID: <code>v0plus_compiler_all_retrievers_devset</code></p>
+<p>Generated: 2026-06-06 16:42:05 UTC TID: <code>v0plus_compiler_all_retrievers_devset</code></p>
+<h2>Snapshot Contract</h2>
+<ul>
+<li>Status: Baseline state-audit snapshot, not a permanent schema spec.</li>
+<li>Applies to: v0plus_compiler_all_retrievers_devset devset trace, predictions, organizer metadata, and Hugging Face conversation rows at generation time.</li>
+<li>Valid until: Rerun after changing the extractor prompt/schema, resolver, routing profile, ranker features, finalization rules, catalog/index, or evaluation split.</li>
+<li>How to use: Use ideal states and replay packs as small-batch experiments. Once a fix lands, regenerate this report and compare stale-state, novelty-anchor, temporal, rejection, union@20, and final@20 slices.</li>
+</ul>
 <h2>Technical Summary</h2>
 <ul>
 <li>Final@20 is 27.4%; union@20 is 47.7%; union@100 is 66.2%.</li>

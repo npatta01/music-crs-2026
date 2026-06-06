@@ -1,6 +1,12 @@
 {
-  "generated_at": "2026-06-06 16:33:52 UTC",
+  "generated_at": "2026-06-06 16:42:16 UTC",
   "tid": "v0plus_compiler_all_retrievers_devset",
+  "snapshot_contract": {
+    "status": "Baseline ranker/retriever decision snapshot, not a permanent ranking policy.",
+    "applies_to": "v0plus_compiler_all_retrievers_devset compact recall data, branch diagnostics, state-focus data, config, and sampled conversations at generation time.",
+    "valid_until": "Rerun after changing candidate generation, retriever routing, fusion/finalization, ranker features, state extraction, catalog/index contents, or evaluation split.",
+    "how_to_use": "Use recommendations as A/B experiment hypotheses. After implementing a scorer or retriever change, regenerate and compare union@20/100, final@20, nDCG, guardrail slices, and case-study examples."
+  },
   "metrics": {
     "n_turns": 8000,
     "final20": 0.2736,

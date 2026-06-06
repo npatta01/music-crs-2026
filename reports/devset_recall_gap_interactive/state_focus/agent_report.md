@@ -1,7 +1,14 @@
 # Music CRS State Focus Report
 
-Generated: 2026-06-06 16:33:43 UTC
+Generated: 2026-06-06 16:42:05 UTC
 TID: `v0plus_compiler_all_retrievers_devset`
+
+## Snapshot Contract
+
+- Status: Baseline state-audit snapshot, not a permanent schema spec.
+- Applies to: v0plus_compiler_all_retrievers_devset devset trace, predictions, organizer metadata, and Hugging Face conversation rows at generation time.
+- Valid until: Rerun after changing the extractor prompt/schema, resolver, routing profile, ranker features, finalization rules, catalog/index, or evaluation split.
+- How to use: Use ideal states and replay packs as small-batch experiments. Once a fix lands, regenerate this report and compare stale-state, novelty-anchor, temporal, rejection, union@20, and final@20 slices.
 
 ## Technical Summary
 

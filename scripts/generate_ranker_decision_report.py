@@ -2038,6 +2038,7 @@ def html_report(data: dict[str, Any]) -> str:
         <div class="metric"><div class="label">Not In Union@20</div><div class="value">{pct(data["metrics"]["not_in_union20"])}</div><div class="note">Retriever/state candidate gap</div></div>
         <div class="metric"><div class="label">Union@20 -> Final Gap</div><div class="value">{pp(data["metrics"]["union20_rank_policy_gap"])}</div><div class="note">Rank/fusion/post-fusion opportunity</div></div>
       </div>
+      <div class="callout" style="margin-top:16px"><strong>Snapshot contract:</strong> This is a baseline decision report for <span class="mono">{html.escape(data["tid"])}</span> generated at <span class="mono">{html.escape(data["generated_at"])}</span>. Treat recommendations as A/B hypotheses for this exact compact report and trace family; after scorer, retriever, state, catalog, or split changes, regenerate and compare before treating old counts as current.</div>
     </div>
   </header>
   <nav><div class="wrap">
@@ -2316,6 +2317,13 @@ def markdown_report(data: dict[str, Any]) -> str:
         "",
         f"Generated: {data['generated_at']}",
         f"TID: `{data['tid']}`",
+        "",
+        "## Snapshot Contract",
+        "",
+        f"- Status: {data['snapshot_contract']['status']}",
+        f"- Applies to: {data['snapshot_contract']['applies_to']}",
+        f"- Valid until: {data['snapshot_contract']['valid_until']}",
+        f"- How to use: {data['snapshot_contract']['how_to_use']}",
         "",
         "## Technical Summary",
         "",
@@ -2639,6 +2647,18 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
     data = {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
         "tid": args.tid,
+        "snapshot_contract": {
+            "status": "Baseline ranker/retriever decision snapshot, not a permanent ranking policy.",
+            "applies_to": f"{args.tid} compact recall data, branch diagnostics, state-focus data, config, and sampled conversations at generation time.",
+            "valid_until": (
+                "Rerun after changing candidate generation, retriever routing, fusion/finalization, ranker features, "
+                "state extraction, catalog/index contents, or evaluation split."
+            ),
+            "how_to_use": (
+                "Use recommendations as A/B experiment hypotheses. After implementing a scorer or retriever change, "
+                "regenerate and compare union@20/100, final@20, nDCG, guardrail slices, and case-study examples."
+            ),
+        },
         "metrics": metrics,
         "official_scores": official_scores,
         "scoring_context": score_context,

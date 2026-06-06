@@ -1,6 +1,12 @@
 {
-  "generated_at": "2026-06-06 12:34:49",
+  "generated_at": "2026-06-06 12:43:13",
   "tid": "v0plus_compiler_all_retrievers_devset",
+  "snapshot_contract": {
+    "status": "Baseline snapshot, not evergreen product documentation.",
+    "applies_to": "v0plus_compiler_all_retrievers_devset devset predictions, trace, config, and ground truth at generation time.",
+    "valid_until": "Rerun after changing state extraction, retriever routing, candidate generation, fusion/finalization, ranker features, catalog/index contents, or evaluation split.",
+    "how_to_use": "Treat work items as experiment hypotheses and replay contracts. After an implementation, compare this baseline to a regenerated report before acting on old counts or examples."
+  },
   "paths": {
     "source_root": "/Users/npatta01/data/projects/music-conversational-music-recomender-2026",
     "trace": "/Users/npatta01/data/projects/music-conversational-music-recomender-2026/exp/inference/devset/v0plus_compiler_all_retrievers_devset_trace.jsonl",
@@ -10708,7 +10714,7 @@
   "state_companion": {
     "available": true,
     "path": "reports/devset_recall_gap_interactive/state_focus/state_report_data.json",
-    "generated_at": "2026-06-06 16:33:43 UTC",
+    "generated_at": "2026-06-06 16:42:05 UTC",
     "headline": {
       "n": 8000,
       "share": 1.0,

@@ -168,7 +168,14 @@ main {
 <main>
   <article class="markdown-body">
 <h1>Music CRS Recall Gap Decision Report</h1>
-<p>Generated: 2026-06-06 16:33:52 UTC TID: <code>v0plus_compiler_all_retrievers_devset</code></p>
+<p>Generated: 2026-06-06 16:42:16 UTC TID: <code>v0plus_compiler_all_retrievers_devset</code></p>
+<h2>Snapshot Contract</h2>
+<ul>
+<li>Status: Baseline ranker/retriever decision snapshot, not a permanent ranking policy.</li>
+<li>Applies to: v0plus_compiler_all_retrievers_devset compact recall data, branch diagnostics, state-focus data, config, and sampled conversations at generation time.</li>
+<li>Valid until: Rerun after changing candidate generation, retriever routing, fusion/finalization, ranker features, state extraction, catalog/index contents, or evaluation split.</li>
+<li>How to use: Use recommendations as A/B experiment hypotheses. After implementing a scorer or retriever change, regenerate and compare union@20/100, final@20, nDCG, guardrail slices, and case-study examples.</li>
+</ul>
 <h2>Technical Summary</h2>
 <ul>
 <li>Official-score context: NDCG@10 is 10.5%; NDCG@20 is 12.5%.</li>

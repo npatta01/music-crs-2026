@@ -3225,6 +3225,18 @@ def analyze(source_root: Path, tid: str) -> dict[str, Any]:
     return {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
         "tid": tid,
+        "snapshot_contract": {
+            "status": "Baseline state-audit snapshot, not a permanent schema spec.",
+            "applies_to": f"{tid} devset trace, predictions, organizer metadata, and Hugging Face conversation rows at generation time.",
+            "valid_until": (
+                "Rerun after changing the extractor prompt/schema, resolver, routing profile, ranker features, "
+                "finalization rules, catalog/index, or evaluation split."
+            ),
+            "how_to_use": (
+                "Use ideal states and replay packs as small-batch experiments. Once a fix lands, regenerate this "
+                "report and compare stale-state, novelty-anchor, temporal, rejection, union@20, and final@20 slices."
+            ),
+        },
         "headline": headline,
         "task_modes": task_modes,
         "cohorts": cohorts,
@@ -3603,6 +3615,7 @@ h5 {{ margin:12px 0 6px; font-size:13px; color:#303849; text-transform:uppercase
       <span class="pill">Union@20 {pct(h['union20'])}</span>
       <span class="pill">Union@100 {pct(h['union100'])}</span>
     </div>
+    <div class="callout" style="margin-top:16px"><strong>Snapshot contract:</strong> This is a baseline state audit for <code>{html_escape(data['tid'])}</code> generated at <code>{html_escape(data['generated_at'])}</code>. The ideal states and decisions are experiment targets for this exact trace/config; after implementing extractor, routing, ranker, catalog, or split changes, regenerate this report and compare before treating old counts as current.</div>
   </div>
 </header>
 <nav><div class="wrap">
@@ -3900,6 +3913,7 @@ h5 {{ margin:12px 0 6px; font-size:13px; color:#303849; text-transform:uppercase
   <div class="two-col">
     <div class="panel">
       <h3>Definitions</h3>
+      <p><strong>Snapshot contract:</strong> {html_escape(data['snapshot_contract']['status'])} {html_escape(data['snapshot_contract']['valid_until'])} {html_escape(data['snapshot_contract']['how_to_use'])}</p>
       <p><strong>Final@20:</strong> {html_escape(data['method']['final20'])}</p>
       <p><strong>Union@20:</strong> {html_escape(data['method']['union20'])}</p>
       <p><strong>Union@100:</strong> {html_escape(data['method']['union100'])}</p>
@@ -3990,6 +4004,13 @@ def render_markdown(data: dict[str, Any]) -> str:
         "",
         f"Generated: {data['generated_at']}",
         f"TID: `{data['tid']}`",
+        "",
+        "## Snapshot Contract",
+        "",
+        f"- Status: {data['snapshot_contract']['status']}",
+        f"- Applies to: {data['snapshot_contract']['applies_to']}",
+        f"- Valid until: {data['snapshot_contract']['valid_until']}",
+        f"- How to use: {data['snapshot_contract']['how_to_use']}",
         "",
         "## Technical Summary",
         "",
