@@ -18,6 +18,7 @@ misleading agents about the current system. Use Git history for older waves.
 |---|---|
 | [v0plus_compiler_all_retrievers_devset.md](v0plus_compiler_all_retrievers_devset.md) | Latest full devset run: NDCG@20 0.1219, Hit@1000 0.6967. Treat as coverage/reranker evidence, not as the score anchor. |
 | [v0plus_compiler_image_devset.md](v0plus_compiler_image_devset.md) | Current score anchor: NDCG@20 0.1452 after retrieval bugfixes. |
+| [analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/index.html](analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/index.html) | Durable baseline recall-gap snapshot for the all-retrievers devset run. Treat as an experiment analysis and replay contract; rerun after extractor, retriever, ranker, catalog, or split changes. |
 | [experiment_log.md](experiment_log.md) | Short current-state note only. Historical wave logs were pruned. |
 | [analysis/README.md](analysis/README.md) | Notes that runtime prompt/schema modules have moved out of `experiments/analysis/`. |
 

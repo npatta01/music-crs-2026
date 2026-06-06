@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1020" height="296" viewBox="0 0 1020 296" role="img" aria-label="Organizer progress labels expose the hard cases">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="28" y="34" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#172033">Organizer progress labels expose the hard cases</text>
+<rect x="28" y="52" width="14" height="14" rx="3" fill="#0f766e"/><text x="50" y="64" font-family="Inter, Arial, sans-serif" font-size="13" fill="#5b6575">union@20</text>
+<rect x="128" y="52" width="14" height="14" rx="3" fill="#2563eb"/><text x="150" y="64" font-family="Inter, Arial, sans-serif" font-size="13" fill="#5b6575">final@20</text>
+<text x="336" y="109" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">DOES_NOT_MOVE_TOWARD_GOAL</text>
+<rect x="350" y="86" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="86" width="222.5" height="18" rx="5" fill="#0f766e"/>
+<text x="580.5" y="100" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">38.4%</text>
+<rect x="350" y="110" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="110" width="93.1" height="18" rx="5" fill="#2563eb"/>
+<text x="451.1" y="124" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">16.1%</text>
+<text x="336" y="167" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">MOVES_TOWARD_GOAL</text>
+<rect x="350" y="144" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="144" width="291.1" height="18" rx="5" fill="#0f766e"/>
+<text x="649.1" y="158" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">50.2%</text>
+<rect x="350" y="168" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="168" width="163.0" height="18" rx="5" fill="#2563eb"/>
+<text x="521.0" y="182" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">28.1%</text>
+<text x="336" y="225" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">TURN1_OR_NONE</text>
+<rect x="350" y="202" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="202" width="229.7" height="18" rx="5" fill="#0f766e"/>
+<text x="587.7" y="216" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">39.6%</text>
+<rect x="350" y="226" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="226" width="185.6" height="18" rx="5" fill="#2563eb"/>
+<text x="543.6" y="240" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">32.0%</text>
+</svg>

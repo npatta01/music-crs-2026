@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="524" viewBox="0 0 1000 524" role="img" aria-label="Top branch top-20 recall">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="28" y="34" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#172033">Top branch top-20 recall</text>
+<text x="306" y="88" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">era popularity</text>
+<rect x="320" y="72" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="72" width="64.6" height="22" rx="6" fill="#2563eb"/>
+<text x="392.6" y="88" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">3.6%</text>
+<text x="306" y="130" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">anchor audio</text>
+<rect x="320" y="114" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="114" width="115.2" height="22" rx="6" fill="#2563eb"/>
+<text x="443.2" y="130" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">6.3%</text>
+<text x="306" y="172" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">qwen8 attributes</text>
+<rect x="320" y="156" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="156" width="124.3" height="22" rx="6" fill="#2563eb"/>
+<text x="452.3" y="172" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">6.9%</text>
+<text x="306" y="214" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">anchor CF</text>
+<rect x="320" y="198" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="198" width="221.8" height="22" rx="6" fill="#2563eb"/>
+<text x="549.8" y="214" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">12.2%</text>
+<text x="306" y="256" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">qwen0.6 metadata</text>
+<rect x="320" y="240" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="240" width="333.0" height="22" rx="6" fill="#2563eb"/>
+<text x="661.0" y="256" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">18.4%</text>
+<text x="306" y="298" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">qwen8 metadata</text>
+<rect x="320" y="282" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="282" width="343.7" height="22" rx="6" fill="#2563eb"/>
+<text x="671.7" y="298" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">18.9%</text>
+<text x="306" y="340" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">qwen0.6 lyric</text>
+<rect x="320" y="324" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="324" width="359.1" height="22" rx="6" fill="#2563eb"/>
+<text x="687.1" y="340" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">19.8%</text>
+<text x="306" y="382" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">bm25</text>
+<rect x="320" y="366" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="366" width="419.2" height="22" rx="6" fill="#2563eb"/>
+<text x="747.2" y="382" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">23.1%</text>
+<text x="306" y="424" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">anchor image</text>
+<rect x="320" y="408" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="408" width="495.2" height="22" rx="6" fill="#2563eb"/>
+<text x="823.2" y="424" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">27.3%</text>
+<text x="306" y="466" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">artist discography</text>
+<rect x="320" y="450" width="600" height="22" rx="6" fill="#edf0f4"/>
+<rect x="320" y="450" width="508.5" height="22" rx="6" fill="#2563eb"/>
+<text x="836.5" y="466" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#172033">28.0%</text>
+</svg>

@@ -1,0 +1,107 @@
+{
+  "n_turns": 8000,
+  "n_failed_no_branches": 0,
+  "n_skipped_no_gt": 0,
+  "saw_branches": true,
+  "hit@1": 0.03925,
+  "hit@20": 0.273625,
+  "hit@50": 0.386375,
+  "hit@100": 0.470875,
+  "hit@200": 0.5495,
+  "hit@1000": 0.728875,
+  "unionhit@20": 0.476625,
+  "union_size@20": 160.18275,
+  "fusion_efficiency@20": 0.5740886441122476,
+  "unionhit@50": 0.5845,
+  "union_size@50": 395.22075,
+  "fusion_efficiency@50": 0.6610350727117195,
+  "unionhit@100": 0.662375,
+  "union_size@100": 783.294375,
+  "fusion_efficiency@100": 0.7108888469522551,
+  "unionhit@200": 0.744,
+  "union_size@200": 1537.83025,
+  "fusion_efficiency@200": 0.7385752688172043,
+  "unionhit@1000": 0.905375,
+  "union_size@1000": 6593.328125,
+  "fusion_efficiency@1000": 0.8050531547701228,
+  "per_branch": {
+    "bm25": {
+      "fired": 8000,
+      "recall@100": 0.403,
+      "recall@200": 0.47025,
+      "recall@1000": 0.638625
+    },
+    "dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b": {
+      "fired": 8000,
+      "recall@100": 0.27525,
+      "recall@200": 0.3085,
+      "recall@1000": 0.39375
+    },
+    "dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b": {
+      "fired": 7720,
+      "recall@100": 0.05958549222797927,
+      "recall@200": 0.08562176165803109,
+      "recall@1000": 0.19702072538860105
+    },
+    "dense.qwen_8b.metadata.metadata_qwen3_embedding_8b": {
+      "fired": 8000,
+      "recall@100": 0.352875,
+      "recall@200": 0.4245,
+      "recall@1000": 0.59925
+    },
+    "dense.qwen_8b.attributes.attributes_qwen3_embedding_8b": {
+      "fired": 7720,
+      "recall@100": 0.16761658031088084,
+      "recall@200": 0.22577720207253887,
+      "recall@1000": 0.45090673575129536
+    },
+    "dense.clap_text.sonic.audio_laion_clap": {
+      "fired": 8000,
+      "recall@100": 0.095625,
+      "recall@200": 0.150125,
+      "recall@1000": 0.382375
+    },
+    "centroid.user.cf_bpr": {
+      "fired": 6368,
+      "recall@100": 0.0829145728643216,
+      "recall@200": 0.12782663316582915,
+      "recall@1000": 0.27292713567839194
+    },
+    "lookup.resolved_artist_discography": {
+      "fired": 5932,
+      "recall@100": 0.3956507080242751,
+      "recall@200": 0.3998651382333109,
+      "recall@1000": 0.4002022926500337
+    },
+    "lookup.era_popularity": {
+      "fired": 2163,
+      "recall@100": 0.09893666204345816,
+      "recall@200": 0.1502542764678687,
+      "recall@1000": 0.1502542764678687
+    },
+    "centroid.anchor_tracks.image_siglip2": {
+      "fired": 6457,
+      "recall@100": 0.36131330339166795,
+      "recall@200": 0.3850085178875639,
+      "recall@1000": 0.46925816942852716
+    },
+    "centroid.anchor_tracks.audio_laion_clap": {
+      "fired": 6457,
+      "recall@100": 0.16168499303081926,
+      "recall@200": 0.23292550720148675,
+      "recall@1000": 0.4680192039646895
+    },
+    "centroid.anchor_tracks.cf_bpr": {
+      "fired": 6457,
+      "recall@100": 0.23834598110577668,
+      "recall@200": 0.27706365185070464,
+      "recall@1000": 0.396778689794022
+    },
+    "dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b": {
+      "fired": 96,
+      "recall@100": 0.3125,
+      "recall@200": 0.3229166666666667,
+      "recall@1000": 0.4479166666666667
+    }
+  }
+}

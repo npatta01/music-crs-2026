@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1020" height="412" viewBox="0 0 1020 412" role="img" aria-label="Entity grounding changes the union@20 ceiling">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="28" y="34" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#172033">Entity grounding changes the union@20 ceiling</text>
+<rect x="28" y="52" width="14" height="14" rx="3" fill="#0f766e"/><text x="50" y="64" font-family="Inter, Arial, sans-serif" font-size="13" fill="#5b6575">union@20</text>
+<rect x="128" y="52" width="14" height="14" rx="3" fill="#2563eb"/><text x="150" y="64" font-family="Inter, Arial, sans-serif" font-size="13" fill="#5b6575">final@20</text>
+<text x="336" y="109" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">mentioned gt artist name unresolved</text>
+<rect x="350" y="86" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="86" width="279.3" height="18" rx="5" fill="#0f766e"/>
+<text x="637.3" y="100" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">48.1%</text>
+<rect x="350" y="110" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="110" width="43.0" height="18" rx="5" fill="#2563eb"/>
+<text x="401.0" y="124" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">7.4%</text>
+<text x="336" y="167" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">resolved exact track</text>
+<rect x="350" y="144" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="144" width="580.0" height="18" rx="5" fill="#0f766e"/>
+<text x="938.0" y="158" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">100.0%</text>
+<rect x="350" y="168" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="168" width="554.8" height="18" rx="5" fill="#2563eb"/>
+<text x="912.8" y="182" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">95.7%</text>
+<text x="336" y="225" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">anchor gt artist</text>
+<rect x="350" y="202" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="202" width="494.0" height="18" rx="5" fill="#0f766e"/>
+<text x="852.0" y="216" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">85.2%</text>
+<rect x="350" y="226" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="226" width="308.0" height="18" rx="5" fill="#2563eb"/>
+<text x="666.0" y="240" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">53.1%</text>
+<text x="336" y="283" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">resolved gt artist</text>
+<rect x="350" y="260" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="260" width="537.2" height="18" rx="5" fill="#0f766e"/>
+<text x="895.2" y="274" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">92.6%</text>
+<rect x="350" y="284" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="284" width="338.9" height="18" rx="5" fill="#2563eb"/>
+<text x="696.9" y="298" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">58.4%</text>
+<text x="336" y="341" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">no gt track or artist in state</text>
+<rect x="350" y="318" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="318" width="128.6" height="18" rx="5" fill="#0f766e"/>
+<text x="486.6" y="332" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">22.2%</text>
+<rect x="350" y="342" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="342" width="55.5" height="18" rx="5" fill="#2563eb"/>
+<text x="413.5" y="356" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">9.6%</text>
+</svg>

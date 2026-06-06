@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1020" height="354" viewBox="0 0 1020 354" role="img" aria-label="Specificity: low-specificity goals need better candidates">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="28" y="34" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#172033">Specificity: low-specificity goals need better candidates</text>
+<rect x="28" y="52" width="14" height="14" rx="3" fill="#0f766e"/><text x="50" y="64" font-family="Inter, Arial, sans-serif" font-size="13" fill="#5b6575">union@20</text>
+<rect x="128" y="52" width="14" height="14" rx="3" fill="#2563eb"/><text x="150" y="64" font-family="Inter, Arial, sans-serif" font-size="13" fill="#5b6575">final@20</text>
+<text x="336" y="109" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">LL</text>
+<rect x="350" y="86" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="86" width="235.0" height="18" rx="5" fill="#0f766e"/>
+<text x="593.0" y="100" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">40.5%</text>
+<rect x="350" y="110" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="110" width="117.3" height="18" rx="5" fill="#2563eb"/>
+<text x="475.3" y="124" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">20.2%</text>
+<text x="336" y="167" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">LH</text>
+<rect x="350" y="144" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="144" width="277.2" height="18" rx="5" fill="#0f766e"/>
+<text x="635.2" y="158" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">47.8%</text>
+<rect x="350" y="168" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="168" width="173.5" height="18" rx="5" fill="#2563eb"/>
+<text x="531.5" y="182" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">29.9%</text>
+<text x="336" y="225" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">HL</text>
+<rect x="350" y="202" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="202" width="290.0" height="18" rx="5" fill="#0f766e"/>
+<text x="648.0" y="216" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">50.0%</text>
+<rect x="350" y="226" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="226" width="153.0" height="18" rx="5" fill="#2563eb"/>
+<text x="511.0" y="240" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">26.4%</text>
+<text x="336" y="283" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="13" fill="#172033">HH</text>
+<rect x="350" y="260" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="260" width="346.1" height="18" rx="5" fill="#0f766e"/>
+<text x="704.1" y="274" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">59.7%</text>
+<rect x="350" y="284" width="580" height="18" rx="5" fill="#edf0f4"/>
+<rect x="350" y="284" width="243.1" height="18" rx="5" fill="#2563eb"/>
+<text x="601.1" y="298" font-family="Inter, Arial, sans-serif" font-size="12" fill="#172033">41.9%</text>
+</svg>
