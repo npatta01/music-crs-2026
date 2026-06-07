@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
+
+import yaml
 
 from mcrs.conversation_state.schema import (
     ConversationStateV0Plus,
@@ -1799,6 +1802,67 @@ def test_attributes_query_matches_doc_format():
     q = compiler._build_attributes_query_string(rs)
     # mirrors the catalog doc "music attributes, tags :..."; artist excluded
     assert q == "music attributes, tags :dark, synthwave"
+
+
+def test_attributes_enriched_query_adds_anchor_catalog_tags():
+    catalog = _catalog()
+    state = _state(
+        mentioned_entities=[
+            MentionedEntity(type="tag", value="dark", sentiment=1),
+            MentionedEntity(type="tag", value="synthwave", sentiment=1),
+            MentionedEntity(type="tag", value="heavy", sentiment=-1),
+        ],
+        track_feedback=[
+            TrackFeedback(
+                track_id="t-morphine-1",
+                overall_sentiment=1,
+                role="accepted",
+            ),
+            TrackFeedback(
+                track_id="t-fugazi-1",
+                overall_sentiment=1,
+                role="seed",
+            ),
+        ],
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())
+
+    q = compiler._build_attributes_enriched_query_string(rs)
+
+    assert q == (
+        "music attributes, tags :dark, synthwave, smoky, lounge, "
+        "post-hardcore, punk"
+    )
+    assert "heavy" not in q
+
+
+def test_current_configs_reference_supported_dense_query_ids():
+    compiler = V0PlusCompiler(_catalog(), FakeRetriever(), _fake_encoder())
+    known_query_ids = set(compiler._query_builders)
+    repo_root = Path(__file__).resolve().parents[1]
+    branch_signatures_by_config = {}
+
+    for config_name in (
+        "v0plus_compiler_all_retrievers_devset.yaml",
+        "v0plus_compiler_blindset_A.yaml",
+    ):
+        config = yaml.safe_load((repo_root / "configs" / config_name).read_text())
+        branches = config["qu_kwargs"]["compiler"]["dense_branches"]
+        unknown_query_ids = sorted(
+            {branch["query_id"] for branch in branches} - known_query_ids
+        )
+        branch_signatures_by_config[config_name] = [
+            (branch["vector_field"], branch["encoder_id"], branch["query_id"])
+            for branch in branches
+        ]
+
+        assert unknown_query_ids == []
+
+    assert (
+        branch_signatures_by_config["v0plus_compiler_all_retrievers_devset.yaml"]
+        == branch_signatures_by_config["v0plus_compiler_blindset_A.yaml"]
+    )
 
 
 def test_metadata_query_excludes_explicit_state_tags():

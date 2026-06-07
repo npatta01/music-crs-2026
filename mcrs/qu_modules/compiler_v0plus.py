@@ -1259,6 +1259,32 @@ class V0PlusCompiler:
             return None
         return "music attributes, tags :" + ", ".join(tags)
 
+    def _build_attributes_enriched_query_string(
+        self, rs: ResolvedConversationState
+    ) -> str | None:
+        """`query_id="attributes_enriched"` — attributes-column query string
+        with current positive tags plus catalog-canonical tags from accepted
+        anchor tracks.
+
+        This is the Qwen-attributes analogue of `sonic_nl_enriched`: it keeps
+        the document prefix expected by the attributes embedding column, while
+        exposing useful anchor-track vocabulary when the state is tag-poor or
+        uses a synonym not present in the catalog tag list.
+        """
+        state = rs.state
+        seen: set[str] = set()
+        tags: list[str] = []
+        for value in self._positive_mention_values(state, "tag") + self._top_anchor_tags(rs, n=5):
+            tag = value.strip()
+            key = tag.casefold()
+            if not tag or key in seen:
+                continue
+            seen.add(key)
+            tags.append(tag)
+        if not tags:
+            return None
+        return "music attributes, tags :" + ", ".join(tags)
+
     @property
     def _query_builders(self):
         """Registry mapping `query_id` -> builder method.
@@ -1276,6 +1302,7 @@ class V0PlusCompiler:
             "sonic_nl_enriched": self._build_sonic_nl_enriched_query_string,
             "lyric": self._build_lyric_query_string,
             "attributes": self._build_attributes_query_string,
+            "attributes_enriched": self._build_attributes_enriched_query_string,
         }
 
     def _mix_for_branch(

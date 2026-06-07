@@ -1306,6 +1306,87 @@ def run_evaluate(
     _evaluate.remote(tid=tid, split=split)
 
 
+@app.function(
+    image=image,
+    secrets=[ENV_SECRET],
+    volumes=_VOLUME_MOUNTS,
+    cpu=LANCEDB_QUERY_CPU,
+    memory=LANCEDB_QUERY_MEMORY,
+    timeout=3600,
+)
+def _state_v1_retriever_matrix(
+    variants_json: str,
+    limit: int,
+    output_prefix: str,
+    sample_id_file: str,
+) -> dict:
+    import json
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    variants = json.loads(variants_json)
+    analysis_dir = (
+        Path("/app")
+        / "experiments"
+        / "analysis"
+        / "devset_recall_gap_v0plus_all_retrievers_2026_06_06"
+    )
+    output_dir = Path(EXP_DIR) / "analysis" / "state_v1_retriever_matrix"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_json = output_dir / f"{output_prefix}.json"
+    output_md = output_dir / f"{output_prefix}.md"
+    output_csv = output_dir / f"{output_prefix}.csv"
+    cmd = [
+        sys.executable,
+        "scripts/state_v1_retriever_matrix.py",
+        "--analysis-dir",
+        str(analysis_dir),
+        "--lancedb-uri",
+        DEFAULT_REMOTE_LANCEDB_URI,
+        "--output-json",
+        str(output_json),
+        "--output-md",
+        str(output_md),
+        "--output-csv",
+        str(output_csv),
+    ]
+    for variant in variants:
+        cmd.extend(["--variant", str(variant)])
+    if sample_id_file:
+        sample_id_path = Path(sample_id_file)
+        if not sample_id_path.is_absolute():
+            sample_id_path = Path("/app") / sample_id_path
+        cmd.extend(["--sample-id-file", str(sample_id_path)])
+    if limit > 0:
+        cmd.extend(["--limit", str(limit)])
+    subprocess.run(cmd, cwd="/app", check=True)
+    results_vol.commit()
+    return {
+        "summary": json.loads(output_json.read_text())["summary"],
+        "json": str(output_json),
+        "md": str(output_md),
+        "csv": str(output_csv),
+    }
+
+
+@app.local_entrypoint()
+def run_state_v1_retriever_matrix(
+    variants_json: str = '["all_candidate_recall"]',
+    limit: int = 56,
+    output_prefix: str = "state_v1_retriever_matrix_modal",
+    sample_id_file: str = "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_role_v2_pack56_sample_ids.txt",
+):
+    """Run the V1 retriever matrix inside Modal against remote LanceDB."""
+    result = _state_v1_retriever_matrix.remote(
+        variants_json=variants_json,
+        limit=limit,
+        output_prefix=output_prefix,
+        sample_id_file=sample_id_file,
+    )
+    print(json.dumps(result, indent=2))
+
+
 @app.local_entrypoint()
 def upload_lancedb_index(
     local_db_dir: str = "cache/lancedb",
