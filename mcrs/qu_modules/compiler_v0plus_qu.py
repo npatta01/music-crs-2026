@@ -571,6 +571,7 @@ class V0PlusCompilerQU:
         session_memory: list[dict[str, Any]],
         topk: int = 1000,
         user_id: str | None = None,
+        session_context: dict[str, Any] | None = None,
     ) -> list[str]:
         """Return up to `topk` track_ids. May return an empty list when the
         extractor fails or the compiler finds no candidates that satisfy the
@@ -592,7 +593,8 @@ class V0PlusCompilerQU:
             )
             return []
         rs = self.resolver.resolve(state, played_track_ids=played)
-        track_ids = self.compiler.compile(rs, user_id=user_id)[:topk]
+        track_ids = self.compiler.compile(
+            rs, user_id=user_id, session_context=session_context)[:topk]
         if not track_ids:
             logger.warning(
                 "v0+ empty result: compiler returned 0 candidates | "
@@ -610,6 +612,7 @@ class V0PlusCompilerQU:
         topk: int,
         sem: asyncio.Semaphore,
         user_id: str | None = None,
+        session_context: dict[str, Any] | None = None,
     ) -> tuple[int, list[str], dict[str, Any]]:
         """Async per-session worker — extractor runs under the semaphore;
         the synchronous compiler runs off the event loop via
@@ -655,7 +658,7 @@ class V0PlusCompilerQU:
         # `branch_trace_topk > 0`. compile() is the thin public wrapper used by
         # the submission/blindset path (only needs .ranked).
         def _run_compile() -> CompileResult:
-            return self.compiler._compile(rs, user_id=user_id)
+            return self.compiler._compile(rs, user_id=user_id, session_context=session_context)
 
         compile_result = await asyncio.to_thread(_run_compile)
         track_ids = compile_result.ranked[:topk]
@@ -701,6 +704,7 @@ class V0PlusCompilerQU:
         session_memories: list[list[dict[str, Any]]],
         topk: int = 1000,
         user_ids: list[str | None] | None = None,
+        session_contexts: list[dict[str, Any] | None] | None = None,
     ) -> list[list[str]]:
         """Parallel batch fan-out via asyncio + semaphore. Each batch entry
         is independent (extractor is stateless re. prior turns), so we run
@@ -726,12 +730,20 @@ class V0PlusCompilerQU:
                 f"user_ids length {len(user_ids)} must match session_memories "
                 f"length {len(session_memories)}"
             )
+        if session_contexts is None:
+            session_contexts = [None] * len(session_memories)
+        elif len(session_contexts) != len(session_memories):
+            raise ValueError(
+                f"session_contexts length {len(session_contexts)} must match session_memories "
+                f"length {len(session_memories)}"
+            )
 
         async def _run() -> list[tuple[int, list[str], dict[str, Any]]]:
             sem = asyncio.Semaphore(self.max_in_flight)
             tasks = [
-                self._acompile_one(i, sm, topk, sem, user_id=uid)
-                for i, (sm, uid) in enumerate(zip(session_memories, user_ids))
+                self._acompile_one(i, sm, topk, sem, user_id=uid, session_context=sc)
+                for i, (sm, uid, sc) in enumerate(
+                    zip(session_memories, user_ids, session_contexts))
             ]
             return await asyncio.gather(*tasks)
 

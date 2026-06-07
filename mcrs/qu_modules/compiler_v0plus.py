@@ -491,12 +491,18 @@ class V0PlusCompiler:
 
     def _reranker_ranked(self, rs: "ResolvedConversationState",
                          named_pools: list[tuple[str, list[tuple[str, float]]]],
-                         branch_query_vectors: dict[str, list[float]] | None = None) -> list[str]:
+                         branch_query_vectors: dict[str, list[float]] | None = None,
+                         session_context: dict | None = None) -> list[str]:
         """Order the deduped branch-pool union with the trained model (pre mask/hard-drop).
 
         ``branch_query_vectors`` (the per-branch query/centroid vectors captured this turn) are
         threaded into the same ``branches`` trace structure the offline pipeline reads, so the
-        dense cross-scoring features (block H) see identical inputs online and offline."""
+        dense cross-scoring features (block H) see identical inputs online and offline.
+
+        ``session_context`` ({user_profile, conversation_goal, session_date}) is flattened onto
+        the entry as ``session_meta`` so ``build_group_record`` populates block-U features at
+        serve time — identical to the offline session_id join, so train/serve stay in parity.
+        None leaves block U neutral (NaN)."""
         branches: dict[str, Any] = {"pools": [
             {"name": name, "hits": [[t, float(s)] for t, s in hits]}
             for name, hits in named_pools
@@ -507,7 +513,7 @@ class V0PlusCompiler:
             branches["branch_query_vectors"] = {
                 k: list(v) for k, v in branch_query_vectors.items()
             }
-        entry = {
+        entry: dict[str, Any] = {
             "session_id": "_",
             "turn_number": 0,
             "trace": {
@@ -515,21 +521,30 @@ class V0PlusCompiler:
                 "branches": branches,
             },
         }
+        if session_context:
+            from mcrs.rerank.session_meta import flatten_session_row
+            entry["session_meta"] = flatten_session_row(session_context)
         return self._get_reranker().rank(entry)
 
     # ------------------------------------------------------------------
     # Top-level
     # ------------------------------------------------------------------
 
-    def compile(self, rs: ResolvedConversationState, user_id: str | None = None) -> list[str]:
+    def compile(self, rs: ResolvedConversationState, user_id: str | None = None,
+                session_context: dict | None = None) -> list[str]:
         """Public entry point. Returns top-final_topk track_ids (unchanged
         output contract). Delegates to `_compile`, which also retains the
         per-branch pools + fused/final funnel for tracing when
-        `CompilerConfig.branch_trace_topk > 0`."""
-        return self._compile(rs, user_id=user_id).ranked
+        `CompilerConfig.branch_trace_topk > 0`.
+
+        `session_context` ({user_profile, conversation_goal, session_date} for this session)
+        is forwarded to the reranker so block-U features compute at serve time instead of
+        going NaN. None is fine (block U stays neutral)."""
+        return self._compile(rs, user_id=user_id, session_context=session_context).ranked
 
     def _compile(
-        self, rs: ResolvedConversationState, user_id: str | None = None
+        self, rs: ResolvedConversationState, user_id: str | None = None,
+        session_context: dict | None = None
     ) -> CompileResult:
         """Compile a resolved state into a CompileResult.
 
@@ -871,7 +886,8 @@ class V0PlusCompiler:
                     "ranker='lambdamart' requires branch_trace_topk > 0 (the reranker scores "
                     "the per-branch pools, which are only retained when tracing is enabled)."
                 )
-            reranked = self._reranker_ranked(rs, named_pools, branch_query_vectors)
+            reranked = self._reranker_ranked(rs, named_pools, branch_query_vectors,
+                                             session_context=session_context)
             ranked = [t for t in reranked if t in candidate_mask and t not in hard_drop]
         else:
             adjusted = self._apply_soft_adjustments(fused, rs)

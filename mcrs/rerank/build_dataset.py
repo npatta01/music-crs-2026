@@ -131,8 +131,15 @@ def _mention_counts(mentioned: list[dict[str, Any]]) -> dict[str, int]:
     return counts
 
 
-def build_group_record(entry: dict[str, Any], gt_tid: str | None) -> dict[str, Any]:
-    """Per-(session,turn) state record for blocks D/E/G (no per-candidate expansion)."""
+def build_group_record(entry: dict[str, Any], gt_tid: str | None,
+                       session_meta: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Per-(session,turn) state record for blocks D/E/G (no per-candidate expansion).
+
+    ``session_meta`` (optional ``session_id -> flat session fields`` from
+    ``mcrs.rerank.session_meta``) joins user-profile / conversation-goal / session-date fields by
+    ``session_id`` for features.py block U (Tier-A goal/age/gender + Tier-B culture match). Off by
+    default so existing builds are unchanged.
+    """
     tr = entry["trace"]
     state = tr.get("state", {}) or {}
     resolver = tr.get("resolver", {}) or {}
@@ -147,7 +154,7 @@ def build_group_record(entry: dict[str, Any], gt_tid: str | None) -> dict[str, A
     # entry; features.py decodes both via vec_codec. Empty dict when capture was off.
     branch_query_vectors = branches.get("branch_query_vectors") or {}
 
-    return {
+    record = {
         "session_id": entry["session_id"],
         "user_id": entry.get("user_id"),
         "turn_number": int(entry["turn_number"]),
@@ -186,6 +193,18 @@ def build_group_record(entry: dict[str, Any], gt_tid: str | None) -> dict[str, A
         # --- H: dense cross-scoring query vectors (branch_name -> base64 float32 or list) ---
         "branch_query_vectors": branch_query_vectors,
     }
+    # --- U (Tier A/B): session-level user-profile / goal / date for block U. Two sources,
+    # both producing the same flat fields: (1) carried directly on the entry (serve path via
+    # _reranker_ranked, and new traces stamped by the inference runners), or (2) joined by
+    # session_id from a `session_meta` map (offline, for traces that predate the inline field).
+    meta = entry.get("session_meta")
+    if meta is None and session_meta is not None:
+        meta = session_meta.get(entry["session_id"])
+    if meta is not None:
+        from mcrs.rerank.session_meta import SESSION_META_FIELDS
+        for k in SESSION_META_FIELDS:
+            record[k] = meta.get(k)
+    return record
 
 
 # ------------------------------------------------------------------------- candidate rows
@@ -286,6 +305,7 @@ def build_dataset(
     max_pool_depth: int | None = None,
     max_neg_per_group: int | None = None,
     flush_rows: int = 500_000,
+    session_meta: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     import pyarrow as pa
     import pyarrow.parquet as pq
@@ -326,7 +346,7 @@ def build_dataset(
             buffer.extend(rows)
             n_rows += len(rows)
 
-            grp = build_group_record(entry, gt_tid)
+            grp = build_group_record(entry, gt_tid, session_meta=session_meta)
             fused = [str(t) for t, _ in (branches.get("fused") or [])][:BASELINE_TOPK]
             final = list((branches.get("final") or {}).get("track_ids", []))[:BASELINE_TOPK]
             grp.update({
@@ -384,11 +404,18 @@ def build_parser() -> argparse.ArgumentParser:
                         "(golden always kept; ranks recorded at full depth).")
     p.add_argument("--max-neg-per-group", type=int, default=None,
                    help="Keep golden + N best-min-rank negatives per group.")
+    p.add_argument("--session-meta-split", default=None,
+                   help="If set (e.g. 'test'), join Tier-A session metadata (user_profile / "
+                        "conversation_goal / session_date) by session_id from the challenge dataset.")
     return p
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    session_meta = None
+    if args.session_meta_split:
+        from mcrs.rerank.session_meta import load_session_meta
+        session_meta = load_session_meta(split=args.session_meta_split)
     summary = build_dataset(
         trace_path=args.trace,
         ground_truth_path=args.ground_truth,
@@ -396,6 +423,7 @@ def main(argv: list[str] | None = None) -> int:
         limit=args.limit,
         max_pool_depth=args.max_pool_depth,
         max_neg_per_group=args.max_neg_per_group,
+        session_meta=session_meta,
     )
     print(json.dumps(summary, indent=2))
     return 0
