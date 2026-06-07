@@ -1319,6 +1319,7 @@ def _state_v1_retriever_matrix(
     limit: int,
     output_prefix: str,
     sample_id_file: str,
+    baseline_pools_json: str,
 ) -> dict:
     import json
     import subprocess
@@ -1359,6 +1360,11 @@ def _state_v1_retriever_matrix(
         if not sample_id_path.is_absolute():
             sample_id_path = Path("/app") / sample_id_path
         cmd.extend(["--sample-id-file", str(sample_id_path)])
+    if baseline_pools_json:
+        baseline_pools_path = Path(baseline_pools_json)
+        if not baseline_pools_path.is_absolute():
+            baseline_pools_path = Path("/app") / baseline_pools_path
+        cmd.extend(["--baseline-pools-json", str(baseline_pools_path)])
     if limit > 0:
         cmd.extend(["--limit", str(limit)])
     subprocess.run(cmd, cwd="/app", check=True)
@@ -1377,6 +1383,7 @@ def run_state_v1_retriever_matrix(
     limit: int = 0,
     output_prefix: str = "state_v1_retriever_matrix_modal",
     sample_id_file: str = "",
+    baseline_pools_json: str = "",
 ):
     """Run the V1 retriever matrix inside Modal against remote LanceDB."""
     result = _state_v1_retriever_matrix.remote(
@@ -1384,6 +1391,7 @@ def run_state_v1_retriever_matrix(
         limit=limit,
         output_prefix=output_prefix,
         sample_id_file=sample_id_file,
+        baseline_pools_json=baseline_pools_json,
     )
     print(json.dumps(result, indent=2))
 

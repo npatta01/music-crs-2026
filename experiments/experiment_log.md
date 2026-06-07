@@ -44,3 +44,29 @@ Next step:
 
 - Use the included state experiment packs for small before/after tests, then
   update or replace this snapshot if the new system changes the conclusions.
+
+## 2026-06-07 - Focused 110 Additive Candidate-Recall Matrix
+
+Decision:
+
+- Keep the focused 110-pack additive matrix as candidate-source evidence for
+  frozen V1 state/projection work.
+- Measure branch pools additively against protected saved-trace baseline pools;
+  do not replace the baseline when judging candidate recall.
+
+Current read:
+
+- Protected saved-trace baseline is 60/110 at union@20, union@50, and union@100
+  on the focused pack.
+- Existing all-candidate branches improve additive union@20 to 66/110.
+- New synthetic tag/popularity/artist-neighbor branches improve additive
+  union@20 to 64/110 on their own, and diagnostic OR with saved branches reaches
+  71/110 at union@20 and 88/110 at union@100.
+- Candidate recall improves, but the remaining misses show this is not solved
+  by branch gating alone; ranking/fusion and possibly source/query design remain
+  separate follow-up work.
+
+Next step:
+
+- Use the additive report's rescued and still-missed examples to decide which
+  branches are worth production gating, then run a separate ranking/fusion goal.

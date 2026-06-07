@@ -49,6 +49,7 @@ DEFAULT_CONFIG = Path("configs/v0plus_compiler_all_retrievers_devset.yaml")
 DEFAULT_MAIN_LANCEDB = Path("cache/lancedb")
 
 KS = (20, 50, 100, 200, 1000)
+ADDITIVE_KS = (20, 50, 100)
 
 
 @dataclass(frozen=True)
@@ -83,6 +84,8 @@ class Variant:
     era_popularity: bool | None = None
     use_base_config: bool = False
     branch_local_rules: tuple[str, ...] = ()
+    compiler_pools: bool = True
+    analysis_branches: tuple[str, ...] = ()
 
 
 QWEN06_METADATA = "metadata_qwen3_embedding_0_6b"
@@ -295,6 +298,63 @@ VARIANTS: dict[str, Variant] = {
             "temporal_soft",
         ),
     ),
+    "tag_popularity": Variant(
+        "tag_popularity",
+        compiler_pools=False,
+        analysis_branches=("tag_popularity",),
+    ),
+    "tag_popularity_alias": Variant(
+        "tag_popularity_alias",
+        compiler_pools=False,
+        analysis_branches=("tag_popularity_alias",),
+    ),
+    "era_tag_popularity": Variant(
+        "era_tag_popularity",
+        compiler_pools=False,
+        analysis_branches=("era_tag_popularity",),
+    ),
+    "same_album_fanout": Variant(
+        "same_album_fanout",
+        compiler_pools=False,
+        analysis_branches=("same_album_fanout",),
+    ),
+    "artist_tag_neighbor_popularity": Variant(
+        "artist_tag_neighbor_popularity",
+        compiler_pools=False,
+        analysis_branches=("artist_tag_neighbor_popularity",),
+    ),
+    "all_synthetic_recall": Variant(
+        "all_synthetic_recall",
+        compiler_pools=False,
+        analysis_branches=(
+            "tag_popularity_alias",
+            "era_tag_popularity",
+            "same_album_fanout",
+            "artist_tag_neighbor_popularity",
+        ),
+    ),
+    "all_candidate_plus_synthetic": Variant(
+        "all_candidate_plus_synthetic",
+        dense_branches=(
+            DenseSpec(QWEN06_METADATA, "qwen_0_6b", "metadata"),
+            DenseSpec(QWEN06_METADATA, "qwen_0_6b", "intent"),
+            DenseSpec(QWEN06_ATTRIBUTES, "qwen_0_6b", "attributes_enriched"),
+            DenseSpec(QWEN8_METADATA, "qwen_8b", "metadata"),
+            DenseSpec(QWEN8_METADATA, "qwen_8b", "intent"),
+            DenseSpec(QWEN8_ATTRIBUTES, "qwen_8b", "attributes_enriched"),
+            DenseSpec(CLAP_AUDIO, "clap_text", "sonic"),
+            DenseSpec(CLAP_AUDIO, "clap_text", "sonic_nl"),
+            DenseSpec(CLAP_AUDIO, "clap_text", "sonic_nl_enriched"),
+        ),
+        centroid=True,
+        similar_artist_anchors=True,
+        analysis_branches=(
+            "tag_popularity_alias",
+            "era_tag_popularity",
+            "same_album_fanout",
+            "artist_tag_neighbor_popularity",
+        ),
+    ),
 }
 
 
@@ -330,6 +390,13 @@ DEFAULT_VARIANTS = (
     "all_candidate_recall",
     "qwen06_clap_centroid_branch_rules",
     "all_candidate_branch_rules",
+    "tag_popularity",
+    "tag_popularity_alias",
+    "era_tag_popularity",
+    "same_album_fanout",
+    "artist_tag_neighbor_popularity",
+    "all_synthetic_recall",
+    "all_candidate_plus_synthetic",
 )
 
 COMBINED_VARIANTS = {
@@ -346,6 +413,8 @@ COMBINED_VARIANTS = {
     "all_candidate_recall",
     "qwen06_clap_centroid_branch_rules",
     "all_candidate_branch_rules",
+    "all_synthetic_recall",
+    "all_candidate_plus_synthetic",
 }
 
 
@@ -383,6 +452,325 @@ def _union_hit(branch_pools, target: str, k: int) -> bool:
         target in {track_id for track_id, _score in pool.hits[:k]}
         for pool in branch_pools
     )
+
+
+def _pool_to_trace_payload(pool: BranchPool, depth: int | None = None) -> dict[str, Any]:
+    hits = [track_id for track_id, _score in pool.hits]
+    if depth is not None:
+        hits = hits[:depth]
+    return {"name": pool.name, "hits": hits}
+
+
+def _pool_from_trace_payload(payload: dict[str, Any]) -> BranchPool:
+    hits: list[tuple[str, float]] = []
+    for rank, item in enumerate(payload.get("hits", []), start=1):
+        track_id = item[0] if isinstance(item, list) else item
+        if track_id:
+            hits.append((str(track_id), 1.0 / rank))
+    return BranchPool(str(payload["name"]), hits)
+
+
+def _trace_pool_from_dict(payload: dict[str, Any], *, prefix: str, depth: int) -> BranchPool:
+    hits: list[tuple[str, float]] = []
+    for rank, item in enumerate(payload.get("hits", [])[:depth], start=1):
+        if isinstance(item, list):
+            track_id = item[0]
+            score = float(item[1]) if len(item) > 1 and item[1] is not None else 1.0 / rank
+        else:
+            track_id = item
+            score = 1.0 / rank
+        if track_id:
+            hits.append((str(track_id), score))
+    return BranchPool(prefix + str(payload["name"]), hits)
+
+
+def _extract_trace_baseline_pools(
+    trace_path: Path,
+    turn_meta: dict[str, dict[str, Any]],
+    *,
+    depth: int = 100,
+) -> dict[str, list[BranchPool]]:
+    wanted: dict[tuple[str, int], str] = {}
+    for sid, meta in turn_meta.items():
+        wanted[(str(meta["session_id"]), int(meta["turn"]))] = sid
+
+    found: dict[str, list[BranchPool]] = {}
+    with trace_path.open() as handle:
+        for line in handle:
+            if len(found) == len(wanted):
+                break
+            row = json.loads(line)
+            key = (str(row.get("session_id")), int(row.get("turn_number") or 0))
+            sid = wanted.get(key)
+            if sid is None:
+                continue
+            pools = (
+                ((row.get("trace") or {}).get("branches") or {}).get("pools")
+                or []
+            )
+            found[sid] = [
+                _trace_pool_from_dict(pool, prefix="baseline.", depth=depth)
+                for pool in pools
+            ]
+    return found
+
+
+def _write_baseline_pools_json(
+    path: Path,
+    *,
+    pools_by_sample: dict[str, list[BranchPool]],
+    sample_ids: list[str],
+    source_trace: Path,
+    depth: int,
+) -> None:
+    payload = {
+        "source_trace": str(source_trace),
+        "depth": depth,
+        "samples": sample_ids,
+        "pools_by_sample": {
+            sid: [_pool_to_trace_payload(pool, depth=depth) for pool in pools_by_sample[sid]]
+            for sid in sample_ids
+        },
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, separators=(",", ":")) + "\n")
+
+
+def _load_baseline_pools_json(path: Path) -> dict[str, list[BranchPool]]:
+    payload = json.loads(path.read_text())
+    return {
+        sid: [_pool_from_trace_payload(pool) for pool in pools]
+        for sid, pools in payload.get("pools_by_sample", {}).items()
+    }
+
+
+def _additive_metrics_for_pools(
+    protected_pools: list[BranchPool],
+    branch_pools: list[BranchPool],
+    target: str,
+) -> dict[str, Any]:
+    additive_pools = list(protected_pools) + list(branch_pools)
+    branch_best, branch_rank = _branch_rank(branch_pools, target)
+    additive_best, additive_rank = _branch_rank(additive_pools, target)
+    protected_best, protected_rank = _branch_rank(protected_pools, target)
+    out: dict[str, Any] = {
+        "protected_best_branch": protected_best,
+        "protected_best_branch_rank": protected_rank,
+        "branch_only_best_branch": branch_best,
+        "branch_only_best_branch_rank": branch_rank,
+        "additive_best_branch": additive_best,
+        "additive_best_branch_rank": additive_rank,
+    }
+    for k in ADDITIVE_KS:
+        out[f"protected_union@{k}"] = _union_hit(protected_pools, target, k)
+        out[f"branch_only@{k}"] = _union_hit(branch_pools, target, k)
+        out[f"additive_union@{k}"] = _union_hit(additive_pools, target, k)
+    return out
+
+
+_TAG_ALIASES: dict[str, tuple[str, ...]] = {
+    "hip hop": ("hip-hop", "rap"),
+    "hip-hop": ("hip hop", "rap"),
+    "rap": ("hip hop", "hip-hop"),
+    "r&b": ("rnb", "rhythm and blues", "soul"),
+    "rnb": ("r&b", "rhythm and blues", "soul"),
+    "pop-punk": ("pop punk", "punk pop"),
+    "pop punk": ("pop-punk", "punk pop"),
+    "edm": ("electronic", "electronica", "dance"),
+    "electronic": ("electronica", "edm"),
+    "alt rock": ("alternative rock", "alternative"),
+    "alternative rock": ("alt rock", "alternative"),
+    "classic": ("popular", "hit"),
+    "popular": ("classic", "hit"),
+}
+
+
+def _norm_term(value: str) -> str:
+    return " ".join(value.casefold().replace("_", " ").split())
+
+
+def _expanded_tag_terms(tags: list[str]) -> set[str]:
+    out: set[str] = set()
+    for value in tags:
+        term = _norm_term(value)
+        if not term:
+            continue
+        out.add(term)
+        out.add(term.replace("-", " "))
+        if " " in term:
+            out.add(term.replace(" ", "-"))
+        for alias in _TAG_ALIASES.get(term, ()):
+            out.add(_norm_term(alias))
+    return {term for term in out if term}
+
+
+def _popularity_rank_for_catalog(catalog: Any) -> dict[str, int]:
+    return {
+        track_id: rank
+        for rank, track_id in enumerate(catalog.popularity_sorted_track_ids())
+    }
+
+
+def _tag_popularity_pool(
+    catalog: Any,
+    *,
+    tags: list[str],
+    name: str,
+    topk: int = 1000,
+    release_range: Any | None = None,
+    exclude_artist_ids: set[str] | None = None,
+    expand_aliases: bool = False,
+) -> BranchPool:
+    query_terms = _expanded_tag_terms(tags) if expand_aliases else {_norm_term(t) for t in tags}
+    query_terms = {term for term in query_terms if term}
+    if not query_terms:
+        return BranchPool(name, [])
+    pop_rank = _popularity_rank_for_catalog(catalog)
+    exclude_artist_ids = exclude_artist_ids or set()
+    lo = getattr(release_range, "start", None) if release_range is not None else None
+    hi = getattr(release_range, "end", None) if release_range is not None else None
+    scored: list[tuple[int, int, str]] = []
+    for track_id in catalog.all_track_ids():
+        if exclude_artist_ids:
+            artist_id = catalog.artist_id_of(track_id)
+            if artist_id in exclude_artist_ids:
+                continue
+        if lo is not None or hi is not None:
+            year = catalog.release_year_of(track_id)
+            if year is None:
+                continue
+            if lo is not None and year < lo:
+                continue
+            if hi is not None and year > hi:
+                continue
+        track_terms = _expanded_tag_terms(catalog.tag_list(track_id))
+        overlap = len(query_terms & track_terms)
+        if not overlap:
+            continue
+        scored.append((overlap, pop_rank.get(track_id, 10**9), track_id))
+    scored.sort(key=lambda item: (-item[0], item[1], item[2]))
+    n = min(topk, len(scored))
+    return BranchPool(
+        name,
+        [(track_id, float(n - idx)) for idx, (_overlap, _rank, track_id) in enumerate(scored[:topk])],
+    )
+
+
+def _state_positive_tags(qu, rs, *, include_anchor_tags: bool = True) -> list[str]:
+    tags = list(qu.compiler._positive_mention_values(rs.state, "tag"))
+    if include_anchor_tags:
+        tags.extend(qu.compiler._top_anchor_tags(rs, n=8))
+    seen: set[str] = set()
+    out: list[str] = []
+    for tag in tags:
+        key = _norm_term(tag)
+        if key and key not in seen:
+            seen.add(key)
+            out.append(tag)
+    return out
+
+
+def _same_album_fanout_pool(qu, rs, *, topk: int = 1000) -> BranchPool:
+    anchor_ids = qu.compiler._anchor_track_ids(rs.state)
+    album_ids = {
+        album_id
+        for track_id in anchor_ids
+        if (album_id := qu.compiler.catalog.album_id_of(track_id))
+    }
+    if not album_ids:
+        return BranchPool("analysis.same_album_fanout", [])
+    pop_rank = qu.compiler._popularity_rank()
+    hits: list[tuple[int, str]] = []
+    anchor_set = set(anchor_ids)
+    for track_id in qu.compiler.catalog.all_track_ids():
+        if track_id in anchor_set:
+            continue
+        if qu.compiler.catalog.album_id_of(track_id) in album_ids:
+            hits.append((pop_rank.get(track_id, 10**9), track_id))
+    hits.sort(key=lambda item: (item[0], item[1]))
+    n = min(topk, len(hits))
+    return BranchPool(
+        "analysis.same_album_fanout",
+        [(track_id, float(n - idx)) for idx, (_rank, track_id) in enumerate(hits[:topk])],
+    )
+
+
+def _artist_tag_neighbor_pool(qu, rs, *, topk: int = 1000) -> BranchPool:
+    artist_ids: list[str] = []
+    seen: set[str] = set()
+    for target in getattr(rs, "resolved_targets", []) or []:
+        if getattr(target, "kind", None) != "artist":
+            continue
+        artist_id = getattr(target, "entity_id", None)
+        if artist_id and artist_id not in seen:
+            seen.add(artist_id)
+            artist_ids.append(artist_id)
+    if not artist_ids:
+        return BranchPool("analysis.artist_tag_neighbor_popularity", [])
+    counter: dict[str, int] = {}
+    pop_rank = qu.compiler._popularity_rank()
+    for artist_id in artist_ids[:5]:
+        tracks = sorted(
+            qu.compiler.catalog.tracks_by_artist_id(artist_id),
+            key=lambda tid: pop_rank.get(tid, 10**9),
+        )[:20]
+        for track_id in tracks:
+            for tag in qu.compiler.catalog.tag_list(track_id):
+                key = _norm_term(tag)
+                if key:
+                    counter[key] = counter.get(key, 0) + 1
+    tags = [
+        tag for tag, _count in sorted(counter.items(), key=lambda item: (-item[1], item[0]))[:12]
+    ]
+    target_mode = _enum_value(getattr(rs.state, "target_artist_mode", ""))
+    exclude_artists = set(artist_ids) if target_mode == "new_artist" else set()
+    return _tag_popularity_pool(
+        qu.compiler.catalog,
+        tags=tags,
+        name="analysis.artist_tag_neighbor_popularity",
+        topk=topk,
+        exclude_artist_ids=exclude_artists,
+        expand_aliases=True,
+    )
+
+
+def _analysis_branch_pools(qu, rs, variant: Variant) -> list[BranchPool]:
+    pools: list[BranchPool] = []
+    for branch in variant.analysis_branches:
+        if branch == "tag_popularity":
+            pools.append(
+                _tag_popularity_pool(
+                    qu.compiler.catalog,
+                    tags=_state_positive_tags(qu, rs),
+                    name="analysis.tag_popularity",
+                )
+            )
+        elif branch == "tag_popularity_alias":
+            pools.append(
+                _tag_popularity_pool(
+                    qu.compiler.catalog,
+                    tags=_state_positive_tags(qu, rs),
+                    name="analysis.tag_popularity_alias",
+                    expand_aliases=True,
+                )
+            )
+        elif branch == "era_tag_popularity":
+            pools.append(
+                _tag_popularity_pool(
+                    qu.compiler.catalog,
+                    tags=_state_positive_tags(qu, rs),
+                    name="analysis.era_tag_popularity",
+                    release_range=rs.state.release_year_range,
+                    expand_aliases=True,
+                )
+            )
+        elif branch == "same_album_fanout":
+            pools.append(_same_album_fanout_pool(qu, rs))
+        elif branch == "artist_tag_neighbor_popularity":
+            pools.append(_artist_tag_neighbor_pool(qu, rs))
+        else:
+            raise KeyError(f"unknown analysis branch: {branch}")
+    return pools
 
 
 def _variant_qu_kwargs(
@@ -615,19 +1003,28 @@ def _compile_variant(
     row: dict[str, Any],
     target: str,
     variant: Variant | None = None,
+    protected_pools: list[BranchPool] | None = None,
 ) -> dict[str, Any]:
     state = _state_from_audit(row)
     played = [tf.track_id for tf in state.track_feedback]
     rs = qu.resolver.resolve(state, played_track_ids=played)
-    result = qu.compiler._compile(rs, user_id=None)
-    branch_pools = _rerank_branch_pools(
-        qu,
-        rs,
-        result.branch_pools,
-        () if variant is None else variant.branch_local_rules,
-    )
-    final_rank = _rank(result.ranked, target)
-    fused_rank = _rank([track_id for track_id, _score in result.fused], target)
+    use_compiler_pools = variant is None or variant.compiler_pools
+    if use_compiler_pools:
+        result = qu.compiler._compile(rs, user_id=None)
+        branch_pools = _rerank_branch_pools(
+            qu,
+            rs,
+            result.branch_pools,
+            () if variant is None else variant.branch_local_rules,
+        )
+        final_rank = _rank(result.ranked, target)
+        fused_rank = _rank([track_id for track_id, _score in result.fused], target)
+    else:
+        branch_pools = []
+        final_rank = None
+        fused_rank = None
+    if variant is not None and variant.analysis_branches:
+        branch_pools.extend(_analysis_branch_pools(qu, rs, variant))
     best_branch, best_branch_rank = _branch_rank(branch_pools, target)
     out: dict[str, Any] = {
         "final_rank": final_rank,
@@ -639,6 +1036,8 @@ def _compile_variant(
     for k in KS:
         out[f"final@{k}"] = final_rank is not None and final_rank <= k
         out[f"union@{k}"] = _union_hit(branch_pools, target, k)
+    if protected_pools is not None:
+        out.update(_additive_metrics_for_pools(protected_pools, branch_pools, target))
     return out
 
 
@@ -654,6 +1053,25 @@ def _summary(rows: list[dict[str, Any]], variant: str) -> dict[str, Any]:
         out[f"best_branch@{k}"] = (
             sum((row["best_branch_rank"] or 10**9) <= k for row in scoped) / n
         )
+    return out
+
+
+def _additive_summary(rows: list[dict[str, Any]], variant: str) -> dict[str, Any]:
+    scoped = [row for row in rows if row["variant"] == variant]
+    n = len(scoped)
+    out: dict[str, Any] = {"variant": variant, "n": n}
+    if n == 0:
+        return out
+    for k in ADDITIVE_KS:
+        out[f"protected_union@{k}"] = sum(row[f"protected_union@{k}"] for row in scoped) / n
+        out[f"branch_only@{k}"] = sum(row[f"branch_only@{k}"] for row in scoped) / n
+        out[f"additive_union@{k}"] = sum(row[f"additive_union@{k}"] for row in scoped) / n
+    out["additive_rescued@20"] = sum(
+        (not row["protected_union@20"]) and row["branch_only@20"] for row in scoped
+    )
+    out["additive_regressed@20"] = sum(
+        row["protected_union@20"] and not row["additive_union@20"] for row in scoped
+    )
     return out
 
 
@@ -867,6 +1285,19 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         "best_branch",
         "n_branch_pools",
     ] + [f"union@{k}" for k in KS] + [f"final@{k}" for k in KS]
+    additive_fields = [
+        "protected_best_branch",
+        "protected_best_branch_rank",
+        "branch_only_best_branch",
+        "branch_only_best_branch_rank",
+        "additive_best_branch",
+        "additive_best_branch_rank",
+    ]
+    additive_fields.extend(f"protected_union@{k}" for k in ADDITIVE_KS)
+    additive_fields.extend(f"branch_only@{k}" for k in ADDITIVE_KS)
+    additive_fields.extend(f"additive_union@{k}" for k in ADDITIVE_KS)
+    if any(any(field in row for field in additive_fields) for row in rows):
+        fieldnames.extend(additive_fields)
     with path.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
@@ -1043,6 +1474,11 @@ def main() -> None:
     parser.add_argument("--output-json", type=Path)
     parser.add_argument("--output-md", type=Path)
     parser.add_argument("--output-csv", type=Path)
+    parser.add_argument("--baseline-pools-json", type=Path)
+    parser.add_argument("--baseline-trace", type=Path)
+    parser.add_argument("--write-baseline-pools-json", type=Path)
+    parser.add_argument("--baseline-pool-depth", type=int, default=100)
+    parser.add_argument("--extract-baseline-only", action="store_true")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
 
@@ -1054,9 +1490,6 @@ def main() -> None:
         raise SystemExit(f"missing audit path: {audit_path}")
     if not pack_path.exists():
         raise SystemExit(f"missing pack path: {pack_path}")
-    if not args.lancedb_uri.exists():
-        raise SystemExit(f"missing LanceDB URI: {args.lancedb_uri}")
-
     unknown_variants = sorted(set(args.variants or ()) - set(VARIANTS))
     if unknown_variants:
         raise SystemExit(
@@ -1084,6 +1517,57 @@ def main() -> None:
         raise SystemExit(f"sample ids missing from audit/pack: {missing}")
     selected_turn_meta = {sid: turn_meta[sid] for sid in sample_ids}
 
+    baseline_pools_by_sample: dict[str, list[BranchPool]] = {}
+    if args.baseline_trace:
+        if not args.baseline_trace.exists():
+            raise SystemExit(f"missing baseline trace: {args.baseline_trace}")
+        baseline_pools_by_sample = _extract_trace_baseline_pools(
+            args.baseline_trace,
+            selected_turn_meta,
+            depth=args.baseline_pool_depth,
+        )
+        missing_baseline = [
+            sid for sid in sample_ids if sid not in baseline_pools_by_sample
+        ]
+        if missing_baseline:
+            raise SystemExit(f"missing baseline trace rows: {missing_baseline}")
+        if args.write_baseline_pools_json:
+            _write_baseline_pools_json(
+                args.write_baseline_pools_json,
+                pools_by_sample=baseline_pools_by_sample,
+                sample_ids=sample_ids,
+                source_trace=args.baseline_trace,
+                depth=args.baseline_pool_depth,
+            )
+    if args.baseline_pools_json:
+        if not args.baseline_pools_json.exists():
+            raise SystemExit(f"missing baseline pools JSON: {args.baseline_pools_json}")
+        baseline_pools_by_sample = _load_baseline_pools_json(args.baseline_pools_json)
+        missing_baseline = [
+            sid for sid in sample_ids if sid not in baseline_pools_by_sample
+        ]
+        if missing_baseline:
+            raise SystemExit(f"missing baseline pools rows: {missing_baseline}")
+    if args.extract_baseline_only:
+        if not args.baseline_trace:
+            raise SystemExit("--extract-baseline-only requires --baseline-trace")
+        if not args.write_baseline_pools_json:
+            raise SystemExit("--extract-baseline-only requires --write-baseline-pools-json")
+        print(
+            json.dumps(
+                {
+                    "samples": len(sample_ids),
+                    "baseline_pools_json": str(args.write_baseline_pools_json),
+                    "depth": args.baseline_pool_depth,
+                },
+                indent=2,
+            )
+        )
+        return
+
+    if not args.lancedb_uri.exists():
+        raise SystemExit(f"missing LanceDB URI: {args.lancedb_uri}")
+
     variant_names = args.variants or list(DEFAULT_VARIANTS)
     base_cfg = OmegaConf.load(args.config)
     base_qu_kwargs = OmegaConf.to_container(base_cfg["qu_kwargs"], resolve=True)
@@ -1100,7 +1584,13 @@ def main() -> None:
             meta = turn_meta[sid]
             if not args.quiet:
                 print(f"  [{idx}/{len(sample_ids)}] {sid}", flush=True)
-            result = _compile_variant(qu, audit_rows[sid], meta["gt_track_id"], variant)
+            result = _compile_variant(
+                qu,
+                audit_rows[sid],
+                meta["gt_track_id"],
+                variant,
+                protected_pools=baseline_pools_by_sample.get(sid),
+            )
             rows.append(
                 {
                     "sample_id": sid,
@@ -1113,8 +1603,12 @@ def main() -> None:
                 }
             )
 
+    additive_mode = bool(baseline_pools_by_sample)
     summary = [_baseline_summary(selected_turn_meta, sample_ids)]
-    summary.extend(_summary(rows, name) for name in variant_names)
+    if additive_mode:
+        summary.extend(_additive_summary(rows, name) for name in variant_names)
+    else:
+        summary.extend(_summary(rows, name) for name in variant_names)
     class_summary = _class_summaries(
         rows,
         selected_turn_meta,
@@ -1136,6 +1630,7 @@ def main() -> None:
         "samples": sample_ids,
         "variants": variant_names,
         "summary": summary,
+        "additive_mode": additive_mode,
         "class_summary": class_summary,
         "examples": examples,
         "rows": rows,

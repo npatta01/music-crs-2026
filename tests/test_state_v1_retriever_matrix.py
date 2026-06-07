@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 
 from mcrs.qu_modules.compiler_v0plus import BranchPool
 from scripts.state_v1_retriever_matrix import (
     VARIANTS,
+    _additive_metrics_for_pools,
     _baseline_summary,
     _class_summaries,
+    _expanded_tag_terms,
+    _extract_trace_baseline_pools,
+    _pool_to_trace_payload,
     _rerank_branch_pools,
+    _tag_popularity_pool,
     _variant_qu_kwargs,
 )
 
@@ -36,6 +42,12 @@ class _FakeCatalog:
 
     def release_year_of(self, track_id: str) -> int | None:
         return self.years.get(track_id)
+
+    def all_track_ids(self) -> list[str]:
+        return sorted(set(self.tags) | set(self.artists) | set(self.years) | set(self.popularity))
+
+    def popularity_sorted_track_ids(self) -> list[str]:
+        return sorted(self.all_track_ids(), key=lambda tid: (self.popularity.get(tid, 10**9), tid))
 
 
 class _FakeCompiler:
@@ -131,6 +143,113 @@ def test_baseline_summary_infers_union50_when_bounds_match():
     assert summary["union@50"] == 0.5
     assert summary["union@100"] == 0.5
     assert summary["final@20"] == 0.5
+
+
+def test_additive_metrics_preserve_protected_baseline_hit():
+    baseline = [BranchPool("baseline.bm25", [("target", 1.0)])]
+    candidate = [BranchPool("new.branch", [("other", 1.0), ("x", 0.5)])]
+
+    metrics = _additive_metrics_for_pools(baseline, candidate, "target")
+
+    assert metrics["branch_only@20"] is False
+    assert metrics["additive_union@20"] is True
+    assert metrics["additive_best_branch"] == "baseline.bm25"
+    assert metrics["additive_best_branch_rank"] == 1
+
+
+def test_additive_metrics_rescue_baseline_miss_with_new_branch():
+    baseline = [BranchPool("baseline.bm25", [("a", 1.0), ("b", 0.5)])]
+    candidate = [BranchPool("new.genre_popularity", [("a", 1.0), ("target", 0.5)])]
+
+    metrics = _additive_metrics_for_pools(baseline, candidate, "target")
+
+    assert metrics["branch_only@20"] is True
+    assert metrics["additive_union@20"] is True
+    assert metrics["branch_only_best_branch"] == "new.genre_popularity"
+    assert metrics["branch_only_best_branch_rank"] == 2
+    assert metrics["additive_best_branch"] == "new.genre_popularity"
+
+
+def test_expanded_tag_terms_adds_common_catalog_aliases():
+    terms = _expanded_tag_terms(["hip hop", "pop-punk", "r&b"])
+
+    assert {"hip hop", "hip-hop", "rap", "pop punk", "pop-punk", "rnb", "r&b"} <= terms
+
+
+def test_tag_popularity_pool_ranks_matching_popular_tracks():
+    catalog = _FakeCatalog(
+        tags={
+            "popular-funk": ["funk", "dance"],
+            "unmatched": ["metal"],
+            "deep-funk": ["funk"],
+        },
+        popularity={"popular-funk": 1, "unmatched": 0, "deep-funk": 50},
+    )
+
+    pool = _tag_popularity_pool(
+        catalog,
+        tags=["funk"],
+        name="analysis.tag_popularity",
+        topk=10,
+    )
+
+    assert [track_id for track_id, _ in pool.hits] == ["popular-funk", "deep-funk"]
+
+
+def test_extract_trace_baseline_pools_streams_only_requested_turns(tmp_path):
+    trace_path = tmp_path / "trace.jsonl"
+    trace_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "session_id": "s1",
+                        "turn_number": 1,
+                        "trace": {
+                            "branches": {
+                                "pools": [
+                                    {
+                                        "name": "bm25",
+                                        "hits": [["a", 1.0], ["target", 0.5], ["tail", 0.1]],
+                                    }
+                                ]
+                            }
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "session_id": "s2",
+                        "turn_number": 1,
+                        "trace": {
+                            "branches": {
+                                "pools": [
+                                    {"name": "bm25", "hits": [["unwanted", 1.0]]}
+                                ]
+                            }
+                        },
+                    }
+                ),
+            ]
+        )
+        + "\n"
+    )
+    turn_meta = {
+        "s1::t1": {
+            "session_id": "s1",
+            "turn": 1,
+            "baseline": {"union20": True, "union100": True},
+        }
+    }
+
+    extracted = _extract_trace_baseline_pools(trace_path, turn_meta, depth=2)
+
+    assert set(extracted) == {"s1::t1"}
+    assert extracted["s1::t1"][0].name == "baseline.bm25"
+    assert _pool_to_trace_payload(extracted["s1::t1"][0]) == {
+        "name": "baseline.bm25",
+        "hits": ["a", "target"],
+    }
 
 
 def test_class_summaries_pick_best_single_and_combined_variants():
