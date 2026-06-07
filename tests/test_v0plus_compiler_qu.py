@@ -7,6 +7,7 @@ an injected fake LiteLLMExtractor so the whole pipeline runs offline.
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 import time
 from dataclasses import dataclass, field
@@ -480,6 +481,67 @@ def test_litellm_extractor_does_not_apply_post_extraction_text_repair(monkeypatc
 
     assert state is not None
     assert state.turn_intent == "more like Fugazi"
+
+
+def test_litellm_extractor_decodes_v1_and_projects_to_v0plus():
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    state = extractor._decode(
+        json.dumps(
+            {
+                "current_request": {
+                    "request_type": "new_artist",
+                    "summary": "Other moody rock tracks, no more Radiohead.",
+                    "source_turn": 2,
+                },
+                "facts": [
+                    {
+                        "type": "artist",
+                        "value": "Radiohead",
+                        "role": "rejected",
+                        "anchor_use": "do_not_use",
+                        "relation": "exclude",
+                        "reuse": "must_exclude",
+                        "source_turn": 2,
+                        "mentioned_current_turn": True,
+                        "evidence_text": "no more Radiohead",
+                    },
+                    {
+                        "type": "attribute",
+                        "facet": "mood",
+                        "value": "moody rock",
+                        "role": "current_target",
+                        "anchor_use": "query_facet",
+                        "relation": "query_facet",
+                        "reuse": "not_applicable",
+                        "source_turn": 2,
+                        "mentioned_current_turn": True,
+                        "evidence_text": "moody rock",
+                    },
+                ],
+                "exclusions": [
+                    {
+                        "type": "artist",
+                        "value": "Radiohead",
+                        "scope": "next_turn_hard",
+                        "source_turn": 2,
+                        "evidence_text": "no more Radiohead",
+                    }
+                ],
+            }
+        )
+    )
+
+    assert isinstance(state, ConversationStateV0Plus)
+    assert state.target_artist_mode.value == "new_artist"
+    assert state.retrieval_profile.value == "novelty"
+    assert [(item.type, item.value, item.sentiment) for item in state.mentioned_entities] == [
+        ("artist", "Radiohead", -1),
+        ("tag", "moody rock", 1),
+    ]
+    assert [(item.kind, item.value) for item in state.explicit_rejections] == [
+        ("artist", "Radiohead")
+    ]
 
 
 def test_litellm_extractor_does_not_store_malformed_json(monkeypatch):

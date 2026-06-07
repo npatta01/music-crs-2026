@@ -45,6 +45,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from pydantic import ValidationError
+
 # `chat_history_parser` (mcrs/inference_utils.py) rewrites music-role content
 # from a bare track_id into the line-oriented metadata blob returned by
 # `MusicCatalogDB.id_to_metadata`, starting with:
@@ -60,7 +62,9 @@ from mcrs.conversation_state.prompts import previous as previous_prompt
 from mcrs.conversation_state.prompts import rejection as rejection_prompt
 from mcrs.conversation_state.prompts import rubric as rubric_prompt
 from mcrs.conversation_state.schema import (
+    ConversationStateV1,
     ConversationStateV0Plus,
+    project_v1_to_v0plus,
 )
 
 
@@ -279,7 +283,13 @@ def _sanitize_parsed_state(parsed: Any) -> Any:
 class LiteLLMExtractor:
     """Calls a hosted LLM (via litellm) with the v0+ extraction prompt and
     strict json_schema response_format. Returns a parsed
-    ConversationStateV0Plus or None on failure."""
+    ConversationStateV0Plus or None on failure.
+
+    The current prompt asks for ConversationStateV1. Decode validates that
+    LLM-facing contract first, then projects it to the existing V0Plus compiler
+    contract. Legacy prompt variants may still return V0Plus-shaped JSON, so
+    decode falls back to V0Plus validation when V1 validation fails.
+    """
 
     model_name: str
     api_base: str | None = None
@@ -377,7 +387,10 @@ class LiteLLMExtractor:
             cleaned = cleaned.rsplit("```", 1)[0].strip()
         parsed = json.loads(cleaned)
         parsed = _sanitize_parsed_state(parsed)
-        return ConversationStateV0Plus.model_validate(parsed)
+        try:
+            return project_v1_to_v0plus(ConversationStateV1.model_validate(parsed))
+        except ValidationError:
+            return ConversationStateV0Plus.model_validate(parsed)
 
     def extract(
         self,

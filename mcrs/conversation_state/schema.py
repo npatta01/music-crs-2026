@@ -378,6 +378,80 @@ class StateExclusion(BaseModel):
         return self
 
 
+class ConversationStateV1(BaseModel):
+    """Fact-first LLM contract for the next recommendation.
+
+    This model intentionally excludes compiler-facing compatibility fields such
+    as `entities`, `rejections`, `target_artist_mode`, and `retrieval_profile`.
+    Downstream code gets those through `project_v1_to_v0plus()`.
+    """
+
+    current_request: CurrentRequest | None = Field(
+        default=None,
+        description=(
+            "Fact-first current ask. This may include a factual request class "
+            "such as exact_track, new_artist, attribute_search, or hidden_target, "
+            "but it is not a retriever profile."
+        ),
+    )
+    facts: list[StateFact] = Field(
+        default_factory=list,
+        description=(
+            "Atomic conversation-visible facts for the latest request. The "
+            "bridge uses relation/reuse/role to project exact seeds, style "
+            "references, query facets, and exclusions."
+        ),
+    )
+    exclusions: list[StateExclusion] = Field(
+        default_factory=list,
+        description="Explicit next-turn exclusions or soft avoid preferences.",
+    )
+    track_feedback: list[TrackFeedback] = Field(
+        default_factory=list,
+        description=(
+            "Per-played-track sentiment. Only include tracks the user actually "
+            "reacted to or explicitly pinned as a seed."
+        ),
+    )
+    referenced_track_ids: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Explicit pronoun/position references to played tracks, such as "
+            "`the second one` or `that previous track`. Do not use for implicit "
+            "topic continuity."
+        ),
+    )
+    temporal_constraint: TemporalConstraint | None = Field(
+        default=None,
+        description=(
+            "Minimal date/era guardrail. apply_as_filter=true only for literal "
+            "hard release-date asks."
+        ),
+    )
+    lyrical_theme: str | None = Field(
+        default=None,
+        description=(
+            "Optional convenience copy of the lyric/meaning query. Prefer a "
+            "facts[] item with facet=lyrical_theme; this field exists for the "
+            "current lyric retriever contract."
+        ),
+    )
+
+    @field_validator("referenced_track_ids", mode="after")
+    @classmethod
+    def _filter_referenced_track_ids(cls, value: list[str]) -> list[str]:
+        return _filter_valid_track_ids(value)
+
+    class Config:
+        extra = "forbid"
+        json_schema_extra = {
+            "$comment": (
+                "ConversationStateV1 — LLM-facing fact contract. Use "
+                "project_v1_to_v0plus() for compiler compatibility."
+            )
+        }
+
+
 def _default_fact_relation(
     fact_type: FactType,
     role: FactRole,
@@ -1362,3 +1436,16 @@ class ConversationStateV0Plus(BaseModel):
                 "v0+ ConversationState — see docs/architectures/session_state.md"
             )
         }
+
+
+def project_v1_to_v0plus(state: ConversationStateV1) -> ConversationStateV0Plus:
+    """Project the fact-first LLM state into the existing compiler contract.
+
+    This is intentionally structural: it copies V1 fields and lets the V0Plus
+    compatibility model derive legacy views from those fields. It does not
+    inspect the raw conversation text or repair phrases with ad hoc matching.
+    """
+
+    return ConversationStateV0Plus.model_validate(
+        state.model_dump(mode="json", exclude_none=True)
+    )

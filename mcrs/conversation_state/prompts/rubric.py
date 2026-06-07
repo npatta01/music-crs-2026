@@ -21,8 +21,8 @@ Before emitting JSON, make these decisions in this order:
 
 1. Direct target check:
    - "play X", "play X by Y", "from album Z", "the song that says ..." => protect exact entities.
-   - Use retrieval_profile=exact_probe when a named track/artist/album is sufficient to retrieve.
-   - Use retrieval_profile=hidden_target_search when the user is recalling a specific unknown title from clues.
+   - Use current_request.request_type=exact_track/exact_artist/exact_album when a named entity is sufficient to retrieve.
+   - Use current_request.request_type=hidden_target when the user is recalling a specific unknown title from clues.
 
 2. Entity role check:
    - Current-turn named entity plus "more by/from/their" => current_target or seed.
@@ -36,10 +36,11 @@ Before emitting JSON, make these decisions in this order:
    - any_artist when no artist constraint matters.
 
 4. Retrieval profile check:
-   - continuation requires a current_target/seed artist, album, or exact track family.
-   - novelty means same vibe/genre/constraints but move away from satisfied/history/rejected entities.
-   - feature_search is for descriptive first-turn asks without a remembered specific target.
-   - hidden_target_search is for "trying to remember", partial lyric/title clues, or one-known-song lookup.
+   - Do not emit a retrieval_profile field. Instead, make facts explicit enough for the bridge/compiler.
+   - Continuation evidence should appear as exact_target current facts for artist/album/track family.
+   - Novelty evidence should appear as new_artist request type plus query_facet/style_reference facts and exclusions.
+   - Feature search evidence should appear as attribute query_facet facts.
+   - Hidden-target evidence should appear as hidden_target request type plus lyric/title/era/popularity facts.
 
 5. Temporal check:
    - hard release_date only for literal eligibility: only, released before/after/between, nothing newer/older.

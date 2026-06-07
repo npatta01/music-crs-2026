@@ -1,6 +1,7 @@
 """Conversation-state schema and extractor prompts."""
 
 from mcrs.conversation_state.schema import (
+    ConversationStateV1,
     ConversationStateV0Plus,
     EntityRole,
     RetrievalProfile,
@@ -8,9 +9,11 @@ from mcrs.conversation_state.schema import (
     StateRejection,
     TargetArtistMode,
     TemporalConstraint,
+    project_v1_to_v0plus,
 )
 
 __all__ = [
+    "ConversationStateV1",
     "ConversationStateV0Plus",
     "EntityRole",
     "RetrievalProfile",
@@ -18,4 +21,5 @@ __all__ = [
     "StateRejection",
     "TargetArtistMode",
     "TemporalConstraint",
+    "project_v1_to_v0plus",
 ]

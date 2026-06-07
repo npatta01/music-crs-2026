@@ -10,7 +10,8 @@ batch of examples.
 
 Extract state that downstream retrieval can use for the next recommendation.
 Do not summarize the conversation. Classify the role of each entity and mode of
-the latest user request.
+the latest user request. The active prompt emits `ConversationStateV1`; compiler
+compatibility fields are derived by the bridge.
 
 The prompt must teach these behaviors:
 
@@ -18,8 +19,9 @@ The prompt must teach these behaviors:
   and `rejected`.
 - Mark prior liked artists and tracks as `satisfied` or `history` when the user
   asks for other artists, another item, or a new direction.
-- Use `target_artist_mode` and `retrieval_profile` as operational routing
-  decisions, not just sentiment labels.
+- Use `current_request.request_type`, `facts[].relation`, and `facts[].reuse`
+  to make the request semantics clear. Do not emit `target_artist_mode` or
+  `retrieval_profile`; the bridge/compiler derives those.
 - Keep hard future exclusions separate from soft style dislikes.
 - Treat era phrases as soft style cues unless the user gives literal release
   date eligibility language.
@@ -33,8 +35,8 @@ teaches the desired extraction behavior:
 1. Does the system prompt describe the decision rule?
 2. Is there a few-shot example showing the positive case?
 3. Is there a few-shot example showing the nearest confusing negative case?
-4. Does the output use only fields supported by `ConversationStateV0Plus`?
-5. Does downstream compatibility consume the field, or is it analysis-only?
+4. Does the output use only fields supported by `ConversationStateV1`?
+5. Does the bridge/projected V0Plus view consume the field, or is it analysis-only?
 
 ## Current Few-Shot Coverage
 

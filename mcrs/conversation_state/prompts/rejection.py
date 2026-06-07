@@ -26,21 +26,24 @@ REJECTION_FOCUSED_EXAMPLES = [
             ],
         },
         "output": {
-            "turn_intent": "Moody alternative rock tracks from other artists; no more Radiohead for now.",
+            "current_request": {
+                "request_type": "new_artist",
+                "summary": "Moody alternative rock tracks from other artists; no more Radiohead for now.",
+                "source_turn": 2,
+                "evidence_text": "from other artists",
+            },
+            "facts": [
+                {"type": "artist", "value": "Radiohead", "role": "rejected", "anchor_use": "do_not_use", "relation": "exclude", "reuse": "must_exclude", "source_turn": 2, "mentioned_current_turn": True, "evidence_text": "good on Radiohead for now"},
+                {"type": "attribute", "facet": "genre", "value": "moody alternative rock", "role": "current_target", "anchor_use": "query_facet", "relation": "query_facet", "reuse": "not_applicable", "source_turn": 2, "mentioned_current_turn": True, "evidence_text": "moody alternative rock"},
+                {"type": "attribute", "facet": "performer", "value": "other artists", "role": "current_target", "anchor_use": "query_facet", "relation": "query_facet", "reuse": "not_applicable", "source_turn": 2, "mentioned_current_turn": True, "evidence_text": "other artists"},
+            ],
+            "exclusions": [
+                {"type": "artist", "value": "Radiohead", "scope": "next_turn_hard", "source_turn": 2, "evidence_text": "good on Radiohead for now"}
+            ],
             "track_feedback": [
                 {"track_id": "t-radiohead-1", "overall_sentiment": 1, "role": "satisfied"}
             ],
             "referenced_track_ids": [],
-            "entities": [
-                {"type": "artist", "value": "Radiohead", "role": "rejected", "source_turn": 2, "mentioned_current_turn": True, "use_as_retrieval_seed": False, "evidence_text": "good on Radiohead for now"},
-                {"type": "tag", "value": "moody alternative rock", "role": "current_target", "source_turn": 2, "mentioned_current_turn": True, "use_as_retrieval_seed": True, "evidence_text": "moody alternative rock"},
-                {"type": "tag", "value": "other artists", "role": "current_target", "source_turn": 2, "mentioned_current_turn": True, "use_as_retrieval_seed": True, "evidence_text": "other artists"}
-            ],
-            "target_artist_mode": "new_artist",
-            "retrieval_profile": "novelty",
-            "rejections": [
-                {"kind": "artist", "value": "Radiohead", "scope": "hard", "source_turn": 2, "evidence_text": "good on Radiohead for now"}
-            ],
             "temporal_constraint": None,
             "lyrical_theme": None,
         },
@@ -55,21 +58,24 @@ REJECTION_FOCUSED_EXAMPLES = [
             ],
         },
         "output": {
-            "turn_intent": "New bands with a heavy riff-driven sound similar to Metallica, but not Metallica.",
+            "current_request": {
+                "request_type": "new_artist",
+                "summary": "New bands with a heavy riff-driven sound similar to Metallica, but not Metallica.",
+                "source_turn": 8,
+                "evidence_text": "new bands",
+            },
+            "facts": [
+                {"type": "artist", "value": "Metallica", "role": "rejected", "anchor_use": "do_not_use", "relation": "exclude", "reuse": "must_exclude", "source_turn": 8, "mentioned_current_turn": True, "evidence_text": "but not them"},
+                {"type": "attribute", "facet": "sonic", "value": "heavy riff-driven", "role": "current_target", "anchor_use": "query_facet", "relation": "query_facet", "reuse": "not_applicable", "source_turn": 8, "mentioned_current_turn": True, "evidence_text": "heavy riff-driven sound"},
+                {"type": "attribute", "facet": "performer", "value": "new bands", "role": "current_target", "anchor_use": "query_facet", "relation": "query_facet", "reuse": "not_applicable", "source_turn": 8, "mentioned_current_turn": True, "evidence_text": "new bands"},
+            ],
+            "exclusions": [
+                {"type": "artist", "value": "Metallica", "scope": "next_turn_hard", "source_turn": 8, "evidence_text": "but not them"}
+            ],
             "track_feedback": [
                 {"track_id": "t-metallica-1", "overall_sentiment": 1, "role": "satisfied"}
             ],
             "referenced_track_ids": [],
-            "entities": [
-                {"type": "artist", "value": "Metallica", "role": "rejected", "source_turn": 8, "mentioned_current_turn": True, "use_as_retrieval_seed": False, "evidence_text": "but not them"},
-                {"type": "tag", "value": "heavy riff-driven", "role": "current_target", "source_turn": 8, "mentioned_current_turn": True, "use_as_retrieval_seed": True, "evidence_text": "heavy riff-driven sound"},
-                {"type": "tag", "value": "new bands", "role": "current_target", "source_turn": 8, "mentioned_current_turn": True, "use_as_retrieval_seed": True, "evidence_text": "new bands"}
-            ],
-            "target_artist_mode": "new_artist",
-            "retrieval_profile": "novelty",
-            "rejections": [
-                {"kind": "artist", "value": "Metallica", "scope": "hard", "source_turn": 8, "evidence_text": "but not them"}
-            ],
             "temporal_constraint": None,
             "lyrical_theme": None,
         },

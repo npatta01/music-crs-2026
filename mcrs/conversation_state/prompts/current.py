@@ -5,7 +5,7 @@ to extract conversation-visible facts for the next recommendation: the current
 request, fact roles, retrieval-anchor use, bounded evidence spans, hard/soft
 exclusions, and a minimal temporal guardrail. Legacy compiler-facing fields
 (`mentioned_entities`, `process_constraints`, `routing_tags`, etc.) are derived
-by `ConversationStateV0Plus` compatibility properties, not emitted by the LLM.
+by the V1-to-V0Plus bridge, not emitted by the LLM.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ import json
 from typing import Any
 
 from mcrs.conversation_state.schema import (
-    ConversationStateV0Plus,
+    ConversationStateV1,
 )
 from mcrs.conversation_state.prompts.common import (
     harden_schema,
@@ -40,10 +40,11 @@ Prefer these fields:
 - temporal_constraint: a small guardrail only. Literal dates may filter; style eras should not.
 - lyrical_theme: only when lyrics/meaning/message/story is the requested retrieval signal.
 
-Compatibility fields (`turn_intent`, `entities`, `rejections`,
-`target_artist_mode`, and `retrieval_profile`) may be omitted when the
-fact-first fields are populated. The schema derives them for the existing
-compiler.
+Do not emit compatibility fields (`turn_intent`, `entities`, `rejections`,
+`target_artist_mode`, or `retrieval_profile`). The deterministic bridge derives
+those fields for the existing compiler from `current_request`, `facts`,
+`exclusions`, `track_feedback`, `referenced_track_ids`, and
+`temporal_constraint`.
 
 Core principle: the state is for the NEXT recommendation, not a transcript
 summary. A loved prior track is usually evidence/context, not automatically a
@@ -1273,6 +1274,34 @@ FEW_SHOT_EXAMPLES = [
 ]
 
 
+_V0PLUS_COMPAT_OUTPUT_KEYS = {
+    "turn_intent",
+    "entities",
+    "target_artist_mode",
+    "retrieval_profile",
+    "rejections",
+}
+
+
+def strip_v0plus_compat_output_fields(example: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy of a few-shot example with only V1 output fields.
+
+    Some older examples carry V0Plus compatibility fields for comparison with
+    past prompt versions. The current prompt must not teach the model to emit
+    those fields, so build-time examples are normalized here.
+    """
+
+    output = dict(example["output"])
+    for key in _V0PLUS_COMPAT_OUTPUT_KEYS:
+        output.pop(key, None)
+    return {"user_prompt": example["user_prompt"], "output": output}
+
+
+FEW_SHOT_EXAMPLES = [
+    strip_v0plus_compat_output_fields(example) for example in FEW_SHOT_EXAMPLES
+]
+
+
 def build_messages(conversation: list[dict[str, Any]], played_track_ids: list[str]) -> list[dict[str, str]]:
     messages = [{"role": "system", "content": SYSTEM}]
     for ex in FEW_SHOT_EXAMPLES:
@@ -1289,12 +1318,12 @@ def build_messages(conversation: list[dict[str, Any]], played_track_ids: list[st
 
 
 def json_schema_for_response_format() -> dict[str, Any]:
-    schema = harden_schema(ConversationStateV0Plus.model_json_schema())
+    schema = harden_schema(ConversationStateV1.model_json_schema())
     schema = strip_schema_annotations(schema)
     return {
         "type": "json_schema",
         "json_schema": {
-            "name": "ConversationStateV0Plus",
+            "name": "ConversationStateV1",
             "strict": True,
             "schema": schema,
         },
@@ -1330,7 +1359,7 @@ def json_schema_for_response_format() -> dict[str, Any]:
 #      for genuine unions too.
 #   4. Drops keys outside the Gemini-supported subset.
 # The Pydantic model is still the real validation gate (the extractor re-parses
-# the model output into ConversationStateV0Plus), so a slightly more permissive
+# the model output into ConversationStateV1), so a slightly more permissive
 # wire schema is acceptable.
 
 # Keys Gemini's responseSchema (OpenAPI subset) accepts on a schema node.

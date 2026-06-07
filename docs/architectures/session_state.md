@@ -2,8 +2,9 @@
 
 > **What it is:** the structured, per-turn understanding of the conversation
 > that drives retrieval. An LLM reads `session_memory` and emits
-> `ConversationStateV0Plus`; a resolver then grounds eligible surface-form names
-> to catalog IDs.
+> `ConversationStateV1`; a deterministic bridge projects that fact state into
+> the current `ConversationStateV0Plus` compiler contract, and the resolver then
+> grounds eligible surface-form names to catalog IDs.
 >
 > **Source of truth:** `mcrs/conversation_state/schema.py`,
 > `mcrs/conversation_state/prompts/current.py`,
@@ -13,11 +14,12 @@
 > Last verified: 2026-06-07.
 
 Session state is the contract between the conversation and candidate
-generation. The v1 contract is intentionally allowed to break the old extractor
-shape: it asks the LLM for meaningful operational state, then exposes derived
-compatibility views for existing compiler code while downstream retrieval is
-migrated. The active prompt and few-shot examples are the primary implementation
-surface; the schema alone is not enough to change extraction behavior.
+generation. The V1 contract is LLM-facing and fact-first: it asks the model for
+meaningful conversation facts, not compiler/routing policy. The bridge/projector
+exposes derived compatibility views for existing V0Plus compiler code while
+downstream retrieval migrates. The active prompt and few-shot examples are the
+primary implementation surface; the schema alone is not enough to change
+extraction behavior.
 
 ---
 
@@ -27,10 +29,12 @@ surface; the schema alone is not enough to change extraction behavior.
 session_memory  (list of {role, content} turns)
    |
    1. EXTRACT   LiteLLMExtractor (compiler_v0plus_qu.py)
-   |              LLM call, JSON-schema-constrained to ConversationStateV0Plus
-   |              prompt_version current -> v1 state
+   |              LLM call, JSON-schema-constrained to ConversationStateV1
    |
-   2. RESOLVE   V0PlusResolver (resolver_v0plus.py)
+   2. PROJECT   project_v1_to_v0plus(schema.py)
+   |              structural V1 -> V0Plus compatibility bridge
+   |
+   3. RESOLVE   V0PlusResolver (resolver_v0plus.py)
    |              fuzzy-match only seed/current-target surface names
    |              resolve hard/soft rejections
    |              collect played_track_ids and feedback artists
@@ -38,10 +42,13 @@ session_memory  (list of {role, content} turns)
    -> ResolvedConversationState   (what the compiler consumes)
 ```
 
-- **Extract**: `current.py` asks the model to output v1 fields only. It should
+- **Extract**: `current.py` asks the model to output V1 fields only. It should
   classify whether prior entities are current seeds, satisfied history,
   contrast, or rejected context instead of treating every positive mention as a
   retriever anchor.
+- **Project**: `project_v1_to_v0plus()` copies only structured V1 fields and
+  derives V0Plus compatibility. It does not inspect raw user text or repair
+  phrases with regex-like logic.
 - **Resolve**: `V0PlusResolver` consumes derived property views such as
   `mentioned_entities`, `style_reference_entities`, and
   `explicit_rejections`. Exact targets and style references are both resolved
@@ -50,45 +57,50 @@ session_memory  (list of {role, content} turns)
 
 ---
 
-## 2. `ConversationStateV0Plus` v1 fields
+## 2. `ConversationStateV1` fields
 
 | Field | Type | What it captures | Retrieval implication |
 |---|---|---|---|
-| `turn_intent` | `str` | Active ask for the next recommendation, in natural language. | Dense/BM25 query text and trace readability. |
-| `facts` | `list[StateFact]` | Atomic artist/album/track/attribute facts with `role`, `anchor_use`, `relation`, and `reuse`. | Primary v1 state contract. Exact targets, style references, query facets, and exclusions project into separate compiler-facing views. |
+| `current_request` | `CurrentRequest \| None` | Active ask plus a factual request type such as `new_artist`, `exact_track`, `attribute_search`, or `hidden_target`. | Weak request-kind evidence. The compiler derives route/profile from this plus facts. |
+| `facts` | `list[StateFact]` | Atomic artist/album/track/attribute facts with `role`, `anchor_use`, `relation`, and `reuse`. | Primary V1 state contract. Exact targets, style references, query facets, and exclusions project into separate compiler-facing views. |
+| `exclusions` | `list[StateExclusion]` | Explicit hard exclusions or soft avoid preferences. | Projects to negative mentions and explicit rejections when eligible. |
 | `track_feedback` | `list[TrackFeedback]` | User reaction to played tracks: `accepted`, `rejected`, `seed`, `neutral`, `satisfied`, or `contrast`. | Positive/seed tracks can anchor centroids; rejected/contrast/satisfied roles should not blindly carry forward. |
 | `referenced_track_ids` | `list[str]` | Explicit pronoun/position references to played tracks. | Exact track anchors when the user says "the second one" or "that previous track". |
-| `entities` | `list[StateEntity]` | Role-typed artist/album/track/tag entities. | Only `current_target` or `seed` entities with `use_as_retrieval_seed=true` become retrieval anchors. |
-| `target_artist_mode` | enum | `same_artist`, `new_artist`, `any_artist`, or `unknown`. | Drives continuation vs novelty policy before fusion/ranking. |
-| `retrieval_profile` | enum | `continuation`, `novelty`, `exact_probe`, `feature_search`, or `hidden_target_search`. | Gives downstream code an operational mode instead of inferring it from sentiment. |
-| `rejections` | `list[StateRejection]` | Hard and soft future exclusions. | Hard artist/track rejections project to strict excludes; soft style/tag rejections demote. |
 | `temporal_constraint` | `TemporalConstraint \| None` | Minimal date/era guardrail. | Only literal hard release-date asks use `apply_as_filter=true`; style/reference eras stay soft. |
 | `lyrical_theme` | `str \| None` | Lyrics topic or quoted lyric phrase. | Lyric dense branch query when present. |
 
-### Role-typed entities
+V1 intentionally does **not** contain `turn_intent`, `entities`, `rejections`,
+`target_artist_mode`, `retrieval_profile`, `routing_tags`, `hard_filters`, or
+`release_year_range`. Those are projected compatibility fields.
 
-`StateEntity` is the main schema change:
+### Fact roles
+
+`StateFact` is the main schema surface:
 
 ```json
 {
-  "type": "artist|album|track|tag",
+  "type": "artist|album|track|attribute",
+  "facet": "genre|mood|sonic|instrument|energy|lyrical_theme|visual|popularity|era|performer",
   "value": "Morphine",
-  "role": "current_target|seed|satisfied|history|contrast|rejected",
+  "role": "current_target|satisfied_prior|history|contrast|rejected",
+  "anchor_use": "must_use|query_facet|partial_anchor|do_not_use",
+  "relation": "exact_target|style_reference|query_facet|exclude|history|contrast|satisfied_prior",
+  "reuse": "must_reuse|may_reuse|avoid_exact|must_exclude|not_applicable",
   "source_turn": 4,
   "mentioned_current_turn": true,
-  "use_as_retrieval_seed": false,
   "evidence_text": "another artist"
 }
 ```
 
 Rules:
 
-- `current_target` and `seed` can drive exact/discography/anchor retrieval.
-- `satisfied`, `history`, `contrast`, and `rejected` are retained for context
-  and debugging but are forced to `use_as_retrieval_seed=false`.
+- `current_target` can drive exact/discography retrieval only when the fact is
+  an exact entity target with `reuse=must_reuse`.
+- `satisfied_prior`, `history`, `contrast`, and `rejected` are retained for
+  context and debugging but do not become exact retrieval seeds.
 - `evidence_text` is optional, bounded to 240 characters, and intended only for
-  high-risk decisions such as entity role, hard rejection, artist-mode choice,
-  or temporal hard-vs-soft classification.
+  high-risk decisions such as fact role, hard rejection, and temporal
+  hard-vs-soft classification.
 
 ### Fact relation and reuse
 
@@ -151,15 +163,18 @@ eras do not drop out-of-range catalog items.
 
 ## 3. Compatibility views
 
-The extractor no longer emits the old fields, but `ConversationStateV0Plus`
-still exposes derived properties so existing compiler code can migrate
-gradually:
+The extractor emits `ConversationStateV1`; `project_v1_to_v0plus()` returns a
+`ConversationStateV0Plus` compatibility object so existing compiler code can
+migrate gradually:
 
 | Derived view | Source in v1 |
 |---|---|
-| `intent_mode` | `retrieval_profile`: novelty -> pivot, continuation/exact -> refinement, otherwise open explore. |
-| `process_constraints` | `target_artist_mode` and `retrieval_profile`. |
-| `routing_tags` | `retrieval_profile` plus `lyrical_theme`. |
+| `turn_intent` | `current_request.summary`. |
+| `target_artist_mode` | `current_request.request_type` plus projected exact/new-artist evidence. |
+| `retrieval_profile` | `current_request.request_type` plus exact/feature/hidden-target evidence. |
+| `intent_mode` | Derived V0Plus `retrieval_profile`: novelty -> pivot, continuation/exact -> refinement, otherwise open explore. |
+| `process_constraints` | Derived V0Plus `target_artist_mode` and `retrieval_profile`. |
+| `routing_tags` | Derived V0Plus `retrieval_profile` plus `lyrical_theme`. |
 | `mentioned_entities` | Negative exclusions plus exact/query facts that may drive current exact retrieval. Style references are excluded. |
 | `style_reference_entities` | Artist/album/track facts with `relation=style_reference`; consumed as soft reference anchors, not exact targets. |
 | `explicit_rejections` | Hard artist/track rejections plus tag/style demotions. |

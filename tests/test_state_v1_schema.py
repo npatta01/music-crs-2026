@@ -2,12 +2,136 @@ import pytest
 from pydantic import ValidationError
 
 from mcrs.conversation_state.schema import (
+    ConversationStateV1,
     ConversationStateV0Plus,
     EntityRole,
     RetrievalProfile,
     TargetArtistMode,
+    project_v1_to_v0plus,
 )
 from mcrs.conversation_state.prompts import current as current_prompt
+
+
+def test_conversation_state_v1_is_llm_facing_and_forbids_compiler_fields():
+    state = ConversationStateV1(
+        current_request={
+            "request_type": "new_artist",
+            "summary": "Other popular hip-hop hits, but no more Drake.",
+            "source_turn": 6,
+        },
+        facts=[
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "hip-hop",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 6,
+                "mentioned_current_turn": True,
+            }
+        ],
+    )
+
+    assert state.current_request is not None
+    assert not hasattr(state, "target_artist_mode")
+    assert not hasattr(state, "retrieval_profile")
+    assert not hasattr(state, "entities")
+    assert not hasattr(state, "rejections")
+
+    with pytest.raises(ValidationError):
+        ConversationStateV1.model_validate(
+            {
+                "current_request": {
+                    "request_type": "new_artist",
+                    "summary": "Other popular hip-hop hits.",
+                    "source_turn": 6,
+                },
+                "facts": [],
+                "target_artist_mode": "new_artist",
+            }
+        )
+
+
+def test_project_v1_to_v0plus_derives_retriever_contract_without_raw_text_policy():
+    state_v1 = ConversationStateV1(
+        current_request={
+            "request_type": "new_artist",
+            "summary": "Other popular hip-hop hits from late 2015 to early 2016, but no more Drake.",
+            "source_turn": 6,
+            "evidence_text": "other popular hip-hop hits",
+        },
+        facts=[
+            {
+                "type": "artist",
+                "value": "Drake",
+                "role": "rejected",
+                "anchor_use": "do_not_use",
+                "relation": "exclude",
+                "reuse": "must_exclude",
+                "source_turn": 6,
+                "mentioned_current_turn": True,
+                "evidence_text": "no more Drake",
+            },
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "hip-hop",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 6,
+                "mentioned_current_turn": True,
+                "evidence_text": "hip-hop hits",
+            },
+            {
+                "type": "attribute",
+                "facet": "popularity",
+                "value": "popular hits",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 6,
+                "mentioned_current_turn": True,
+                "evidence_text": "popular",
+            },
+        ],
+        exclusions=[
+            {
+                "type": "artist",
+                "value": "Drake",
+                "scope": "next_turn_hard",
+                "source_turn": 6,
+                "evidence_text": "no more Drake",
+            }
+        ],
+        temporal_constraint={
+            "kind": "release_date",
+            "start_year": 2015,
+            "end_year": 2016,
+            "strength": "hard",
+            "apply_as_filter": True,
+            "evidence_text": "late 2015 to early 2016",
+        },
+    )
+
+    projected = project_v1_to_v0plus(state_v1)
+
+    assert projected.turn_intent.startswith("Other popular hip-hop hits")
+    assert projected.target_artist_mode is TargetArtistMode.new_artist
+    assert projected.retrieval_profile is RetrievalProfile.novelty
+    assert [(me.type, me.value, me.sentiment) for me in projected.mentioned_entities] == [
+        ("artist", "Drake", -1),
+        ("tag", "hip-hop", 1),
+        ("tag", "popular hits", 1),
+    ]
+    assert [(r.kind, r.value) for r in projected.explicit_rejections] == [
+        ("artist", "Drake")
+    ]
+    assert projected.hard_filters
 
 
 def test_state_v1_role_typed_entities_drive_current_seed_view():
@@ -160,11 +284,14 @@ def test_current_prompt_schema_exposes_v1_fields_not_old_mode_fields():
     assert "current_request" in props
     assert "facts" in props
     assert "exclusions" in props
-    assert "entities" in props
-    assert "target_artist_mode" in props
-    assert "retrieval_profile" in props
-    assert "rejections" in props
     assert "temporal_constraint" in props
+    assert "track_feedback" in props
+    assert "referenced_track_ids" in props
+    assert response_format["json_schema"]["name"] == "ConversationStateV1"
+    assert "entities" not in props
+    assert "target_artist_mode" not in props
+    assert "retrieval_profile" not in props
+    assert "rejections" not in props
     assert "mentioned_entities" not in props
     assert "process_constraints" not in props
     assert "routing_tags" not in props
@@ -230,7 +357,7 @@ def test_current_prompt_teaches_role_typed_state_contract():
 
 def test_current_prompt_few_shots_validate_against_state_schema():
     states = [
-        ConversationStateV0Plus.model_validate(example["output"])
+        ConversationStateV1.model_validate(example["output"])
         for example in current_prompt.FEW_SHOT_EXAMPLES
     ]
 
@@ -241,12 +368,14 @@ def test_current_prompt_few_shots_validate_against_state_schema():
         for state in states
     )
     assert any(
-        any(entity.role.value == "satisfied" for entity in state.entities)
-        and state.target_artist_mode.value == "new_artist"
+        any(fact.role.value == "satisfied_prior" for fact in state.facts)
+        and state.current_request
+        and state.current_request.request_type.value == "new_artist"
         for state in states
     )
     assert any(
-        state.retrieval_profile.value == "hidden_target_search"
+        state.current_request
+        and state.current_request.request_type.value == "hidden_target"
         and state.lyrical_theme
         for state in states
     )
@@ -268,21 +397,21 @@ def test_current_prompt_teaches_generic_for_now_artist_rejection():
     system = current_prompt.SYSTEM.casefold()
     examples = current_prompt.FEW_SHOT_EXAMPLES
     states = [
-        ConversationStateV0Plus.model_validate(example["output"])
+        ConversationStateV1.model_validate(example["output"])
         for example in examples
     ]
 
     assert "good on x for now" in system
     assert any(
         any(
-            rejection.kind == "artist"
-            and rejection.scope.value == "hard"
-            and "for now" in (rejection.evidence_text or "").casefold()
-            for rejection in state.rejections
+            exclusion.type.value == "artist"
+            and exclusion.scope.value == "next_turn_hard"
+            and "for now" in (exclusion.evidence_text or "").casefold()
+            for exclusion in state.exclusions
         )
         and all(
-            entity.role.value != "current_target" or entity.value != state.rejections[0].value
-            for entity in state.entities
+            fact.role.value != "current_target" or fact.value != state.exclusions[0].value
+            for fact in state.facts
         )
         for state in states
     )
@@ -373,7 +502,7 @@ def test_current_prompt_teaches_retriever_critical_surface_cues():
 
 def test_current_prompt_few_shots_cover_remaining_surface_cue_gaps():
     states = [
-        ConversationStateV0Plus.model_validate(example["output"])
+        ConversationStateV1.model_validate(example["output"])
         for example in current_prompt.FEW_SHOT_EXAMPLES
     ]
     values = {
