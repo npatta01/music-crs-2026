@@ -690,6 +690,11 @@ def _mentioned_entity_from_exclusion(
     entity_type = _fact_type_to_legacy_entity_type(exclusion.type.value)
     if entity_type is None:
         return None
+    if (
+        entity_type in {"artist", "album", "track"}
+        and exclusion.scope != ExclusionScope.next_turn_hard
+    ):
+        return None
     return MentionedEntity(type=entity_type, value=exclusion.value, sentiment=-1)
 
 
@@ -702,6 +707,8 @@ def _explicit_rejection_from_exclusion(
     if kind == "attribute":
         kind = "tag"
     if kind not in ("artist", "track", "album", "tag"):
+        return None
+    if kind in {"artist", "track", "album"} and exclusion.scope != ExclusionScope.next_turn_hard:
         return None
     return ExplicitRejection(
         kind=kind,

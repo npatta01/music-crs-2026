@@ -152,6 +152,12 @@ qu_kwargs:
 
     routing_boost: {}
 
+    # Consume V1 style-reference entities as soft centroid anchors. This keeps
+    # exact/entity/tag projection unchanged, but lets "similar to X" and liked
+    # prior artists contribute representative tracks to audio/image/CF centroid
+    # branches when the compiler safety gates allow it.
+    enable_similar_artist_anchors: true
+
     enable_resolved_artist_discography: true
     disco_weight: 1.0
     disco_cap: 150

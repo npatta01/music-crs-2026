@@ -1030,6 +1030,77 @@ def test_fact_projection_keeps_soft_style_dislikes_as_tag_demotions():
     ]
 
 
+def test_soft_entity_exclusion_does_not_override_current_exact_target():
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "exact_track",
+            "summary": "Play The Spirit of Radio by Rush instead.",
+            "source_turn": 3,
+            "evidence_text": "play The Spirit of Radio by Rush instead",
+        },
+        facts=[
+            {
+                "type": "track",
+                "value": "Tom Sawyer",
+                "role": "rejected",
+                "anchor_use": "do_not_use",
+                "relation": "exclude",
+                "reuse": "must_exclude",
+                "source_turn": 3,
+                "mentioned_current_turn": True,
+                "evidence_text": "problem with Tom Sawyer",
+            },
+            {
+                "type": "track",
+                "value": "The Spirit of Radio",
+                "role": "current_target",
+                "anchor_use": "must_use",
+                "relation": "exact_target",
+                "reuse": "must_reuse",
+                "source_turn": 3,
+                "mentioned_current_turn": True,
+                "evidence_text": "play The Spirit of Radio",
+            },
+            {
+                "type": "artist",
+                "value": "Rush",
+                "role": "current_target",
+                "anchor_use": "must_use",
+                "relation": "exact_target",
+                "reuse": "must_reuse",
+                "source_turn": 3,
+                "mentioned_current_turn": True,
+                "evidence_text": "by Rush",
+            },
+        ],
+        exclusions=[
+            {
+                "type": "track",
+                "value": "Tom Sawyer",
+                "scope": "next_turn_hard",
+                "source_turn": 3,
+                "evidence_text": "problem with Tom Sawyer",
+            },
+            {
+                "type": "artist",
+                "value": "Rush",
+                "scope": "soft_preference",
+                "source_turn": 1,
+                "evidence_text": "prior compatibility noise",
+            },
+        ],
+    )
+
+    assert [(me.type, me.value, me.sentiment) for me in state.mentioned_entities] == [
+        ("track", "Tom Sawyer", -1),
+        ("track", "The Spirit of Radio", 1),
+        ("artist", "Rush", 1),
+    ]
+    assert [(r.kind, r.value) for r in state.explicit_rejections] == [
+        ("track", "Tom Sawyer")
+    ]
+
+
 def test_fact_relation_and_reuse_split_exact_targets_from_style_references():
     state = ConversationStateV0Plus(
         current_request={
