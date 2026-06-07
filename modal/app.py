@@ -1350,6 +1350,7 @@ def _state_v1_retriever_matrix(
         str(output_md),
         "--output-csv",
         str(output_csv),
+        "--quiet",
     ]
     for variant in variants:
         cmd.extend(["--variant", str(variant)])
@@ -1373,9 +1374,9 @@ def _state_v1_retriever_matrix(
 @app.local_entrypoint()
 def run_state_v1_retriever_matrix(
     variants_json: str = '["all_candidate_recall"]',
-    limit: int = 56,
+    limit: int = 0,
     output_prefix: str = "state_v1_retriever_matrix_modal",
-    sample_id_file: str = "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_role_v2_pack56_sample_ids.txt",
+    sample_id_file: str = "",
 ):
     """Run the V1 retriever matrix inside Modal against remote LanceDB."""
     result = _state_v1_retriever_matrix.remote(
