@@ -546,6 +546,12 @@ def _fact_type_to_legacy_entity_type(fact_type: str | None) -> str | None:
     return None
 
 
+def _fact_to_legacy_entity_type(fact: dict) -> str | None:
+    if _fact_relation_value(fact) == FactRelation.query_facet.value:
+        return "tag"
+    return _fact_type_to_legacy_entity_type(fact.get("type"))
+
+
 def _fact_type_to_rejection_kind(fact_type: str | None) -> str | None:
     if fact_type == FactType.attribute.value:
         return "tag"
@@ -589,7 +595,7 @@ def _fact_uses_retrieval_seed(fact: dict) -> bool:
     reuse = _fact_reuse_value(fact)
     if relation == FactRelation.exclude.value or reuse == ReusePolicy.must_exclude.value:
         return False
-    if fact.get("type") == FactType.attribute.value:
+    if relation == FactRelation.query_facet.value:
         return relation == FactRelation.query_facet.value and anchor_use in {
             AnchorUse.must_use.value,
             AnchorUse.query_facet.value,
@@ -643,7 +649,7 @@ def _state_entity_key(entity_type: str | None, value: str | None) -> tuple[str, 
 
 
 def _entity_from_fact(fact: dict) -> dict | None:
-    entity_type = _fact_type_to_legacy_entity_type(fact.get("type"))
+    entity_type = _fact_to_legacy_entity_type(fact)
     if entity_type is None or not fact.get("value"):
         return None
     return {
@@ -658,12 +664,13 @@ def _entity_from_fact(fact: dict) -> dict | None:
 
 
 def _mentioned_entity_from_fact(fact: "StateFact") -> MentionedEntity | None:
-    entity_type = _fact_type_to_legacy_entity_type(fact.type.value)
+    fact_payload = fact.model_dump(mode="json")
+    entity_type = _fact_to_legacy_entity_type(fact_payload)
     if entity_type is None:
         return None
     if fact.role == FactRole.rejected:
         return MentionedEntity(type=entity_type, value=fact.value, sentiment=-1)
-    if _fact_uses_retrieval_seed(fact.model_dump()):
+    if _fact_uses_retrieval_seed(fact_payload):
         return MentionedEntity(type=entity_type, value=fact.value, sentiment=1)
     return None
 

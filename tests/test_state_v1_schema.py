@@ -134,6 +134,39 @@ def test_project_v1_to_v0plus_derives_retriever_contract_without_raw_text_policy
     assert projected.hard_filters
 
 
+def test_project_v1_to_v0plus_treats_query_facet_relation_as_retriever_tag():
+    state_v1 = ConversationStateV1(
+        current_request={
+            "request_type": "attribute_search",
+            "summary": "Another upbeat, high-energy country track.",
+            "source_turn": 6,
+            "evidence_text": "high-energy country track",
+        },
+        facts=[
+            {
+                "type": "artist",
+                "value": "country",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 6,
+                "mentioned_current_turn": True,
+                "evidence_text": "country track",
+            }
+        ],
+    )
+
+    projected = project_v1_to_v0plus(state_v1)
+
+    assert [(entity.type, entity.value, entity.use_as_retrieval_seed) for entity in projected.entities] == [
+        ("tag", "country", True)
+    ]
+    assert [(mention.type, mention.value, mention.sentiment) for mention in projected.mentioned_entities] == [
+        ("tag", "country", 1)
+    ]
+
+
 def test_state_v1_role_typed_entities_drive_current_seed_view():
     state = ConversationStateV0Plus(
         turn_intent="other high-energy classic disco tracks",
