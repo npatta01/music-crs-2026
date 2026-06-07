@@ -11,6 +11,14 @@ design doc, with the first-cut decisions locked 2026-06-03:
 * E   query x item match (the learned routing-multiplier replacement)
 * F   cheap structural signals (score gap/ratio to top, within-union artist concentration,
       conversation position, query specificity, tag jaccard/novelty)
+* P   abandoned-direction match (negative-pivot mirror of E's anchor features): does the
+      candidate resemble (artist/album/track/tags) the carried-forward positive tracks the user
+      is pivoting away from? Lets the tree learn ``pivot AND resembles-abandoned => demote``.
+* U   Tier-A user-profile + conversation-goal context (organizer session metadata joined by
+      session_id): goal category/specificity, user age/gender, session_date×release_year era
+      interactions, and a Tier-B ``preferred_musical_culture`` × candidate-tags genre-token
+      match. Group-constant categoricals + per-candidate interactions; neutral (NaN) when the
+      session-meta join is absent (serving path / pre-join datasets).
 
 artist_id / album_id are used internally for match features but are **never emitted** as
 model columns (memorisation/leakage guard).
@@ -25,6 +33,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 from pathlib import Path
 from typing import Any
 
@@ -288,6 +297,269 @@ def _block_e_and_f_union(df: pd.DataFrame, groups: pd.DataFrame, meta: pd.DataFr
     return pd.DataFrame(cols, index=df.index)
 
 
+# ----------------------------------------------------- block P: abandoned-direction (pivot)
+
+def _abandoned_anchor_track_ids(track_feedback: list[dict[str, Any]] | None) -> set[str]:
+    """Carried-forward positive (accepted/seed, sentiment>0) tracks = the "abandoned direction".
+
+    Mirrors the non-pivot branch of ``compiler_v0plus._positive_anchor_track_ids`` but
+    INTENTIONALLY omits the pivot guard: on a pivot turn this is exactly the direction the user
+    just left, which the reranker needs in order to learn to demote it. On a non-pivot turn it
+    equals the anchor set (harmlessly redundant with the ``e__*`` anchor-match features).
+    """
+    ids: set[str] = set()
+    for tf in track_feedback or []:
+        if tf.get("role") in ("accepted", "seed") and (tf.get("overall_sentiment") or 0) > 0:
+            tid = tf.get("track_id")
+            if tid:
+                ids.add(tid)
+    return ids
+
+
+def _block_p_pivot_away(df: pd.DataFrame, groups: pd.DataFrame, meta: pd.DataFrame) -> pd.DataFrame:
+    """Per-candidate resemblance to the ABANDONED direction + pivot scalars.
+
+    The negative-pivot mirror of E's anchor-match features. For every candidate, flag whether it
+    matches the artist / album / track / tags of the carried-forward positive ("abandoned")
+    tracks (``_abandoned_anchor_track_ids``), so a LambdaMART tree can learn the interaction
+    ``intent_mode==pivot AND resembles-abandoned => demote``. Derived purely from ``track_feedback``
+    already in the group record, so no trace regeneration is needed.
+
+    All columns are deliberately left monotone-UNCONSTRAINED (see ``monotone_constraints``): the
+    correct direction flips with intent (demote on pivot; the same similarity is mildly positive
+    off-pivot), so the tree decides.
+
+    Limitation: the abandoned set comes from positively-rated *played* tracks only; a pivot away
+    from an artist that was merely *mentioned* (never played) is not captured by this tier.
+    """
+    artist_of = dict(zip(meta["track_id"], meta["artist_id"]))
+    album_of = dict(zip(meta["track_id"], meta["album_id"]))
+    tags_of = dict(zip(meta["track_id"], meta["tags"]))
+    grp_state = groups.set_index([groups["session_id"], groups["turn_number"]])
+
+    n = len(df)
+    cols = {
+        "p__is_abandoned_track": np.zeros(n, "int8"),
+        "p__artist_match_abandoned": np.zeros(n, "int8"),
+        "p__album_match_abandoned": np.zeros(n, "int8"),
+        "p__tag_overlap_abandoned": np.zeros(n, "int16"),
+        "p__jaccard_tag_abandoned": np.full(n, np.nan),
+        "q__is_pivot": np.zeros(n, "int8"),
+        "q__n_abandoned_anchors": np.zeros(n, "int16"),
+    }
+    df = df.reset_index(drop=True)
+
+    for (sid, turn), sub in df.groupby(GROUP_KEYS, sort=False):
+        gs = grp_state.loc[(sid, turn)]
+        if isinstance(gs, pd.DataFrame):
+            gs = gs.iloc[0]
+        abandoned_tracks = _abandoned_anchor_track_ids(gs.get("track_feedback"))
+        intent = gs.get("intent_mode")
+        idx = sub.index.to_numpy()
+        cols["q__is_pivot"][idx] = 1 if intent == "pivot" else 0
+        cols["q__n_abandoned_anchors"][idx] = len(abandoned_tracks)
+        if not abandoned_tracks:
+            continue  # nothing abandoned -> matches stay 0, jaccard stays NaN
+
+        abandoned_artists = {artist_of.get(t) for t in abandoned_tracks}
+        abandoned_artists.discard(None)
+        abandoned_albums = {album_of.get(t) for t in abandoned_tracks}
+        abandoned_albums.discard(None)
+        abandoned_tags: set[str] = set()
+        for t in abandoned_tracks:
+            abandoned_tags.update(tags_of.get(t, ()))
+
+        tids = sub["track_id"].to_numpy()
+        artists = np.array([artist_of.get(t) for t in tids], dtype=object)
+        albums = np.array([album_of.get(t) for t in tids], dtype=object)
+        cols["p__is_abandoned_track"][idx] = [t in abandoned_tracks for t in tids]
+        cols["p__artist_match_abandoned"][idx] = [a in abandoned_artists for a in artists]
+        cols["p__album_match_abandoned"][idx] = [a in abandoned_albums for a in albums]
+        cand_tags = [set(tags_of.get(t, ())) for t in tids]
+        cols["p__tag_overlap_abandoned"][idx] = [len(ct & abandoned_tags) for ct in cand_tags]
+        if abandoned_tags:
+            cols["p__jaccard_tag_abandoned"][idx] = [
+                (len(ct & abandoned_tags) / len(ct | abandoned_tags)) if (ct or abandoned_tags) else 0.0
+                for ct in cand_tags]
+
+    return pd.DataFrame(cols, index=df.index)
+
+
+# ------------------------------------------------- block U: user-profile + conversation-goal
+
+USER_GOAL_CATEGORICALS = ["q__goal_category", "q__goal_specificity", "q__user_gender"]
+_FORMATIVE_MIN, _FORMATIVE_MAX = 12, 25  # nostalgia band: track released when user was ~12-25
+
+# Geographic / filler tokens stripped from a free-text ``preferred_musical_culture`` so only
+# genre tokens remain to match against catalog tags. (Geo words like "american" are themselves
+# common tags, so they must be removed or they'd add noise; pure-genre tokens like "rock" stay.)
+_CULTURE_STOP = frozenset({
+    "culture", "cultures", "music", "musical", "scene", "style", "sound", "sounds", "subculture",
+    "and", "of", "the", "a", "an",
+    "western", "eastern", "northern", "southern", "north", "south", "east", "west",
+    "american", "america", "anglo", "anglophone", "angloamerican", "british", "britain", "uk",
+    "european", "europe", "brazilian", "brazil", "nordic", "scandinavian", "german", "germany",
+    "french", "france", "francophone", "japanese", "japan", "korean", "korea", "irish", "ireland",
+    "spanish", "spain", "hispanic", "canadian", "canada", "australian", "australia", "jamaican",
+    "caribbean", "polynesian", "indonesian", "asian", "african", "africa", "diaspora", "black",
+    "international", "global", "worldwide", "domestic", "national", "anglophone",
+    "contemporary", "modern", "vintage", "retro", "classic", "old", "new", "school", "golden",
+    "age", "mainstream", "early", "late", "mid", "era",
+})
+
+
+def _genre_tokens(text: str) -> set[str]:
+    """Split free text into lowercased word-tokens (keeping intra-word hyphens like 'hip-hop').
+
+    Drops era tokens ('90s') and single chars. Shared by the culture phrase and candidate tags
+    so a single-word culture token ('rock') matches a multi-word tag ('alternative rock')."""
+    out: set[str] = set()
+    for p in re.split(r"[^\w-]+", text.lower()):
+        p = p.strip("-")
+        if len(p) < 2 or re.fullmatch(r"\d+s?", p):
+            continue
+        out.add(p)
+    return out
+
+
+def _culture_tokens(culture: Any) -> set[str]:
+    """Genre tokens from a ``preferred_musical_culture`` phrase (geo/filler stripped).
+
+    A token is dropped if it (or, for a hyphenated compound like 'anglo-american', all of its
+    hyphen-parts) is geo/filler — so 'hip-hop' survives but 'anglo-american' does not."""
+    out: set[str] = set()
+    if not culture or not isinstance(culture, str):
+        return out
+    for t in _genre_tokens(culture):
+        if t in _CULTURE_STOP:
+            continue
+        if all(p in _CULTURE_STOP for p in t.split("-") if p):
+            continue
+        out.add(t)
+    return out
+
+
+def _session_year(session_date: Any) -> float:
+    """Year from a 'YYYY-MM-DD' session_date string; NaN if missing/malformed."""
+    if not session_date or not isinstance(session_date, str) or len(session_date) < 4:
+        return np.nan
+    try:
+        return float(int(session_date[:4]))
+    except ValueError:
+        return np.nan
+
+
+def _block_u_user_goal(df: pd.DataFrame, groups: pd.DataFrame, meta: pd.DataFrame) -> pd.DataFrame:
+    """Tier-A session-context features + a Tier-B preferred-musical-culture × tags match.
+
+    Group-constant: goal category (A-K) / specificity (LL/LH/HL/HH) / user gender as pinned
+    categoricals, plus user age and session year as numerics. Per-candidate: how the candidate's
+    release year relates to the session date and user age (track age at session, after-session
+    anomaly, user age at release, nostalgia/formative-years flag), and how many genre tokens of
+    the user's ``preferred_musical_culture`` appear in the candidate's tags (overlap + binary).
+    All monotone-unconstrained.
+
+    Reads fields from the group record (joined by ``session_meta`` in ``build_dataset``). When
+    those columns are absent (serving path / pre-join datasets) every feature is neutral
+    (NaN / NaN-category), so the column set stays stable and train/serve parity holds.
+    """
+    year_of = dict(zip(meta["track_id"], meta["release_year"]))
+    tags_of = dict(zip(meta["track_id"], meta["tags"]))
+    grp_state = groups.set_index([groups["session_id"], groups["turn_number"]])
+    cols_present = {c: (c in groups.columns) for c in
+                    ("goal_category", "goal_specificity", "user_gender", "user_age",
+                     "session_date", "user_preferred_musical_culture")}
+
+    n = len(df)
+    cols: dict[str, Any] = {
+        "q__goal_category": np.array([None] * n, dtype=object),
+        "q__goal_specificity": np.array([None] * n, dtype=object),
+        "q__user_gender": np.array([None] * n, dtype=object),
+        "q__user_age": np.full(n, np.nan),
+        "q__session_year": np.full(n, np.nan),
+        "u__track_age_at_session": np.full(n, np.nan),
+        "u__released_after_session": np.full(n, np.nan),
+        "u__user_age_at_release": np.full(n, np.nan),
+        "u__release_in_formative_window": np.full(n, np.nan),
+        "u__culture_tag_overlap": np.full(n, np.nan),
+        "u__culture_tag_match": np.full(n, np.nan),
+    }
+    df = df.reset_index(drop=True)
+    _tag_tokens_cache: dict[str, set[str]] = {}
+
+    def _tag_tokens(tid):
+        toks = _tag_tokens_cache.get(tid)
+        if toks is None:
+            toks = set()
+            for tag in tags_of.get(tid, ()):
+                toks |= _genre_tokens(tag)
+            _tag_tokens_cache[tid] = toks
+        return toks
+
+    def _get(gs, key):
+        return gs.get(key) if cols_present[key] else None
+
+    for (sid, turn), sub in df.groupby(GROUP_KEYS, sort=False):
+        gs = grp_state.loc[(sid, turn)]
+        if isinstance(gs, pd.DataFrame):
+            gs = gs.iloc[0]
+        idx = sub.index.to_numpy()
+        cols["q__goal_category"][idx] = _get(gs, "goal_category")
+        cols["q__goal_specificity"][idx] = _get(gs, "goal_specificity")
+        cols["q__user_gender"][idx] = _get(gs, "user_gender")
+
+        age = _get(gs, "user_age")
+        age = float(age) if (age is not None and not (isinstance(age, float) and math.isnan(age))) else None
+        if age is not None:
+            cols["q__user_age"][idx] = age
+        syear = _session_year(_get(gs, "session_date"))
+        if not math.isnan(syear):
+            cols["q__session_year"][idx] = syear
+
+        tids = sub["track_id"].to_numpy()
+
+        # Tier-B: preferred_musical_culture genre tokens vs candidate tag tokens.
+        culture_toks = _culture_tokens(_get(gs, "user_preferred_musical_culture"))
+        if culture_toks:
+            ov = [len(culture_toks & _tag_tokens(t)) for t in tids]
+            cols["u__culture_tag_overlap"][idx] = ov
+            cols["u__culture_tag_match"][idx] = [1.0 if o > 0 else 0.0 for o in ov]
+
+        if math.isnan(syear):
+            continue  # no session year -> era interactions stay NaN
+        track_age, after, age_at_rel, formative = [], [], [], []
+        for t in tids:
+            y = year_of.get(t)
+            if y is None or (isinstance(y, float) and math.isnan(y)):
+                track_age.append(np.nan); after.append(np.nan)
+                age_at_rel.append(np.nan); formative.append(np.nan)
+                continue
+            ta = syear - float(y)
+            track_age.append(ta)
+            after.append(1.0 if float(y) > syear else 0.0)
+            if age is not None:
+                ua = age - ta
+                age_at_rel.append(ua)
+                formative.append(1.0 if _FORMATIVE_MIN <= ua <= _FORMATIVE_MAX else 0.0)
+            else:
+                age_at_rel.append(np.nan); formative.append(np.nan)
+        cols["u__track_age_at_session"][idx] = track_age
+        cols["u__released_after_session"][idx] = after
+        cols["u__user_age_at_release"][idx] = age_at_rel
+        cols["u__release_in_formative_window"][idx] = formative
+
+    out = pd.DataFrame(cols, index=df.index)
+    for c in USER_GOAL_CATEGORICALS:
+        levels = CATEGORICAL_LEVELS[c]
+        vals = pd.Series(out[c], index=out.index)
+        # Map any value outside the pinned levels to NA up front (pandas 4 rejects
+        # constructing a Categorical from non-null values not in `categories`).
+        vals = vals.where(vals.isin(levels))
+        out[c] = pd.Categorical(vals, categories=levels)
+    return out
+
+
+
 # ------------------------------------------------------------------------------- assembly
 
 def features_from_frames(
@@ -312,13 +584,16 @@ def features_from_frames(
     c = _block_c(df, meta)
     d = _block_d(df, groups)
     e_f = _block_e_and_f_union(df, groups, meta, a_agg["agg__min_rank"])
+    p = _block_p_pivot_away(df, groups, meta)
+    u = _block_u_user_goal(df, groups, meta)
 
     key_cols = GROUP_KEYS + ["track_id"] + (["label"] if "label" in df.columns else [])
     out = pd.concat(
         [df[key_cols].reset_index(drop=True),
          a_f.reset_index(drop=True), a_agg.reset_index(drop=True),
          c.reset_index(drop=True), d.reset_index(drop=True),
-         e_f.reset_index(drop=True)],
+         e_f.reset_index(drop=True), p.reset_index(drop=True),
+         u.reset_index(drop=True)],
         axis=1,
     )
     return out
@@ -333,7 +608,8 @@ def build_features(dataset_dir: str | Path, catalog: Any) -> pd.DataFrame:
 
 
 NON_FEATURE_COLS = set(GROUP_KEYS + ["track_id", "label"])
-CATEGORICAL_FEATURES = ["intent_mode", "exploration_policy"]
+CATEGORICAL_FEATURES = ["intent_mode", "exploration_policy",
+                        "q__goal_category", "q__goal_specificity", "q__user_gender"]
 # Fixed category levels (from the schema enums). pandas categoricals encode by *code* (the
 # position in the categories list), so train and serve MUST share the same ordered levels --
 # otherwise a single-turn serving frame (one intent_mode) assigns different codes than the
@@ -341,6 +617,10 @@ CATEGORICAL_FEATURES = ["intent_mode", "exploration_policy"]
 CATEGORICAL_LEVELS: dict[str, list[str]] = {
     "intent_mode": ["open_explore", "refinement", "pivot", "playlist_build"],
     "exploration_policy": ["exploit", "diversify_artists", "diversify_albums", "balanced"],
+    # Tier-A (block U). Levels pinned from the challenge dataset; unseen values -> NaN code.
+    "q__goal_category": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"],
+    "q__goal_specificity": ["LL", "LH", "HL", "HH"],
+    "q__user_gender": ["female", "male"],
 }
 
 

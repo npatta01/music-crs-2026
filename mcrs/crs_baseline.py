@@ -133,7 +133,8 @@ class CRS_BASELINE:
             system_prompt += self.role_prompt["personalization"] + '\n' + user_profile_str
         return system_prompt
 
-    def chat(self, user_query: str, user_id: Optional[str] = None) -> dict[str, Any]:
+    def chat(self, user_query: str, user_id: Optional[str] = None,
+             session_context: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """Run a single CRS turn: retrieve items and generate a response.
         Args:
             user_query: The user's latest message or request.
@@ -156,14 +157,14 @@ class CRS_BASELINE:
         if hasattr(self.qu, "compile_track_ids"):
             import inspect
             sig = inspect.signature(self.qu.compile_track_ids)
+            kwargs: dict[str, Any] = {}
             if "user_id" in sig.parameters:
-                retrieval_items = self.qu.compile_track_ids(
-                    self.session_memory, topk=self.retrieval_topk, user_id=user_id,
-                )
-            else:
-                retrieval_items = self.qu.compile_track_ids(
-                    self.session_memory, topk=self.retrieval_topk
-                )
+                kwargs["user_id"] = user_id
+            if "session_context" in sig.parameters:
+                kwargs["session_context"] = session_context
+            retrieval_items = self.qu.compile_track_ids(
+                self.session_memory, topk=self.retrieval_topk, **kwargs
+            )
         else:
             retrieval_input = self.qu.transform_query(self.session_memory)
             retrieval_items = self.retrieval.text_to_item_retrieval(
@@ -204,6 +205,7 @@ class CRS_BASELINE:
         sys_prompts = []
         session_memories = []
         user_ids: list[Any] = []
+        session_contexts: list[Any] = []
 
         for data in batch_data:
             user_query = data['user_query']
@@ -214,6 +216,7 @@ class CRS_BASELINE:
             sys_prompts.append(self._get_system_prompt(user_id))
             session_memories.append(session_memory)
             user_ids.append(user_id)
+            session_contexts.append(data.get('session_context'))
 
         # QUs that own the full pipeline (V0PlusCompilerQU) provide
         # `batch_compile_track_ids` and bypass `self.retrieval`. Forward
@@ -224,14 +227,14 @@ class CRS_BASELINE:
         if hasattr(self.qu, "batch_compile_track_ids"):
             import inspect
             sig = inspect.signature(self.qu.batch_compile_track_ids)
+            kwargs: dict[str, Any] = {}
             if "user_ids" in sig.parameters:
-                batch_retrieval_items = self.qu.batch_compile_track_ids(
-                    session_memories, topk=self.retrieval_topk, user_ids=user_ids,
-                )
-            else:
-                batch_retrieval_items = self.qu.batch_compile_track_ids(
-                    session_memories, topk=self.retrieval_topk,
-                )
+                kwargs["user_ids"] = user_ids
+            if "session_contexts" in sig.parameters:
+                kwargs["session_contexts"] = session_contexts
+            batch_retrieval_items = self.qu.batch_compile_track_ids(
+                session_memories, topk=self.retrieval_topk, **kwargs
+            )
             # V0PlusCompilerQU stashes per-session traces here as a side effect.
             batch_traces = list(getattr(self.qu, "last_traces", []) or [])
         elif hasattr(self.qu, "compile_track_ids"):

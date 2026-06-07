@@ -218,21 +218,32 @@ def main(args):
         print(f"Shard {shard_id}/{num_shards}: {len(db)} sessions "
               f"(indices [{start}, {end}))")
     # Prepare all batch data at once
+    from mcrs.rerank.session_meta import flatten_session_row
     batch_data, metadata = [], []
     for item in db:
         user_id = item['user_id']
         session_id = item['session_id']
+        # Session-level context for the reranker's block-U features (computed at serve so they
+        # are not NaN). Same fields the offline session_id join supplies during training.
+        session_context = {
+            'user_profile': item.get('user_profile'),
+            'conversation_goal': item.get('conversation_goal'),
+            'session_date': item.get('session_date'),
+        }
+        session_meta_flat = flatten_session_row(session_context)
         for target_turn_number in range(1, 9):
             chat_history, user_query = chat_history_parser(item['conversations'], music_crs, target_turn_number)
             batch_data.append({
                 'user_query': user_query,
                 'user_id': user_id,
-                'session_memory': chat_history
+                'session_memory': chat_history,
+                'session_context': session_context,
             })
             metadata.append({
                 'session_id': session_id,
                 'user_id': user_id,
-                'turn_number': target_turn_number
+                'turn_number': target_turn_number,
+                'session_meta': session_meta_flat,
             })
     inference_results = []
     trace_results = []
@@ -255,6 +266,9 @@ def main(args):
                 "session_id": batch_metadata[j]['session_id'],
                 "user_id": batch_metadata[j]['user_id'],
                 "turn_number": batch_metadata[j]['turn_number'],
+                # Carried so the rerank dataset builder gets block-U fields inline (no separate
+                # session_id join needed for traces produced after this change).
+                "session_meta": batch_metadata[j]['session_meta'],
                 "trace": _with_trace_run_metadata(
                     result.get("trace"),
                     trace_run_metadata,

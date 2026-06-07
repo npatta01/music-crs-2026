@@ -127,21 +127,30 @@ def main(args):
         print(f"Shard {shard_id}/{num_shards}: {len(db)} sessions "
               f"(indices [{start}, {end}))")
     # Prepare all batch data at once
+    from mcrs.rerank.session_meta import flatten_session_row
     batch_data, metadata = [], []
     for item in db:
         user_id = item['user_id']
         session_id = item['session_id']
         turn_number = item["conversations"][-1]["turn_number"]
         chat_history, user_query = chat_history_parser(item["conversations"], music_crs, turn_number)
+        # Session-level context for the reranker's block-U features (serve-time, non-NaN).
+        session_context = {
+            'user_profile': item.get('user_profile'),
+            'conversation_goal': item.get('conversation_goal'),
+            'session_date': item.get('session_date'),
+        }
         batch_data.append({
             'user_query': user_query,
             'user_id': user_id,
-            'session_memory': chat_history
+            'session_memory': chat_history,
+            'session_context': session_context,
         })
         metadata.append({
             'session_id': session_id,
             'user_id': user_id,
-            'turn_number': turn_number
+            'turn_number': turn_number,
+            'session_meta': flatten_session_row(session_context),
         })
     inference_results = []
     for i in tqdm(range(0, len(batch_data), args.batch_size), desc="Batch inference"):
