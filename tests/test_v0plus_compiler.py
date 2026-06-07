@@ -102,6 +102,18 @@ class CountingReleaseYearCatalog(DictCatalog):
         return super().release_year_of(track_id)
 
 
+class NoReleaseTextFieldRetriever(FakeRetriever):
+    @property
+    def supported_text_fields(self) -> frozenset[str]:
+        return frozenset({"track_name", "artist_name", "album_name", "tag_list"})
+
+
+class LimitedVectorFieldRetriever(FakeRetriever):
+    @property
+    def supported_vector_fields(self) -> frozenset[str]:
+        return frozenset({"metadata_qwen3_embedding_0_6b"})
+
+
 def _fake_encoder():
     """Fresh FakeEmbeddingClient per test. Returns a fixed vector; tests
     assert on what the compiler does WITH the vector, not its contents."""
@@ -810,6 +822,31 @@ def test_compiler_respects_custom_dense_branches_config():
     assert retriever.embedding_calls[0]["vector_field"] == "metadata_qwen3_embedding_0_6b"
 
 
+def test_compiler_skips_dense_branches_for_unsupported_vector_fields():
+    catalog = _catalog()
+    retriever = LimitedVectorFieldRetriever(
+        text_hits_by_field={"artist_name": [("t-morphine-1", 5.0)]},
+        embedding_hits=[("t-morphine-1", 0.9)],
+    )
+    state = _state(
+        mentioned_entities=[
+            MentionedEntity(type="artist", value="Morphine", sentiment=1),
+        ],
+    )
+    cfg = CompilerConfig(
+        dense_branches=[
+            DenseBranch(vector_field="metadata_qwen3_embedding_0_6b"),
+            DenseBranch(vector_field="metadata_qwen3_embedding_8b"),
+        ]
+    )
+
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    assert [call["vector_field"] for call in retriever.embedding_calls] == [
+        "metadata_qwen3_embedding_0_6b"
+    ]
+
+
 # ---------------------------------------------------------------------
 # Per-branch encoder / query-template dispatch (R1-R4 text-side work)
 # ---------------------------------------------------------------------
@@ -1194,6 +1231,61 @@ def test_resolver_grounds_positive_artist_mention():
     assert arts[0].source_text == "Morphine"
 
 
+def test_resolver_grounds_only_v1_seed_entities_as_targets():
+    catalog = _catalog()
+    state = _state(
+        entities=[
+            {
+                "type": "artist",
+                "value": "Morphine",
+                "role": "satisfied",
+                "source_turn": 2,
+                "mentioned_current_turn": True,
+                "use_as_retrieval_seed": False,
+                "evidence_text": "another artist",
+            },
+            {
+                "type": "tag",
+                "value": "smoky",
+                "role": "current_target",
+                "source_turn": 2,
+                "mentioned_current_turn": True,
+                "use_as_retrieval_seed": True,
+                "evidence_text": "smoky",
+            },
+        ],
+        target_artist_mode="new_artist",
+        retrieval_profile="novelty",
+    )
+    rs = _resolve(state, catalog)
+
+    assert rs.resolved_targets == ()
+
+
+def test_resolver_grounds_v1_current_artist_seed_as_target():
+    catalog = _catalog()
+    state = _state(
+        entities=[
+            {
+                "type": "artist",
+                "value": "Morphine",
+                "role": "current_target",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+                "use_as_retrieval_seed": True,
+                "evidence_text": "more Morphine",
+            }
+        ],
+        target_artist_mode="same_artist",
+        retrieval_profile="exact_probe",
+    )
+    rs = _resolve(state, catalog)
+
+    arts = [t for t in rs.resolved_targets if t.kind == "artist"]
+    assert len(arts) == 1
+    assert arts[0].entity_id == "a-morphine"
+
+
 def test_resolver_grounds_fuzzy_artist_spelling():
     catalog = _catalog()
     state = _state(mentioned_entities=[MentionedEntity(type="artist", value="morphine", sentiment=1)])
@@ -1336,36 +1428,35 @@ def test_lyric_query_none_without_theme():
 
 
 def test_routing_multiplier_boosts_matching_branch():
-    from mcrs.conversation_state.schema import RoutingTags
     catalog = _catalog()
     cfg = CompilerConfig(routing_boost={"lyric_search": 3.0, "exact_entity_probe": 2.0})
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)
-    rs = _resolve(_state(routing_tags=RoutingTags(lyric_search=True)), catalog)
+    rs = _resolve(_state(lyrical_theme="late night loneliness"), catalog)
     assert compiler._routing_multiplier("dense.lyric", rs) == 3.0
     assert compiler._routing_multiplier("bm25", rs) == 1.0          # exact_entity_probe not set
     assert compiler._routing_multiplier("centroid.image", rs) == 1.0
 
 
 def test_routing_multiplier_default_one_when_unconfigured():
-    from mcrs.conversation_state.schema import RoutingTags
     catalog = _catalog()
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())  # no routing_boost
-    rs = _resolve(_state(routing_tags=RoutingTags(lyric_search=True, exact_entity_probe=True)), catalog)
+    rs = _resolve(
+        _state(lyrical_theme="late night loneliness", retrieval_profile="exact_probe"),
+        catalog,
+    )
     assert compiler._routing_multiplier("dense.lyric", rs) == 1.0
     assert compiler._routing_multiplier("bm25", rs) == 1.0
 
 
 def test_routing_multiplier_unmapped_kind_is_one():
-    from mcrs.conversation_state.schema import RoutingTags
     catalog = _catalog()
     cfg = CompilerConfig(routing_boost={"lyric_search": 3.0})
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)
-    rs = _resolve(_state(routing_tags=RoutingTags(lyric_search=True)), catalog)
+    rs = _resolve(_state(lyrical_theme="late night loneliness"), catalog)
     assert compiler._routing_multiplier("dense.other", rs) == 1.0
 
 
 def test_lyric_branch_fires_and_is_weighted_on_lyric_search():
-    from mcrs.conversation_state.schema import RoutingTags
     catalog = _catalog()
     enc = _fake_encoder()  # FakeEmbeddingClient records every embed_batch() text in `.calls`
     cfg = CompilerConfig(
@@ -1376,8 +1467,7 @@ def test_lyric_branch_fires_and_is_weighted_on_lyric_search():
         branch_trace_topk=50,
     )
     retr = FakeRetriever(embedding_hits=[("t-morphine-1", 0.9)])
-    state = _state(lyrical_theme="late night loneliness",
-                   routing_tags=RoutingTags(lyric_search=True))
+    state = _state(lyrical_theme="late night loneliness")
     rs = _resolve(state, catalog)
     res = V0PlusCompiler(catalog, retr, enc, cfg)._compile(rs)
     traces = {p.name: [t for t, _ in p.hits] for p in res.branch_pools}
@@ -1582,6 +1672,121 @@ def test_similar_artist_anchors_intent_gate():
     assert compiler2._similar_artist_anchor_track_ids(rs_eep) == []
 
 
+def test_style_reference_resolves_for_centroid_but_not_discography():
+    catalog = _sa_catalog()
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "new_artist",
+            "summary": "New bands with the smoky Morphine feel, but not Morphine.",
+            "source_turn": 1,
+            "evidence_text": "new bands with the smoky Morphine feel",
+        },
+        facts=[
+            {
+                "type": "artist",
+                "value": "Morphine",
+                "role": "current_target",
+                "anchor_use": "partial_anchor",
+                "relation": "style_reference",
+                "reuse": "avoid_exact",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+                "evidence_text": "Morphine feel",
+            },
+            {
+                "type": "attribute",
+                "facet": "mood",
+                "value": "smoky",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+                "evidence_text": "smoky",
+            },
+        ],
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        FakeRetriever(),
+        _fake_encoder(),
+        _sa_cfg(enable_resolved_artist_discography=True),
+    )
+
+    assert [(target.source_text, target.resolution_role) for target in rs.resolved_targets] == [
+        ("Morphine", "style_reference"),
+    ]
+    assert compiler._resolved_artist_discography_pool(rs) == []
+    assert compiler._similar_artist_anchor_track_ids(rs) == [
+        "t-mor-1",
+        "t-mor-2",
+        "t-mor-3",
+    ]
+
+
+def test_style_reference_with_hard_exclusion_keeps_similarity_but_drops_exact_artist():
+    catalog = _sa_catalog()
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "new_artist",
+            "summary": "New bands with the smoky Morphine feel, but not Morphine.",
+            "source_turn": 1,
+            "evidence_text": "new bands with the smoky Morphine feel",
+        },
+        facts=[
+            {
+                "type": "artist",
+                "value": "Morphine",
+                "role": "satisfied_prior",
+                "anchor_use": "do_not_use",
+                "relation": "style_reference",
+                "reuse": "avoid_exact",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+                "evidence_text": "Morphine feel, but not Morphine",
+            },
+            {
+                "type": "attribute",
+                "facet": "mood",
+                "value": "smoky",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+                "evidence_text": "smoky",
+            },
+        ],
+        exclusions=[
+            {
+                "type": "artist",
+                "value": "Morphine",
+                "scope": "next_turn_hard",
+                "source_turn": 1,
+                "evidence_text": "but not Morphine",
+            }
+        ],
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        FakeRetriever(),
+        _fake_encoder(),
+        _sa_cfg(enable_resolved_artist_discography=True),
+    )
+
+    assert compiler._resolved_artist_discography_pool(rs) == []
+    assert compiler._similar_artist_anchor_track_ids(rs) == [
+        "t-mor-1",
+        "t-mor-2",
+        "t-mor-3",
+    ]
+    assert {"t-mor-1", "t-mor-2", "t-mor-3"} <= compiler._hard_drop_set(rs)
+
+
 def test_attributes_query_matches_doc_format():
     catalog = _catalog()
     state = _state(mentioned_entities=[
@@ -1627,6 +1832,42 @@ def test_attributes_query_none_without_tags():
     assert compiler._build_attributes_query_string(rs) is None
 
 
+def test_bm25_release_year_terms_skip_when_retriever_lacks_text_fields():
+    state = _state(
+        turn_intent="late 70s classic rock",
+        temporal_constraint={
+            "kind": "style_era",
+            "start_year": 1977,
+            "end_year": 1984,
+            "strength": "soft",
+            "apply_as_filter": False,
+            "evidence_text": "late 70s or early 80s",
+        },
+    )
+    rs = _resolve(state)
+    compiler = V0PlusCompiler(
+        _catalog(),
+        NoReleaseTextFieldRetriever(),
+        _fake_encoder(),
+        CompilerConfig(
+            enable_dense=False,
+            field_boosts={
+                "track_name": 3.0,
+                "artist_name": 3.0,
+                "album_name": 2.0,
+                "tag_list": 1.5,
+                "release_year": 1.0,
+                "release_decade": 1.0,
+            },
+        ),
+    )
+
+    clauses = compiler._build_bm25_clauses(rs)
+
+    assert "release_year" not in {clause.field for clause in clauses}
+    assert "release_decade" not in {clause.field for clause in clauses}
+
+
 def _era_cfg(**overrides):
     cfg = dict(enable_dense=False, enable_era_popularity=True, era_pop_cap=200,
                branch_trace_topk=50)
@@ -1667,13 +1908,47 @@ def _ryr_cfg(**overrides):
 
 def test_release_year_filter_narrows_mask_to_in_range():
     catalog = _catalog()  # tracks span 1988-2010
-    rs = _resolve(_state(release_year_range={"start": 1990, "end": 1999}), catalog)
+    rs = _resolve(
+        _state(
+            temporal_constraint={
+                "kind": "release_date",
+                "start_year": 1990,
+                "end_year": 1999,
+                "strength": "hard",
+                "apply_as_filter": True,
+                "evidence_text": "only 90s tracks",
+            }
+        ),
+        catalog,
+    )
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _ryr_cfg())
     mask = compiler._release_date_mask(rs.state)
     # only 1990s tracks: Morphine Buena 1995, Fugazi Repeater 1990, Tom Waits 1999
     assert "t-morphine-2" in mask and "t-fugazi-2" in mask and "t-tomwaits-1" in mask
     assert "t-fugazi-1" not in mask   # 1988
     assert "t-filler-1" not in mask   # 2010
+
+
+def test_release_year_filter_does_not_narrow_soft_style_era():
+    catalog = _catalog()
+    rs = _resolve(
+        _state(
+            temporal_constraint={
+                "kind": "style_era",
+                "start_year": 1990,
+                "end_year": 1999,
+                "strength": "soft",
+                "apply_as_filter": False,
+                "evidence_text": "90s vibe",
+            }
+        ),
+        catalog,
+    )
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _ryr_cfg())
+
+    mask = compiler._release_date_mask(rs.state)
+
+    assert mask == set(catalog.all_track_ids())
 
 
 def test_release_year_filter_off_by_default_keeps_all():
@@ -1686,17 +1961,42 @@ def test_release_year_filter_off_by_default_keeps_all():
 
 def test_release_year_filter_open_bounds():
     catalog = _catalog()
-    rs = _resolve(_state(release_year_range={"start": 2000, "end": None}), catalog)
+    rs = _resolve(
+        _state(
+            temporal_constraint={
+                "kind": "release_date",
+                "start_year": 2000,
+                "end_year": None,
+                "strength": "hard",
+                "apply_as_filter": True,
+                "evidence_text": "released after 2000",
+            }
+        ),
+        catalog,
+    )
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _ryr_cfg())
     mask = compiler._release_date_mask(rs.state)
     assert mask == {"t-filler-1"}  # only 2010 is >= 2000
 
 
-def test_release_year_filter_skips_when_too_aggressive():
+def test_release_year_filter_respects_hard_empty_range():
     catalog = _catalog()
-    # a range matching 0 tracks would blank the pool -> skipped (min_keep guard)
-    rs = _resolve(_state(release_year_range={"start": 1700, "end": 1750}), catalog)
+    # v1 hard temporal filters are explicit user constraints, so an impossible
+    # range is allowed to produce an empty candidate mask.
+    rs = _resolve(
+        _state(
+            temporal_constraint={
+                "kind": "release_date",
+                "start_year": 1700,
+                "end_year": 1750,
+                "strength": "hard",
+                "apply_as_filter": True,
+                "evidence_text": "only 1700s tracks",
+            }
+        ),
+        catalog,
+    )
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(),
                               _ryr_cfg(release_year_filter_min_keep=1))
     mask = compiler._release_date_mask(rs.state)
-    assert mask == set(catalog.all_track_ids())  # unchanged (no in-range tracks)
+    assert mask == set()

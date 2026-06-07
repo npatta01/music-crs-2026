@@ -446,6 +446,42 @@ def test_litellm_extractor_manually_stores_only_valid_responses(monkeypatch):
     ]
 
 
+def test_litellm_extractor_does_not_apply_post_extraction_text_repair(monkeypatch):
+    import mcrs.qu_modules.compiler_v0plus_qu as qu_mod
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("post-extraction text repair must not run in production")
+
+    monkeypatch.setattr(qu_mod, "repair_state_from_conversation", fail_if_called, raising=False)
+
+    response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(
+                    content='{"turn_intent": "more like Fugazi", "intent_mode": "refinement"}'
+                )
+            )
+        ],
+        model_dump_json=lambda: '{"cached": true}',
+    )
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(
+            completion=lambda **kwargs: response,
+            cache=SimpleNamespace(add_cache=lambda *args, **kwargs: None),
+        ),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    state = extractor.extract([{"turn": 1, "role": "user", "text": "x"}], [])
+
+    assert state is not None
+    assert state.turn_intent == "more like Fugazi"
+
+
 def test_litellm_extractor_does_not_store_malformed_json(monkeypatch):
     stored = []
     completion_kwargs = []
@@ -788,32 +824,36 @@ def test_routing_boost_survives_yaml_allowlist():
     assert qu.compiler.cfg.routing_boost == {"lyric_search": 4.0}
 
 
-def test_build_qu_rejects_missing_configured_vector_fields():
+def test_build_qu_allows_missing_configured_vector_fields_for_branch_skip():
     catalog = _catalog()
 
-    with pytest.raises(ValueError, match="metadata_qwen3_embedding_8b"):
-        build_v0plus_compiler_qu(
-            qu_kwargs={
+    qu = build_v0plus_compiler_qu(
+        qu_kwargs={
                 "compiler": {
+                    "branch_trace_topk": 10,
                     "enable_dense": True,
                     "dense_branches": [
-                        {
-                            "vector_field": "metadata_qwen3_embedding_8b",
-                            "encoder_id": "qwen_8b",
-                            "query_id": "metadata",
-                        }
-                    ],
-                }
-            },
-            _overrides={
-                "catalog": catalog,
-                "matcher": RapidfuzzCatalogMatcher(catalog),
-                "encoders": {"qwen_8b": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5])},
-                # FakeRetriever only advertises metadata_qwen3_embedding_0_6b.
-                "retriever": FakeRetriever(),
-                "extractor": _FakeExtractor(state=_state()),
-            },
-        )
+                    {
+                        "vector_field": "metadata_qwen3_embedding_8b",
+                        "encoder_id": "qwen_8b",
+                        "query_id": "metadata",
+                    }
+                ],
+            }
+        },
+        _overrides={
+            "catalog": catalog,
+            "matcher": RapidfuzzCatalogMatcher(catalog),
+            "encoders": {"qwen_8b": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5])},
+            # FakeRetriever only advertises metadata_qwen3_embedding_0_6b.
+            "retriever": FakeRetriever(),
+            "extractor": _FakeExtractor(state=_state()),
+        },
+    )
+
+    qu.batch_compile_track_ids([[{"role": "user", "content": "hi"}]], topk=10)
+    status = qu.last_traces[0]["branches"]["branch_status"]
+    assert status["dense.qwen_8b.metadata.metadata_qwen3_embedding_8b"]["skip_reason"] == "unsupported_vector_field"
 
 
 def test_resolve_prompt_fns_uses_current_prompt():
@@ -834,6 +874,26 @@ def test_resolve_prompt_fns_keeps_previous_reference_prompt():
         bm, schema = _resolve_prompt_fns(alias)
         assert bm is previous.build_messages
         assert schema is previous.json_schema_for_response_format
+
+
+def test_resolve_prompt_fns_exposes_experimental_rubric_prompt():
+    from mcrs.qu_modules.compiler_v0plus_qu import _resolve_prompt_fns
+    from mcrs.conversation_state.prompts import rubric
+
+    for alias in ("rubric", "decision_rubric", "v5"):
+        bm, schema = _resolve_prompt_fns(alias)
+        assert bm is rubric.build_messages
+        assert schema is rubric.json_schema_for_response_format
+
+
+def test_resolve_prompt_fns_exposes_experimental_rejection_prompt():
+    from mcrs.qu_modules.compiler_v0plus_qu import _resolve_prompt_fns
+    from mcrs.conversation_state.prompts import rejection
+
+    for alias in ("rejection", "rejection_fewshot", "v5_rejection"):
+        bm, schema = _resolve_prompt_fns(alias)
+        assert bm is rejection.build_messages
+        assert schema is rejection.json_schema_for_response_format
 
 
 def test_litellm_encoder_forwards_extra_params():

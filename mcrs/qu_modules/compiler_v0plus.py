@@ -307,13 +307,10 @@ class CompilerConfig:
     enable_era_popularity: bool = False
     era_pop_weight: float = 1.0
     era_pop_cap: int = 200
-    # Release-year pre-filter (#filter). When True AND the extractor emitted a
-    # release_year_range, narrow the candidate_mask to tracks whose release year
-    # falls in [start, end] (open bounds ok). Applies to ALL branches (it's the
-    # global candidate gate). Off by default. Unlike hard_filters (which the
-    # extractor never emits), this uses the soft year-range present on ~33% of
-    # turns. Permissive: if the range would blank the pool to < release_year_filter_min_keep
-    # tracks, it's skipped (treated as too-aggressive / likely-wrong extraction).
+    # Deprecated release-year pre-filter config. v1 hard release-date asks are
+    # represented as hard_filters via temporal_constraint.apply_as_filter=true;
+    # soft release_year_range/style-era hints do not gate candidates here. Keep
+    # the fields so older configs still parse.
     enable_release_year_filter: bool = False
     release_year_filter_min_keep: int = 50
     routing_boost: dict[str, float] = field(default_factory=dict)
@@ -439,6 +436,11 @@ class V0PlusCompiler:
                     "skip_reason": "disabled",
                 }
         if self.cfg.enable_dense:
+            supported_vector_fields = getattr(
+                self.retriever,
+                "supported_vector_fields",
+                frozenset(),
+            )
             for branch in self.cfg.dense_branches:
                 branch_name = self._dense_branch_trace_name(branch)
                 q_text = query_strings.get(branch.query_id)
@@ -447,6 +449,15 @@ class V0PlusCompiler:
                     if q_text is not None:
                         query_trace["query_text"] = q_text
                     branch_queries[branch_name] = query_trace
+                if branch.vector_field not in supported_vector_fields:
+                    dense_branch_results.append([])
+                    if trace_enabled:
+                        branch_status[branch_name] = {
+                            "configured": True,
+                            "fired": False,
+                            "skip_reason": "unsupported_vector_field",
+                        }
+                    continue
                 if q_text is None:
                     # Either query_id unknown OR state had no positive signal.
                     # Append empty hits to keep dense_branch_results aligned
@@ -502,6 +513,11 @@ class V0PlusCompiler:
         #    TalkPlayData).
         centroid_branches = self._resolve_centroid_only_branches()
         centroid_branch_results: list[tuple[list[tuple[str, float]], float]] = []
+        supported_vector_fields = getattr(
+            self.retriever,
+            "supported_vector_fields",
+            frozenset(),
+        )
         for cb in centroid_branches:
             branch_name = self._centroid_branch_trace_name(cb)
             source_track_ids: list[str] = []
@@ -519,6 +535,14 @@ class V0PlusCompiler:
                 elif cb.centroid_source == "user":
                     query_trace["user_id_present"] = user_id is not None
                 branch_queries[branch_name] = query_trace
+            if cb.vector_field not in supported_vector_fields:
+                if trace_enabled:
+                    branch_status[branch_name] = {
+                        "configured": True,
+                        "fired": False,
+                        "skip_reason": "unsupported_vector_field",
+                    }
+                continue
             # On pivot turns the anchor set is intentionally cleared (the user
             # changed direction), so an anchor-sourced centroid would be stale
             # — skip it. Exception (issue #74 Fix 1): when similar-artist
@@ -771,9 +795,11 @@ class V0PlusCompiler:
                 "source_text": t.source_text,
                 "entity_id": t.entity_id,
                 "confidence": float(t.confidence),
+                "resolution_role": getattr(t, "resolution_role", "exact_target"),
             }
             for t in rs.resolved_targets
             if t.kind == "artist"
+            and getattr(t, "resolution_role", "exact_target") == "exact_target"
         ]
         return {
             "kind": "lookup",
@@ -874,6 +900,11 @@ class V0PlusCompiler:
 
         release_range = state.release_year_range
         if release_range is not None:
+            supported_text_fields = getattr(
+                self.retriever,
+                "supported_text_fields",
+                frozenset(DEFAULT_FIELD_BOOSTS),
+            )
             year_boost = self.cfg.field_boosts.get("release_year", 0.0)
             decade_boost = self.cfg.field_boosts.get("release_decade", 0.0)
             exact_year = (
@@ -883,7 +914,10 @@ class V0PlusCompiler:
             )
             if (exact_year and year_boost > 0.0) or (not exact_year and decade_boost > 0.0):
                 for field_name, term in self._release_year_range_bm25_terms(state):
-                    if self.cfg.field_boosts.get(field_name, 0.0) > 0.0:
+                    if (
+                        field_name in supported_text_fields
+                        and self.cfg.field_boosts.get(field_name, 0.0) > 0.0
+                    ):
                         per_field.setdefault(field_name, []).append(term)
 
         # turn_intent: free text routed where mood/title vocabulary fits.
@@ -972,6 +1006,43 @@ class V0PlusCompiler:
     # New `query_id`s are added by writing a `_build_<name>_query_string`
     # method and registering it in `_query_builders` below.
 
+    @staticmethod
+    def _positive_mention_values(
+        state: ConversationStateV0Plus,
+        entity_type: str,
+    ) -> list[str]:
+        return [
+            me.value
+            for me in state.mentioned_entities
+            if me.sentiment >= 0 and me.type == entity_type and me.value
+        ]
+
+    @staticmethod
+    def _style_reference_values(
+        state: ConversationStateV0Plus,
+        entity_type: str,
+    ) -> list[str]:
+        return [
+            me.value
+            for me in state.style_reference_entities
+            if me.sentiment >= 0 and me.type == entity_type and me.value
+        ]
+
+    @classmethod
+    def _artist_reference_values(cls, state: ConversationStateV0Plus) -> list[str]:
+        seen: set[str] = set()
+        out: list[str] = []
+        for value in (
+            cls._positive_mention_values(state, "artist")
+            + cls._style_reference_values(state, "artist")
+        ):
+            key = value.casefold().strip()
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            out.append(value)
+        return out
+
     def _build_dense_query_string(self, rs: ResolvedConversationState) -> str | None:
         """`query_id="intent"` — canonical Qwen3/BM25-shaped query string.
 
@@ -985,14 +1056,8 @@ class V0PlusCompiler:
         if state.turn_intent.strip():
             text_parts.append(state.turn_intent.strip())
 
-        artists = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "artist"
-        ]
-        tags = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "tag"
-        ]
+        artists = self._artist_reference_values(state)
+        tags = self._positive_mention_values(state, "tag")
         if artists:
             text_parts.append("like: " + ", ".join(artists))
         if tags:
@@ -1014,18 +1079,9 @@ class V0PlusCompiler:
         if state.turn_intent.strip():
             text_parts.append(state.turn_intent.strip())
 
-        artists = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "artist"
-        ]
-        albums = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "album"
-        ]
-        tracks = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "track"
-        ]
+        artists = self._positive_mention_values(state, "artist")
+        albums = self._positive_mention_values(state, "album")
+        tracks = self._positive_mention_values(state, "track")
         if artists:
             text_parts.append("artists: " + ", ".join(artists))
         if albums:
@@ -1053,10 +1109,7 @@ class V0PlusCompiler:
             alone so the branch still fires when extraction is tag-poor.
         """
         state = rs.state
-        tags = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "tag"
-        ]
+        tags = self._positive_mention_values(state, "tag")
         intent = state.turn_intent.strip()
         if tags:
             joined_tags = ", ".join(tags)
@@ -1083,10 +1136,7 @@ class V0PlusCompiler:
           - Falls back to "album cover, {turn_intent}" otherwise.
         """
         state = rs.state
-        tags = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "tag"
-        ]
+        tags = self._positive_mention_values(state, "tag")
         if tags:
             return "album cover, " + ", ".join(tags)
         intent = state.turn_intent.strip()
@@ -1115,14 +1165,8 @@ class V0PlusCompiler:
             are empty (preserves any signal at all).
         """
         state = rs.state
-        tags = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "tag"
-        ]
-        artists = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "artist"
-        ]
+        tags = self._positive_mention_values(state, "tag")
+        artists = self._artist_reference_values(state)
         parts: list[str] = []
         if tags:
             parts.append(f"A song with {', '.join(tags)} sound")
@@ -1164,14 +1208,8 @@ class V0PlusCompiler:
         tags (deduped, source-order preserved).
         """
         state = rs.state
-        state_tags = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "tag" and me.value
-        ]
-        artists = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "artist" and me.value
-        ]
+        state_tags = self._positive_mention_values(state, "tag")
+        artists = self._artist_reference_values(state)
         # Top-N catalog-canonical tags from positive anchors (reuses the
         # same machinery BM25 uses for anchor_tag_expansion).
         anchor_tags = self._top_anchor_tags(rs, n=5)
@@ -1216,11 +1254,7 @@ class V0PlusCompiler:
         Built from positive tag mentions (genre/mood/instrument). Returns None
         when there are no positive tags (branch is skipped on tag-poor turns)."""
         state = rs.state
-        tags = [
-            me.value.strip()
-            for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "tag" and me.value.strip()
-        ]
+        tags = [value.strip() for value in self._positive_mention_values(state, "tag")]
         if not tags:
             return None
         return "music attributes, tags :" + ", ".join(tags)
@@ -1291,23 +1325,6 @@ class V0PlusCompiler:
                 continue
             valid = valid & step_mask
 
-        # Soft release_year_range pre-filter (config-gated). The extractor emits
-        # this on ~33% of turns but never a hard_filter; when enabled, treat the
-        # year-range as a candidate gate over ALL branches.
-        if self.cfg.enable_release_year_filter:
-            ryr = state.release_year_range
-            if ryr is not None and (ryr.start is not None or ryr.end is not None):
-                lo = ryr.start if ryr.start is not None else -(10**9)
-                hi = ryr.end if ryr.end is not None else 10**9
-                in_range = {
-                    tid for tid in valid
-                    if (yr := self.catalog.release_year_of(tid)) is not None
-                    and lo <= yr <= hi
-                }
-                # Permissive: a too-aggressive / likely-wrong range that would
-                # blank the pool is skipped rather than starving retrieval.
-                if len(in_range) >= self.cfg.release_year_filter_min_keep:
-                    valid = in_range
         return valid
 
     def _hard_drop_set(self, rs: ResolvedConversationState) -> set[str]:
@@ -1438,6 +1455,7 @@ class V0PlusCompiler:
         for tgt in rs.resolved_targets:
             if (
                 tgt.kind == "artist"
+                and getattr(tgt, "resolution_role", "exact_target") == "exact_target"
                 and tgt.entity_id is not None
                 and tgt.confidence >= cfg.disco_confidence_threshold
                 and tgt.entity_id not in seen_artists
@@ -1524,6 +1542,8 @@ class V0PlusCompiler:
         for tgt in rs.resolved_targets:
             if (
                 tgt.kind == "artist"
+                and getattr(tgt, "resolution_role", "exact_target")
+                in {"exact_target", "style_reference"}
                 and tgt.entity_id is not None
                 and tgt.confidence >= cfg.similar_artist_confidence_threshold
                 and tgt.entity_id not in seen_artists

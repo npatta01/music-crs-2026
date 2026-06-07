@@ -57,6 +57,8 @@ _METADATA_BLOB_TRACK_ID_RE = re.compile(r"^track_id:\s*([0-9a-fA-F\-]{36})\b")
 
 from mcrs.conversation_state.prompts import current as current_prompt
 from mcrs.conversation_state.prompts import previous as previous_prompt
+from mcrs.conversation_state.prompts import rejection as rejection_prompt
+from mcrs.conversation_state.prompts import rubric as rubric_prompt
 from mcrs.conversation_state.schema import (
     ConversationStateV0Plus,
 )
@@ -67,6 +69,10 @@ def _resolve_prompt_fns(prompt_version: str | None):
     pv = (prompt_version or "current").lower()
     if pv in ("current", "v4", "default"):
         return current_prompt.build_messages, current_prompt.json_schema_for_response_format
+    if pv in ("rubric", "decision_rubric", "v5"):
+        return rubric_prompt.build_messages, rubric_prompt.json_schema_for_response_format
+    if pv in ("rejection", "rejection_fewshot", "v5_rejection"):
+        return rejection_prompt.build_messages, rejection_prompt.json_schema_for_response_format
     if pv in ("previous", "reference", "v3"):
         return previous_prompt.build_messages, previous_prompt.json_schema_for_response_format
     raise ValueError(f"unknown extractor prompt_version: {prompt_version!r}")
@@ -1060,10 +1066,10 @@ def build_v0plus_compiler_qu(
             supported_vector_fields = set(retriever.supported_vector_fields)
             missing_vector_fields = sorted(configured_vector_fields - supported_vector_fields)
             if missing_vector_fields:
-                raise ValueError(
+                logger.warning(
                     "Configured v0+ vector field(s) are missing from the LanceDB index: "
-                    f"{missing_vector_fields}. Rebuild/re-upload the LanceDB catalog with "
-                    "matching embedding columns before running this config."
+                    "%s. Corresponding dense/centroid branches will be skipped.",
+                    missing_vector_fields,
                 )
 
         compiler = V0PlusCompiler(

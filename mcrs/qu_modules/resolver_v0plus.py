@@ -46,14 +46,16 @@ class ResolvedRejection:
 @dataclass(frozen=True)
 class ResolvedTarget:
     """A grounded positive `mentioned_entities` entry: surface form + best
-    catalog match + confidence + full candidate list. The Compiler uses
-    high-confidence artist targets to fetch discography candidates."""
+    catalog match + confidence + full candidate list. `resolution_role` keeps
+    exact current targets separate from style/reference anchors so the Compiler
+    can route them to different retriever surfaces."""
 
     kind: str  # "artist" | "track"
     source_text: str
     entity_id: str | None
     confidence: float
     candidates: tuple[tuple[str, float], ...] = ()
+    resolution_role: str = "exact_target"
 
 
 @dataclass(frozen=True)
@@ -112,11 +114,7 @@ class V0PlusResolver:
             tf.track_id: self.catalog.artist_id_of(tf.track_id)
             for tf in state.track_feedback
         }
-        resolved_targets = tuple(
-            self._ground_target(me.type, me.value)
-            for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type in ("artist", "track")
-        )
+        resolved_targets = tuple(self._ground_targets(state))
         return ResolvedConversationState(
             state=state,
             played_track_ids=tuple(played_track_ids or ()),
@@ -125,7 +123,33 @@ class V0PlusResolver:
             resolved_targets=resolved_targets,
         )
 
-    def _ground_target(self, kind: str, value: str) -> ResolvedTarget:
+    def _ground_targets(self, state: ConversationStateV0Plus) -> list[ResolvedTarget]:
+        out: list[ResolvedTarget] = []
+        seen: set[tuple[str, str]] = set()
+        for me in state.mentioned_entities:
+            if me.sentiment < 0 or me.type not in ("artist", "track"):
+                continue
+            key = (me.type, me.value.casefold().strip())
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(self._ground_target(me.type, me.value, "exact_target"))
+        for me in state.style_reference_entities:
+            if me.sentiment < 0 or me.type not in ("artist", "track"):
+                continue
+            key = (me.type, me.value.casefold().strip())
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(self._ground_target(me.type, me.value, "style_reference"))
+        return out
+
+    def _ground_target(
+        self,
+        kind: str,
+        value: str,
+        resolution_role: str = "exact_target",
+    ) -> ResolvedTarget:
         topk = self.artist_match_topk if kind == "artist" else self.track_match_topk
         matches = self.matcher.match(
             value, kind, topk=topk, score_cutoff=self.score_cutoff
@@ -137,6 +161,7 @@ class V0PlusResolver:
             entity_id=best_id,
             confidence=float(best_score),
             candidates=tuple((eid, float(s)) for eid, s in matches),
+            resolution_role=resolution_role,
         )
 
     def _resolve_rejection(self, kind: str, value: str) -> ResolvedRejection:
