@@ -1,0 +1,7 @@
+{
+  "model_path": "exp/rerank/devset_phaseB/model_single/model.txt",
+  "n_features": 131,
+  "best_iteration": 72,
+  "inner_val_ndcg@20": 0.27939772180473327,
+  "n_fit_rows": 19024258
+}

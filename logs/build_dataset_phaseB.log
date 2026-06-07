@@ -1,0 +1,12 @@
+{
+  "n_groups": 8000,
+  "n_candidate_rows": 24214659,
+  "n_groups_with_gt": 8000,
+  "gt_in_union": 6967,
+  "gt_in_union_rate": 0.870875,
+  "avg_candidates_per_group": 3026.832375,
+  "unknown_pool_names": [],
+  "max_pool_depth": 500,
+  "max_neg_per_group": null,
+  "out_dir": "exp/rerank/devset_phaseB"
+}

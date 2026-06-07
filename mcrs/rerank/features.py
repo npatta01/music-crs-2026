@@ -288,6 +288,82 @@ def _block_e_and_f_union(df: pd.DataFrame, groups: pd.DataFrame, meta: pd.DataFr
     return pd.DataFrame(cols, index=df.index)
 
 
+# ------------------------------------------------------------- block H: dense cross-scoring
+
+def _block_h_cross_scoring(df: pd.DataFrame, groups: pd.DataFrame, catalog: Any) -> pd.DataFrame:
+    """Per-candidate cosine to the turn's captured query/centroid vector in each modality.
+
+    For EVERY union candidate (not just the ones a branch surfaced), score the candidate's
+    catalog vector against the actual vector that branch searched with this turn — a dense
+    relevance signal that fills the sparse per-branch NaNs. Vectorized: one (n_candidates x dim)
+    @ (dim,) matmul per (group, vector_field). Columns are always emitted (NaN where the branch
+    didn't fire or the candidate lacks a vector) so the model's feature set is stable.
+
+    Returns an all-NaN frame (correct, neutral) when query vectors weren't captured or the
+    catalog can't supply vector matrices (e.g. a metadata-only test catalog).
+    """
+    from mcrs.rerank.branches import CROSS_SCORE_SPECS, parse_branch_name, xcos_col
+    from mcrs.rerank.vec_codec import decode_branch_vectors
+
+    n = len(df)
+    out = {xcos_col(s.name): np.full(n, np.nan, dtype=np.float64) for s in CROSS_SCORE_SPECS}
+    if "branch_query_vectors" not in groups.columns or not hasattr(catalog, "vector_matrix"):
+        return pd.DataFrame(out, index=df.index)
+
+    grp_state = groups.set_index([groups["session_id"], groups["turn_number"]])
+    df = df.reset_index(drop=True)
+    fields_needed = sorted({s.vector_field for s in CROSS_SCORE_SPECS})
+    mat_cache: dict[str, Any] = {}
+
+    def matrix(field: str):
+        if field not in mat_cache:
+            mat_cache[field] = catalog.vector_matrix(field)
+        return mat_cache[field]
+
+    for (sid, turn), sub in df.groupby(GROUP_KEYS, sort=False):
+        gs = grp_state.loc[(sid, turn)]
+        if isinstance(gs, pd.DataFrame):
+            gs = gs.iloc[0]
+        bqv = decode_branch_vectors(gs.get("branch_query_vectors") or {})
+        if not bqv:
+            continue
+        # (kind, source, vector_field) -> unit-norm float32 query vector
+        keyed: dict[tuple, np.ndarray] = {}
+        for name, vec in bqv.items():
+            kind, source, field = parse_branch_name(name)
+            if field is None:
+                continue
+            nrm = float(np.linalg.norm(vec))
+            keyed[(kind, source, field)] = (vec / nrm) if nrm > 0 else vec
+
+        idx = sub.index.to_numpy()
+        tids = sub["track_id"].to_numpy()
+        # Candidate row indices into each field's matrix, computed once per field.
+        rows_by_field: dict[str, Any] = {}
+        for field in fields_needed:
+            id_to_row, mat = matrix(field)
+            if mat is None:
+                rows_by_field[field] = None
+                continue
+            rows_by_field[field] = np.array([id_to_row.get(t, -1) for t in tids])
+
+        for spec in CROSS_SCORE_SPECS:
+            q = keyed.get((spec.kind, spec.source, spec.vector_field))
+            if q is None:
+                continue  # branch didn't fire this turn -> leave NaN
+            rows = rows_by_field.get(spec.vector_field)
+            if rows is None:
+                continue
+            _, mat = matrix(spec.vector_field)
+            present = rows >= 0
+            if not present.any():
+                continue
+            sims = mat[rows[present]] @ q.astype(np.float32)
+            out[xcos_col(spec.name)][idx[present]] = sims
+
+    return pd.DataFrame(out, index=df.index)
+
+
 # ------------------------------------------------------------------------------- assembly
 
 def features_from_frames(
@@ -312,13 +388,14 @@ def features_from_frames(
     c = _block_c(df, meta)
     d = _block_d(df, groups)
     e_f = _block_e_and_f_union(df, groups, meta, a_agg["agg__min_rank"])
+    h = _block_h_cross_scoring(df, groups, catalog)
 
     key_cols = GROUP_KEYS + ["track_id"] + (["label"] if "label" in df.columns else [])
     out = pd.concat(
         [df[key_cols].reset_index(drop=True),
          a_f.reset_index(drop=True), a_agg.reset_index(drop=True),
          c.reset_index(drop=True), d.reset_index(drop=True),
-         e_f.reset_index(drop=True)],
+         e_f.reset_index(drop=True), h.reset_index(drop=True)],
         axis=1,
     )
     return out
@@ -349,7 +426,8 @@ def feature_columns(frame: pd.DataFrame) -> list[str]:
 
 
 def monotone_constraints(feature_cols: list[str]) -> list[int]:
-    """+1 on the trustworthy raw branch scores (per registry); 0 elsewhere."""
+    """+1 on the trustworthy raw branch scores (per registry) and the block-H dense
+    cross-scores (higher cosine to the query = more relevant); 0 elsewhere."""
     cons = []
     for col in feature_cols:
         c = 0
@@ -357,6 +435,8 @@ def monotone_constraints(feature_cols: list[str]) -> list[int]:
             key = col[: -len("__score")]
             if key in BRANCH_BY_KEY:
                 c = BRANCH_BY_KEY[key].score_monotone
+        elif col.startswith("h__xcos_"):
+            c = +1
         cons.append(c)
     return cons
 

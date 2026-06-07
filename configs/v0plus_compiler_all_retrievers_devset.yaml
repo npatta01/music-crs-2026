@@ -80,6 +80,11 @@ qu_kwargs:
     rrf_k: 60
     final_topk: 1000
 
+    # Capture each branch's actual query/centroid vector into the trace so the reranker's
+    # dense cross-scoring features (block H) can cosine every candidate against them. Adds
+    # ~base64 float32 vectors per turn to the trace; required to TRAIN the block-H model.
+    capture_branch_query_vectors: true
+
     field_boosts:
       track_name: 3.0
       artist_name: 3.0

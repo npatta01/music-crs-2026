@@ -1,0 +1,23 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[2026-06-06T19:45:28Z WARN  lance::dataset::write::insert] No existing dataset at /Users/semih/all_github_projects/ClaudeCodeProjects/music-conversational-music-recomender-2026/cache/lancedb_emb/music_track_catalog.lance, it will be created
+{
+  "db_uri": "cache/lancedb_emb",
+  "table_name": "music_track_catalog",
+  "inserted_rows": 47071,
+  "metadata_row_count": 47071,
+  "metadata_only_row_count": 0,
+  "include_embeddings": true,
+  "fts_text_fields": [
+    "bm25_compat_text",
+    "bm25_compat_bm25s_tokens_text",
+    "bm25_with_tag_list_text",
+    "bm25_with_tag_list_bm25s_tokens_text",
+    "track_name_text",
+    "artist_name_text",
+    "album_name_text",
+    "release_date_text",
+    "release_year_text",
+    "release_decade_text",
+    "tag_list_text"
+  ]
+}

@@ -1283,12 +1283,26 @@ def test_discography_branch_skips_below_confidence_threshold():
     assert "lookup.resolved_artist_discography" not in traces
 
 
-def test_discography_branch_gated_off_on_pivot():
+def test_discography_branch_fires_for_pivot_target_by_default():
+    # On a pivot the resolved artist is the NEW direction the user pivoted to, so the
+    # pivot-target discography exception (enable_pivot_target_discography, default on) lets
+    # disco fire — it's the main lever for pivot retrieval coverage.
     catalog = _catalog()
     state = _state(intent_mode="pivot",
                    mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)])
     rs = _resolve(state, catalog)
     res = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _disco_cfg())._compile(rs)
+    traces = {p.name: [t for t, _ in p.hits] for p in res.branch_pools}
+    assert traces["lookup.resolved_artist_discography"][:2] == ["t-morphine-1", "t-morphine-2"]
+
+
+def test_discography_branch_gated_off_on_pivot_when_exception_disabled():
+    catalog = _catalog()
+    state = _state(intent_mode="pivot",
+                   mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)])
+    rs = _resolve(state, catalog)
+    cfg = _disco_cfg(enable_pivot_target_discography=False)
+    res = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)._compile(rs)
     traces = {p.name: [t for t, _ in p.hits] for p in res.branch_pools}
     assert "lookup.resolved_artist_discography" not in traces
 
@@ -1302,6 +1316,36 @@ def test_discography_branch_respects_hard_drop():
     # discography track is brought in.
     assert "t-morphine-1" not in result
     assert "t-morphine-2" in result
+
+
+def test_anchor_track_ids_drops_stale_anchors_on_pivot():
+    """The pivot stale-anchor guard: off-pivot keeps accepted/seed + referenced; on pivot
+    only this-turn referenced tracks survive. Retrieval (_anchor_track_ids) and the reranker
+    feature inputs (build_state_record) share the guard, so they agree."""
+    from mcrs.qu_modules.compiler_v0plus import build_state_record
+
+    catalog = _catalog()
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())
+    tf = [
+        TrackFeedback(track_id="t-fugazi-1", role="accepted", overall_sentiment=1),
+        TrackFeedback(track_id="t-fugazi-2", role="seed", overall_sentiment=1),
+    ]
+
+    # Off-pivot: carried-over accepted/seed anchors + this-turn referenced are all kept.
+    state = _state(intent_mode="refinement", track_feedback=tf,
+                   referenced_track_ids=["t-morphine-1"])
+    expected_off = ["t-fugazi-1", "t-fugazi-2", "t-morphine-1"]
+    assert compiler._anchor_track_ids(state) == expected_off
+    rec = build_state_record(state, _resolve(state, catalog))
+    assert rec["resolver"]["anchor_track_ids"] == expected_off
+
+    # Pivot: the carried-over accepted/seed tracks are the OLD direction → dropped; only the
+    # track referenced this turn remains an anchor.
+    pstate = _state(intent_mode="pivot", track_feedback=tf,
+                    referenced_track_ids=["t-morphine-1"])
+    assert compiler._anchor_track_ids(pstate) == ["t-morphine-1"]
+    prec = build_state_record(pstate, _resolve(pstate, catalog))
+    assert prec["resolver"]["anchor_track_ids"] == ["t-morphine-1"]
 
 
 def test_routing_tags_default_false_and_settable():

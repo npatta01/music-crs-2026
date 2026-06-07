@@ -113,6 +113,10 @@ class CompileResult:
     branch_queries: dict[str, dict] = field(default_factory=dict)
     branch_status: dict[str, dict] = field(default_factory=dict)
     candidate_filter_summary: dict[str, int] = field(default_factory=dict)
+    # branch_name -> the actual query/centroid vector that branch searched with. Populated
+    # only when CompilerConfig.capture_branch_query_vectors is on. Used by the reranker's
+    # dense cross-scoring features (block H). Serialized base64 float32 in the trace.
+    branch_query_vectors: dict[str, list[float]] = field(default_factory=dict)
 
     def to_trace_dict(self) -> dict:
         """Serialize to the `branches` trace schema (JSON-friendly)."""
@@ -134,6 +138,11 @@ class CompileResult:
             "branch_queries": self.branch_queries,
             "branch_status": self.branch_status,
             "candidate_filter_summary": self.candidate_filter_summary,
+            **(
+                {"branch_query_vectors": _encode_branch_vectors(self.branch_query_vectors)}
+                if self.branch_query_vectors
+                else {}
+            ),
         }
 
 
@@ -191,6 +200,42 @@ class CentroidOnlyBranch:
     centroid_source: str = "anchor_tracks"  # or "user"
 
 
+def _encode_branch_vectors(vectors: dict[str, list[float]]) -> dict[str, str]:
+    """Serialize captured per-branch query vectors for the trace (base64 float32).
+
+    Lazy import keeps the rerank dependency out of the normal (non-reranker) compile path."""
+    from mcrs.rerank.vec_codec import encode_branch_vectors
+    return encode_branch_vectors(vectors)
+
+
+def _positive_anchor_track_ids(state) -> list[str]:
+    """Positive anchor tracks for centroid / tag expansion / reranker match features.
+
+    Off-pivot: positively-rated accepted/seed tracks (carried across turns) plus any
+    tracks referenced this turn. **On a pivot the user has changed direction**, so the
+    carried-over accepted/seed tracks are NO LONGER anchors — anchoring retrieval or the
+    reranker's similarity features on them pulls toward the direction the user just left
+    (the pivot stale-anchor bug). On pivot we keep only this-turn ``referenced_track_ids``.
+
+    Single source of truth shared by ``build_state_record`` (reranker feature inputs) and
+    ``Compiler._anchor_track_ids`` (retrieval centroid / tag expansion) so train, serve, and
+    retrieval all see the same anchor set — including the pivot guard.
+    """
+    ids: list[str] = []
+    if getattr(state.intent_mode, "value", state.intent_mode) != "pivot":
+        for tf in state.track_feedback:
+            if tf.role in ("accepted", "seed") and tf.overall_sentiment > 0:
+                ids.append(tf.track_id)
+    ids.extend(state.referenced_track_ids)
+    seen: set[str] = set()
+    out: list[str] = []
+    for tid in ids:
+        if tid not in seen:
+            seen.add(tid)
+            out.append(tid)
+    return out
+
+
 def build_state_record(state, rs) -> dict:
     """Per-turn ``{state, resolver, resolved_targets}`` record for the reranker / trace.
 
@@ -217,11 +262,10 @@ def build_state_record(state, rs) -> dict:
         me.value for me in state.mentioned_entities
         if me.sentiment > 0 and me.type == "tag" and me.value
     ]
-    anchor_track_ids: list[str] = []
-    for tf in state.track_feedback:
-        if tf.role in ("accepted", "seed") and tf.overall_sentiment > 0:
-            anchor_track_ids.append(tf.track_id)
-    anchor_track_ids.extend(state.referenced_track_ids)
+    # Pivot-aware: on a pivot the carried-over accepted/seed tracks are dropped (the user
+    # changed direction) so the reranker's anchor-match features don't reward the old
+    # direction. Shared with retrieval via _positive_anchor_track_ids.
+    anchor_track_ids = _positive_anchor_track_ids(state)
     anchor_artist_ids = [
         me.value for me in state.mentioned_entities
         if me.sentiment > 0 and me.type == "artist" and me.value
@@ -333,6 +377,11 @@ class CompilerConfig:
     # (the reranker scores the per-branch pools) and `reranker_model_path`.
     ranker: str = "rrf"
     reranker_model_path: str | None = None
+    # Capture each retrieval branch's actual query/centroid vector (the post-mix dense vector
+    # and the centroid-only vectors) on the CompileResult + trace, for the reranker's dense
+    # cross-scoring features (block H). Off by default so normal runs/tests are unaffected and
+    # the trace stays small; enabled in the rerank trace-generation config.
+    capture_branch_query_vectors: bool = False
 
     # Resolved-artist discography branch (issue #74 Stage A). Off by default.
     enable_resolved_artist_discography: bool = False
@@ -340,6 +389,12 @@ class CompilerConfig:
     disco_cap: int = 150
     disco_confidence_threshold: float = 90.0
     disco_gated_intents: tuple[str, ...] = ("pivot",)
+    # Pivot exception to the disco gate: on a pivot the resolved targets are the NEW
+    # direction the user pivoted TO (the stale anchors live in track_feedback, not in
+    # resolved_targets), so pulling the new artist's discography is exactly what we want —
+    # it's the main lever for pivot retrieval coverage. When True, disco fires for
+    # high-confidence resolved artist targets even on pivot turns.
+    enable_pivot_target_discography: bool = True
 
     # Similar-artist anchoring (issue #74 Fix 1). Off by default => baseline is
     # byte-identical. When on, a few representative tracks of each RESOLVED
@@ -435,17 +490,29 @@ class V0PlusCompiler:
         return self._reranker
 
     def _reranker_ranked(self, rs: "ResolvedConversationState",
-                         named_pools: list[tuple[str, list[tuple[str, float]]]]) -> list[str]:
-        """Order the deduped branch-pool union with the trained model (pre mask/hard-drop)."""
+                         named_pools: list[tuple[str, list[tuple[str, float]]]],
+                         branch_query_vectors: dict[str, list[float]] | None = None) -> list[str]:
+        """Order the deduped branch-pool union with the trained model (pre mask/hard-drop).
+
+        ``branch_query_vectors`` (the per-branch query/centroid vectors captured this turn) are
+        threaded into the same ``branches`` trace structure the offline pipeline reads, so the
+        dense cross-scoring features (block H) see identical inputs online and offline."""
+        branches: dict[str, Any] = {"pools": [
+            {"name": name, "hits": [[t, float(s)] for t, s in hits]}
+            for name, hits in named_pools
+        ]}
+        if branch_query_vectors:
+            # Pass float lists directly; the shared decoder (vec_codec.decode_branch_vectors)
+            # accepts lists and casts to float32 — matching the float32 the trace stores.
+            branches["branch_query_vectors"] = {
+                k: list(v) for k, v in branch_query_vectors.items()
+            }
         entry = {
             "session_id": "_",
             "turn_number": 0,
             "trace": {
                 **build_state_record(rs.state, rs),
-                "branches": {"pools": [
-                    {"name": name, "hits": [[t, float(s)] for t, s in hits]}
-                    for name, hits in named_pools
-                ]},
+                "branches": branches,
             },
         }
         return self._get_reranker().rank(entry)
@@ -480,6 +547,10 @@ class V0PlusCompiler:
         trace_enabled = _trace_k > 0
         branch_queries: dict[str, dict] = {}
         branch_status: dict[str, dict] = {}
+        # branch_name -> the actual vector each branch searched with (post-mix dense vector /
+        # centroid). Captured for the reranker dense cross-scoring features (block H).
+        capture_vecs = self.cfg.capture_branch_query_vectors
+        branch_query_vectors: dict[str, list[float]] = {}
 
         # 1. Pre-fusion catalog mask from hard_filters.release_date
         candidate_mask = self._release_date_mask(state)
@@ -561,6 +632,8 @@ class V0PlusCompiler:
                     raw = enc.embed_batch([q_text])[0]
                     encoded_cache[cache_key] = _normalize(raw)
                 vec = self._mix_for_branch(rs, encoded_cache[cache_key], branch)
+                if capture_vecs:
+                    branch_query_vectors[branch_name] = vec
                 hits = self.retriever.search_embedding(
                     query_vector=vec,
                     vector_field=branch.vector_field,
@@ -653,6 +726,8 @@ class V0PlusCompiler:
                         "skip_reason": skip_reason,
                     }
                 continue
+            if capture_vecs:
+                branch_query_vectors[branch_name] = centroid
             hits = self.retriever.search_embedding(
                 query_vector=centroid,
                 vector_field=cb.vector_field,
@@ -716,7 +791,7 @@ class V0PlusCompiler:
             else:
                 reason = (
                     "gated_by_intent"
-                    if rs.state.intent_mode.value in self.cfg.disco_gated_intents
+                    if self._disco_is_gated(rs)
                     else "no_query"
                 )
                 branch_status[disco_branch_name] = {
@@ -796,7 +871,7 @@ class V0PlusCompiler:
                     "ranker='lambdamart' requires branch_trace_topk > 0 (the reranker scores "
                     "the per-branch pools, which are only retained when tracing is enabled)."
                 )
-            reranked = self._reranker_ranked(rs, named_pools)
+            reranked = self._reranker_ranked(rs, named_pools, branch_query_vectors)
             ranked = [t for t in reranked if t in candidate_mask and t not in hard_drop]
         else:
             adjusted = self._apply_soft_adjustments(fused, rs)
@@ -819,6 +894,7 @@ class V0PlusCompiler:
             branch_queries=branch_queries,
             branch_status=branch_status,
             candidate_filter_summary=candidate_filter_summary,
+            branch_query_vectors=branch_query_vectors,
         )
 
     # ------------------------------------------------------------------
@@ -1523,6 +1599,20 @@ class V0PlusCompiler:
             }
         return self._pop_rank
 
+    def _disco_is_gated(self, rs: ResolvedConversationState) -> bool:
+        """Whether the resolved-artist discography branch is intent-gated this turn.
+
+        Normally pivot is gated (the anchors are stale). But when
+        ``enable_pivot_target_discography`` is on, pivot is the EXCEPTION: the resolved
+        artist targets are the new direction the user pivoted to, so we let disco fire for
+        them. Any other configured gated intent stays gated."""
+        intent = rs.state.intent_mode.value
+        if intent not in self.cfg.disco_gated_intents:
+            return False
+        if intent == "pivot" and self.cfg.enable_pivot_target_discography:
+            return False
+        return True
+
     def _resolved_artist_discography_pool(
         self, rs: ResolvedConversationState
     ) -> list[tuple[str, float]]:
@@ -1533,7 +1623,7 @@ class V0PlusCompiler:
         cfg = self.cfg
         if not cfg.enable_resolved_artist_discography:
             return []
-        if rs.state.intent_mode.value in cfg.disco_gated_intents:
+        if self._disco_is_gated(rs):
             return []
         artist_ids: list[str] = []
         seen_artists: set[str] = set()
@@ -1714,20 +1804,12 @@ class V0PlusCompiler:
     def _anchor_track_ids(
         self, state: ConversationStateV0Plus
     ) -> list[str]:
-        """Tracks that count as positive anchors for centroid / tag expansion."""
-        ids: list[str] = []
-        for tf in state.track_feedback:
-            if tf.role in ("accepted", "seed") and tf.overall_sentiment > 0:
-                ids.append(tf.track_id)
-        ids.extend(state.referenced_track_ids)
-        # Dedupe, preserve order
-        seen: set[str] = set()
-        out: list[str] = []
-        for tid in ids:
-            if tid not in seen:
-                seen.add(tid)
-                out.append(tid)
-        return out
+        """Tracks that count as positive anchors for centroid / tag expansion.
+
+        Delegates to the shared, pivot-aware ``_positive_anchor_track_ids`` so retrieval and
+        the reranker features agree on the anchor set (including dropping stale anchors on
+        pivot)."""
+        return _positive_anchor_track_ids(state)
 
     def _top_anchor_tags(
         self, rs: ResolvedConversationState, n: int

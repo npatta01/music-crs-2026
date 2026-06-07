@@ -268,6 +268,32 @@ def test_load_qu_module_unsupported_raises():
 # ---------------------------------------------------------------------
 
 
+def test_compiler_flags_pass_through_from_config():
+    """qu_kwargs.compiler.* must reach CompilerConfig (the passthrough allowlist).
+
+    Regression guard: capture_branch_query_vectors / enable_pivot_target_discography are read
+    from YAML and silently dropped if missing from the allowlist — which would disable the
+    reranker's dense cross-scoring + the pivot disco fix without any error.
+    """
+    catalog = _catalog()
+    qu = build_v0plus_compiler_qu(
+        qu_kwargs={"compiler": {
+            "branch_trace_topk": 10,
+            "capture_branch_query_vectors": True,
+            "enable_pivot_target_discography": False,
+        }},
+        _overrides={
+            "catalog": catalog,
+            "matcher": RapidfuzzCatalogMatcher(catalog),
+            "encoder": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5]),
+            "retriever": FakeRetriever(),
+            "extractor": _FakeExtractor(state=_state()),
+        },
+    )
+    assert qu.compiler.cfg.capture_branch_query_vectors is True
+    assert qu.compiler.cfg.enable_pivot_target_discography is False
+
+
 def test_build_qu_rejects_unknown_encoder_backend():
     catalog = _catalog()
     with pytest.raises(ValueError, match="Unknown encoder.backend"):

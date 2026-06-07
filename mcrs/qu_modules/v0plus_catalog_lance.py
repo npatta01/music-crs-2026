@@ -105,6 +105,9 @@ class LanceDbCatalog:
     _release_date_by_tid: dict[str, _date] = field(default_factory=dict, init=False, repr=False)
     _vector_columns_available: set[str] = field(default_factory=set, init=False, repr=False)
     _vectors: dict[str, dict[str, list[float]]] = field(default_factory=dict, init=False, repr=False)
+    # Lazily-built, cached per-field L2-normalized vector matrix for dense cross-scoring
+    # (rerank block H): field -> (track_id->row_index, float32 [n_present x dim]).
+    _vector_matrix_cache: dict[str, Any] = field(default_factory=dict, init=False, repr=False)
     _table: Any = field(default=None, init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -323,6 +326,59 @@ class LanceDbCatalog:
         if v is None:
             return None
         return [float(x) for x in v]
+
+    def vector_matrix(self, vector_field: str):
+        """Cached, L2-normalized float32 matrix of every track's vector in ``vector_field``.
+
+        Returns ``(id_to_row, matrix)`` where ``id_to_row`` maps track_id -> row index and
+        ``matrix`` is ``[n_present x dim]`` float32 with unit-norm rows (so a dot with a
+        unit-norm query is the cosine similarity). Tracks with no stored vector (or a
+        ``has_<field>`` flag of False) are omitted from ``id_to_row``.
+
+        Built once per field by a single table scan and cached on the instance — this is the
+        bulk primitive for the rerank dense cross-scoring features (block H), shared by the
+        offline feature build and the online reranker so both score against identical vectors.
+        Returns ``(None, None)`` when the field is not a vector column in this table.
+        """
+        import numpy as np
+
+        cached = self._vector_matrix_cache.get(vector_field)
+        if cached is not None:
+            return cached
+        if vector_field not in self._vector_columns_available:
+            self._vector_matrix_cache[vector_field] = (None, None)
+            return (None, None)
+
+        schema_field_names = {f.name for f in self._table.schema}
+        has_col = f"has_{vector_field}"
+        cols = ["track_id", vector_field]
+        if has_col in schema_field_names:
+            cols.append(has_col)
+        df = self._table.search().select(cols).limit(0).to_pandas()
+
+        id_to_row: dict[str, int] = {}
+        rows: list[Any] = []
+        for rec in df.to_dict(orient="records"):
+            if has_col in rec and not rec.get(has_col):
+                continue
+            vec = rec.get(vector_field)
+            if vec is None:
+                continue
+            arr = np.asarray(vec, dtype=np.float32)
+            if arr.size == 0 or not np.any(arr):
+                continue  # missing vectors are stored as all-zeros
+            id_to_row[str(rec["track_id"])] = len(rows)
+            rows.append(arr)
+        if not rows:
+            self._vector_matrix_cache[vector_field] = (None, None)
+            return (None, None)
+        mat = np.vstack(rows).astype(np.float32)
+        norms = np.linalg.norm(mat, axis=1, keepdims=True)
+        norms[norms == 0.0] = 1.0
+        mat /= norms
+        result = (id_to_row, mat)
+        self._vector_matrix_cache[vector_field] = result
+        return result
 
     def metadata_vector(self, track_id: str) -> list[float] | None:
         return self.vector(track_id, "metadata_qwen3_embedding_0_6b")

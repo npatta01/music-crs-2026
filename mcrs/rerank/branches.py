@@ -133,3 +133,52 @@ def raw_rank_col(key: str) -> str:
 
 def raw_score_col(key: str) -> str:
     return f"raw__{key}__score"
+
+
+# --- Block H: dense cross-scoring (issue #93 follow-up) -----------------------------------
+# A per-candidate cosine to the turn's actual query/centroid vector in each modality, for
+# EVERY union candidate -- a DENSE relevance signal that fills the sparse per-branch NaNs
+# (a candidate only gets a branch's rank/score if that branch surfaced it). The compiler
+# captures each branch's query vector (CompilerConfig.capture_branch_query_vectors); these
+# specs map a stable feature suffix -> (catalog vector field, branch kind, centroid source)
+# so features.py can find the right captured query vector and the right candidate vectors.
+
+@dataclass(frozen=True)
+class CrossScoreSpec:
+    name: str           # feature suffix -> column h__xcos_{name}
+    vector_field: str   # catalog vector field for the candidate side
+    kind: str           # "dense" | "centroid" (which branch family captured the query vector)
+    source: str | None  # centroid source ("anchor_tracks" | "user"); None for dense
+
+
+CROSS_SCORE_SPECS: tuple[CrossScoreSpec, ...] = (
+    CrossScoreSpec("metadata_qwen3", "metadata_qwen3_embedding_0_6b", "dense", None),
+    CrossScoreSpec("attributes_qwen3", "attributes_qwen3_embedding_0_6b", "dense", None),
+    CrossScoreSpec("clap_text", "audio_laion_clap", "dense", None),
+    CrossScoreSpec("audio_anchor", "audio_laion_clap", "centroid", "anchor_tracks"),
+    CrossScoreSpec("image_anchor", "image_siglip2", "centroid", "anchor_tracks"),
+    CrossScoreSpec("cf_bpr_anchor", "cf_bpr", "centroid", "anchor_tracks"),
+    CrossScoreSpec("cf_bpr_user", "cf_bpr", "centroid", "user"),
+)
+
+
+def xcos_col(name: str) -> str:
+    return f"h__xcos_{name}"
+
+
+CROSS_SCORE_COLS: tuple[str, ...] = tuple(xcos_col(s.name) for s in CROSS_SCORE_SPECS)
+
+
+def parse_branch_name(name: str) -> tuple[str | None, str | None, str | None]:
+    """Raw branch-trace pool name -> (kind, centroid_source, vector_field).
+
+    ``dense.{encoder_id}.{query_id}.{vector_field}`` -> ("dense", None, vector_field)
+    ``centroid.{source}.{vector_field}``             -> ("centroid", source, vector_field)
+    Anything else -> (None, None, None).
+    """
+    parts = name.split(".")
+    if parts and parts[0] == "dense" and len(parts) >= 2:
+        return ("dense", None, parts[-1])
+    if parts and parts[0] == "centroid" and len(parts) >= 3:
+        return ("centroid", parts[1], ".".join(parts[2:]))
+    return (None, None, None)

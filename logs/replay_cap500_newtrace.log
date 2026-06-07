@@ -1,0 +1,7 @@
+trace=new_trace_2k.jsonl
+model=exp/rerank/devset_cap500/model_single/model.txt
+OVERALL NDCG@20: 0.2654  n=2000
+  refinement      n= 1459  NDCG@20=0.2678
+  open_explore    n=  258  NDCG@20=0.2456
+  playlist_build  n=  207  NDCG@20=0.3261
+  pivot           n=   76  NDCG@20=0.1216

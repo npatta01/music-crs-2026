@@ -1,0 +1,11 @@
+OK  v0plus_compiler_all_retrievers_devset.run_20260606T232126Z-9d5571.shard_0.json  64.3 MB  3.4s
+OK  v0plus_compiler_all_retrievers_devset.run_20260606T232126Z-9d5571.shard_0_trace.jsonl  1196.3 MB  52.8s
+OK  v0plus_compiler_all_retrievers_devset.run_20260606T232126Z-9d5571.shard_1.json  64.3 MB  3.1s
+OK  v0plus_compiler_all_retrievers_devset.run_20260606T232126Z-9d5571.shard_1_trace.jsonl  1194.6 MB  53.4s
+OK  v0plus_compiler_all_retrievers_devset.run_20260606T232126Z-9d5571.shard_2.json  64.3 MB  3.4s
+OK  v0plus_compiler_all_retrievers_devset.run_20260606T232126Z-9d5571.shard_2_trace.jsonl  1201.4 MB  53.0s
+OK  v0plus_compiler_all_retrievers_devset.run_20260606T232126Z-9d5571.shard_3.json  64.3 MB  3.4s
+OK  v0plus_compiler_all_retrievers_devset.run_20260606T232126Z-9d5571.shard_3_trace.jsonl  1196.5 MB  52.7s
+OK  v0plus_compiler_all_retrievers_devset.run_20260606T232126Z-9d5571.shard_4.json  64.3 MB  3.3s
+OK  v0plus_compiler_all_retrievers_devset.run_20260606T232126Z-9d5571.shard_4_trace.jsonl  1203.0 MB  52.6s
+DONE all 10 files

@@ -8,9 +8,13 @@ DELETED_DEVSET_TID = "v0plus_compiler_image_devset"
 
 def test_current_config_surface_has_no_deleted_devset_references():
     configs = sorted(path.name for path in (PROJECT_ROOT / "configs").glob("*.yaml"))
+    # Canonical RRF configs + their LambdaMART-reranker variants (ranker: lambdamart, with the
+    # dense cross-scoring capture flag). All four are current surface.
     assert configs == [
         "v0plus_compiler_all_retrievers_devset.yaml",
+        "v0plus_compiler_all_retrievers_reranked_devset.yaml",
         "v0plus_compiler_blindset_A.yaml",
+        "v0plus_compiler_blindset_A_reranked.yaml",
     ]
 
     checked_paths = [

@@ -1,0 +1,443 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/npatta01/main/ap-TWQQQPpEW8aamxX8uFGxGo
+Building image im-MNPR4fxU9TlrsrohzWJ7kG
+Building image im-UihCBRMP7oKxMIoqS47LF2
+
+=> Step 0: FROM base
+
+=> Step 1: COPY . /
+Saving image...
+Image saved, took 1.78s
+
+Built image im-MNPR4fxU9TlrsrohzWJ7kG in 11.93s
+
+
+Building image im-F6bjng2udu5ZokPoRqZPkJ
+
+=> Step 0: FROM base
+
+=> Step 1: ENV PYTHONPATH=/app
+Saving image...
+
+=> Step 0: FROM base
+
+=> Step 1: COPY . /
+Saving image...
+Image saved, took 1.34s
+
+Built image im-F6bjng2udu5ZokPoRqZPkJ in 2.38s
+
+
+Image saved, took 2.90s
+
+Built image im-UihCBRMP7oKxMIoqS47LF2 in 18.09s
+
+
+Building image im-9CRSrHJxFF4bAP9vERzJkn
+
+=> Step 0: FROM base
+
+=> Step 1: ENV PYTHONPATH=/app
+
+=> Step 2: ENV MCRS_LITELLM_CACHE_BACKEND=file
+
+=> Step 3: ENV MCRS_LITELLM_CACHE_DIR=/root/cache/litellm
+Saving image...
+Image saved, took 858.23ms
+
+Built image im-9CRSrHJxFF4bAP9vERzJkn in 2.02s
+
+
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/semih/all_github_projects/ClaudeCodeProjects/music-conversational-mus
+│   ic-recomender-2026/modal/app.py
+├── 🔨 Created mount 
+│   /Users/semih/all_github_projects/ClaudeCodeProjects/music-conversational-mus
+│   ic-recomender-2026
+├── 🔨 Created function verify_clap_textside.
+├── 🔨 Created function MultimodalTextEncoder.*.
+├── 🔨 Created function _inference_devset.
+├── 🔨 Created function _inference_devset_cpu.
+├── 🔨 Created function _inference_blindset.
+├── 🔨 Created function _inference_blindset_cpu.
+├── 🔨 Created function ModalRetrievalService.*.
+├── 🔨 Created function Qwen3Encoder.*.
+├── 🔨 Created function ModalLiteLLMService.*.
+├── 🔨 Created function query_lancedb.
+├── 🔨 Created function _evaluate.
+├── 🔨 Created function _build_lancedb_with_vllm_qwen_embeddings.
+└── 🔨 Created function verify_siglip_textside.
+Spawned 5 shards for v0plus_compiler_all_retrievers_devset (split=devset, run_id=20260606T232126Z-9d5571).
+LiteLLM file cache enabled at: /root/cache/litellm
+
+[1ASplit strings:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ASplit strings:   8%|▊         | 3607/47071 [00:00<00:01, 36063.16it/s]
+[1ASplit strings:  16%|█▌        | 7326/47071 [00:00<00:01, 36716.35it/s]
+[1ASplit strings:  23%|██▎       | 10998/47071 [00:00<00:00, 36320.28it/s]
+[1ASplit strings:  31%|███▏      | 14728/47071 [00:00<00:00, 36701.26it/s]
+[1ASplit strings:  39%|███▉      | 18399/47071 [00:00<00:00, 35670.93it/s]
+[1ASplit strings:  47%|████▋     | 22011/47071 [00:00<00:00, 35819.93it/s]
+LiteLLM file cache enabled at: /root/cache/litellm
+[1ASplit strings:  54%|█████▍    | 25597/47071 [00:00<00:00, 34815.74it/s]
+[1ASplit strings:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ASplit strings:  62%|██████▏   | 29410/47071 [00:00<00:00, 35839.38it/s]
+[1ASplit strings:   8%|▊         | 3736/47071 [00:00<00:01, 37354.87it/s]
+LiteLLM file cache enabled at: /root/cache/litellm
+[1ASplit strings:  70%|███████   | 33115/47071 [00:00<00:00, 36207.18it/s]
+[1ASplit strings:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ASplit strings:  16%|█▌        | 7472/47071 [00:00<00:01, 35914.42it/s]
+[1ASplit strings:  78%|███████▊  | 36742/47071 [00:01<00:00, 36148.86it/s]
+[1ASplit strings:   8%|▊         | 3662/47071 [00:00<00:01, 36616.28it/s]
+[1ASplit strings:  24%|██▎       | 11068/47071 [00:00<00:01, 35640.42it/s]
+[1ASplit strings:  86%|████████▌ | 40567/47071 [00:01<00:00, 36782.80it/s]
+[1ASplit strings:  16%|█▌        | 7324/47071 [00:00<00:01, 36309.15it/s]
+[1ASplit strings:  32%|███▏      | 14904/47071 [00:00<00:00, 36692.52it/s]
+[1ASplit strings:  94%|█████████▍| 44296/47071 [00:01<00:00, 36926.01it/s]
+[1ASplit strings:  23%|██▎       | 10956/47071 [00:00<00:01, 34921.62it/s]
+[1ASplit strings:  39%|███▉      | 18577/47071 [00:00<00:00, 35853.91it/s]
+[1A                                                                       
+[1A2026-06-06 23:22:25,723 DEBUG bm25s: Building index from IDs objects
+
+[1ABM25S Count Tokens:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ASplit strings:  47%|████▋     | 22255/47071 [00:00<00:00, 36160.63it/s]
+[1ASplit strings:  31%|███▏      | 14787/47071 [00:00<00:00, 36219.60it/s]
+[1ABM25S Count Tokens:  31%|███       | 14649/47071 [00:00<00:00, 146474.08it/s]
+[1ASplit strings:  39%|███▉      | 18416/47071 [00:00<00:00, 35501.50it/s]
+[1ASplit strings:  55%|█████▍    | 25875/47071 [00:00<00:00, 35661.97it/s]
+[1ABM25S Count Tokens:  62%|██████▏   | 29297/47071 [00:00<00:00, 142700.32it/s]
+[1ASplit strings:  47%|████▋     | 22099/47071 [00:00<00:00, 35941.11it/s]
+[1ASplit strings:  63%|██████▎   | 29702/47071 [00:00<00:00, 36474.67it/s]
+[1ABM25S Count Tokens:  93%|█████████▎| 43574/47071 [00:00<00:00, 132775.97it/s]
+[1ASplit strings:  55%|█████▍    | 25699/47071 [00:00<00:00, 35468.85it/s]
+[1A                                                                             
+[1A
+[1ASplit strings:  71%|███████   | 33354/47071 [00:00<00:00, 36119.12it/s]
+[1ABM25S Compute Scores:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ASplit strings:  62%|██████▏   | 29392/47071 [00:00<00:00, 35914.72it/s]
+[1ASplit strings:  79%|███████▉  | 37107/47071 [00:01<00:00, 36542.97it/s]
+[1ABM25S Compute Scores:  13%|█▎        | 6058/47071 [00:00<00:00, 60569.23it/s]
+[1ASplit strings:  87%|████████▋ | 40994/47071 [00:01<00:00, 37245.36it/s]
+[1ABM25S Compute Scores:  26%|██▌       | 12230/47071 [00:00<00:00, 61236.26it/s]
+[1ASplit strings:  70%|███████   | 33021/47071 [00:00<00:00, 36027.24it/s]
+[1ASplit strings:  95%|█████████▌| 44722/47071 [00:01<00:00, 37176.80it/s]
+[1ASplit strings:  78%|███████▊  | 36627/47071 [00:01<00:00, 35726.46it/s]
+[1ABM25S Compute Scores:  39%|███▉      | 18435/47071 [00:00<00:00, 61604.66it/s]
+[1A                                                                       
+[1ASplit strings:  86%|████████▌ | 40320/47071 [00:01<00:00, 36083.89it/s]
+[1ABM25S Compute Scores:  52%|█████▏    | 24596/47071 [00:00<00:00, 61401.24it/s]
+[1A2026-06-06 23:22:26,467 DEBUG bm25s: Building index from IDs objects
+
+[1ABM25S Count Tokens:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Count Tokens:  31%|███       | 14635/47071 [00:00<00:00, 146328.16it/s]
+[1ASplit strings:  93%|█████████▎| 43931/47071 [00:01<00:00, 35828.32it/s]
+[1ABM25S Compute Scores:  66%|██████▌   | 30868/47071 [00:00<00:00, 61871.52it/s]
+[1A                                                                       
+[1A
+[1ABM25S Count Tokens:  62%|██████▏   | 29268/47071 [00:00<00:00, 139180.53it/s]
+[1ABM25S Compute Scores:  79%|███████▊  | 37056/47071 [00:00<00:00, 61692.66it/s]2026-06-06 23:22:26,686 DEBUG bm25s: Building index from IDs objects
+
+[1ABM25S Count Tokens:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Count Tokens:  31%|███       | 14626/47071 [00:00<00:00, 146250.38it/s]
+[1ABM25S Compute Scores:  92%|█████████▏| 43226/47071 [00:00<00:00, 61534.97it/s]
+[1ABM25S Count Tokens:  92%|█████████▏| 43210/47071 [00:00<00:00, 131571.22it/s]
+[1A                                                                              
+[1A
+[1A                                                                             
+[1A
+[1ABM25S Compute Scores:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Count Tokens:  62%|██████▏   | 29252/47071 [00:00<00:00, 136287.93it/s]
+[1ABM25S Compute Scores:  13%|█▎        | 6251/47071 [00:00<00:00, 62506.78it/s]
+[1ABM25S Count Tokens:  91%|█████████ | 42927/47071 [00:00<00:00, 132664.35it/s]
+[1ABM25S Compute Scores:  27%|██▋       | 12585/47071 [00:00<00:00, 62992.87it/s]                                                                             
+[1A
+[1ABM25S Compute Scores:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Compute Scores:  40%|████      | 18885/47071 [00:00<00:00, 62867.35it/s]
+[1ABM25S Compute Scores:  13%|█▎        | 6295/47071 [00:00<00:00, 62943.61it/s]
+[1AFinding newlines for mmindex:   0%|          | 0.00/25.8M [00:00<?, ?B/s]
+[1ABM25S Compute Scores:  53%|█████▎    | 25172/47071 [00:00<00:00, 62570.91it/s]
+[1ABM25S Compute Scores:  27%|██▋       | 12590/47071 [00:00<00:00, 62077.26it/s]
+[1AFinding newlines for mmindex:  36%|███▌      | 9.34M/25.8M [00:00<00:00, 93.4MB/s]
+[1ABM25S Compute Scores:  67%|██████▋   | 31430/47071 [00:00<00:00, 62439.81it/s]
+[1ABM25S Compute Scores:  40%|████      | 18888/47071 [00:00<00:00, 62483.54it/s]
+[1ABM25S Compute Scores:  80%|████████  | 37722/47071 [00:00<00:00, 62598.56it/s]
+[1AFinding newlines for mmindex:  73%|███████▎  | 18.9M/25.8M [00:00<00:00, 94.9MB/s]
+[1ABM25S Compute Scores:  53%|█████▎    | 25138/47071 [00:00<00:00, 62131.51it/s]Finding newlines for mmindex: 100%|██████████| 25.8M/25.8M [00:00<00:00, 96.1MB/s]
+
+[1ABM25S Compute Scores:  94%|█████████▎| 44097/47071 [00:00<00:00, 62972.08it/s]
+[1ABM25S Compute Scores:  67%|██████▋   | 31427/47071 [00:00<00:00, 62399.93it/s]
+[1A                                                                              
+[1ABM25S Compute Scores:  80%|████████  | 37668/47071 [00:00<00:00, 61845.69it/s]
+[1A
+[1ABM25S Compute Scores:  93%|█████████▎| 43854/47071 [00:00<00:00, 61548.32it/s]
+[1A                                                                              
+[1A
+LiteLLM file cache enabled at: /root/cache/litellm
+[1AFinding newlines for mmindex:   0%|          | 0.00/25.8M [00:00<?, ?B/s]
+[1AFinding newlines for mmindex:  34%|███▍      | 8.72M/25.8M [00:00<00:00, 87.2MB/s]
+[1ASplit strings:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ASplit strings:   5%|▌         | 2484/47071 [00:00<00:01, 24834.22it/s]
+[1AFinding newlines for mmindex:  68%|██████▊   | 17.5M/25.8M [00:00<00:00, 87.7MB/s]
+[1AFinding newlines for mmindex:   0%|          | 0.00/25.8M [00:00<?, ?B/s]
+[1AFinding newlines for mmindex: 100%|██████████| 25.8M/25.8M [00:00<00:00, 88.1MB/s]
+
+[1ASplit strings:  11%|█         | 4988/47071 [00:00<00:01, 24951.11it/s]
+[1AFinding newlines for mmindex:  33%|███▎      | 8.48M/25.8M [00:00<00:00, 84.8MB/s]
+[1ASplit strings:  16%|█▌        | 7484/47071 [00:00<00:01, 24160.14it/s]
+[1ASplit strings:  21%|██        | 9903/47071 [00:00<00:01, 22384.55it/s]
+[1AFinding newlines for mmindex:  66%|██████▌   | 17.0M/25.8M [00:00<00:00, 80.2MB/s]
+[1AFinding newlines for mmindex: 100%|██████████| 25.8M/25.8M [00:00<00:00, 85.8MB/s]
+
+[1ASplit strings:  26%|██▋       | 12394/47071 [00:00<00:01, 23237.53it/s]
+[1ASplit strings:  31%|███▏      | 14785/47071 [00:00<00:01, 23454.65it/s]
+[1ASplit strings:  36%|███▋      | 17143/47071 [00:00<00:01, 23370.15it/s]
+[1ASplit strings:  41%|████▏     | 19488/47071 [00:00<00:01, 23358.74it/s]
+[1ASplit strings:  47%|████▋     | 22101/47071 [00:00<00:01, 24209.79it/s]
+[1ASplit strings:  52%|█████▏    | 24528/47071 [00:01<00:00, 23975.99it/s]
+[1ASplit strings:  58%|█████▊    | 27071/47071 [00:01<00:00, 24390.41it/s]
+[1ASplit strings:  63%|██████▎   | 29627/47071 [00:01<00:00, 24737.54it/s]
+[1ASplit strings:  68%|██████▊   | 32144/47071 [00:01<00:00, 24862.57it/s]
+[1ASplit strings:  74%|███████▎  | 34633/47071 [00:01<00:00, 24471.58it/s]
+[1ASplit strings:  79%|███████▉  | 37083/47071 [00:01<00:00, 24231.83it/s]
+[1ASplit strings:  84%|████████▍ | 39509/47071 [00:01<00:00, 23710.09it/s]
+[1ASplit strings:  89%|████████▉ | 41884/47071 [00:01<00:00, 21969.49it/s]
+[1ASplit strings:  94%|█████████▎| 44106/47071 [00:01<00:00, 20847.32it/s]
+[1ASplit strings:  98%|█████████▊| 46214/47071 [00:02<00:00, 20131.42it/s]
+[1A                                                                       
+[1A2026-06-06 23:22:30,094 DEBUG bm25s: Building index from IDs objects
+
+[1ABM25S Count Tokens:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Count Tokens:  20%|█▉        | 9241/47071 [00:00<00:00, 92399.07it/s]
+[1ABM25S Count Tokens:  39%|███▉      | 18481/47071 [00:00<00:00, 89467.22it/s]
+[1ABM25S Count Tokens:  58%|█████▊    | 27435/47071 [00:00<00:00, 87457.39it/s]
+[1ABM25S Count Tokens:  77%|███████▋  | 36187/47071 [00:00<00:00, 85604.04it/s]
+[1ABM25S Count Tokens:  95%|█████████▌| 44753/47071 [00:00<00:00, 84158.94it/s]
+[1A                                                                            
+[1A
+[1ABM25S Compute Scores:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Compute Scores:   7%|▋         | 3229/47071 [00:00<00:01, 32276.56it/s]
+[1ABM25S Compute Scores:  14%|█▎        | 6457/47071 [00:00<00:01, 32017.00it/s]
+[1ABM25S Compute Scores:  21%|██        | 9659/47071 [00:00<00:01, 31829.45it/s]
+[1ABM25S Compute Scores:  28%|██▊       | 13067/47071 [00:00<00:01, 32710.36it/s]
+[1ABM25S Compute Scores:  35%|███▍      | 16430/47071 [00:00<00:00, 33039.96it/s]
+[1ABM25S Compute Scores:  42%|████▏     | 19763/47071 [00:00<00:00, 33133.12it/s]
+[1ABM25S Compute Scores:  49%|████▉     | 23104/47071 [00:00<00:00, 33220.69it/s]
+[1ABM25S Compute Scores:  56%|█████▌    | 26427/47071 [00:00<00:00, 33065.76it/s]
+[1ABM25S Compute Scores:  63%|██████▎   | 29765/47071 [00:00<00:00, 33161.48it/s]
+[1ABM25S Compute Scores:  70%|███████   | 33082/47071 [00:01<00:00, 33039.48it/s]
+[1ABM25S Compute Scores:  77%|███████▋  | 36399/47071 [00:01<00:00, 33076.73it/s]
+[1ABM25S Compute Scores:  84%|████████▍ | 39707/47071 [00:01<00:00, 32831.61it/s]
+[1ABM25S Compute Scores:  91%|█████████▏| 43001/47071 [00:01<00:00, 32863.69it/s]
+[1ABM25S Compute Scores:  98%|█████████▊| 46288/47071 [00:01<00:00, 32704.60it/s]
+[1A                                                                              
+[1A
+[1AFinding newlines for mmindex:   0%|          | 0.00/25.8M [00:00<?, ?B/s]
+[1AFinding newlines for mmindex:  26%|██▌       | 6.76M/25.8M [00:00<00:00, 67.6MB/s]
+[1AFinding newlines for mmindex:  53%|█████▎    | 13.7M/25.8M [00:00<00:00, 68.5MB/s]
+[1AFinding newlines for mmindex:  80%|███████▉  | 20.6M/25.8M [00:00<00:00, 68.8MB/s]
+[1AFinding newlines for mmindex: 100%|██████████| 25.8M/25.8M [00:00<00:00, 68.9MB/s]
+LiteLLM file cache enabled at: /root/cache/litellm
+
+[1ASplit strings:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ASplit strings:   6%|▌         | 2808/47071 [00:00<00:01, 28071.13it/s]
+[1ASplit strings:  12%|█▏        | 5616/47071 [00:00<00:01, 27422.53it/s]
+[1ASplit strings:  18%|█▊        | 8360/47071 [00:00<00:01, 25011.00it/s]
+[1ASplit strings:  23%|██▎       | 10883/47071 [00:00<00:01, 24082.73it/s]
+[1ASplit strings:  29%|██▊       | 13462/47071 [00:00<00:01, 24655.66it/s]
+[1ASplit strings:  35%|███▍      | 16257/47071 [00:00<00:01, 25724.66it/s]
+[1ASplit strings:  40%|████      | 18843/47071 [00:00<00:01, 24021.08it/s]
+[1ASplit strings:  45%|████▌     | 21271/47071 [00:00<00:01, 23841.99it/s]
+[1ASplit strings:  50%|█████     | 23673/47071 [00:00<00:00, 23412.88it/s]
+[1ASplit strings:  55%|█████▌    | 26026/47071 [00:01<00:00, 23392.62it/s]
+[1ASplit strings:  61%|██████    | 28816/47071 [00:01<00:00, 24717.77it/s]
+[1ASplit strings:  67%|██████▋   | 31532/47071 [00:01<00:00, 25434.57it/s]
+[1ASplit strings:  72%|███████▏  | 34085/47071 [00:01<00:00, 24224.22it/s]
+[1ASplit strings:  78%|███████▊  | 36538/47071 [00:01<00:00, 24308.75it/s]
+[1ASplit strings:  83%|████████▎ | 38982/47071 [00:01<00:00, 23805.60it/s]
+[1ASplit strings:  88%|████████▊ | 41572/47071 [00:01<00:00, 24405.09it/s]
+[1ASplit strings:  94%|█████████▎| 44022/47071 [00:01<00:00, 23498.66it/s]
+[1ASplit strings:  99%|█████████▊| 46384/47071 [00:01<00:00, 23456.44it/s]
+[1A                                                                       
+[1A2026-06-06 23:22:40,631 DEBUG bm25s: Building index from IDs objects
+
+[1ABM25S Count Tokens:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Count Tokens:  26%|██▌       | 12005/47071 [00:00<00:00, 120028.08it/s]
+[1ABM25S Count Tokens:  51%|█████     | 24008/47071 [00:00<00:00, 103927.40it/s]
+[1ABM25S Count Tokens:  73%|███████▎  | 34539/47071 [00:00<00:00, 104322.95it/s]
+[1ABM25S Count Tokens:  96%|█████████▌| 45050/47071 [00:00<00:00, 104504.72it/s]
+[1A                                                                             
+[1A
+[1ABM25S Compute Scores:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Compute Scores:   9%|▉         | 4149/47071 [00:00<00:01, 41473.82it/s]
+[1ABM25S Compute Scores:  18%|█▊        | 8387/47071 [00:00<00:00, 42003.74it/s]
+[1ABM25S Compute Scores:  27%|██▋       | 12738/47071 [00:00<00:00, 42689.23it/s]
+[1ABM25S Compute Scores:  36%|███▋      | 17070/47071 [00:00<00:00, 42934.56it/s]
+[1ABM25S Compute Scores:  46%|████▌     | 21591/47071 [00:00<00:00, 43752.46it/s]
+[1ABM25S Compute Scores:  55%|█████▌    | 25967/47071 [00:00<00:00, 43633.34it/s]
+[1ABM25S Compute Scores:  65%|██████▍   | 30394/47071 [00:00<00:00, 43838.94it/s]
+[1ABM25S Compute Scores:  74%|███████▍  | 34778/47071 [00:00<00:00, 43803.53it/s]
+[1ABM25S Compute Scores:  83%|████████▎ | 39189/47071 [00:00<00:00, 43898.65it/s]
+[1ABM25S Compute Scores:  93%|█████████▎| 43657/47071 [00:01<00:00, 44137.23it/s]
+[1A                                                                              
+[1A
+[1AFinding newlines for mmindex:   0%|          | 0.00/25.8M [00:00<?, ?B/s]
+[1AFinding newlines for mmindex:  28%|██▊       | 7.21M/25.8M [00:00<00:00, 72.1MB/s]
+[1AFinding newlines for mmindex:  56%|█████▌    | 14.4M/25.8M [00:00<00:00, 68.9MB/s]
+[1AFinding newlines for mmindex:  84%|████████▍ | 21.8M/25.8M [00:00<00:00, 71.1MB/s]
+[1AFinding newlines for mmindex: 100%|██████████| 25.8M/25.8M [00:00<00:00, 71.0MB/s]
+Shard 2/5: 200 sessions (indices [400, 600))
+Shard 0/5: 200 sessions (indices [0, 200))
+
+[1ABatch inference:   0%|          | 0/25 [00:00<?, ?it/s]
+Shard 1/5: 200 sessions (indices [200, 400))
+[1ABatch inference:   0%|          | 0/25 [00:00<?, ?it/s]
+[1ABatch inference:   0%|          | 0/25 [00:00<?, ?it/s]Shard 3/5: 200 sessions (indices [600, 800))
+
+Shard 4/5: 200 sessions (indices [800, 1000))
+[1ABatch inference:   0%|          | 0/25 [00:00<?, ?it/s]
+[1ABatch inference:   0%|          | 0/25 [00:00<?, ?it/s]
+[1ABatch inference:   4%|▍         | 1/25 [01:05<26:03, 65.13s/it]
+[1ABatch inference:   4%|▍         | 1/25 [01:05<26:12, 65.54s/it]
+[1ABatch inference:   4%|▍         | 1/25 [01:09<27:59, 69.99s/it]
+[1ABatch inference:   4%|▍         | 1/25 [01:17<30:59, 77.49s/it]
+[1ABatch inference:   8%|▊         | 2/25 [01:56<21:51, 57.02s/it]
+[1ABatch inference:   8%|▊         | 2/25 [02:04<23:38, 61.65s/it]
+[1ABatch inference:   4%|▍         | 1/25 [01:45<42:07, 105.31s/it]
+[1ABatch inference:   8%|▊         | 2/25 [02:13<25:19, 66.08s/it]
+[1ABatch inference:   8%|▊         | 2/25 [02:25<27:40, 72.20s/it]
+[1ABatch inference:  12%|█▏        | 3/25 [02:56<21:20, 58.21s/it]
+[1ABatch inference:  12%|█▏        | 3/25 [03:02<22:02, 60.13s/it]
+[1ABatch inference:  12%|█▏        | 3/25 [03:23<24:51, 67.79s/it]
+[1ABatch inference:   8%|▊         | 2/25 [03:10<35:48, 93.41s/it] 
+[1ABatch inference:  16%|█▌        | 4/25 [03:49<19:45, 56.44s/it]
+[1ABatch inference:  16%|█▌        | 4/25 [03:56<20:13, 57.76s/it]
+[1ABatch inference:  12%|█▏        | 3/25 [03:34<25:46, 70.29s/it]
+[1ABatch inference:  16%|█▌        | 4/25 [04:21<22:24, 64.00s/it]
+[1ABatch inference:  20%|██        | 5/25 [04:44<18:34, 55.72s/it]
+[1ABatch inference:  20%|██        | 5/25 [04:51<18:55, 56.78s/it]
+[1ABatch inference:  12%|█▏        | 3/25 [04:36<33:00, 90.03s/it]
+[1ABatch inference:  16%|█▌        | 4/25 [04:41<24:15, 69.33s/it]
+[1ABatch inference:  20%|██        | 5/25 [05:30<21:53, 65.70s/it]
+[1ABatch inference:  24%|██▍       | 6/25 [05:40<17:45, 56.06s/it]
+[1ABatch inference:  24%|██▍       | 6/25 [05:45<17:35, 55.55s/it]
+[1ABatch inference:  20%|██        | 5/25 [05:48<22:45, 68.26s/it]
+[1ABatch inference:  16%|█▌        | 4/25 [05:57<30:15, 86.44s/it]
+[1ABatch inference:  24%|██▍       | 6/25 [06:32<20:25, 64.48s/it]
+[1ABatch inference:  28%|██▊       | 7/25 [06:38<16:25, 54.73s/it]
+[1ABatch inference:  28%|██▊       | 7/25 [06:41<17:16, 57.59s/it]
+[1ABatch inference:  24%|██▍       | 6/25 [06:59<21:58, 69.39s/it]
+[1ABatch inference:  32%|███▏      | 8/25 [07:32<15:30, 54.75s/it]
+[1ABatch inference:  20%|██        | 5/25 [07:13<27:36, 82.82s/it]
+[1ABatch inference:  32%|███▏      | 8/25 [07:38<16:13, 57.27s/it]
+[1ABatch inference:  28%|██▊       | 7/25 [07:39<19:38, 65.47s/it]
+[1ABatch inference:  36%|███▌      | 9/25 [08:32<15:01, 56.32s/it]
+[1ABatch inference:  36%|███▌      | 9/25 [08:36<15:19, 57.48s/it]
+[1ABatch inference:  28%|██▊       | 7/25 [08:08<20:44, 69.14s/it]
+[1ABatch inference:  32%|███▏      | 8/25 [08:39<18:00, 63.54s/it]
+[1ABatch inference:  24%|██▍       | 6/25 [08:27<25:13, 79.68s/it]
+[1ABatch inference:  40%|████      | 10/25 [09:31<14:12, 56.80s/it]
+[1ABatch inference:  40%|████      | 10/25 [09:32<14:18, 57.23s/it]
+[1ABatch inference:  36%|███▌      | 9/25 [09:38<16:36, 62.27s/it]
+[1ABatch inference:  32%|███▏      | 8/25 [09:12<19:06, 67.46s/it]
+[1ABatch inference:  28%|██▊       | 7/25 [09:39<23:10, 77.25s/it]
+[1ABatch inference:  44%|████▍     | 11/25 [10:32<13:32, 58.02s/it]
+[1ABatch inference:  44%|████▍     | 11/25 [10:33<13:40, 58.60s/it]
+[1ABatch inference:  40%|████      | 10/25 [10:35<15:08, 60.54s/it]
+[1ABatch inference:  36%|███▌      | 9/25 [10:27<18:37, 69.86s/it]
+[1ABatch inference:  32%|███▏      | 8/25 [10:51<21:23, 75.48s/it]
+[1ABatch inference:  48%|████▊     | 12/25 [11:29<12:30, 57.75s/it]
+[1ABatch inference:  48%|████▊     | 12/25 [11:32<12:41, 58.55s/it]
+[1ABatch inference:  44%|████▍     | 11/25 [11:33<13:55, 59.71s/it]
+[1ABatch inference:  40%|████      | 10/25 [11:46<18:11, 72.78s/it]
+[1ABatch inference:  52%|█████▏    | 13/25 [12:24<11:24, 57.04s/it]
+[1ABatch inference:  48%|████▊     | 12/25 [12:27<12:36, 58.21s/it]
+[1ABatch inference:  36%|███▌      | 9/25 [12:06<20:07, 75.47s/it]
+[1ABatch inference:  52%|█████▏    | 13/25 [12:34<11:56, 59.72s/it]
+[1ABatch inference:  52%|█████▏    | 13/25 [13:18<11:12, 56.06s/it]
+[1ABatch inference:  56%|█████▌    | 14/25 [13:25<10:40, 58.23s/it]
+[1ABatch inference:  56%|█████▌    | 14/25 [13:29<10:41, 58.30s/it]
+[1ABatch inference:  44%|████▍     | 11/25 [13:11<17:49, 76.40s/it]
+[1ABatch inference:  40%|████      | 10/25 [13:15<18:22, 73.53s/it]
+[1ABatch inference:  56%|█████▌    | 14/25 [14:17<10:24, 56.76s/it]
+[1ABatch inference:  60%|██████    | 15/25 [14:20<09:32, 57.21s/it]
+[1ABatch inference:  60%|██████    | 15/25 [14:26<09:38, 57.90s/it]
+[1ABatch inference:  44%|████▍     | 11/25 [14:33<17:28, 74.92s/it]
+[1ABatch inference:  48%|████▊     | 12/25 [14:33<16:55, 78.13s/it]
+[1ABatch inference:  60%|██████    | 15/25 [15:11<09:18, 55.89s/it]
+[1ABatch inference:  64%|██████▍   | 16/25 [15:16<08:30, 56.77s/it]
+[1ABatch inference:  64%|██████▍   | 16/25 [15:26<08:46, 58.54s/it]
+[1ABatch inference:  64%|██████▍   | 16/25 [16:05<08:19, 55.53s/it]
+[1ABatch inference:  68%|██████▊   | 17/25 [16:16<07:43, 57.91s/it]
+[1ABatch inference:  48%|████▊     | 12/25 [15:53<16:32, 76.32s/it]
+[1ABatch inference:  68%|██████▊   | 17/25 [16:20<07:38, 57.30s/it]
+[1ABatch inference:  52%|█████▏    | 13/25 [15:59<16:07, 80.66s/it]
+[1ABatch inference:  68%|██████▊   | 17/25 [17:03<07:29, 56.21s/it]
+[1ABatch inference:  72%|███████▏  | 18/25 [17:11<06:37, 56.81s/it]
+[1ABatch inference:  72%|███████▏  | 18/25 [17:17<06:39, 57.09s/it]
+[1ABatch inference:  52%|█████▏    | 13/25 [17:17<15:43, 78.66s/it]
+[1ABatch inference:  56%|█████▌    | 14/25 [17:27<15:09, 82.64s/it]
+[1ABatch inference:  72%|███████▏  | 18/25 [18:05<06:44, 57.77s/it]
+[1ABatch inference:  76%|███████▌  | 19/25 [18:07<05:39, 56.65s/it]
+[1ABatch inference:  76%|███████▌  | 19/25 [18:16<05:46, 57.73s/it]
+[1ABatch inference:  76%|███████▌  | 19/25 [19:03<05:47, 57.96s/it]
+[1ABatch inference:  80%|████████  | 20/25 [19:08<04:49, 57.83s/it]
+[1ABatch inference:  56%|█████▌    | 14/25 [18:48<15:06, 82.38s/it]
+[1ABatch inference:  80%|████████  | 20/25 [19:19<04:56, 59.36s/it]
+[1ABatch inference:  60%|██████    | 15/25 [19:00<14:18, 85.90s/it]
+[1ABatch inference:  80%|████████  | 20/25 [20:04<04:54, 58.94s/it]
+[1ABatch inference:  84%|████████▍ | 21/25 [20:11<03:58, 59.56s/it]
+[1ABatch inference:  84%|████████▍ | 21/25 [20:19<03:57, 59.37s/it]
+[1ABatch inference:  60%|██████    | 15/25 [20:19<14:10, 85.06s/it]
+[1ABatch inference:  84%|████████▍ | 21/25 [20:58<03:49, 57.30s/it]
+[1ABatch inference:  64%|██████▍   | 16/25 [20:43<13:38, 91.00s/it]
+[1ABatch inference:  88%|████████▊ | 22/25 [21:15<03:02, 60.88s/it]
+[1ABatch inference:  88%|████████▊ | 22/25 [21:20<02:59, 59.99s/it]
+[1ABatch inference:  88%|████████▊ | 22/25 [21:50<02:47, 55.81s/it]
+[1ABatch inference:  64%|██████▍   | 16/25 [21:52<13:06, 87.40s/it]
+[1ABatch inference:  92%|█████████▏| 23/25 [22:21<02:04, 62.28s/it]
+[1ABatch inference:  92%|█████████▏| 23/25 [22:32<02:07, 63.65s/it]
+[1ABatch inference:  92%|█████████▏| 23/25 [22:46<01:51, 55.82s/it]
+[1ABatch inference:  68%|██████▊   | 17/25 [22:22<12:27, 93.46s/it]
+[1ABatch inference:  96%|█████████▌| 24/25 [23:35<01:05, 65.77s/it]
+[1ABatch inference:  96%|█████████▌| 24/25 [23:49<00:58, 58.16s/it]
+[1ABatch inference:  68%|██████▊   | 17/25 [23:27<11:56, 89.55s/it]
+[1ABatch inference:  96%|█████████▌| 24/25 [24:02<01:11, 71.45s/it]
+[1ABatch inference:  72%|███████▏  | 18/25 [23:56<10:55, 93.70s/it]
+[1ABatch inference: 100%|██████████| 25/25 [24:47<00:00, 57.83s/it]
+[1ABatch inference: 100%|██████████| 25/25 [24:47<00:00, 59.48s/it]
+
+[1ABatch inference: 100%|██████████| 25/25 [24:58<00:00, 71.02s/it]Batch inference: 100%|██████████| 25/25 [24:58<00:00, 59.94s/it]
+
+[1ABatch inference: 100%|██████████| 25/25 [25:12<00:00, 70.97s/it]Batch inference: 100%|██████████| 25/25 [25:12<00:00, 60.50s/it]
+CPU results saved to volume: inference/devset/v0plus_compiler_all_retrievers_devset.run_20260606T232126Z-9d5571.shard_2.json
+
+CPU results saved to volume: inference/devset/v0plus_compiler_all_retrievers_devset.run_20260606T232126Z-9d5571.shard_0.json
+CPU results saved to volume: inference/devset/v0plus_compiler_all_retrievers_devset.run_20260606T232126Z-9d5571.shard_1.json
+[1ABatch inference:  72%|███████▏  | 18/25 [25:04<10:42, 91.82s/it]
+[1ABatch inference:  76%|███████▌  | 19/25 [25:33<09:26, 94.49s/it]
+[1ABatch inference:  76%|███████▌  | 19/25 [26:31<09:02, 90.38s/it]
+[1ABatch inference:  80%|████████  | 20/25 [27:20<08:12, 98.46s/it]
+[1ABatch inference:  80%|████████  | 20/25 [28:22<08:02, 96.60s/it]
+[1ABatch inference:  84%|████████▍ | 21/25 [29:12<06:49, 102.38s/it]
+[1ABatch inference:  84%|████████▍ | 21/25 [30:02<06:30, 97.73s/it]
+[1ABatch inference:  88%|████████▊ | 22/25 [30:51<05:03, 101.25s/it]
+[1ABatch inference:  88%|████████▊ | 22/25 [31:43<04:56, 98.69s/it]
+Shard 0 complete.
+Shard 1 complete.
+Shard 2 complete.
+[1ABatch inference:  92%|█████████▏| 23/25 [32:41<03:27, 103.91s/it]
+[1ABatch inference:  92%|█████████▏| 23/25 [33:17<03:14, 97.12s/it]
+[1ABatch inference:  96%|█████████▌| 24/25 [34:28<01:45, 105.06s/it]
+[1ABatch inference:  96%|█████████▌| 24/25 [35:06<01:40, 100.88s/it]
+[1ABatch inference: 100%|██████████| 25/25 [36:11<00:00, 104.20s/it]
+[1ABatch inference: 100%|██████████| 25/25 [36:11<00:00, 86.84s/it] 
+
+[1ABatch inference: 100%|██████████| 25/25 [36:48<00:00, 100.99s/it]Batch inference: 100%|██████████| 25/25 [36:48<00:00, 88.32s/it] 
+CPU results saved to volume: inference/devset/v0plus_compiler_all_retrievers_devset.run_20260606T232126Z-9d5571.shard_4.json
+CPU results saved to volume: inference/devset/v0plus_compiler_all_retrievers_devset.run_20260606T232126Z-9d5571.shard_3.json
+Shard 3 complete.
+Shard 4 complete.
+All 5 shards complete. Per-shard outputs: inference/devset/v0plus_compiler_all_retrievers_devset.run_20260606T232126Z-9d5571.shard_{0..4}.json
+✓ App completed. View run at 
+https://modal.com/apps/npatta01/main/ap-TWQQQPpEW8aamxX8uFGxGo

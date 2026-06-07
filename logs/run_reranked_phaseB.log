@@ -1,0 +1,541 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/npatta01/main/ap-q4K6ray3llcMngyWqjdPHL
+Building image im-kgGQGaZYfPiXjHewj1tZYJ
+Building image im-KMoCJiudsEe3TKt7JkSRNg
+
+=> Step 0: FROM base
+
+=> Step 1: COPY . /
+Saving image...
+Image saved, took 1.41s
+
+Built image im-kgGQGaZYfPiXjHewj1tZYJ in 6.81s
+
+
+Building image im-rdKtIDVswpkcuYgkag6wjk
+
+=> Step 0: FROM base
+
+=> Step 1: ENV PYTHONPATH=/app
+Saving image...
+Image saved, took 772.83ms
+
+Built image im-rdKtIDVswpkcuYgkag6wjk in 3.10s
+
+
+
+=> Step 0: FROM base
+
+=> Step 1: COPY . /
+Saving image...
+Image saved, took 1.75s
+
+Built image im-KMoCJiudsEe3TKt7JkSRNg in 16.18s
+
+
+Building image im-ON5AqMuy5CHpV3jqVAOtWK
+
+=> Step 0: FROM base
+
+=> Step 1: ENV PYTHONPATH=/app
+
+=> Step 2: ENV MCRS_LITELLM_CACHE_BACKEND=file
+
+=> Step 3: ENV MCRS_LITELLM_CACHE_DIR=/root/cache/litellm
+Saving image...
+Image saved, took 914.25ms
+
+Built image im-ON5AqMuy5CHpV3jqVAOtWK in 3.62s
+
+
+✓ Created objects.
+├── 🔨 Created mount 
+│   /Users/semih/all_github_projects/ClaudeCodeProjects/music-conversational-mus
+│   ic-recomender-2026/modal/app.py
+├── 🔨 Created mount 
+│   /Users/semih/all_github_projects/ClaudeCodeProjects/music-conversational-mus
+│   ic-recomender-2026
+├── 🔨 Created function verify_clap_textside.
+├── 🔨 Created function MultimodalTextEncoder.*.
+├── 🔨 Created function _inference_devset.
+├── 🔨 Created function _inference_devset_cpu.
+├── 🔨 Created function _inference_blindset.
+├── 🔨 Created function _inference_blindset_cpu.
+├── 🔨 Created function ModalRetrievalService.*.
+├── 🔨 Created function Qwen3Encoder.*.
+├── 🔨 Created function ModalLiteLLMService.*.
+├── 🔨 Created function query_lancedb.
+├── 🔨 Created function _evaluate.
+├── 🔨 Created function _build_lancedb_with_vllm_qwen_embeddings.
+└── 🔨 Created function verify_siglip_textside.
+Spawned 5 shards for v0plus_compiler_all_retrievers_reranked_devset (split=devset, run_id=20260607T011258Z-4ed5f3).
+LiteLLM file cache enabled at: /root/cache/litellm
+
+[1ASplit strings:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ASplit strings:   7%|▋         | 3525/47071 [00:00<00:01, 35236.26it/s]
+[1ASplit strings:  15%|█▍        | 7049/47071 [00:00<00:01, 34493.42it/s]
+[1ASplit strings:  22%|██▏       | 10500/47071 [00:00<00:01, 33363.72it/s]
+[1ASplit strings:  29%|██▉       | 13871/47071 [00:00<00:00, 33488.34it/s]
+[1ASplit strings:  37%|███▋      | 17223/47071 [00:00<00:00, 32192.83it/s]
+[1ASplit strings:  43%|████▎     | 20451/47071 [00:00<00:00, 31314.64it/s]
+[1ASplit strings:  50%|█████     | 23590/47071 [00:00<00:00, 31076.17it/s]
+[1ASplit strings:  57%|█████▋    | 26702/47071 [00:00<00:00, 30442.29it/s]
+[1ASplit strings:  64%|██████▎   | 29902/47071 [00:00<00:00, 30909.41it/s]
+[1ASplit strings:  70%|███████   | 32998/47071 [00:01<00:00, 30272.93it/s]
+[1ASplit strings:  77%|███████▋  | 36030/47071 [00:01<00:00, 28345.51it/s]
+[1ASplit strings:  83%|████████▎ | 38888/47071 [00:01<00:00, 28206.73it/s]
+[1ASplit strings:  90%|████████▉ | 42279/47071 [00:01<00:00, 29839.04it/s]
+[1ASplit strings:  97%|█████████▋| 45562/47071 [00:01<00:00, 30706.27it/s]
+[1A                                                                       
+[1A2026-06-07 01:13:55,073 DEBUG bm25s: Building index from IDs objects
+
+[1ABM25S Count Tokens:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Count Tokens:  30%|██▉       | 14081/47071 [00:00<00:00, 140795.03it/s]
+[1ABM25S Count Tokens:  60%|█████▉    | 28161/47071 [00:00<00:00, 131867.00it/s]
+[1ABM25S Count Tokens:  88%|████████▊ | 41386/47071 [00:00<00:00, 128791.93it/s]
+[1A                                                                             
+[1A
+[1ABM25S Compute Scores:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Compute Scores:  11%|█▏        | 5397/47071 [00:00<00:00, 53961.82it/s]
+[1ABM25S Compute Scores:  24%|██▍       | 11470/47071 [00:00<00:00, 57939.72it/s]
+[1ABM25S Compute Scores:  37%|███▋      | 17318/47071 [00:00<00:00, 58178.39it/s]
+LiteLLM file cache enabled at: /root/cache/litellm
+[1ABM25S Compute Scores:  50%|█████     | 23653/47071 [00:00<00:00, 60217.93it/s]
+[1ASplit strings:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Compute Scores:  63%|██████▎   | 29817/47071 [00:00<00:00, 60727.94it/s]
+[1ASplit strings:   7%|▋         | 3182/47071 [00:00<00:01, 31816.47it/s]
+[1ABM25S Compute Scores:  76%|███████▌  | 35890/47071 [00:00<00:00, 60553.44it/s]
+[1ASplit strings:  14%|█▍        | 6691/47071 [00:00<00:01, 33737.51it/s]
+[1ABM25S Compute Scores:  89%|████████▉ | 41946/47071 [00:00<00:00, 59520.97it/s]
+[1ASplit strings:  21%|██▏       | 10065/47071 [00:00<00:01, 31956.24it/s]
+[1A                                                                              
+[1A
+[1ASplit strings:  29%|██▊       | 13446/47071 [00:00<00:01, 32662.97it/s]
+[1ASplit strings:  36%|███▌      | 16927/47071 [00:00<00:00, 33419.12it/s]
+[1ASplit strings:  43%|████▎     | 20277/47071 [00:00<00:00, 32767.60it/s]
+[1ASplit strings:  50%|█████     | 23594/47071 [00:00<00:00, 32894.06it/s]
+[1AFinding newlines for mmindex:   0%|          | 0.00/25.8M [00:00<?, ?B/s]
+[1ASplit strings:  57%|█████▋    | 26889/47071 [00:00<00:00, 32428.45it/s]
+[1AFinding newlines for mmindex:  31%|███       | 8.03M/25.8M [00:00<00:00, 80.2MB/s]
+[1ASplit strings:  64%|██████▍   | 30311/47071 [00:00<00:00, 32974.99it/s]
+[1AFinding newlines for mmindex:  63%|██████▎   | 16.3M/25.8M [00:00<00:00, 81.5MB/s]
+[1ASplit strings:  71%|███████▏  | 33613/47071 [00:01<00:00, 32825.27it/s]
+[1AFinding newlines for mmindex:  95%|█████████▌| 24.7M/25.8M [00:00<00:00, 82.6MB/s]Finding newlines for mmindex: 100%|██████████| 25.8M/25.8M [00:00<00:00, 82.8MB/s]
+
+[1ASplit strings:  78%|███████▊  | 36899/47071 [00:01<00:00, 32640.95it/s]
+[1ASplit strings:  86%|████████▌ | 40304/47071 [00:01<00:00, 33061.75it/s]
+[1ASplit strings:  93%|█████████▎| 43613/47071 [00:01<00:00, 32494.08it/s]
+[1ASplit strings: 100%|█████████▉| 46896/47071 [00:01<00:00, 32587.63it/s]
+[1A                                                                       
+[1A2026-06-07 01:13:57,404 DEBUG bm25s: Building index from IDs objects
+
+[1ABM25S Count Tokens:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Count Tokens:  31%|███       | 14449/47071 [00:00<00:00, 144482.21it/s]
+[1ABM25S Count Tokens:  61%|██████▏   | 28898/47071 [00:00<00:00, 135306.74it/s]
+[1ABM25S Count Tokens:  90%|█████████ | 42468/47071 [00:00<00:00, 127386.67it/s]
+[1A                                                                             
+[1A
+[1ABM25S Compute Scores:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Compute Scores:  13%|█▎        | 5948/47071 [00:00<00:00, 59477.93it/s]
+[1ABM25S Compute Scores:  25%|██▌       | 11973/47071 [00:00<00:00, 59929.17it/s]
+[1ABM25S Compute Scores:  38%|███▊      | 17966/47071 [00:00<00:00, 59511.19it/s]
+[1ABM25S Compute Scores:  51%|█████▏    | 24161/47071 [00:00<00:00, 60466.42it/s]
+LiteLLM file cache enabled at: /root/cache/litellm
+[1ABM25S Compute Scores:  64%|██████▍   | 30209/47071 [00:00<00:00, 59883.95it/s]
+[1ABM25S Compute Scores:  77%|███████▋  | 36329/47071 [00:00<00:00, 60322.26it/s]
+[1ABM25S Compute Scores:  90%|█████████ | 42421/47071 [00:00<00:00, 60513.87it/s]
+[1ASplit strings:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ASplit strings:   6%|▋         | 3033/47071 [00:00<00:01, 30323.74it/s]
+[1A                                                                              
+[1A
+[1ASplit strings:  13%|█▎        | 6090/47071 [00:00<00:01, 30466.55it/s]
+[1ASplit strings:  19%|█▉        | 9137/47071 [00:00<00:01, 29517.10it/s]
+[1ASplit strings:  26%|██▌       | 12294/47071 [00:00<00:01, 30310.55it/s]
+LiteLLM file cache enabled at: /root/cache/litellm
+[1ASplit strings:  33%|███▎      | 15505/47071 [00:00<00:01, 30949.80it/s]
+[1AFinding newlines for mmindex:   0%|          | 0.00/25.8M [00:00<?, ?B/s]
+LiteLLM file cache enabled at: /root/cache/litellm
+[1ASplit strings:  40%|███▉      | 18604/47071 [00:00<00:00, 30390.42it/s]
+[1ASplit strings:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1AFinding newlines for mmindex:  29%|██▉       | 7.61M/25.8M [00:00<00:00, 76.1MB/s]
+[1AFinding newlines for mmindex:  59%|█████▉    | 15.2M/25.8M [00:00<00:00, 75.1MB/s]
+[1ASplit strings:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ASplit strings:   6%|▌         | 2868/47071 [00:00<00:01, 28670.12it/s]
+[1ASplit strings:  46%|████▌     | 21769/47071 [00:00<00:00, 30792.69it/s]
+[1ASplit strings:   6%|▌         | 2662/47071 [00:00<00:01, 26615.77it/s]
+[1ASplit strings:  11%|█▏        | 5324/47071 [00:00<00:01, 26493.55it/s]
+[1AFinding newlines for mmindex:  91%|█████████ | 23.5M/25.8M [00:00<00:00, 78.5MB/s]
+[1ASplit strings:  13%|█▎        | 5885/47071 [00:00<00:01, 29540.57it/s]
+[1AFinding newlines for mmindex: 100%|██████████| 25.8M/25.8M [00:00<00:00, 77.9MB/s]
+
+[1ASplit strings:  17%|█▋        | 7974/47071 [00:00<00:01, 25524.00it/s]
+[1ASplit strings:  53%|█████▎    | 24852/47071 [00:00<00:00, 30664.15it/s]
+[1ASplit strings:  60%|█████▉    | 28078/47071 [00:00<00:00, 31153.68it/s]
+[1ASplit strings:  19%|█▉        | 8840/47071 [00:00<00:01, 28311.33it/s]
+[1ASplit strings:  23%|██▎       | 10639/47071 [00:00<00:01, 25956.04it/s]
+[1ASplit strings:  66%|██████▋   | 31257/47071 [00:01<00:00, 31348.02it/s]
+[1ASplit strings:  25%|██▌       | 11856/47071 [00:00<00:01, 29021.98it/s]
+[1ASplit strings:  29%|██▊       | 13455/47071 [00:00<00:01, 26733.29it/s]
+[1ASplit strings:  73%|███████▎  | 34394/47071 [00:01<00:00, 30746.18it/s]
+[1ASplit strings:  80%|███████▉  | 37600/47071 [00:01<00:00, 31138.11it/s]
+[1ASplit strings:  34%|███▍      | 16206/47071 [00:00<00:01, 26993.56it/s]
+[1ASplit strings:  32%|███▏      | 14852/47071 [00:00<00:01, 29353.83it/s]
+[1ASplit strings:  40%|████      | 18951/47071 [00:00<00:01, 27135.55it/s]
+[1ASplit strings:  38%|███▊      | 17792/47071 [00:00<00:01, 29244.81it/s]
+[1ASplit strings:  87%|████████▋ | 40830/47071 [00:01<00:00, 31485.18it/s]
+[1ASplit strings:  93%|█████████▎| 43982/47071 [00:01<00:00, 31105.46it/s]
+[1ASplit strings:  44%|████▍     | 20720/47071 [00:00<00:00, 29211.54it/s]
+[1ASplit strings:  46%|████▌     | 21682/47071 [00:00<00:00, 27189.98it/s]
+[1ASplit strings:  50%|█████     | 23643/47071 [00:00<00:00, 29095.74it/s]
+[1ASplit strings:  56%|█████▋    | 26559/47071 [00:00<00:00, 29114.01it/s]
+[1ASplit strings:  52%|█████▏    | 24403/47071 [00:00<00:00, 26989.09it/s]
+[1ASplit strings:  58%|█████▊    | 27231/47071 [00:01<00:00, 27383.21it/s]
+[1A                                                                       
+[1A2026-06-07 01:13:59,891 DEBUG bm25s: Building index from IDs objects
+
+[1ABM25S Count Tokens:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Count Tokens:  27%|██▋       | 12756/47071 [00:00<00:00, 127552.82it/s]
+[1ASplit strings:  64%|██████▍   | 30101/47071 [00:01<00:00, 27782.93it/s]
+[1ASplit strings:  63%|██████▎   | 29646/47071 [00:01<00:00, 29646.67it/s]
+[1ABM25S Count Tokens:  54%|█████▍    | 25512/47071 [00:00<00:00, 123473.58it/s]
+[1ASplit strings:  70%|██████▉   | 32881/47071 [00:01<00:00, 27156.11it/s]
+[1ASplit strings:  69%|██████▉   | 32612/47071 [00:01<00:00, 29299.22it/s]
+[1ABM25S Count Tokens:  80%|████████  | 37869/47071 [00:00<00:00, 114173.44it/s]
+[1ASplit strings:  76%|███████▌  | 35633/47071 [00:01<00:00, 27260.11it/s]
+[1ASplit strings:  76%|███████▌  | 35588/47071 [00:01<00:00, 29437.35it/s]
+[1ASplit strings:  82%|████████▏ | 38533/47071 [00:01<00:00, 29178.48it/s]
+[1A                                                                             
+[1A
+[1ABM25S Compute Scores:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ASplit strings:  82%|████████▏ | 38406/47071 [00:01<00:00, 27399.56it/s]
+[1ASplit strings:  88%|████████▊ | 41489/47071 [00:01<00:00, 29289.13it/s]
+[1ABM25S Compute Scores:  10%|▉         | 4687/47071 [00:00<00:00, 46860.77it/s]
+[1ASplit strings:  87%|████████▋ | 41181/47071 [00:01<00:00, 27499.53it/s]
+[1ASplit strings:  94%|█████████▍| 44419/47071 [00:01<00:00, 29253.50it/s]
+[1ASplit strings:  93%|█████████▎| 43964/47071 [00:01<00:00, 27596.80it/s]
+[1ABM25S Compute Scores:  20%|█▉        | 9374/47071 [00:00<00:00, 46768.83it/s]
+[1ABM25S Compute Scores:  30%|██▉       | 14102/47071 [00:00<00:00, 47000.71it/s]
+[1A                                                                       
+[1A2026-06-07 01:14:00,650 DEBUG bm25s: Building index from IDs objects
+
+[1ABM25S Count Tokens:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ASplit strings:  99%|█████████▉| 46800/47071 [00:01<00:00, 27822.55it/s]
+[1A                                                                       
+[1A2026-06-07 01:14:00,704 DEBUG bm25s: Building index from IDs objects
+
+[1ABM25S Count Tokens:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Compute Scores:  40%|████      | 18928/47071 [00:00<00:00, 47496.49it/s]
+[1ABM25S Count Tokens:  25%|██▍       | 11745/47071 [00:00<00:00, 117443.67it/s]
+[1ABM25S Count Tokens:  24%|██▍       | 11447/47071 [00:00<00:00, 114453.74it/s]
+[1ABM25S Compute Scores:  50%|█████     | 23678/47071 [00:00<00:00, 47348.24it/s]
+[1ABM25S Count Tokens:  50%|████▉     | 23490/47071 [00:00<00:00, 115315.64it/s]
+[1ABM25S Count Tokens:  49%|████▊     | 22893/47071 [00:00<00:00, 112867.22it/s]
+[1ABM25S Compute Scores:  61%|██████    | 28483/47071 [00:00<00:00, 47583.82it/s]
+[1ABM25S Compute Scores:  71%|███████   | 33242/47071 [00:00<00:00, 47089.27it/s]
+[1ABM25S Count Tokens:  74%|███████▍  | 35025/47071 [00:00<00:00, 112343.40it/s]
+[1ABM25S Count Tokens:  73%|███████▎  | 34182/47071 [00:00<00:00, 110775.33it/s]
+[1ABM25S Count Tokens:  98%|█████████▊| 46267/47071 [00:00<00:00, 109055.63it/s]
+[1A                                                                             
+[1A
+[1ABM25S Compute Scores:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Count Tokens:  96%|█████████▌| 45264/47071 [00:00<00:00, 109311.19it/s]
+[1A                                                                             
+[1A
+[1ABM25S Compute Scores:   0%|          | 0/47071 [00:00<?, ?it/s]
+[1ABM25S Compute Scores:   9%|▉         | 4422/47071 [00:00<00:00, 44210.34it/s]
+[1ABM25S Compute Scores:  19%|█▉        | 8844/47071 [00:00<00:00, 43816.04it/s]
+[1ABM25S Compute Scores:   9%|▉         | 4288/47071 [00:00<00:00, 42874.93it/s]
+[1ABM25S Compute Scores:  18%|█▊        | 8576/47071 [00:00<00:00, 42692.10it/s]
+[1ABM25S Compute Scores:  28%|██▊       | 13293/47071 [00:00<00:00, 44121.41it/s]
+[1ABM25S Compute Scores:  81%|████████  | 37952/47071 [00:00<00:00, 46967.30it/s]
+[1ABM25S Compute Scores:  91%|█████████ | 42650/47071 [00:00<00:00, 46752.34it/s]
+[1ABM25S Compute Scores:  27%|██▋       | 12851/47071 [00:00<00:00, 42717.10it/s]
+[1ABM25S Compute Scores:  37%|███▋      | 17232/47071 [00:00<00:00, 43144.46it/s]
+[1ABM25S Compute Scores:  38%|███▊      | 17712/47071 [00:00<00:00, 44146.60it/s]
+[1ABM25S Compute Scores:  47%|████▋     | 22171/47071 [00:00<00:00, 44301.21it/s]
+[1A                                                                              
+[1A
+[1ABM25S Compute Scores:  46%|████▌     | 21547/47071 [00:00<00:00, 42836.79it/s]
+[1ABM25S Compute Scores:  57%|█████▋    | 26630/47071 [00:00<00:00, 44398.56it/s]
+[1AFinding newlines for mmindex:   0%|          | 0.00/25.8M [00:00<?, ?B/s]
+[1ABM25S Compute Scores:  55%|█████▍    | 25832/47071 [00:00<00:00, 42517.09it/s]
+[1ABM25S Compute Scores:  66%|██████▌   | 31083/47071 [00:00<00:00, 44436.38it/s]
+[1ABM25S Compute Scores:  64%|██████▍   | 30184/47071 [00:00<00:00, 42841.82it/s]
+[1AFinding newlines for mmindex:  28%|██▊       | 7.23M/25.8M [00:00<00:00, 72.3MB/s]
+[1AFinding newlines for mmindex:  56%|█████▌    | 14.5M/25.8M [00:00<00:00, 71.9MB/s]
+[1ABM25S Compute Scores:  75%|███████▌  | 35527/47071 [00:00<00:00, 44323.85it/s]
+[1ABM25S Compute Scores:  73%|███████▎  | 34469/47071 [00:00<00:00, 42302.83it/s]
+[1AFinding newlines for mmindex:  85%|████████▌ | 22.0M/25.8M [00:00<00:00, 73.5MB/s]
+[1AFinding newlines for mmindex: 100%|██████████| 25.8M/25.8M [00:00<00:00, 73.1MB/s]
+
+[1ABM25S Compute Scores:  85%|████████▍ | 39960/47071 [00:00<00:00, 44304.14it/s]
+[1ABM25S Compute Scores:  82%|████████▏ | 38778/47071 [00:00<00:00, 42544.55it/s]
+[1ABM25S Compute Scores:  91%|█████████▏| 43034/47071 [00:01<00:00, 42283.46it/s]
+[1ABM25S Compute Scores:  94%|█████████▍| 44391/47071 [00:01<00:00, 44252.05it/s]
+[1A                                                                              
+[1A                                                                              
+[1A
+[1AFinding newlines for mmindex:   0%|          | 0.00/25.8M [00:00<?, ?B/s]
+[1AFinding newlines for mmindex:  26%|██▋       | 6.81M/25.8M [00:00<00:00, 68.1MB/s]
+[1AFinding newlines for mmindex:   0%|          | 0.00/25.8M [00:00<?, ?B/s]
+[1AFinding newlines for mmindex:  53%|█████▎    | 13.8M/25.8M [00:00<00:00, 68.9MB/s]
+[1AFinding newlines for mmindex:  27%|██▋       | 7.01M/25.8M [00:00<00:00, 70.1MB/s]
+[1AFinding newlines for mmindex:  56%|█████▌    | 14.5M/25.8M [00:00<00:00, 72.6MB/s]
+[1AFinding newlines for mmindex:  80%|███████▉  | 20.6M/25.8M [00:00<00:00, 68.9MB/s]
+[1AFinding newlines for mmindex:  84%|████████▍ | 21.7M/25.8M [00:00<00:00, 71.2MB/s]Finding newlines for mmindex: 100%|██████████| 25.8M/25.8M [00:00<00:00, 68.2MB/s]
+Finding newlines for mmindex: 100%|██████████| 25.8M/25.8M [00:00<00:00, 70.5MB/s]
+Shard 0/5: 200 sessions (indices [0, 200))
+
+Shard 1/5: 200 sessions (indices [200, 400))
+[1ABatch inference:   0%|          | 0/25 [00:00<?, ?it/s]
+Shard 3/5: 200 sessions (indices [600, 800))
+[1ABatch inference:   0%|          | 0/25 [00:00<?, ?it/s]
+Shard 2/5: 200 sessions (indices [400, 600))
+Shard 4/5: 200 sessions (indices [800, 1000))
+[1ABatch inference:   0%|          | 0/25 [00:00<?, ?it/s]
+[1ABatch inference:   0%|          | 0/25 [00:00<?, ?it/s]
+[1ABatch inference:   0%|          | 0/25 [00:00<?, ?it/s]
+[1ABatch inference:   4%|▍         | 1/25 [05:24<2:09:36, 324.04s/it]
+[1ABatch inference:   4%|▍         | 1/25 [06:06<2:26:42, 366.75s/it]
+[1ABatch inference:   4%|▍         | 1/25 [06:27<2:34:55, 387.30s/it]
+[1ABatch inference:   4%|▍         | 1/25 [06:42<2:41:04, 402.70s/it]
+[1ABatch inference:   4%|▍         | 1/25 [06:31<2:36:36, 391.51s/it]
+[1ABatch inference:   8%|▊         | 2/25 [07:02<1:13:15, 191.09s/it]
+[1ABatch inference:   8%|▊         | 2/25 [08:00<1:22:06, 214.20s/it]
+[1ABatch inference:   8%|▊         | 2/25 [08:14<1:24:10, 219.60s/it]
+[1ABatch inference:   8%|▊         | 2/25 [08:23<1:28:45, 231.54s/it]
+[1ABatch inference:   8%|▊         | 2/25 [08:27<1:27:55, 229.37s/it]
+[1ABatch inference:  12%|█▏        | 3/25 [08:39<54:18, 148.10s/it]  
+[1ABatch inference:  12%|█▏        | 3/25 [09:44<1:00:03, 163.78s/it]
+[1ABatch inference:  12%|█▏        | 3/25 [09:54<1:00:38, 165.37s/it]
+[1ABatch inference:  16%|█▌        | 4/25 [10:18<45:09, 129.03s/it]
+[1ABatch inference:  12%|█▏        | 3/25 [10:26<1:05:41, 179.14s/it]
+[1ABatch inference:  12%|█▏        | 3/25 [10:38<1:08:44, 187.49s/it]
+[1ABatch inference:  16%|█▌        | 4/25 [11:19<47:52, 136.79s/it]  
+[1ABatch inference:  16%|█▌        | 4/25 [11:39<49:29, 141.38s/it]  
+[1ABatch inference:  20%|██        | 5/25 [11:54<38:58, 116.91s/it]
+[1ABatch inference:  16%|█▌        | 4/25 [12:20<53:35, 153.14s/it]  
+[1ABatch inference:  20%|██        | 5/25 [13:00<41:14, 123.70s/it]
+[1ABatch inference:  16%|█▌        | 4/25 [12:51<58:02, 165.82s/it]  
+[1ABatch inference:  20%|██        | 5/25 [13:17<41:50, 125.54s/it]
+[1ABatch inference:  24%|██▍       | 6/25 [13:25<34:18, 108.33s/it]
+[1ABatch inference:  20%|██        | 5/25 [14:16<46:41, 140.07s/it]
+[1ABatch inference:  24%|██▍       | 6/25 [14:34<36:04, 113.93s/it]
+[1ABatch inference:  24%|██▍       | 6/25 [14:58<37:08, 117.27s/it]
+[1ABatch inference:  28%|██▊       | 7/25 [15:01<31:14, 104.13s/it]
+[1ABatch inference:  20%|██        | 5/25 [15:05<51:24, 154.24s/it]
+[1ABatch inference:  28%|██▊       | 7/25 [16:11<32:26, 108.15s/it]
+[1ABatch inference:  24%|██▍       | 6/25 [16:17<42:16, 133.48s/it]
+[1ABatch inference:  28%|██▊       | 7/25 [16:38<33:32, 111.82s/it]
+[1ABatch inference:  32%|███▏      | 8/25 [16:37<28:49, 101.73s/it]
+[1ABatch inference:  24%|██▍       | 6/25 [17:18<46:39, 147.34s/it]
+[1ABatch inference:  32%|███▏      | 8/25 [17:43<29:11, 103.02s/it]
+[1ABatch inference:  32%|███▏      | 8/25 [18:18<30:34, 107.93s/it]
+[1ABatch inference:  28%|██▊       | 7/25 [18:09<37:56, 126.49s/it]
+[1ABatch inference:  36%|███▌      | 9/25 [18:20<27:12, 102.03s/it]
+[1ABatch inference:  36%|███▌      | 9/25 [19:16<26:37, 99.81s/it] 
+[1ABatch inference:  28%|██▊       | 7/25 [19:15<41:13, 137.40s/it]
+[1ABatch inference:  36%|███▌      | 9/25 [19:48<27:16, 102.25s/it]
+[1ABatch inference:  40%|████      | 10/25 [20:00<25:19, 101.30s/it]
+[1ABatch inference:  32%|███▏      | 8/25 [20:04<34:47, 122.82s/it]
+[1ABatch inference:  40%|████      | 10/25 [20:50<24:32, 98.15s/it]
+[1ABatch inference:  32%|███▏      | 8/25 [21:00<35:56, 126.84s/it]
+[1ABatch inference:  40%|████      | 10/25 [21:30<25:35, 102.35s/it]
+[1ABatch inference:  44%|████▍     | 11/25 [21:39<23:27, 100.55s/it]
+[1ABatch inference:  36%|███▌      | 9/25 [22:06<32:42, 122.66s/it]
+[1ABatch inference:  44%|████▍     | 11/25 [22:31<23:06, 99.04s/it]
+[1ABatch inference:  44%|████▍     | 11/25 [23:07<23:30, 100.73s/it]
+[1ABatch inference:  36%|███▌      | 9/25 [22:52<32:34, 122.18s/it]
+[1ABatch inference:  48%|████▊     | 12/25 [23:21<21:53, 101.02s/it]
+[1ABatch inference:  48%|████▊     | 12/25 [24:05<21:06, 97.40s/it]
+[1ABatch inference:  40%|████      | 10/25 [24:14<31:03, 124.22s/it]
+[1ABatch inference:  48%|████▊     | 12/25 [24:42<21:27, 99.03s/it] 
+[1ABatch inference:  40%|████      | 10/25 [24:44<29:47, 119.17s/it]
+[1ABatch inference:  52%|█████▏    | 13/25 [25:03<20:17, 101.49s/it]
+[1ABatch inference:  52%|█████▏    | 13/25 [25:40<19:20, 96.70s/it]
+[1ABatch inference:  52%|█████▏    | 13/25 [26:14<19:19, 96.61s/it]
+[1ABatch inference:  44%|████▍     | 11/25 [26:15<28:44, 123.15s/it]
+[1ABatch inference:  56%|█████▌    | 14/25 [26:39<18:16, 99.66s/it] 
+[1ABatch inference:  44%|████▍     | 11/25 [26:36<27:16, 116.90s/it]
+[1ABatch inference:  56%|█████▌    | 14/25 [27:15<17:38, 96.21s/it]
+[1ABatch inference:  56%|█████▌    | 14/25 [27:46<17:30, 95.51s/it]
+[1ABatch inference:  60%|██████    | 15/25 [28:19<16:36, 99.69s/it]
+[1ABatch inference:  48%|████▊     | 12/25 [28:29<27:22, 126.33s/it]
+[1ABatch inference:  48%|████▊     | 12/25 [28:35<25:28, 117.60s/it]
+[1ABatch inference:  60%|██████    | 15/25 [28:56<16:16, 97.68s/it]
+[1ABatch inference:  60%|██████    | 15/25 [29:21<15:51, 95.15s/it]
+[1ABatch inference:  64%|██████▍   | 16/25 [29:59<14:58, 99.78s/it]
+[1ABatch inference:  64%|██████▍   | 16/25 [30:27<14:21, 95.70s/it]
+[1ABatch inference:  52%|█████▏    | 13/25 [30:33<25:08, 125.69s/it]
+[1ABatch inference:  52%|█████▏    | 13/25 [30:34<23:35, 117.96s/it]
+[1ABatch inference:  64%|██████▍   | 16/25 [30:54<14:10, 94.45s/it]
+[1ABatch inference:  68%|██████▊   | 17/25 [31:37<13:14, 99.26s/it]
+[1ABatch inference:  68%|██████▊   | 17/25 [31:59<12:37, 94.69s/it]
+[1ABatch inference:  68%|██████▊   | 17/25 [32:24<12:25, 93.15s/it]
+[1ABatch inference:  56%|█████▌    | 14/25 [32:35<22:52, 124.79s/it]
+[1ABatch inference:  56%|█████▌    | 14/25 [32:40<22:06, 120.55s/it]
+[1ABatch inference:  72%|███████▏  | 18/25 [33:08<11:18, 96.88s/it]
+[1ABatch inference:  72%|███████▏  | 18/25 [33:37<11:09, 95.64s/it]
+[1ABatch inference:  72%|███████▏  | 18/25 [34:03<11:05, 95.08s/it]
+[1ABatch inference:  76%|███████▌  | 19/25 [34:43<09:38, 96.34s/it]
+[1ABatch inference:  60%|██████    | 15/25 [34:40<20:46, 124.67s/it]
+[1ABatch inference:  60%|██████    | 15/25 [34:54<20:45, 124.55s/it]
+[1ABatch inference:  76%|███████▌  | 19/25 [35:14<09:35, 95.86s/it]
+[1ABatch inference:  76%|███████▌  | 19/25 [35:40<09:33, 95.57s/it]
+[1ABatch inference:  80%|████████  | 20/25 [36:18<08:00, 96.08s/it]
+[1ABatch inference:  80%|████████  | 20/25 [36:46<07:54, 94.82s/it]
+[1ABatch inference:  64%|██████▍   | 16/25 [36:36<18:19, 122.17s/it]
+[1ABatch inference:  64%|██████▍   | 16/25 [36:58<18:40, 124.48s/it]
+[1ABatch inference:  80%|████████  | 20/25 [37:18<08:01, 96.27s/it]
+[1ABatch inference:  84%|████████▍ | 21/25 [37:45<06:12, 93.18s/it]
+[1ABatch inference:  84%|████████▍ | 21/25 [38:14<06:10, 92.66s/it]
+[1ABatch inference:  84%|████████▍ | 21/25 [38:53<06:24, 96.05s/it]
+[1ABatch inference:  68%|██████▊   | 17/25 [38:45<16:32, 124.06s/it]
+[1ABatch inference:  88%|████████▊ | 22/25 [39:21<04:42, 94.07s/it]
+[1ABatch inference:  68%|██████▊   | 17/25 [39:25<17:27, 131.00s/it]
+[1ABatch inference:  88%|████████▊ | 22/25 [39:53<04:43, 94.60s/it]
+[1ABatch inference:  88%|████████▊ | 22/25 [40:42<04:59, 99.83s/it]
+[1ABatch inference:  92%|█████████▏| 23/25 [40:56<03:08, 94.20s/it]
+[1ABatch inference:  72%|███████▏  | 18/25 [41:05<15:02, 128.89s/it]
+[1ABatch inference:  92%|█████████▏| 23/25 [41:22<03:06, 93.12s/it]
+[1ABatch inference:  72%|███████▏  | 18/25 [41:44<15:35, 133.59s/it]
+[1ABatch inference:  92%|█████████▏| 23/25 [42:11<03:12, 96.40s/it]
+[1ABatch inference:  96%|█████████▌| 24/25 [42:26<01:33, 93.02s/it]
+[1ABatch inference:  96%|█████████▌| 24/25 [43:08<01:36, 96.88s/it]
+[1ABatch inference:  76%|███████▌  | 19/25 [43:20<13:04, 130.73s/it]
+[1ABatch inference:  96%|█████████▌| 24/25 [43:49<01:37, 97.11s/it]
+[1ABatch inference: 100%|██████████| 25/25 [44:02<00:00, 94.00s/it]
+[1ABatch inference: 100%|██████████| 25/25 [44:02<00:00, 105.70s/it]
+
+[1ABatch inference:  76%|███████▌  | 19/25 [44:04<13:32, 135.40s/it]
+[1ABatch inference: 100%|██████████| 25/25 [44:35<00:00, 93.95s/it]
+[1ABatch inference: 100%|██████████| 25/25 [44:35<00:00, 107.03s/it]
+CPU results saved to volume: inference/devset/v0plus_compiler_all_retrievers_reranked_devset.run_20260607T011258Z-4ed5f3.shard_3.json
+CPU results saved to volume: inference/devset/v0plus_compiler_all_retrievers_reranked_devset.run_20260607T011258Z-4ed5f3.shard_1.json
+
+[1ABatch inference: 100%|██████████| 25/25 [45:22<00:00, 95.67s/it]
+[1ABatch inference: 100%|██████████| 25/25 [45:22<00:00, 108.88s/it]
+
+CPU results saved to volume: inference/devset/v0plus_compiler_all_retrievers_reranked_devset.run_20260607T011258Z-4ed5f3.shard_0.json
+Shard 0 complete.
+Shard 1 complete.
+[1ABatch inference:  80%|████████  | 20/25 [45:22<10:40, 128.06s/it]
+[1ABatch inference:  80%|████████  | 20/25 [46:11<11:04, 132.80s/it]
+[1ABatch inference:  84%|████████▍ | 21/25 [47:32<08:35, 128.84s/it]
+[1ABatch inference:  84%|████████▍ | 21/25 [48:34<09:03, 135.88s/it]
+[1ABatch inference:  88%|████████▊ | 22/25 [49:44<06:29, 129.83s/it]
+[1ABatch inference:  88%|████████▊ | 22/25 [50:50<06:47, 135.93s/it]
+[1ABatch inference:  92%|█████████▏| 23/25 [51:45<04:14, 127.01s/it]
+[1ABatch inference:  92%|█████████▏| 23/25 [53:05<04:31, 135.72s/it]
+[1ABatch inference:  96%|█████████▌| 24/25 [54:04<02:10, 130.67s/it]
+[1ABatch inference:  96%|█████████▌| 24/25 [55:23<02:16, 136.42s/it]
+[1ABatch inference: 100%|██████████| 25/25 [56:21<00:00, 132.51s/it]
+[1ABatch inference: 100%|██████████| 25/25 [56:21<00:00, 135.26s/it]
+CPU results saved to volume: inference/devset/v0plus_compiler_all_retrievers_reranked_devset.run_20260607T011258Z-4ed5f3.shard_4.json
+
+[1ABatch inference: 100%|██████████| 25/25 [57:31<00:00, 133.99s/it]
+[1ABatch inference: 100%|██████████| 25/25 [57:31<00:00, 138.07s/it]
+Shard 2 complete.
+CPU results saved to volume: inference/devset/v0plus_compiler_all_retrievers_reranked_devset.run_20260607T011258Z-4ed5f3.shard_2.json
+Shard 3 complete.
+Shard 4 complete.
+All 5 shards complete. Per-shard outputs: inference/devset/v0plus_compiler_all_retrievers_reranked_devset.run_20260607T011258Z-4ed5f3.shard_{0..4}.json
+✓ App completed. View run at 
+https://modal.com/apps/npatta01/main/ap-q4K6ray3llcMngyWqjdPHL
+Downloaded 10 file(s) (6313366210 bytes) to /Users/semih/all_github_projects/ClaudeCodeProjects/music-conversational-music-recomender-2026/exp
+Wrote /Users/semih/all_github_projects/ClaudeCodeProjects/music-conversational-music-recomender-2026/exp/inference/devset/v0plus_compiler_all_retrievers_reranked_devset.json  (8000 unique rows from 5 shards)
+Wrote /Users/semih/all_github_projects/ClaudeCodeProjects/music-conversational-music-recomender-2026/exp/inference/devset/v0plus_compiler_all_retrievers_reranked_devset_trace.jsonl  (8000 unique rows from 5 shards)
+Scoring turns:   0%|          | 0/8000 [00:00<?, ?it/s]Scoring turns:   1%|▏         | 112/8000 [00:00<00:07, 1111.05it/s]Scoring turns:   3%|▎         | 227/8000 [00:00<00:06, 1132.99it/s]Scoring turns:   4%|▍         | 342/8000 [00:00<00:06, 1139.32it/s]Scoring turns:   6%|▌         | 459/8000 [00:00<00:06, 1149.35it/s]Scoring turns:   7%|▋         | 575/8000 [00:00<00:06, 1149.85it/s]Scoring turns:   9%|▊         | 691/8000 [00:00<00:06, 1151.58it/s]Scoring turns:  10%|█         | 807/8000 [00:00<00:06, 1149.24it/s]Scoring turns:  12%|█▏        | 924/8000 [00:00<00:06, 1155.27it/s]Scoring turns:  13%|█▎        | 1041/8000 [00:00<00:06, 1159.37it/s]Scoring turns:  14%|█▍        | 1157/8000 [00:01<00:05, 1156.65it/s]Scoring turns:  16%|█▌        | 1273/8000 [00:01<00:05, 1156.82it/s]Scoring turns:  17%|█▋        | 1389/8000 [00:01<00:05, 1152.96it/s]Scoring turns:  19%|█▉        | 1507/8000 [00:01<00:05, 1158.56it/s]Scoring turns:  20%|██        | 1624/8000 [00:01<00:05, 1161.16it/s]Scoring turns:  22%|██▏       | 1741/8000 [00:01<00:05, 1143.54it/s]Scoring turns:  23%|██▎       | 1856/8000 [00:01<00:05, 1135.60it/s]Scoring turns:  25%|██▍       | 1970/8000 [00:01<00:05, 1129.97it/s]Scoring turns:  26%|██▌       | 2084/8000 [00:01<00:05, 1115.81it/s]Scoring turns:  27%|██▋       | 2196/8000 [00:01<00:05, 1105.96it/s]Scoring turns:  29%|██▉       | 2307/8000 [00:02<00:05, 1093.92it/s]Scoring turns:  30%|███       | 2417/8000 [00:02<00:05, 1092.72it/s]Scoring turns:  32%|███▏      | 2530/8000 [00:02<00:04, 1103.28it/s]Scoring turns:  33%|███▎      | 2645/8000 [00:02<00:04, 1116.12it/s]Scoring turns:  34%|███▍      | 2759/8000 [00:02<00:04, 1122.59it/s]Scoring turns:  36%|███▌      | 2872/8000 [00:02<00:04, 1123.33it/s]Scoring turns:  37%|███▋      | 2989/8000 [00:02<00:04, 1134.46it/s]Scoring turns:  39%|███▉      | 3105/8000 [00:02<00:04, 1140.00it/s]Scoring turns:  40%|████      | 3220/8000 [00:02<00:04, 1140.36it/s]Scoring turns:  42%|████▏     | 3335/8000 [00:02<00:04, 1141.95it/s]Scoring turns:  43%|████▎     | 3450/8000 [00:03<00:03, 1142.24it/s]Scoring turns:  45%|████▍     | 3567/8000 [00:03<00:03, 1148.88it/s]Scoring turns:  46%|████▌     | 3683/8000 [00:03<00:03, 1150.63it/s]Scoring turns:  47%|████▋     | 3799/8000 [00:03<00:03, 1149.78it/s]Scoring turns:  49%|████▉     | 3914/8000 [00:03<00:03, 1149.25it/s]Scoring turns:  50%|█████     | 4031/8000 [00:03<00:03, 1153.10it/s]Scoring turns:  52%|█████▏    | 4147/8000 [00:03<00:03, 1152.71it/s]Scoring turns:  53%|█████▎    | 4264/8000 [00:03<00:03, 1156.90it/s]Scoring turns:  55%|█████▍    | 4380/8000 [00:03<00:03, 1156.88it/s]Scoring turns:  56%|█████▌    | 4497/8000 [00:03<00:03, 1160.58it/s]Scoring turns:  58%|█████▊    | 4614/8000 [00:04<00:02, 1161.55it/s]Scoring turns:  59%|█████▉    | 4731/8000 [00:04<00:02, 1159.20it/s]Scoring turns:  61%|██████    | 4847/8000 [00:04<00:02, 1159.11it/s]Scoring turns:  62%|██████▏   | 4963/8000 [00:04<00:02, 1154.70it/s]Scoring turns:  63%|██████▎   | 5079/8000 [00:04<00:02, 1152.11it/s]Scoring turns:  65%|██████▍   | 5195/8000 [00:04<00:02, 1153.98it/s]Scoring turns:  66%|██████▋   | 5312/8000 [00:04<00:02, 1155.81it/s]Scoring turns:  68%|██████▊   | 5428/8000 [00:04<00:02, 1151.26it/s]Scoring turns:  69%|██████▉   | 5544/8000 [00:04<00:02, 1148.46it/s]Scoring turns:  71%|███████   | 5660/8000 [00:04<00:02, 1151.40it/s]Scoring turns:  72%|███████▏  | 5777/8000 [00:05<00:01, 1155.91it/s]Scoring turns:  74%|███████▎  | 5893/8000 [00:05<00:01, 1155.93it/s]Scoring turns:  75%|███████▌  | 6010/8000 [00:05<00:01, 1157.42it/s]Scoring turns:  77%|███████▋  | 6127/8000 [00:05<00:01, 1158.89it/s]Scoring turns:  78%|███████▊  | 6244/8000 [00:05<00:01, 1159.50it/s]Scoring turns:  80%|███████▉  | 6360/8000 [00:05<00:01, 1159.30it/s]Scoring turns:  81%|████████  | 6477/8000 [00:05<00:01, 1159.93it/s]Scoring turns:  82%|████████▏ | 6593/8000 [00:05<00:01, 1155.94it/s]Scoring turns:  84%|████████▍ | 6709/8000 [00:05<00:01, 1156.43it/s]Scoring turns:  85%|████████▌ | 6825/8000 [00:05<00:01, 1152.69it/s]Scoring turns:  87%|████████▋ | 6941/8000 [00:06<00:00, 1152.40it/s]Scoring turns:  88%|████████▊ | 7057/8000 [00:06<00:00, 1152.99it/s]Scoring turns:  90%|████████▉ | 7174/8000 [00:06<00:00, 1156.73it/s]Scoring turns:  91%|█████████ | 7290/8000 [00:06<00:00, 1155.40it/s]Scoring turns:  93%|█████████▎| 7406/8000 [00:06<00:00, 1153.21it/s]Scoring turns:  94%|█████████▍| 7522/8000 [00:06<00:00, 1139.46it/s]Scoring turns:  95%|█████████▌| 7637/8000 [00:06<00:00, 1140.84it/s]Scoring turns:  97%|█████████▋| 7752/8000 [00:06<00:00, 1143.13it/s]Scoring turns:  98%|█████████▊| 7870/8000 [00:06<00:00, 1152.55it/s]Scoring turns: 100%|█████████▉| 7986/8000 [00:06<00:00, 1154.57it/s]Scoring turns: 100%|██████████| 8000/8000 [00:06<00:00, 1146.50it/s]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+
+=== v0plus_compiler_all_retrievers_reranked_devset ===
+Turns evaluated: 8000   Min pool depth: 1000   Max pool depth: 1000   Shallow rows: 0
+Full diagnostic depth required: False (target depth=1000); metric cutoffs: [1, 5, 10, 20, 50, 100, 200, 500, 1000]
+
+Ranking quality (macro avg: per-turn, then across turns)
+  NDCG@1      0.0885
+  NDCG@5      0.1628
+  NDCG@10     0.1887
+  NDCG@20     0.2092
+  NDCG@50     0.2280
+  NDCG@100    0.2387
+  NDCG@200    0.2471
+  NDCG@500    0.2573
+  NDCG@1000   0.2625
+  MRR         0.1603
+  MRR@100     0.1595
+  MRR@200     0.1599
+  MRR@500     0.1602
+  MRR@1000    0.1603
+
+Retrieval coverage (is the GT even in the pool?)
+  Hit@1       0.0885
+  Hit@5       0.2348
+  Hit@10      0.3149
+  Hit@20      0.3962
+  Hit@50      0.4903
+  Hit@100     0.5563
+  Hit@200     0.6164
+  Hit@500     0.7007
+  Hit@1000    0.7506
+  % GT not in top-20   60.4%
+  % GT not in top-100  44.4%
+  % GT not in top-200  38.4%
+  % GT not in top-500  29.9%
+  % GT not in top-1000 24.9%
+  Mean rank (found)    110.1
+  Median rank (found)  17.0
+
+Diversity
+  Catalog div @20 0.5604
+  Catalog div @100 0.8975
+  Lexical diversity       0.0000
+
+Per-turn  (NDCG@20 / Hit@20 / Hit@100)
+  turn 1: 0.2071  0.3740  0.5080  (n=1000)
+  turn 2: 0.2497  0.4630  0.6400  (n=1000)
+  turn 3: 0.2276  0.4320  0.6080  (n=1000)
+  turn 4: 0.2092  0.4130  0.5650  (n=1000)
+  turn 5: 0.2044  0.4070  0.5650  (n=1000)
+  turn 6: 0.1995  0.3660  0.5330  (n=1000)
+  turn 7: 0.1890  0.3550  0.5140  (n=1000)
+  turn 8: 0.1873  0.3600  0.5170  (n=1000)
+
+Saved: /Users/semih/all_github_projects/ClaudeCodeProjects/music-conversational-music-recomender-2026/exp/scores/devset/v0plus_compiler_all_retrievers_reranked_devset.json
+Saved per-sample metrics: /Users/semih/all_github_projects/ClaudeCodeProjects/music-conversational-music-recomender-2026/exp/scores/devset/v0plus_compiler_all_retrievers_reranked_devset_samples.csv
+n_turns scored: 8000
+
+FINAL recommendation:
+  hit@1    = 0.0885
+  hit@20   = 0.3962
+  hit@50   = 0.4903
+  hit@100  = 0.5563
+  hit@200  = 0.6164
+  hit@1000 = 0.7506
+
+UNION of branches:
+  unionhit@20 = 0.4788  (mean union size 160, fusion_efficiency 0.828)
+  unionhit@50 = 0.5854  (mean union size 395, fusion_efficiency 0.837)
+  unionhit@100 = 0.6629  (mean union size 783, fusion_efficiency 0.839)
+  unionhit@200 = 0.7440  (mean union size 1538, fusion_efficiency 0.828)
+  unionhit@1000 = 0.9054  (mean union size 6593, fusion_efficiency 0.829)
+
+PER-BRANCH recall (denominator = turns fired):
+  bm25                             fired=8000  r@100=0.4031  r@200=0.4703  r@1000=0.6385
+  centroid.anchor_tracks.audio_laion_clap fired=6457  r@100=0.1617  r@200=0.2329  r@1000=0.4680
+  centroid.anchor_tracks.cf_bpr    fired=6457  r@100=0.2383  r@200=0.2771  r@1000=0.3968
+  centroid.anchor_tracks.image_siglip2 fired=6457  r@100=0.3613  r@200=0.3850  r@1000=0.4693
+  centroid.user.cf_bpr             fired=6368  r@100=0.0829  r@200=0.1278  r@1000=0.2729
+  dense.clap_text.sonic.audio_laion_clap fired=8000  r@100=0.0956  r@200=0.1501  r@1000=0.3824
+  dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b fired=7720  r@100=0.0596  r@200=0.0856  r@1000=0.1970
+  dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b fired=96    r@100=0.3125  r@200=0.3229  r@1000=0.4479
+  dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b fired=8000  r@100=0.2752  r@200=0.3085  r@1000=0.3937
+  dense.qwen_8b.attributes.attributes_qwen3_embedding_8b fired=7720  r@100=0.1676  r@200=0.2258  r@1000=0.4509
+  dense.qwen_8b.metadata.metadata_qwen3_embedding_8b fired=8000  r@100=0.3529  r@200=0.4245  r@1000=0.5992
+  lookup.era_popularity            fired=2163  r@100=0.0989  r@200=0.1503  r@1000=0.1503
+  lookup.resolved_artist_discography fired=6153  r@100=0.3941  r@200=0.3982  r@1000=0.3985
+
+wrote /Users/semih/all_github_projects/ClaudeCodeProjects/music-conversational-music-recomender-2026/exp/scores/devset/v0plus_compiler_all_retrievers_reranked_devset_branch_diagnostics.json
+Sharded run_id: 20260607T011258Z-4ed5f3 (re-run with --run_id 20260607T011258Z-4ed5f3 to retry)
+[branch-diagnostics] merged union@k / fusion_efficiency@k into /Users/semih/all_github_projects/ClaudeCodeProjects/music-conversational-music-recomender-2026/exp/scores/devset/v0plus_compiler_all_retrievers_reranked_devset.json

@@ -70,6 +70,9 @@ qu_kwargs:
     # --- Final ranker: LightGBM LambdaMART (replaces RRF) ---
     ranker: "lambdamart"
     reranker_model_path: "/root/models/rerank/model.txt"
+    # Capture branch query/centroid vectors at serve time so the reranker's dense
+    # cross-scoring features (block H) get the same query vectors they were trained on.
+    capture_branch_query_vectors: true
 
     field_boosts:
       track_name: 3.0

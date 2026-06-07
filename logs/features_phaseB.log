@@ -1,0 +1,10 @@
+{
+  "rows": 24214659,
+  "n_features": 131,
+  "categorical": [
+    "intent_mode",
+    "exploration_policy"
+  ],
+  "n_monotone": 16,
+  "out": "exp/rerank/devset_phaseB/features.parquet"
+}

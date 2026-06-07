@@ -1,0 +1,14 @@
+
+=== WITH block H (offline serve-replay) ===
+OVERALL NDCG@20: 0.2079  n=2000
+  refinement      n= 1459  NDCG@20=0.2043
+  open_explore    n=  258  NDCG@20=0.2068
+  playlist_build  n=  207  NDCG@20=0.2638
+  pivot           n=   76  NDCG@20=0.1265
+
+=== NO block H (offline serve-replay) ===
+OVERALL NDCG@20: 0.2067  n=2000
+  refinement      n= 1459  NDCG@20=0.2040
+  open_explore    n=  258  NDCG@20=0.2001
+  playlist_build  n=  207  NDCG@20=0.2637
+  pivot           n=   76  NDCG@20=0.1260

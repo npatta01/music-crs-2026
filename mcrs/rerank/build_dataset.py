@@ -141,6 +141,11 @@ def build_group_record(entry: dict[str, Any], gt_tid: str | None) -> dict[str, A
     targets = tr.get("resolved_targets", []) or []
     mentions = _mention_counts(state.get("mentioned_entities", []))
     track_feedback = state.get("track_feedback", []) or []
+    branches = tr.get("branches", {}) or {}
+    # Per-branch query/centroid vectors for dense cross-scoring (block H). Carried through
+    # verbatim — base64 float32 from a serialized trace, or plain float lists from the online
+    # entry; features.py decodes both via vec_codec. Empty dict when capture was off.
+    branch_query_vectors = branches.get("branch_query_vectors") or {}
 
     return {
         "session_id": entry["session_id"],
@@ -178,6 +183,8 @@ def build_group_record(entry: dict[str, Any], gt_tid: str | None) -> dict[str, A
             {"track_id": tf.get("track_id"), "role": tf.get("role"),
              "overall_sentiment": tf.get("overall_sentiment")} for tf in track_feedback
         ],
+        # --- H: dense cross-scoring query vectors (branch_name -> base64 float32 or list) ---
+        "branch_query_vectors": branch_query_vectors,
     }
 
 
