@@ -9,13 +9,17 @@ from mcrs.qu_modules.compiler_v0plus import BranchPool
 from scripts.state_v1_retriever_matrix import (
     VARIANTS,
     _additive_metrics_for_pools,
+    _all_on_ledger,
     _baseline_summary,
     _class_summaries,
     _expanded_tag_terms,
     _extract_trace_baseline_pools,
+    _greedy_minimal_subset,
     _pool_to_trace_payload,
+    _pool_payload_to_branch_pool,
     _query_text_tag_popularity_pool,
     _rerank_branch_pools,
+    _serialize_variant_pools,
     _scene_terms_from_text,
     _state_query_text,
     _tag_popularity_pool,
@@ -135,6 +139,29 @@ def test_current_config_variant_preserves_base_compiler_branches(tmp_path):
     assert set(out["encoders"]) == {"qwen_0_6b", "clap_text"}
     assert out["compiler"]["enable_dense"] is True
     assert out["compiler"]["enable_era_popularity"] is True
+
+
+def test_all_candidate_v3_includes_raw_attributes_and_lyrics():
+    branches = {
+        (branch.vector_field, branch.encoder_id, branch.query_id)
+        for branch in VARIANTS["all_candidate_plus_synthetic_v3"].dense_branches
+    }
+
+    assert (
+        "attributes_qwen3_embedding_0_6b",
+        "qwen_0_6b",
+        "attributes",
+    ) in branches
+    assert (
+        "attributes_qwen3_embedding_8b",
+        "qwen_8b",
+        "attributes",
+    ) in branches
+    assert (
+        "lyrics_qwen3_embedding_0_6b",
+        "qwen_0_6b",
+        "lyric",
+    ) in branches
 
 
 def test_baseline_summary_infers_union50_when_bounds_match():
@@ -402,3 +429,106 @@ def test_branch_local_popularity_boost_requires_structured_popularity_fact():
 
     assert [track_id for track_id, _ in unchanged[0].hits] == ["deep-cut", "classic"]
     assert [track_id for track_id, _ in boosted[0].hits] == ["classic", "deep-cut"]
+
+
+def test_serialize_variant_pools_round_trips_branch_pools_with_depth():
+    pools = {
+        "s1::t1": [
+            BranchPool("bm25", [("a", 1.0), ("target", 0.9), ("tail", 0.1)]),
+            BranchPool("dense.lyric", [("lyric-hit", 2.0)]),
+        ]
+    }
+
+    payload = _serialize_variant_pools(
+        variant="all_on",
+        sample_ids=["s1::t1"],
+        pools_by_sample=pools,
+        depth=2,
+    )
+
+    assert payload["variant"] == "all_on"
+    assert payload["depth"] == 2
+    assert payload["pools_by_sample"]["s1::t1"][0] == {
+        "name": "bm25",
+        "hits": ["a", "target"],
+    }
+    round_trip = _pool_payload_to_branch_pool(payload["pools_by_sample"]["s1::t1"][0])
+    assert round_trip == BranchPool("bm25", [("a", 1.0), ("target", 0.5)])
+
+
+def test_all_on_ledger_computes_unique_and_leave_one_out_rescues():
+    sample_ids = ["a", "b", "c"]
+    turn_meta = {
+        "a": {"pack": "P0", "gt_track_id": "ta"},
+        "b": {"pack": "P0", "gt_track_id": "tb"},
+        "c": {"pack": "P1", "gt_track_id": "tc"},
+    }
+    protected = {
+        "a": [BranchPool("baseline", [("base", 1.0)])],
+        "b": [BranchPool("baseline", [("tb", 1.0)])],
+        "c": [BranchPool("baseline", [("base", 1.0)])],
+    }
+    candidate = {
+        "a": [
+            BranchPool("dense.lyric", [("ta", 1.0)]),
+            BranchPool("bm25", [("x", 1.0)]),
+        ],
+        "b": [
+            BranchPool("dense.lyric", [("tb", 1.0)]),
+            BranchPool("analysis.scene", [("tb", 1.0)]),
+        ],
+        "c": [
+            BranchPool("analysis.scene", [("tc", 1.0)]),
+        ],
+    }
+
+    ledger = _all_on_ledger(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        protected_pools_by_sample=protected,
+        candidate_pools_by_sample=candidate,
+        ks=(20, 100),
+    )
+
+    summary = {row["branch"]: row for row in ledger["branch_summary"]}
+    assert ledger["overall"]["all_on_union@20_count"] == 3
+    assert summary["dense.lyric"]["branch_hit@20_count"] == 2
+    assert summary["dense.lyric"]["unique_rescue@100_count"] == 1
+    assert summary["analysis.scene"]["leave_one_out_loss@100_count"] == 1
+    assert ledger["per_sample"]["a"]["best_branch"] == "dense.lyric"
+    assert ledger["per_class"][0]["all_on_union@100_count"] == 2
+
+
+def test_greedy_minimal_subset_prefers_largest_new_union100_gain():
+    sample_ids = ["a", "b", "c"]
+    turn_meta = {
+        "a": {"pack": "P0", "gt_track_id": "ta"},
+        "b": {"pack": "P0", "gt_track_id": "tb"},
+        "c": {"pack": "P1", "gt_track_id": "tc"},
+    }
+    protected = {
+        "a": [BranchPool("baseline", [("base", 1.0)])],
+        "b": [BranchPool("baseline", [("base", 1.0)])],
+        "c": [BranchPool("baseline", [("base", 1.0)])],
+    }
+    candidate = {
+        "a": [
+            BranchPool("branch.big", [("ta", 1.0)]),
+            BranchPool("branch.small", [("ta", 1.0)]),
+        ],
+        "b": [BranchPool("branch.big", [("tb", 1.0)])],
+        "c": [BranchPool("branch.tail", [("tc", 1.0)])],
+    }
+
+    subset = _greedy_minimal_subset(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        protected_pools_by_sample=protected,
+        candidate_pools_by_sample=candidate,
+        ks=(20, 100),
+    )
+
+    assert [step["branch"] for step in subset["steps"]] == ["branch.big", "branch.tail"]
+    assert subset["summary"]["selected_branches"] == ["branch.big", "branch.tail"]
+    assert subset["summary"]["subset_union@100_count"] == 3
+    assert subset["summary"]["subset_union@20_count"] == 3

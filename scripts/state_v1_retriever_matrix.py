@@ -395,6 +395,32 @@ VARIANTS: dict[str, Variant] = {
             "query_text_tag_popularity",
         ),
     ),
+    "all_candidate_plus_synthetic_v3": Variant(
+        "all_candidate_plus_synthetic_v3",
+        dense_branches=(
+            DenseSpec(QWEN06_METADATA, "qwen_0_6b", "metadata"),
+            DenseSpec(QWEN06_METADATA, "qwen_0_6b", "intent"),
+            DenseSpec(QWEN06_ATTRIBUTES, "qwen_0_6b", "attributes"),
+            DenseSpec(QWEN06_ATTRIBUTES, "qwen_0_6b", "attributes_enriched"),
+            DenseSpec("lyrics_qwen3_embedding_0_6b", "qwen_0_6b", "lyric"),
+            DenseSpec(QWEN8_METADATA, "qwen_8b", "metadata"),
+            DenseSpec(QWEN8_METADATA, "qwen_8b", "intent"),
+            DenseSpec(QWEN8_ATTRIBUTES, "qwen_8b", "attributes"),
+            DenseSpec(QWEN8_ATTRIBUTES, "qwen_8b", "attributes_enriched"),
+            DenseSpec(CLAP_AUDIO, "clap_text", "sonic"),
+            DenseSpec(CLAP_AUDIO, "clap_text", "sonic_nl"),
+            DenseSpec(CLAP_AUDIO, "clap_text", "sonic_nl_enriched"),
+        ),
+        centroid=True,
+        similar_artist_anchors=True,
+        analysis_branches=(
+            "tag_popularity_alias",
+            "era_tag_popularity",
+            "same_album_fanout",
+            "artist_tag_neighbor_popularity",
+            "query_text_tag_popularity",
+        ),
+    ),
 }
 
 
@@ -440,6 +466,7 @@ DEFAULT_VARIANTS = (
     "all_synthetic_recall_v2",
     "all_candidate_plus_synthetic",
     "all_candidate_plus_synthetic_v2",
+    "all_candidate_plus_synthetic_v3",
 )
 
 COMBINED_VARIANTS = {
@@ -460,6 +487,7 @@ COMBINED_VARIANTS = {
     "all_candidate_plus_synthetic",
     "all_synthetic_recall_v2",
     "all_candidate_plus_synthetic_v2",
+    "all_candidate_plus_synthetic_v3",
 }
 
 
@@ -587,6 +615,305 @@ def _load_baseline_pools_json(path: Path) -> dict[str, list[BranchPool]]:
         sid: [_pool_from_trace_payload(pool) for pool in pools]
         for sid, pools in payload.get("pools_by_sample", {}).items()
     }
+
+
+def _pool_payload_to_branch_pool(payload: dict[str, Any]) -> BranchPool:
+    return _pool_from_trace_payload(payload)
+
+
+def _serialize_variant_pools(
+    *,
+    variant: str,
+    sample_ids: list[str],
+    pools_by_sample: dict[str, list[BranchPool]],
+    depth: int,
+) -> dict[str, Any]:
+    return {
+        "variant": variant,
+        "depth": depth,
+        "samples": sample_ids,
+        "pools_by_sample": {
+            sid: [_pool_to_trace_payload(pool, depth=depth) for pool in pools_by_sample.get(sid, [])]
+            for sid in sample_ids
+        },
+    }
+
+
+def _load_variant_pools_payload(payload: dict[str, Any]) -> dict[str, list[BranchPool]]:
+    return {
+        sid: [_pool_payload_to_branch_pool(pool) for pool in pools]
+        for sid, pools in payload.get("pools_by_sample", {}).items()
+    }
+
+
+def _branch_names(pools_by_sample: dict[str, list[BranchPool]]) -> list[str]:
+    names = {
+        pool.name
+        for pools in pools_by_sample.values()
+        for pool in pools
+    }
+    return sorted(names)
+
+
+def _filter_pools_by_branch_names(
+    pools: list[BranchPool],
+    branch_names: set[str],
+) -> list[BranchPool]:
+    return [pool for pool in pools if pool.name in branch_names]
+
+
+def _target_for_sample(turn_meta: dict[str, dict[str, Any]], sample_id: str) -> str:
+    return str(turn_meta[sample_id]["gt_track_id"])
+
+
+def _hit_count(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    pools_by_sample: dict[str, list[BranchPool]],
+    k: int,
+) -> int:
+    return sum(
+        _union_hit(pools_by_sample.get(sid, []), _target_for_sample(turn_meta, sid), k)
+        for sid in sample_ids
+    )
+
+
+def _merged_pools_by_sample(
+    sample_ids: list[str],
+    *pool_maps: dict[str, list[BranchPool]],
+) -> dict[str, list[BranchPool]]:
+    return {
+        sid: [
+            pool
+            for pools_by_sample in pool_maps
+            for pool in pools_by_sample.get(sid, [])
+        ]
+        for sid in sample_ids
+    }
+
+
+def _all_on_ledger(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    protected_pools_by_sample: dict[str, list[BranchPool]],
+    candidate_pools_by_sample: dict[str, list[BranchPool]],
+    ks: tuple[int, ...] = ADDITIVE_KS,
+) -> dict[str, Any]:
+    all_on_pools = _merged_pools_by_sample(
+        sample_ids,
+        protected_pools_by_sample,
+        candidate_pools_by_sample,
+    )
+    branches = _branch_names(candidate_pools_by_sample)
+    overall: dict[str, Any] = {"n": len(sample_ids)}
+    for k in ks:
+        overall[f"protected_union@{k}_count"] = _hit_count(
+            sample_ids=sample_ids,
+            turn_meta=turn_meta,
+            pools_by_sample=protected_pools_by_sample,
+            k=k,
+        )
+        overall[f"all_on_union@{k}_count"] = _hit_count(
+            sample_ids=sample_ids,
+            turn_meta=turn_meta,
+            pools_by_sample=all_on_pools,
+            k=k,
+        )
+
+    branch_summary: list[dict[str, Any]] = []
+    for branch in branches:
+        row: dict[str, Any] = {"branch": branch, "n": len(sample_ids)}
+        branch_only = {
+            sid: _filter_pools_by_branch_names(candidate_pools_by_sample.get(sid, []), {branch})
+            for sid in sample_ids
+        }
+        without_branch = {
+            sid: _filter_pools_by_branch_names(
+                candidate_pools_by_sample.get(sid, []),
+                set(branches) - {branch},
+            )
+            for sid in sample_ids
+        }
+        protected_plus_without = _merged_pools_by_sample(
+            sample_ids,
+            protected_pools_by_sample,
+            without_branch,
+        )
+        for k in ks:
+            branch_hits = 0
+            marginal = 0
+            unique = 0
+            leave_one_out = 0
+            for sid in sample_ids:
+                target = _target_for_sample(turn_meta, sid)
+                protected_hit = _union_hit(protected_pools_by_sample.get(sid, []), target, k)
+                branch_hit = _union_hit(branch_only.get(sid, []), target, k)
+                without_hit = _union_hit(protected_plus_without.get(sid, []), target, k)
+                all_on_hit = _union_hit(all_on_pools.get(sid, []), target, k)
+                if branch_hit:
+                    branch_hits += 1
+                if branch_hit and not protected_hit:
+                    marginal += 1
+                if branch_hit and not protected_hit and not without_hit:
+                    unique += 1
+                if all_on_hit and not without_hit:
+                    leave_one_out += 1
+            row[f"branch_hit@{k}_count"] = branch_hits
+            row[f"marginal_rescue@{k}_count"] = marginal
+            row[f"unique_rescue@{k}_count"] = unique
+            row[f"leave_one_out_loss@{k}_count"] = leave_one_out
+        branch_summary.append(row)
+
+    branch_summary.sort(
+        key=lambda row: (
+            -row.get("unique_rescue@100_count", 0),
+            -row.get("marginal_rescue@100_count", 0),
+            -row.get("branch_hit@20_count", 0),
+            row["branch"],
+        )
+    )
+
+    per_sample: dict[str, dict[str, Any]] = {}
+    for sid in sample_ids:
+        target = _target_for_sample(turn_meta, sid)
+        best_branch, best_rank = _branch_rank(candidate_pools_by_sample.get(sid, []), target)
+        sample_row: dict[str, Any] = {
+            "pack": turn_meta[sid]["pack"],
+            "best_branch": best_branch,
+            "best_branch_rank": best_rank,
+        }
+        for k in ks:
+            sample_row[f"protected_union@{k}"] = _union_hit(
+                protected_pools_by_sample.get(sid, []),
+                target,
+                k,
+            )
+            sample_row[f"all_on_union@{k}"] = _union_hit(
+                all_on_pools.get(sid, []),
+                target,
+                k,
+            )
+        per_sample[sid] = sample_row
+
+    per_class: list[dict[str, Any]] = []
+    packs: dict[str, list[str]] = {}
+    for sid in sample_ids:
+        packs.setdefault(turn_meta[sid]["pack"], []).append(sid)
+    for pack, pack_ids in sorted(packs.items()):
+        row: dict[str, Any] = {"pack": pack, "n": len(pack_ids)}
+        for k in ks:
+            row[f"protected_union@{k}_count"] = sum(
+                per_sample[sid][f"protected_union@{k}"] for sid in pack_ids
+            )
+            row[f"all_on_union@{k}_count"] = sum(
+                per_sample[sid][f"all_on_union@{k}"] for sid in pack_ids
+            )
+        per_class.append(row)
+
+    return {
+        "overall": overall,
+        "branch_summary": branch_summary,
+        "per_class": per_class,
+        "per_sample": per_sample,
+    }
+
+
+def _greedy_minimal_subset(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    protected_pools_by_sample: dict[str, list[BranchPool]],
+    candidate_pools_by_sample: dict[str, list[BranchPool]],
+    ks: tuple[int, ...] = ADDITIVE_KS,
+) -> dict[str, Any]:
+    branches = _branch_names(candidate_pools_by_sample)
+    selected: set[str] = set()
+    steps: list[dict[str, Any]] = []
+    all_on = _merged_pools_by_sample(sample_ids, protected_pools_by_sample, candidate_pools_by_sample)
+    target_union100 = _hit_count(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        pools_by_sample=all_on,
+        k=100,
+    )
+    current = dict(protected_pools_by_sample)
+
+    while True:
+        current_union100 = _hit_count(
+            sample_ids=sample_ids,
+            turn_meta=turn_meta,
+            pools_by_sample=current,
+            k=100,
+        )
+        if current_union100 >= target_union100:
+            break
+        best_branch = None
+        best_candidate = None
+        best_key = (0, 0, "")
+        for branch in branches:
+            if branch in selected:
+                continue
+            branch_only = {
+                sid: _filter_pools_by_branch_names(candidate_pools_by_sample.get(sid, []), {branch})
+                for sid in sample_ids
+            }
+            trial = _merged_pools_by_sample(sample_ids, current, branch_only)
+            gain100 = _hit_count(
+                sample_ids=sample_ids,
+                turn_meta=turn_meta,
+                pools_by_sample=trial,
+                k=100,
+            ) - current_union100
+            gain20 = _hit_count(
+                sample_ids=sample_ids,
+                turn_meta=turn_meta,
+                pools_by_sample=trial,
+                k=20,
+            ) - _hit_count(
+                sample_ids=sample_ids,
+                turn_meta=turn_meta,
+                pools_by_sample=current,
+                k=20,
+            )
+            key = (gain100, gain20, branch)
+            if key[0] > 0 and key > best_key:
+                best_key = key
+                best_branch = branch
+                best_candidate = trial
+        if best_branch is None or best_candidate is None:
+            break
+        selected.add(best_branch)
+        current = best_candidate
+        step = {"branch": best_branch}
+        for k in ks:
+            step[f"subset_union@{k}_count"] = _hit_count(
+                sample_ids=sample_ids,
+                turn_meta=turn_meta,
+                pools_by_sample=current,
+                k=k,
+            )
+        steps.append(step)
+
+    summary: dict[str, Any] = {
+        "n": len(sample_ids),
+        "selected_branches": [step["branch"] for step in steps],
+    }
+    for k in ks:
+        summary[f"subset_union@{k}_count"] = _hit_count(
+            sample_ids=sample_ids,
+            turn_meta=turn_meta,
+            pools_by_sample=current,
+            k=k,
+        )
+        summary[f"all_on_union@{k}_count"] = _hit_count(
+            sample_ids=sample_ids,
+            turn_meta=turn_meta,
+            pools_by_sample=all_on,
+            k=k,
+        )
+    return {"summary": summary, "steps": steps}
 
 
 def _additive_metrics_for_pools(
@@ -1255,6 +1582,7 @@ def _compile_variant(
     target: str,
     variant: Variant | None = None,
     protected_pools: list[BranchPool] | None = None,
+    include_branch_pools: bool = False,
 ) -> dict[str, Any]:
     state = _state_from_audit(row)
     played = [tf.track_id for tf in state.track_feedback]
@@ -1289,6 +1617,8 @@ def _compile_variant(
         out[f"union@{k}"] = _union_hit(branch_pools, target, k)
     if protected_pools is not None:
         out.update(_additive_metrics_for_pools(protected_pools, branch_pools, target))
+    if include_branch_pools:
+        out["_branch_pools"] = branch_pools
     return out
 
 
@@ -1738,6 +2068,10 @@ def main() -> None:
     parser.add_argument("--baseline-trace", type=Path)
     parser.add_argument("--write-baseline-pools-json", type=Path)
     parser.add_argument("--baseline-pool-depth", type=int, default=100)
+    parser.add_argument("--write-branch-pools-json", type=Path)
+    parser.add_argument("--branch-pool-depth", type=int, default=1000)
+    parser.add_argument("--write-ledger-json", type=Path)
+    parser.add_argument("--write-minimal-subset-json", type=Path)
     parser.add_argument("--extract-baseline-only", action="store_true")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
@@ -1834,12 +2168,20 @@ def main() -> None:
     _resolve_vllm_endpoints_in_qu_kwargs(base_qu_kwargs)
 
     rows: list[dict[str, Any]] = []
+    capture_branch_pools = bool(
+        args.write_branch_pools_json
+        or args.write_ledger_json
+        or args.write_minimal_subset_json
+    )
+    candidate_pools_by_variant: dict[str, dict[str, list[BranchPool]]] = {}
     for variant_name in variant_names:
         variant = VARIANTS[variant_name]
         if not args.quiet:
             print(f"building variant: {variant.name}", flush=True)
         qu_kwargs = _variant_qu_kwargs(base_qu_kwargs, variant, args.lancedb_uri)
         qu = build_v0plus_compiler_qu(qu_kwargs)
+        if capture_branch_pools:
+            candidate_pools_by_variant[variant.name] = {}
         for idx, sid in enumerate(sample_ids, start=1):
             meta = turn_meta[sid]
             if not args.quiet:
@@ -1850,7 +2192,11 @@ def main() -> None:
                 meta["gt_track_id"],
                 variant,
                 protected_pools=baseline_pools_by_sample.get(sid),
+                include_branch_pools=capture_branch_pools,
             )
+            branch_pools = result.pop("_branch_pools", None)
+            if branch_pools is not None:
+                candidate_pools_by_variant[variant.name][sid] = branch_pools
             rows.append(
                 {
                     "sample_id": sid,
@@ -1903,6 +2249,71 @@ def main() -> None:
     output_json.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
     _write_csv(output_csv, rows)
     _write_report(output_md, payload)
+
+    if args.write_branch_pools_json:
+        args.write_branch_pools_json.parent.mkdir(parents=True, exist_ok=True)
+        if len(variant_names) == 1:
+            variant = variant_names[0]
+            pools_payload = _serialize_variant_pools(
+                variant=variant,
+                sample_ids=sample_ids,
+                pools_by_sample=candidate_pools_by_variant.get(variant, {}),
+                depth=args.branch_pool_depth,
+            )
+        else:
+            pools_payload = {
+                "depth": args.branch_pool_depth,
+                "samples": sample_ids,
+                "variants": {
+                    variant: _serialize_variant_pools(
+                        variant=variant,
+                        sample_ids=sample_ids,
+                        pools_by_sample=candidate_pools_by_variant.get(variant, {}),
+                        depth=args.branch_pool_depth,
+                    )
+                    for variant in variant_names
+                },
+            }
+        args.write_branch_pools_json.write_text(
+            json.dumps(pools_payload, ensure_ascii=False, indent=2) + "\n"
+        )
+
+    ledger_payload: dict[str, Any] | None = None
+    subset_payload: dict[str, Any] | None = None
+    if args.write_ledger_json or args.write_minimal_subset_json:
+        if not baseline_pools_by_sample:
+            raise SystemExit("--write-ledger-json requires --baseline-pools-json")
+        if len(variant_names) != 1:
+            raise SystemExit("ledger/subset output requires exactly one --variant")
+        variant = variant_names[0]
+        candidate_pools_by_sample = candidate_pools_by_variant.get(variant, {})
+        ledger_payload = _all_on_ledger(
+            sample_ids=sample_ids,
+            turn_meta=selected_turn_meta,
+            protected_pools_by_sample=baseline_pools_by_sample,
+            candidate_pools_by_sample=candidate_pools_by_sample,
+            ks=ADDITIVE_KS,
+        )
+        ledger_payload["variant"] = variant
+        if args.write_ledger_json:
+            args.write_ledger_json.parent.mkdir(parents=True, exist_ok=True)
+            args.write_ledger_json.write_text(
+                json.dumps(ledger_payload, ensure_ascii=False, indent=2) + "\n"
+            )
+        subset_payload = _greedy_minimal_subset(
+            sample_ids=sample_ids,
+            turn_meta=selected_turn_meta,
+            protected_pools_by_sample=baseline_pools_by_sample,
+            candidate_pools_by_sample=candidate_pools_by_sample,
+            ks=ADDITIVE_KS,
+        )
+        subset_payload["variant"] = variant
+        if args.write_minimal_subset_json:
+            args.write_minimal_subset_json.parent.mkdir(parents=True, exist_ok=True)
+            args.write_minimal_subset_json.write_text(
+                json.dumps(subset_payload, ensure_ascii=False, indent=2) + "\n"
+            )
+
     print(
         json.dumps(
             {
@@ -1910,6 +2321,17 @@ def main() -> None:
                 "json": str(output_json),
                 "md": str(output_md),
                 "csv": str(output_csv),
+                "branch_pools_json": (
+                    str(args.write_branch_pools_json)
+                    if args.write_branch_pools_json
+                    else None
+                ),
+                "ledger_json": str(args.write_ledger_json) if args.write_ledger_json else None,
+                "minimal_subset_json": (
+                    str(args.write_minimal_subset_json)
+                    if args.write_minimal_subset_json
+                    else None
+                ),
             },
             indent=2,
         )

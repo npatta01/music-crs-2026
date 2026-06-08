@@ -70,3 +70,27 @@ Next step:
 
 - Use the additive report's rescued and still-missed examples to decide which
   branches are worth production gating, then run a separate ranking/fusion goal.
+
+## 2026-06-07 - Focused 110 All-On Branch Attribution
+
+Decision:
+
+- Keep the all-on branch-pool report as the focused-pack source-recall audit
+  for frozen V1 state/projection.
+- Do not promote the added lyric/raw-attribute branches from this pass; they are
+  valid diagnostics but add no current-baseline rescues on the focused pack.
+
+Current read:
+
+- Current focused baseline is existing modal+synthetic OR plus query-text tag
+  popularity: 75/110 union@20, 87/110 union@50, and 91/110 union@100.
+- Expanded all-on v3 plus protected saved-trace pools reaches 74/110 union@20,
+  85/110 union@50, and 89/110 union@100.
+- Current plus all-on v3 remains 75/110, 87/110, and 91/110, with zero new
+  current-baseline rescues at @20, @50, or @100.
+
+Next step:
+
+- Treat the remaining 19 current union@100 misses as source/query-design work.
+- Treat the 16 current top100 tail misses as a separate branch-local ordering
+  or survivor-slot experiment, not as a global RRF/ranker replacement yet.
