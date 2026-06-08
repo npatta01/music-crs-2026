@@ -122,6 +122,10 @@ Current read:
 - A stricter recency/new-artist constraint ablation improves over baseline but
   trails the promoted feature family, so reject it as a replacement rather than
   shipping stronger hand-tuned constraints.
+- A cached anchor-tag/style-neighbor probe over all catalog tracks gets 15 valid
+  branch-only top20 hits but zero current-miss rescues at @20/@50/@100; it only
+  finds five misses deep at @1000. Do not add this as a standalone
+  candidate-recall branch without a stronger selector.
 - Only 2 valid GTs are absent from all saved deep pools in this focused pack;
   most remaining misses are rank/order, query specificity, or state-role
   consumption issues.
