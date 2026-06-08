@@ -150,3 +150,37 @@ Next step:
   hidden-target/lyric, visual cover/artwork, temporal scene/popularity, and
   novelty artist-neighbor slices, then re-run additive union@20 on the focused
   pack before any expensive full-devset cache-miss run.
+
+## 2026-06-08 - Focused 110 Satisfied-Anchor + Hard-Drop Gap Fix
+
+Decision:
+
+- Keep positive `track_feedback.role="satisfied"` as a soft compiler anchor for
+  centroid/tag expansion; pivot gates still prevent stale-anchor tag carryover.
+- Keep the retriever-matrix harness fix that applies branch-local rules to
+  analysis branches, not only compiler branches.
+- Keep `all_candidate_plus_targeted_v4_hard_drop` as the conservative
+  diagnostic/prototype variant; reject the full soft rule set as a blanket
+  reranker because it hurts valid top-20 on the residual source-gap slice.
+
+Current read:
+
+- On all 110 focused turns, hard-drop targeted branches reach 79/110 additive
+  union@20, 92/110 union@50, and 100/110 union@100 against protected saved
+  pools; valid-only is 70/97, 82/97, and 89/97.
+- As an additive source on top of the prior promoted feature family, coverage
+  reaches 87/110 all and 76/97 valid at union@20, and 104/110 all / 93/97 valid
+  at union@100.
+- On the compact 19 residual source-gap slice, valid top-20 improves from 1/16
+  in the prior v4 source-gap run to 3/16 with satisfied anchors plus hard-drop
+  analysis-branch rules.
+- Remaining gaps are not fixed by scalar soft constraints: lyric/hidden-target,
+  visual cover/artwork, temporal scene/popularity, and stale-entity ordering
+  still need sharper source/query branches and production gating.
+
+Next step:
+
+- Run one combined saved-pool pass for promoted feature family OR hard-drop
+  targeted branches, then evaluate a small production-gating config. Do not
+  claim full-devset or leaderboard lift until focused-gated gains survive a
+  real devset run.

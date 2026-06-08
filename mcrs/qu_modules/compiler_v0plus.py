@@ -1662,7 +1662,7 @@ class V0PlusCompiler:
         """Tracks that count as positive anchors for centroid / tag expansion."""
         ids: list[str] = []
         for tf in state.track_feedback:
-            if tf.role in ("accepted", "seed") and tf.overall_sentiment > 0:
+            if tf.role in ("accepted", "seed", "satisfied") and tf.overall_sentiment > 0:
                 ids.append(tf.track_id)
         ids.extend(state.referenced_track_ids)
         # Dedupe, preserve order

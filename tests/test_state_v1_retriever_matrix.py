@@ -7,9 +7,11 @@ from types import SimpleNamespace
 
 from mcrs.qu_modules.compiler_v0plus import BranchPool
 from scripts.state_v1_retriever_matrix import (
+    Variant,
     VARIANTS,
     _additive_metrics_for_pools,
     _all_on_ledger,
+    _analysis_branch_pools_for_variant,
     _artist_neighbor_scene_weighted_v3_pool,
     _baseline_summary,
     _class_summaries,
@@ -216,6 +218,13 @@ def test_all_candidate_v4_includes_visual_and_targeted_analysis_branches():
     assert ("image_siglip2", "siglip2_text", "visual") in dense
     assert "scene_era_tag_popularity_v2" in variant.analysis_branches
     assert "artist_neighbor_scene_v2" in variant.analysis_branches
+
+
+def test_all_candidate_v4_hard_drop_variant_keeps_only_hard_drop_rule():
+    variant = VARIANTS["all_candidate_plus_targeted_v4_hard_drop"]
+
+    assert variant.analysis_branches == VARIANTS["all_candidate_plus_targeted_v4"].analysis_branches
+    assert variant.branch_local_rules == ("hard_drop",)
 
 
 def test_baseline_summary_infers_union50_when_bounds_match():
@@ -505,6 +514,31 @@ def test_branch_local_rules_hard_drop_only_removes_compiler_drop_set():
     reranked = _rerank_branch_pools(qu, rs, pools, ("hard_drop",))
 
     assert [track_id for track_id, _ in reranked[0].hits] == ["target"]
+
+
+def test_variant_hard_drop_rules_apply_to_analysis_branches():
+    state = _state(facts=[SimpleNamespace(type="attribute", value="indie")])
+    catalog = _FakeCatalog(
+        tags={
+            "rejected-track": ["indie"],
+            "target": ["indie"],
+        },
+        popularity={
+            "rejected-track": 1,
+            "target": 2,
+        },
+    )
+    qu, rs = _fake_qu(state, catalog, hard_drop={"rejected-track"})
+    variant = Variant(
+        "analysis_hard_drop",
+        compiler_pools=False,
+        analysis_branches=("tag_popularity_alias",),
+        branch_local_rules=("hard_drop",),
+    )
+
+    pools = _analysis_branch_pools_for_variant(qu, rs, variant)
+
+    assert [track_id for track_id, _ in pools[0].hits] == ["target"]
 
 
 def test_branch_local_negative_tag_is_soft_not_filter():

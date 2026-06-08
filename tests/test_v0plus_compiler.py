@@ -266,6 +266,23 @@ def test_compiler_includes_anchor_tags_on_refinement():
     assert "smoky" in tag_query  # anchor tag from the accepted morphine track
 
 
+def test_compiler_uses_satisfied_track_feedback_as_soft_anchor_on_refinement():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="yes, keep going",
+        intent_mode="refinement",
+        track_feedback=[
+            TrackFeedback(track_id="t-morphine-1", overall_sentiment=1, role="satisfied"),
+        ],
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder()).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    tag_query = next((c.query for c in clauses if c.field == "tag_list"), "")
+    assert "smoky" in tag_query
+
+
 def test_compiler_centroid_alpha_zero_on_pivot_means_no_mixing():
     """On pivot, dense query vector should equal encode(text) — no centroid mix."""
     catalog = _catalog()

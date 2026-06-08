@@ -471,6 +471,36 @@ VARIANTS: dict[str, Variant] = {
             "artist_neighbor_scene_v2",
         ),
     ),
+    "all_candidate_plus_targeted_v4_hard_drop": Variant(
+        "all_candidate_plus_targeted_v4_hard_drop",
+        dense_branches=(
+            DenseSpec(QWEN06_METADATA, "qwen_0_6b", "metadata"),
+            DenseSpec(QWEN06_METADATA, "qwen_0_6b", "intent"),
+            DenseSpec(QWEN06_ATTRIBUTES, "qwen_0_6b", "attributes"),
+            DenseSpec(QWEN06_ATTRIBUTES, "qwen_0_6b", "attributes_enriched"),
+            DenseSpec("lyrics_qwen3_embedding_0_6b", "qwen_0_6b", "lyric"),
+            DenseSpec(QWEN8_METADATA, "qwen_8b", "metadata"),
+            DenseSpec(QWEN8_METADATA, "qwen_8b", "intent"),
+            DenseSpec(QWEN8_ATTRIBUTES, "qwen_8b", "attributes"),
+            DenseSpec(QWEN8_ATTRIBUTES, "qwen_8b", "attributes_enriched"),
+            DenseSpec(CLAP_AUDIO, "clap_text", "sonic"),
+            DenseSpec(CLAP_AUDIO, "clap_text", "sonic_nl"),
+            DenseSpec(CLAP_AUDIO, "clap_text", "sonic_nl_enriched"),
+            DenseSpec(SIGLIP_IMAGE, "siglip2_text", "visual"),
+        ),
+        centroid=True,
+        similar_artist_anchors=True,
+        analysis_branches=(
+            "tag_popularity_alias",
+            "era_tag_popularity",
+            "same_album_fanout",
+            "artist_tag_neighbor_popularity",
+            "query_text_tag_popularity",
+            "scene_era_tag_popularity_v2",
+            "artist_neighbor_scene_v2",
+        ),
+        branch_local_rules=("hard_drop",),
+    ),
 }
 
 
@@ -1634,6 +1664,15 @@ def _analysis_branch_pools(qu, rs, variant: Variant) -> list[BranchPool]:
     return pools
 
 
+def _analysis_branch_pools_for_variant(qu, rs, variant: Variant) -> list[BranchPool]:
+    return _rerank_branch_pools(
+        qu,
+        rs,
+        _analysis_branch_pools(qu, rs, variant),
+        variant.branch_local_rules,
+    )
+
+
 def _variant_qu_kwargs(
     base_qu_kwargs: dict[str, Any],
     variant: Variant,
@@ -1892,7 +1931,7 @@ def _compile_variant(
         final_rank = None
         fused_rank = None
     if variant is not None and variant.analysis_branches:
-        branch_pools.extend(_analysis_branch_pools(qu, rs, variant))
+        branch_pools.extend(_analysis_branch_pools_for_variant(qu, rs, variant))
     best_branch, best_branch_rank = _branch_rank(branch_pools, target)
     out: dict[str, Any] = {
         "final_rank": final_rank,
