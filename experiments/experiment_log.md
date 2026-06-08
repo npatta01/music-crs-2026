@@ -123,6 +123,10 @@ Current read:
   over protected+promoted pools also creates zero valid current-miss top-20
   rescues. This weakens the "just learn a selector" hypothesis for the current
   feature set.
+- A feature-weight sweep over the same protected+promoted scorer pool also
+  creates zero valid current-miss top-20 rescues, even at 8x feature weight.
+  Existing hand features are therefore not merely underweighted; the next lever
+  needs sharper query/source signals or richer candidate features.
 - A stricter recency/new-artist constraint ablation improves over baseline but
   trails the promoted feature family, so reject it as a replacement rather than
   shipping stronger hand-tuned constraints.
@@ -136,7 +140,7 @@ Current read:
 
 Next step:
 
-- Do not keep adding scalar hand-tuned constraints. The next focused experiment
-  should create sharper source/query branches for the two valid deep-pool
-  absences and the hidden-target/lyric/visual slices, or add richer candidate
-  features before revisiting learned ranking.
+- Do not keep adding scalar hand-tuned constraints or feature-weight sweeps.
+  The next focused experiment should create sharper source/query branches for
+  the two valid deep-pool absences and the hidden-target/lyric/visual slices,
+  or add richer candidate features before revisiting learned ranking.

@@ -683,6 +683,7 @@ def _candidate_scorer_rank_ids(
     protected_top20_ids: set[str] | None = None,
     protected_top20_bonus: float = 0.0,
     exact_bonus: float = 0.15,
+    feature_weight: float = 1.0,
 ) -> list[str]:
     """Score a capped union pool with rank evidence plus candidate features.
 
@@ -723,7 +724,9 @@ def _candidate_scorer_rank_ids(
     for track_id, feature in features.items():
         if track_id not in scores:
             continue
-        scores[track_id] += float(getattr(feature, "feature_score", 0.0) or 0.0)
+        scores[track_id] += feature_weight * float(
+            getattr(feature, "feature_score", 0.0) or 0.0
+        )
     for track_id, families in families_by_track.items():
         scores[track_id] = scores.get(track_id, 0.0) + (
             agreement_bonus * max(0, len(families) - 1)
@@ -744,6 +747,7 @@ def _candidate_scorer_proxy_summary(
     features_by_sample: dict[str, dict[str, CandidateFeature]],
     variant_name: str = "candidate_scorer",
     depths: tuple[int, ...] = (50, 100, 200),
+    feature_weight: float = 1.0,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     valid_ids = {sid for sid in sample_ids if labels[sid].get("valid_gt")}
@@ -752,6 +756,7 @@ def _candidate_scorer_proxy_summary(
             "variant": f"{variant_name}_depth{depth}",
             "base_variant": variant_name,
             "depth_per_branch": depth,
+            "feature_weight": feature_weight,
             "all_n": len(sample_ids),
             "valid_n": len(valid_ids),
         }
@@ -772,6 +777,7 @@ def _candidate_scorer_proxy_summary(
                     state=states[sid],
                     limit=max(k, 100),
                     depth=depth,
+                    feature_weight=feature_weight,
                 )
                 try:
                     rank = ranked.index(target) + 1
@@ -803,6 +809,46 @@ def _candidate_scorer_proxy_summary(
             sorted(valid_ranks)[len(valid_ranks) // 2] if valid_ranks else None
         )
         rows.append(row)
+    return rows
+
+
+def _candidate_feature_weight_sweep_summary(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    labels: dict[str, dict[str, Any]],
+    states: dict[str, Any],
+    current_rows: dict[str, dict[str, Any]],
+    pools_by_sample: dict[str, list[BranchPool]],
+    features_by_sample: dict[str, dict[str, CandidateFeature]],
+    variant_name: str = "candidate_feature_weight_sweep",
+    depth: int = 50,
+    feature_weights: tuple[float, ...] = (0.0, 0.5, 1.0, 2.0, 4.0, 8.0),
+) -> list[dict[str, Any]]:
+    """Test whether candidate features are merely underweighted.
+
+    This is intentionally not a production ranker. A high feature weight can
+    overfit the focused pack, but if even very large weights cannot rescue
+    valid current misses, the remaining problem is feature/query specificity,
+    not scalar weighting.
+    """
+
+    rows: list[dict[str, Any]] = []
+    for weight in feature_weights:
+        rows.extend(
+            _candidate_scorer_proxy_summary(
+                sample_ids=sample_ids,
+                turn_meta=turn_meta,
+                labels=labels,
+                states=states,
+                current_rows=current_rows,
+                pools_by_sample=pools_by_sample,
+                features_by_sample=features_by_sample,
+                variant_name=f"{variant_name}_w{weight:g}",
+                depths=(depth,),
+                feature_weight=weight,
+            )
+        )
     return rows
 
 
@@ -2633,9 +2679,10 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "- Compiler-aware branch-family scoring also fails to create current-miss "
         "top-20 rescues. That rules out a simple RRF/branch-weight fix on the "
         "saved pools; the capped candidate-scorer, branch-survivor, and learned "
-        "listwise proxies below also fail to create valid top-20 rescues. The "
-        "next useful work is sharper branch queries or richer candidate features, "
-        "not another plain RRF rewrite.",
+        "listwise proxies below also fail to create valid top-20 rescues. A "
+        "feature-weight sweep also fails, so the current hand features are not "
+        "merely underweighted. The next useful work is sharper branch queries or "
+        "richer candidate features, not another plain RRF rewrite.",
         "- User-CF alone does not improve union@20, but it improves deeper recall "
         "and should be deferred as a ranking feature rather than promoted as a "
         "top-20 candidate-recall fix.",
@@ -2999,6 +3046,60 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
             )
         )
 
+    feature_weight_rows = payload.get("candidate_feature_weight_sweep") or []
+    if feature_weight_rows:
+        lines.extend([
+            "",
+            "## Candidate Feature-Weight Separability",
+            "",
+            "This diagnostic keeps the same protected + promoted candidate pools "
+            "and only changes how strongly deterministic candidate features count "
+            "inside the offline selector. It tests whether the features are merely "
+            "underweighted or whether they fail to separate valid GTs from "
+            "distractors.",
+            "",
+            "| feature weight | depth | scorer p@20 | valid p@20 | valid current+u@20 | valid rescues@20 | valid current+u@50 | valid current+u@100 |",
+            "|---:|---:|---:|---:|---:|---:|---:|---:|",
+        ])
+        for row in feature_weight_rows:
+            lines.append(
+                "| {weight} | {depth} | {a20}/{alln} | {v20}/{validn} | {vcu20}/{validn} | {vr20} | {vcu50}/{validn} | {vcu100}/{validn} |".format(
+                    weight=_fmt(row["feature_weight"]),
+                    depth=row["depth_per_branch"],
+                    a20=row["all_scorer_final@20_count"],
+                    alln=row["all_n"],
+                    v20=row["valid_scorer_final@20_count"],
+                    validn=row["valid_n"],
+                    vcu20=row["valid_current_plus_scorer@20_count"],
+                    vr20=row["valid_current_miss_rescue@20_count"],
+                    vcu50=row["valid_current_plus_scorer@50_count"],
+                    vcu100=row["valid_current_plus_scorer@100_count"],
+                )
+            )
+        best_weight = max(
+            feature_weight_rows,
+            key=lambda row: (
+                row["valid_current_miss_rescue@20_count"],
+                row["valid_current_plus_scorer@20_count"],
+                row["valid_current_plus_scorer@50_count"],
+            ),
+        )
+        lines.append(
+            "\nSeparability read: the best feature-weight sweep row uses "
+            f"feature_weight={_fmt(best_weight['feature_weight'])} and gets "
+            f"{best_weight['valid_current_miss_rescue@20_count']} valid "
+            "current-miss rescues@20. "
+            + (
+                "That means the current hand features contain separable signal, "
+                "but the selector needs a stronger calibration/test split before "
+                "promotion."
+                if best_weight["valid_current_miss_rescue@20_count"] > 0
+                else "That means simply turning up existing feature scores is not "
+                "enough; the next lever should be sharper query/source features, "
+                "not scalar weight tuning."
+            )
+        )
+
     survivor_rows = payload.get("branch_survivor_proxy") or []
     if survivor_rows:
         lines.extend([
@@ -3315,9 +3416,9 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "## Next Tests",
         "",
         "1. Do not promote the feature family or capped scalar scorer directly into "
-        "production fusion. Scalar candidate scoring, explicit survivor slots, "
-        "and a cheap cross-validated listwise selector all produce zero valid "
-        "current-miss top-20 rescues on this focused pack.",
+        "production fusion. Scalar candidate scoring, feature-weight tuning, "
+        "explicit survivor slots, and a cheap cross-validated listwise selector "
+        "all produce zero valid current-miss top-20 rescues on this focused pack.",
         "2. Move the next focused work to sharper branch/query sources: visual or "
         "hidden-target branches for artwork/vibe asks, lyric/theme branches for "
         "direct lyrical constraints, and richer candidate features for the "
@@ -3699,6 +3800,19 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 variant_name=variant_name,
             )
         )
+    candidate_feature_weight_sweep = _candidate_feature_weight_sweep_summary(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        labels=labels,
+        states=states,
+        current_rows=current_plus_targeted_rows,
+        pools_by_sample=candidate_scorer_pool_variants[
+            "candidate_promoted_feature_family"
+        ],
+        features_by_sample=candidate_feature_maps["promoted_feature_family"],
+        variant_name="candidate_promoted_feature_family_weight_sweep",
+        depth=50,
+    )
     variant_rows: dict[str, dict[str, dict[str, Any]]] = {
         "current_or": current_rows,
         "current_plus_targeted": current_plus_targeted_rows,
@@ -3829,10 +3943,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "Keep branch-local feature levers as focused candidate-quality evidence, "
         "but do not promote them as a final-list fix yet. Plain all-on branches, "
         "branch-family weighting, capped scalar scoring, explicit survivor slots, "
-        "and a cheap learned listwise selector do not produce valid top-20 "
-        "current-miss rescues. The next focused work should target sharper "
-        "branch/query sources and richer candidate features; only the small "
-        "absent-from-deep-pools slice should trigger a true new-source goal."
+        "a feature-weight sweep, and a cheap learned listwise selector do not "
+        "produce valid top-20 current-miss rescues. The next focused work should "
+        "target sharper branch/query sources and richer candidate features; only "
+        "the small absent-from-deep-pools slice should trigger a true new-source "
+        "goal."
     )
     payload: dict[str, Any] = {
         "scope": {
@@ -3852,6 +3967,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "fusion_proxy": fusion_proxy,
         "state_weighted_fusion_proxy": state_weighted_fusion_proxy,
         "candidate_scorer_proxy": candidate_scorer_proxy,
+        "candidate_feature_weight_sweep": candidate_feature_weight_sweep,
         "branch_local_rescue_scorer_diagnostics": branch_local_rescue_scorer_diagnostics,
         "branch_survivor_proxy": branch_survivor_proxy,
         "learned_listwise_proxy": learned_listwise_proxy,

@@ -16,6 +16,7 @@ from scripts.state_v1_candidate_quality_matrix import (
     _candidate_scorer_proxy_summary,
     _candidate_scorer_rank_map,
     _candidate_scorer_rank_ids,
+    _candidate_feature_weight_sweep_summary,
     _cosine,
     _feature_scores_for_sample,
     _fusion_proxy_summary,
@@ -356,6 +357,43 @@ def test_candidate_scorer_rank_ids_uses_feature_evidence_over_raw_rank():
     assert ranked[0] == "target"
 
 
+def test_candidate_scorer_rank_ids_allows_feature_weight_sweep():
+    hits = [("raw-top", 1.0), ("target", 0.9)]
+    state = SimpleNamespace(
+        current_request=SimpleNamespace(request_type="attribute_search", summary=""),
+        facts=[],
+        explicit_rejections=[],
+        track_feedback=[],
+        referenced_track_ids=[],
+        lyrical_theme=None,
+        target_artist_mode=None,
+    )
+    features = {
+        "raw-top": CandidateFeature(feature_score=0.0, hard_drop=False),
+        "target": CandidateFeature(feature_score=0.01, hard_drop=False),
+    }
+
+    low_weight = _candidate_scorer_rank_ids(
+        [BranchPool("bm25", hits)],
+        features=features,
+        state=state,
+        limit=2,
+        depth=20,
+        feature_weight=0.0,
+    )
+    high_weight = _candidate_scorer_rank_ids(
+        [BranchPool("bm25", hits)],
+        features=features,
+        state=state,
+        limit=2,
+        depth=20,
+        feature_weight=8.0,
+    )
+
+    assert low_weight[0] == "raw-top"
+    assert high_weight[0] == "target"
+
+
 def test_candidate_scorer_proxy_summary_reports_additive_rescues():
     sample_ids = ["a", "b"]
     turn_meta = {
@@ -404,6 +442,50 @@ def test_candidate_scorer_proxy_summary_reports_additive_rescues():
     assert row["all_current_plus_scorer@20_count"] == 2
     assert row["all_current_miss_rescue@20_count"] == 1
     assert row["valid_current_miss_rescue@20_count"] == 1
+
+
+def test_candidate_feature_weight_sweep_summary_exposes_underweight_rescue():
+    sample_ids = ["a"]
+    turn_meta = {"a": {"gt_track_id": "target"}}
+    labels = {"a": {"valid_gt": True}}
+    states = {
+        "a": SimpleNamespace(
+            current_request=SimpleNamespace(request_type="attribute_search", summary=""),
+            facts=[],
+            explicit_rejections=[],
+            track_feedback=[],
+            referenced_track_ids=[],
+        )
+    }
+    current_rows = {"a": {"union@20": False, "union@50": False, "union@100": False}}
+    hits = [(f"raw-{idx}", 1.0 / idx) for idx in range(1, 21)]
+    hits.append(("target", 1.0 / 21))
+    pools = {"a": [BranchPool("bm25", hits)]}
+    features = {
+        "a": {
+            **{
+                f"raw-{idx}": CandidateFeature(feature_score=0.0, hard_drop=False)
+                for idx in range(1, 21)
+            },
+            "target": CandidateFeature(feature_score=0.01, hard_drop=False),
+        }
+    }
+
+    rows = _candidate_feature_weight_sweep_summary(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        labels=labels,
+        states=states,
+        current_rows=current_rows,
+        pools_by_sample=pools,
+        features_by_sample=features,
+        depth=25,
+        feature_weights=(0.0, 8.0),
+    )
+
+    by_weight = {row["feature_weight"]: row for row in rows}
+    assert by_weight[0.0]["valid_current_miss_rescue@20_count"] == 0
+    assert by_weight[8.0]["valid_current_miss_rescue@20_count"] == 1
 
 
 def test_candidate_scorer_rank_map_reports_missing_and_ranked_targets():
