@@ -94,3 +94,33 @@ Next step:
 - Treat the remaining 19 current union@100 misses as source/query-design work.
 - Treat the 16 current top100 tail misses as a separate branch-local ordering
   or survivor-slot experiment, not as a global RRF/ranker replacement yet.
+
+## 2026-06-08 - Focused 110 Non-Prompt Candidate-Quality Diagnostic
+
+Decision:
+
+- Freeze V1 state extraction/prompt for this pass; the cached role/projection
+  gates are good enough for retrieval diagnostics.
+- Keep candidate-level catalog, anchor-CF, and branch-local hybrid features as
+  the next measured direction; do not promote direct RRF branch duplication or
+  broad branch-family weighting from this pass.
+
+Current read:
+
+- Current+targeted focused baseline is 77/110 union@20, 90/110 union@50, and
+  93/110 union@100.
+- The promoted non-prompt feature family reaches 84/110 union@20, 95/110
+  union@50, and 100/110 union@100; valid-GT-only union@20 moves 69/99 -> 76/99.
+- Plain all-on branches and compiler-aware branch-family scoring create zero
+  current-miss union@20 rescues. The useful signal is candidate-level scoring,
+  not simply more branch firing or conservative RRF reweighting.
+- Only 2 valid GTs are absent from all saved deep pools in this focused pack;
+  most remaining misses are rank/order, query specificity, or state-role
+  consumption issues.
+
+Next step:
+
+- Build a capped top100-200 candidate-level scorer or learned ranker smoke over
+  the focused pack before any new full-devset cache-miss run. Use candidate
+  metadata, state/catalog feature overlap, anchor-CF, and hard drops only for
+  explicit resolved entity exclusions.

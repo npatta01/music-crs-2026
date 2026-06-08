@@ -1,0 +1,1516 @@
+{
+  "samples": [
+    "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+    "5f085552-b56b-440e-830b-b4e40b58f854::t6",
+    "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+    "88beb200-0334-4aba-be15-8e1303725766::t6",
+    "daeef24e-b041-4140-9101-882820c63408::t7",
+    "a930da0d-07f1-46c6-909d-e4fd95ae1148::t6",
+    "b466a64b-b3cc-4c62-8a70-8261434f915f::t2",
+    "d5fcb591-3744-4ebb-9d1a-5c57c314b7d0::t5",
+    "f2d85aa5-2086-4b1e-9974-d188c43621db::t8",
+    "1c567917-f931-4609-9695-a9c0f8e39f3d::t2",
+    "a9b423bf-d05c-418d-98af-2a3b1e1d7917::t1",
+    "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t8"
+  ],
+  "variants": [
+    "tags_only",
+    "centroid_no_style",
+    "centroid_style_safe",
+    "centroid_style_broad",
+    "centroid_style_broad_w3",
+    "centroid_style_broad_w5"
+  ],
+  "summary": [
+    {
+      "variant": "tags_only",
+      "n": 12,
+      "final@20": 0.16666666666666666,
+      "final@100": 0.16666666666666666,
+      "union@20": 0.16666666666666666,
+      "union@100": 0.16666666666666666,
+      "union@200": 0.3333333333333333,
+      "union@1000": 0.5,
+      "best_branch@100": 0.16666666666666666
+    },
+    {
+      "variant": "centroid_no_style",
+      "n": 12,
+      "final@20": 0.16666666666666666,
+      "final@100": 0.16666666666666666,
+      "union@20": 0.16666666666666666,
+      "union@100": 0.16666666666666666,
+      "union@200": 0.3333333333333333,
+      "union@1000": 0.5,
+      "best_branch@100": 0.16666666666666666
+    },
+    {
+      "variant": "centroid_style_safe",
+      "n": 12,
+      "final@20": 0.16666666666666666,
+      "final@100": 0.16666666666666666,
+      "union@20": 0.16666666666666666,
+      "union@100": 0.25,
+      "union@200": 0.5,
+      "union@1000": 0.5833333333333334,
+      "best_branch@100": 0.25
+    },
+    {
+      "variant": "centroid_style_broad",
+      "n": 12,
+      "final@20": 0.16666666666666666,
+      "final@100": 0.16666666666666666,
+      "union@20": 0.16666666666666666,
+      "union@100": 0.25,
+      "union@200": 0.5833333333333334,
+      "union@1000": 0.6666666666666666,
+      "best_branch@100": 0.25
+    },
+    {
+      "variant": "centroid_style_broad_w3",
+      "n": 12,
+      "final@20": 0.16666666666666666,
+      "final@100": 0.25,
+      "union@20": 0.16666666666666666,
+      "union@100": 0.25,
+      "union@200": 0.5833333333333334,
+      "union@1000": 0.6666666666666666,
+      "best_branch@100": 0.25
+    },
+    {
+      "variant": "centroid_style_broad_w5",
+      "n": 12,
+      "final@20": 0.16666666666666666,
+      "final@100": 0.25,
+      "union@20": 0.16666666666666666,
+      "union@100": 0.25,
+      "union@200": 0.5833333333333334,
+      "union@1000": 0.6666666666666666,
+      "best_branch@100": 0.25
+    }
+  ],
+  "rows": [
+    {
+      "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+      "variant": "tags_only",
+      "final_rank": 261,
+      "fused_rank": 334,
+      "best_branch": "lookup.era_popularity",
+      "best_branch_rank": 169,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "5f085552-b56b-440e-830b-b4e40b58f854::t6",
+      "variant": "tags_only",
+      "final_rank": 897,
+      "fused_rank": null,
+      "best_branch": "bm25",
+      "best_branch_rank": 881,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": true,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+      "variant": "tags_only",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 1,
+      "branch_status_counts": {
+        "fired": 1,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "88beb200-0334-4aba-be15-8e1303725766::t6",
+      "variant": "tags_only",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "gated_by_intent": 1
+      }
+    },
+    {
+      "sample_id": "daeef24e-b041-4140-9101-882820c63408::t7",
+      "variant": "tags_only",
+      "final_rank": 106,
+      "fused_rank": 106,
+      "best_branch": "bm25",
+      "best_branch_rank": 104,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "a930da0d-07f1-46c6-909d-e4fd95ae1148::t6",
+      "variant": "tags_only",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 1,
+      "branch_status_counts": {
+        "fired": 1,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2",
+      "variant": "tags_only",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "d5fcb591-3744-4ebb-9d1a-5c57c314b7d0::t5",
+      "variant": "tags_only",
+      "final_rank": 348,
+      "fused_rank": 392,
+      "best_branch": "bm25",
+      "best_branch_rank": 201,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": true,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "f2d85aa5-2086-4b1e-9974-d188c43621db::t8",
+      "variant": "tags_only",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "1c567917-f931-4609-9695-a9c0f8e39f3d::t2",
+      "variant": "tags_only",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 1,
+      "branch_status_counts": {
+        "fired": 1,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "a9b423bf-d05c-418d-98af-2a3b1e1d7917::t1",
+      "variant": "tags_only",
+      "final_rank": 2,
+      "fused_rank": 1,
+      "best_branch": "lookup.resolved_artist_discography",
+      "best_branch_rank": 1,
+      "union20": true,
+      "union100": true,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 3,
+      "branch_status_counts": {
+        "fired": 3
+      }
+    },
+    {
+      "sample_id": "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t8",
+      "variant": "tags_only",
+      "final_rank": 2,
+      "fused_rank": 1,
+      "best_branch": "lookup.resolved_artist_discography",
+      "best_branch_rank": 1,
+      "union20": true,
+      "union100": true,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+      "variant": "centroid_no_style",
+      "final_rank": 261,
+      "fused_rank": 334,
+      "best_branch": "lookup.era_popularity",
+      "best_branch_rank": 169,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_anchors": 3,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "5f085552-b56b-440e-830b-b4e40b58f854::t6",
+      "variant": "centroid_no_style",
+      "final_rank": 897,
+      "fused_rank": null,
+      "best_branch": "bm25",
+      "best_branch_rank": 881,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": true,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_anchors": 3,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+      "variant": "centroid_no_style",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 1,
+      "branch_status_counts": {
+        "fired": 1,
+        "no_anchors": 3,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "88beb200-0334-4aba-be15-8e1303725766::t6",
+      "variant": "centroid_no_style",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "pivot_skip": 3,
+        "gated_by_intent": 1
+      }
+    },
+    {
+      "sample_id": "daeef24e-b041-4140-9101-882820c63408::t7",
+      "variant": "centroid_no_style",
+      "final_rank": 106,
+      "fused_rank": 106,
+      "best_branch": "bm25",
+      "best_branch_rank": 104,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_anchors": 3,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "a930da0d-07f1-46c6-909d-e4fd95ae1148::t6",
+      "variant": "centroid_no_style",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 1,
+      "branch_status_counts": {
+        "fired": 1,
+        "no_anchors": 3,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2",
+      "variant": "centroid_no_style",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_anchors": 3,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "d5fcb591-3744-4ebb-9d1a-5c57c314b7d0::t5",
+      "variant": "centroid_no_style",
+      "final_rank": 348,
+      "fused_rank": 392,
+      "best_branch": "bm25",
+      "best_branch_rank": 201,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": true,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_anchors": 3,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "f2d85aa5-2086-4b1e-9974-d188c43621db::t8",
+      "variant": "centroid_no_style",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_anchors": 3,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "1c567917-f931-4609-9695-a9c0f8e39f3d::t2",
+      "variant": "centroid_no_style",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 1,
+      "branch_status_counts": {
+        "fired": 1,
+        "no_anchors": 3,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "a9b423bf-d05c-418d-98af-2a3b1e1d7917::t1",
+      "variant": "centroid_no_style",
+      "final_rank": 2,
+      "fused_rank": 1,
+      "best_branch": "lookup.resolved_artist_discography",
+      "best_branch_rank": 1,
+      "union20": true,
+      "union100": true,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 3,
+      "branch_status_counts": {
+        "fired": 3,
+        "no_anchors": 3
+      }
+    },
+    {
+      "sample_id": "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t8",
+      "variant": "centroid_no_style",
+      "final_rank": 2,
+      "fused_rank": 1,
+      "best_branch": "lookup.resolved_artist_discography",
+      "best_branch_rank": 1,
+      "union20": true,
+      "union100": true,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_anchors": 3,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+      "variant": "centroid_style_safe",
+      "final_rank": 186,
+      "fused_rank": 466,
+      "best_branch": "lookup.era_popularity",
+      "best_branch_rank": 169,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "5f085552-b56b-440e-830b-b4e40b58f854::t6",
+      "variant": "centroid_style_safe",
+      "final_rank": 142,
+      "fused_rank": 212,
+      "best_branch": "centroid.anchor_tracks.audio_laion_clap",
+      "best_branch_rank": 134,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+      "variant": "centroid_style_safe",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 4,
+      "branch_status_counts": {
+        "fired": 4,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "88beb200-0334-4aba-be15-8e1303725766::t6",
+      "variant": "centroid_style_safe",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "pivot_skip": 3,
+        "gated_by_intent": 1
+      }
+    },
+    {
+      "sample_id": "daeef24e-b041-4140-9101-882820c63408::t7",
+      "variant": "centroid_style_safe",
+      "final_rank": 440,
+      "fused_rank": 440,
+      "best_branch": "bm25",
+      "best_branch_rank": 104,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "a930da0d-07f1-46c6-909d-e4fd95ae1148::t6",
+      "variant": "centroid_style_safe",
+      "final_rank": 118,
+      "fused_rank": 147,
+      "best_branch": "centroid.anchor_tracks.audio_laion_clap",
+      "best_branch_rank": 27,
+      "union20": false,
+      "union100": true,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 4,
+      "branch_status_counts": {
+        "fired": 4,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2",
+      "variant": "centroid_style_safe",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_anchors": 3,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "d5fcb591-3744-4ebb-9d1a-5c57c314b7d0::t5",
+      "variant": "centroid_style_safe",
+      "final_rank": 540,
+      "fused_rank": 728,
+      "best_branch": "bm25",
+      "best_branch_rank": 201,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "f2d85aa5-2086-4b1e-9974-d188c43621db::t8",
+      "variant": "centroid_style_safe",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_anchors": 3,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "1c567917-f931-4609-9695-a9c0f8e39f3d::t2",
+      "variant": "centroid_style_safe",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 4,
+      "branch_status_counts": {
+        "fired": 4,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "a9b423bf-d05c-418d-98af-2a3b1e1d7917::t1",
+      "variant": "centroid_style_safe",
+      "final_rank": 2,
+      "fused_rank": 2,
+      "best_branch": "lookup.resolved_artist_discography",
+      "best_branch_rank": 1,
+      "union20": true,
+      "union100": true,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 6,
+      "branch_status_counts": {
+        "fired": 6
+      }
+    },
+    {
+      "sample_id": "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t8",
+      "variant": "centroid_style_safe",
+      "final_rank": 2,
+      "fused_rank": 1,
+      "best_branch": "lookup.resolved_artist_discography",
+      "best_branch_rank": 1,
+      "union20": true,
+      "union100": true,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_anchors": 3,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+      "variant": "centroid_style_broad",
+      "final_rank": 186,
+      "fused_rank": 466,
+      "best_branch": "lookup.era_popularity",
+      "best_branch_rank": 169,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "5f085552-b56b-440e-830b-b4e40b58f854::t6",
+      "variant": "centroid_style_broad",
+      "final_rank": 142,
+      "fused_rank": 212,
+      "best_branch": "centroid.anchor_tracks.audio_laion_clap",
+      "best_branch_rank": 134,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+      "variant": "centroid_style_broad",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 4,
+      "branch_status_counts": {
+        "fired": 4,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "88beb200-0334-4aba-be15-8e1303725766::t6",
+      "variant": "centroid_style_broad",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "pivot_skip": 3,
+        "gated_by_intent": 1
+      }
+    },
+    {
+      "sample_id": "daeef24e-b041-4140-9101-882820c63408::t7",
+      "variant": "centroid_style_broad",
+      "final_rank": 440,
+      "fused_rank": 440,
+      "best_branch": "bm25",
+      "best_branch_rank": 104,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "a930da0d-07f1-46c6-909d-e4fd95ae1148::t6",
+      "variant": "centroid_style_broad",
+      "final_rank": 118,
+      "fused_rank": 147,
+      "best_branch": "centroid.anchor_tracks.audio_laion_clap",
+      "best_branch_rank": 27,
+      "union20": false,
+      "union100": true,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 4,
+      "branch_status_counts": {
+        "fired": 4,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2",
+      "variant": "centroid_style_broad",
+      "final_rank": 657,
+      "fused_rank": 942,
+      "best_branch": "centroid.anchor_tracks.audio_laion_clap",
+      "best_branch_rank": 183,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "d5fcb591-3744-4ebb-9d1a-5c57c314b7d0::t5",
+      "variant": "centroid_style_broad",
+      "final_rank": 540,
+      "fused_rank": 728,
+      "best_branch": "bm25",
+      "best_branch_rank": 201,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "f2d85aa5-2086-4b1e-9974-d188c43621db::t8",
+      "variant": "centroid_style_broad",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_anchors": 3,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "1c567917-f931-4609-9695-a9c0f8e39f3d::t2",
+      "variant": "centroid_style_broad",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 4,
+      "branch_status_counts": {
+        "fired": 4,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "a9b423bf-d05c-418d-98af-2a3b1e1d7917::t1",
+      "variant": "centroid_style_broad",
+      "final_rank": 2,
+      "fused_rank": 2,
+      "best_branch": "lookup.resolved_artist_discography",
+      "best_branch_rank": 1,
+      "union20": true,
+      "union100": true,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 6,
+      "branch_status_counts": {
+        "fired": 6
+      }
+    },
+    {
+      "sample_id": "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t8",
+      "variant": "centroid_style_broad",
+      "final_rank": 2,
+      "fused_rank": 2,
+      "best_branch": "lookup.resolved_artist_discography",
+      "best_branch_rank": 1,
+      "union20": true,
+      "union100": true,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+      "variant": "centroid_style_broad_w3",
+      "final_rank": 283,
+      "fused_rank": 677,
+      "best_branch": "lookup.era_popularity",
+      "best_branch_rank": 169,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "5f085552-b56b-440e-830b-b4e40b58f854::t6",
+      "variant": "centroid_style_broad_w3",
+      "final_rank": 101,
+      "fused_rank": 169,
+      "best_branch": "centroid.anchor_tracks.audio_laion_clap",
+      "best_branch_rank": 134,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+      "variant": "centroid_style_broad_w3",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 4,
+      "branch_status_counts": {
+        "fired": 4,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "88beb200-0334-4aba-be15-8e1303725766::t6",
+      "variant": "centroid_style_broad_w3",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "pivot_skip": 3,
+        "gated_by_intent": 1
+      }
+    },
+    {
+      "sample_id": "daeef24e-b041-4140-9101-882820c63408::t7",
+      "variant": "centroid_style_broad_w3",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": "bm25",
+      "best_branch_rank": 104,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "a930da0d-07f1-46c6-909d-e4fd95ae1148::t6",
+      "variant": "centroid_style_broad_w3",
+      "final_rank": 84,
+      "fused_rank": 103,
+      "best_branch": "centroid.anchor_tracks.audio_laion_clap",
+      "best_branch_rank": 27,
+      "union20": false,
+      "union100": true,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 4,
+      "branch_status_counts": {
+        "fired": 4,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2",
+      "variant": "centroid_style_broad_w3",
+      "final_rank": 404,
+      "fused_rank": 622,
+      "best_branch": "centroid.anchor_tracks.audio_laion_clap",
+      "best_branch_rank": 183,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "d5fcb591-3744-4ebb-9d1a-5c57c314b7d0::t5",
+      "variant": "centroid_style_broad_w3",
+      "final_rank": 839,
+      "fused_rank": null,
+      "best_branch": "bm25",
+      "best_branch_rank": 201,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "f2d85aa5-2086-4b1e-9974-d188c43621db::t8",
+      "variant": "centroid_style_broad_w3",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_anchors": 3,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "1c567917-f931-4609-9695-a9c0f8e39f3d::t2",
+      "variant": "centroid_style_broad_w3",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 4,
+      "branch_status_counts": {
+        "fired": 4,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "a9b423bf-d05c-418d-98af-2a3b1e1d7917::t1",
+      "variant": "centroid_style_broad_w3",
+      "final_rank": 2,
+      "fused_rank": 2,
+      "best_branch": "lookup.resolved_artist_discography",
+      "best_branch_rank": 1,
+      "union20": true,
+      "union100": true,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 6,
+      "branch_status_counts": {
+        "fired": 6
+      }
+    },
+    {
+      "sample_id": "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t8",
+      "variant": "centroid_style_broad_w3",
+      "final_rank": 2,
+      "fused_rank": 2,
+      "best_branch": "lookup.resolved_artist_discography",
+      "best_branch_rank": 1,
+      "union20": true,
+      "union100": true,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+      "variant": "centroid_style_broad_w5",
+      "final_rank": 328,
+      "fused_rank": 762,
+      "best_branch": "lookup.era_popularity",
+      "best_branch_rank": 169,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "5f085552-b56b-440e-830b-b4e40b58f854::t6",
+      "variant": "centroid_style_broad_w5",
+      "final_rank": 102,
+      "fused_rank": 172,
+      "best_branch": "centroid.anchor_tracks.audio_laion_clap",
+      "best_branch_rank": 134,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+      "variant": "centroid_style_broad_w5",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 4,
+      "branch_status_counts": {
+        "fired": 4,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "88beb200-0334-4aba-be15-8e1303725766::t6",
+      "variant": "centroid_style_broad_w5",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "pivot_skip": 3,
+        "gated_by_intent": 1
+      }
+    },
+    {
+      "sample_id": "daeef24e-b041-4140-9101-882820c63408::t7",
+      "variant": "centroid_style_broad_w5",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": "bm25",
+      "best_branch_rank": 104,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "a930da0d-07f1-46c6-909d-e4fd95ae1148::t6",
+      "variant": "centroid_style_broad_w5",
+      "final_rank": 80,
+      "fused_rank": 102,
+      "best_branch": "centroid.anchor_tracks.audio_laion_clap",
+      "best_branch_rank": 27,
+      "union20": false,
+      "union100": true,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 4,
+      "branch_status_counts": {
+        "fired": 4,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2",
+      "variant": "centroid_style_broad_w5",
+      "final_rank": 363,
+      "fused_rank": 574,
+      "best_branch": "centroid.anchor_tracks.audio_laion_clap",
+      "best_branch_rank": 183,
+      "union20": false,
+      "union100": false,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "d5fcb591-3744-4ebb-9d1a-5c57c314b7d0::t5",
+      "variant": "centroid_style_broad_w5",
+      "final_rank": 970,
+      "fused_rank": null,
+      "best_branch": "bm25",
+      "best_branch_rank": 201,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "f2d85aa5-2086-4b1e-9974-d188c43621db::t8",
+      "variant": "centroid_style_broad_w5",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 2,
+      "branch_status_counts": {
+        "fired": 2,
+        "no_anchors": 3,
+        "no_query": 1
+      }
+    },
+    {
+      "sample_id": "1c567917-f931-4609-9695-a9c0f8e39f3d::t2",
+      "variant": "centroid_style_broad_w5",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": null,
+      "best_branch_rank": null,
+      "union20": false,
+      "union100": false,
+      "union200": false,
+      "union1000": false,
+      "n_branch_pools": 4,
+      "branch_status_counts": {
+        "fired": 4,
+        "no_query": 2
+      }
+    },
+    {
+      "sample_id": "a9b423bf-d05c-418d-98af-2a3b1e1d7917::t1",
+      "variant": "centroid_style_broad_w5",
+      "final_rank": 2,
+      "fused_rank": 2,
+      "best_branch": "lookup.resolved_artist_discography",
+      "best_branch_rank": 1,
+      "union20": true,
+      "union100": true,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 6,
+      "branch_status_counts": {
+        "fired": 6
+      }
+    },
+    {
+      "sample_id": "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t8",
+      "variant": "centroid_style_broad_w5",
+      "final_rank": 2,
+      "fused_rank": 2,
+      "best_branch": "lookup.resolved_artist_discography",
+      "best_branch_rank": 1,
+      "union20": true,
+      "union100": true,
+      "union200": true,
+      "union1000": true,
+      "n_branch_pools": 5,
+      "branch_status_counts": {
+        "fired": 5,
+        "no_query": 1
+      }
+    }
+  ],
+  "turn_meta": {
+    "0b9d547f-e748-464a-90e2-2199149f915c::t6": {
+      "pack": "P0_roleless_stale_entity_failure",
+      "gt_track_id": "8817ecde-d27e-4be0-8f44-e74f409b2bee",
+      "gt_track": "Give It To Me Baby",
+      "gt_artist": "Rick James",
+      "baseline": {
+        "final_rank": 158,
+        "fused_rank": 218,
+        "best_branch_rank": 101,
+        "best_branch": "dense.qwen_8b.attributes.attributes_qwen3_embedding_8b",
+        "union20": false,
+        "union100": false,
+        "union200": true
+      }
+    },
+    "5f085552-b56b-440e-830b-b4e40b58f854::t6": {
+      "pack": "P0_novelty_prior_anchor_failure",
+      "gt_track_id": "90359ccd-d781-4746-83e8-db7b21ddf76e",
+      "gt_track": "Redneck Yacht Club",
+      "gt_artist": "Craig Morgan",
+      "baseline": {
+        "final_rank": 136,
+        "fused_rank": 291,
+        "best_branch_rank": 102,
+        "best_branch": "dense.qwen_8b.metadata.metadata_qwen3_embedding_8b",
+        "union20": false,
+        "union100": false,
+        "union200": true
+      }
+    },
+    "0858f444-c9af-4f08-a9fc-2a731a24182b::t5": {
+      "pack": "P0_roleless_stale_entity_failure",
+      "gt_track_id": "af0e6b5d-4f33-46d7-b696-d838379abea6",
+      "gt_track": "Armature",
+      "gt_artist": "Emptyset",
+      "baseline": {
+        "final_rank": 368,
+        "fused_rank": 384,
+        "best_branch_rank": 101,
+        "best_branch": "dense.clap_text.sonic.audio_laion_clap",
+        "union20": false,
+        "union100": false,
+        "union200": true
+      }
+    },
+    "88beb200-0334-4aba-be15-8e1303725766::t6": {
+      "pack": "P0_novelty_prior_anchor_failure",
+      "gt_track_id": "bad307e0-1f22-4c72-ab1a-23094bd9580f",
+      "gt_track": "Used To",
+      "gt_artist": "Lil Wayne, Drake",
+      "baseline": {
+        "final_rank": 522,
+        "fused_rank": 252,
+        "best_branch_rank": 101,
+        "best_branch": "dense.clap_text.sonic.audio_laion_clap",
+        "union20": false,
+        "union100": false,
+        "union200": true
+      }
+    },
+    "daeef24e-b041-4140-9101-882820c63408::t7": {
+      "pack": "P0_novelty_prior_anchor_failure",
+      "gt_track_id": "87df5ff6-cd6e-4287-93ba-6aec63020098",
+      "gt_track": "The Analog Kid",
+      "gt_artist": "Rush",
+      "baseline": {
+        "final_rank": 240,
+        "fused_rank": 316,
+        "best_branch_rank": 101,
+        "best_branch": "bm25",
+        "union20": false,
+        "union100": false,
+        "union200": true
+      }
+    },
+    "a930da0d-07f1-46c6-909d-e4fd95ae1148::t6": {
+      "pack": "P0_new_artist_union20_gap_failure",
+      "gt_track_id": "359d27a7-2c9f-4a14-9089-6fa16369cc07",
+      "gt_track": "Without You",
+      "gt_artist": "Christina Aguilera",
+      "baseline": {
+        "final_rank": 413,
+        "fused_rank": 423,
+        "best_branch_rank": 101,
+        "best_branch": "centroid.anchor_tracks.cf_bpr",
+        "union20": false,
+        "union100": false,
+        "union200": true
+      }
+    },
+    "b466a64b-b3cc-4c62-8a70-8261434f915f::t2": {
+      "pack": "P0_new_artist_union20_gap_failure",
+      "gt_track_id": "fc82d8da-577f-4959-b6e7-dbc6815c672a",
+      "gt_track": "Two To Make It Right",
+      "gt_artist": "Seduction",
+      "baseline": {
+        "final_rank": 162,
+        "fused_rank": 449,
+        "best_branch_rank": 105,
+        "best_branch": "dense.clap_text.sonic.audio_laion_clap",
+        "union20": false,
+        "union100": false,
+        "union200": true
+      }
+    },
+    "d5fcb591-3744-4ebb-9d1a-5c57c314b7d0::t5": {
+      "pack": "P1_temporal_constraint_failure",
+      "gt_track_id": "e9ec3de5-acfb-45eb-9e1a-d89464990ee1",
+      "gt_track": "Love Train",
+      "gt_artist": "The O'Jays",
+      "baseline": {
+        "final_rank": 160,
+        "fused_rank": 369,
+        "best_branch_rank": 106,
+        "best_branch": "centroid.anchor_tracks.audio_laion_clap",
+        "union20": false,
+        "union100": false,
+        "union200": true
+      }
+    },
+    "f2d85aa5-2086-4b1e-9974-d188c43621db::t8": {
+      "pack": "P1_temporal_constraint_failure",
+      "gt_track_id": "561cf4a8-51b6-4616-88f8-f826d44f0133",
+      "gt_track": "Leraine",
+      "gt_artist": "Kettel",
+      "baseline": {
+        "final_rank": 416,
+        "fused_rank": 567,
+        "best_branch_rank": 108,
+        "best_branch": "dense.qwen_8b.attributes.attributes_qwen3_embedding_8b",
+        "union20": false,
+        "union100": false,
+        "union200": true
+      }
+    },
+    "1c567917-f931-4609-9695-a9c0f8e39f3d::t2": {
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "gt_track_id": "b0484aa3-91d7-4dab-a240-8c75be343b86",
+      "gt_track": "Arregaçada / U Can't Touch This",
+      "gt_artist": "Banda Uó",
+      "baseline": {
+        "final_rank": null,
+        "fused_rank": null,
+        "best_branch_rank": 102,
+        "best_branch": "dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b",
+        "union20": false,
+        "union100": false,
+        "union200": true
+      }
+    },
+    "a9b423bf-d05c-418d-98af-2a3b1e1d7917::t1": {
+      "pack": "POS_clean_final_hit_control",
+      "gt_track_id": "cc0a852e-6e66-4018-8f52-8470dee0ac69",
+      "gt_track": "It Was A Good Day",
+      "gt_artist": "Ice Cube",
+      "baseline": {
+        "final_rank": 2,
+        "fused_rank": 2,
+        "best_branch_rank": 1,
+        "best_branch": "lookup.resolved_artist_discography",
+        "union20": true,
+        "union100": true,
+        "union200": true
+      }
+    },
+    "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t8": {
+      "pack": "POS_clean_final_hit_control",
+      "gt_track_id": "e242389b-17fd-449a-aabd-6596119bce17",
+      "gt_track": "Feel Good Inc",
+      "gt_artist": "Gorillaz",
+      "baseline": {
+        "final_rank": 7,
+        "fused_rank": 1,
+        "best_branch_rank": 1,
+        "best_branch": "lookup.resolved_artist_discography",
+        "union20": true,
+        "union100": true,
+        "union200": true
+      }
+    }
+  }
+}

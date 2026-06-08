@@ -45,6 +45,11 @@ AUDIT_JSONL = ANALYSIS_DIR / "state_v1_goal_current_all110_reprojected_audit.jso
 PROTECTED_POOLS_JSON = ANALYSIS_DIR / "state_v1_protected_baseline_branch_pools_top100.json"
 ALL_ON_POOLS_JSON = ANALYSIS_DIR / "state_v1_all_on_branch_pools.json"
 TARGETED_REPORT_JSON = ANALYSIS_DIR / "state_v1_targeted_branch_recall_report.json"
+ROLE_SCORES_JSON = ANALYSIS_DIR / "state_v1_goal_current_all110_reprojected_role_scores.json"
+PROJECTION_SCORES_JSON = ANALYSIS_DIR / "state_v1_goal_current_all110_reprojected_projection_scores.json"
+FACT_SCORES_JSON = ANALYSIS_DIR / "state_v1_goal_current_all110_reprojected_fact_scores.json"
+LEGACY_REPLAY_SCORES_JSON = ANALYSIS_DIR / "state_v1_goal_current_all110_scores.json"
+RETRIEVAL_SMOKE_JSON = ANALYSIS_DIR / "state_v1_retrieval_smoke_current_rerun.json"
 TRACE_PATHS = (
     Path("exp/inference/devset/v0plus_compiler_all_retrievers_devset_trace.jsonl"),
     Path(
@@ -55,6 +60,7 @@ TRACE_PATHS = (
 DEFAULT_LANCEDB = Path("cache/lancedb")
 KS = (20, 50, 100)
 DEEP_KS = (20, 50, 100, 200, 500, 1000)
+FUSION_PROXY_KS = (20, 50, 100)
 POOL_RECIPE_DEPTHS = {
     "small_top50_per_branch": 50,
     "medium_top100_per_branch": 100,
@@ -119,6 +125,27 @@ BRANCH_FAMILY_GROUPS = {
         "image_anchor_centroid",
         "cf_anchor_centroid",
     },
+}
+
+BRANCH_FAMILY_BASE_WEIGHTS = {
+    "exact_lookup_discography": 1.30,
+    "same_album_fanout": 1.00,
+    "bm25": 0.90,
+    "qwen_intent": 0.75,
+    "qwen_metadata": 0.72,
+    "qwen_attributes": 0.45,
+    "qwen_attributes_enriched": 0.50,
+    "qwen_lyrics": 0.65,
+    "audio_anchor_centroid": 0.72,
+    "image_anchor_centroid": 0.70,
+    "cf_anchor_centroid": 0.78,
+    "tag_scene": 0.82,
+    "artist_neighbor": 0.58,
+    "era_popularity": 0.55,
+    "clap_sonic": 0.34,
+    "clap_sonic_nl": 0.36,
+    "clap_sonic_nl_enriched": 0.40,
+    "other": 0.25,
 }
 
 
@@ -223,6 +250,37 @@ def _load_pools(path: Path) -> dict[str, list[BranchPool]]:
         sid: [_pool_from_trace_payload(pool) for pool in pools]
         for sid, pools in payload["pools_by_sample"].items()
     }
+
+
+def _summary_from_json(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    payload = json.loads(path.read_text())
+    summary = payload.get("summary") if isinstance(payload, dict) else None
+    return summary if isinstance(summary, dict) else None
+
+
+def _state_gate_summary(analysis_dir: Path) -> dict[str, Any]:
+    paths = {
+        "role": analysis_dir / ROLE_SCORES_JSON.name,
+        "projection": analysis_dir / PROJECTION_SCORES_JSON.name,
+        "fact": analysis_dir / FACT_SCORES_JSON.name,
+        "legacy_replay": analysis_dir / LEGACY_REPLAY_SCORES_JSON.name,
+    }
+    return {
+        key: summary
+        for key, path in paths.items()
+        if (summary := _summary_from_json(path)) is not None
+    }
+
+
+def _retrieval_smoke_summary(analysis_dir: Path) -> list[dict[str, Any]]:
+    path = analysis_dir / RETRIEVAL_SMOKE_JSON.name
+    if not path.exists():
+        return []
+    payload = json.loads(path.read_text())
+    summary = payload.get("summary") if isinstance(payload, dict) else []
+    return summary if isinstance(summary, list) else []
 
 
 def _resolve_matrix_path(raw: str | Path) -> Path:
@@ -347,6 +405,267 @@ def _merged_pools(
         ]
         for sid in sample_ids
     }
+
+
+def _rrf_fuse_pool_ids(
+    pools: list[BranchPool],
+    *,
+    limit: int,
+    rrf_k: float = 60.0,
+) -> list[str]:
+    """Unweighted RRF over saved analysis pools.
+
+    This is intentionally a proxy. The production compiler has branch weights,
+    post-fusion features, and backfill; this helper only checks whether
+    branch-local top-k movement is strong enough to survive a simple fusion
+    step over the saved pools.
+    """
+
+    scores: dict[str, float] = {}
+    first_seen: dict[str, int] = {}
+    order = 0
+    for pool in pools:
+        seen_in_pool: set[str] = set()
+        for rank, (track_id, _score) in enumerate(pool.hits, start=1):
+            if track_id in seen_in_pool:
+                continue
+            seen_in_pool.add(track_id)
+            if track_id not in first_seen:
+                first_seen[track_id] = order
+                order += 1
+            scores[track_id] = scores.get(track_id, 0.0) + 1.0 / (rrf_k + rank)
+    return sorted(scores, key=lambda tid: (-scores[tid], first_seen[tid]))[:limit]
+
+
+def _fusion_proxy_summary(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    labels: dict[str, dict[str, Any]],
+    variants: dict[str, dict[str, list[BranchPool]]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    valid_ids = {sid for sid in sample_ids if labels[sid].get("valid_gt")}
+    for variant, pools_by_sample in variants.items():
+        row: dict[str, Any] = {
+            "variant": variant,
+            "all_n": len(sample_ids),
+            "valid_n": len(valid_ids),
+        }
+        ranks: list[int] = []
+        valid_ranks: list[int] = []
+        for k in FUSION_PROXY_KS:
+            all_count = 0
+            valid_count = 0
+            for sid in sample_ids:
+                target = str(turn_meta[sid]["gt_track_id"])
+                fused = _rrf_fuse_pool_ids(
+                    pools_by_sample.get(sid, []),
+                    limit=max(k, 100),
+                )
+                try:
+                    rank = fused.index(target) + 1
+                except ValueError:
+                    rank = None
+                if rank is not None and rank <= k:
+                    all_count += 1
+                    if sid in valid_ids:
+                        valid_count += 1
+                if k == 100 and rank is not None:
+                    ranks.append(rank)
+                    if sid in valid_ids:
+                        valid_ranks.append(rank)
+            row[f"all_proxy_final@{k}_count"] = all_count
+            row[f"all_proxy_final@{k}"] = (
+                all_count / len(sample_ids) if sample_ids else None
+            )
+            row[f"valid_proxy_final@{k}_count"] = valid_count
+            row[f"valid_proxy_final@{k}"] = (
+                valid_count / len(valid_ids) if valid_ids else None
+            )
+        row["all_proxy_rank_median"] = (
+            sorted(ranks)[len(ranks) // 2] if ranks else None
+        )
+        row["valid_proxy_rank_median"] = (
+            sorted(valid_ranks)[len(valid_ranks) // 2] if valid_ranks else None
+        )
+        rows.append(row)
+    return rows
+
+
+def _state_family_weights(state: Any) -> dict[str, float]:
+    weights = dict(BRANCH_FAMILY_BASE_WEIGHTS)
+    query_text = " ".join([
+        _state_query_text(state),
+        str(getattr(state, "lyrical_theme", "") or ""),
+    ]).casefold()
+    if any(term in query_text for term in ("lyric", "lyrics", "theme", "story", "narrative")):
+        weights["qwen_lyrics"] *= 1.50
+        weights["qwen_attributes"] *= 1.15
+        weights["qwen_attributes_enriched"] *= 1.15
+    if any(term in query_text for term in ("cover", "album art", "artwork", "visual", "image")):
+        weights["image_anchor_centroid"] *= 1.50
+    if _has_explicit_popularity_request(state):
+        weights["tag_scene"] *= 1.25
+        weights["era_popularity"] *= 1.25
+        weights["artist_neighbor"] *= 1.12
+    if any(
+        term in query_text
+        for term in (
+            "sound",
+            "sonic",
+            "instrument",
+            "guitar",
+            "piano",
+            "drums",
+            "beat",
+            "energy",
+            "groove",
+            "danceable",
+        )
+    ):
+        weights["clap_sonic"] *= 1.25
+        weights["clap_sonic_nl"] *= 1.25
+        weights["clap_sonic_nl_enriched"] *= 1.25
+    if _enum_value(getattr(state, "target_artist_mode", None)) == "new_artist":
+        weights["same_album_fanout"] *= 0.75
+        weights["exact_lookup_discography"] *= 0.90
+        weights["tag_scene"] *= 1.15
+        weights["artist_neighbor"] *= 1.15
+    if _state_anchor_track_ids(state):
+        weights["audio_anchor_centroid"] *= 1.20
+        weights["image_anchor_centroid"] *= 1.10
+        weights["cf_anchor_centroid"] *= 1.25
+    return weights
+
+
+def _state_weighted_fuse_pool_ids(
+    pools: list[BranchPool],
+    *,
+    state: Any,
+    limit: int,
+    depth: int = 200,
+    rank_base: float = 30.0,
+    agreement_bonus: float = 0.004,
+    protected_top20_ids: set[str] | None = None,
+    protected_top20_bonus: float = 0.0,
+    exact_bonus: float = 0.15,
+) -> list[str]:
+    """Compiler-aware saved-pool scorer.
+
+    This is intentionally still a proxy, but it is stronger than plain RRF:
+    it lets the projected state choose branch-family weights and rewards
+    candidates that multiple families independently surface.
+    """
+
+    weights = _state_family_weights(state)
+    hard_drops = _state_hard_drop_track_ids(state)
+    protected_top20_ids = protected_top20_ids or set()
+    scores: dict[str, float] = {}
+    first_seen: dict[str, int] = {}
+    families_by_track: dict[str, set[str]] = defaultdict(set)
+    order = 0
+    for pool in pools:
+        family = _branch_family(pool.name)
+        seen_in_pool: set[str] = set()
+        for rank, (track_id, _score) in enumerate(pool.hits[:depth], start=1):
+            if track_id in seen_in_pool or track_id in hard_drops:
+                continue
+            seen_in_pool.add(track_id)
+            if track_id not in first_seen:
+                first_seen[track_id] = order
+                order += 1
+            scores[track_id] = scores.get(track_id, 0.0) + (
+                weights.get(family, BRANCH_FAMILY_BASE_WEIGHTS["other"]) / (rank_base + rank)
+            )
+            if family in {"exact_lookup_discography", "same_album_fanout"}:
+                scores[track_id] += exact_bonus / (10.0 + rank)
+            families_by_track[track_id].add(family)
+    for track_id, families in families_by_track.items():
+        scores[track_id] = scores.get(track_id, 0.0) + (
+            agreement_bonus * max(0, len(families) - 1)
+        )
+        if track_id in protected_top20_ids:
+            scores[track_id] += protected_top20_bonus
+    return sorted(scores, key=lambda tid: (-scores[tid], first_seen[tid], tid))[:limit]
+
+
+def _state_weighted_fusion_proxy_summary(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    labels: dict[str, dict[str, Any]],
+    states: dict[str, Any],
+    variants: dict[str, dict[str, list[BranchPool]]],
+    current_rows: dict[str, dict[str, Any]],
+    protected_pools: dict[str, list[BranchPool]],
+    depths: tuple[int, ...] = (50, 100, 200, 500),
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    valid_ids = {sid for sid in sample_ids if labels[sid].get("valid_gt")}
+    for variant, pools_by_sample in variants.items():
+        for depth in depths:
+            row: dict[str, Any] = {
+                "variant": f"{variant}_depth{depth}",
+                "base_variant": variant,
+                "depth_per_branch": depth,
+                "all_n": len(sample_ids),
+                "valid_n": len(valid_ids),
+            }
+            ranks: list[int] = []
+            valid_ranks: list[int] = []
+            for k in FUSION_PROXY_KS:
+                all_final_count = 0
+                valid_final_count = 0
+                all_current_plus_count = 0
+                valid_current_plus_count = 0
+                all_current_miss_rescues = 0
+                valid_current_miss_rescues = 0
+                for sid in sample_ids:
+                    target = str(turn_meta[sid]["gt_track_id"])
+                    protected_top20 = {
+                        track_id
+                        for pool in protected_pools.get(sid, [])
+                        for track_id, _score in pool.hits[:20]
+                    }
+                    fused = _state_weighted_fuse_pool_ids(
+                        pools_by_sample.get(sid, []),
+                        state=states[sid],
+                        limit=max(k, 100),
+                        depth=depth,
+                        protected_top20_ids=protected_top20,
+                    )
+                    try:
+                        rank = fused.index(target) + 1
+                    except ValueError:
+                        rank = None
+                    proxy_hit = rank is not None and rank <= k
+                    current_hit = bool(current_rows[sid].get(f"union@{k}"))
+                    all_final_count += int(proxy_hit)
+                    all_current_plus_count += int(current_hit or proxy_hit)
+                    all_current_miss_rescues += int(proxy_hit and not current_hit)
+                    if sid in valid_ids:
+                        valid_final_count += int(proxy_hit)
+                        valid_current_plus_count += int(current_hit or proxy_hit)
+                        valid_current_miss_rescues += int(proxy_hit and not current_hit)
+                    if k == 100 and rank is not None:
+                        ranks.append(rank)
+                        if sid in valid_ids:
+                            valid_ranks.append(rank)
+                row[f"all_proxy_final@{k}_count"] = all_final_count
+                row[f"valid_proxy_final@{k}_count"] = valid_final_count
+                row[f"all_current_plus_proxy@{k}_count"] = all_current_plus_count
+                row[f"valid_current_plus_proxy@{k}_count"] = valid_current_plus_count
+                row[f"all_current_miss_rescue@{k}_count"] = all_current_miss_rescues
+                row[f"valid_current_miss_rescue@{k}_count"] = valid_current_miss_rescues
+            row["all_proxy_rank_median"] = (
+                sorted(ranks)[len(ranks) // 2] if ranks else None
+            )
+            row["valid_proxy_rank_median"] = (
+                sorted(valid_ranks)[len(valid_ranks) // 2] if valid_ranks else None
+            )
+            rows.append(row)
+    return rows
 
 
 def _rank_in_pool(pool: BranchPool, target: str) -> int | None:
@@ -1329,15 +1648,124 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "means reachable @21-100 candidates can be pulled upward inside branches; "
         "it does not prove final@20/nDCG lift until the real compiler/fusion path "
         "is smoked.",
+        "- Saved-pool fusion proxy does not validate the feature family as a direct "
+        "final-list fix: `protected_plus_all_on` gets 50/110 proxy@20, while "
+        "`protected_plus_promoted_feature_family` gets 39/110 proxy@20. Treat the "
+        "features as reranker/candidate-pool evidence, not as a production RRF "
+        "patch.",
+        "- Compiler-aware branch-family scoring also fails to create current-miss "
+        "top-20 rescues. That rules out a simple RRF/branch-weight fix on the "
+        "saved pools; the next useful scorer needs candidate-level metadata, "
+        "cross-encoder evidence, or a targeted new source for the few absent cases.",
         "- User-CF alone does not improve union@20, but it improves deeper recall "
         "and should be deferred as a ranking feature rather than promoted as a "
         "top-20 candidate-recall fix.",
+    ]
+
+    state_gate = payload.get("state_gate") or {}
+    role_gate = state_gate.get("role") or {}
+    projection_gate = state_gate.get("projection") or {}
+    fact_gate = state_gate.get("fact") or {}
+    legacy_gate = state_gate.get("legacy_replay") or {}
+    lines.extend([
+        "",
+        "## Source Truth And State Gate",
+        "",
+        "- Active prompt: `mcrs/conversation_state/prompts/current.py` "
+        "(`ConversationStateV1` JSON schema).",
+        "- Active schema/bridge: `mcrs/conversation_state/schema.py` "
+        "(`project_v1_to_v0plus`).",
+        "- Active extractor decode path: `mcrs/qu_modules/compiler_v0plus_qu.py` "
+        "validates V1, then projects to V0Plus.",
+        "- Active compiler consumers: `mcrs/qu_modules/compiler_v0plus.py` uses "
+        "`mentioned_entities`, `style_reference_entities`, `turn_intent`, "
+        "`lyrical_theme`, `release_year_range`, `explicit_rejections`, and "
+        "`track_feedback` through the projected V0Plus view.",
+        "",
+        "| Gate | Samples | Pass/read | Notes |",
+        "|---|---:|---:|---|",
+    ])
+    if role_gate:
+        lines.append(
+            "| role labels | {n} | {rate} | exact seeds {exact}, style refs {style}, query facets {facet}, temporal {temporal} |".format(
+                n=role_gate.get("samples"),
+                rate=_fmt(role_gate.get("all_pass_rate")),
+                exact=_fmt(role_gate.get("exact_seeds_rate")),
+                style=_fmt(role_gate.get("style_references_rate")),
+                facet=_fmt(role_gate.get("query_facets_rate")),
+                temporal=_fmt(role_gate.get("temporal_constraint_rate")),
+            )
+        )
+    if projection_gate:
+        lines.append(
+            "| projected retriever contract | {n} | {passes}/{n} | current failures are narrow synonym/phrase cases |".format(
+                n=projection_gate.get("samples"),
+                passes=projection_gate.get("passes"),
+            )
+        )
+    if fact_gate:
+        lines.append(
+            "| fact compiler core | {n} | {rate} | strict fact all-pass {allpass}; forbidden stale seeds {forbidden} |".format(
+                n=fact_gate.get("samples"),
+                rate=_fmt(fact_gate.get("compiler_core_pass_rate")),
+                allpass=_fmt(fact_gate.get("all_pass_rate")),
+                forbidden=_fmt(fact_gate.get("forbidden_seeds_rate")),
+            )
+        )
+    if legacy_gate:
+        lines.append(
+            "| old V0Plus replay all-pass | {n} | {rate} | low by design because V1 no longer asks the LLM to own policy fields |".format(
+                n=legacy_gate.get("samples"),
+                rate=_fmt(legacy_gate.get("all_pass_rate")),
+            )
+        )
+    lines.extend([
+        "",
+        "State-gate decision: do not spend another broad paid extraction pass yet. "
+        "The cached V1 extraction is good enough for focused retrieval/projection "
+        "smokes; remaining state issues are localized label/prompt cases such as "
+        "`popular` vs `well-known`, `metal` vs `heavy and intense`, and preserving "
+        "`boost my energy` as a fact value rather than only evidence text.",
+    ])
+
+    smoke_rows = payload.get("retrieval_smoke") or []
+    if smoke_rows:
+        lines.extend([
+            "",
+            "## Tiny Local Retrieval Smoke",
+            "",
+            "This rerun uses saved V1 extraction and disables paid dense text "
+            "embedding calls. It tests BM25, lookup, era-popularity, and local "
+            "centroid/style-reference consumption on 12 representative turns.",
+            "",
+            "| Variant | final@20 | union@20 | union@100 | union@200 | union@1000 |",
+            "|---|---:|---:|---:|---:|---:|",
+        ])
+        for row in smoke_rows:
+            lines.append(
+                "| `{variant}` | {f20} | {u20} | {u100} | {u200} | {u1000} |".format(
+                    variant=row["variant"],
+                    f20=_fmt(row.get("final@20")),
+                    u20=_fmt(row.get("union@20")),
+                    u100=_fmt(row.get("union@100")),
+                    u200=_fmt(row.get("union@200")),
+                    u1000=_fmt(row.get("union@1000")),
+                )
+            )
+        lines.append(
+            "\nSmoke read: style-reference centroid consumption improves depth "
+            "(`union@1000` 0.500 -> 0.667), but does not move `union@20` or "
+            "`final@20`; this is ranking/order territory, not another state "
+            "extraction call."
+        )
+
+    lines.extend([
         "",
         "## Headline Metrics",
         "",
         "| Variant | all n | all u@20 | all u@50 | all u@100 | valid n | valid u@20 | valid u@50 | valid u@100 |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
-    ]
+    ])
     for row in payload["metrics"]:
         lines.append(
             "| `{variant}` | {all_n} | {all20} | {all50} | {all100} | {valid_n} | {valid20} | {valid50} | {valid100} |".format(
@@ -1450,6 +1878,79 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
 
     lines.extend([
         "",
+        "## Saved-Pool Fusion Proxy",
+        "",
+        "This is not production final ranking. It runs unweighted RRF over saved "
+        "analysis pools so we can tell whether branch-local top-20 movement "
+        "survives a simple fusion step. Treat it as a cheap gate before touching "
+        "global RRF or running full devset.",
+        "",
+        "| Proxy variant | all p@20 | all p@50 | all p@100 | valid p@20 | valid p@50 | valid p@100 | valid median rank |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
+    ])
+    for row in payload["fusion_proxy"]:
+        lines.append(
+            "| `{variant}` | {a20} | {a50} | {a100} | {v20} | {v50} | {v100} | {med} |".format(
+                variant=row["variant"],
+                a20=f"{row['all_proxy_final@20_count']}/{row['all_n']}",
+                a50=f"{row['all_proxy_final@50_count']}/{row['all_n']}",
+                a100=f"{row['all_proxy_final@100_count']}/{row['all_n']}",
+                v20=f"{row['valid_proxy_final@20_count']}/{row['valid_n']}",
+                v50=f"{row['valid_proxy_final@50_count']}/{row['valid_n']}",
+                v100=f"{row['valid_proxy_final@100_count']}/{row['valid_n']}",
+                med=row.get("valid_proxy_rank_median") or "",
+            )
+        )
+    lines.append(
+        "\nFusion-proxy read: if `protected_plus_promoted_feature_family` does not "
+        "beat `protected_plus_all_on` at proxy@20, the +7 union@20 branch-local "
+        "movement should be treated as candidate-quality evidence, not a "
+        "production final-list fix. If it does beat it, the next step is a tiny "
+        "real compiler final-list smoke with the same fixed features."
+    )
+
+    weighted_rows = payload.get("state_weighted_fusion_proxy") or []
+    if weighted_rows:
+        lines.extend([
+            "",
+            "## Compiler-Aware Saved-Pool Scorer Proxy",
+            "",
+            "This stronger proxy replaces plain RRF with state-conditioned branch-family "
+            "weights, exact/album bonuses, hard drops for explicit rejected tracks, "
+            "and cross-family agreement. It still uses only saved branch pools; no "
+            "new retriever, prompt, or catalog metadata feature is introduced here.",
+            "",
+            "| Proxy variant | depth | all p@20 | valid p@20 | current+proxy u@20 | valid current+proxy u@20 | current-miss rescues@20 | valid rescues@20 | valid p@100 |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+        ])
+        for row in weighted_rows:
+            lines.append(
+                "| `{variant}` | {depth} | {a20}/{alln} | {v20}/{validn} | {cu20}/{alln} | {vcu20}/{validn} | {r20} | {vr20} | {v100}/{validn} |".format(
+                    variant=row["base_variant"],
+                    depth=row["depth_per_branch"],
+                    a20=row["all_proxy_final@20_count"],
+                    alln=row["all_n"],
+                    v20=row["valid_proxy_final@20_count"],
+                    validn=row["valid_n"],
+                    cu20=row["all_current_plus_proxy@20_count"],
+                    vcu20=row["valid_current_plus_proxy@20_count"],
+                    r20=row["all_current_miss_rescue@20_count"],
+                    vr20=row["valid_current_miss_rescue@20_count"],
+                    v100=row["valid_proxy_final@100_count"],
+                )
+            )
+        lines.append(
+            "\nWeighted-scorer read: this does not rescue current union@20 misses. "
+            "So the remaining focused gap is not solved by branch-family weights, "
+            "intent routing, or a conservative RRF rewrite alone. The measurable "
+            "branch-local +7 comes from candidate-level catalog/anchor features; "
+            "those need a real capped candidate scorer or learned ranker over a "
+            "top100-200 pool, while the two valid deep-pool absences are the only "
+            "clear new-source candidates in this focused pack."
+        )
+
+    lines.extend([
+        "",
         "## GT Audit",
         "",
         "| Label | Count |",
@@ -1492,8 +1993,9 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "- Projection-only state consumption: represented by `catalog_features` and "
         "`branch_local_hybrid`, which derive query terms from the existing frozen "
         "request summary/facts/lyrical theme and consume them as score features. "
-        "This moved valid union@20, so this should become compiler-owned structured "
-        "branch-local scoring before any prompt work.",
+        "This moved valid union@20 inside branch pools, but the saved-pool fusion "
+        "proxy did not preserve the lift. Keep the features for a capped candidate "
+        "ranker or learned scorer, not as a direct RRF branch duplication.",
         "- Derived catalog features: normalized tag aliases, broad track text, release "
         "year compatibility, and popularity-if-requested are positive. Keep for "
         "full-devset smoke.",
@@ -1592,10 +2094,11 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "",
         "## Next Tests",
         "",
-        "1. Implement the promoted feature layer behind a conservative compiler config "
-        "flag, then run a tiny 10-session smoke that reports both final metrics "
-        "(`final@20`, nDCG@20 if available) and union diagnostics. The full-devset "
-        "run should only follow if the tiny smoke shows final-list movement.",
+        "1. Do not promote the feature family directly into production fusion. First "
+        "build a tiny final-list smoke that scores a capped top200 candidate pool "
+        "once per turn, instead of duplicating every branch into RRF. Report "
+        "`final@20`, nDCG@20 if available, and union diagnostics before any "
+        "full-devset run.",
         "2. Run a held-out focused/devset slice with the same fixed weights. Do not tune "
         "weights on the focused-110 again; if fixed weights are unstable, learn or "
         "parameterize them before promoting.",
@@ -1837,6 +2340,54 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         labels=labels,
         pools_by_sample=all_on_pools,
     )
+    fusion_proxy = _fusion_proxy_summary(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        labels=labels,
+        variants={
+            "protected_trace_top100": protected_pools,
+            "protected_plus_all_on": _merged_pools(
+                sample_ids,
+                protected_pools,
+                all_on_pools,
+            ),
+            "protected_plus_catalog_features": _merged_pools(
+                sample_ids,
+                protected_pools,
+                variant_pool_maps["catalog_features"],
+            ),
+            "protected_plus_anchor_cf": _merged_pools(
+                sample_ids,
+                protected_pools,
+                variant_pool_maps["anchor_cf_features"],
+            ),
+            "protected_plus_branch_local_hybrid": _merged_pools(
+                sample_ids,
+                protected_pools,
+                variant_pool_maps["branch_local_hybrid"],
+            ),
+            "protected_plus_promoted_feature_family": _merged_pools(
+                sample_ids,
+                protected_pools,
+                variant_pool_maps["promoted_feature_family"],
+            ),
+        },
+    )
+    state_weighted_fusion_proxy = _state_weighted_fusion_proxy_summary(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        labels=labels,
+        states=states,
+        current_rows=current_plus_targeted_rows,
+        protected_pools=protected_pools,
+        variants={
+            "protected_plus_all_on_weighted": _merged_pools(
+                sample_ids,
+                protected_pools,
+                all_on_pools,
+            ),
+        },
+    )
     variant_rows: dict[str, dict[str, dict[str, Any]]] = {
         "current_or": current_rows,
         "current_plus_targeted": current_plus_targeted_rows,
@@ -1904,7 +2455,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "Keep only levers with positive valid-GT union@20 lift for the next "
         "full-devset smoke. If a lever only improves union@50, treat it as "
         "evidence for branch-local ranking or a lightweight ranker, not as "
-        "candidate recall solved."
+        "candidate recall solved. The saved-pool fusion proxies now say these "
+        "features should feed a capped candidate-level scorer/ranker rather than "
+        "direct RRF branch duplication or broad branch-family weighting. Only the "
+        "small absent-from-deep-pools slice should trigger a new-source goal."
     )
     payload: dict[str, Any] = {
         "scope": {
@@ -1914,11 +2468,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "baseline_actual": actual_baselines,
         },
         "gt_audit_counts": _counts_by_label(labels),
+        "state_gate": _state_gate_summary(ANALYSIS_DIR),
+        "retrieval_smoke": _retrieval_smoke_summary(ANALYSIS_DIR),
         "metrics": metrics,
         "decisions": decisions,
         "branch_deep_summary": branch_deep_summary,
         "branch_family_additive": branch_family_additive,
         "pool_size_strategy": pool_size_strategy,
+        "fusion_proxy": fusion_proxy,
+        "state_weighted_fusion_proxy": state_weighted_fusion_proxy,
         "gap_diagnostics": gap_diagnostics,
         "noise_examples": noise_examples,
         "per_class": _per_class_metrics(

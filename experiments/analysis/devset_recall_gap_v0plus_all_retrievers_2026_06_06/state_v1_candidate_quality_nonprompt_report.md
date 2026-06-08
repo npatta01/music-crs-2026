@@ -9,7 +9,40 @@ Scope: focused-110 only. V1 state extractor prompt and schema are frozen. Metric
 - Valid-GT-only lift: 69/99 -> 76/99 union@20. That is +7 valid branch-union top-20 rescues with no state prompt/schema changes. It still needs final-fusion validation.
 - Plain `all_on_original` does not move top-20. The gap is not only whether branches fire; it is branch-local candidate ordering using catalog tags, year/popularity compatibility, anchor-CF, and soft novelty/negative evidence.
 - No new candidates are introduced by these feature variants. The result means reachable @21-100 candidates can be pulled upward inside branches; it does not prove final@20/nDCG lift until the real compiler/fusion path is smoked.
+- Saved-pool fusion proxy does not validate the feature family as a direct final-list fix: `protected_plus_all_on` gets 50/110 proxy@20, while `protected_plus_promoted_feature_family` gets 39/110 proxy@20. Treat the features as reranker/candidate-pool evidence, not as a production RRF patch.
+- Compiler-aware branch-family scoring also fails to create current-miss top-20 rescues. That rules out a simple RRF/branch-weight fix on the saved pools; the next useful scorer needs candidate-level metadata, cross-encoder evidence, or a targeted new source for the few absent cases.
 - User-CF alone does not improve union@20, but it improves deeper recall and should be deferred as a ranking feature rather than promoted as a top-20 candidate-recall fix.
+
+## Source Truth And State Gate
+
+- Active prompt: `mcrs/conversation_state/prompts/current.py` (`ConversationStateV1` JSON schema).
+- Active schema/bridge: `mcrs/conversation_state/schema.py` (`project_v1_to_v0plus`).
+- Active extractor decode path: `mcrs/qu_modules/compiler_v0plus_qu.py` validates V1, then projects to V0Plus.
+- Active compiler consumers: `mcrs/qu_modules/compiler_v0plus.py` uses `mentioned_entities`, `style_reference_entities`, `turn_intent`, `lyrical_theme`, `release_year_range`, `explicit_rejections`, and `track_feedback` through the projected V0Plus view.
+
+| Gate | Samples | Pass/read | Notes |
+|---|---:|---:|---|
+| role labels | 56 | 0.929 | exact seeds 1.000, style refs 1.000, query facets 1.000, temporal 1.000 |
+| projected retriever contract | 56 | 53/56 | current failures are narrow synonym/phrase cases |
+| fact compiler core | 56 | 0.821 | strict fact all-pass 0.714; forbidden stale seeds 1.000 |
+| old V0Plus replay all-pass | 110 | 0.291 | low by design because V1 no longer asks the LLM to own policy fields |
+
+State-gate decision: do not spend another broad paid extraction pass yet. The cached V1 extraction is good enough for focused retrieval/projection smokes; remaining state issues are localized label/prompt cases such as `popular` vs `well-known`, `metal` vs `heavy and intense`, and preserving `boost my energy` as a fact value rather than only evidence text.
+
+## Tiny Local Retrieval Smoke
+
+This rerun uses saved V1 extraction and disables paid dense text embedding calls. It tests BM25, lookup, era-popularity, and local centroid/style-reference consumption on 12 representative turns.
+
+| Variant | final@20 | union@20 | union@100 | union@200 | union@1000 |
+|---|---:|---:|---:|---:|---:|
+| `tags_only` | 0.167 | 0.167 | 0.167 | 0.333 | 0.500 |
+| `centroid_no_style` | 0.167 | 0.167 | 0.167 | 0.333 | 0.500 |
+| `centroid_style_safe` | 0.167 | 0.167 | 0.250 | 0.500 | 0.583 |
+| `centroid_style_broad` | 0.167 | 0.167 | 0.250 | 0.583 | 0.667 |
+| `centroid_style_broad_w3` | 0.167 | 0.167 | 0.250 | 0.583 | 0.667 |
+| `centroid_style_broad_w5` | 0.167 | 0.167 | 0.250 | 0.583 | 0.667 |
+
+Smoke read: style-reference centroid consumption improves depth (`union@1000` 0.500 -> 0.667), but does not move `union@20` or `final@20`; this is ranking/order territory, not another state extraction call.
 
 ## Headline Metrics
 
@@ -80,6 +113,34 @@ Rows are additive against current+targeted. For k>100, protected baseline only h
 
 Pool recommendation: use a large but capped reranker pool around top200 per active branch family as the first serious reranker recipe. It reaches 88/99 valid GT with about 2,025 unique candidates/turn on this pack. Top500/top1000 recover more GT (95/99 and 97/99 valid), but the pool sizes explode to roughly 4,555 and 8,195 unique candidates/turn. Keep exact/lookup generous, keep BM25/Qwen/tag/scene/anchor branches around top100-200, trigger lyric/visual/sonic branches only when state evidence asks for them, and use popularity/user-CF as score features unless a separate branch proves top20 lift.
 
+## Saved-Pool Fusion Proxy
+
+This is not production final ranking. It runs unweighted RRF over saved analysis pools so we can tell whether branch-local top-20 movement survives a simple fusion step. Treat it as a cheap gate before touching global RRF or running full devset.
+
+| Proxy variant | all p@20 | all p@50 | all p@100 | valid p@20 | valid p@50 | valid p@100 | valid median rank |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `protected_trace_top100` | 43/110 | 54/110 | 58/110 | 36/99 | 47/99 | 50/99 | 10 |
+| `protected_plus_all_on` | 50/110 | 54/110 | 61/110 | 43/99 | 46/99 | 53/99 | 5 |
+| `protected_plus_catalog_features` | 42/110 | 53/110 | 62/110 | 36/99 | 45/99 | 54/99 | 7 |
+| `protected_plus_anchor_cf` | 48/110 | 56/110 | 62/110 | 42/99 | 48/99 | 54/99 | 6 |
+| `protected_plus_branch_local_hybrid` | 40/110 | 53/110 | 64/110 | 36/99 | 47/99 | 57/99 | 9 |
+| `protected_plus_promoted_feature_family` | 39/110 | 53/110 | 65/110 | 37/99 | 47/99 | 58/99 | 8 |
+
+Fusion-proxy read: if `protected_plus_promoted_feature_family` does not beat `protected_plus_all_on` at proxy@20, the +7 union@20 branch-local movement should be treated as candidate-quality evidence, not a production final-list fix. If it does beat it, the next step is a tiny real compiler final-list smoke with the same fixed features.
+
+## Compiler-Aware Saved-Pool Scorer Proxy
+
+This stronger proxy replaces plain RRF with state-conditioned branch-family weights, exact/album bonuses, hard drops for explicit rejected tracks, and cross-family agreement. It still uses only saved branch pools; no new retriever, prompt, or catalog metadata feature is introduced here.
+
+| Proxy variant | depth | all p@20 | valid p@20 | current+proxy u@20 | valid current+proxy u@20 | current-miss rescues@20 | valid rescues@20 | valid p@100 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `protected_plus_all_on_weighted` | 50 | 48/110 | 43/99 | 77/110 | 69/99 | 0 | 0 | 48/99 |
+| `protected_plus_all_on_weighted` | 100 | 49/110 | 43/99 | 77/110 | 69/99 | 0 | 0 | 50/99 |
+| `protected_plus_all_on_weighted` | 200 | 49/110 | 43/99 | 77/110 | 69/99 | 0 | 0 | 52/99 |
+| `protected_plus_all_on_weighted` | 500 | 49/110 | 43/99 | 77/110 | 69/99 | 0 | 0 | 53/99 |
+
+Weighted-scorer read: this does not rescue current union@20 misses. So the remaining focused gap is not solved by branch-family weights, intent routing, or a conservative RRF rewrite alone. The measurable branch-local +7 comes from candidate-level catalog/anchor features; those need a real capped candidate scorer or learned ranker over a top100-200 pool, while the two valid deep-pool absences are the only clear new-source candidates in this focused pack.
+
 ## GT Audit
 
 | Label | Count |
@@ -108,7 +169,7 @@ Noisy/contradictory GT is excluded only for the valid-GT-only view. All-110 metr
 
 ## Lever Readout
 
-- Projection-only state consumption: represented by `catalog_features` and `branch_local_hybrid`, which derive query terms from the existing frozen request summary/facts/lyrical theme and consume them as score features. This moved valid union@20, so this should become compiler-owned structured branch-local scoring before any prompt work.
+- Projection-only state consumption: represented by `catalog_features` and `branch_local_hybrid`, which derive query terms from the existing frozen request summary/facts/lyrical theme and consume them as score features. This moved valid union@20 inside branch pools, but the saved-pool fusion proxy did not preserve the lift. Keep the features for a capped candidate ranker or learned scorer, not as a direct RRF branch duplication.
 - Derived catalog features: normalized tag aliases, broad track text, release year compatibility, and popularity-if-requested are positive. Keep for full-devset smoke.
 - Anchor-CF: positive top-20 lift. Keep as a branch-local feature when the state has liked/reference/accepted anchors.
 - User-CF: 89/110 focused users have vectors and user-CF improves union@100, but not union@20. Defer to ranking work; do not call it a candidate-recall fix yet.
@@ -149,7 +210,7 @@ These are valid/current misses where raw branch top slots are occupied by plausi
 
 ## Next Tests
 
-1. Implement the promoted feature layer behind a conservative compiler config flag, then run a tiny 10-session smoke that reports both final metrics (`final@20`, nDCG@20 if available) and union diagnostics. The full-devset run should only follow if the tiny smoke shows final-list movement.
+1. Do not promote the feature family directly into production fusion. First build a tiny final-list smoke that scores a capped top200 candidate pool once per turn, instead of duplicating every branch into RRF. Report `final@20`, nDCG@20 if available, and union diagnostics before any full-devset run.
 2. Run a held-out focused/devset slice with the same fixed weights. Do not tune weights on the focused-110 again; if fixed weights are unstable, learn or parameterize them before promoting.
 3. Hand-audit the 10 `gt_conflicts_with_explicit_user_constraint` rows and keep all-110 metrics side by side with valid-only metrics.
 4. Separately replay the role-typed state branch against the remaining stale-anchor and temporal residuals. Branch-local scoring is complementary; it is not a substitute for extracting seed/satisfied/history/contrast/rejected roles or soft-era versus hard-date intent correctly.
@@ -295,6 +356,6 @@ These are valid/current misses where raw branch top slots are occupied by plausi
 
 ## Recommendation
 
-Keep only levers with positive valid-GT union@20 lift for the next full-devset smoke. If a lever only improves union@50, treat it as evidence for branch-local ranking or a lightweight ranker, not as candidate recall solved.
+Keep only levers with positive valid-GT union@20 lift for the next full-devset smoke. If a lever only improves union@50, treat it as evidence for branch-local ranking or a lightweight ranker, not as candidate recall solved. The saved-pool fusion proxies now say these features should feed a capped candidate-level scorer/ranker rather than direct RRF branch duplication or broad branch-family weighting. Only the small absent-from-deep-pools slice should trigger a new-source goal.
 
 Need-new-source note: only 2 valid GTs are absent from all saved deep pools in this run. Most remaining valid failures are not fundamentally absent; they are near/deep ranking, query specificity, or state-role consumption problems.

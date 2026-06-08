@@ -9,9 +9,14 @@ from scripts.state_v1_candidate_quality_matrix import (
     _branch_deep_summary,
     _branch_family,
     _cosine,
+    _fusion_proxy_summary,
     _metrics_for_subset,
     _pool_recipe_summary,
     _rank_pool_with_features,
+    _rrf_fuse_pool_ids,
+    _state_family_weights,
+    _state_weighted_fuse_pool_ids,
+    _state_weighted_fusion_proxy_summary,
     _valid_sample_ids,
 )
 
@@ -162,3 +167,149 @@ def test_pool_recipe_summary_reports_unique_candidate_size_and_gt_hits():
     assert rows[1]["recipe"] == "medium"
     assert rows[1]["all_gt_in_pool_count"] == 2
     assert rows[1]["valid_gt_in_pool_count"] == 1
+
+
+def test_rrf_fuse_pool_ids_rewards_cross_pool_agreement():
+    pools = [
+        BranchPool("a", [("shared", 1.0), ("solo-a", 0.9)]),
+        BranchPool("b", [("solo-b", 1.0), ("shared", 0.9)]),
+    ]
+
+    fused = _rrf_fuse_pool_ids(pools, limit=3)
+
+    assert fused[0] == "shared"
+    assert set(fused) == {"shared", "solo-a", "solo-b"}
+
+
+def test_fusion_proxy_summary_counts_all_and_valid_hits():
+    sample_ids = ["a", "b", "c"]
+    turn_meta = {
+        "a": {"gt_track_id": "ta"},
+        "b": {"gt_track_id": "tb"},
+        "c": {"gt_track_id": "tc"},
+    }
+    labels = {
+        "a": {"valid_gt": True},
+        "b": {"valid_gt": True},
+        "c": {"valid_gt": False},
+    }
+    variants = {
+        "baseline": {
+            "a": [BranchPool("bm25", [("ta", 1.0)])],
+            "b": [BranchPool("bm25", [("x", 1.0), ("tb", 0.5)])],
+            "c": [BranchPool("bm25", [("tc", 1.0)])],
+        },
+        "candidate": {
+            "a": [BranchPool("bm25", [("x", 1.0)])],
+            "b": [BranchPool("bm25", [("tb", 1.0)])],
+            "c": [BranchPool("bm25", [("x", 1.0)])],
+        },
+    }
+
+    rows = _fusion_proxy_summary(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        labels=labels,
+        variants=variants,
+    )
+
+    by_variant = {row["variant"]: row for row in rows}
+    assert by_variant["baseline"]["all_proxy_final@20_count"] == 3
+    assert by_variant["baseline"]["valid_proxy_final@20_count"] == 2
+    assert by_variant["candidate"]["all_proxy_final@20_count"] == 1
+    assert by_variant["candidate"]["valid_proxy_final@20_count"] == 1
+
+
+def test_state_family_weights_boost_popularity_and_lyrics():
+    state = SimpleNamespace(
+        current_request=SimpleNamespace(
+            request_type="attribute_search",
+            summary="popular lyric driven story song",
+            evidence_text="popular lyric driven story",
+        ),
+        facts=[
+            SimpleNamespace(type="attribute", facet="popularity", relation="query_facet", role="current_target", value="popular"),
+        ],
+        track_feedback=[],
+        referenced_track_ids=[],
+        lyrical_theme="storytelling",
+        target_artist_mode=None,
+    )
+
+    weights = _state_family_weights(state)
+
+    assert weights["qwen_lyrics"] > 0.65
+    assert weights["tag_scene"] > 0.82
+    assert weights["era_popularity"] > 0.55
+
+
+def test_state_weighted_fuse_pool_ids_applies_hard_drops_and_agreement():
+    state = SimpleNamespace(
+        current_request=SimpleNamespace(request_type="attribute_search", summary=""),
+        facts=[],
+        explicit_rejections=[
+            SimpleNamespace(kind="track", entity_id="drop", certainty="explicit"),
+        ],
+        track_feedback=[],
+        referenced_track_ids=[],
+        lyrical_theme=None,
+        target_artist_mode=None,
+    )
+    pools = [
+        BranchPool("bm25", [("drop", 1.0), ("shared", 0.9), ("solo", 0.8)]),
+        BranchPool("dense.qwen_8b.intent.metadata_qwen3_embedding_8b", [("shared", 1.0), ("other", 0.9)]),
+    ]
+
+    fused = _state_weighted_fuse_pool_ids(
+        pools,
+        state=state,
+        limit=3,
+        depth=10,
+        agreement_bonus=0.01,
+    )
+
+    assert "drop" not in fused
+    assert fused[0] == "shared"
+
+
+def test_state_weighted_fusion_proxy_summary_reports_current_miss_rescues():
+    sample_ids = ["a", "b"]
+    turn_meta = {
+        "a": {"gt_track_id": "ta"},
+        "b": {"gt_track_id": "tb"},
+    }
+    labels = {
+        "a": {"valid_gt": True},
+        "b": {"valid_gt": False},
+    }
+    states = {
+        "a": SimpleNamespace(current_request=SimpleNamespace(request_type="attribute_search", summary=""), facts=[], track_feedback=[], referenced_track_ids=[]),
+        "b": SimpleNamespace(current_request=SimpleNamespace(request_type="attribute_search", summary=""), facts=[], track_feedback=[], referenced_track_ids=[]),
+    }
+    current_rows = {
+        "a": {"union@20": False, "union@50": False, "union@100": False},
+        "b": {"union@20": True, "union@50": True, "union@100": True},
+    }
+    variants = {
+        "weighted": {
+            "a": [BranchPool("bm25", [("ta", 1.0)])],
+            "b": [BranchPool("bm25", [("tb", 1.0)])],
+        }
+    }
+
+    rows = _state_weighted_fusion_proxy_summary(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        labels=labels,
+        states=states,
+        variants=variants,
+        current_rows=current_rows,
+        protected_pools={},
+        depths=(20,),
+    )
+
+    row = rows[0]
+    assert row["all_proxy_final@20_count"] == 2
+    assert row["all_current_plus_proxy@20_count"] == 2
+    assert row["all_current_miss_rescue@20_count"] == 1
+    assert row["valid_current_miss_rescue@20_count"] == 1
