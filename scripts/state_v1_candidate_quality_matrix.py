@@ -53,6 +53,7 @@ PROJECTION_SCORES_JSON = ANALYSIS_DIR / "state_v1_goal_current_all110_reprojecte
 FACT_SCORES_JSON = ANALYSIS_DIR / "state_v1_goal_current_all110_reprojected_fact_scores.json"
 LEGACY_REPLAY_SCORES_JSON = ANALYSIS_DIR / "state_v1_goal_current_all110_scores.json"
 RETRIEVAL_SMOKE_JSON = ANALYSIS_DIR / "state_v1_retrieval_smoke_current_rerun.json"
+SOURCE_GAP_JSON = ANALYSIS_DIR / "state_v1_source_gap19_family_audit.json"
 TRACE_PATHS = (
     Path("exp/inference/devset/v0plus_compiler_all_retrievers_devset_trace.jsonl"),
     Path(
@@ -284,6 +285,37 @@ def _retrieval_smoke_summary(analysis_dir: Path) -> list[dict[str, Any]]:
     payload = json.loads(path.read_text())
     summary = payload.get("summary") if isinstance(payload, dict) else []
     return summary if isinstance(summary, list) else []
+
+
+def _source_gap_summary(analysis_dir: Path) -> dict[str, Any]:
+    path = analysis_dir / SOURCE_GAP_JSON.name
+    if not path.exists():
+        return {"n": 0, "family_counts": {}, "worksheet_reason_counts": {}, "rows": []}
+    payload = json.loads(path.read_text())
+    rows: list[dict[str, Any]] = []
+    for row in payload.get("rows", []):
+        rows.append(
+            {
+                "sample_id": row.get("sample_id"),
+                "pack": row.get("pack"),
+                "family": row.get("family"),
+                "worksheet_reason": row.get("worksheet_reason"),
+                "gt_track": row.get("gt_track"),
+                "gt_artist": row.get("gt_artist"),
+                "gt_year": row.get("gt_year"),
+                "gt_pop_rank": row.get("gt_pop_rank"),
+                "best_branch": row.get("v3_best_branch"),
+                "best_rank": row.get("v3_best_rank"),
+                "query": row.get("state_query_text"),
+                "what_should_change": row.get("what_should_change"),
+            }
+        )
+    return {
+        "n": int(payload.get("n") or len(rows)),
+        "family_counts": payload.get("family_counts") or {},
+        "worksheet_reason_counts": payload.get("worksheet_reason_counts") or {},
+        "rows": rows,
+    }
 
 
 def _resolve_matrix_path(raw: str | Path) -> Path:
@@ -3350,6 +3382,82 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "guardrail valid slice remains 5/5 union@20.",
     ])
 
+    source_gap = payload.get("source_gap") or {}
+    source_rows = source_gap.get("rows") or []
+    if source_rows:
+        lines.extend([
+            "",
+            "## Residual Source-Gap Worksheet",
+            "",
+            "This worksheet is the compact residual after current + targeted "
+            "branches. It separates source/query gaps from final selector issues, "
+            "so the next experiment can target the right mechanism.",
+            "",
+            "| Source-gap family | n | Read |",
+            "|---|---:|---|",
+        ])
+        family_reads = {
+            "temporal_scene_constraint_missing": (
+                "state/query has useful scene terms, but the date/era interpretation "
+                "or branch query is too narrow; treat era as soft unless explicit."
+            ),
+            "visual_cover_text_to_image_missing": (
+                "visual or artwork language needs a stronger text-to-image/cross-modal "
+                "query or richer visual descriptors."
+            ),
+            "scene_popularity_prior_missing": (
+                "continuation/satisfied-prior turns need scene/popularity/context "
+                "features beyond literal current text."
+            ),
+            "lyric_hidden_target_query_or_source_missing": (
+                "lyric/story/hidden-target asks are weak under current lyric dense/tag "
+                "sources; likely need better lyric query/source evidence."
+            ),
+            "novelty_artist_neighbor_source_missing": (
+                "style-neighbor retrieval exists but the seed or neighbor scoring is "
+                "too weak for top-20."
+            ),
+            "generic_source_or_query_missing": (
+                "broad sonic/style request is present but existing branches do not "
+                "surface the GT high enough."
+            ),
+        }
+        for family, count in sorted(source_gap.get("family_counts", {}).items()):
+            lines.append(
+                "| `{family}` | {count} | {read} |".format(
+                    family=family,
+                    count=count,
+                    read=family_reads.get(family, "needs source/query audit"),
+                )
+            )
+        lines.extend([
+            "",
+            "| sample | family | GT | best branch/rank | next change |",
+            "|---|---|---|---|---|",
+        ])
+        for row in source_rows[:10]:
+            best = (
+                f"`{row['best_branch']}` #{row['best_rank']}"
+                if row.get("best_branch") and row.get("best_rank") is not None
+                else "absent"
+            )
+            lines.append(
+                "| `{sample}` | `{family}` | {gt} by {artist} | {best} | {change} |".format(
+                    sample=row.get("sample_id"),
+                    family=row.get("family"),
+                    gt=str(row.get("gt_track") or "")[:42],
+                    artist=str(row.get("gt_artist") or "")[:28],
+                    best=best,
+                    change=str(row.get("what_should_change") or "")[:130],
+                )
+            )
+        lines.append(
+            "\nSource-gap read: most rows are not solved by another scalar scorer. "
+            "The narrow candidates for new or sharper branches are lyric/hidden-target "
+            "queries, visual text-to-image descriptions, and scene/era/popularity "
+            "queries with soft temporal handling."
+        )
+
     lines.extend([
         "",
         "## Gap Reason By Slice",
@@ -3971,6 +4079,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "branch_local_rescue_scorer_diagnostics": branch_local_rescue_scorer_diagnostics,
         "branch_survivor_proxy": branch_survivor_proxy,
         "learned_listwise_proxy": learned_listwise_proxy,
+        "source_gap": _source_gap_summary(args.output_json.parent),
         "gap_diagnostics": gap_diagnostics,
         "noise_examples": noise_examples,
         "per_class": _per_class_metrics(

@@ -279,6 +279,34 @@ Noisy/contradictory GT is excluded only for the valid-GT-only view. All-110 metr
 - Some temporal residuals are state errors, not only scoring errors: if the frozen state emits a tight wrong release range, a non-prompt scorer can only soften the damage. It cannot recover the intended era semantics perfectly.
 - Rejection controls stayed stable in this additive analysis: the P1 rejection guardrail valid slice remains 5/5 union@20.
 
+## Residual Source-Gap Worksheet
+
+This worksheet is the compact residual after current + targeted branches. It separates source/query gaps from final selector issues, so the next experiment can target the right mechanism.
+
+| Source-gap family | n | Read |
+|---|---:|---|
+| `generic_source_or_query_missing` | 1 | broad sonic/style request is present but existing branches do not surface the GT high enough. |
+| `lyric_hidden_target_query_or_source_missing` | 5 | lyric/story/hidden-target asks are weak under current lyric dense/tag sources; likely need better lyric query/source evidence. |
+| `novelty_artist_neighbor_source_missing` | 2 | style-neighbor retrieval exists but the seed or neighbor scoring is too weak for top-20. |
+| `scene_popularity_prior_missing` | 2 | continuation/satisfied-prior turns need scene/popularity/context features beyond literal current text. |
+| `temporal_scene_constraint_missing` | 6 | state/query has useful scene terms, but the date/era interpretation or branch query is too narrow; treat era as soft unless explicit. |
+| `visual_cover_text_to_image_missing` | 3 | visual or artwork language needs a stronger text-to-image/cross-modal query or richer visual descriptors. |
+
+| sample | family | GT | best branch/rank | next change |
+|---|---|---|---|---|
+| `41367174-552b-4117-9caa-d0ba1b307d37::t2` | `temporal_scene_constraint_missing` | Mercy by Muse | `analysis.era_tag_popularity` #239 | Keep prior entities as history/context, but decay or remove them from current anchors unless the user re-mentions them. The resolv |
+| `9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4` | `visual_cover_text_to_image_missing` | The Carbon Stampede by Cattle Decapitation | `centroid.anchor_tracks.cf_bpr` #137 | Add a deterministic post-final rejection filter/assertion over rejected track IDs, artist IDs, and normalized multi-artist names.  |
+| `5f29a9df-ad38-4349-a2f0-c9a690ea072d::t2` | `scene_popularity_prior_missing` | Shaft by Kashmere Stage Band | absent | Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit da |
+| `78cdaccb-0f9b-4876-80b1-c20bf0b444e6::t8` | `generic_source_or_query_missing` | In the Shadows by The Rasmus | `centroid.anchor_tracks.audio_laion_clap` #253 | Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history a |
+| `88af7ec3-c368-421b-9512-d0180da3d1f6::t2` | `lyric_hidden_target_query_or_source_missing` | I Believe in a Thing Called Love by The Darkness | absent | Keep prior entities as history/context, but decay or remove them from current anchors unless the user re-mentions them. The resolv |
+| `d9a65836-7165-45bf-aa3e-3ef7ba5d073a::t2` | `temporal_scene_constraint_missing` | Move Along by The All-American Rejects | `analysis.tag_popularity_alias` #170 | Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit da |
+| `88beb200-0334-4aba-be15-8e1303725766::t6` | `temporal_scene_constraint_missing` | Used To by Lil Wayne, Drake | `analysis.query_text_tag_popularity` #189 | Add a deterministic post-final rejection filter/assertion over rejected track IDs, artist IDs, and normalized multi-artist names.  |
+| `8dc4c630-8369-4720-b379-2a7dcd8d34aa::t7` | `novelty_artist_neighbor_source_missing` | Transcentience by Animals As Leaders | `dense.qwen_8b.intent.metadata_qwen3_embedding_8b` #102 | Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history a |
+| `380a5ed5-3eb9-4201-8fa6-81381a583bf5::t3` | `novelty_artist_neighbor_source_missing` | God Hates a Coward by Tomahawk | `analysis.query_text_tag_popularity` #547 | Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history a |
+| `cdd374ea-1ad9-4440-8c2d-4c76c5fb3f78::t3` | `scene_popularity_prior_missing` | Gib ihn einfach (Dies das 2) by Ghanaian Stallion | `dense.qwen_8b.attributes.attributes_qwen3_embedding_8b` #101 | Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history a |
+
+Source-gap read: most rows are not solved by another scalar scorer. The narrow candidates for new or sharper branches are lyric/hidden-target queries, visual text-to-image descriptions, and scene/era/popularity queries with soft temporal handling.
+
 ## Gap Reason By Slice
 
 | Slice | n | valid n | current u@20 | promoted u@20 | dominant reasons |

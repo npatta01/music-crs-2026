@@ -27,6 +27,7 @@ from scripts.state_v1_candidate_quality_matrix import (
     _rank_pool_with_features,
     _state_requests_recent_releases,
     _rrf_fuse_pool_ids,
+    _source_gap_summary,
     _state_family_weights,
     _state_weighted_fuse_pool_ids,
     _state_weighted_fusion_proxy_summary,
@@ -43,6 +44,44 @@ def test_valid_sample_ids_excludes_noisy_gt_labels():
     }
 
     assert _valid_sample_ids(labels) == {"a", "d"}
+
+
+def test_source_gap_summary_loads_compact_rows(tmp_path):
+    path = tmp_path / "state_v1_source_gap19_family_audit.json"
+    path.write_text(
+        """
+{
+  "n": 1,
+  "family_counts": {"lyric_hidden_target_query_or_source_missing": 1},
+  "worksheet_reason_counts": {"lyric_or_theme_source_gap": 1},
+  "rows": [
+    {
+      "sample_id": "s::t1",
+      "pack": "P1",
+      "family": "lyric_hidden_target_query_or_source_missing",
+      "worksheet_reason": "lyric_or_theme_source_gap",
+      "gt_track": "Track",
+      "gt_artist": "Artist",
+      "gt_year": 2001,
+      "gt_pop_rank": 123,
+      "v3_best_branch": "dense.qwen",
+      "v3_best_rank": 42,
+      "state_query_text": "story lyric",
+      "what_should_change": "Use lyric source."
+    }
+  ]
+}
+""".strip()
+    )
+
+    summary = _source_gap_summary(tmp_path)
+
+    assert summary["n"] == 1
+    assert summary["family_counts"] == {
+        "lyric_hidden_target_query_or_source_missing": 1
+    }
+    assert summary["rows"][0]["sample_id"] == "s::t1"
+    assert summary["rows"][0]["best_rank"] == 42
 
 
 def test_metrics_for_subset_reports_all_and_valid_only_counts():
