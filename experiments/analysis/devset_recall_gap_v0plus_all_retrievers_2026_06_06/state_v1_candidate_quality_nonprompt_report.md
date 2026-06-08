@@ -165,6 +165,26 @@ This proxy scores capped `protected + feature-reranked branch` pools with both b
 
 Candidate-scorer read: the best focused proxy is `candidate_branch_local_hybrid` at depth 200, with 0 valid current-miss rescues@20 and 69/97 valid current+scorer union@20. This does not pass the tiny final-list smoke gate. The feature evidence improves branch-local union, but a global candidate scorer still cannot decide which branch-local survivors belong in the top 20.
 
+## Branch-Local Rescues Versus Candidate Scorer
+
+This table explains the apparent contradiction: branch-local feature reranking can pull GT into at least one branch top-20, but the capped global scorer still has to choose 20 tracks across all branches. Rows below are only current-miss turns rescued by `promoted_feature_family`.
+
+- Scorer variant inspected: `candidate_promoted_feature_family_depth50`.
+- Branch-local rescues: 7 all, 5 valid, 2 noisy/contradictory.
+- Valid scorer placement: top20=0, rank21-50=0, rank51-100=2, missing_top100=3.
+
+| sample | valid | bucket | scorer rank | branch rank | GT | branch |
+|---|---:|---|---:|---:|---|---|
+| `9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4` | True | `rank_51_100` | 81 | 9 | The Carbon Stampede by Cattle Decapitation | `dense.clap_text.sonic_nl.audio_laion_clap.branch_local_hybrid` |
+| `5a0dfe9d-ec8a-4449-97df-35535cbf162f::t1` | True | `rank_51_100` | 82 | 18 | A New World by Harry Gregson-Williams | `dense.qwen_8b.metadata.metadata_qwen3_embedding_8b.branch_local_hybrid` |
+| `1c567917-f931-4609-9695-a9c0f8e39f3d::t2` | True | `missing_top100` |  | 16 | Arregaçada / U Can't Touch This by Banda Uó | `dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b.anchor_cf_features` |
+| `54cda581-3b2e-4245-a479-1a27589760d2::t3` | True | `missing_top100` |  | 8 | Deliberation - Studio by Katatonia | `dense.qwen_8b.attributes_enriched.attributes_qwen3_embedding_8b.branch_local_hybrid` |
+| `e66c6a88-88ba-4117-9114-363bfa96294a::t7` | True | `missing_top100` |  | 16 | Test Drive by John Powell | `centroid.anchor_tracks.audio_laion_clap.catalog_features` |
+| `daeef24e-b041-4140-9101-882820c63408::t7` | False | `rank_top20` | 17 | 3 | The Analog Kid by Rush | `dense.qwen_8b.intent.metadata_qwen3_embedding_8b.anchor_cf_features` |
+| `a33a5df0-2c2b-429c-84e6-cde28affd4d5::t6` | False | `missing_top100` |  | 16 | Thriller by Fall Out Boy | `bm25.branch_local_hybrid` |
+
+Read: valid branch-local rescues are not becoming top-20 under the aligned capped scorer. If they cluster in rank21-50, a stronger listwise or learned scorer is the next focused test. If they are missing_top100 despite branch-local top-20 rank, the global scorer is burying a branch survivor and should be compared against an explicit branch-survivor/listwise policy rather than treated as source absence.
+
 ## GT Audit
 
 | Label | Count |
@@ -234,9 +254,9 @@ These are valid/current misses where raw branch top slots are occupied by plausi
 
 ## Next Tests
 
-1. Do not promote the feature family directly into production fusion. First build a tiny final-list smoke that scores a capped top200 candidate pool once per turn, instead of duplicating every branch into RRF. Report `final@20`, nDCG@20 if available, and union diagnostics before any full-devset run.
+1. Do not promote the feature family or capped scalar scorer directly into production fusion. The next focused test should compare a listwise scorer or explicit branch-survivor policy over branch-local top20 survivors plus a capped top100-200 pool. Report final-like@20, nDCG@20 if available, and union diagnostics before any full-devset run.
 2. Run a held-out focused/devset slice with the same fixed weights. Do not tune weights on the focused-110 again; if fixed weights are unstable, learn or parameterize them before promoting.
-3. Hand-audit the 10 `gt_conflicts_with_explicit_user_constraint` rows and keep all-110 metrics side by side with valid-only metrics.
+3. Hand-audit the 12 `gt_conflicts_with_explicit_user_constraint` rows and keep all-110 metrics side by side with valid-only metrics.
 4. Separately replay the role-typed state branch against the remaining stale-anchor and temporal residuals. Branch-local scoring is complementary; it is not a substitute for extracting seed/satisfied/history/contrast/rejected roles or soft-era versus hard-date intent correctly.
 5. For lyric/theme cases, validate whether the existing lyric branch can move known @21-100 examples before adding a new retriever. If it cannot express the target even with good query text, then scope a lyric/theme source goal.
 
@@ -380,6 +400,6 @@ These are valid/current misses where raw branch top slots are occupied by plausi
 
 ## Recommendation
 
-Keep only levers with positive valid-GT union@20 lift for the next full-devset smoke. If a lever only improves union@50, treat it as evidence for branch-local ranking or a lightweight ranker, not as candidate recall solved. The saved-pool fusion proxies now say these features should feed a capped candidate-level scorer/ranker rather than direct RRF branch duplication or broad branch-family weighting. Only the small absent-from-deep-pools slice should trigger a new-source goal.
+Keep branch-local feature levers as focused candidate-quality evidence, but do not promote them as a final-list fix yet. Plain all-on branches, branch-family weighting, and the capped scalar candidate scorer do not produce valid top-20 current-miss rescues. The next focused test should compare listwise scoring or explicit branch-survivor selection against the five valid branch-local rescues. Only the small absent-from-deep-pools slice should trigger a new-source goal.
 
 Need-new-source note: only 2 valid GTs are absent from all saved deep pools in this run. Most remaining valid failures are not fundamentally absent; they are near/deep ranking, query specificity, or state-role consumption problems.

@@ -2573,6 +2573,118 @@
       "valid_scorer_rank_median": 6
     }
   ],
+  "branch_local_rescue_scorer_diagnostics": {
+    "summary": {
+      "scorer_variant": "candidate_promoted_feature_family_depth50",
+      "all_branch_local_rescues": 7,
+      "valid_branch_local_rescues": 5,
+      "noisy_branch_local_rescues": 2,
+      "valid_scorer_top20": 0,
+      "valid_scorer_21_50": 0,
+      "valid_scorer_51_100": 2,
+      "valid_scorer_missing": 3
+    },
+    "rows": [
+      {
+        "sample_id": "9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4",
+        "pack": "P0_roleless_stale_entity_failure",
+        "valid_gt": true,
+        "gt_audit_label": "valid_gt_state_signal_compiler_not_consumed",
+        "gt_track": "The Carbon Stampede",
+        "gt_artist": "Cattle Decapitation",
+        "current_user": "Suffocation is always a solid listen, but I'm really looking to discover some *new* bands. Can you suggest some more recent acts that are making waves in the technical or progressive death metal scene? I'm open to anything that's pushing the envelope.",
+        "baseline_best_rank": 108,
+        "promoted_best_rank": 9,
+        "promoted_best_branch": "dense.clap_text.sonic_nl.audio_laion_clap.branch_local_hybrid",
+        "scorer_rank": 81,
+        "scorer_rank_bucket": "rank_51_100"
+      },
+      {
+        "sample_id": "5a0dfe9d-ec8a-4449-97df-35535cbf162f::t1",
+        "pack": "P1_positive_tag_retrieval_gap_failure",
+        "valid_gt": true,
+        "gt_audit_label": "valid_gt_branch_local_ranking_weak",
+        "gt_track": "A New World",
+        "gt_artist": "Harry Gregson-Williams",
+        "current_user": "Play something epic and orchestral, like a movie soundtrack, for background music.",
+        "baseline_best_rank": 60,
+        "promoted_best_rank": 18,
+        "promoted_best_branch": "dense.qwen_8b.metadata.metadata_qwen3_embedding_8b.branch_local_hybrid",
+        "scorer_rank": 82,
+        "scorer_rank_bucket": "rank_51_100"
+      },
+      {
+        "sample_id": "1c567917-f931-4609-9695-a9c0f8e39f3d::t2",
+        "pack": "P1_positive_tag_retrieval_gap_failure",
+        "valid_gt": true,
+        "gt_audit_label": "valid_gt_branch_local_ranking_weak",
+        "gt_track": "Arregaçada / U Can't Touch This",
+        "gt_artist": "Banda Uó",
+        "current_user": "That's a good start! Anitta is definitely on point for contemporary pop. What about something more recent and upbeat, specifically from the 'tecno brega' or 'funk carioca' scenes?",
+        "baseline_best_rank": 35,
+        "promoted_best_rank": 16,
+        "promoted_best_branch": "dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b.anchor_cf_features",
+        "scorer_rank": null,
+        "scorer_rank_bucket": "missing_top100"
+      },
+      {
+        "sample_id": "54cda581-3b2e-4245-a479-1a27589760d2::t3",
+        "pack": "P1_positive_tag_retrieval_gap_failure",
+        "valid_gt": true,
+        "gt_audit_label": "valid_gt_branch_local_ranking_weak",
+        "gt_track": "Deliberation - Studio",
+        "gt_artist": "Katatonia",
+        "current_user": "This is getting really close! The album art for \"Character\" by Dark Tranquillity is definitely in the right ballpark with the ruined city and bleak atmosphere. However, the one I'm thinking of had a somewhat more abstract or symbolic image on the cover, rat...",
+        "baseline_best_rank": 46,
+        "promoted_best_rank": 8,
+        "promoted_best_branch": "dense.qwen_8b.attributes_enriched.attributes_qwen3_embedding_8b.branch_local_hybrid",
+        "scorer_rank": null,
+        "scorer_rank_bucket": "missing_top100"
+      },
+      {
+        "sample_id": "e66c6a88-88ba-4117-9114-363bfa96294a::t7",
+        "pack": "P0_roleless_stale_entity_failure",
+        "valid_gt": true,
+        "gt_audit_label": "valid_gt_branch_local_ranking_weak",
+        "gt_track": "Test Drive",
+        "gt_artist": "John Powell",
+        "current_user": "This is absolutely perfect! \"Anthem of the World\" is exactly the powerful and uplifting epic music I was looking for. Can you give me more recommendations that are similar to this or Two Steps from Hell?",
+        "baseline_best_rank": 36,
+        "promoted_best_rank": 16,
+        "promoted_best_branch": "centroid.anchor_tracks.audio_laion_clap.catalog_features",
+        "scorer_rank": null,
+        "scorer_rank_bucket": "missing_top100"
+      },
+      {
+        "sample_id": "daeef24e-b041-4140-9101-882820c63408::t7",
+        "pack": "P0_novelty_prior_anchor_failure",
+        "valid_gt": false,
+        "gt_audit_label": "gt_conflicts_with_explicit_user_constraint",
+        "gt_track": "The Analog Kid",
+        "gt_artist": "Rush",
+        "current_user": "Okay, it sounds like there's a problem with 'Tom Sawyer'. That's a bummer. Can you please play 'The Spirit of Radio' by Rush instead?",
+        "baseline_best_rank": 24,
+        "promoted_best_rank": 3,
+        "promoted_best_branch": "dense.qwen_8b.intent.metadata_qwen3_embedding_8b.anchor_cf_features",
+        "scorer_rank": 17,
+        "scorer_rank_bucket": "rank_top20"
+      },
+      {
+        "sample_id": "a33a5df0-2c2b-429c-84e6-cde28affd4d5::t6",
+        "pack": "P1_temporal_constraint_failure",
+        "valid_gt": false,
+        "gt_audit_label": "gt_conflicts_with_explicit_user_constraint",
+        "gt_track": "Thriller",
+        "gt_artist": "Fall Out Boy",
+        "current_user": "You're doing so well with Panic! At The Disco and the emotional vibe! \"Always\" is a great song, but it's still not the one that screams \"mid-2000s emo phase\" to me. The track I'm thinking of is definitely from their first album, \"A Fever You Can't Sweat Out...",
+        "baseline_best_rank": 23,
+        "promoted_best_rank": 16,
+        "promoted_best_branch": "bm25.branch_local_hybrid",
+        "scorer_rank": null,
+        "scorer_rank_bucket": "missing_top100"
+      }
+    ]
+  },
   "gap_diagnostics": {
     "per_sample": {
       "0b9d547f-e748-464a-90e2-2199149f915c::t6": {
@@ -9822,7 +9934,7 @@
     "with_user_id": 110,
     "with_vector": 89
   },
-  "recommendation": "Keep only levers with positive valid-GT union@20 lift for the next full-devset smoke. If a lever only improves union@50, treat it as evidence for branch-local ranking or a lightweight ranker, not as candidate recall solved. The saved-pool fusion proxies now say these features should feed a capped candidate-level scorer/ranker rather than direct RRF branch duplication or broad branch-family weighting. Only the small absent-from-deep-pools slice should trigger a new-source goal.",
+  "recommendation": "Keep branch-local feature levers as focused candidate-quality evidence, but do not promote them as a final-list fix yet. Plain all-on branches, branch-family weighting, and the capped scalar candidate scorer do not produce valid top-20 current-miss rescues. The next focused test should compare listwise scoring or explicit branch-survivor selection against the five valid branch-local rescues. Only the small absent-from-deep-pools slice should trigger a new-source goal.",
   "rows": [
     {
       "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",

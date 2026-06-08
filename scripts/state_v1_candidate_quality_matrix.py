@@ -803,6 +803,98 @@ def _candidate_scorer_proxy_summary(
     return rows
 
 
+def _candidate_scorer_rank_map(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    states: dict[str, Any],
+    pools_by_sample: dict[str, list[BranchPool]],
+    features_by_sample: dict[str, dict[str, CandidateFeature]],
+    depth: int,
+    limit: int = 100,
+) -> dict[str, int | None]:
+    ranks: dict[str, int | None] = {}
+    for sid in sample_ids:
+        target = str(turn_meta[sid]["gt_track_id"])
+        ranked = _candidate_scorer_rank_ids(
+            pools_by_sample.get(sid, []),
+            features=features_by_sample.get(sid, {}),
+            state=states[sid],
+            limit=limit,
+            depth=depth,
+        )
+        try:
+            ranks[sid] = ranked.index(target) + 1
+        except ValueError:
+            ranks[sid] = None
+    return ranks
+
+
+def _rank_bucket(rank: int | None) -> str:
+    if rank is None:
+        return "missing_top100"
+    if rank <= 20:
+        return "rank_top20"
+    if rank <= 50:
+        return "rank_21_50"
+    if rank <= 100:
+        return "rank_51_100"
+    return "missing_top100"
+
+
+def _branch_local_rescue_scorer_diagnostics(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    labels: dict[str, dict[str, Any]],
+    baseline_rows: dict[str, dict[str, Any]],
+    promoted_rows: dict[str, dict[str, Any]],
+    scorer_ranks: dict[str, int | None],
+    scorer_variant: str,
+) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    for sid in sample_ids:
+        if baseline_rows[sid].get("union@20") or not promoted_rows[sid].get("union@20"):
+            continue
+        meta = turn_meta[sid]
+        rank = scorer_ranks.get(sid)
+        rows.append(
+            {
+                "sample_id": sid,
+                "pack": meta["pack"],
+                "valid_gt": bool(labels[sid]["valid_gt"]),
+                "gt_audit_label": labels[sid]["gt_audit_label"],
+                "gt_track": meta["gt_track"],
+                "gt_artist": meta["gt_artist"],
+                "current_user": meta.get("current_user"),
+                "baseline_best_rank": baseline_rows[sid].get("best_branch_rank"),
+                "promoted_best_rank": promoted_rows[sid].get("best_branch_rank"),
+                "promoted_best_branch": promoted_rows[sid].get("best_branch"),
+                "scorer_rank": rank,
+                "scorer_rank_bucket": _rank_bucket(rank),
+            }
+        )
+    valid_rows = [row for row in rows if row["valid_gt"]]
+    summary = {
+        "scorer_variant": scorer_variant,
+        "all_branch_local_rescues": len(rows),
+        "valid_branch_local_rescues": len(valid_rows),
+        "noisy_branch_local_rescues": len(rows) - len(valid_rows),
+        "valid_scorer_top20": sum(row["scorer_rank_bucket"] == "rank_top20" for row in valid_rows),
+        "valid_scorer_21_50": sum(row["scorer_rank_bucket"] == "rank_21_50" for row in valid_rows),
+        "valid_scorer_51_100": sum(row["scorer_rank_bucket"] == "rank_51_100" for row in valid_rows),
+        "valid_scorer_missing": sum(row["scorer_rank_bucket"] == "missing_top100" for row in valid_rows),
+    }
+    rows.sort(
+        key=lambda row: (
+            not row["valid_gt"],
+            row["scorer_rank"] if row["scorer_rank"] is not None else 10**9,
+            row["sample_id"],
+        )
+    )
+    return {"summary": summary, "rows": rows}
+
+
 def _feature_maps_by_sample(
     *,
     sample_ids: list[str],
@@ -2243,6 +2335,58 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
             )
         )
 
+    rescue_diag = payload.get("branch_local_rescue_scorer_diagnostics") or {}
+    rescue_summary = rescue_diag.get("summary") or {}
+    rescue_rows = rescue_diag.get("rows") or []
+    if rescue_summary:
+        lines.extend([
+            "",
+            "## Branch-Local Rescues Versus Candidate Scorer",
+            "",
+            "This table explains the apparent contradiction: branch-local feature "
+            "reranking can pull GT into at least one branch top-20, but the capped "
+            "global scorer still has to choose 20 tracks across all branches. "
+            "Rows below are only current-miss turns rescued by "
+            "`promoted_feature_family`.",
+            "",
+            "- Scorer variant inspected: "
+            f"`{rescue_summary['scorer_variant']}`.",
+            "- Branch-local rescues: "
+            f"{rescue_summary['all_branch_local_rescues']} all, "
+            f"{rescue_summary['valid_branch_local_rescues']} valid, "
+            f"{rescue_summary['noisy_branch_local_rescues']} noisy/contradictory.",
+            "- Valid scorer placement: "
+            f"top20={rescue_summary['valid_scorer_top20']}, "
+            f"rank21-50={rescue_summary['valid_scorer_21_50']}, "
+            f"rank51-100={rescue_summary['valid_scorer_51_100']}, "
+            f"missing_top100={rescue_summary['valid_scorer_missing']}.",
+            "",
+            "| sample | valid | bucket | scorer rank | branch rank | GT | branch |",
+            "|---|---:|---|---:|---:|---|---|",
+        ])
+        for row in rescue_rows:
+            scorer_rank = row["scorer_rank"] if row["scorer_rank"] is not None else ""
+            lines.append(
+                "| `{sample_id}` | {valid} | `{bucket}` | {srank} | {brank} | {gt} by {artist} | `{branch}` |".format(
+                    sample_id=row["sample_id"],
+                    valid=str(row["valid_gt"]),
+                    bucket=row["scorer_rank_bucket"],
+                    srank=scorer_rank,
+                    brank=row["promoted_best_rank"] or "",
+                    gt=str(row["gt_track"])[:48],
+                    artist=str(row["gt_artist"])[:32],
+                    branch=row["promoted_best_branch"] or "",
+                )
+            )
+        lines.append(
+            "\nRead: valid branch-local rescues are not becoming top-20 under the "
+            "aligned capped scorer. If they cluster in rank21-50, a stronger "
+            "listwise or learned scorer is the next focused test. If they are "
+            "missing_top100 despite branch-local top-20 rank, the global scorer is "
+            "burying a branch survivor and should be compared against an explicit "
+            "branch-survivor/listwise policy rather than treated as source absence."
+        )
+
     lines.extend([
         "",
         "## GT Audit",
@@ -2390,16 +2534,16 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "",
         "## Next Tests",
         "",
-        "1. Do not promote the feature family directly into production fusion. First "
-        "build a tiny final-list smoke that scores a capped top200 candidate pool "
-        "once per turn, instead of duplicating every branch into RRF. Report "
-        "`final@20`, nDCG@20 if available, and union diagnostics before any "
-        "full-devset run.",
+        "1. Do not promote the feature family or capped scalar scorer directly into "
+        "production fusion. The next focused test should compare a listwise scorer "
+        "or explicit branch-survivor policy over branch-local top20 survivors plus "
+        "a capped top100-200 pool. Report final-like@20, nDCG@20 if available, and "
+        "union diagnostics before any full-devset run.",
         "2. Run a held-out focused/devset slice with the same fixed weights. Do not tune "
         "weights on the focused-110 again; if fixed weights are unstable, learn or "
         "parameterize them before promoting.",
-        "3. Hand-audit the 10 `gt_conflicts_with_explicit_user_constraint` rows and keep "
-        "all-110 metrics side by side with valid-only metrics.",
+        f"3. Hand-audit the {conflict_count} `gt_conflicts_with_explicit_user_constraint` "
+        "rows and keep all-110 metrics side by side with valid-only metrics.",
         "4. Separately replay the role-typed state branch against the remaining stale-anchor "
         "and temporal residuals. Branch-local scoring is complementary; it is not a "
         "substitute for extracting seed/satisfied/history/contrast/rejected roles or "
@@ -2784,6 +2928,48 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             row.update(labels[sid])
         variant_rows[mode] = rows
 
+    best_candidate_scorer = max(
+        candidate_scorer_proxy,
+        key=lambda row: (
+            row["valid_current_miss_rescue@20_count"],
+            row["valid_current_plus_scorer@20_count"],
+            row["valid_current_plus_scorer@50_count"],
+        ),
+    )
+    diagnostic_candidate_scorer = next(
+        (
+            row
+            for row in candidate_scorer_proxy
+            if row["base_variant"] == "candidate_promoted_feature_family"
+            and int(row["depth_per_branch"]) == 50
+        ),
+        best_candidate_scorer,
+    )
+    diagnostic_candidate_feature_key = diagnostic_candidate_scorer["base_variant"].removeprefix(
+        "candidate_"
+    )
+    diagnostic_candidate_scorer_ranks = _candidate_scorer_rank_map(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        states=states,
+        pools_by_sample=candidate_scorer_pool_variants[
+            diagnostic_candidate_scorer["base_variant"]
+        ],
+        features_by_sample=candidate_feature_maps[diagnostic_candidate_feature_key],
+        depth=int(diagnostic_candidate_scorer["depth_per_branch"]),
+    )
+    branch_local_rescue_scorer_diagnostics = (
+        _branch_local_rescue_scorer_diagnostics(
+            sample_ids=sample_ids,
+            turn_meta=turn_meta,
+            labels=labels,
+            baseline_rows=current_plus_targeted_rows,
+            promoted_rows=variant_rows["promoted_feature_family"],
+            scorer_ranks=diagnostic_candidate_scorer_ranks,
+            scorer_variant=diagnostic_candidate_scorer["variant"],
+        )
+    )
+
     metrics = [
         _variant_metrics(
             variant=variant,
@@ -2831,13 +3017,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         catalog=catalog,
     )
     recommendation = (
-        "Keep only levers with positive valid-GT union@20 lift for the next "
-        "full-devset smoke. If a lever only improves union@50, treat it as "
-        "evidence for branch-local ranking or a lightweight ranker, not as "
-        "candidate recall solved. The saved-pool fusion proxies now say these "
-        "features should feed a capped candidate-level scorer/ranker rather than "
-        "direct RRF branch duplication or broad branch-family weighting. Only the "
-        "small absent-from-deep-pools slice should trigger a new-source goal."
+        "Keep branch-local feature levers as focused candidate-quality evidence, "
+        "but do not promote them as a final-list fix yet. Plain all-on branches, "
+        "branch-family weighting, and the capped scalar candidate scorer do not "
+        "produce valid top-20 current-miss rescues. The next focused test should "
+        "compare listwise scoring or explicit branch-survivor selection against "
+        "the five valid branch-local rescues. Only the small absent-from-deep-pools "
+        "slice should trigger a new-source goal."
     )
     payload: dict[str, Any] = {
         "scope": {
@@ -2857,6 +3043,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "fusion_proxy": fusion_proxy,
         "state_weighted_fusion_proxy": state_weighted_fusion_proxy,
         "candidate_scorer_proxy": candidate_scorer_proxy,
+        "branch_local_rescue_scorer_diagnostics": branch_local_rescue_scorer_diagnostics,
         "gap_diagnostics": gap_diagnostics,
         "noise_examples": noise_examples,
         "per_class": _per_class_metrics(

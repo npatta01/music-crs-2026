@@ -9,7 +9,9 @@ from scripts.state_v1_candidate_quality_matrix import (
     CandidateFeature,
     _branch_deep_summary,
     _branch_family,
+    _branch_local_rescue_scorer_diagnostics,
     _candidate_scorer_proxy_summary,
+    _candidate_scorer_rank_map,
     _candidate_scorer_rank_ids,
     _cosine,
     _fusion_proxy_summary,
@@ -395,3 +397,94 @@ def test_candidate_scorer_proxy_summary_reports_additive_rescues():
     assert row["all_current_plus_scorer@20_count"] == 2
     assert row["all_current_miss_rescue@20_count"] == 1
     assert row["valid_current_miss_rescue@20_count"] == 1
+
+
+def test_candidate_scorer_rank_map_reports_missing_and_ranked_targets():
+    sample_ids = ["a", "b"]
+    turn_meta = {
+        "a": {"gt_track_id": "ta"},
+        "b": {"gt_track_id": "tb"},
+    }
+    states = {
+        "a": SimpleNamespace(current_request=SimpleNamespace(request_type="attribute_search", summary=""), facts=[], track_feedback=[], referenced_track_ids=[]),
+        "b": SimpleNamespace(current_request=SimpleNamespace(request_type="attribute_search", summary=""), facts=[], track_feedback=[], referenced_track_ids=[]),
+    }
+    pools = {
+        "a": [BranchPool("bm25", [("x", 1.0), ("ta", 0.5)])],
+        "b": [BranchPool("bm25", [("x", 1.0)])],
+    }
+    features = {
+        "a": {
+            "x": CandidateFeature(feature_score=0.0, hard_drop=False),
+            "ta": CandidateFeature(feature_score=0.5, hard_drop=False),
+        },
+        "b": {"x": CandidateFeature(feature_score=0.0, hard_drop=False)},
+    }
+
+    ranks = _candidate_scorer_rank_map(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        states=states,
+        pools_by_sample=pools,
+        features_by_sample=features,
+        depth=20,
+    )
+
+    assert ranks == {"a": 1, "b": None}
+
+
+def test_branch_local_rescue_scorer_diagnostics_buckets_rescued_rows():
+    sample_ids = ["valid_rescue", "noisy_rescue", "current_hit", "still_miss"]
+    turn_meta = {
+        "valid_rescue": {"pack": "P0", "gt_track": "Track A", "gt_artist": "Artist A", "current_user": "more like this"},
+        "noisy_rescue": {"pack": "P1", "gt_track": "Track B", "gt_artist": "Artist B", "current_user": "not that artist"},
+        "current_hit": {"pack": "P0", "gt_track": "Track C", "gt_artist": "Artist C", "current_user": "play it"},
+        "still_miss": {"pack": "P0", "gt_track": "Track D", "gt_artist": "Artist D", "current_user": "find it"},
+    }
+    labels = {
+        "valid_rescue": {"valid_gt": True, "gt_audit_label": "valid_gt_branch_local_ranking_weak"},
+        "noisy_rescue": {"valid_gt": False, "gt_audit_label": "gt_conflicts_with_explicit_user_constraint"},
+        "current_hit": {"valid_gt": True, "gt_audit_label": "valid_gt_state_supports_it"},
+        "still_miss": {"valid_gt": True, "gt_audit_label": "valid_gt_retriever_source_weak"},
+    }
+    baseline_rows = {
+        "valid_rescue": {"union@20": False, "best_branch_rank": 46},
+        "noisy_rescue": {"union@20": False, "best_branch_rank": 24},
+        "current_hit": {"union@20": True, "best_branch_rank": 5},
+        "still_miss": {"union@20": False, "best_branch_rank": None},
+    }
+    promoted_rows = {
+        "valid_rescue": {"union@20": True, "best_branch_rank": 8, "best_branch": "hybrid"},
+        "noisy_rescue": {"union@20": True, "best_branch_rank": 3, "best_branch": "anchor_cf"},
+        "current_hit": {"union@20": True, "best_branch_rank": 4, "best_branch": "bm25"},
+        "still_miss": {"union@20": False, "best_branch_rank": None, "best_branch": None},
+    }
+    scorer_ranks = {
+        "valid_rescue": 42,
+        "noisy_rescue": 10,
+        "current_hit": 3,
+        "still_miss": None,
+    }
+
+    diagnostics = _branch_local_rescue_scorer_diagnostics(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        labels=labels,
+        baseline_rows=baseline_rows,
+        promoted_rows=promoted_rows,
+        scorer_ranks=scorer_ranks,
+        scorer_variant="candidate_test",
+    )
+
+    assert diagnostics["summary"] == {
+        "scorer_variant": "candidate_test",
+        "all_branch_local_rescues": 2,
+        "valid_branch_local_rescues": 1,
+        "noisy_branch_local_rescues": 1,
+        "valid_scorer_top20": 0,
+        "valid_scorer_21_50": 1,
+        "valid_scorer_51_100": 0,
+        "valid_scorer_missing": 0,
+    }
+    assert diagnostics["rows"][0]["sample_id"] == "valid_rescue"
+    assert diagnostics["rows"][0]["scorer_rank_bucket"] == "rank_21_50"

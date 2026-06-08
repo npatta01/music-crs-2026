@@ -122,7 +122,6 @@ Current read:
 
 Next step:
 
-- Build a capped top100-200 candidate-level scorer or learned ranker smoke over
-  the focused pack before any new full-devset cache-miss run. Use candidate
-  metadata, state/catalog feature overlap, anchor-CF, and hard drops only for
-  explicit resolved entity exclusions.
+- Compare a listwise scorer or explicit branch-survivor policy over branch-local
+  top20 survivors plus a capped top100-200 pool before any new full-devset
+  cache-miss run. The scalar capped scorer did not rescue valid top-20 misses.
