@@ -10,7 +10,7 @@ Scope: focused-110 only. V1 state extractor prompt and schema are frozen. Metric
 - Plain `all_on_original` does not move top-20. The gap is not only whether branches fire; it is branch-local candidate ordering using catalog tags, year/popularity compatibility, anchor-CF, and soft novelty/negative evidence.
 - No new candidates are introduced by these feature variants. The result means reachable @21-100 candidates can be pulled upward inside branches; it does not prove final@20/nDCG lift until the real compiler/fusion path is smoked.
 - Saved-pool fusion proxy does not validate the feature family as a direct final-list fix: `protected_plus_all_on` gets 50/110 proxy@20, while `protected_plus_promoted_feature_family` gets 39/110 proxy@20. Treat the features as reranker/candidate-pool evidence, not as a production RRF patch.
-- Compiler-aware branch-family scoring also fails to create current-miss top-20 rescues. That rules out a simple RRF/branch-weight fix on the saved pools; the capped candidate-scorer proxy below also fails to create valid top-20 rescues, so the next useful final-list step is a stronger learned/listwise scorer or a separately measured branch-survivor policy, not another plain RRF rewrite.
+- Compiler-aware branch-family scoring also fails to create current-miss top-20 rescues. That rules out a simple RRF/branch-weight fix on the saved pools; the capped candidate-scorer, branch-survivor, and learned listwise proxies below also fail to create valid top-20 rescues. The next useful work is sharper branch queries or richer candidate features, not another plain RRF rewrite.
 - User-CF alone does not improve union@20, but it improves deeper recall and should be deferred as a ranking feature rather than promoted as a top-20 candidate-recall fix.
 - `strict_constraints` tests stronger recency and new-artist demotion. It trails `promoted_feature_family`, so keep it as a negative ablation rather than the production candidate-quality direction.
 
@@ -141,7 +141,7 @@ This stronger proxy replaces plain RRF with state-conditioned branch-family weig
 | `protected_plus_all_on_weighted` | 200 | 49/110 | 43/97 | 77/110 | 69/97 | 0 | 0 | 52/97 |
 | `protected_plus_all_on_weighted` | 500 | 49/110 | 43/97 | 77/110 | 69/97 | 0 | 0 | 53/97 |
 
-Weighted-scorer read: this does not rescue current union@20 misses. So the remaining focused gap is not solved by branch-family weights, intent routing, or a conservative RRF rewrite alone. The measurable branch-local +7 comes from candidate-level catalog/anchor features; those need a real capped candidate scorer or learned ranker over a top100-200 pool, while the 2 valid deep-pool absences are the only clear new-source candidates in this focused pack.
+Weighted-scorer read: this does not rescue current union@20 misses. So the remaining focused gap is not solved by branch-family weights, intent routing, or a conservative RRF rewrite alone. The measurable branch-local +7 comes from candidate-level catalog/anchor features; downstream scalar/survivor/listwise selection proxies do not convert that signal into valid top-20 rescues. The 2 valid deep-pool absences are the clearest clear new-source candidates in this focused pack.
 
 ## Capped Candidate-Level Scorer Proxy
 
@@ -190,6 +190,16 @@ This proxy tests an explicit listwise policy: start with the protected current b
 | 4 | 50 | 44/110 | 38/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
 
 Survivor-policy read: the best offline policy reserves 1 slot(s) at depth 10 and gets 0 valid current-miss rescues@20. Because this is also 0, a few reserved slots are not enough; the remaining gap needs a stronger listwise/learned selector or sharper branch queries, not just survivor-slot preservation.
+
+## Cross-Validated Learned Listwise Proxy
+
+This is an offline diagnostic over the same protected + promoted candidate pools. It trains a tiny logistic selector with deterministic sample-id folds, valid-GT training rows only, and no track-id features. It is not a production ranker and should be used only to decide whether learned/listwise selection is worth a separate goal.
+
+| depth | cap | listwise p@20 | valid p@20 | current+listwise u@20 | valid current+listwise u@20 | rescues@20 | valid rescues@20 | valid current+listwise u@50 | valid current+listwise u@100 | valid median rank |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 100 | 500 | 54/110 | 48/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 | 3 |
+
+Learned-listwise read: the best offline fold gets 0 valid current-miss rescues@20 and 69/97 valid current+listwise union@20. This means even the cheap learned selector cannot recover the branch-local rescues; focus next on sharper branch queries or richer candidate features before a full ranker run.
 
 ## Branch-Local Rescues Versus Candidate Scorer
 
@@ -281,8 +291,8 @@ These are valid/current misses where raw branch top slots are occupied by plausi
 
 ## Next Tests
 
-1. Do not promote the feature family or capped scalar scorer directly into production fusion. The next focused test should compare a listwise scorer or explicit branch-survivor policy over branch-local top20 survivors plus a capped top100-200 pool. Report final-like@20, nDCG@20 if available, and union diagnostics before any full-devset run.
-2. Run a held-out focused/devset slice with the same fixed weights. Do not tune weights on the focused-110 again; if fixed weights are unstable, learn or parameterize them before promoting.
+1. Do not promote the feature family or capped scalar scorer directly into production fusion. Scalar candidate scoring, explicit survivor slots, and a cheap cross-validated listwise selector all produce zero valid current-miss top-20 rescues on this focused pack.
+2. Move the next focused work to sharper branch/query sources: visual or hidden-target branches for artwork/vibe asks, lyric/theme branches for direct lyrical constraints, and richer candidate features for the branch-local rank 8-20 rescues.
 3. Hand-audit the 12 `gt_conflicts_with_explicit_user_constraint` rows and keep all-110 metrics side by side with valid-only metrics.
 4. Separately replay the role-typed state branch against the remaining stale-anchor and temporal residuals. Branch-local scoring is complementary; it is not a substitute for extracting seed/satisfied/history/contrast/rejected roles or soft-era versus hard-date intent correctly.
 5. For lyric/theme cases, validate whether the existing lyric branch can move known @21-100 examples before adding a new retriever. If it cannot express the target even with good query text, then scope a lyric/theme source goal.
@@ -427,6 +437,6 @@ These are valid/current misses where raw branch top slots are occupied by plausi
 
 ## Recommendation
 
-Keep branch-local feature levers as focused candidate-quality evidence, but do not promote them as a final-list fix yet. Plain all-on branches, branch-family weighting, and the capped scalar candidate scorer do not produce valid top-20 current-miss rescues. The next focused test should compare listwise scoring or explicit branch-survivor selection against the five valid branch-local rescues. Only the small absent-from-deep-pools slice should trigger a new-source goal.
+Keep branch-local feature levers as focused candidate-quality evidence, but do not promote them as a final-list fix yet. Plain all-on branches, branch-family weighting, capped scalar scoring, explicit survivor slots, and a cheap learned listwise selector do not produce valid top-20 current-miss rescues. The next focused work should target sharper branch/query sources and richer candidate features; only the small absent-from-deep-pools slice should trigger a true new-source goal.
 
 Need-new-source note: only 2 valid GTs are absent from all saved deep pools in this run. Most remaining valid failures are not fundamentally absent; they are near/deep ranking, query specificity, or state-role consumption problems.

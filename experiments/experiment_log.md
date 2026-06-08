@@ -119,6 +119,10 @@ Current read:
 - Explicit branch-survivor slots also create zero valid current-miss top-20
   rescues on saved pools; the rescued GTs are branch-local rank 8-18-ish among
   many plausible candidates, so a few reserved slots do not solve selection.
+- A capped top100-per-branch, top500-unique, 3-fold learned listwise diagnostic
+  over protected+promoted pools also creates zero valid current-miss top-20
+  rescues. This weakens the "just learn a selector" hypothesis for the current
+  feature set.
 - A stricter recency/new-artist constraint ablation improves over baseline but
   trails the promoted feature family, so reject it as a replacement rather than
   shipping stronger hand-tuned constraints.
@@ -133,6 +137,6 @@ Current read:
 Next step:
 
 - Do not keep adding scalar hand-tuned constraints. The next focused experiment
-  should either train/evaluate a small listwise scorer on the capped top100-200
-  pool, or create a truly new source/query branch for the two valid deep-pool
-  absences and the hidden-target/lyric/visual slices.
+  should create sharper source/query branches for the two valid deep-pool
+  absences and the hidden-target/lyric/visual slices, or add richer candidate
+  features before revisiting learned ranking.

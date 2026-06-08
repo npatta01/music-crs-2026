@@ -19,6 +19,8 @@ from scripts.state_v1_candidate_quality_matrix import (
     _cosine,
     _feature_scores_for_sample,
     _fusion_proxy_summary,
+    _learned_listwise_proxy_summary,
+    _listwise_candidate_rank_ids,
     _metrics_for_subset,
     _pool_recipe_summary,
     _rank_pool_with_features,
@@ -692,3 +694,83 @@ def test_branch_survivor_summary_reports_valid_current_miss_rescues():
     assert row["valid_current_plus_survivor@20_count"] == 1
     assert row["all_current_miss_rescue@20_count"] == 1
     assert row["valid_current_miss_rescue@20_count"] == 1
+
+
+def test_listwise_candidate_rank_ids_uses_learned_weights_and_hard_drops():
+    state = SimpleNamespace(
+        current_request=SimpleNamespace(request_type="attribute_search", summary=""),
+        facts=[],
+        explicit_rejections=[
+            SimpleNamespace(kind="track", entity_id="drop", certainty="explicit"),
+        ],
+        track_feedback=[],
+        referenced_track_ids=[],
+        lyrical_theme=None,
+        target_artist_mode=None,
+    )
+    pools = [BranchPool("bm25", [("drop", 1.0), ("target", 0.9), ("other", 0.8)])]
+    features = {
+        "drop": CandidateFeature(feature_score=5.0, hard_drop=True),
+        "target": CandidateFeature(feature_score=1.0, hard_drop=False),
+        "other": CandidateFeature(feature_score=0.0, hard_drop=False),
+    }
+
+    ranked = _listwise_candidate_rank_ids(
+        pools,
+        features=features,
+        state=state,
+        weights=[0.0, 5.0],
+        mean=[0.0],
+        scale=[1.0],
+        limit=3,
+        depth=20,
+        feature_names=("candidate_feature_score",),
+    )
+
+    assert ranked == ["target", "other"]
+
+
+def test_learned_listwise_proxy_summary_cross_validates_current_miss_rescue():
+    sample_ids = ["a0", "a1", "b0", "b1"]
+    turn_meta = {
+        sid: {"gt_track_id": f"target-{sid}"}
+        for sid in sample_ids
+    }
+    labels = {sid: {"valid_gt": True} for sid in sample_ids}
+    states = {
+        sid: SimpleNamespace(current_request=SimpleNamespace(request_type="attribute_search", summary=""), facts=[], explicit_rejections=[], track_feedback=[], referenced_track_ids=[])
+        for sid in sample_ids
+    }
+    current_rows = {
+        sid: {"union@20": False, "union@50": False, "union@100": False}
+        for sid in sample_ids
+    }
+    pools = {
+        sid: [BranchPool("bm25", [(f"noise-{sid}", 1.0), (f"target-{sid}", 0.9)])]
+        for sid in sample_ids
+    }
+    features = {
+        sid: {
+            f"noise-{sid}": CandidateFeature(feature_score=0.0, hard_drop=False),
+            f"target-{sid}": CandidateFeature(feature_score=1.0, hard_drop=False),
+        }
+        for sid in sample_ids
+    }
+
+    rows = _learned_listwise_proxy_summary(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        labels=labels,
+        states=states,
+        current_rows=current_rows,
+        pools_by_sample=pools,
+        features_by_sample=features,
+        variant_name="learned_test",
+        depths=(20,),
+        folds=2,
+        feature_names=("candidate_feature_score",),
+    )
+
+    row = rows[0]
+    assert row["valid_current_miss_rescue@20_count"] == 4
+    assert row["valid_current_plus_listwise@20_count"] == 4

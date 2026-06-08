@@ -3116,6 +3116,49 @@
       "valid_survivor_rank_median": 8
     }
   ],
+  "learned_listwise_proxy": [
+    {
+      "variant": "learned_listwise_promoted_feature_family_depth100",
+      "base_variant": "learned_listwise_promoted_feature_family",
+      "depth_per_branch": 100,
+      "folds": 3,
+      "max_candidates": 500,
+      "all_n": 110,
+      "valid_n": 97,
+      "feature_names": [
+        "candidate_feature_score",
+        "weighted_rrf_score",
+        "raw_rrf_score",
+        "best_rank_inv",
+        "family_count",
+        "exact_lookup_score",
+        "semantic_text_score",
+        "tag_scene_score",
+        "anchor_similarity_score",
+        "modality_score"
+      ],
+      "all_listwise_final@20_count": 54,
+      "valid_listwise_final@20_count": 48,
+      "all_current_plus_listwise@20_count": 77,
+      "valid_current_plus_listwise@20_count": 69,
+      "all_current_miss_rescue@20_count": 0,
+      "valid_current_miss_rescue@20_count": 0,
+      "all_listwise_final@50_count": 55,
+      "valid_listwise_final@50_count": 48,
+      "all_current_plus_listwise@50_count": 90,
+      "valid_current_plus_listwise@50_count": 80,
+      "all_current_miss_rescue@50_count": 0,
+      "valid_current_miss_rescue@50_count": 0,
+      "all_listwise_final@100_count": 55,
+      "valid_listwise_final@100_count": 48,
+      "all_current_plus_listwise@100_count": 93,
+      "valid_current_plus_listwise@100_count": 83,
+      "all_current_miss_rescue@100_count": 0,
+      "valid_current_miss_rescue@100_count": 0,
+      "all_listwise_rank_median": 5,
+      "valid_listwise_rank_median": 3
+    }
+  ],
   "gap_diagnostics": {
     "per_sample": {
       "0b9d547f-e748-464a-90e2-2199149f915c::t6": {
@@ -11019,7 +11062,7 @@
     "with_user_id": 110,
     "with_vector": 89
   },
-  "recommendation": "Keep branch-local feature levers as focused candidate-quality evidence, but do not promote them as a final-list fix yet. Plain all-on branches, branch-family weighting, and the capped scalar candidate scorer do not produce valid top-20 current-miss rescues. The next focused test should compare listwise scoring or explicit branch-survivor selection against the five valid branch-local rescues. Only the small absent-from-deep-pools slice should trigger a new-source goal.",
+  "recommendation": "Keep branch-local feature levers as focused candidate-quality evidence, but do not promote them as a final-list fix yet. Plain all-on branches, branch-family weighting, capped scalar scoring, explicit survivor slots, and a cheap learned listwise selector do not produce valid top-20 current-miss rescues. The next focused work should target sharper branch/query sources and richer candidate features; only the small absent-from-deep-pools slice should trigger a true new-source goal.",
   "rows": [
     {
       "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",

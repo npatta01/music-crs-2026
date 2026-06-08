@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import math
 import sys
@@ -17,6 +18,8 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
+
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -828,6 +831,450 @@ def _candidate_scorer_rank_map(
         except ValueError:
             ranks[sid] = None
     return ranks
+
+
+LISTWISE_DEFAULT_FEATURES = (
+    "candidate_feature_score",
+    "weighted_rrf_score",
+    "raw_rrf_score",
+    "best_rank_inv",
+    "family_count",
+    "exact_lookup_score",
+    "semantic_text_score",
+    "tag_scene_score",
+    "anchor_similarity_score",
+    "modality_score",
+)
+
+
+def _candidate_listwise_features(
+    *,
+    track_id: str,
+    pools: list[BranchPool],
+    features: dict[str, CandidateFeature],
+    state: Any,
+    depth: int,
+    feature_names: tuple[str, ...] = LISTWISE_DEFAULT_FEATURES,
+) -> list[float] | None:
+    state_hard_drops = _state_hard_drop_track_ids(state)
+    feature = features.get(track_id)
+    if track_id in state_hard_drops or bool(getattr(feature, "hard_drop", False)):
+        return None
+
+    weights = _state_family_weights(state)
+    family_rank_scores: Counter[str] = Counter()
+    raw_rrf_score = 0.0
+    weighted_rrf_score = 0.0
+    best_rank: int | None = None
+    families: set[str] = set()
+    for pool in pools:
+        family = _branch_family(pool.name)
+        seen_in_pool: set[str] = set()
+        for rank, (candidate_id, _score) in enumerate(pool.hits[:depth], start=1):
+            if candidate_id in seen_in_pool:
+                continue
+            seen_in_pool.add(candidate_id)
+            if candidate_id != track_id:
+                continue
+            raw_component = 1.0 / (30.0 + rank)
+            weighted_component = weights.get(
+                family,
+                BRANCH_FAMILY_BASE_WEIGHTS["other"],
+            ) / (30.0 + rank)
+            raw_rrf_score += raw_component
+            weighted_rrf_score += weighted_component
+            family_rank_scores[family] += weighted_component
+            families.add(family)
+            best_rank = rank if best_rank is None else min(best_rank, rank)
+            break
+
+    if best_rank is None:
+        return None
+
+    grouped_scores = {
+        "exact_lookup_score": sum(
+            family_rank_scores[family]
+            for family in ("exact_lookup_discography", "same_album_fanout")
+        ),
+        "semantic_text_score": sum(
+            family_rank_scores[family]
+            for family in (
+                "bm25",
+                "qwen_metadata",
+                "qwen_intent",
+                "qwen_attributes",
+                "qwen_attributes_enriched",
+                "qwen_lyrics",
+            )
+        ),
+        "tag_scene_score": sum(
+            family_rank_scores[family]
+            for family in ("tag_scene", "era_popularity", "artist_neighbor")
+        ),
+        "anchor_similarity_score": sum(
+            family_rank_scores[family]
+            for family in (
+                "audio_anchor_centroid",
+                "image_anchor_centroid",
+                "cf_anchor_centroid",
+            )
+        ),
+        "modality_score": sum(
+            family_rank_scores[family]
+            for family in (
+                "clap_sonic",
+                "clap_sonic_nl",
+                "clap_sonic_nl_enriched",
+                "audio_anchor_centroid",
+                "image_anchor_centroid",
+                "cf_anchor_centroid",
+            )
+        ),
+    }
+    values = {
+        "candidate_feature_score": float(
+            getattr(feature, "feature_score", 0.0) if feature is not None else 0.0
+        ),
+        "weighted_rrf_score": weighted_rrf_score,
+        "raw_rrf_score": raw_rrf_score,
+        "best_rank_inv": 1.0 / float(best_rank),
+        "family_count": float(len(families)),
+        **grouped_scores,
+    }
+    return [float(values[name]) for name in feature_names]
+
+
+def _candidate_ids_from_pools(
+    pools: list[BranchPool],
+    *,
+    depth: int,
+    max_candidates: int | None = None,
+) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for pool in pools:
+        for track_id, _score in pool.hits[:depth]:
+            if track_id in seen:
+                continue
+            seen.add(track_id)
+            out.append(track_id)
+            if max_candidates is not None and len(out) >= max_candidates:
+                return out
+    return out
+
+
+def _listwise_sample_matrix(
+    *,
+    pools: list[BranchPool],
+    features: dict[str, CandidateFeature],
+    state: Any,
+    depth: int,
+    max_candidates: int | None = None,
+    feature_names: tuple[str, ...] = LISTWISE_DEFAULT_FEATURES,
+) -> tuple[list[str], np.ndarray]:
+    track_ids: list[str] = []
+    rows: list[list[float]] = []
+    for track_id in _candidate_ids_from_pools(
+        pools,
+        depth=depth,
+        max_candidates=max_candidates,
+    ):
+        row = _candidate_listwise_features(
+            track_id=track_id,
+            pools=pools,
+            features=features,
+            state=state,
+            depth=depth,
+            feature_names=feature_names,
+        )
+        if row is None:
+            continue
+        track_ids.append(track_id)
+        rows.append(row)
+    if not rows:
+        return [], np.zeros((0, len(feature_names)), dtype=float)
+    return track_ids, np.asarray(rows, dtype=float)
+
+
+def _fit_logistic_ranker(
+    x: np.ndarray,
+    y: np.ndarray,
+    *,
+    iterations: int = 120,
+    learning_rate: float = 0.18,
+    l2: float = 0.02,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    if x.size == 0:
+        return (
+            np.zeros(1, dtype=float),
+            np.zeros(x.shape[1] if x.ndim == 2 else 0, dtype=float),
+            np.ones(x.shape[1] if x.ndim == 2 else 0, dtype=float),
+        )
+    mean = x.mean(axis=0)
+    scale = x.std(axis=0)
+    scale = np.where(scale < 1e-8, 1.0, scale)
+    z = (x - mean) / scale
+    x_aug = np.column_stack([np.ones(z.shape[0]), z])
+    weights = np.zeros(x_aug.shape[1], dtype=float)
+    positives = max(1, int(y.sum()))
+    negatives = max(1, int(len(y) - y.sum()))
+    sample_weight = np.where(y > 0, min(50.0, negatives / positives), 1.0)
+    weight_sum = float(sample_weight.sum())
+    for _ in range(iterations):
+        logits = np.clip(x_aug @ weights, -30.0, 30.0)
+        probs = 1.0 / (1.0 + np.exp(-logits))
+        error = (probs - y) * sample_weight
+        grad = (x_aug.T @ error) / weight_sum
+        grad[1:] += l2 * weights[1:]
+        weights -= learning_rate * grad
+    return weights, mean, scale
+
+
+def _fold_for_sample(sample_id: str, folds: int) -> int:
+    digest = hashlib.md5(sample_id.encode("utf-8")).hexdigest()
+    return int(digest[:8], 16) % folds
+
+
+def _train_listwise_fold_model(
+    *,
+    train_sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    labels: dict[str, dict[str, Any]],
+    states: dict[str, Any],
+    pools_by_sample: dict[str, list[BranchPool]],
+    features_by_sample: dict[str, dict[str, CandidateFeature]],
+    depth: int,
+    feature_names: tuple[str, ...],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    rows: list[np.ndarray] = []
+    targets: list[float] = []
+    for sid in train_sample_ids:
+        if not labels[sid].get("valid_gt"):
+            continue
+        candidate_ids, matrix = _listwise_sample_matrix(
+            pools=pools_by_sample.get(sid, []),
+            features=features_by_sample.get(sid, {}),
+            state=states[sid],
+            depth=depth,
+            feature_names=feature_names,
+        )
+        if not candidate_ids:
+            continue
+        target = str(turn_meta[sid]["gt_track_id"])
+        if target not in candidate_ids:
+            continue
+        rows.append(matrix)
+        targets.extend(1.0 if track_id == target else 0.0 for track_id in candidate_ids)
+    if not rows:
+        return (
+            np.zeros(len(feature_names) + 1, dtype=float),
+            np.zeros(len(feature_names), dtype=float),
+            np.ones(len(feature_names), dtype=float),
+        )
+    x = np.vstack(rows)
+    y = np.asarray(targets, dtype=float)
+    return _fit_logistic_ranker(x, y)
+
+
+def _fit_logistic_ranker_from_cached_samples(
+    *,
+    train_sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    labels: dict[str, dict[str, Any]],
+    sample_matrices: dict[str, tuple[list[str], np.ndarray]],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    rows: list[np.ndarray] = []
+    targets: list[float] = []
+    feature_width = 0
+    for sid, (_candidate_ids, matrix) in sample_matrices.items():
+        if matrix.ndim == 2 and matrix.shape[1] > feature_width:
+            feature_width = matrix.shape[1]
+            break
+    for sid in train_sample_ids:
+        if not labels[sid].get("valid_gt"):
+            continue
+        candidate_ids, matrix = sample_matrices[sid]
+        if not candidate_ids:
+            continue
+        target = str(turn_meta[sid]["gt_track_id"])
+        if target not in candidate_ids:
+            continue
+        rows.append(matrix)
+        targets.extend(1.0 if track_id == target else 0.0 for track_id in candidate_ids)
+    if not rows:
+        return (
+            np.zeros(feature_width + 1, dtype=float),
+            np.zeros(feature_width, dtype=float),
+            np.ones(feature_width, dtype=float),
+        )
+    return _fit_logistic_ranker(np.vstack(rows), np.asarray(targets, dtype=float))
+
+
+def _listwise_candidate_rank_ids(
+    pools: list[BranchPool],
+    *,
+    features: dict[str, CandidateFeature],
+    state: Any,
+    weights: Iterable[float],
+    mean: Iterable[float],
+    scale: Iterable[float],
+    limit: int,
+    depth: int = 200,
+    max_candidates: int | None = None,
+    feature_names: tuple[str, ...] = LISTWISE_DEFAULT_FEATURES,
+) -> list[str]:
+    candidate_ids, matrix = _listwise_sample_matrix(
+        pools=pools,
+        features=features,
+        state=state,
+        depth=depth,
+        max_candidates=max_candidates,
+        feature_names=feature_names,
+    )
+    if not candidate_ids:
+        return []
+    weights_arr = np.asarray(list(weights), dtype=float)
+    mean_arr = np.asarray(list(mean), dtype=float)
+    scale_arr = np.asarray(list(scale), dtype=float)
+    scale_arr = np.where(scale_arr < 1e-8, 1.0, scale_arr)
+    if weights_arr.shape[0] != matrix.shape[1] + 1:
+        raise ValueError("weights must include bias plus one value per feature")
+    scores = np.column_stack([
+        np.ones(matrix.shape[0]),
+        (matrix - mean_arr) / scale_arr,
+    ]) @ weights_arr
+    ranked = sorted(
+        zip(candidate_ids, scores),
+        key=lambda item: (-float(item[1]), item[0]),
+    )
+    return [track_id for track_id, _score in ranked[:limit]]
+
+
+def _rank_cached_listwise_matrix(
+    *,
+    candidate_ids: list[str],
+    matrix: np.ndarray,
+    weights: np.ndarray,
+    mean: np.ndarray,
+    scale: np.ndarray,
+    limit: int,
+) -> list[str]:
+    if not candidate_ids:
+        return []
+    scale = np.where(scale < 1e-8, 1.0, scale)
+    scores = np.column_stack([
+        np.ones(matrix.shape[0]),
+        (matrix - mean) / scale,
+    ]) @ weights
+    ranked = sorted(
+        zip(candidate_ids, scores),
+        key=lambda item: (-float(item[1]), item[0]),
+    )
+    return [track_id for track_id, _score in ranked[:limit]]
+
+
+def _learned_listwise_proxy_summary(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    labels: dict[str, dict[str, Any]],
+    states: dict[str, Any],
+    current_rows: dict[str, dict[str, Any]],
+    pools_by_sample: dict[str, list[BranchPool]],
+    features_by_sample: dict[str, dict[str, CandidateFeature]],
+    variant_name: str,
+    depths: tuple[int, ...] = (50, 100, 200),
+    folds: int = 5,
+    max_candidates: int | None = 500,
+    feature_names: tuple[str, ...] = LISTWISE_DEFAULT_FEATURES,
+) -> list[dict[str, Any]]:
+    valid_ids = {sid for sid in sample_ids if labels[sid].get("valid_gt")}
+    rows: list[dict[str, Any]] = []
+    for depth in depths:
+        sample_matrices = {
+            sid: _listwise_sample_matrix(
+                pools=pools_by_sample.get(sid, []),
+                features=features_by_sample.get(sid, {}),
+                state=states[sid],
+                depth=depth,
+                max_candidates=max_candidates,
+                feature_names=feature_names,
+            )
+            for sid in sample_ids
+        }
+        fold_models = {
+            fold: _fit_logistic_ranker_from_cached_samples(
+                train_sample_ids=[
+                    sid for sid in sample_ids if _fold_for_sample(sid, folds) != fold
+                ],
+                turn_meta=turn_meta,
+                labels=labels,
+                sample_matrices=sample_matrices,
+            )
+            for fold in range(folds)
+        }
+        row: dict[str, Any] = {
+            "variant": f"{variant_name}_depth{depth}",
+            "base_variant": variant_name,
+            "depth_per_branch": depth,
+            "folds": folds,
+            "max_candidates": max_candidates,
+            "all_n": len(sample_ids),
+            "valid_n": len(valid_ids),
+            "feature_names": list(feature_names),
+        }
+        ranks: list[int] = []
+        valid_ranks: list[int] = []
+        for k in FUSION_PROXY_KS:
+            all_final_count = 0
+            valid_final_count = 0
+            all_current_plus_count = 0
+            valid_current_plus_count = 0
+            all_current_miss_rescues = 0
+            valid_current_miss_rescues = 0
+            for sid in sample_ids:
+                target = str(turn_meta[sid]["gt_track_id"])
+                weights, mean, scale = fold_models[_fold_for_sample(sid, folds)]
+                candidate_ids, matrix = sample_matrices[sid]
+                ranked = _rank_cached_listwise_matrix(
+                    candidate_ids=candidate_ids,
+                    matrix=matrix,
+                    weights=weights,
+                    mean=mean,
+                    scale=scale,
+                    limit=max(k, 100),
+                )
+                try:
+                    rank = ranked.index(target) + 1
+                except ValueError:
+                    rank = None
+                listwise_hit = rank is not None and rank <= k
+                current_hit = bool(current_rows[sid].get(f"union@{k}"))
+                all_final_count += int(listwise_hit)
+                all_current_plus_count += int(current_hit or listwise_hit)
+                all_current_miss_rescues += int(listwise_hit and not current_hit)
+                if sid in valid_ids:
+                    valid_final_count += int(listwise_hit)
+                    valid_current_plus_count += int(current_hit or listwise_hit)
+                    valid_current_miss_rescues += int(listwise_hit and not current_hit)
+                if k == 100 and rank is not None:
+                    ranks.append(rank)
+                    if sid in valid_ids:
+                        valid_ranks.append(rank)
+            row[f"all_listwise_final@{k}_count"] = all_final_count
+            row[f"valid_listwise_final@{k}_count"] = valid_final_count
+            row[f"all_current_plus_listwise@{k}_count"] = all_current_plus_count
+            row[f"valid_current_plus_listwise@{k}_count"] = valid_current_plus_count
+            row[f"all_current_miss_rescue@{k}_count"] = all_current_miss_rescues
+            row[f"valid_current_miss_rescue@{k}_count"] = valid_current_miss_rescues
+        row["all_listwise_rank_median"] = (
+            sorted(ranks)[len(ranks) // 2] if ranks else None
+        )
+        row["valid_listwise_rank_median"] = (
+            sorted(valid_ranks)[len(valid_ranks) // 2] if valid_ranks else None
+        )
+        rows.append(row)
+    return rows
 
 
 def _branch_survivor_candidates(
@@ -2185,9 +2632,9 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "patch.",
         "- Compiler-aware branch-family scoring also fails to create current-miss "
         "top-20 rescues. That rules out a simple RRF/branch-weight fix on the "
-        "saved pools; the capped candidate-scorer proxy below also fails to create "
-        "valid top-20 rescues, so the next useful final-list step is a stronger "
-        "learned/listwise scorer or a separately measured branch-survivor policy, "
+        "saved pools; the capped candidate-scorer, branch-survivor, and learned "
+        "listwise proxies below also fail to create valid top-20 rescues. The "
+        "next useful work is sharper branch queries or richer candidate features, "
         "not another plain RRF rewrite.",
         "- User-CF alone does not improve union@20, but it improves deeper recall "
         "and should be deferred as a ranking feature rather than promoted as a "
@@ -2486,10 +2933,10 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
             "So the remaining focused gap is not solved by branch-family weights, "
             "intent routing, or a conservative RRF rewrite alone. The measurable "
             f"branch-local +{all_union20_lift} comes from candidate-level "
-            "catalog/anchor features; "
-            "those need a real capped candidate scorer or learned ranker over a "
-            f"top100-200 pool, while the {valid_deep_absences} valid deep-pool "
-            "absences are the only "
+            "catalog/anchor features; downstream scalar/survivor/listwise "
+            "selection proxies do not convert that signal into valid top-20 "
+            f"rescues. The {valid_deep_absences} valid deep-pool "
+            "absences are the clearest "
             "clear new-source candidates in this focused pack."
         )
 
@@ -2608,6 +3055,63 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
                 "enough; the remaining gap needs a stronger listwise/learned "
                 "selector or sharper branch queries, not just survivor-slot "
                 "preservation."
+            )
+        )
+
+    listwise_rows = payload.get("learned_listwise_proxy") or []
+    if listwise_rows:
+        lines.extend([
+            "",
+            "## Cross-Validated Learned Listwise Proxy",
+            "",
+            "This is an offline diagnostic over the same protected + promoted "
+            "candidate pools. It trains a tiny logistic selector with deterministic "
+            "sample-id folds, valid-GT training rows only, and no track-id features. "
+            "It is not a production ranker and should be used only to decide "
+            "whether learned/listwise selection is worth a separate goal.",
+            "",
+            "| depth | cap | listwise p@20 | valid p@20 | current+listwise u@20 | valid current+listwise u@20 | rescues@20 | valid rescues@20 | valid current+listwise u@50 | valid current+listwise u@100 | valid median rank |",
+            "|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        ])
+        for row in listwise_rows:
+            lines.append(
+                "| {depth} | {cap} | {a20}/{alln} | {v20}/{validn} | {cu20}/{alln} | {vcu20}/{validn} | {r20} | {vr20} | {vcu50}/{validn} | {vcu100}/{validn} | {med} |".format(
+                    depth=row["depth_per_branch"],
+                    cap=row.get("max_candidates") or "",
+                    a20=row["all_listwise_final@20_count"],
+                    alln=row["all_n"],
+                    v20=row["valid_listwise_final@20_count"],
+                    validn=row["valid_n"],
+                    cu20=row["all_current_plus_listwise@20_count"],
+                    vcu20=row["valid_current_plus_listwise@20_count"],
+                    r20=row["all_current_miss_rescue@20_count"],
+                    vr20=row["valid_current_miss_rescue@20_count"],
+                    vcu50=row["valid_current_plus_listwise@50_count"],
+                    vcu100=row["valid_current_plus_listwise@100_count"],
+                    med=row.get("valid_listwise_rank_median") or "",
+                )
+            )
+        best_listwise = max(
+            listwise_rows,
+            key=lambda row: (
+                row["valid_current_miss_rescue@20_count"],
+                row["valid_current_plus_listwise@20_count"],
+                row["valid_current_plus_listwise@50_count"],
+            ),
+        )
+        lines.append(
+            "\nLearned-listwise read: the best offline fold gets "
+            f"{best_listwise['valid_current_miss_rescue@20_count']} valid "
+            "current-miss rescues@20 and "
+            f"{best_listwise['valid_current_plus_listwise@20_count']}/"
+            f"{best_listwise['valid_n']} valid current+listwise union@20. "
+            + (
+                "That is enough evidence to run a tiny real final-list smoke, "
+                "but not enough to claim full-devset lift."
+                if best_listwise["valid_current_miss_rescue@20_count"] > 0
+                else "This means even the cheap learned selector cannot recover "
+                "the branch-local rescues; focus next on sharper branch queries "
+                "or richer candidate features before a full ranker run."
             )
         )
 
@@ -2811,13 +3315,13 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "## Next Tests",
         "",
         "1. Do not promote the feature family or capped scalar scorer directly into "
-        "production fusion. The next focused test should compare a listwise scorer "
-        "or explicit branch-survivor policy over branch-local top20 survivors plus "
-        "a capped top100-200 pool. Report final-like@20, nDCG@20 if available, and "
-        "union diagnostics before any full-devset run.",
-        "2. Run a held-out focused/devset slice with the same fixed weights. Do not tune "
-        "weights on the focused-110 again; if fixed weights are unstable, learn or "
-        "parameterize them before promoting.",
+        "production fusion. Scalar candidate scoring, explicit survivor slots, "
+        "and a cheap cross-validated listwise selector all produce zero valid "
+        "current-miss top-20 rescues on this focused pack.",
+        "2. Move the next focused work to sharper branch/query sources: visual or "
+        "hidden-target branches for artwork/vibe asks, lyric/theme branches for "
+        "direct lyrical constraints, and richer candidate features for the "
+        "branch-local rank 8-20 rescues.",
         f"3. Hand-audit the {conflict_count} `gt_conflicts_with_explicit_user_constraint` "
         "rows and keep all-110 metrics side by side with valid-only metrics.",
         "4. Separately replay the role-typed state branch against the remaining stale-anchor "
@@ -3262,6 +3766,18 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         protected_pools=protected_pools,
         survivor_pools=variant_pool_maps["promoted_feature_family"],
     )
+    learned_listwise_proxy = _learned_listwise_proxy_summary(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        labels=labels,
+        states=states,
+        current_rows=current_plus_targeted_rows,
+        pools_by_sample=candidate_scorer_pool_variants["candidate_promoted_feature_family"],
+        features_by_sample=candidate_feature_maps["promoted_feature_family"],
+        variant_name="learned_listwise_promoted_feature_family",
+        depths=(100,),
+        folds=3,
+    )
 
     metrics = [
         _variant_metrics(
@@ -3312,11 +3828,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     recommendation = (
         "Keep branch-local feature levers as focused candidate-quality evidence, "
         "but do not promote them as a final-list fix yet. Plain all-on branches, "
-        "branch-family weighting, and the capped scalar candidate scorer do not "
-        "produce valid top-20 current-miss rescues. The next focused test should "
-        "compare listwise scoring or explicit branch-survivor selection against "
-        "the five valid branch-local rescues. Only the small absent-from-deep-pools "
-        "slice should trigger a new-source goal."
+        "branch-family weighting, capped scalar scoring, explicit survivor slots, "
+        "and a cheap learned listwise selector do not produce valid top-20 "
+        "current-miss rescues. The next focused work should target sharper "
+        "branch/query sources and richer candidate features; only the small "
+        "absent-from-deep-pools slice should trigger a true new-source goal."
     )
     payload: dict[str, Any] = {
         "scope": {
@@ -3338,6 +3854,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "candidate_scorer_proxy": candidate_scorer_proxy,
         "branch_local_rescue_scorer_diagnostics": branch_local_rescue_scorer_diagnostics,
         "branch_survivor_proxy": branch_survivor_proxy,
+        "learned_listwise_proxy": learned_listwise_proxy,
         "gap_diagnostics": gap_diagnostics,
         "noise_examples": noise_examples,
         "per_class": _per_class_metrics(
