@@ -12,6 +12,7 @@ Scope: focused-110 only. V1 state extractor prompt and schema are frozen. Metric
 - Saved-pool fusion proxy does not validate the feature family as a direct final-list fix: `protected_plus_all_on` gets 50/110 proxy@20, while `protected_plus_promoted_feature_family` gets 39/110 proxy@20. Treat the features as reranker/candidate-pool evidence, not as a production RRF patch.
 - Compiler-aware branch-family scoring also fails to create current-miss top-20 rescues. That rules out a simple RRF/branch-weight fix on the saved pools; the capped candidate-scorer proxy below also fails to create valid top-20 rescues, so the next useful final-list step is a stronger learned/listwise scorer or a separately measured branch-survivor policy, not another plain RRF rewrite.
 - User-CF alone does not improve union@20, but it improves deeper recall and should be deferred as a ranking feature rather than promoted as a top-20 candidate-recall fix.
+- `strict_constraints` tests stronger recency and new-artist demotion. It trails `promoted_feature_family`, so keep it as a negative ablation rather than the production candidate-quality direction.
 
 ## Source Truth And State Gate
 
@@ -55,6 +56,7 @@ Smoke read: style-reference centroid consumption improves depth (`union@1000` 0.
 | `anchor_cf_features` | 110 | 80/110 | 91/110 | 96/110 | 97 | 70/97 | 80/97 | 85/97 |
 | `user_cf_features` | 110 | 77/110 | 91/110 | 101/110 | 97 | 69/97 | 81/97 | 90/97 |
 | `branch_local_hybrid` | 110 | 82/110 | 94/110 | 97/110 | 97 | 72/97 | 84/97 | 87/97 |
+| `strict_constraints` | 110 | 81/110 | 94/110 | 97/110 | 97 | 71/97 | 84/97 | 87/97 |
 | `catalog_plus_anchor_cf` | 110 | 81/110 | 93/110 | 99/110 | 97 | 71/97 | 82/97 | 88/97 |
 | `promoted_feature_family` | 110 | 84/110 | 95/110 | 100/110 | 97 | 74/97 | 84/97 | 89/97 |
 | `all_feature_family` | 110 | 84/110 | 95/110 | 104/110 | 97 | 74/97 | 84/97 | 92/97 |
@@ -162,8 +164,32 @@ This proxy scores capped `protected + feature-reranked branch` pools with both b
 | `candidate_all_feature_family` | 50 | 37/110 | 35/97 | 78/110 | 69/97 | 1 | 0 | 80/97 | 84/97 |
 | `candidate_all_feature_family` | 100 | 35/110 | 34/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 84/97 |
 | `candidate_all_feature_family` | 200 | 35/110 | 34/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 84/97 |
+| `candidate_strict_constraints` | 50 | 29/110 | 27/97 | 78/110 | 69/97 | 1 | 0 | 80/97 | 84/97 |
+| `candidate_strict_constraints` | 100 | 30/110 | 28/97 | 78/110 | 69/97 | 1 | 0 | 81/97 | 84/97 |
+| `candidate_strict_constraints` | 200 | 30/110 | 28/97 | 78/110 | 69/97 | 1 | 0 | 81/97 | 84/97 |
 
 Candidate-scorer read: the best focused proxy is `candidate_branch_local_hybrid` at depth 200, with 0 valid current-miss rescues@20 and 69/97 valid current+scorer union@20. This does not pass the tiny final-list smoke gate. The feature evidence improves branch-local union, but a global candidate scorer still cannot decide which branch-local survivors belong in the top 20.
+
+## Branch-Survivor Slot Proxy
+
+This proxy tests an explicit listwise policy: start with the protected current branch pools, reserve a tiny number of slots for promoted branch-local top candidates, then fill the rest from protected pools. It only hard-drops explicit resolved track exclusions. This is still an offline saved-pool diagnostic, not a production final-rank change.
+
+| slots | depth | survivor p@20 | valid p@20 | current+survivor u@20 | valid current+survivor u@20 | rescues@20 | valid rescues@20 | valid current+survivor u@50 | valid current+survivor u@100 |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 10 | 42/110 | 36/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 1 | 20 | 42/110 | 36/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 1 | 50 | 43/110 | 37/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 2 | 10 | 44/110 | 38/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 2 | 20 | 43/110 | 37/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 2 | 50 | 44/110 | 38/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 3 | 10 | 44/110 | 38/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 3 | 20 | 44/110 | 38/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 3 | 50 | 45/110 | 39/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 4 | 10 | 43/110 | 37/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 4 | 20 | 44/110 | 38/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 4 | 50 | 44/110 | 38/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+
+Survivor-policy read: the best offline policy reserves 1 slot(s) at depth 10 and gets 0 valid current-miss rescues@20. Because this is also 0, a few reserved slots are not enough; the remaining gap needs a stronger listwise/learned selector or sharper branch queries, not just survivor-slot preservation.
 
 ## Branch-Local Rescues Versus Candidate Scorer
 
@@ -207,6 +233,7 @@ Noisy/contradictory GT is excluded only for the valid-GT-only view. All-110 metr
 | `anchor_cf_features` | keep_for_full_devset_smoke | 3 | 1 | 0 |
 | `user_cf_features` | defer_to_branch_ranking_work | 0 | 0 | 1 |
 | `branch_local_hybrid` | keep_for_full_devset_smoke | 5 | 3 | 4 |
+| `strict_constraints` | reject_as_promoted_replacement | 4 | 2 | 4 |
 | `catalog_plus_anchor_cf` | keep_for_full_devset_smoke | 4 | 2 | 2 |
 | `promoted_feature_family` | keep_for_full_devset_smoke | 7 | 5 | 4 |
 | `all_feature_family` | defer_user_cf_component | 7 | 5 | 4 |

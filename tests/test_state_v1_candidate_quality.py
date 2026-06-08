@@ -7,17 +7,22 @@ from types import SimpleNamespace
 from mcrs.qu_modules.compiler_v0plus import BranchPool
 from scripts.state_v1_candidate_quality_matrix import (
     CandidateFeature,
+    TrackMeta,
     _branch_deep_summary,
     _branch_family,
     _branch_local_rescue_scorer_diagnostics,
+    _branch_survivor_rank_ids,
+    _branch_survivor_summary,
     _candidate_scorer_proxy_summary,
     _candidate_scorer_rank_map,
     _candidate_scorer_rank_ids,
     _cosine,
+    _feature_scores_for_sample,
     _fusion_proxy_summary,
     _metrics_for_subset,
     _pool_recipe_summary,
     _rank_pool_with_features,
+    _state_requests_recent_releases,
     _rrf_fuse_pool_ids,
     _state_family_weights,
     _state_weighted_fuse_pool_ids,
@@ -488,3 +493,202 @@ def test_branch_local_rescue_scorer_diagnostics_buckets_rescued_rows():
     }
     assert diagnostics["rows"][0]["sample_id"] == "valid_rescue"
     assert diagnostics["rows"][0]["scorer_rank_bucket"] == "rank_21_50"
+
+
+def test_state_requests_recent_releases_from_fact_or_request_text():
+    state_from_fact = SimpleNamespace(
+        current_request=SimpleNamespace(request_type="new_artist", summary=""),
+        facts=[
+            SimpleNamespace(type="attribute", facet="era", value="recent", relation="query_facet", role="current_target"),
+        ],
+    )
+    state_from_text = SimpleNamespace(
+        current_request=SimpleNamespace(request_type="attribute_search", summary="newer contemporary pop"),
+        facts=[],
+    )
+    oldies_state = SimpleNamespace(
+        current_request=SimpleNamespace(request_type="attribute_search", summary="classic 70s rock"),
+        facts=[],
+    )
+
+    assert _state_requests_recent_releases(state_from_fact)
+    assert _state_requests_recent_releases(state_from_text)
+    assert not _state_requests_recent_releases(oldies_state)
+
+
+class _MiniCatalog:
+    def __init__(self, artists: dict[str, str], vectors: dict[str, list[float]]):
+        self.artists = artists
+        self.vectors = vectors
+
+    def vector(self, track_id: str, _field: str) -> list[float] | None:
+        return self.vectors.get(track_id)
+
+    def artist_id_of(self, track_id: str) -> str | None:
+        return self.artists.get(track_id)
+
+
+def test_feature_scores_apply_recent_release_soft_preference():
+    state = SimpleNamespace(
+        current_request=SimpleNamespace(request_type="attribute_search", summary="more recent upbeat scene music"),
+        facts=[],
+        explicit_rejections=[],
+        track_feedback=[],
+        referenced_track_ids=[],
+        lyrical_theme=None,
+        target_artist_mode=None,
+    )
+    track_meta = {
+        "old": TrackMeta(tags=frozenset(), text="", release_year=1994, popularity_rank=None, cf_bpr=None, artist_id="old_artist"),
+        "recent": TrackMeta(tags=frozenset(), text="", release_year=2018, popularity_rank=None, cf_bpr=None, artist_id="new_artist"),
+    }
+
+    features = _feature_scores_for_sample(
+        state=state,
+        track_meta=track_meta,
+        candidate_ids={"old", "recent"},
+        catalog=_MiniCatalog({}, {}),
+        user_vector=None,
+        mode="strict_constraints",
+    )
+
+    assert features["recent"].feature_score > features["old"].feature_score
+
+
+def test_feature_scores_strongly_demote_anchor_artist_for_new_artist_request():
+    state = SimpleNamespace(
+        current_request=SimpleNamespace(request_type="new_artist", summary="new artist with similar energy"),
+        facts=[],
+        explicit_rejections=[],
+        track_feedback=[SimpleNamespace(track_id="anchor", role="satisfied")],
+        referenced_track_ids=[],
+        lyrical_theme=None,
+        target_artist_mode="new_artist",
+    )
+    track_meta = {
+        "same_artist": TrackMeta(tags=frozenset(), text="", release_year=2020, popularity_rank=None, cf_bpr=[1.0, 0.0], artist_id="anchor_artist"),
+        "other_artist": TrackMeta(tags=frozenset(), text="", release_year=2020, popularity_rank=None, cf_bpr=[1.0, 0.0], artist_id="other_artist"),
+    }
+    catalog = _MiniCatalog(
+        artists={"anchor": "anchor_artist", "same_artist": "anchor_artist", "other_artist": "other_artist"},
+        vectors={"anchor": [1.0, 0.0]},
+    )
+
+    features = _feature_scores_for_sample(
+        state=state,
+        track_meta=track_meta,
+        candidate_ids={"same_artist", "other_artist"},
+        catalog=catalog,
+        user_vector=None,
+        mode="strict_constraints",
+    )
+
+    assert features["other_artist"].feature_score - features["same_artist"].feature_score >= 0.05
+
+
+def test_branch_survivor_rank_ids_reserves_slots_for_promoted_branch_winners():
+    state = SimpleNamespace(
+        current_request=SimpleNamespace(request_type="attribute_search", summary=""),
+        facts=[],
+        explicit_rejections=[],
+        track_feedback=[],
+        referenced_track_ids=[],
+        lyrical_theme=None,
+        target_artist_mode=None,
+    )
+    protected = [
+        BranchPool("bm25", [(f"base-{idx}", 1.0 / idx) for idx in range(1, 21)])
+    ]
+    promoted = [
+        BranchPool(
+            "dense.qwen_8b.attributes_enriched.attributes_qwen3_embedding_8b.branch_local_hybrid",
+            [("target", 1.0), ("branch-noise", 0.9)],
+        )
+    ]
+
+    ranked = _branch_survivor_rank_ids(
+        protected_pools=protected,
+        survivor_pools=promoted,
+        state=state,
+        limit=20,
+        survivor_slots=2,
+        survivor_depth=20,
+    )
+
+    assert "target" in ranked[:20]
+    assert ranked.index("target") < 2
+    assert len(ranked) == 20
+
+
+def test_branch_survivor_rank_ids_applies_explicit_hard_drops():
+    state = SimpleNamespace(
+        current_request=SimpleNamespace(request_type="attribute_search", summary=""),
+        facts=[],
+        explicit_rejections=[
+            SimpleNamespace(kind="track", entity_id="drop", certainty="explicit"),
+        ],
+        track_feedback=[],
+        referenced_track_ids=[],
+        lyrical_theme=None,
+        target_artist_mode=None,
+    )
+    protected = [BranchPool("bm25", [("keep", 1.0)])]
+    promoted = [BranchPool("analysis.tag_popularity_alias.branch_local_hybrid", [("drop", 1.0), ("target", 0.9)])]
+
+    ranked = _branch_survivor_rank_ids(
+        protected_pools=protected,
+        survivor_pools=promoted,
+        state=state,
+        limit=3,
+        survivor_slots=2,
+        survivor_depth=20,
+    )
+
+    assert "drop" not in ranked
+    assert ranked[:2] == ["target", "keep"]
+
+
+def test_branch_survivor_summary_reports_valid_current_miss_rescues():
+    sample_ids = ["a", "b"]
+    turn_meta = {
+        "a": {"gt_track_id": "ta"},
+        "b": {"gt_track_id": "tb"},
+    }
+    labels = {
+        "a": {"valid_gt": True},
+        "b": {"valid_gt": False},
+    }
+    states = {
+        "a": SimpleNamespace(current_request=SimpleNamespace(request_type="attribute_search", summary=""), facts=[], explicit_rejections=[], track_feedback=[], referenced_track_ids=[]),
+        "b": SimpleNamespace(current_request=SimpleNamespace(request_type="attribute_search", summary=""), facts=[], explicit_rejections=[], track_feedback=[], referenced_track_ids=[]),
+    }
+    current_rows = {
+        "a": {"union@20": False, "union@50": False, "union@100": False},
+        "b": {"union@20": True, "union@50": True, "union@100": True},
+    }
+    protected = {
+        "a": [BranchPool("bm25", [("x", 1.0)])],
+        "b": [BranchPool("bm25", [("tb", 1.0)])],
+    }
+    promoted = {
+        "a": [BranchPool("analysis.tag_popularity_alias.branch_local_hybrid", [("ta", 1.0)])],
+        "b": [BranchPool("analysis.tag_popularity_alias.branch_local_hybrid", [("x", 1.0)])],
+    }
+
+    rows = _branch_survivor_summary(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        labels=labels,
+        states=states,
+        current_rows=current_rows,
+        protected_pools=protected,
+        survivor_pools=promoted,
+        survivor_slots=(1,),
+        survivor_depths=(20,),
+    )
+
+    row = rows[0]
+    assert row["all_current_plus_survivor@20_count"] == 2
+    assert row["valid_current_plus_survivor@20_count"] == 1
+    assert row["all_current_miss_rescue@20_count"] == 1
+    assert row["valid_current_miss_rescue@20_count"] == 1

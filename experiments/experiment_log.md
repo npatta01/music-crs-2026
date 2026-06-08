@@ -116,12 +116,19 @@ Current read:
   candidate-level scorer create zero valid current-miss final-like top-20
   rescues. The useful signal is branch-local candidate ordering; it still needs
   a stronger learned/listwise scorer or separately measured survivor policy.
+- Explicit branch-survivor slots also create zero valid current-miss top-20
+  rescues on saved pools; the rescued GTs are branch-local rank 8-18-ish among
+  many plausible candidates, so a few reserved slots do not solve selection.
+- A stricter recency/new-artist constraint ablation improves over baseline but
+  trails the promoted feature family, so reject it as a replacement rather than
+  shipping stronger hand-tuned constraints.
 - Only 2 valid GTs are absent from all saved deep pools in this focused pack;
   most remaining misses are rank/order, query specificity, or state-role
   consumption issues.
 
 Next step:
 
-- Compare a listwise scorer or explicit branch-survivor policy over branch-local
-  top20 survivors plus a capped top100-200 pool before any new full-devset
-  cache-miss run. The scalar capped scorer did not rescue valid top-20 misses.
+- Do not keep adding scalar hand-tuned constraints. The next focused experiment
+  should either train/evaluate a small listwise scorer on the capped top100-200
+  pool, or create a truly new source/query branch for the two valid deep-pool
+  absences and the hidden-target/lyric/visual slices.

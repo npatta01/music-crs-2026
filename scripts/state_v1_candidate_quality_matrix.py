@@ -830,6 +830,168 @@ def _candidate_scorer_rank_map(
     return ranks
 
 
+def _branch_survivor_candidates(
+    *,
+    survivor_pools: list[BranchPool],
+    state: Any,
+    survivor_depth: int,
+) -> list[str]:
+    weights = _state_family_weights(state)
+    hard_drops = _state_hard_drop_track_ids(state)
+    scores: dict[str, float] = {}
+    first_seen: dict[str, int] = {}
+    order = 0
+    for pool in survivor_pools:
+        family = _branch_family(pool.name)
+        weight = weights.get(family, BRANCH_FAMILY_BASE_WEIGHTS["other"])
+        seen_in_pool: set[str] = set()
+        for rank, (track_id, _score) in enumerate(pool.hits[:survivor_depth], start=1):
+            if track_id in seen_in_pool or track_id in hard_drops:
+                continue
+            seen_in_pool.add(track_id)
+            if track_id not in first_seen:
+                first_seen[track_id] = order
+                order += 1
+            branch_local_score = float(_score or 0.0)
+            scores[track_id] = scores.get(track_id, 0.0) + (
+                weight / (20.0 + rank)
+            ) + min(0.05, max(0.0, branch_local_score))
+    return sorted(scores, key=lambda tid: (-scores[tid], first_seen[tid], tid))
+
+
+def _branch_survivor_rank_ids(
+    *,
+    protected_pools: list[BranchPool],
+    survivor_pools: list[BranchPool],
+    state: Any,
+    limit: int,
+    survivor_slots: int,
+    survivor_depth: int,
+) -> list[str]:
+    """Reserve a few final-list slots for high-confidence branch-local survivors.
+
+    This is an analysis proxy for a possible listwise policy. It does not let
+    branches interpret raw text and it does not add candidates; it only tests
+    whether branch-local top-20 winners get buried by global scoring.
+    """
+
+    hard_drops = _state_hard_drop_track_ids(state)
+    survivors = _branch_survivor_candidates(
+        survivor_pools=survivor_pools,
+        state=state,
+        survivor_depth=survivor_depth,
+    )
+    protected = _state_weighted_fuse_pool_ids(
+        protected_pools,
+        state=state,
+        limit=max(limit * 2, 100),
+        depth=20,
+    )
+    ranked: list[str] = []
+    seen: set[str] = set()
+
+    for track_id in survivors:
+        if len(ranked) >= survivor_slots:
+            break
+        if track_id in hard_drops or track_id in seen:
+            continue
+        ranked.append(track_id)
+        seen.add(track_id)
+
+    for track_id in protected:
+        if len(ranked) >= limit:
+            break
+        if track_id in hard_drops or track_id in seen:
+            continue
+        ranked.append(track_id)
+        seen.add(track_id)
+
+    for track_id in survivors:
+        if len(ranked) >= limit:
+            break
+        if track_id in hard_drops or track_id in seen:
+            continue
+        ranked.append(track_id)
+        seen.add(track_id)
+
+    return ranked[:limit]
+
+
+def _branch_survivor_summary(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    labels: dict[str, dict[str, Any]],
+    states: dict[str, Any],
+    current_rows: dict[str, dict[str, Any]],
+    protected_pools: dict[str, list[BranchPool]],
+    survivor_pools: dict[str, list[BranchPool]],
+    survivor_slots: tuple[int, ...] = (1, 2, 3, 4),
+    survivor_depths: tuple[int, ...] = (10, 20, 50),
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    valid_ids = {sid for sid in sample_ids if labels[sid].get("valid_gt")}
+    for slots in survivor_slots:
+        for depth in survivor_depths:
+            row: dict[str, Any] = {
+                "variant": f"branch_survivor_slots{slots}_depth{depth}",
+                "survivor_slots": slots,
+                "survivor_depth": depth,
+                "all_n": len(sample_ids),
+                "valid_n": len(valid_ids),
+            }
+            ranks: list[int] = []
+            valid_ranks: list[int] = []
+            for k in FUSION_PROXY_KS:
+                all_final_count = 0
+                valid_final_count = 0
+                all_current_plus_count = 0
+                valid_current_plus_count = 0
+                all_current_miss_rescues = 0
+                valid_current_miss_rescues = 0
+                for sid in sample_ids:
+                    target = str(turn_meta[sid]["gt_track_id"])
+                    ranked = _branch_survivor_rank_ids(
+                        protected_pools=protected_pools.get(sid, []),
+                        survivor_pools=survivor_pools.get(sid, []),
+                        state=states[sid],
+                        limit=max(k, 100),
+                        survivor_slots=slots,
+                        survivor_depth=depth,
+                    )
+                    try:
+                        rank = ranked.index(target) + 1
+                    except ValueError:
+                        rank = None
+                    survivor_hit = rank is not None and rank <= k
+                    current_hit = bool(current_rows[sid].get(f"union@{k}"))
+                    all_final_count += int(survivor_hit)
+                    all_current_plus_count += int(current_hit or survivor_hit)
+                    all_current_miss_rescues += int(survivor_hit and not current_hit)
+                    if sid in valid_ids:
+                        valid_final_count += int(survivor_hit)
+                        valid_current_plus_count += int(current_hit or survivor_hit)
+                        valid_current_miss_rescues += int(survivor_hit and not current_hit)
+                    if k == 100 and rank is not None:
+                        ranks.append(rank)
+                        if sid in valid_ids:
+                            valid_ranks.append(rank)
+                row[f"all_survivor_final@{k}_count"] = all_final_count
+                row[f"valid_survivor_final@{k}_count"] = valid_final_count
+                row[f"all_current_plus_survivor@{k}_count"] = all_current_plus_count
+                row[f"valid_current_plus_survivor@{k}_count"] = valid_current_plus_count
+                row[f"all_current_miss_rescue@{k}_count"] = all_current_miss_rescues
+                row[f"valid_current_miss_rescue@{k}_count"] = valid_current_miss_rescues
+            row["all_survivor_rank_median"] = (
+                sorted(ranks)[len(ranks) // 2] if ranks else None
+            )
+            row["valid_survivor_rank_median"] = (
+                sorted(valid_ranks)[len(valid_ranks) // 2] if valid_ranks else None
+            )
+            rows.append(row)
+    return rows
+
+
 def _rank_bucket(rank: int | None) -> str:
     if rank is None:
         return "missing_top100"
@@ -1552,6 +1714,53 @@ GENERIC_TERMS = {
     "rock",
 }
 
+RECENT_RELEASE_TERMS = {
+    "contemporary",
+    "current",
+    "latest",
+    "modern",
+    "new act",
+    "new artist",
+    "new band",
+    "newer",
+    "recent",
+    "recent act",
+    "recent artist",
+    "recent band",
+}
+
+
+def _state_requests_recent_releases(state: Any) -> bool:
+    query_text = _state_query_text(state).casefold()
+    if any(term in query_text for term in RECENT_RELEASE_TERMS):
+        return True
+    for fact in getattr(state, "facts", []) or []:
+        fact_type = _enum_value(getattr(fact, "type", None))
+        facet = _enum_value(getattr(fact, "facet", None))
+        relation = _enum_value(getattr(fact, "relation", None))
+        value = str(getattr(fact, "value", "") or "").casefold()
+        if fact_type != "attribute" or relation != "query_facet":
+            continue
+        if facet in {"era", "popularity"} and any(
+            term in value for term in RECENT_RELEASE_TERMS
+        ):
+            return True
+    return False
+
+
+def _recent_release_feature(year: int | None) -> float:
+    if year is None:
+        return 0.0
+    if year >= 2020:
+        return 0.055
+    if year >= 2014:
+        return 0.045
+    if year >= 2005:
+        return 0.026
+    if year >= 1998:
+        return 0.0
+    return -0.045
+
 
 def _feature_scores_for_sample(
     *,
@@ -1567,6 +1776,7 @@ def _feature_scores_for_sample(
     expanded_query_terms = _expanded_tag_terms(sorted(query_terms))
     negative_terms = _expanded_tag_terms(sorted(_negative_tag_values(state)))
     popularity_requested = _has_explicit_popularity_request(state)
+    recent_requested = _state_requests_recent_releases(state)
     hard_drop_track_ids = _state_hard_drop_track_ids(state)
     anchor_track_ids = _state_anchor_track_ids(state)
     anchor_cf = _centroid([catalog.vector(track_id, "cf_bpr") for track_id in anchor_track_ids])
@@ -1590,7 +1800,7 @@ def _feature_scores_for_sample(
         negative_overlap = negative_terms & meta.tags
         year_match = _release_year_compatible(state, meta.release_year)
 
-        if mode in {"catalog_features", "branch_local_hybrid"}:
+        if mode in {"catalog_features", "branch_local_hybrid", "strict_constraints"}:
             score += min(0.060, 0.015 * len(specific_overlap))
             score += min(0.020, 0.004 * len(generic_overlap))
             score += min(0.024, 0.008 * len(phrase_hits))
@@ -1598,6 +1808,8 @@ def _feature_scores_for_sample(
                 score += 0.014
             elif year_match < 0:
                 score -= 0.014
+            if mode == "strict_constraints" and recent_requested:
+                score += _recent_release_feature(meta.release_year)
             if popularity_requested and meta.popularity_rank is not None:
                 if meta.popularity_rank <= 200:
                     score += 0.040
@@ -1608,15 +1820,15 @@ def _feature_scores_for_sample(
             if negative_overlap:
                 score -= min(0.060, 0.030 * len(negative_overlap))
 
-        if mode in {"anchor_cf_features", "branch_local_hybrid"}:
+        if mode in {"anchor_cf_features", "branch_local_hybrid", "strict_constraints"}:
             score += 0.036 * max(0.0, _cosine(anchor_cf, meta.cf_bpr))
 
-        if mode in {"user_cf_features", "branch_local_hybrid"}:
+        if mode in {"user_cf_features", "branch_local_hybrid", "strict_constraints"}:
             score += 0.026 * max(0.0, _cosine(user_vector, meta.cf_bpr))
 
-        if mode == "branch_local_hybrid":
+        if mode in {"branch_local_hybrid", "strict_constraints"}:
             if target_artist_mode == "new_artist" and meta.artist_id in anchor_artist_ids:
-                score -= 0.030
+                score -= 0.085 if mode == "strict_constraints" else 0.030
             if getattr(state, "lyrical_theme", None):
                 score += 0.006 * len(phrase_hits)
 
@@ -1854,7 +2066,9 @@ def _decision_for_variant(
     valid_u50_gain = sum(rows[sid]["union@50"] for sid in valid_ids) - sum(
         baseline[sid]["union@50"] for sid in valid_ids
     )
-    if variant == "all_feature_family":
+    if variant == "strict_constraints":
+        decision = "reject_as_promoted_replacement"
+    elif variant == "all_feature_family":
         decision = "defer_user_cf_component"
     elif variant == "all_on_original":
         decision = "reject_without_branch_local_scoring"
@@ -1978,6 +2192,9 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "- User-CF alone does not improve union@20, but it improves deeper recall "
         "and should be deferred as a ranking feature rather than promoted as a "
         "top-20 candidate-recall fix.",
+        "- `strict_constraints` tests stronger recency and new-artist demotion. "
+        "It trails `promoted_feature_family`, so keep it as a negative ablation "
+        "rather than the production candidate-quality direction.",
     ]
 
     state_gate = payload.get("state_gate") or {}
@@ -2332,6 +2549,65 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
                 "feature evidence improves branch-local union, but a global "
                 "candidate scorer still cannot decide which branch-local survivors "
                 "belong in the top 20."
+            )
+        )
+
+    survivor_rows = payload.get("branch_survivor_proxy") or []
+    if survivor_rows:
+        lines.extend([
+            "",
+            "## Branch-Survivor Slot Proxy",
+            "",
+            "This proxy tests an explicit listwise policy: start with the protected "
+            "current branch pools, reserve a tiny number of slots for promoted "
+            "branch-local top candidates, then fill the rest from protected pools. "
+            "It only hard-drops explicit resolved track exclusions. This is still "
+            "an offline saved-pool diagnostic, not a production final-rank change.",
+            "",
+            "| slots | depth | survivor p@20 | valid p@20 | current+survivor u@20 | valid current+survivor u@20 | rescues@20 | valid rescues@20 | valid current+survivor u@50 | valid current+survivor u@100 |",
+            "|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        ])
+        for row in survivor_rows:
+            lines.append(
+                "| {slots} | {depth} | {a20}/{alln} | {v20}/{validn} | {cu20}/{alln} | {vcu20}/{validn} | {r20} | {vr20} | {vcu50}/{validn} | {vcu100}/{validn} |".format(
+                    slots=row["survivor_slots"],
+                    depth=row["survivor_depth"],
+                    a20=row["all_survivor_final@20_count"],
+                    alln=row["all_n"],
+                    v20=row["valid_survivor_final@20_count"],
+                    validn=row["valid_n"],
+                    cu20=row["all_current_plus_survivor@20_count"],
+                    vcu20=row["valid_current_plus_survivor@20_count"],
+                    r20=row["all_current_miss_rescue@20_count"],
+                    vr20=row["valid_current_miss_rescue@20_count"],
+                    vcu50=row["valid_current_plus_survivor@50_count"],
+                    vcu100=row["valid_current_plus_survivor@100_count"],
+                )
+            )
+        best_survivor = max(
+            survivor_rows,
+            key=lambda row: (
+                row["valid_current_miss_rescue@20_count"],
+                row["valid_current_plus_survivor@20_count"],
+                row["valid_current_plus_survivor@50_count"],
+                -row["survivor_slots"],
+                -row["survivor_depth"],
+            ),
+        )
+        lines.append(
+            "\nSurvivor-policy read: the best offline policy reserves "
+            f"{best_survivor['survivor_slots']} slot(s) at depth "
+            f"{best_survivor['survivor_depth']} and gets "
+            f"{best_survivor['valid_current_miss_rescue@20_count']} valid "
+            "current-miss rescues@20. "
+            + (
+                "Because this beats the scalar scorer, the next test should be "
+                "a real listwise branch-survivor policy."
+                if best_survivor["valid_current_miss_rescue@20_count"] > 0
+                else "Because this is also 0, a few reserved slots are not "
+                "enough; the remaining gap needs a stronger listwise/learned "
+                "selector or sharper branch queries, not just survivor-slot "
+                "preservation."
             )
         )
 
@@ -2746,6 +3022,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "anchor_cf_features",
             "user_cf_features",
             "branch_local_hybrid",
+            "strict_constraints",
         )
     }
     candidate_feature_maps["promoted_feature_family"] = _merge_feature_maps_by_sample(
@@ -2775,6 +3052,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "anchor_cf_features",
             "user_cf_features",
             "branch_local_hybrid",
+            "strict_constraints",
         )
     }
     variant_pool_maps["catalog_plus_anchor_cf"] = _merged_pools(
@@ -2890,6 +3168,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             protected_pools,
             variant_pool_maps["all_feature_family"],
         ),
+        "candidate_strict_constraints": _merged_pools(
+            sample_ids,
+            protected_pools,
+            variant_pool_maps["strict_constraints"],
+        ),
     }
     for variant_name in (
         "candidate_catalog_features",
@@ -2897,6 +3180,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "candidate_branch_local_hybrid",
         "candidate_promoted_feature_family",
         "candidate_all_feature_family",
+        "candidate_strict_constraints",
     ):
         feature_key = variant_name.removeprefix("candidate_")
         candidate_scorer_proxy.extend(
@@ -2968,6 +3252,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             scorer_ranks=diagnostic_candidate_scorer_ranks,
             scorer_variant=diagnostic_candidate_scorer["variant"],
         )
+    )
+    branch_survivor_proxy = _branch_survivor_summary(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        labels=labels,
+        states=states,
+        current_rows=current_plus_targeted_rows,
+        protected_pools=protected_pools,
+        survivor_pools=variant_pool_maps["promoted_feature_family"],
     )
 
     metrics = [
@@ -3044,6 +3337,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "state_weighted_fusion_proxy": state_weighted_fusion_proxy,
         "candidate_scorer_proxy": candidate_scorer_proxy,
         "branch_local_rescue_scorer_diagnostics": branch_local_rescue_scorer_diagnostics,
+        "branch_survivor_proxy": branch_survivor_proxy,
         "gap_diagnostics": gap_diagnostics,
         "noise_examples": noise_examples,
         "per_class": _per_class_metrics(
