@@ -86,12 +86,13 @@ def main() -> None:
         split_types=["all_users"],
     )
     prompts_dir = Path(args.prompts_dir)
-    roleplay = (prompts_dir / "roleplay.txt").read_text(encoding="utf-8")
+    # The response prompt is self-contained (leads with role + goal), so we no
+    # longer prepend the generic roleplay.txt (avoids a duplicated/conflicting role).
     response = Path(args.response_prompt).read_text(encoding="utf-8")
     personalization = (prompts_dir / "personalization.txt").read_text(encoding="utf-8")
 
     def build_system_prompt(user_id):
-        sp = roleplay + response
+        sp = response
         if user_id:
             try:
                 sp += personalization + "\n" + user_db.id_to_profile_str(user_id)
