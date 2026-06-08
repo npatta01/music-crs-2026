@@ -14,7 +14,10 @@ from scripts.state_v1_retriever_matrix import (
     _expanded_tag_terms,
     _extract_trace_baseline_pools,
     _pool_to_trace_payload,
+    _query_text_tag_popularity_pool,
     _rerank_branch_pools,
+    _scene_terms_from_text,
+    _state_query_text,
     _tag_popularity_pool,
     _variant_qu_kwargs,
 )
@@ -42,6 +45,9 @@ class _FakeCatalog:
 
     def release_year_of(self, track_id: str) -> int | None:
         return self.years.get(track_id)
+
+    def track_text(self, track_id: str, *, max_tags: int = 5) -> str:
+        return " | ".join([track_id, ", ".join(self.tag_list(track_id)[:max_tags])])
 
     def all_track_ids(self) -> list[str]:
         return sorted(set(self.tags) | set(self.artists) | set(self.years) | set(self.popularity))
@@ -171,9 +177,18 @@ def test_additive_metrics_rescue_baseline_miss_with_new_branch():
 
 
 def test_expanded_tag_terms_adds_common_catalog_aliases():
-    terms = _expanded_tag_terms(["hip hop", "pop-punk", "r&b"])
+    terms = _expanded_tag_terms(["hip hop", "pop-punk", "R&B/Soul"])
 
-    assert {"hip hop", "hip-hop", "rap", "pop punk", "pop-punk", "rnb", "r&b"} <= terms
+    assert {
+        "hip hop",
+        "hip-hop",
+        "rap",
+        "pop punk",
+        "pop-punk",
+        "rnb",
+        "r&b",
+        "soul",
+    } <= terms
 
 
 def test_tag_popularity_pool_ranks_matching_popular_tracks():
@@ -194,6 +209,63 @@ def test_tag_popularity_pool_ranks_matching_popular_tracks():
     )
 
     assert [track_id for track_id, _ in pool.hits] == ["popular-funk", "deep-funk"]
+
+
+def test_state_query_text_combines_request_summary_intent_and_lyric_theme():
+    state = _state(
+        current_request=SimpleNamespace(
+            summary="Find a Christian song with an encouraging message",
+            evidence_text="Christian song",
+        ),
+        turn_intent="Find an encouraging Christian track",
+        lyrical_theme="encouraging message",
+    )
+
+    text = _state_query_text(state)
+
+    assert "Christian song" in text
+    assert "encouraging message" in text
+    assert "Christian track" in text
+
+
+def test_scene_terms_from_text_maps_generic_scene_words_to_catalog_terms():
+    terms = _scene_terms_from_text(
+        "upbeat early 2000s Latin pop hit with Christian soundtrack energy"
+    )
+
+    assert {"latin pop", "latin", "pop", "christian", "ccm", "soundtrack"} <= terms
+
+
+def test_query_text_tag_popularity_uses_scene_terms_and_soft_year_ordering():
+    catalog = _FakeCatalog(
+        tags={
+            "latin-hit": ["latin pop", "pop"],
+            "generic-pop": ["pop"],
+            "wrong-era-latin": ["latin pop", "pop"],
+        },
+        years={"latin-hit": 2003, "generic-pop": 2003, "wrong-era-latin": 2018},
+        popularity={"generic-pop": 0, "wrong-era-latin": 1, "latin-hit": 20},
+    )
+    state = _state(
+        current_request=SimpleNamespace(
+            summary="Find an early 2000s Latin Pop hit",
+            evidence_text="early 2000s Latin Pop",
+        ),
+        turn_intent="Find an early 2000s Latin Pop hit",
+        release_year_range=SimpleNamespace(start=1999, end=2005),
+    )
+
+    pool = _query_text_tag_popularity_pool(
+        catalog,
+        state=state,
+        name="analysis.query_text_tag_popularity",
+        topk=10,
+    )
+
+    assert [track_id for track_id, _score in pool.hits][:2] == [
+        "latin-hit",
+        "generic-pop",
+    ]
 
 
 def test_extract_trace_baseline_pools_streams_only_requested_turns(tmp_path):

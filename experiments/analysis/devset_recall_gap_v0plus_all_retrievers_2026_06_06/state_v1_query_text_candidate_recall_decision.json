@@ -1,0 +1,277 @@
+{
+  "scope": "focused 110 state-gap turns; additive candidate recall only; V1 state/projection frozen",
+  "baseline_full_or": {
+    "20": 71,
+    "50": 82,
+    "100": 88
+  },
+  "new_full_or_plus_query_text": {
+    "20": 75,
+    "50": 87,
+    "100": 91
+  },
+  "lift": {
+    "20": 4,
+    "50": 5,
+    "100": 3
+  },
+  "protected_baseline": {
+    "union@20": 60,
+    "union@50": 60
+  },
+  "single_branch_summary": {
+    "variant": "query_text_tag_popularity",
+    "n": 110,
+    "protected_union@20": 0.5454545454545454,
+    "branch_only@20": 0.18181818181818182,
+    "additive_union@20": 0.5909090909090909,
+    "protected_union@50": 0.5454545454545454,
+    "branch_only@50": 0.20909090909090908,
+    "additive_union@50": 0.6,
+    "protected_union@100": 0.5454545454545454,
+    "branch_only@100": 0.22727272727272727,
+    "additive_union@100": 0.6090909090909091,
+    "additive_rescued@20": 5,
+    "additive_regressed@20": 0
+  },
+  "synthetic_v2_summary": {
+    "variant": "all_synthetic_recall_v2",
+    "n": 110,
+    "protected_union@20": 0.5454545454545454,
+    "branch_only@20": 0.33636363636363636,
+    "additive_union@20": 0.6181818181818182,
+    "protected_union@50": 0.5454545454545454,
+    "branch_only@50": 0.38181818181818183,
+    "additive_union@50": 0.6636363636363637,
+    "protected_union@100": 0.5454545454545454,
+    "branch_only@100": 0.4,
+    "additive_union@100": 0.6727272727272727,
+    "additive_rescued@20": 8,
+    "additive_regressed@20": 0
+  },
+  "rescued_union20": [
+    {
+      "sample_id": "a930da0d-07f1-46c6-909d-e4fd95ae1148::t6",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "gt": "Without You / Christina Aguilera",
+      "branch": "analysis.query_text_tag_popularity",
+      "rank": 7,
+      "reason": "popularity_by_scene_query_gap"
+    },
+    {
+      "sample_id": "5f085552-b56b-440e-830b-b4e40b58f854::t6",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "gt": "Redneck Yacht Club / Craig Morgan",
+      "branch": "analysis.query_text_tag_popularity",
+      "rank": 6,
+      "reason": "target_in_51_100_tail_query_or_ordering"
+    },
+    {
+      "sample_id": "a8df96e2-c196-462c-9484-72aa093aedf4::t1",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "gt": "Do Everything / Steven Curtis Chapman",
+      "branch": "analysis.query_text_tag_popularity",
+      "rank": 6,
+      "reason": "target_in_51_100_tail_query_or_ordering"
+    },
+    {
+      "sample_id": "4e2482dc-a76c-4f4b-9d3f-7becec2f8a3a::t4",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "gt": "Goodbye Pork Pie Hat / Charles Mingus",
+      "branch": "analysis.query_text_tag_popularity",
+      "rank": 15,
+      "reason": "popularity_by_scene_query_gap"
+    }
+  ],
+  "rescued_union50_only": [
+    {
+      "sample_id": "a33a5df0-2c2b-429c-84e6-cde28affd4d5::t6",
+      "pack": "P1_temporal_constraint_failure",
+      "gt": "Thriller / Fall Out Boy",
+      "branch": "analysis.query_text_tag_popularity",
+      "rank": 42,
+      "reason": "lyric_or_theme_source_gap"
+    }
+  ],
+  "remaining_union50_reason_counts": {
+    "popularity_by_scene_query_gap": 4,
+    "lyric_or_theme_source_gap": 5,
+    "visual_cover_art_source_gap": 7,
+    "target_in_51_100_tail_query_or_ordering": 4,
+    "scene_subculture_or_genre_query_gap": 2,
+    "retriever_source_or_query_gap": 1
+  },
+  "remaining_union20_reason_counts": {
+    "popularity_by_scene_query_gap": 4,
+    "lyric_or_theme_source_gap": 6,
+    "visual_cover_art_source_gap": 7,
+    "target_in_51_100_tail_query_or_ordering": 4,
+    "scene_subculture_or_genre_query_gap": 2,
+    "retriever_source_or_query_gap": 1,
+    "target_in_21_50_tail_branch_ordering": 11
+  },
+  "remaining_union50_examples": [
+    {
+      "sample_id": "5f29a9df-ad38-4349-a2f0-c9a690ea072d::t2",
+      "pack": "P0_roleless_stale_entity_failure",
+      "gt": "Shaft / Kashmere Stage Band",
+      "reason": "popularity_by_scene_query_gap",
+      "best_branch": null,
+      "best_rank": null,
+      "state_summary": "The user is satisfied with the recommendation but has not requested any additional action or follow-up yet."
+    },
+    {
+      "sample_id": "88af7ec3-c368-421b-9512-d0180da3d1f6::t2",
+      "pack": "P0_roleless_stale_entity_failure",
+      "gt": "I Believe in a Thing Called Love / The Darkness",
+      "reason": "lyric_or_theme_source_gap",
+      "best_branch": null,
+      "best_rank": null,
+      "state_summary": "User is trying to recall a 2000s song with a wedding drama scene, specific lines about a bartender or overhearing gossip; \n   'I Write Sins Not Tragedies' is a contrast."
+    },
+    {
+      "sample_id": "ad5348a7-d3bc-4882-bfca-54aa655eac96::t5",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "gt": "Glitter / Tyler, The Creator",
+      "reason": "visual_cover_art_source_gap",
+      "best_branch": null,
+      "best_rank": null,
+      "state_summary": "More tracks where the album art is vibrant, energetic, and the music matches that vibe."
+    },
+    {
+      "sample_id": "54cda581-3b2e-4245-a479-1a27589760d2::t3",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "gt": "Deliberation - Studio / Katatonia",
+      "reason": "target_in_51_100_tail_query_or_ordering",
+      "best_branch": "analysis.era_tag_popularity",
+      "best_rank": 123,
+      "state_summary": "A heavy metal album with a dark, bleak, abstract or symbolic cover of a ruined/destroyed city, released mid-2000s to mid-2010s."
+    },
+    {
+      "sample_id": "5a0dfe9d-ec8a-4449-97df-35535cbf162f::t1",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "gt": "A New World / Harry Gregson-Williams",
+      "reason": "target_in_51_100_tail_query_or_ordering",
+      "best_branch": "analysis.query_text_tag_popularity",
+      "best_rank": 308,
+      "state_summary": "Epic orchestral movie soundtrack music for background listening."
+    },
+    {
+      "sample_id": "5861afef-85c0-4163-b8b9-5a11e308f352::t4",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "gt": "Carmes\u00ed / Vicente Garcia",
+      "reason": "target_in_51_100_tail_query_or_ordering",
+      "best_branch": "analysis.tag_popularity_alias",
+      "best_rank": 518,
+      "state_summary": "More diverse artists with a danceable or Latin sound, referencing the likeable style of prior tracks but explicitly requesting different artists."
+    },
+    {
+      "sample_id": "2bbc0a7e-3ab0-4376-8135-182cd4ae075f::t1",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "gt": "Las Almas Del Silencio / Ricky Martin",
+      "reason": "target_in_51_100_tail_query_or_ordering",
+      "best_branch": "analysis.query_text_tag_popularity",
+      "best_rank": 188,
+      "state_summary": "Find a hit Latin Pop song from around the early 2000s."
+    },
+    {
+      "sample_id": "cdd374ea-1ad9-4440-8c2d-4c76c5fb3f78::t3",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "gt": "Gib ihn einfach (Dies das 2) / Ghanaian Stallion",
+      "reason": "popularity_by_scene_query_gap",
+      "best_branch": null,
+      "best_rank": null,
+      "state_summary": "An old-school hip-hop track with a timeless, era-defining feeling; Damian Marley jamrock style is satisfied context."
+    },
+    {
+      "sample_id": "8dc4c630-8369-4720-b379-2a7dcd8d34aa::t7",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "gt": "Transcentience / Animals As Leaders",
+      "reason": "scene_subculture_or_genre_query_gap",
+      "best_branch": null,
+      "best_rank": null,
+      "state_summary": "Something that leans into orchestral or symphonic elements alongside technicality, similar to the experimental complexity found but now with a more melodic/atmospheric edge."
+    },
+    {
+      "sample_id": "9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4",
+      "pack": "P0_roleless_stale_entity_failure",
+      "gt": "The Carbon Stampede / Cattle Decapitation",
+      "reason": "visual_cover_art_source_gap",
+      "best_branch": "analysis.artist_tag_neighbor_popularity",
+      "best_rank": 201,
+      "state_summary": "Discover new/some more recent acts in the technical or progressive death metal scene that are pushing the envelope."
+    },
+    {
+      "sample_id": "67b9ba8a-382f-4b70-af76-576848d8cf67::t8",
+      "pack": "P1_temporal_constraint_failure",
+      "gt": "Gangsta Gangsta / N.W.A.",
+      "reason": "lyric_or_theme_source_gap",
+      "best_branch": "analysis.artist_tag_neighbor_popularity",
+      "best_rank": 875,
+      "state_summary": "Pure unfiltered raw aggressive track with dark intense gritty beats and horrorcore-influenced lyrics, late 90s/early 2000s East Coast underground style."
+    },
+    {
+      "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "gt": "Two To Make It Right / Seduction",
+      "reason": "popularity_by_scene_query_gap",
+      "best_branch": "analysis.artist_tag_neighbor_popularity",
+      "best_rank": 226,
+      "state_summary": "Other iconic 90s dance hits with similar energetic, dance-worthy feel to 'Finally'."
+    },
+    {
+      "sample_id": "88beb200-0334-4aba-be15-8e1303725766::t6",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "gt": "Used To / Lil Wayne, Drake",
+      "reason": "visual_cover_art_source_gap",
+      "best_branch": "analysis.query_text_tag_popularity",
+      "best_rank": 189,
+      "state_summary": "Popular hip-hop hits from late 2015 to early 2016 by artists other than Drake."
+    },
+    {
+      "sample_id": "9468e467-d396-461b-be29-b30b6cf87c35::t5",
+      "pack": "P1_temporal_constraint_failure",
+      "gt": "Midnight / A Tribe Called Quest",
+      "reason": "lyric_or_theme_source_gap",
+      "best_branch": null,
+      "best_rank": null,
+      "state_summary": "Other tracks like 'Blinded By The Lights' by The Streets, capturing its atmospheric, late-night, spoken-word storytelling style."
+    },
+    {
+      "sample_id": "c4c0c288-dbcd-4970-ad52-901aafe91b88::t4",
+      "pack": "P1_temporal_constraint_failure",
+      "gt": "I Juswanna Chill / Large Professor",
+      "reason": "visual_cover_art_source_gap",
+      "best_branch": null,
+      "best_rank": null,
+      "state_summary": "Other artists from the golden age with a jazzy hip-hop feel, preserving the underground 90s style."
+    }
+  ],
+  "recommendations": [
+    {
+      "decision": "keep",
+      "item": "query_text_tag_popularity diagnostic branch",
+      "why": "Measured additive full-OR lift +4 @20 and +5 @50 on the focused 110 without replacing protected baseline pools."
+    },
+    {
+      "decision": "keep",
+      "item": "catalog tag slash normalization",
+      "why": "Generic normalization for tags like R&B/Soul; covered by unit test and applies to all tag-popularity branches."
+    },
+    {
+      "decision": "defer",
+      "item": "productionizing query-text branch",
+      "why": "The measured implementation scans catalog rows; production should pre-index normalized tag/text terms or convert it to an indexed retriever."
+    },
+    {
+      "decision": "defer/new source",
+      "item": "visual/cover-art and lyric/theme classes",
+      "why": "Remaining @50 misses are dominated by visual_cover_art_source_gap=7 and lyric_or_theme_source_gap=5; existing tag/text branches do not express these well."
+    },
+    {
+      "decision": "defer/new source",
+      "item": "artist-neighbor/source graph for scene popularity",
+      "why": "Funk/disco and similar scene cases still miss because catalog tags are sparse or popularity prior ranks a nearby but not GT artist/track."
+    }
+  ]
+}

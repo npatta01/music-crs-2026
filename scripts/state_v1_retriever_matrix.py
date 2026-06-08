@@ -15,6 +15,7 @@ import argparse
 import copy
 import csv
 import json
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -333,6 +334,22 @@ VARIANTS: dict[str, Variant] = {
             "artist_tag_neighbor_popularity",
         ),
     ),
+    "query_text_tag_popularity": Variant(
+        "query_text_tag_popularity",
+        compiler_pools=False,
+        analysis_branches=("query_text_tag_popularity",),
+    ),
+    "all_synthetic_recall_v2": Variant(
+        "all_synthetic_recall_v2",
+        compiler_pools=False,
+        analysis_branches=(
+            "tag_popularity_alias",
+            "era_tag_popularity",
+            "same_album_fanout",
+            "artist_tag_neighbor_popularity",
+            "query_text_tag_popularity",
+        ),
+    ),
     "all_candidate_plus_synthetic": Variant(
         "all_candidate_plus_synthetic",
         dense_branches=(
@@ -353,6 +370,29 @@ VARIANTS: dict[str, Variant] = {
             "era_tag_popularity",
             "same_album_fanout",
             "artist_tag_neighbor_popularity",
+        ),
+    ),
+    "all_candidate_plus_synthetic_v2": Variant(
+        "all_candidate_plus_synthetic_v2",
+        dense_branches=(
+            DenseSpec(QWEN06_METADATA, "qwen_0_6b", "metadata"),
+            DenseSpec(QWEN06_METADATA, "qwen_0_6b", "intent"),
+            DenseSpec(QWEN06_ATTRIBUTES, "qwen_0_6b", "attributes_enriched"),
+            DenseSpec(QWEN8_METADATA, "qwen_8b", "metadata"),
+            DenseSpec(QWEN8_METADATA, "qwen_8b", "intent"),
+            DenseSpec(QWEN8_ATTRIBUTES, "qwen_8b", "attributes_enriched"),
+            DenseSpec(CLAP_AUDIO, "clap_text", "sonic"),
+            DenseSpec(CLAP_AUDIO, "clap_text", "sonic_nl"),
+            DenseSpec(CLAP_AUDIO, "clap_text", "sonic_nl_enriched"),
+        ),
+        centroid=True,
+        similar_artist_anchors=True,
+        analysis_branches=(
+            "tag_popularity_alias",
+            "era_tag_popularity",
+            "same_album_fanout",
+            "artist_tag_neighbor_popularity",
+            "query_text_tag_popularity",
         ),
     ),
 }
@@ -396,7 +436,10 @@ DEFAULT_VARIANTS = (
     "same_album_fanout",
     "artist_tag_neighbor_popularity",
     "all_synthetic_recall",
+    "query_text_tag_popularity",
+    "all_synthetic_recall_v2",
     "all_candidate_plus_synthetic",
+    "all_candidate_plus_synthetic_v2",
 )
 
 COMBINED_VARIANTS = {
@@ -415,6 +458,8 @@ COMBINED_VARIANTS = {
     "all_candidate_branch_rules",
     "all_synthetic_recall",
     "all_candidate_plus_synthetic",
+    "all_synthetic_recall_v2",
+    "all_candidate_plus_synthetic_v2",
 }
 
 
@@ -582,7 +627,73 @@ _TAG_ALIASES: dict[str, tuple[str, ...]] = {
     "alternative rock": ("alt rock", "alternative"),
     "classic": ("popular", "hit"),
     "popular": ("classic", "hit"),
+    "movie score": ("soundtrack", "score", "ost"),
+    "soundtrack": ("movie score", "score", "ost"),
+    "orchestral": ("orchestra", "orchestral epic", "classical"),
+    "christian": ("ccm", "christian music", "christian rock", "contemporary christian"),
+    "latin pop": ("latin", "pop"),
+    "funk carioca": ("brazilian funk", "baile funk", "funk"),
+    "tecno brega": ("technobrega", "brega", "pop"),
+    "pop punk": ("pop-punk", "punk-pop", "emo rock"),
+    "emo": ("emo rock", "pop-punk", "punk-pop"),
+    "technical death metal": ("death metal", "progressive metal", "metal"),
+    "progressive death metal": ("death metal", "progressive metal", "metal"),
+    "underground hip hop": ("underground hip-hop", "east coast hip hop", "hip-hop", "rap"),
+    "golden age hip hop": ("east coast hip hop", "classic hip-hop", "hip-hop", "rap"),
+    "country": ("new country", "rockin country", "country songs"),
+    "dance": ("Dance", "house", "freestyle mix"),
+    "disco": ("funk", "soul", "dance"),
+    "punk": ("classic punk", "hardcore punk", "proto-punk"),
 }
+
+
+_SCENE_TERM_ALIASES: dict[str, tuple[str, ...]] = {
+    "latin pop": ("latin pop", "latin", "pop"),
+    "latin": ("latin", "latin pop"),
+    "christian": ("christian", "ccm", "christian music", "christian rock", "contemporary christian"),
+    "encouraging": ("encouraging", "positive", "hopeful"),
+    "soundtrack": ("soundtrack", "movie score", "score", "ost"),
+    "movie score": ("movie score", "soundtrack", "score", "ost"),
+    "orchestral": ("orchestral", "orchestra", "orchestral epic", "classical"),
+    "epic": ("epic", "soundtrack", "trailer music"),
+    "country": ("country", "new country", "rockin country", "country songs"),
+    "pop punk": ("pop punk", "pop-punk", "punk-pop", "emo rock"),
+    "pop-punk": ("pop punk", "pop-punk", "punk-pop", "emo rock"),
+    "emo": ("emo", "emo rock", "pop-punk", "punk-pop"),
+    "punk": ("punk", "classic punk", "hardcore punk", "proto-punk"),
+    "proto punk": ("proto-punk", "classic punk", "punk"),
+    "hip hop": ("hip hop", "hip-hop", "rap"),
+    "hip-hop": ("hip hop", "hip-hop", "rap"),
+    "underground": ("underground hip-hop", "east coast hip hop"),
+    "east coast": ("east coast hip hop", "east coast rap", "new york rap"),
+    "golden age": ("classic hip-hop", "east coast hip hop", "hip-hop"),
+    "gangsta": ("gangsta", "gangsta rap attitude", "west coast hip hop"),
+    "technical": ("technical death metal", "progressive metal", "metal"),
+    "death metal": ("death metal", "technical death metal", "brutal death metal"),
+    "progressive metal": ("progressive metal", "technical death metal", "metal"),
+    "metal": ("metal", "Metal", "hard rock"),
+    "electronic": ("electronic", "Electronic", "synthpop", "synthwave"),
+    "cyberpunk": ("synthwave", "electronic", "soundtrack"),
+    "dance": ("dance", "Dance", "house", "freestyle mix"),
+    "disco": ("disco", "funk", "soul", "dance"),
+    "funk": ("funk", "Funk", "soul", "groovy"),
+    "r&b": ("r&b", "R&B/Soul", "soul", "pop rnb"),
+    "jazz": ("jazz", "Jazz", "hard bop", "avant-garde jazz"),
+    "rock": ("rock", "Rock", "alternative rock", "hard rock"),
+}
+
+
+_QUERY_TEXT_STOPWORDS = frozenset(
+    {
+        "a", "an", "and", "any", "are", "as", "but", "by", "can", "could",
+        "do", "else", "for", "from", "give", "have", "i", "in", "is", "it",
+        "like", "me", "more", "of", "or", "other", "play", "song", "songs",
+        "something", "that", "the", "this", "to", "track", "tracks", "what",
+        "with", "you",
+    }
+)
+
+_SOFT_YEAR_MATCH_WEIGHT = 8
 
 
 def _norm_term(value: str) -> str:
@@ -591,8 +702,15 @@ def _norm_term(value: str) -> str:
 
 def _expanded_tag_terms(tags: list[str]) -> set[str]:
     out: set[str] = set()
+    pending: list[str] = []
     for value in tags:
         term = _norm_term(value)
+        if not term:
+            continue
+        pending.append(term)
+        if "/" in term:
+            pending.extend(_norm_term(part) for part in term.split("/"))
+    for term in pending:
         if not term:
             continue
         out.add(term)
@@ -602,6 +720,70 @@ def _expanded_tag_terms(tags: list[str]) -> set[str]:
         for alias in _TAG_ALIASES.get(term, ()):
             out.add(_norm_term(alias))
     return {term for term in out if term}
+
+
+def _get_text_attr(obj: Any, name: str) -> str:
+    if obj is None:
+        return ""
+    if isinstance(obj, dict):
+        value = obj.get(name)
+    else:
+        value = getattr(obj, name, None)
+    return str(value).strip() if value else ""
+
+
+def _state_query_text(state: Any) -> str:
+    parts: list[str] = []
+    request = getattr(state, "current_request", None)
+    for value in (
+        getattr(state, "turn_intent", None),
+        _get_text_attr(request, "summary"),
+        _get_text_attr(request, "evidence_text"),
+        getattr(state, "lyrical_theme", None),
+    ):
+        if value:
+            parts.append(str(value))
+    for fact in getattr(state, "facts", []) or []:
+        fact_type = _enum_value(getattr(fact, "type", None))
+        relation = _enum_value(getattr(fact, "relation", None))
+        role = _enum_value(getattr(fact, "role", None))
+        if fact_type != "attribute" and relation not in {"query_facet", "exact_target"}:
+            continue
+        if role == "rejected":
+            continue
+        value = str(getattr(fact, "value", "") or "").strip()
+        if value:
+            parts.append(value)
+    seen: set[str] = set()
+    out: list[str] = []
+    for part in parts:
+        text = " ".join(part.split())
+        key = text.casefold()
+        if text and key not in seen:
+            seen.add(key)
+            out.append(text)
+    return "; ".join(out)
+
+
+def _scene_terms_from_text(text: str) -> set[str]:
+    norm = _norm_term(text)
+    out: set[str] = set()
+    for phrase, aliases in _SCENE_TERM_ALIASES.items():
+        if phrase in norm:
+            out.update(_norm_term(alias) for alias in aliases)
+
+    tokens = [
+        token
+        for token in re.findall(r"[a-z0-9&]+", norm)
+        if len(token) > 3 and token not in _QUERY_TEXT_STOPWORDS
+    ]
+    out.update(tokens)
+    for n in (2, 3):
+        for idx in range(len(tokens) - n + 1):
+            phrase = " ".join(tokens[idx : idx + n])
+            if any(key in phrase for key in _SCENE_TERM_ALIASES):
+                out.add(phrase)
+    return _expanded_tag_terms(sorted(out))
 
 
 def _popularity_rank_for_catalog(catalog: Any) -> dict[str, int]:
@@ -653,6 +835,64 @@ def _tag_popularity_pool(
     return BranchPool(
         name,
         [(track_id, float(n - idx)) for idx, (_overlap, _rank, track_id) in enumerate(scored[:topk])],
+    )
+
+
+def _year_match_bonus(release_range: Any | None, year: int | None) -> int:
+    if release_range is None or year is None:
+        return 0
+    lo = getattr(release_range, "start", None)
+    hi = getattr(release_range, "end", None)
+    if lo is None and hi is None:
+        return 0
+    if lo is not None and year < lo:
+        return -1
+    if hi is not None and year > hi:
+        return -1
+    return 1
+
+
+def _query_text_tag_popularity_pool(
+    catalog: Any,
+    *,
+    state: Any,
+    name: str,
+    topk: int = 1000,
+    exclude_artist_ids: set[str] | None = None,
+) -> BranchPool:
+    query_text = _state_query_text(state)
+    query_terms = _scene_terms_from_text(query_text)
+    if not query_terms:
+        return BranchPool(name, [])
+    pop_rank = _popularity_rank_for_catalog(catalog)
+    exclude_artist_ids = exclude_artist_ids or set()
+    release_range = getattr(state, "release_year_range", None)
+    scored: list[tuple[int, int, int, int, str]] = []
+    for track_id in catalog.all_track_ids():
+        if exclude_artist_ids:
+            artist_id = catalog.artist_id_of(track_id)
+            if artist_id in exclude_artist_ids:
+                continue
+        tag_terms = _expanded_tag_terms(catalog.tag_list(track_id))
+        text = _norm_term(catalog.track_text(track_id, max_tags=20))
+        overlap = query_terms & tag_terms
+        phrase_hits = {
+            term for term in query_terms if " " in term and term in text
+        }
+        if not overlap and not phrase_hits:
+            continue
+        tag_score = len(overlap) * 4 + len(phrase_hits) * 2
+        year_bonus = _year_match_bonus(release_range, catalog.release_year_of(track_id))
+        score = tag_score + year_bonus * _SOFT_YEAR_MATCH_WEIGHT
+        scored.append((score, tag_score, year_bonus, pop_rank.get(track_id, 10**9), track_id))
+    scored.sort(key=lambda item: (-item[0], -item[1], -item[2], item[3], item[4]))
+    n = min(topk, len(scored))
+    return BranchPool(
+        name,
+        [
+            (track_id, float(n - idx))
+            for idx, (_score, _tag_score, _year_bonus, _rank, track_id) in enumerate(scored[:topk])
+        ],
     )
 
 
@@ -768,6 +1008,17 @@ def _analysis_branch_pools(qu, rs, variant: Variant) -> list[BranchPool]:
             pools.append(_same_album_fanout_pool(qu, rs))
         elif branch == "artist_tag_neighbor_popularity":
             pools.append(_artist_tag_neighbor_pool(qu, rs))
+        elif branch == "query_text_tag_popularity":
+            target_mode = _enum_value(getattr(rs.state, "target_artist_mode", ""))
+            exclude_artists = _anchor_artist_ids(qu, rs) if target_mode == "new_artist" else set()
+            pools.append(
+                _query_text_tag_popularity_pool(
+                    qu.compiler.catalog,
+                    state=rs.state,
+                    name="analysis.query_text_tag_popularity",
+                    exclude_artist_ids=exclude_artists,
+                )
+            )
         else:
             raise KeyError(f"unknown analysis branch: {branch}")
     return pools
@@ -1313,6 +1564,15 @@ def _fmt(value: Any) -> str:
     return str(value)
 
 
+def _summary_metric(row: dict[str, Any], metric: str) -> Any:
+    value = row.get(metric)
+    if value is not None:
+        return value
+    if metric.startswith("union@"):
+        return row.get(f"additive_{metric}")
+    return None
+
+
 def _write_report(path: Path, payload: dict[str, Any]) -> None:
     lines = [
         "# State V1 Retriever Matrix",
@@ -1332,11 +1592,11 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
                 n=row["n"],
                 final20=_fmt(row.get("final@20")),
                 final50=_fmt(row.get("final@50")),
-                union20=_fmt(row.get("union@20")),
-                union50=_fmt(row.get("union@50")),
-                union100=_fmt(row.get("union@100")),
-                union200=_fmt(row.get("union@200")),
-                union1000=_fmt(row.get("union@1000")),
+                union20=_fmt(_summary_metric(row, "union@20")),
+                union50=_fmt(_summary_metric(row, "union@50")),
+                union100=_fmt(_summary_metric(row, "union@100")),
+                union200=_fmt(_summary_metric(row, "union@200")),
+                union1000=_fmt(_summary_metric(row, "union@1000")),
                 best50=_fmt(row.get("best_branch@50")),
             )
         )
