@@ -3631,6 +3631,274 @@
         "query": "More tracks where the album art is vibrant, energetic, and the music matches that vibe.; artwork really brings out the music's vibe. What else have you got that fits this awesome...",
         "what_should_change": "Improve turn-type routing and candidate generation: use listener_goal/current state, role-aware entities, tags, popularity, culture/CF affinity, and novelty profiles before spending effort only on final reranking."
       }
+    ],
+    "branch_family_evidence": [
+      {
+        "sample_id": "41367174-552b-4117-9caa-d0ba1b307d37::t2",
+        "source_family": "temporal_scene_constraint_missing",
+        "best_branch_family": "era_popularity",
+        "best_branch": "analysis.era_tag_popularity",
+        "best_rank": 239,
+        "best_rank_bucket": "missing_top100",
+        "families_present": [
+          "audio_anchor_centroid",
+          "bm25",
+          "era_popularity",
+          "tag_scene"
+        ]
+      },
+      {
+        "sample_id": "9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4",
+        "source_family": "visual_cover_text_to_image_missing",
+        "best_branch_family": "cf_anchor_centroid",
+        "best_branch": "centroid.anchor_tracks.cf_bpr",
+        "best_rank": 137,
+        "best_rank_bucket": "missing_top100",
+        "families_present": [
+          "artist_neighbor",
+          "audio_anchor_centroid",
+          "bm25",
+          "cf_anchor_centroid",
+          "clap_sonic_nl",
+          "clap_sonic_nl_enriched",
+          "era_popularity",
+          "qwen_attributes",
+          "qwen_attributes_enriched",
+          "qwen_intent",
+          "qwen_metadata",
+          "tag_scene"
+        ]
+      },
+      {
+        "sample_id": "5f29a9df-ad38-4349-a2f0-c9a690ea072d::t2",
+        "source_family": "scene_popularity_prior_missing",
+        "best_branch_family": null,
+        "best_branch": null,
+        "best_rank": null,
+        "best_rank_bucket": "absent",
+        "families_present": []
+      },
+      {
+        "sample_id": "78cdaccb-0f9b-4876-80b1-c20bf0b444e6::t8",
+        "source_family": "generic_source_or_query_missing",
+        "best_branch_family": "audio_anchor_centroid",
+        "best_branch": "centroid.anchor_tracks.audio_laion_clap",
+        "best_rank": 253,
+        "best_rank_bucket": "missing_top100",
+        "families_present": [
+          "artist_neighbor",
+          "audio_anchor_centroid"
+        ]
+      },
+      {
+        "sample_id": "88af7ec3-c368-421b-9512-d0180da3d1f6::t2",
+        "source_family": "lyric_hidden_target_query_or_source_missing",
+        "best_branch_family": null,
+        "best_branch": null,
+        "best_rank": null,
+        "best_rank_bucket": "absent",
+        "families_present": []
+      },
+      {
+        "sample_id": "d9a65836-7165-45bf-aa3e-3ef7ba5d073a::t2",
+        "source_family": "temporal_scene_constraint_missing",
+        "best_branch_family": "tag_scene",
+        "best_branch": "analysis.tag_popularity_alias",
+        "best_rank": 170,
+        "best_rank_bucket": "missing_top100",
+        "families_present": [
+          "bm25",
+          "clap_sonic_nl",
+          "clap_sonic_nl_enriched",
+          "qwen_intent",
+          "tag_scene"
+        ]
+      },
+      {
+        "sample_id": "88beb200-0334-4aba-be15-8e1303725766::t6",
+        "source_family": "temporal_scene_constraint_missing",
+        "best_branch_family": "tag_scene",
+        "best_branch": "analysis.query_text_tag_popularity",
+        "best_rank": 189,
+        "best_rank_bucket": "missing_top100",
+        "families_present": [
+          "clap_sonic",
+          "era_popularity",
+          "tag_scene"
+        ]
+      },
+      {
+        "sample_id": "8dc4c630-8369-4720-b379-2a7dcd8d34aa::t7",
+        "source_family": "novelty_artist_neighbor_source_missing",
+        "best_branch_family": "qwen_intent",
+        "best_branch": "dense.qwen_8b.intent.metadata_qwen3_embedding_8b",
+        "best_rank": 102,
+        "best_rank_bucket": "missing_top100",
+        "families_present": [
+          "qwen_intent",
+          "qwen_metadata"
+        ]
+      },
+      {
+        "sample_id": "380a5ed5-3eb9-4201-8fa6-81381a583bf5::t3",
+        "source_family": "novelty_artist_neighbor_source_missing",
+        "best_branch_family": "tag_scene",
+        "best_branch": "analysis.query_text_tag_popularity",
+        "best_rank": 547,
+        "best_rank_bucket": "missing_top100",
+        "families_present": [
+          "bm25",
+          "tag_scene"
+        ]
+      },
+      {
+        "sample_id": "cdd374ea-1ad9-4440-8c2d-4c76c5fb3f78::t3",
+        "source_family": "scene_popularity_prior_missing",
+        "best_branch_family": "qwen_attributes",
+        "best_branch": "dense.qwen_8b.attributes.attributes_qwen3_embedding_8b",
+        "best_rank": 101,
+        "best_rank_bucket": "missing_top100",
+        "families_present": [
+          "qwen_attributes",
+          "qwen_attributes_enriched"
+        ]
+      },
+      {
+        "sample_id": "15b1caf3-d1ed-46ef-a8e3-c9f7657e6b77::t6",
+        "source_family": "visual_cover_text_to_image_missing",
+        "best_branch_family": "qwen_attributes_enriched",
+        "best_branch": "dense.qwen_0_6b.attributes_enriched.attributes_qwen3_embedding_0_6b",
+        "best_rank": 332,
+        "best_rank_bucket": "missing_top100",
+        "families_present": [
+          "qwen_attributes",
+          "qwen_attributes_enriched"
+        ]
+      },
+      {
+        "sample_id": "907921a3-d08f-4ba1-8cce-0e760a9e7044::t7",
+        "source_family": "lyric_hidden_target_query_or_source_missing",
+        "best_branch_family": "cf_anchor_centroid",
+        "best_branch": "centroid.anchor_tracks.cf_bpr",
+        "best_rank": 296,
+        "best_rank_bucket": "missing_top100",
+        "families_present": [
+          "cf_anchor_centroid",
+          "clap_sonic",
+          "qwen_attributes",
+          "qwen_attributes_enriched"
+        ]
+      },
+      {
+        "sample_id": "324ddfb5-8a18-4729-9acb-c851907a297c::t3",
+        "source_family": "temporal_scene_constraint_missing",
+        "best_branch_family": "clap_sonic_nl",
+        "best_branch": "dense.clap_text.sonic_nl.audio_laion_clap",
+        "best_rank": 333,
+        "best_rank_bucket": "missing_top100",
+        "families_present": [
+          "artist_neighbor",
+          "audio_anchor_centroid",
+          "bm25",
+          "cf_anchor_centroid",
+          "clap_sonic_nl",
+          "clap_sonic_nl_enriched",
+          "qwen_attributes",
+          "qwen_attributes_enriched",
+          "qwen_intent",
+          "qwen_metadata",
+          "tag_scene"
+        ]
+      },
+      {
+        "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2",
+        "source_family": "temporal_scene_constraint_missing",
+        "best_branch_family": "audio_anchor_centroid",
+        "best_branch": "centroid.anchor_tracks.audio_laion_clap",
+        "best_rank": 183,
+        "best_rank_bucket": "missing_top100",
+        "families_present": [
+          "artist_neighbor",
+          "audio_anchor_centroid",
+          "bm25",
+          "clap_sonic",
+          "clap_sonic_nl",
+          "clap_sonic_nl_enriched",
+          "qwen_attributes",
+          "qwen_attributes_enriched"
+        ]
+      },
+      {
+        "sample_id": "67b9ba8a-382f-4b70-af76-576848d8cf67::t8",
+        "source_family": "lyric_hidden_target_query_or_source_missing",
+        "best_branch_family": "qwen_intent",
+        "best_branch": "dense.qwen_8b.intent.metadata_qwen3_embedding_8b",
+        "best_rank": 142,
+        "best_rank_bucket": "missing_top100",
+        "families_present": [
+          "artist_neighbor",
+          "bm25",
+          "image_anchor_centroid",
+          "qwen_intent",
+          "qwen_metadata"
+        ]
+      },
+      {
+        "sample_id": "9468e467-d396-461b-be29-b30b6cf87c35::t5",
+        "source_family": "lyric_hidden_target_query_or_source_missing",
+        "best_branch_family": "qwen_metadata",
+        "best_branch": "dense.qwen_8b.metadata.metadata_qwen3_embedding_8b",
+        "best_rank": 179,
+        "best_rank_bucket": "missing_top100",
+        "families_present": [
+          "bm25",
+          "qwen_intent",
+          "qwen_metadata"
+        ]
+      },
+      {
+        "sample_id": "e978bb5b-26af-4c7d-b720-b9210bdddf25::t8",
+        "source_family": "lyric_hidden_target_query_or_source_missing",
+        "best_branch_family": "qwen_attributes_enriched",
+        "best_branch": "dense.qwen_0_6b.attributes_enriched.attributes_qwen3_embedding_0_6b",
+        "best_rank": 447,
+        "best_rank_bucket": "missing_top100",
+        "families_present": [
+          "clap_sonic",
+          "clap_sonic_nl",
+          "clap_sonic_nl_enriched",
+          "qwen_attributes",
+          "qwen_attributes_enriched",
+          "qwen_metadata"
+        ]
+      },
+      {
+        "sample_id": "c4c0c288-dbcd-4970-ad52-901aafe91b88::t4",
+        "source_family": "temporal_scene_constraint_missing",
+        "best_branch_family": "qwen_intent",
+        "best_branch": "dense.qwen_8b.intent.metadata_qwen3_embedding_8b",
+        "best_rank": 228,
+        "best_rank_bucket": "missing_top100",
+        "families_present": [
+          "audio_anchor_centroid",
+          "cf_anchor_centroid",
+          "clap_sonic_nl",
+          "clap_sonic_nl_enriched",
+          "qwen_attributes",
+          "qwen_attributes_enriched",
+          "qwen_intent",
+          "qwen_metadata"
+        ]
+      },
+      {
+        "sample_id": "ad5348a7-d3bc-4882-bfca-54aa655eac96::t5",
+        "source_family": "visual_cover_text_to_image_missing",
+        "best_branch_family": null,
+        "best_branch": null,
+        "best_rank": null,
+        "best_rank_bucket": "absent",
+        "families_present": []
+      }
     ]
   },
   "gap_diagnostics": {

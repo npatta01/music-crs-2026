@@ -318,6 +318,58 @@ def _source_gap_summary(analysis_dir: Path) -> dict[str, Any]:
     }
 
 
+def _source_gap_branch_family_evidence(
+    *,
+    source_gap: dict[str, Any],
+    turn_meta: dict[str, dict[str, Any]],
+    pools_by_sample: dict[str, list[BranchPool]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for source_row in source_gap.get("rows", []):
+        sid = str(source_row.get("sample_id") or "")
+        if sid not in turn_meta:
+            continue
+        target = str(turn_meta[sid]["gt_track_id"])
+        best_by_family: dict[str, dict[str, Any]] = {}
+        for pool in pools_by_sample.get(sid, []):
+            rank = _rank_in_pool(pool, target)
+            if rank is None:
+                continue
+            family = _branch_family(pool.name)
+            previous = best_by_family.get(family)
+            if previous is None or rank < int(previous["rank"]):
+                best_by_family[family] = {"branch": pool.name, "rank": rank}
+        if best_by_family:
+            best_family, best = min(
+                best_by_family.items(),
+                key=lambda item: (int(item[1]["rank"]), item[0]),
+            )
+            rows.append(
+                {
+                    "sample_id": sid,
+                    "source_family": source_row.get("family"),
+                    "best_branch_family": best_family,
+                    "best_branch": best["branch"],
+                    "best_rank": int(best["rank"]),
+                    "best_rank_bucket": _rank_bucket(int(best["rank"])),
+                    "families_present": sorted(best_by_family),
+                }
+            )
+        else:
+            rows.append(
+                {
+                    "sample_id": sid,
+                    "source_family": source_row.get("family"),
+                    "best_branch_family": None,
+                    "best_branch": None,
+                    "best_rank": None,
+                    "best_rank_bucket": "absent",
+                    "families_present": [],
+                }
+            )
+    return rows
+
+
 def _resolve_matrix_path(raw: str | Path) -> Path:
     path = Path(raw)
     if path.is_absolute():
@@ -3422,6 +3474,32 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
                 "surface the GT high enough."
             ),
         }
+        family_next_changes = {
+            "temporal_scene_constraint_missing": (
+                "Sharpen scene/era query construction and score release-era compatibility "
+                "softly; avoid hard year filtering unless the user gives explicit dates."
+            ),
+            "visual_cover_text_to_image_missing": (
+                "Add or improve a visual text-to-image branch that turns artwork/cover "
+                "language into image-descriptor queries before candidate fusion."
+            ),
+            "scene_popularity_prior_missing": (
+                "Use satisfied-prior context plus scene/popularity features to create a "
+                "continuation branch; do not rely only on current literal text."
+            ),
+            "lyric_hidden_target_query_or_source_missing": (
+                "Create a lyric/theme/hidden-target branch or stronger lyric query source; "
+                "existing dense/tag branches are not surfacing these GTs."
+            ),
+            "novelty_artist_neighbor_source_missing": (
+                "Improve artist-neighbor seed selection and neighbor scoring for explicit "
+                "new/different-artist requests."
+            ),
+            "generic_source_or_query_missing": (
+                "Inspect the branch query and source coverage manually; current broad "
+                "sonic/style branches surface the GT only very deep."
+            ),
+        }
         for family, count in sorted(source_gap.get("family_counts", {}).items()):
             lines.append(
                 "| `{family}` | {count} | {read} |".format(
@@ -3448,7 +3526,10 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
                     gt=str(row.get("gt_track") or "")[:42],
                     artist=str(row.get("gt_artist") or "")[:28],
                     best=best,
-                    change=str(row.get("what_should_change") or "")[:130],
+                    change=family_next_changes.get(
+                        row.get("family"),
+                        "Audit source coverage and branch query construction for this row.",
+                    ),
                 )
             )
         lines.append(
@@ -3457,6 +3538,43 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
             "queries, visual text-to-image descriptions, and scene/era/popularity "
             "queries with soft temporal handling."
         )
+        branch_evidence = source_gap.get("branch_family_evidence") or []
+        if branch_evidence:
+            bucket_counts: Counter[tuple[str, str]] = Counter()
+            best_family_counts: Counter[tuple[str, str]] = Counter()
+            for row in branch_evidence:
+                source_family = str(row.get("source_family") or "unknown")
+                bucket_counts[(source_family, str(row.get("best_rank_bucket") or ""))] += 1
+                best_family = row.get("best_branch_family") or "absent"
+                best_family_counts[(source_family, str(best_family))] += 1
+            lines.extend([
+                "",
+                "### Existing Branch Evidence For Source Gaps",
+                "",
+                "| source family | best-rank buckets | best branch families |",
+                "|---|---|---|",
+            ])
+            source_families = sorted({row.get("source_family") for row in branch_evidence})
+            for source_family in source_families:
+                if not source_family:
+                    continue
+                buckets = ", ".join(
+                    f"{bucket}:{count}"
+                    for (family, bucket), count in sorted(bucket_counts.items())
+                    if family == source_family
+                )
+                families = ", ".join(
+                    f"{family}:{count}"
+                    for (sfamily, family), count in best_family_counts.most_common()
+                    if sfamily == source_family
+                )
+                lines.append(f"| `{source_family}` | {buckets} | {families} |")
+            lines.append(
+                "\nBranch-evidence read: when residual GTs are only present at "
+                "rank101+ or absent, stronger final-list selection cannot fix them. "
+                "The work should either sharpen that branch query or add a source "
+                "that makes the GT appear in a smaller candidate pool."
+            )
 
     lines.extend([
         "",
@@ -4057,6 +4175,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "the small absent-from-deep-pools slice should trigger a true new-source "
         "goal."
     )
+    source_gap = _source_gap_summary(args.output_json.parent)
+    source_gap["branch_family_evidence"] = _source_gap_branch_family_evidence(
+        source_gap=source_gap,
+        turn_meta=turn_meta,
+        pools_by_sample=all_on_pools,
+    )
+
     payload: dict[str, Any] = {
         "scope": {
             "state_prompt_schema": "frozen",
@@ -4079,7 +4204,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "branch_local_rescue_scorer_diagnostics": branch_local_rescue_scorer_diagnostics,
         "branch_survivor_proxy": branch_survivor_proxy,
         "learned_listwise_proxy": learned_listwise_proxy,
-        "source_gap": _source_gap_summary(args.output_json.parent),
+        "source_gap": source_gap,
         "gap_diagnostics": gap_diagnostics,
         "noise_examples": noise_examples,
         "per_class": _per_class_metrics(

@@ -27,6 +27,7 @@ from scripts.state_v1_candidate_quality_matrix import (
     _rank_pool_with_features,
     _state_requests_recent_releases,
     _rrf_fuse_pool_ids,
+    _source_gap_branch_family_evidence,
     _source_gap_summary,
     _state_family_weights,
     _state_weighted_fuse_pool_ids,
@@ -82,6 +83,41 @@ def test_source_gap_summary_loads_compact_rows(tmp_path):
     }
     assert summary["rows"][0]["sample_id"] == "s::t1"
     assert summary["rows"][0]["best_rank"] == 42
+
+
+def test_source_gap_branch_family_evidence_reports_best_family_and_absent():
+    source_gap = {
+        "rows": [
+            {"sample_id": "a", "family": "lyric_hidden_target_query_or_source_missing"},
+            {"sample_id": "b", "family": "visual_cover_text_to_image_missing"},
+        ]
+    }
+    turn_meta = {
+        "a": {"gt_track_id": "ta"},
+        "b": {"gt_track_id": "tb"},
+    }
+    pools = {
+        "a": [
+            BranchPool("bm25", [("x", 1.0), ("ta", 0.5)]),
+            BranchPool("dense.qwen_8b.intent.metadata_qwen3_embedding_8b", [("ta", 1.0)]),
+        ],
+        "b": [BranchPool("bm25", [("x", 1.0)])],
+    }
+
+    rows = _source_gap_branch_family_evidence(
+        source_gap=source_gap,
+        turn_meta=turn_meta,
+        pools_by_sample=pools,
+    )
+
+    assert rows[0]["sample_id"] == "a"
+    assert rows[0]["best_branch_family"] == "qwen_intent"
+    assert rows[0]["best_rank"] == 1
+    assert rows[0]["best_rank_bucket"] == "rank_top20"
+    assert rows[0]["families_present"] == ["bm25", "qwen_intent"]
+    assert rows[1]["sample_id"] == "b"
+    assert rows[1]["best_branch_family"] is None
+    assert rows[1]["best_rank_bucket"] == "absent"
 
 
 def test_metrics_for_subset_reports_all_and_valid_only_counts():

@@ -294,18 +294,31 @@ This worksheet is the compact residual after current + targeted branches. It sep
 
 | sample | family | GT | best branch/rank | next change |
 |---|---|---|---|---|
-| `41367174-552b-4117-9caa-d0ba1b307d37::t2` | `temporal_scene_constraint_missing` | Mercy by Muse | `analysis.era_tag_popularity` #239 | Keep prior entities as history/context, but decay or remove them from current anchors unless the user re-mentions them. The resolv |
-| `9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4` | `visual_cover_text_to_image_missing` | The Carbon Stampede by Cattle Decapitation | `centroid.anchor_tracks.cf_bpr` #137 | Add a deterministic post-final rejection filter/assertion over rejected track IDs, artist IDs, and normalized multi-artist names.  |
-| `5f29a9df-ad38-4349-a2f0-c9a690ea072d::t2` | `scene_popularity_prior_missing` | Shaft by Kashmere Stage Band | absent | Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit da |
-| `78cdaccb-0f9b-4876-80b1-c20bf0b444e6::t8` | `generic_source_or_query_missing` | In the Shadows by The Rasmus | `centroid.anchor_tracks.audio_laion_clap` #253 | Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history a |
-| `88af7ec3-c368-421b-9512-d0180da3d1f6::t2` | `lyric_hidden_target_query_or_source_missing` | I Believe in a Thing Called Love by The Darkness | absent | Keep prior entities as history/context, but decay or remove them from current anchors unless the user re-mentions them. The resolv |
-| `d9a65836-7165-45bf-aa3e-3ef7ba5d073a::t2` | `temporal_scene_constraint_missing` | Move Along by The All-American Rejects | `analysis.tag_popularity_alias` #170 | Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit da |
-| `88beb200-0334-4aba-be15-8e1303725766::t6` | `temporal_scene_constraint_missing` | Used To by Lil Wayne, Drake | `analysis.query_text_tag_popularity` #189 | Add a deterministic post-final rejection filter/assertion over rejected track IDs, artist IDs, and normalized multi-artist names.  |
-| `8dc4c630-8369-4720-b379-2a7dcd8d34aa::t7` | `novelty_artist_neighbor_source_missing` | Transcentience by Animals As Leaders | `dense.qwen_8b.intent.metadata_qwen3_embedding_8b` #102 | Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history a |
-| `380a5ed5-3eb9-4201-8fa6-81381a583bf5::t3` | `novelty_artist_neighbor_source_missing` | God Hates a Coward by Tomahawk | `analysis.query_text_tag_popularity` #547 | Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history a |
-| `cdd374ea-1ad9-4440-8c2d-4c76c5fb3f78::t3` | `scene_popularity_prior_missing` | Gib ihn einfach (Dies das 2) by Ghanaian Stallion | `dense.qwen_8b.attributes.attributes_qwen3_embedding_8b` #101 | Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history a |
+| `41367174-552b-4117-9caa-d0ba1b307d37::t2` | `temporal_scene_constraint_missing` | Mercy by Muse | `analysis.era_tag_popularity` #239 | Sharpen scene/era query construction and score release-era compatibility softly; avoid hard year filtering unless the user gives explicit dates. |
+| `9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4` | `visual_cover_text_to_image_missing` | The Carbon Stampede by Cattle Decapitation | `centroid.anchor_tracks.cf_bpr` #137 | Add or improve a visual text-to-image branch that turns artwork/cover language into image-descriptor queries before candidate fusion. |
+| `5f29a9df-ad38-4349-a2f0-c9a690ea072d::t2` | `scene_popularity_prior_missing` | Shaft by Kashmere Stage Band | absent | Use satisfied-prior context plus scene/popularity features to create a continuation branch; do not rely only on current literal text. |
+| `78cdaccb-0f9b-4876-80b1-c20bf0b444e6::t8` | `generic_source_or_query_missing` | In the Shadows by The Rasmus | `centroid.anchor_tracks.audio_laion_clap` #253 | Inspect the branch query and source coverage manually; current broad sonic/style branches surface the GT only very deep. |
+| `88af7ec3-c368-421b-9512-d0180da3d1f6::t2` | `lyric_hidden_target_query_or_source_missing` | I Believe in a Thing Called Love by The Darkness | absent | Create a lyric/theme/hidden-target branch or stronger lyric query source; existing dense/tag branches are not surfacing these GTs. |
+| `d9a65836-7165-45bf-aa3e-3ef7ba5d073a::t2` | `temporal_scene_constraint_missing` | Move Along by The All-American Rejects | `analysis.tag_popularity_alias` #170 | Sharpen scene/era query construction and score release-era compatibility softly; avoid hard year filtering unless the user gives explicit dates. |
+| `88beb200-0334-4aba-be15-8e1303725766::t6` | `temporal_scene_constraint_missing` | Used To by Lil Wayne, Drake | `analysis.query_text_tag_popularity` #189 | Sharpen scene/era query construction and score release-era compatibility softly; avoid hard year filtering unless the user gives explicit dates. |
+| `8dc4c630-8369-4720-b379-2a7dcd8d34aa::t7` | `novelty_artist_neighbor_source_missing` | Transcentience by Animals As Leaders | `dense.qwen_8b.intent.metadata_qwen3_embedding_8b` #102 | Improve artist-neighbor seed selection and neighbor scoring for explicit new/different-artist requests. |
+| `380a5ed5-3eb9-4201-8fa6-81381a583bf5::t3` | `novelty_artist_neighbor_source_missing` | God Hates a Coward by Tomahawk | `analysis.query_text_tag_popularity` #547 | Improve artist-neighbor seed selection and neighbor scoring for explicit new/different-artist requests. |
+| `cdd374ea-1ad9-4440-8c2d-4c76c5fb3f78::t3` | `scene_popularity_prior_missing` | Gib ihn einfach (Dies das 2) by Ghanaian Stallion | `dense.qwen_8b.attributes.attributes_qwen3_embedding_8b` #101 | Use satisfied-prior context plus scene/popularity features to create a continuation branch; do not rely only on current literal text. |
 
 Source-gap read: most rows are not solved by another scalar scorer. The narrow candidates for new or sharper branches are lyric/hidden-target queries, visual text-to-image descriptions, and scene/era/popularity queries with soft temporal handling.
+
+### Existing Branch Evidence For Source Gaps
+
+| source family | best-rank buckets | best branch families |
+|---|---|---|
+| `generic_source_or_query_missing` | missing_top100:1 | audio_anchor_centroid:1 |
+| `lyric_hidden_target_query_or_source_missing` | absent:1, missing_top100:4 | absent:1, cf_anchor_centroid:1, qwen_intent:1, qwen_metadata:1, qwen_attributes_enriched:1 |
+| `novelty_artist_neighbor_source_missing` | missing_top100:2 | qwen_intent:1, tag_scene:1 |
+| `scene_popularity_prior_missing` | absent:1, missing_top100:1 | absent:1, qwen_attributes:1 |
+| `temporal_scene_constraint_missing` | missing_top100:6 | tag_scene:2, era_popularity:1, clap_sonic_nl:1, audio_anchor_centroid:1, qwen_intent:1 |
+| `visual_cover_text_to_image_missing` | absent:1, missing_top100:2 | cf_anchor_centroid:1, qwen_attributes_enriched:1, absent:1 |
+
+Branch-evidence read: when residual GTs are only present at rank101+ or absent, stronger final-list selection cannot fix them. The work should either sharpen that branch query or add a source that makes the GT appear in a smaller candidate pool.
 
 ## Gap Reason By Slice
 
