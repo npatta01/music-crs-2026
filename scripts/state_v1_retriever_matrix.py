@@ -17,6 +17,7 @@ import csv
 import json
 import re
 import sys
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -94,6 +95,7 @@ QWEN06_ATTRIBUTES = "attributes_qwen3_embedding_0_6b"
 QWEN8_METADATA = "metadata_qwen3_embedding_8b"
 QWEN8_ATTRIBUTES = "attributes_qwen3_embedding_8b"
 CLAP_AUDIO = "audio_laion_clap"
+SIGLIP_IMAGE = "image_siglip2"
 
 
 VARIANTS: dict[str, Variant] = {
@@ -123,7 +125,7 @@ VARIANTS: dict[str, Variant] = {
     "centroid_image": Variant(
         "centroid_image",
         centroid=True,
-        centroid_fields=("image_siglip2",),
+        centroid_fields=(SIGLIP_IMAGE,),
     ),
     "centroid_cf": Variant(
         "centroid_cf",
@@ -168,6 +170,10 @@ VARIANTS: dict[str, Variant] = {
         ),
         centroid=True,
         similar_artist_anchors=True,
+    ),
+    "siglip_visual": Variant(
+        "siglip_visual",
+        dense_branches=(DenseSpec(SIGLIP_IMAGE, "siglip2_text", "visual"),),
     ),
     "qwen06_metadata": Variant(
         "qwen06_metadata",
@@ -339,6 +345,21 @@ VARIANTS: dict[str, Variant] = {
         compiler_pools=False,
         analysis_branches=("query_text_tag_popularity",),
     ),
+    "scene_era_tag_popularity_v2": Variant(
+        "scene_era_tag_popularity_v2",
+        compiler_pools=False,
+        analysis_branches=("scene_era_tag_popularity_v2",),
+    ),
+    "artist_neighbor_scene_v2": Variant(
+        "artist_neighbor_scene_v2",
+        compiler_pools=False,
+        analysis_branches=("artist_neighbor_scene_v2",),
+    ),
+    "artist_neighbor_scene_weighted_v3": Variant(
+        "artist_neighbor_scene_weighted_v3",
+        compiler_pools=False,
+        analysis_branches=("artist_neighbor_scene_weighted_v3",),
+    ),
     "all_synthetic_recall_v2": Variant(
         "all_synthetic_recall_v2",
         compiler_pools=False,
@@ -421,6 +442,35 @@ VARIANTS: dict[str, Variant] = {
             "query_text_tag_popularity",
         ),
     ),
+    "all_candidate_plus_targeted_v4": Variant(
+        "all_candidate_plus_targeted_v4",
+        dense_branches=(
+            DenseSpec(QWEN06_METADATA, "qwen_0_6b", "metadata"),
+            DenseSpec(QWEN06_METADATA, "qwen_0_6b", "intent"),
+            DenseSpec(QWEN06_ATTRIBUTES, "qwen_0_6b", "attributes"),
+            DenseSpec(QWEN06_ATTRIBUTES, "qwen_0_6b", "attributes_enriched"),
+            DenseSpec("lyrics_qwen3_embedding_0_6b", "qwen_0_6b", "lyric"),
+            DenseSpec(QWEN8_METADATA, "qwen_8b", "metadata"),
+            DenseSpec(QWEN8_METADATA, "qwen_8b", "intent"),
+            DenseSpec(QWEN8_ATTRIBUTES, "qwen_8b", "attributes"),
+            DenseSpec(QWEN8_ATTRIBUTES, "qwen_8b", "attributes_enriched"),
+            DenseSpec(CLAP_AUDIO, "clap_text", "sonic"),
+            DenseSpec(CLAP_AUDIO, "clap_text", "sonic_nl"),
+            DenseSpec(CLAP_AUDIO, "clap_text", "sonic_nl_enriched"),
+            DenseSpec(SIGLIP_IMAGE, "siglip2_text", "visual"),
+        ),
+        centroid=True,
+        similar_artist_anchors=True,
+        analysis_branches=(
+            "tag_popularity_alias",
+            "era_tag_popularity",
+            "same_album_fanout",
+            "artist_tag_neighbor_popularity",
+            "query_text_tag_popularity",
+            "scene_era_tag_popularity_v2",
+            "artist_neighbor_scene_v2",
+        ),
+    ),
 }
 
 
@@ -441,6 +491,7 @@ DEFAULT_VARIANTS = (
     "clap_sonic_nl_enriched",
     "clap_all",
     "clap_centroid",
+    "siglip_visual",
     "qwen06_metadata",
     "qwen06_metadata_intent",
     "qwen06_attributes",
@@ -464,9 +515,12 @@ DEFAULT_VARIANTS = (
     "all_synthetic_recall",
     "query_text_tag_popularity",
     "all_synthetic_recall_v2",
+    "scene_era_tag_popularity_v2",
+    "artist_neighbor_scene_v2",
     "all_candidate_plus_synthetic",
     "all_candidate_plus_synthetic_v2",
     "all_candidate_plus_synthetic_v3",
+    "all_candidate_plus_targeted_v4",
 )
 
 COMBINED_VARIANTS = {
@@ -488,6 +542,7 @@ COMBINED_VARIANTS = {
     "all_synthetic_recall_v2",
     "all_candidate_plus_synthetic_v2",
     "all_candidate_plus_synthetic_v3",
+    "all_candidate_plus_targeted_v4",
 }
 
 
@@ -966,11 +1021,20 @@ _TAG_ALIASES: dict[str, tuple[str, ...]] = {
     "technical death metal": ("death metal", "progressive metal", "metal"),
     "progressive death metal": ("death metal", "progressive metal", "metal"),
     "underground hip hop": ("underground hip-hop", "east coast hip hop", "hip-hop", "rap"),
+    "underground hip-hop": ("underground hip hop", "east coast hip hop", "hip-hop", "rap"),
     "golden age hip hop": ("east coast hip hop", "classic hip-hop", "hip-hop", "rap"),
+    "east coast rap": ("east coast hip hop", "new york rap", "hip-hop", "rap"),
+    "jazz hop": ("jazz rap", "jazz-hop", "hip hop", "hip-hop"),
+    "jazz rap": ("jazz hop", "jazz-hop", "hip hop", "hip-hop"),
     "country": ("new country", "rockin country", "country songs"),
     "dance": ("Dance", "house", "freestyle mix"),
+    "freestyle": ("freestyle mix", "dance", "house"),
+    "freestyle mix": ("freestyle", "dance", "house"),
     "disco": ("funk", "soul", "dance"),
     "punk": ("classic punk", "hardcore punk", "proto-punk"),
+    "vaporwave": ("cityvapor", "electronic", "late night lo-fi"),
+    "cityvapor": ("vaporwave", "electronic", "late night lo-fi"),
+    "experimental": ("avant-garde", "strange", "alternative rock", "progressive metal"),
 }
 
 
@@ -1006,7 +1070,16 @@ _SCENE_TERM_ALIASES: dict[str, tuple[str, ...]] = {
     "funk": ("funk", "Funk", "soul", "groovy"),
     "r&b": ("r&b", "R&B/Soul", "soul", "pop rnb"),
     "jazz": ("jazz", "Jazz", "hard bop", "avant-garde jazz"),
+    "jazzy": ("jazz", "jazz hop", "jazz rap", "jazz-hop"),
+    "jazz hop": ("jazz rap", "jazz-hop", "hip hop", "hip-hop"),
+    "jazz rap": ("jazz hop", "jazz-hop", "hip hop", "hip-hop"),
     "rock": ("rock", "Rock", "alternative rock", "hard rock"),
+    "guitar riff": ("rock", "alternative rock", "hard rock"),
+    "freestyle": ("freestyle mix", "dance", "house"),
+    "freestyle mix": ("freestyle", "dance", "house"),
+    "vaporwave": ("vaporwave", "cityvapor", "electronic", "late night lo-fi"),
+    "lo-fi": ("lo-fi", "late night lo-fi", "vaporwave"),
+    "avant-garde": ("experimental", "strange", "alternative rock", "progressive metal"),
 }
 
 
@@ -1223,6 +1296,80 @@ def _query_text_tag_popularity_pool(
     )
 
 
+_GENERIC_SCENE_TERMS = {
+    "alternative",
+    "dance",
+    "electronic",
+    "hip hop",
+    "hip-hop",
+    "metal",
+    "pop",
+    "rap",
+    "rock",
+}
+
+
+def _scene_term_weight(term: str) -> int:
+    if term in _GENERIC_SCENE_TERMS:
+        return 2
+    if " " in term or "-" in term or "&" in term:
+        return 8
+    return 4
+
+
+def _scene_era_tag_popularity_v2_pool(
+    catalog: Any,
+    *,
+    state: Any,
+    name: str,
+    topk: int = 1000,
+    exclude_artist_ids: set[str] | None = None,
+    extra_terms: set[str] | None = None,
+) -> BranchPool:
+    query_terms = _scene_terms_from_text(_state_query_text(state))
+    if extra_terms:
+        query_terms |= _expanded_tag_terms(sorted(extra_terms))
+    query_terms = {term for term in query_terms if term}
+    if not query_terms:
+        return BranchPool(name, [])
+
+    pop_rank = _popularity_rank_for_catalog(catalog)
+    exclude_artist_ids = exclude_artist_ids or set()
+    release_range = getattr(state, "release_year_range", None)
+    scored: list[tuple[int, int, int, int, str]] = []
+    for track_id in catalog.all_track_ids():
+        if exclude_artist_ids:
+            artist_id = catalog.artist_id_of(track_id)
+            if artist_id in exclude_artist_ids:
+                continue
+
+        tag_terms = _expanded_tag_terms(catalog.tag_list(track_id))
+        text = _norm_term(catalog.track_text(track_id, max_tags=40))
+        overlap = query_terms & tag_terms
+        phrase_hits = {
+            term for term in query_terms if " " in term and term in text
+        }
+        if not overlap and not phrase_hits:
+            continue
+
+        term_score = sum(_scene_term_weight(term) for term in overlap)
+        phrase_score = sum(_scene_term_weight(term) for term in phrase_hits)
+        specificity_bonus = 5 if len(overlap | phrase_hits) >= 2 else 0
+        year_bonus = _year_match_bonus(release_range, catalog.release_year_of(track_id))
+        score = term_score + phrase_score + specificity_bonus + year_bonus * 5
+        scored.append((score, term_score + phrase_score, year_bonus, pop_rank.get(track_id, 10**9), track_id))
+
+    scored.sort(key=lambda item: (-item[0], -item[1], -item[2], item[3], item[4]))
+    n = min(topk, len(scored))
+    return BranchPool(
+        name,
+        [
+            (track_id, float(n - idx))
+            for idx, (_score, _term_score, _year_bonus, _rank, track_id) in enumerate(scored[:topk])
+        ],
+    )
+
+
 def _state_positive_tags(qu, rs, *, include_anchor_tags: bool = True) -> list[str]:
     tags = list(qu.compiler._positive_mention_values(rs.state, "tag"))
     if include_anchor_tags:
@@ -1301,6 +1448,127 @@ def _artist_tag_neighbor_pool(qu, rs, *, topk: int = 1000) -> BranchPool:
     )
 
 
+def _artist_neighbor_scene_v2_pool(qu, rs, *, topk: int = 1000) -> BranchPool:
+    artist_ids: list[str] = []
+    seen_artists: set[str] = set()
+    for target in getattr(rs, "resolved_targets", []) or []:
+        if getattr(target, "kind", None) != "artist":
+            continue
+        artist_id = getattr(target, "entity_id", None)
+        if artist_id and artist_id not in seen_artists:
+            seen_artists.add(artist_id)
+            artist_ids.append(artist_id)
+    for track_id in qu.compiler._anchor_track_ids(rs.state):
+        artist_id = qu.compiler.catalog.artist_id_of(track_id)
+        if artist_id and artist_id not in seen_artists:
+            seen_artists.add(artist_id)
+            artist_ids.append(artist_id)
+
+    if not artist_ids:
+        return BranchPool("analysis.artist_neighbor_scene_v2", [])
+
+    pop_rank = qu.compiler._popularity_rank()
+    artist_terms: set[str] = set()
+    for artist_id in artist_ids[:6]:
+        tracks = sorted(
+            qu.compiler.catalog.tracks_by_artist_id(artist_id),
+            key=lambda tid: pop_rank.get(tid, 10**9),
+        )[:25]
+        for track_id in tracks:
+            artist_terms.update(_expanded_tag_terms(qu.compiler.catalog.tag_list(track_id)))
+
+    target_mode = _enum_value(getattr(rs.state, "target_artist_mode", ""))
+    exclude_artists = set(artist_ids) if target_mode == "new_artist" else set()
+    return _scene_era_tag_popularity_v2_pool(
+        qu.compiler.catalog,
+        state=rs.state,
+        name="analysis.artist_neighbor_scene_v2",
+        topk=topk,
+        exclude_artist_ids=exclude_artists,
+        extra_terms=artist_terms,
+    )
+
+
+def _artist_ids_from_resolved_and_anchors(qu, rs) -> list[str]:
+    artist_ids: list[str] = []
+    seen_artists: set[str] = set()
+    for target in getattr(rs, "resolved_targets", []) or []:
+        if getattr(target, "kind", None) != "artist":
+            continue
+        artist_id = getattr(target, "entity_id", None)
+        if artist_id and artist_id not in seen_artists:
+            seen_artists.add(artist_id)
+            artist_ids.append(artist_id)
+    for track_id in qu.compiler._anchor_track_ids(rs.state):
+        artist_id = qu.compiler.catalog.artist_id_of(track_id)
+        if artist_id and artist_id not in seen_artists:
+            seen_artists.add(artist_id)
+            artist_ids.append(artist_id)
+    return artist_ids
+
+
+def _artist_neighbor_scene_weighted_v3_pool(qu, rs, *, topk: int = 1000) -> BranchPool:
+    artist_ids = _artist_ids_from_resolved_and_anchors(qu, rs)
+    if not artist_ids:
+        return BranchPool("analysis.artist_neighbor_scene_weighted_v3", [])
+
+    pop_rank = qu.compiler._popularity_rank()
+    anchor_counter: Counter[str] = Counter()
+    for artist_id in artist_ids[:6]:
+        tracks = sorted(
+            qu.compiler.catalog.tracks_by_artist_id(artist_id),
+            key=lambda tid: pop_rank.get(tid, 10**9),
+        )[:25]
+        for track_id in tracks:
+            anchor_counter.update(_expanded_tag_terms(qu.compiler.catalog.tag_list(track_id)))
+    if not anchor_counter:
+        return BranchPool("analysis.artist_neighbor_scene_weighted_v3", [])
+
+    state_terms = _scene_terms_from_text(_state_query_text(rs.state))
+    target_mode = _enum_value(getattr(rs.state, "target_artist_mode", ""))
+    exclude_artists = set(artist_ids) if target_mode == "new_artist" else set()
+    anchor_track_ids = set(qu.compiler._anchor_track_ids(rs.state))
+    release_range = getattr(rs.state, "release_year_range", None)
+    scored: list[tuple[int, int, int, int, str]] = []
+    for track_id in qu.compiler.catalog.all_track_ids():
+        if track_id in anchor_track_ids:
+            continue
+        if exclude_artists:
+            artist_id = qu.compiler.catalog.artist_id_of(track_id)
+            if artist_id in exclude_artists:
+                continue
+        tag_terms = _expanded_tag_terms(qu.compiler.catalog.tag_list(track_id))
+        anchor_overlap = tag_terms & set(anchor_counter)
+        state_overlap = tag_terms & state_terms
+        if not anchor_overlap and not state_overlap:
+            continue
+
+        anchor_score = sum(
+            min(anchor_counter[term], 8) * _scene_term_weight(term)
+            for term in anchor_overlap
+        )
+        state_score = sum(_scene_term_weight(term) for term in state_overlap)
+        specific_overlap = {
+            term
+            for term in anchor_overlap | state_overlap
+            if term not in _GENERIC_SCENE_TERMS
+        }
+        specificity_bonus = 8 if len(specific_overlap) >= 2 else 0
+        year_bonus = _year_match_bonus(release_range, qu.compiler.catalog.release_year_of(track_id))
+        score = anchor_score + state_score + specificity_bonus + year_bonus * 3
+        scored.append((score, anchor_score + state_score, year_bonus, pop_rank.get(track_id, 10**9), track_id))
+
+    scored.sort(key=lambda item: (-item[0], -item[1], -item[2], item[3], item[4]))
+    n = min(topk, len(scored))
+    return BranchPool(
+        "analysis.artist_neighbor_scene_weighted_v3",
+        [
+            (track_id, float(n - idx))
+            for idx, (_score, _term_score, _year_bonus, _rank, track_id) in enumerate(scored[:topk])
+        ],
+    )
+
+
 def _analysis_branch_pools(qu, rs, variant: Variant) -> list[BranchPool]:
     pools: list[BranchPool] = []
     for branch in variant.analysis_branches:
@@ -1346,6 +1614,21 @@ def _analysis_branch_pools(qu, rs, variant: Variant) -> list[BranchPool]:
                     exclude_artist_ids=exclude_artists,
                 )
             )
+        elif branch == "scene_era_tag_popularity_v2":
+            target_mode = _enum_value(getattr(rs.state, "target_artist_mode", ""))
+            exclude_artists = _anchor_artist_ids(qu, rs) if target_mode == "new_artist" else set()
+            pools.append(
+                _scene_era_tag_popularity_v2_pool(
+                    qu.compiler.catalog,
+                    state=rs.state,
+                    name="analysis.scene_era_tag_popularity_v2",
+                    exclude_artist_ids=exclude_artists,
+                )
+            )
+        elif branch == "artist_neighbor_scene_v2":
+            pools.append(_artist_neighbor_scene_v2_pool(qu, rs))
+        elif branch == "artist_neighbor_scene_weighted_v3":
+            pools.append(_artist_neighbor_scene_weighted_v3_pool(qu, rs))
         else:
             raise KeyError(f"unknown analysis branch: {branch}")
     return pools
@@ -1364,7 +1647,7 @@ def _variant_qu_kwargs(
     # every vector column for every matrix variant can exhaust a laptop.
     centroid_fields = list(variant.centroid_fields)
     if variant.centroid and not centroid_fields:
-        centroid_fields = [CLAP_AUDIO, "image_siglip2", "cf_bpr"]
+        centroid_fields = [CLAP_AUDIO, SIGLIP_IMAGE, "cf_bpr"]
     eager_vector_fields: list[str] = []
     if variant.use_base_config:
         for branch in qu_kwargs.get("compiler", {}).get("centroid_only_branches", []):
@@ -1376,7 +1659,13 @@ def _variant_qu_kwargs(
     qu_kwargs["lancedb"]["eager_vector_fields"] = eager_vector_fields
 
     # Avoid instantiating unused remote encoder clients in each variant.
-    base_encoders = dict(base_qu_kwargs.get("encoders") or {})
+    base_encoders = copy.deepcopy(dict(base_qu_kwargs.get("encoders") or {}))
+    if "siglip2_text" not in base_encoders and "clap_text" in base_encoders:
+        clap_cfg = base_encoders["clap_text"]
+        if clap_cfg.get("backend") == "modal_multimodal":
+            siglip_cfg = copy.deepcopy(clap_cfg)
+            siglip_cfg["method"] = "embed_siglip_text"
+            base_encoders["siglip2_text"] = siglip_cfg
     if variant.use_base_config:
         needed_encoder_ids = {
             branch.get("encoder_id")

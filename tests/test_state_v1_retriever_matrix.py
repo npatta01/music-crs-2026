@@ -10,6 +10,7 @@ from scripts.state_v1_retriever_matrix import (
     VARIANTS,
     _additive_metrics_for_pools,
     _all_on_ledger,
+    _artist_neighbor_scene_weighted_v3_pool,
     _baseline_summary,
     _class_summaries,
     _expanded_tag_terms,
@@ -19,6 +20,7 @@ from scripts.state_v1_retriever_matrix import (
     _pool_payload_to_branch_pool,
     _query_text_tag_popularity_pool,
     _rerank_branch_pools,
+    _scene_era_tag_popularity_v2_pool,
     _serialize_variant_pools,
     _scene_terms_from_text,
     _state_query_text,
@@ -35,11 +37,13 @@ class _FakeCatalog:
         artists: dict[str, str] | None = None,
         years: dict[str, int] | None = None,
         popularity: dict[str, int] | None = None,
+        artist_tracks: dict[str, list[str]] | None = None,
     ):
         self.tags = tags or {}
         self.artists = artists or {}
         self.years = years or {}
         self.popularity = popularity or {}
+        self.artist_tracks = artist_tracks or {}
 
     def tag_list(self, track_id: str) -> list[str]:
         return self.tags.get(track_id, [])
@@ -58,6 +62,9 @@ class _FakeCatalog:
 
     def popularity_sorted_track_ids(self) -> list[str]:
         return sorted(self.all_track_ids(), key=lambda tid: (self.popularity.get(tid, 10**9), tid))
+
+    def tracks_by_artist_id(self, artist_id: str) -> list[str]:
+        return list(self.artist_tracks.get(artist_id, []))
 
 
 class _FakeCompiler:
@@ -162,6 +169,53 @@ def test_all_candidate_v3_includes_raw_attributes_and_lyrics():
         "qwen_0_6b",
         "lyric",
     ) in branches
+
+
+def test_siglip_visual_variant_injects_modal_encoder_from_clap_config(tmp_path):
+    base = {
+        "lancedb": {"db_uri": "old"},
+        "encoders": {
+            "clap_text": {
+                "backend": "modal_multimodal",
+                "modal_app_name": "music-crs",
+                "modal_cls_name": "MultimodalTextEncoder",
+                "method": "embed_clap_text",
+            },
+        },
+        "compiler": {"dense_branches": []},
+    }
+
+    out = _variant_qu_kwargs(base, VARIANTS["siglip_visual"], tmp_path)
+
+    assert out["encoders"] == {
+        "siglip2_text": {
+            "backend": "modal_multimodal",
+            "modal_app_name": "music-crs",
+            "modal_cls_name": "MultimodalTextEncoder",
+            "method": "embed_siglip_text",
+        }
+    }
+    assert out["compiler"]["dense_branches"] == [
+        {
+            "vector_field": "image_siglip2",
+            "encoder_id": "siglip2_text",
+            "query_id": "visual",
+            "weight": 1.0,
+            "distance_type": "cosine",
+        }
+    ]
+
+
+def test_all_candidate_v4_includes_visual_and_targeted_analysis_branches():
+    variant = VARIANTS["all_candidate_plus_targeted_v4"]
+    dense = {
+        (branch.vector_field, branch.encoder_id, branch.query_id)
+        for branch in variant.dense_branches
+    }
+
+    assert ("image_siglip2", "siglip2_text", "visual") in dense
+    assert "scene_era_tag_popularity_v2" in variant.analysis_branches
+    assert "artist_neighbor_scene_v2" in variant.analysis_branches
 
 
 def test_baseline_summary_infers_union50_when_bounds_match():
@@ -292,6 +346,68 @@ def test_query_text_tag_popularity_uses_scene_terms_and_soft_year_ordering():
     assert [track_id for track_id, _score in pool.hits][:2] == [
         "latin-hit",
         "generic-pop",
+    ]
+
+
+def test_scene_era_tag_popularity_v2_prefers_scene_specific_tags_over_generic_popularity():
+    catalog = _FakeCatalog(
+        tags={
+            "east-coast-jazz": ["east coast rap", "jazz hop", "underground hip-hop"],
+            "generic-rap": ["hip-hop", "rap"],
+            "wrong-scene-popular": ["pop", "dance"],
+        },
+        years={"east-coast-jazz": 1993, "generic-rap": 1994, "wrong-scene-popular": 1993},
+        popularity={"wrong-scene-popular": 0, "generic-rap": 1, "east-coast-jazz": 250},
+    )
+    state = _state(
+        current_request=SimpleNamespace(
+            summary="Find a golden age jazzy east coast underground hip hop track",
+            evidence_text="golden age jazzy east coast",
+        ),
+        turn_intent="golden age jazzy east coast underground hip hop",
+        release_year_range=SimpleNamespace(start=1990, end=1996),
+    )
+
+    pool = _scene_era_tag_popularity_v2_pool(
+        catalog,
+        state=state,
+        name="analysis.scene_era_tag_popularity_v2",
+        topk=10,
+    )
+
+    assert [track_id for track_id, _score in pool.hits][:2] == [
+        "east-coast-jazz",
+        "generic-rap",
+    ]
+
+
+def test_weighted_artist_neighbor_prefers_frequent_specific_anchor_terms():
+    catalog = _FakeCatalog(
+        tags={
+            "anchor-a": ["east coast rap", "underground hip-hop"],
+            "anchor-b": ["east coast rap", "jazz hop"],
+            "specific-candidate": ["east coast rap", "underground hip-hop", "jazz hop"],
+            "generic-popular": ["rap"],
+        },
+        artists={"anchor": "anchor-artist", "anchor-a": "anchor-artist", "anchor-b": "anchor-artist"},
+        artist_tracks={"anchor-artist": ["anchor-a", "anchor-b"]},
+        popularity={"generic-popular": 0, "specific-candidate": 500},
+    )
+    state = _state(
+        current_request=SimpleNamespace(
+            summary="Find jazzy underground east coast hip hop",
+            evidence_text="underground east coast",
+        ),
+        turn_intent="jazzy underground east coast hip hop",
+        target_artist_mode="new_artist",
+    )
+    qu, rs = _fake_qu(state, catalog)
+
+    pool = _artist_neighbor_scene_weighted_v3_pool(qu, rs, topk=10)
+
+    assert [track_id for track_id, _score in pool.hits][:2] == [
+        "specific-candidate",
+        "generic-popular",
     ]
 
 
