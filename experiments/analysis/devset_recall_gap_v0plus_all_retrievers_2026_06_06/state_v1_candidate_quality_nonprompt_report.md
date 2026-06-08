@@ -1,13 +1,14 @@
 # State V1 Candidate Quality Non-Prompt Matrix
 
-Scope: focused-110 only. V1 state extractor prompt and schema are frozen. Metrics are additive against the protected current+targeted baseline.
+Scope: focused-110 only. V1 state extractor prompt and schema are frozen. Metrics are additive against the protected current+targeted baseline. This is a branch-local top-k quality test: it reorders existing branch pools and measures a union ceiling, not the final served top-20 list.
 
 ## Read This First
 
 - Current+targeted baseline: 77/110 union@20, 90/110 union@50, 93/110 union@100.
 - Best non-prompt lever: `promoted_feature_family` 84/110 union@20, 95/110 union@50, 100/110 union@100.
-- Valid-GT-only lift: 69/99 -> 76/99 union@20. That is +7 valid top-20 rescues with no state prompt/schema changes.
+- Valid-GT-only lift: 69/99 -> 76/99 union@20. That is +7 valid branch-union top-20 rescues with no state prompt/schema changes. It still needs final-fusion validation.
 - Plain `all_on_original` does not move top-20. The gap is not only whether branches fire; it is branch-local candidate ordering using catalog tags, year/popularity compatibility, anchor-CF, and soft novelty/negative evidence.
+- No new candidates are introduced by these feature variants. The result means reachable @21-100 candidates can be pulled upward inside branches; it does not prove final@20/nDCG lift until the real compiler/fusion path is smoked.
 - User-CF alone does not improve union@20, but it improves deeper recall and should be deferred as a ranking feature rather than promoted as a top-20 candidate-recall fix.
 
 ## Headline Metrics
@@ -25,6 +26,60 @@ Scope: focused-110 only. V1 state extractor prompt and schema are frozen. Metric
 | `promoted_feature_family` | 110 | 84/110 | 95/110 | 100/110 | 99 | 76/99 | 86/99 | 91/99 |
 | `all_feature_family` | 110 | 84/110 | 95/110 | 104/110 | 99 | 76/99 | 86/99 | 94/99 |
 
+## Deep Branch Recall Curves
+
+These are branch-only raw pool hits from the saved top1000 pools. They answer whether a future reranker could possibly recover the GT from a branch.
+
+Coverage note: `state_v1_all_on_branch_pools.json` does not contain a raw SigLIP visual text-to-image pool or user-CF retrieval pool. SigLIP is reflected in the current+targeted baseline, and user-CF is tested below as a candidate feature, but their top500/top1000 branch curves are unavailable in this saved-pool run.
+
+| Branch | Family | fired | hit@20 | hit@50 | hit@100 | hit@200 | hit@500 | hit@1000 | marginal@20 |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `centroid.anchor_tracks.cf_bpr` | `cf_anchor_centroid` | 85 | 36 | 37 | 41 | 44 | 53 | 56 | 0 |
+| `dense.qwen_0_6b.intent.metadata_qwen3_embedding_0_6b` | `qwen_intent` | 110 | 30 | 33 | 37 | 40 | 41 | 47 | 0 |
+| `centroid.anchor_tracks.image_siglip2` | `image_anchor_centroid` | 85 | 30 | 34 | 37 | 39 | 41 | 45 | 0 |
+| `dense.qwen_8b.intent.metadata_qwen3_embedding_8b` | `qwen_intent` | 110 | 27 | 34 | 42 | 48 | 59 | 70 | 0 |
+| `dense.qwen_8b.metadata.metadata_qwen3_embedding_8b` | `qwen_metadata` | 110 | 26 | 32 | 39 | 44 | 53 | 61 | 0 |
+| `dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b` | `qwen_metadata` | 110 | 24 | 29 | 31 | 32 | 34 | 40 | 0 |
+| `bm25` | `bm25` | 110 | 23 | 25 | 29 | 33 | 46 | 59 | 0 |
+| `centroid.anchor_tracks.audio_laion_clap` | `audio_anchor_centroid` | 85 | 22 | 25 | 32 | 37 | 48 | 53 | 0 |
+| `analysis.artist_tag_neighbor_popularity` | `artist_neighbor` | 110 | 21 | 27 | 29 | 33 | 43 | 52 | 0 |
+| `analysis.query_text_tag_popularity` | `tag_scene` | 110 | 20 | 23 | 25 | 32 | 41 | 53 | 0 |
+| `lookup.resolved_artist_discography` | `exact_lookup_discography` | 26 | 19 | 19 | 19 | 19 | 19 | 19 | 0 |
+| `analysis.tag_popularity_alias` | `tag_scene` | 110 | 12 | 13 | 14 | 17 | 27 | 34 | 0 |
+| `analysis.era_tag_popularity` | `era_popularity` | 110 | 11 | 12 | 15 | 18 | 28 | 32 | 0 |
+| `lookup.era_popularity` | `era_popularity` | 46 | 10 | 12 | 14 | 16 | 16 | 16 | 0 |
+| `dense.qwen_8b.attributes_enriched.attributes_qwen3_embedding_8b` | `qwen_attributes_enriched` | 93 | 3 | 4 | 8 | 14 | 18 | 31 | 0 |
+| `dense.qwen_8b.attributes.attributes_qwen3_embedding_8b` | `qwen_attributes` | 93 | 2 | 3 | 7 | 12 | 16 | 30 | 0 |
+| `dense.clap_text.sonic_nl_enriched.audio_laion_clap` | `clap_sonic_nl_enriched` | 110 | 2 | 2 | 6 | 10 | 22 | 40 | 0 |
+| `dense.clap_text.sonic.audio_laion_clap` | `clap_sonic` | 110 | 2 | 3 | 4 | 8 | 20 | 32 | 0 |
+
+## Branch-Family Additive Recall
+
+Rows are additive against current+targeted. For k>100, protected baseline only has top100 saved pools, so use the branch-only counts as the clean deep-pool signal.
+
+| Family variant | all u@20 | valid u@20 | valid branch-only@100 | valid branch-only@1000 |
+|---|---:|---:|---:|---:|
+| `baseline_only` | 77/110 | 69/99 | 0/99 | 0/99 |
+| `all_candidate_branches` | 77/110 | 69/99 | 76/99 | 97/99 |
+| `all_branch_local_cleaned` | 84/110 | 76/99 | 86/99 | 97/99 |
+| `family_exact_lookup` | 77/110 | 69/99 | 20/99 | 20/99 |
+| `family_semantic_text` | 77/110 | 69/99 | 56/99 | 88/99 |
+| `family_tag_scene` | 77/110 | 69/99 | 45/99 | 74/99 |
+| `family_anchor_similarity` | 77/110 | 69/99 | 42/99 | 64/99 |
+| `family_modality` | 77/110 | 69/99 | 46/99 | 76/99 |
+
+## Reranker Pool Size Strategy
+
+| Recipe | depth/branch | avg unique | p90 unique | all GT in pool | valid GT in pool | dominant raw-slot families |
+|---|---:|---:|---:|---:|---:|---|
+| `small_top50_per_branch` | 50 | 542.218 | 670 | 76/110 | 71/99 | qwen_metadata:11000, qwen_intent:11000, qwen_attributes:9300, qwen_attributes_enriched:9300 |
+| `medium_top100_per_branch` | 100 | 1053.600 | 1302 | 81/110 | 76/99 | qwen_metadata:22000, qwen_intent:22000, qwen_attributes:18600, qwen_attributes_enriched:18600 |
+| `large_top200_per_branch` | 200 | 2024.800 | 2515 | 96/110 | 88/99 | qwen_metadata:44000, qwen_intent:44000, qwen_attributes:37200, qwen_attributes_enriched:37200 |
+| `very_large_top500_per_branch` | 500 | 4554.845 | 5622 | 104/110 | 95/99 | qwen_metadata:110000, qwen_intent:110000, qwen_attributes:93000, qwen_attributes_enriched:93000 |
+| `raw_deep_top1000_per_branch` | 1000 | 8195.045 | 10143 | 106/110 | 97/99 | qwen_metadata:220000, qwen_intent:220000, qwen_attributes:186000, qwen_attributes_enriched:186000 |
+
+Pool recommendation: use a large but capped reranker pool around top200 per active branch family as the first serious reranker recipe. It reaches 88/99 valid GT with about 2,025 unique candidates/turn on this pack. Top500/top1000 recover more GT (95/99 and 97/99 valid), but the pool sizes explode to roughly 4,555 and 8,195 unique candidates/turn. Keep exact/lookup generous, keep BM25/Qwen/tag/scene/anchor branches around top100-200, trigger lyric/visual/sonic branches only when state evidence asks for them, and use popularity/user-CF as score features unless a separate branch proves top20 lift.
+
 ## GT Audit
 
 | Label | Count |
@@ -36,7 +91,7 @@ Scope: focused-110 only. V1 state extractor prompt and schema are frozen. Metric
 | `valid_gt_state_signal_compiler_not_consumed` | 12 |
 | `valid_gt_state_supports_it` | 69 |
 
-Noisy/contradictory GT is excluded only for the valid-GT-only view. All-110 metrics still include every turn. The conflict labels are mostly literal cases like 'not Drake', 'not Daft Punk', or 'not System Of A Down' where the GT artist violates an explicit user constraint.
+Noisy/contradictory GT is excluded only for the valid-GT-only view. All-110 metrics still include every turn. The conflict labels are mostly literal cases like 'not Drake', 'not Daft Punk', or 'not System Of A Down' where the GT artist violates an explicit user constraint. Because the conflict detector uses name matching, keep this as an audit label rather than a leaderboard exclusion until the 10 conflict rows are hand-verified.
 
 ## Decisions
 
@@ -57,13 +112,48 @@ Noisy/contradictory GT is excluded only for the valid-GT-only view. All-110 metr
 - Derived catalog features: normalized tag aliases, broad track text, release year compatibility, and popularity-if-requested are positive. Keep for full-devset smoke.
 - Anchor-CF: positive top-20 lift. Keep as a branch-local feature when the state has liked/reference/accepted anchors.
 - User-CF: 89/110 focused users have vectors and user-CF improves union@100, but not union@20. Defer to ranking work; do not call it a candidate-recall fix yet.
+- Feature magnitudes are hand-set on the focused gap pack. The direction is credible because controls stay stable, but the exact +7 size is overfit-risk until the same frozen weights pass a held-out/full-devset smoke.
 - Last-resort prompt ablation: not run. The frozen state contains enough usable signal to get +7 valid union@20 from non-prompt levers, so prompt iteration should be a separate later goal only for the remaining state/lyric failures.
 
 ## Remaining Gap
 
 - Still-near @21-50: mostly branch-local scoring/query specificity. Examples include `5ee0dbbc...::t8` at rank 22, `3676005d...::t1` at rank 27, `10a15ba2...::t7` at rank 29, and `2bbc0a7e...::t1` at rank 30.
 - Deeper/missing: stale or roleless anchors still blur novelty requests, and some lyric/theme requests need a stronger lyric-aware source or better query text.
+- Some temporal residuals are state errors, not only scoring errors: if the frozen state emits a tight wrong release range, a non-prompt scorer can only soften the damage. It cannot recover the intended era semantics perfectly.
 - Rejection controls stayed stable in this additive analysis: the P1 rejection guardrail valid slice remains 5/5 union@20.
+
+## Gap Reason By Slice
+
+| Slice | n | valid n | current u@20 | promoted u@20 | dominant reasons |
+|---|---:|---:|---:|---:|---|
+| `P0_new_artist_union20_gap_failure` | 10 | 10 | 4 | 4 | already_in_current_union20:4, deep_101_500_branch_query_or_noise:3, near_miss_21_50_branch_local_scoring:2, near_miss_51_100_branch_local_scoring:1 |
+| `P0_novelty_prior_anchor_failure` | 10 | 9 | 4 | 5 | already_in_current_union20:4, deep_101_500_branch_query_or_noise:2, near_miss_21_50_branch_local_scoring:1, gt_conflicts_with_explicit_user_constraint:1 |
+| `P0_roleless_stale_entity_failure` | 10 | 9 | 1 | 3 | deep_101_500_branch_query_or_noise:3, rescued_by_branch_local_scoring:2, near_miss_51_100_branch_local_scoring:1, already_in_current_union20:1 |
+| `P1_positive_tag_retrieval_gap_failure` | 10 | 10 | 4 | 7 | already_in_current_union20:4, rescued_by_branch_local_scoring:3, gt_absent_from_all_saved_deep_pools:1, deep_101_500_branch_query_or_noise:1 |
+| `P1_rejection_guardrail_failure` | 10 | 5 | 10 | 10 | already_in_current_union20:5, gt_conflicts_with_explicit_user_constraint:5 |
+| `P1_temporal_constraint_failure` | 10 | 9 | 4 | 5 | already_in_current_union20:4, deep_101_500_branch_query_or_noise:3, gt_conflicts_with_explicit_user_constraint:1, rescued_by_branch_local_scoring:1 |
+| `POS_clean_final_hit_control` | 10 | 10 | 10 | 10 | already_in_current_union20:10 |
+| `POS_exact_entity_success_control` | 10 | 10 | 10 | 10 | already_in_current_union20:10 |
+| `lyric_or_theme_gap` | 18 | 16 | 10 | 11 | already_in_current_union20:10, deep_101_500_branch_query_or_noise:3, near_miss_21_50_branch_local_scoring:2, underspecified_next_play_behavior:1 |
+| `visual_or_cover_art_gap` | 11 | 6 | 7 | 9 | gt_conflicts_with_explicit_user_constraint:5, rescued_by_branch_local_scoring:2, already_in_current_union20:2, deep_101_500_branch_query_or_noise:1 |
+
+## Top-20 Noise Examples
+
+These are valid/current misses where raw branch top slots are occupied by plausible but wrong candidates. Use them for branch-local scoring and query specificity debugging, not prompt tuning.
+
+- `0b9d547f-e748-464a-90e2-2199149f915c::t6` (P0_roleless_stale_entity_failure) GT=Give It To Me Baby by Rick James; top noise: bm25#1=Evelyn Thomas - High Energy; bm25#2=Nightmares On Wax - 70s 80s; bm25#3=Michael Jackson - Burn This Disco Out
+- `e66c6a88-88ba-4117-9114-363bfa96294a::t7` (P0_roleless_stale_entity_failure) GT=Test Drive by John Powell; top noise: bm25#1=blink-182 - Anthem Part Two; bm25#2=Two Steps from Hell - Heart of Courage; bm25#3=Steve Jablonsky - Downtown Battle
+- `41367174-552b-4117-9caa-d0ba1b307d37::t2` (P0_roleless_stale_entity_failure) GT=Mercy by Muse; top noise: bm25#1=Madonna - This Used To Be My Playground; bm25#2=Foo Fighters - Something from Nothing; bm25#3=Destiny's Child - Emotion
+- `10a15ba2-4126-4ae4-ac6c-dc170735ae9e::t7` (P0_roleless_stale_entity_failure) GT=I Can't Go to Sleep by Wu-Tang Clan; top noise: bm25#1=Kendrick Lamar - Illuminate (feat. Kendrick Lamar); bm25#2=Jay Rock - Pay for It (feat. Kendrick Lamar & Chantal); bm25#3=Jay Rock - Hood Gone Love It (feat. Kendrick Lamar)
+- `9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4` (P0_roleless_stale_entity_failure) GT=The Carbon Stampede by Cattle Decapitation; top noise: bm25#1=Cephalic Carnage - Dying Will Be the Death of Me; bm25#2=Static-X - Push It; bm25#3=The Faceless - Akeldama
+
+## Next Tests
+
+1. Implement the promoted feature layer behind a conservative compiler config flag, then run a tiny 10-session smoke that reports both final metrics (`final@20`, nDCG@20 if available) and union diagnostics. The full-devset run should only follow if the tiny smoke shows final-list movement.
+2. Run a held-out focused/devset slice with the same fixed weights. Do not tune weights on the focused-110 again; if fixed weights are unstable, learn or parameterize them before promoting.
+3. Hand-audit the 10 `gt_conflicts_with_explicit_user_constraint` rows and keep all-110 metrics side by side with valid-only metrics.
+4. Separately replay the role-typed state branch against the remaining stale-anchor and temporal residuals. Branch-local scoring is complementary; it is not a substitute for extracting seed/satisfied/history/contrast/rejected roles or soft-era versus hard-date intent correctly.
+5. For lyric/theme cases, validate whether the existing lyric branch can move known @21-100 examples before adding a new retriever. If it cannot express the target even with good query text, then scope a lyric/theme source goal.
 
 ## Per-Class Valid-Only union@20
 
@@ -206,3 +296,5 @@ Noisy/contradictory GT is excluded only for the valid-GT-only view. All-110 metr
 ## Recommendation
 
 Keep only levers with positive valid-GT union@20 lift for the next full-devset smoke. If a lever only improves union@50, treat it as evidence for branch-local ranking or a lightweight ranker, not as candidate recall solved.
+
+Need-new-source note: only 2 valid GTs are absent from all saved deep pools in this run. Most remaining valid failures are not fundamentally absent; they are near/deep ranking, query specificity, or state-role consumption problems.

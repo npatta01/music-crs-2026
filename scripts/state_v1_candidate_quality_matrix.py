@@ -54,9 +54,71 @@ TRACE_PATHS = (
 )
 DEFAULT_LANCEDB = Path("cache/lancedb")
 KS = (20, 50, 100)
+DEEP_KS = (20, 50, 100, 200, 500, 1000)
+POOL_RECIPE_DEPTHS = {
+    "small_top50_per_branch": 50,
+    "medium_top100_per_branch": 100,
+    "large_top200_per_branch": 200,
+    "very_large_top500_per_branch": 500,
+    "raw_deep_top1000_per_branch": 1000,
+}
 NOISY_GT_LABELS = {
     "gt_conflicts_with_explicit_user_constraint",
     "underspecified_next_play_behavior",
+}
+
+BRANCH_FAMILY_ORDER = (
+    "bm25",
+    "exact_lookup_discography",
+    "same_album_fanout",
+    "qwen_metadata",
+    "qwen_intent",
+    "qwen_attributes",
+    "qwen_attributes_enriched",
+    "qwen_lyrics",
+    "clap_sonic",
+    "clap_sonic_nl",
+    "clap_sonic_nl_enriched",
+    "audio_anchor_centroid",
+    "image_anchor_centroid",
+    "cf_anchor_centroid",
+    "era_popularity",
+    "tag_scene",
+    "artist_neighbor",
+    "other",
+)
+
+BRANCH_FAMILY_GROUPS = {
+    "exact_lookup": {
+        "exact_lookup_discography",
+        "same_album_fanout",
+    },
+    "semantic_text": {
+        "qwen_metadata",
+        "qwen_intent",
+        "qwen_attributes",
+        "qwen_attributes_enriched",
+        "qwen_lyrics",
+        "bm25",
+    },
+    "tag_scene": {
+        "tag_scene",
+        "era_popularity",
+        "artist_neighbor",
+    },
+    "anchor_similarity": {
+        "audio_anchor_centroid",
+        "image_anchor_centroid",
+        "cf_anchor_centroid",
+    },
+    "modality": {
+        "clap_sonic",
+        "clap_sonic_nl",
+        "clap_sonic_nl_enriched",
+        "audio_anchor_centroid",
+        "image_anchor_centroid",
+        "cf_anchor_centroid",
+    },
 }
 
 
@@ -285,6 +347,467 @@ def _merged_pools(
         ]
         for sid in sample_ids
     }
+
+
+def _rank_in_pool(pool: BranchPool, target: str) -> int | None:
+    for rank, (track_id, _score) in enumerate(pool.hits, start=1):
+        if track_id == target:
+            return rank
+    return None
+
+
+def _branch_family(branch_name: str) -> str:
+    name = branch_name
+    if name == "bm25":
+        return "bm25"
+    if name == "lookup.resolved_artist_discography":
+        return "exact_lookup_discography"
+    if name == "analysis.same_album_fanout":
+        return "same_album_fanout"
+    if name == "lookup.era_popularity" or name == "analysis.era_tag_popularity":
+        return "era_popularity"
+    if name in {
+        "analysis.tag_popularity_alias",
+        "analysis.query_text_tag_popularity",
+        "analysis.scene_era_tag_popularity",
+    }:
+        return "tag_scene"
+    if "artist_tag_neighbor" in name or "artist_neighbor_scene" in name:
+        return "artist_neighbor"
+    if name == "centroid.anchor_tracks.audio_laion_clap":
+        return "audio_anchor_centroid"
+    if name == "centroid.anchor_tracks.image_siglip2":
+        return "image_anchor_centroid"
+    if name == "centroid.anchor_tracks.cf_bpr":
+        return "cf_anchor_centroid"
+    if "lyrics_qwen" in name or ".lyric." in name:
+        return "qwen_lyrics"
+    if ".attributes_enriched." in name:
+        return "qwen_attributes_enriched"
+    if ".attributes." in name:
+        return "qwen_attributes"
+    if ".intent." in name:
+        return "qwen_intent"
+    if ".metadata." in name:
+        return "qwen_metadata"
+    if "clap_text.sonic_nl_enriched" in name:
+        return "clap_sonic_nl_enriched"
+    if "clap_text.sonic_nl" in name:
+        return "clap_sonic_nl"
+    if "clap_text.sonic" in name:
+        return "clap_sonic"
+    return "other"
+
+
+def _filter_pools_by_family(
+    pools_by_sample: dict[str, list[BranchPool]],
+    families: set[str],
+) -> dict[str, list[BranchPool]]:
+    return {
+        sid: [
+            pool
+            for pool in pools
+            if _branch_family(pool.name) in families
+        ]
+        for sid, pools in pools_by_sample.items()
+    }
+
+
+def _filter_pools_by_branch(
+    pools_by_sample: dict[str, list[BranchPool]],
+    branch: str,
+) -> dict[str, list[BranchPool]]:
+    return {
+        sid: [pool for pool in pools if pool.name == branch]
+        for sid, pools in pools_by_sample.items()
+    }
+
+
+def _branch_deep_summary(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    pools_by_sample: dict[str, list[BranchPool]],
+    protected_rows: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    branch_names = sorted({
+        pool.name
+        for pools in pools_by_sample.values()
+        for pool in pools
+    })
+    branch_rows: list[dict[str, Any]] = []
+    for branch in branch_names:
+        row: dict[str, Any] = {
+            "branch": branch,
+            "family": _branch_family(branch),
+            "turns_fired": sum(
+                any(pool.name == branch for pool in pools_by_sample.get(sid, []))
+                for sid in sample_ids
+            ),
+        }
+        class_helped_at20: Counter[str] = Counter()
+        rank_values: list[int] = []
+        for k in DEEP_KS:
+            hit_count = 0
+            marginal_count = 0
+            unique_count = 0
+            for sid in sample_ids:
+                target = str(turn_meta[sid]["gt_track_id"])
+                branch_pools = [
+                    pool for pool in pools_by_sample.get(sid, []) if pool.name == branch
+                ]
+                branch_hit = any(_rank_in_pool(pool, target) is not None and _rank_in_pool(pool, target) <= k for pool in branch_pools)
+                if branch_hit:
+                    hit_count += 1
+                    ranks = [
+                        rank
+                        for pool in branch_pools
+                        if (rank := _rank_in_pool(pool, target)) is not None
+                    ]
+                    if ranks:
+                        rank_values.append(min(ranks))
+                protected_hit = bool(protected_rows[sid].get(f"union@{k}"))
+                if branch_hit and not protected_hit:
+                    marginal_count += 1
+                    if k == 20:
+                        class_helped_at20[turn_meta[sid]["pack"]] += 1
+                other_hit = any(
+                    pool.name != branch
+                    and (rank := _rank_in_pool(pool, target)) is not None
+                    and rank <= k
+                    for pool in pools_by_sample.get(sid, [])
+                )
+                if branch_hit and not protected_hit and not other_hit:
+                    unique_count += 1
+            row[f"hit@{k}_count"] = hit_count
+            row[f"hit@{k}"] = hit_count / len(sample_ids) if sample_ids else None
+            row[f"marginal_rescue@{k}_count"] = marginal_count
+            row[f"unique_rescue@{k}_count"] = unique_count
+        row["best_rank_min"] = min(rank_values) if rank_values else None
+        row["best_rank_median"] = (
+            sorted(rank_values)[len(rank_values) // 2] if rank_values else None
+        )
+        row["classes_helped@20"] = dict(class_helped_at20)
+        branch_rows.append(row)
+
+    family_rows: list[dict[str, Any]] = []
+    for family in BRANCH_FAMILY_ORDER:
+        family_pools = _filter_pools_by_family(pools_by_sample, {family})
+        if not any(family_pools.values()):
+            continue
+        row = {
+            "family": family,
+            "branches": sorted({
+                pool.name for pools in family_pools.values() for pool in pools
+            }),
+        }
+        for k in DEEP_KS:
+            hit_count = 0
+            marginal_count = 0
+            for sid in sample_ids:
+                target = str(turn_meta[sid]["gt_track_id"])
+                family_hit = _union_hit(family_pools.get(sid, []), target, k)
+                hit_count += int(family_hit)
+                marginal_count += int(family_hit and not protected_rows[sid].get(f"union@{k}"))
+            row[f"hit@{k}_count"] = hit_count
+            row[f"marginal_rescue@{k}_count"] = marginal_count
+        family_rows.append(row)
+
+    branch_rows.sort(
+        key=lambda row: (
+            -row["hit@20_count"],
+            -row["hit@100_count"],
+            -row["hit@1000_count"],
+            row["branch"],
+        )
+    )
+    family_rows.sort(
+        key=lambda row: (
+            -row["hit@20_count"],
+            -row["hit@100_count"],
+            row["family"],
+        )
+    )
+    return {"branches": branch_rows, "families": family_rows}
+
+
+def _branch_family_additive_rows(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    labels: dict[str, dict[str, Any]],
+    all_on_pools: dict[str, list[BranchPool]],
+    protected_rows: dict[str, dict[str, Any]],
+    cleaned_pools: dict[str, list[BranchPool]],
+) -> list[dict[str, Any]]:
+    variants: dict[str, dict[str, list[BranchPool]]] = {
+        "baseline_only": {sid: [] for sid in sample_ids},
+        "all_candidate_branches": all_on_pools,
+        "all_branch_local_cleaned": cleaned_pools,
+    }
+    for group, families in BRANCH_FAMILY_GROUPS.items():
+        variants[f"family_{group}"] = _filter_pools_by_family(all_on_pools, families)
+    rows: list[dict[str, Any]] = []
+    valid_ids = _valid_sample_ids(labels)
+    for variant, pool_map in variants.items():
+        row = {
+            "variant": variant,
+            "all_n": len(sample_ids),
+            "valid_n": len(valid_ids),
+        }
+        for scope, scoped_ids in (
+            ("all", sample_ids),
+            ("valid_only", [sid for sid in sample_ids if sid in valid_ids]),
+        ):
+            for k in DEEP_KS:
+                count = 0
+                branch_only_count = 0
+                for sid in scoped_ids:
+                    target = str(turn_meta[sid]["gt_track_id"])
+                    branch_hit = _union_hit(pool_map.get(sid, []), target, k)
+                    protected_hit = bool(protected_rows[sid].get(f"union@{k}"))
+                    branch_only_count += int(branch_hit)
+                    count += int(branch_hit or protected_hit)
+                denom = len(scoped_ids)
+                row[f"{scope}_union@{k}_count"] = count
+                row[f"{scope}_union@{k}"] = count / denom if denom else None
+                row[f"{scope}_branch_only@{k}_count"] = branch_only_count
+        rows.append(row)
+    return rows
+
+
+def _candidate_ids_for_depth(pools: list[BranchPool], depth: int) -> set[str]:
+    return {
+        track_id
+        for pool in pools
+        for track_id, _score in pool.hits[:depth]
+    }
+
+
+def _pool_recipe_summary(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    labels: dict[str, dict[str, Any]],
+    pools_by_sample: dict[str, list[BranchPool]],
+    depths: dict[str, int] | None = None,
+) -> list[dict[str, Any]]:
+    depths = depths or POOL_RECIPE_DEPTHS
+    valid_ids = _valid_sample_ids(labels)
+    rows: list[dict[str, Any]] = []
+    for recipe, depth in depths.items():
+        sizes: list[int] = []
+        all_gt_hits = 0
+        valid_gt_hits = 0
+        family_candidate_counts: Counter[str] = Counter()
+        for sid in sample_ids:
+            target = str(turn_meta[sid]["gt_track_id"])
+            candidate_ids = _candidate_ids_for_depth(pools_by_sample.get(sid, []), depth)
+            sizes.append(len(candidate_ids))
+            all_gt_hits += int(target in candidate_ids)
+            valid_gt_hits += int(sid in valid_ids and target in candidate_ids)
+            for pool in pools_by_sample.get(sid, []):
+                family_candidate_counts[_branch_family(pool.name)] += len(pool.hits[:depth])
+        sizes_sorted = sorted(sizes)
+        n = len(sizes_sorted)
+        p90_idx = min(n - 1, int(math.ceil(0.9 * n)) - 1) if n else 0
+        rows.append(
+            {
+                "recipe": recipe,
+                "depth_per_branch": depth,
+                "all_n": len(sample_ids),
+                "valid_n": len(valid_ids),
+                "avg_unique_candidates": sum(sizes) / len(sizes) if sizes else None,
+                "p50_unique_candidates": sizes_sorted[n // 2] if n else None,
+                "p90_unique_candidates": sizes_sorted[p90_idx] if n else None,
+                "all_gt_in_pool_count": all_gt_hits,
+                "valid_gt_in_pool_count": valid_gt_hits,
+                "dominant_families_by_raw_slots": [
+                    {"family": family, "slots": count}
+                    for family, count in family_candidate_counts.most_common(6)
+                ],
+            }
+        )
+    return rows
+
+
+def _sample_slices(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    states: dict[str, Any],
+) -> dict[str, list[str]]:
+    slices: dict[str, list[str]] = defaultdict(list)
+    lyric_terms = ("lyric", "lyrics", "theme", "story", "storytelling", "narrative")
+    visual_terms = ("cover", "album art", "artwork", "visual", "image")
+    for sid in sample_ids:
+        meta = turn_meta[sid]
+        text = " ".join([
+            str(meta.get("current_user") or ""),
+            _state_query_text(states[sid]),
+        ]).casefold()
+        slices[meta["pack"]].append(sid)
+        if any(term in text for term in lyric_terms):
+            slices["lyric_or_theme_gap"].append(sid)
+        if any(term in text for term in visual_terms):
+            slices["visual_or_cover_art_gap"].append(sid)
+    return dict(slices)
+
+
+def _best_raw_rank(
+    pools: list[BranchPool],
+    target: str,
+) -> tuple[str | None, int | None]:
+    best_branch: str | None = None
+    best_rank: int | None = None
+    for pool in pools:
+        rank = _rank_in_pool(pool, target)
+        if rank is not None and (best_rank is None or rank < best_rank):
+            best_branch = pool.name
+            best_rank = rank
+    return best_branch, best_rank
+
+
+def _gap_reason(
+    *,
+    sid: str,
+    turn_meta: dict[str, dict[str, Any]],
+    labels: dict[str, dict[str, Any]],
+    current_plus_targeted: dict[str, dict[str, Any]],
+    promoted_rows: dict[str, dict[str, Any]],
+    all_on_pools: dict[str, list[BranchPool]],
+) -> dict[str, Any]:
+    meta = turn_meta[sid]
+    target = str(meta["gt_track_id"])
+    best_branch, best_rank = _best_raw_rank(all_on_pools.get(sid, []), target)
+    label = labels[sid]["gt_audit_label"]
+    if label in NOISY_GT_LABELS:
+        reason = label
+    elif current_plus_targeted[sid].get("union@20"):
+        reason = "already_in_current_union20"
+    elif promoted_rows[sid].get("union@20"):
+        reason = "rescued_by_branch_local_scoring"
+    elif best_rank is None:
+        reason = "gt_absent_from_all_saved_deep_pools"
+    elif best_rank <= 20:
+        reason = "projector_or_branch_family_not_in_protected_baseline"
+    elif best_rank <= 50:
+        reason = "near_miss_21_50_branch_local_scoring"
+    elif best_rank <= 100:
+        reason = "near_miss_51_100_branch_local_scoring"
+    elif best_rank <= 500:
+        reason = "deep_101_500_branch_query_or_noise"
+    elif best_rank <= 1000:
+        reason = "very_deep_501_1000_retriever_weak"
+    else:
+        reason = "gt_absent_from_all_saved_deep_pools"
+    return {
+        "sample_id": sid,
+        "pack": meta["pack"],
+        "gt_track": meta["gt_track"],
+        "gt_artist": meta["gt_artist"],
+        "gt_audit_label": label,
+        "gap_reason": reason,
+        "best_raw_branch": best_branch,
+        "best_raw_rank": best_rank,
+        "promoted_best_branch": promoted_rows[sid].get("best_branch"),
+        "promoted_best_rank": promoted_rows[sid].get("best_branch_rank"),
+        "current_user": meta.get("current_user"),
+    }
+
+
+def _gap_diagnostics(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    labels: dict[str, dict[str, Any]],
+    states: dict[str, Any],
+    current_plus_targeted: dict[str, dict[str, Any]],
+    promoted_rows: dict[str, dict[str, Any]],
+    all_on_pools: dict[str, list[BranchPool]],
+) -> dict[str, Any]:
+    slices = _sample_slices(sample_ids=sample_ids, turn_meta=turn_meta, states=states)
+    per_sample = {
+        sid: _gap_reason(
+            sid=sid,
+            turn_meta=turn_meta,
+            labels=labels,
+            current_plus_targeted=current_plus_targeted,
+            promoted_rows=promoted_rows,
+            all_on_pools=all_on_pools,
+        )
+        for sid in sample_ids
+    }
+    per_slice: list[dict[str, Any]] = []
+    for slice_name, ids in sorted(slices.items()):
+        counts = Counter(per_sample[sid]["gap_reason"] for sid in ids)
+        valid_ids = [sid for sid in ids if labels[sid]["valid_gt"]]
+        per_slice.append(
+            {
+                "slice": slice_name,
+                "n": len(ids),
+                "valid_n": len(valid_ids),
+                "reason_counts": dict(counts),
+                "current_plus_targeted_union@20_count": sum(
+                    current_plus_targeted[sid]["union@20"] for sid in ids
+                ),
+                "promoted_union@20_count": sum(
+                    promoted_rows[sid]["union@20"] for sid in ids
+                ),
+                "promoted_valid_union@20_count": sum(
+                    promoted_rows[sid]["union@20"] for sid in valid_ids
+                ),
+            }
+        )
+    return {"per_sample": per_sample, "per_slice": per_slice}
+
+
+def _top_noise_examples(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    pools_by_sample: dict[str, list[BranchPool]],
+    catalog: LanceDbCatalog,
+    limit: int = 8,
+) -> list[dict[str, Any]]:
+    examples: list[dict[str, Any]] = []
+    for sid in sample_ids:
+        target = str(turn_meta[sid]["gt_track_id"])
+        pools = pools_by_sample.get(sid, [])
+        if _union_hit(pools, target, 20):
+            continue
+        noisy_top: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for pool in pools:
+            for rank, (track_id, _score) in enumerate(pool.hits[:5], start=1):
+                if track_id in seen:
+                    continue
+                seen.add(track_id)
+                noisy_top.append(
+                    {
+                        "branch": pool.name,
+                        "rank": rank,
+                        "track_id": track_id,
+                        "label": catalog.track_label(track_id),
+                    }
+                )
+                if len(noisy_top) >= 5:
+                    break
+            if len(noisy_top) >= 5:
+                break
+        examples.append(
+            {
+                "sample_id": sid,
+                "pack": turn_meta[sid]["pack"],
+                "gt_track": turn_meta[sid]["gt_track"],
+                "gt_artist": turn_meta[sid]["gt_artist"],
+                "current_user": turn_meta[sid]["current_user"],
+                "top_noise": noisy_top,
+            }
+        )
+        if len(examples) >= limit:
+            break
+    return examples
 
 
 def _state_anchor_track_ids(state: Any) -> list[str]:
@@ -779,7 +1302,9 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "# State V1 Candidate Quality Non-Prompt Matrix",
         "",
         "Scope: focused-110 only. V1 state extractor prompt and schema are frozen. "
-        "Metrics are additive against the protected current+targeted baseline.",
+        "Metrics are additive against the protected current+targeted baseline. "
+        "This is a branch-local top-k quality test: it reorders existing branch "
+        "pools and measures a union ceiling, not the final served top-20 list.",
         "",
         "## Read This First",
         "",
@@ -794,11 +1319,16 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "- Valid-GT-only lift: "
         f"{baseline['valid_only_union@20_count']}/99 -> "
         f"{promoted['valid_only_union@20_count']}/99 union@20. "
-        "That is +7 valid top-20 rescues with no state prompt/schema changes.",
+        "That is +7 valid branch-union top-20 rescues with no state prompt/schema "
+        "changes. It still needs final-fusion validation.",
         "- Plain `all_on_original` does not move top-20. The gap is not only "
         "whether branches fire; it is branch-local candidate ordering using "
         "catalog tags, year/popularity compatibility, anchor-CF, and soft "
         "novelty/negative evidence.",
+        "- No new candidates are introduced by these feature variants. The result "
+        "means reachable @21-100 candidates can be pulled upward inside branches; "
+        "it does not prove final@20/nDCG lift until the real compiler/fusion path "
+        "is smoked.",
         "- User-CF alone does not improve union@20, but it improves deeper recall "
         "and should be deferred as a ranking feature rather than promoted as a "
         "top-20 candidate-recall fix.",
@@ -825,6 +1355,101 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
 
     lines.extend([
         "",
+        "## Deep Branch Recall Curves",
+        "",
+        "These are branch-only raw pool hits from the saved top1000 pools. "
+        "They answer whether a future reranker could possibly recover the GT "
+        "from a branch.",
+        "",
+        "Coverage note: `state_v1_all_on_branch_pools.json` does not contain "
+        "a raw SigLIP visual text-to-image pool or user-CF retrieval pool. "
+        "SigLIP is reflected in the current+targeted baseline, and user-CF is "
+        "tested below as a candidate feature, but their top500/top1000 branch "
+        "curves are unavailable in this saved-pool run.",
+        "",
+        "| Branch | Family | fired | hit@20 | hit@50 | hit@100 | hit@200 | hit@500 | hit@1000 | marginal@20 |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+    ])
+    for row in payload["branch_deep_summary"]["branches"][:18]:
+        lines.append(
+            "| `{branch}` | `{family}` | {fired} | {h20} | {h50} | {h100} | {h200} | {h500} | {h1000} | {m20} |".format(
+                branch=row["branch"],
+                family=row["family"],
+                fired=row["turns_fired"],
+                h20=row["hit@20_count"],
+                h50=row["hit@50_count"],
+                h100=row["hit@100_count"],
+                h200=row["hit@200_count"],
+                h500=row["hit@500_count"],
+                h1000=row["hit@1000_count"],
+                m20=row["marginal_rescue@20_count"],
+            )
+        )
+
+    lines.extend([
+        "",
+        "## Branch-Family Additive Recall",
+        "",
+        "Rows are additive against current+targeted. For k>100, protected baseline "
+        "only has top100 saved pools, so use the branch-only counts as the clean "
+        "deep-pool signal.",
+        "",
+        "| Family variant | all u@20 | valid u@20 | valid branch-only@100 | valid branch-only@1000 |",
+        "|---|---:|---:|---:|---:|",
+    ])
+    for row in payload["branch_family_additive"]:
+        lines.append(
+            "| `{variant}` | {all20}/{alln} | {valid20}/{validn} | {b100}/{validn} | {b1000}/{validn} |".format(
+                variant=row["variant"],
+                all20=row["all_union@20_count"],
+                alln=row["all_n"],
+                valid20=row["valid_only_union@20_count"],
+                validn=row["valid_n"],
+                b100=row["valid_only_branch_only@100_count"],
+                b1000=row["valid_only_branch_only@1000_count"],
+            )
+        )
+
+    lines.extend([
+        "",
+        "## Reranker Pool Size Strategy",
+        "",
+        "| Recipe | depth/branch | avg unique | p90 unique | all GT in pool | valid GT in pool | dominant raw-slot families |",
+        "|---|---:|---:|---:|---:|---:|---|",
+    ])
+    for row in payload["pool_size_strategy"]:
+        dominant = ", ".join(
+            f"{item['family']}:{item['slots']}"
+            for item in row["dominant_families_by_raw_slots"][:4]
+        )
+        lines.append(
+            "| `{recipe}` | {depth} | {avg} | {p90} | {allhit}/{alln} | {validhit}/{validn} | {dominant} |".format(
+                recipe=row["recipe"],
+                depth=row["depth_per_branch"],
+                avg=_fmt(row["avg_unique_candidates"]),
+                p90=row["p90_unique_candidates"],
+                allhit=row["all_gt_in_pool_count"],
+                alln=row["all_n"],
+                validhit=row["valid_gt_in_pool_count"],
+                validn=row["valid_n"],
+                dominant=dominant,
+            )
+        )
+    lines.extend([
+        "",
+        "Pool recommendation: use a large but capped reranker pool around top200 "
+        "per active branch family as the first serious reranker recipe. It reaches "
+        "88/99 valid GT with about 2,025 unique candidates/turn on this pack. "
+        "Top500/top1000 recover more GT (95/99 and 97/99 valid), but the pool "
+        "sizes explode to roughly 4,555 and 8,195 unique candidates/turn. "
+        "Keep exact/lookup generous, keep BM25/Qwen/tag/scene/anchor branches around "
+        "top100-200, trigger lyric/visual/sonic branches only when state evidence "
+        "asks for them, and use popularity/user-CF as score features unless a "
+        "separate branch proves top20 lift.",
+    ])
+
+    lines.extend([
+        "",
         "## GT Audit",
         "",
         "| Label | Count |",
@@ -837,7 +1462,9 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "Noisy/contradictory GT is excluded only for the valid-GT-only view. "
         "All-110 metrics still include every turn. The conflict labels are mostly "
         "literal cases like 'not Drake', 'not Daft Punk', or 'not System Of A Down' "
-        "where the GT artist violates an explicit user constraint.",
+        "where the GT artist violates an explicit user constraint. Because the "
+        "conflict detector uses name matching, keep this as an audit label rather "
+        "than a leaderboard exclusion until the 10 conflict rows are hand-verified.",
     ])
 
     lines.extend([
@@ -875,6 +1502,9 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "- User-CF: 89/110 focused users have vectors and user-CF improves union@100, "
         "but not union@20. Defer to ranking work; do not call it a candidate-recall "
         "fix yet.",
+        "- Feature magnitudes are hand-set on the focused gap pack. The direction is "
+        "credible because controls stay stable, but the exact +7 size is overfit-risk "
+        "until the same frozen weights pass a held-out/full-devset smoke.",
         "- Last-resort prompt ablation: not run. The frozen state contains enough "
         "usable signal to get +7 valid union@20 from non-prompt levers, so prompt "
         "iteration should be a separate later goal only for the remaining state/lyric "
@@ -890,8 +1520,94 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "`10a15ba2...::t7` at rank 29, and `2bbc0a7e...::t1` at rank 30.",
         "- Deeper/missing: stale or roleless anchors still blur novelty requests, and some "
         "lyric/theme requests need a stronger lyric-aware source or better query text.",
+        "- Some temporal residuals are state errors, not only scoring errors: if the "
+        "frozen state emits a tight wrong release range, a non-prompt scorer can only "
+        "soften the damage. It cannot recover the intended era semantics perfectly.",
         "- Rejection controls stayed stable in this additive analysis: the P1 rejection "
         "guardrail valid slice remains 5/5 union@20.",
+    ])
+
+    lines.extend([
+        "",
+        "## Gap Reason By Slice",
+        "",
+        "| Slice | n | valid n | current u@20 | promoted u@20 | dominant reasons |",
+        "|---|---:|---:|---:|---:|---|",
+    ])
+    interesting_slices = {
+        "P0_new_artist_union20_gap_failure",
+        "P0_novelty_prior_anchor_failure",
+        "P0_roleless_stale_entity_failure",
+        "P1_positive_tag_retrieval_gap_failure",
+        "P1_temporal_constraint_failure",
+        "P1_rejection_guardrail_failure",
+        "lyric_or_theme_gap",
+        "visual_or_cover_art_gap",
+        "POS_exact_entity_success_control",
+        "POS_clean_final_hit_control",
+    }
+    for row in payload["gap_diagnostics"]["per_slice"]:
+        if row["slice"] not in interesting_slices:
+            continue
+        reasons = ", ".join(
+            f"{reason}:{count}"
+            for reason, count in Counter(row["reason_counts"]).most_common(4)
+        )
+        lines.append(
+            "| `{slice}` | {n} | {validn} | {cur20} | {prom20} | {reasons} |".format(
+                slice=row["slice"],
+                n=row["n"],
+                validn=row["valid_n"],
+                cur20=row["current_plus_targeted_union@20_count"],
+                prom20=row["promoted_union@20_count"],
+                reasons=reasons,
+            )
+        )
+
+    lines.extend([
+        "",
+        "## Top-20 Noise Examples",
+        "",
+        "These are valid/current misses where raw branch top slots are occupied by "
+        "plausible but wrong candidates. Use them for branch-local scoring and "
+        "query specificity debugging, not prompt tuning.",
+        "",
+    ])
+    for item in payload["noise_examples"][:5]:
+        noise = "; ".join(
+            f"{entry['branch']}#{entry['rank']}={entry['label']}"
+            for entry in item["top_noise"][:3]
+        )
+        lines.append(
+            "- `{sample_id}` ({pack}) GT={gt_track} by {gt_artist}; top noise: {noise}".format(
+                sample_id=item["sample_id"],
+                pack=item["pack"],
+                gt_track=item["gt_track"],
+                gt_artist=item["gt_artist"],
+                noise=noise,
+            )
+        )
+
+    lines.extend([
+        "",
+        "## Next Tests",
+        "",
+        "1. Implement the promoted feature layer behind a conservative compiler config "
+        "flag, then run a tiny 10-session smoke that reports both final metrics "
+        "(`final@20`, nDCG@20 if available) and union diagnostics. The full-devset "
+        "run should only follow if the tiny smoke shows final-list movement.",
+        "2. Run a held-out focused/devset slice with the same fixed weights. Do not tune "
+        "weights on the focused-110 again; if fixed weights are unstable, learn or "
+        "parameterize them before promoting.",
+        "3. Hand-audit the 10 `gt_conflicts_with_explicit_user_constraint` rows and keep "
+        "all-110 metrics side by side with valid-only metrics.",
+        "4. Separately replay the role-typed state branch against the remaining stale-anchor "
+        "and temporal residuals. Branch-local scoring is complementary; it is not a "
+        "substitute for extracting seed/satisfied/history/contrast/rejected roles or "
+        "soft-era versus hard-date intent correctly.",
+        "5. For lyric/theme cases, validate whether the existing lyric branch can move "
+        "known @21-100 examples before adding a new retriever. If it cannot express "
+        "the target even with good query text, then scope a lyric/theme source goal.",
     ])
 
     lines.extend([
@@ -974,6 +1690,11 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "## Recommendation",
         "",
         payload["recommendation"],
+        "",
+        "Need-new-source note: only 2 valid GTs are absent from all saved deep pools "
+        "in this run. Most remaining valid failures are not fundamentally absent; "
+        "they are near/deep ranking, query specificity, or state-role consumption "
+        "problems.",
     ])
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n")
@@ -1000,6 +1721,25 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         sample_ids=sample_ids,
         turn_meta=turn_meta,
     )
+    expected_baselines = {
+        "current_or": {"union@20": 75, "union@50": 87, "union@100": 91},
+        "current_plus_targeted": {"union@20": 77, "union@50": 90, "union@100": 93},
+    }
+    actual_baselines = {
+        "current_or": {
+            f"union@{k}": sum(row[f"union@{k}"] for row in current_rows.values())
+            for k in KS
+        },
+        "current_plus_targeted": {
+            f"union@{k}": sum(row[f"union@{k}"] for row in current_plus_targeted_rows.values())
+            for k in KS
+        },
+    }
+    if actual_baselines != expected_baselines:
+        raise SystemExit(
+            "focused baseline mismatch; expected "
+            f"{expected_baselines}, got {actual_baselines}"
+        )
 
     original_pool_rows = _pools_to_rows(
         name="all_on_original",
@@ -1077,6 +1817,26 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         variant_pool_maps["user_cf_features"],
         variant_pool_maps["branch_local_hybrid"],
     )
+    branch_deep_summary = _branch_deep_summary(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        pools_by_sample=all_on_pools,
+        protected_rows=current_plus_targeted_rows,
+    )
+    branch_family_additive = _branch_family_additive_rows(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        labels=labels,
+        all_on_pools=all_on_pools,
+        protected_rows=current_plus_targeted_rows,
+        cleaned_pools=variant_pool_maps["promoted_feature_family"],
+    )
+    pool_size_strategy = _pool_recipe_summary(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        labels=labels,
+        pools_by_sample=all_on_pools,
+    )
     variant_rows: dict[str, dict[str, dict[str, Any]]] = {
         "current_or": current_rows,
         "current_plus_targeted": current_plus_targeted_rows,
@@ -1125,6 +1885,21 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         for variant, rows in variant_rows.items()
         if variant not in {"current_or", "current_plus_targeted"}
     }
+    gap_diagnostics = _gap_diagnostics(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        labels=labels,
+        states=states,
+        current_plus_targeted=current_plus_targeted_rows,
+        promoted_rows=variant_rows["promoted_feature_family"],
+        all_on_pools=all_on_pools,
+    )
+    noise_examples = _top_noise_examples(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        pools_by_sample=all_on_pools,
+        catalog=catalog,
+    )
     recommendation = (
         "Keep only levers with positive valid-GT union@20 lift for the next "
         "full-devset smoke. If a lever only improves union@50, treat it as "
@@ -1135,18 +1910,17 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "scope": {
             "state_prompt_schema": "frozen",
             "sample_count": len(sample_ids),
-            "baseline_expected": {
-                "current_or": {"union@20": 75, "union@50": 87, "union@100": 91},
-                "current_plus_targeted": {
-                    "union@20": 77,
-                    "union@50": 90,
-                    "union@100": 93,
-                },
-            },
+            "baseline_expected": expected_baselines,
+            "baseline_actual": actual_baselines,
         },
         "gt_audit_counts": _counts_by_label(labels),
         "metrics": metrics,
         "decisions": decisions,
+        "branch_deep_summary": branch_deep_summary,
+        "branch_family_additive": branch_family_additive,
+        "pool_size_strategy": pool_size_strategy,
+        "gap_diagnostics": gap_diagnostics,
+        "noise_examples": noise_examples,
         "per_class": _per_class_metrics(
             variants=variant_rows,
             sample_ids=sample_ids,
