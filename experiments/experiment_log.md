@@ -109,11 +109,13 @@ Current read:
 
 - Current+targeted focused baseline is 77/110 union@20, 90/110 union@50, and
   93/110 union@100.
-- The promoted non-prompt feature family reaches 84/110 union@20, 95/110
-  union@50, and 100/110 union@100; valid-GT-only union@20 moves 69/99 -> 76/99.
-- Plain all-on branches and compiler-aware branch-family scoring create zero
-  current-miss union@20 rescues. The useful signal is candidate-level scoring,
-  not simply more branch firing or conservative RRF reweighting.
+- The promoted non-prompt feature family reaches 84/110 branch-local union@20,
+  95/110 union@50, and 100/110 union@100; after tightening two obvious noisy
+  GT labels, valid-GT-only union@20 moves 69/97 -> 74/97.
+- Plain all-on branches, compiler-aware branch-family scoring, and the capped
+  candidate-level scorer create zero valid current-miss final-like top-20
+  rescues. The useful signal is branch-local candidate ordering; it still needs
+  a stronger learned/listwise scorer or separately measured survivor policy.
 - Only 2 valid GTs are absent from all saved deep pools in this focused pack;
   most remaining misses are rank/order, query specificity, or state-role
   consumption issues.

@@ -6,8 +6,11 @@ from types import SimpleNamespace
 
 from mcrs.qu_modules.compiler_v0plus import BranchPool
 from scripts.state_v1_candidate_quality_matrix import (
+    CandidateFeature,
     _branch_deep_summary,
     _branch_family,
+    _candidate_scorer_proxy_summary,
+    _candidate_scorer_rank_ids,
     _cosine,
     _fusion_proxy_summary,
     _metrics_for_subset,
@@ -311,5 +314,84 @@ def test_state_weighted_fusion_proxy_summary_reports_current_miss_rescues():
     row = rows[0]
     assert row["all_proxy_final@20_count"] == 2
     assert row["all_current_plus_proxy@20_count"] == 2
+    assert row["all_current_miss_rescue@20_count"] == 1
+    assert row["valid_current_miss_rescue@20_count"] == 1
+
+
+def test_candidate_scorer_rank_ids_uses_feature_evidence_over_raw_rank():
+    hits = [(f"generic-{idx}", 1.0 / idx) for idx in range(1, 21)]
+    hits.append(("target", 1.0 / 21))
+    state = SimpleNamespace(
+        current_request=SimpleNamespace(request_type="attribute_search", summary=""),
+        facts=[],
+        explicit_rejections=[],
+        track_feedback=[],
+        referenced_track_ids=[],
+        lyrical_theme=None,
+        target_artist_mode=None,
+    )
+    features = {
+        track_id: CandidateFeature(feature_score=0.0, hard_drop=False)
+        for track_id, _score in hits
+    }
+    features["target"] = CandidateFeature(feature_score=0.5, hard_drop=False)
+
+    ranked = _candidate_scorer_rank_ids(
+        [BranchPool("bm25", hits)],
+        features=features,
+        state=state,
+        limit=20,
+        depth=25,
+    )
+
+    assert ranked[0] == "target"
+
+
+def test_candidate_scorer_proxy_summary_reports_additive_rescues():
+    sample_ids = ["a", "b"]
+    turn_meta = {
+        "a": {"gt_track_id": "ta"},
+        "b": {"gt_track_id": "tb"},
+    }
+    labels = {
+        "a": {"valid_gt": True},
+        "b": {"valid_gt": False},
+    }
+    states = {
+        "a": SimpleNamespace(current_request=SimpleNamespace(request_type="attribute_search", summary=""), facts=[], track_feedback=[], referenced_track_ids=[]),
+        "b": SimpleNamespace(current_request=SimpleNamespace(request_type="attribute_search", summary=""), facts=[], track_feedback=[], referenced_track_ids=[]),
+    }
+    current_rows = {
+        "a": {"union@20": False, "union@50": False, "union@100": False},
+        "b": {"union@20": True, "union@50": True, "union@100": True},
+    }
+    pools = {
+        "a": [BranchPool("bm25", [("x", 1.0), ("ta", 0.5)])],
+        "b": [BranchPool("bm25", [("tb", 1.0)])],
+    }
+    features = {
+        "a": {
+            "x": CandidateFeature(feature_score=0.0, hard_drop=False),
+            "ta": CandidateFeature(feature_score=0.5, hard_drop=False),
+        },
+        "b": {
+            "tb": CandidateFeature(feature_score=0.0, hard_drop=False),
+        },
+    }
+
+    rows = _candidate_scorer_proxy_summary(
+        sample_ids=sample_ids,
+        turn_meta=turn_meta,
+        labels=labels,
+        states=states,
+        current_rows=current_rows,
+        pools_by_sample=pools,
+        features_by_sample=features,
+        depths=(20,),
+    )
+
+    row = rows[0]
+    assert row["all_scorer_final@20_count"] == 2
+    assert row["all_current_plus_scorer@20_count"] == 2
     assert row["all_current_miss_rescue@20_count"] == 1
     assert row["valid_current_miss_rescue@20_count"] == 1

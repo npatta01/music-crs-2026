@@ -668,6 +668,202 @@ def _state_weighted_fusion_proxy_summary(
     return rows
 
 
+def _candidate_scorer_rank_ids(
+    pools: list[BranchPool],
+    *,
+    features: dict[str, CandidateFeature],
+    state: Any,
+    limit: int,
+    depth: int = 200,
+    rank_base: float = 30.0,
+    agreement_bonus: float = 0.004,
+    protected_top20_ids: set[str] | None = None,
+    protected_top20_bonus: float = 0.0,
+    exact_bonus: float = 0.15,
+) -> list[str]:
+    """Score a capped union pool with rank evidence plus candidate features.
+
+    Unlike the branch-family fusion proxy, this scorer can see the deterministic
+    candidate evidence used by the branch-local feature variants. It is still an
+    analysis proxy: the production path can later decide whether to implement it
+    as a lightweight reranker, a learned ranker, or a final-list smoke.
+    """
+
+    weights = _state_family_weights(state)
+    state_hard_drops = _state_hard_drop_track_ids(state)
+    protected_top20_ids = protected_top20_ids or set()
+    scores: dict[str, float] = {}
+    first_seen: dict[str, int] = {}
+    families_by_track: dict[str, set[str]] = defaultdict(set)
+    order = 0
+    for pool in pools:
+        family = _branch_family(pool.name)
+        seen_in_pool: set[str] = set()
+        for rank, (track_id, _score) in enumerate(pool.hits[:depth], start=1):
+            feature = features.get(track_id)
+            if (
+                track_id in seen_in_pool
+                or track_id in state_hard_drops
+                or bool(getattr(feature, "hard_drop", False))
+            ):
+                continue
+            seen_in_pool.add(track_id)
+            if track_id not in first_seen:
+                first_seen[track_id] = order
+                order += 1
+            scores[track_id] = scores.get(track_id, 0.0) + (
+                weights.get(family, BRANCH_FAMILY_BASE_WEIGHTS["other"]) / (rank_base + rank)
+            )
+            if family in {"exact_lookup_discography", "same_album_fanout"}:
+                scores[track_id] += exact_bonus / (10.0 + rank)
+            families_by_track[track_id].add(family)
+    for track_id, feature in features.items():
+        if track_id not in scores:
+            continue
+        scores[track_id] += float(getattr(feature, "feature_score", 0.0) or 0.0)
+    for track_id, families in families_by_track.items():
+        scores[track_id] = scores.get(track_id, 0.0) + (
+            agreement_bonus * max(0, len(families) - 1)
+        )
+        if track_id in protected_top20_ids:
+            scores[track_id] += protected_top20_bonus
+    return sorted(scores, key=lambda tid: (-scores[tid], first_seen[tid], tid))[:limit]
+
+
+def _candidate_scorer_proxy_summary(
+    *,
+    sample_ids: list[str],
+    turn_meta: dict[str, dict[str, Any]],
+    labels: dict[str, dict[str, Any]],
+    states: dict[str, Any],
+    current_rows: dict[str, dict[str, Any]],
+    pools_by_sample: dict[str, list[BranchPool]],
+    features_by_sample: dict[str, dict[str, CandidateFeature]],
+    variant_name: str = "candidate_scorer",
+    depths: tuple[int, ...] = (50, 100, 200),
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    valid_ids = {sid for sid in sample_ids if labels[sid].get("valid_gt")}
+    for depth in depths:
+        row: dict[str, Any] = {
+            "variant": f"{variant_name}_depth{depth}",
+            "base_variant": variant_name,
+            "depth_per_branch": depth,
+            "all_n": len(sample_ids),
+            "valid_n": len(valid_ids),
+        }
+        ranks: list[int] = []
+        valid_ranks: list[int] = []
+        for k in FUSION_PROXY_KS:
+            all_final_count = 0
+            valid_final_count = 0
+            all_current_plus_count = 0
+            valid_current_plus_count = 0
+            all_current_miss_rescues = 0
+            valid_current_miss_rescues = 0
+            for sid in sample_ids:
+                target = str(turn_meta[sid]["gt_track_id"])
+                ranked = _candidate_scorer_rank_ids(
+                    pools_by_sample.get(sid, []),
+                    features=features_by_sample.get(sid, {}),
+                    state=states[sid],
+                    limit=max(k, 100),
+                    depth=depth,
+                )
+                try:
+                    rank = ranked.index(target) + 1
+                except ValueError:
+                    rank = None
+                scorer_hit = rank is not None and rank <= k
+                current_hit = bool(current_rows[sid].get(f"union@{k}"))
+                all_final_count += int(scorer_hit)
+                all_current_plus_count += int(current_hit or scorer_hit)
+                all_current_miss_rescues += int(scorer_hit and not current_hit)
+                if sid in valid_ids:
+                    valid_final_count += int(scorer_hit)
+                    valid_current_plus_count += int(current_hit or scorer_hit)
+                    valid_current_miss_rescues += int(scorer_hit and not current_hit)
+                if k == 100 and rank is not None:
+                    ranks.append(rank)
+                    if sid in valid_ids:
+                        valid_ranks.append(rank)
+            row[f"all_scorer_final@{k}_count"] = all_final_count
+            row[f"valid_scorer_final@{k}_count"] = valid_final_count
+            row[f"all_current_plus_scorer@{k}_count"] = all_current_plus_count
+            row[f"valid_current_plus_scorer@{k}_count"] = valid_current_plus_count
+            row[f"all_current_miss_rescue@{k}_count"] = all_current_miss_rescues
+            row[f"valid_current_miss_rescue@{k}_count"] = valid_current_miss_rescues
+        row["all_scorer_rank_median"] = (
+            sorted(ranks)[len(ranks) // 2] if ranks else None
+        )
+        row["valid_scorer_rank_median"] = (
+            sorted(valid_ranks)[len(valid_ranks) // 2] if valid_ranks else None
+        )
+        rows.append(row)
+    return rows
+
+
+def _feature_maps_by_sample(
+    *,
+    sample_ids: list[str],
+    pools_by_sample: dict[str, list[BranchPool]],
+    states: dict[str, Any],
+    track_meta: dict[str, TrackMeta],
+    catalog: LanceDbCatalog,
+    user_vectors: dict[str, list[float] | None],
+    mode: str,
+) -> dict[str, dict[str, CandidateFeature]]:
+    out: dict[str, dict[str, CandidateFeature]] = {}
+    for sid in sample_ids:
+        candidate_ids = {
+            track_id
+            for pool in pools_by_sample.get(sid, [])
+            for track_id, _score in pool.hits
+        }
+        out[sid] = _feature_scores_for_sample(
+            state=states[sid],
+            track_meta=track_meta,
+            candidate_ids=candidate_ids,
+            catalog=catalog,
+            user_vector=user_vectors.get(sid),
+            mode=mode,
+        )
+    return out
+
+
+def _merge_feature_maps_by_sample(
+    *feature_maps: dict[str, dict[str, CandidateFeature]],
+) -> dict[str, dict[str, CandidateFeature]]:
+    sample_ids = {
+        sid
+        for feature_map in feature_maps
+        for sid in feature_map
+    }
+    out: dict[str, dict[str, CandidateFeature]] = {}
+    for sid in sample_ids:
+        track_ids = {
+            track_id
+            for feature_map in feature_maps
+            for track_id in feature_map.get(sid, {})
+        }
+        merged: dict[str, CandidateFeature] = {}
+        for track_id in track_ids:
+            score = 0.0
+            hard_drop = False
+            for feature_map in feature_maps:
+                feature = feature_map.get(sid, {}).get(track_id)
+                if feature is None:
+                    continue
+                score += float(feature.feature_score)
+                hard_drop = hard_drop or bool(feature.hard_drop)
+            merged[track_id] = CandidateFeature(
+                feature_score=score,
+                hard_drop=hard_drop,
+            )
+        out[sid] = merged
+    return out
+
+
 def _rank_in_pool(pool: BranchPool, target: str) -> int | None:
     for rank, (track_id, _score) in enumerate(pool.hits, start=1):
         if track_id == target:
@@ -1394,6 +1590,14 @@ AUDIT_OVERRIDES = {
         "gt_conflicts_with_explicit_user_constraint",
         "User asks to branch out from Masta Ace; GT is still Masta Ace.",
     ),
+    "daeef24e-b041-4140-9101-882820c63408::t7": (
+        "gt_conflicts_with_explicit_user_constraint",
+        "User explicitly asks for 'The Spirit of Radio' by Rush; GT is another Rush track.",
+    ),
+    "a33a5df0-2c2b-429c-84e6-cde28affd4d5::t6": (
+        "gt_conflicts_with_explicit_user_constraint",
+        "User describes a Panic! At The Disco first-album track; GT is Fall Out Boy.",
+    ),
 }
 
 
@@ -1598,7 +1802,7 @@ def _write_csv(path: Path, sample_ids: list[str], rows: dict[str, dict[str, Any]
     ]
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         for sid in sample_ids:
             row = rows[sid]
@@ -1617,6 +1821,25 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
     metric_by_variant = {row["variant"]: row for row in payload["metrics"]}
     baseline = metric_by_variant["current_plus_targeted"]
     promoted = metric_by_variant["promoted_feature_family"]
+    pool_rows_by_recipe = {
+        row["recipe"]: row for row in payload.get("pool_size_strategy", [])
+    }
+    pool_top200 = pool_rows_by_recipe.get("large_top200_per_branch", {})
+    pool_top500 = pool_rows_by_recipe.get("very_large_top500_per_branch", {})
+    pool_top1000 = pool_rows_by_recipe.get("raw_deep_top1000_per_branch", {})
+    valid_deep_absences = (
+        pool_top1000.get("valid_n", 0) - pool_top1000.get("valid_gt_in_pool_count", 0)
+        if pool_top1000
+        else 0
+    )
+    valid_union20_lift = (
+        promoted["valid_only_union@20_count"] - baseline["valid_only_union@20_count"]
+    )
+    all_union20_lift = promoted["all_union@20_count"] - baseline["all_union@20_count"]
+    conflict_count = payload.get("gt_audit_counts", {}).get(
+        "gt_conflicts_with_explicit_user_constraint",
+        0,
+    )
     lines: list[str] = [
         "# State V1 Candidate Quality Non-Prompt Matrix",
         "",
@@ -1636,9 +1859,10 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         f"{promoted['all_union@50_count']}/110 union@50, "
         f"{promoted['all_union@100_count']}/110 union@100.",
         "- Valid-GT-only lift: "
-        f"{baseline['valid_only_union@20_count']}/99 -> "
-        f"{promoted['valid_only_union@20_count']}/99 union@20. "
-        "That is +7 valid branch-union top-20 rescues with no state prompt/schema "
+        f"{baseline['valid_only_union@20_count']}/{baseline['valid_only_n']} -> "
+        f"{promoted['valid_only_union@20_count']}/{promoted['valid_only_n']} union@20. "
+        f"That is +{valid_union20_lift} "
+        "valid branch-union top-20 rescues with no state prompt/schema "
         "changes. It still needs final-fusion validation.",
         "- Plain `all_on_original` does not move top-20. The gap is not only "
         "whether branches fire; it is branch-local candidate ordering using "
@@ -1655,8 +1879,10 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "patch.",
         "- Compiler-aware branch-family scoring also fails to create current-miss "
         "top-20 rescues. That rules out a simple RRF/branch-weight fix on the "
-        "saved pools; the next useful scorer needs candidate-level metadata, "
-        "cross-encoder evidence, or a targeted new source for the few absent cases.",
+        "saved pools; the capped candidate-scorer proxy below also fails to create "
+        "valid top-20 rescues, so the next useful final-list step is a stronger "
+        "learned/listwise scorer or a separately measured branch-survivor policy, "
+        "not another plain RRF rewrite.",
         "- User-CF alone does not improve union@20, but it improves deeper recall "
         "and should be deferred as a ranking feature rather than promoted as a "
         "top-20 candidate-recall fix.",
@@ -1867,8 +2093,14 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "",
         "Pool recommendation: use a large but capped reranker pool around top200 "
         "per active branch family as the first serious reranker recipe. It reaches "
-        "88/99 valid GT with about 2,025 unique candidates/turn on this pack. "
-        "Top500/top1000 recover more GT (95/99 and 97/99 valid), but the pool "
+        f"{pool_top200.get('valid_gt_in_pool_count')}/{pool_top200.get('valid_n')} "
+        "valid GT with about "
+        f"{_fmt(pool_top200.get('avg_unique_candidates'))} unique candidates/turn "
+        "on this pack. "
+        "Top500/top1000 recover more GT "
+        f"({pool_top500.get('valid_gt_in_pool_count')}/{pool_top500.get('valid_n')} "
+        f"and {pool_top1000.get('valid_gt_in_pool_count')}/{pool_top1000.get('valid_n')} "
+        "valid), but the pool "
         "sizes explode to roughly 4,555 and 8,195 unique candidates/turn. "
         "Keep exact/lookup generous, keep BM25/Qwen/tag/scene/anchor branches around "
         "top100-200, trigger lyric/visual/sonic branches only when state evidence "
@@ -1903,7 +2135,8 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         )
     lines.append(
         "\nFusion-proxy read: if `protected_plus_promoted_feature_family` does not "
-        "beat `protected_plus_all_on` at proxy@20, the +7 union@20 branch-local "
+        f"beat `protected_plus_all_on` at proxy@20, the +{all_union20_lift} "
+        "union@20 branch-local "
         "movement should be treated as candidate-quality evidence, not a "
         "production final-list fix. If it does beat it, the next step is a tiny "
         "real compiler final-list smoke with the same fixed features."
@@ -1943,10 +2176,71 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
             "\nWeighted-scorer read: this does not rescue current union@20 misses. "
             "So the remaining focused gap is not solved by branch-family weights, "
             "intent routing, or a conservative RRF rewrite alone. The measurable "
-            "branch-local +7 comes from candidate-level catalog/anchor features; "
+            f"branch-local +{all_union20_lift} comes from candidate-level "
+            "catalog/anchor features; "
             "those need a real capped candidate scorer or learned ranker over a "
-            "top100-200 pool, while the two valid deep-pool absences are the only "
+            f"top100-200 pool, while the {valid_deep_absences} valid deep-pool "
+            "absences are the only "
             "clear new-source candidates in this focused pack."
+        )
+
+    candidate_scorer_rows = payload.get("candidate_scorer_proxy") or []
+    if candidate_scorer_rows:
+        lines.extend([
+            "",
+            "## Capped Candidate-Level Scorer Proxy",
+            "",
+            "This proxy scores capped `protected + feature-reranked branch` pools "
+            "with both branch-rank evidence and deterministic candidate features "
+            "(catalog tag/phrase/year/popularity compatibility, anchor-CF, user-CF "
+            "where tested, novelty demotion, and hard drops only for explicit "
+            "resolved exclusions). This is the first proxy in this report that can "
+            "see the same candidate-level evidence responsible for the branch-local "
+            "top-20 rescues.",
+            "",
+            "| Feature set | depth | scorer p@20 | valid p@20 | current+scorer u@20 | valid current+scorer u@20 | rescues@20 | valid rescues@20 | valid current+scorer u@50 | valid current+scorer u@100 |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        ])
+        for row in candidate_scorer_rows:
+            lines.append(
+                "| `{variant}` | {depth} | {a20}/{alln} | {v20}/{validn} | {cu20}/{alln} | {vcu20}/{validn} | {r20} | {vr20} | {vcu50}/{validn} | {vcu100}/{validn} |".format(
+                    variant=row["base_variant"],
+                    depth=row["depth_per_branch"],
+                    a20=row["all_scorer_final@20_count"],
+                    alln=row["all_n"],
+                    v20=row["valid_scorer_final@20_count"],
+                    validn=row["valid_n"],
+                    cu20=row["all_current_plus_scorer@20_count"],
+                    vcu20=row["valid_current_plus_scorer@20_count"],
+                    r20=row["all_current_miss_rescue@20_count"],
+                    vr20=row["valid_current_miss_rescue@20_count"],
+                    vcu50=row["valid_current_plus_scorer@50_count"],
+                    vcu100=row["valid_current_plus_scorer@100_count"],
+                )
+            )
+        best = max(
+            candidate_scorer_rows,
+            key=lambda row: (
+                row["valid_current_miss_rescue@20_count"],
+                row["valid_current_plus_scorer@20_count"],
+                row["valid_current_plus_scorer@50_count"],
+            ),
+        )
+        lines.append(
+            "\nCandidate-scorer read: the best focused proxy is "
+            f"`{best['base_variant']}` at depth {best['depth_per_branch']}, "
+            f"with {best['valid_current_miss_rescue@20_count']} valid current-miss "
+            f"rescues@20 and {best['valid_current_plus_scorer@20_count']}/"
+            f"{best['valid_n']} valid current+scorer union@20. "
+            + (
+                "This passes the tiny final-list smoke gate; the next step is a "
+                "real compiler final-list smoke over the same capped pool."
+                if best["valid_current_miss_rescue@20_count"] > 0
+                else "This does not pass the tiny final-list smoke gate. The "
+                "feature evidence improves branch-local union, but a global "
+                "candidate scorer still cannot decide which branch-local survivors "
+                "belong in the top 20."
+            )
         )
 
     lines.extend([
@@ -1965,7 +2259,8 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "literal cases like 'not Drake', 'not Daft Punk', or 'not System Of A Down' "
         "where the GT artist violates an explicit user constraint. Because the "
         "conflict detector uses name matching, keep this as an audit label rather "
-        "than a leaderboard exclusion until the 10 conflict rows are hand-verified.",
+        f"than a leaderboard exclusion until the {conflict_count} conflict rows are "
+        "hand-verified.",
     ])
 
     lines.extend([
@@ -2005,10 +2300,11 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "but not union@20. Defer to ranking work; do not call it a candidate-recall "
         "fix yet.",
         "- Feature magnitudes are hand-set on the focused gap pack. The direction is "
-        "credible because controls stay stable, but the exact +7 size is overfit-risk "
-        "until the same frozen weights pass a held-out/full-devset smoke.",
+        "credible because controls stay stable, but the exact focused-pack lift is "
+        "overfit-risk until the same frozen weights pass a held-out/full-devset smoke.",
         "- Last-resort prompt ablation: not run. The frozen state contains enough "
-        "usable signal to get +7 valid union@20 from non-prompt levers, so prompt "
+        f"usable signal to get +{valid_union20_lift} valid union@20 from non-prompt "
+        "levers, so prompt "
         "iteration should be a separate later goal only for the remaining state/lyric "
         "failures.",
     ])
@@ -2268,6 +2564,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         for pool in pools
         for track_id, _score in pool.hits
     }
+    candidate_ids.update(
+        track_id
+        for pools in protected_pools.values()
+        for pool in pools
+        for track_id, _score in pool.hits
+    )
     catalog = LanceDbCatalog(str(args.lancedb_uri), eager_vector_fields=("cf_bpr",))
     candidate_ids.update(
         track_id
@@ -2284,6 +2586,35 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         else None
         for sid in sample_ids
     }
+    scorer_pools = _merged_pools(sample_ids, protected_pools, all_on_pools)
+    candidate_feature_maps = {
+        mode: _feature_maps_by_sample(
+            sample_ids=sample_ids,
+            pools_by_sample=scorer_pools,
+            states=states,
+            track_meta=track_meta,
+            catalog=catalog,
+            user_vectors=user_vectors,
+            mode=mode,
+        )
+        for mode in (
+            "catalog_features",
+            "anchor_cf_features",
+            "user_cf_features",
+            "branch_local_hybrid",
+        )
+    }
+    candidate_feature_maps["promoted_feature_family"] = _merge_feature_maps_by_sample(
+        candidate_feature_maps["catalog_features"],
+        candidate_feature_maps["anchor_cf_features"],
+        candidate_feature_maps["branch_local_hybrid"],
+    )
+    candidate_feature_maps["all_feature_family"] = _merge_feature_maps_by_sample(
+        candidate_feature_maps["catalog_features"],
+        candidate_feature_maps["anchor_cf_features"],
+        candidate_feature_maps["user_cf_features"],
+        candidate_feature_maps["branch_local_hybrid"],
+    )
 
     variant_pool_maps = {
         mode: _rerank_pool_map(
@@ -2388,6 +2719,54 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             ),
         },
     )
+    candidate_scorer_proxy: list[dict[str, Any]] = []
+    candidate_scorer_pool_variants = {
+        "candidate_catalog_features": _merged_pools(
+            sample_ids,
+            protected_pools,
+            variant_pool_maps["catalog_features"],
+        ),
+        "candidate_anchor_cf_features": _merged_pools(
+            sample_ids,
+            protected_pools,
+            variant_pool_maps["anchor_cf_features"],
+        ),
+        "candidate_branch_local_hybrid": _merged_pools(
+            sample_ids,
+            protected_pools,
+            variant_pool_maps["branch_local_hybrid"],
+        ),
+        "candidate_promoted_feature_family": _merged_pools(
+            sample_ids,
+            protected_pools,
+            variant_pool_maps["promoted_feature_family"],
+        ),
+        "candidate_all_feature_family": _merged_pools(
+            sample_ids,
+            protected_pools,
+            variant_pool_maps["all_feature_family"],
+        ),
+    }
+    for variant_name in (
+        "candidate_catalog_features",
+        "candidate_anchor_cf_features",
+        "candidate_branch_local_hybrid",
+        "candidate_promoted_feature_family",
+        "candidate_all_feature_family",
+    ):
+        feature_key = variant_name.removeprefix("candidate_")
+        candidate_scorer_proxy.extend(
+            _candidate_scorer_proxy_summary(
+                sample_ids=sample_ids,
+                turn_meta=turn_meta,
+                labels=labels,
+                states=states,
+                current_rows=current_plus_targeted_rows,
+                pools_by_sample=candidate_scorer_pool_variants[variant_name],
+                features_by_sample=candidate_feature_maps[feature_key],
+                variant_name=variant_name,
+            )
+        )
     variant_rows: dict[str, dict[str, dict[str, Any]]] = {
         "current_or": current_rows,
         "current_plus_targeted": current_plus_targeted_rows,
@@ -2477,6 +2856,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "pool_size_strategy": pool_size_strategy,
         "fusion_proxy": fusion_proxy,
         "state_weighted_fusion_proxy": state_weighted_fusion_proxy,
+        "candidate_scorer_proxy": candidate_scorer_proxy,
         "gap_diagnostics": gap_diagnostics,
         "noise_examples": noise_examples,
         "per_class": _per_class_metrics(
