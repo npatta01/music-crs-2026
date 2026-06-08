@@ -127,6 +127,11 @@ Current read:
   creates zero valid current-miss top-20 rescues, even at 8x feature weight.
   Existing hand features are therefore not merely underweighted; the next lever
   needs sharper query/source signals or richer candidate features.
+- The residual source-gap worksheet now joins each family back to the all-on
+  branch pools: all 19 compact residual source-gap rows are either absent from
+  all-on top100 or only present at rank101+. This makes lyric/hidden-target,
+  visual text-to-image, temporal scene/popularity, and artist-neighbor source
+  work the next grounded candidate-recall lever, not another scalar scorer.
 - A stricter recency/new-artist constraint ablation improves over baseline but
   trails the promoted feature family, so reject it as a replacement rather than
   shipping stronger hand-tuned constraints.
@@ -142,5 +147,6 @@ Next step:
 
 - Do not keep adding scalar hand-tuned constraints or feature-weight sweeps.
   The next focused experiment should create sharper source/query branches for
-  the two valid deep-pool absences and the hidden-target/lyric/visual slices,
-  or add richer candidate features before revisiting learned ranking.
+  hidden-target/lyric, visual cover/artwork, temporal scene/popularity, and
+  novelty artist-neighbor slices, then re-run additive union@20 on the focused
+  pack before any expensive full-devset cache-miss run.
