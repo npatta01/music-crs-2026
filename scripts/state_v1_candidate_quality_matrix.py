@@ -3510,6 +3510,18 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
             )
         lines.extend([
             "",
+            "Source availability note: the catalog metadata exposes titles, artists, "
+            "albums, tags, popularity, and release dates, but not raw lyrics or raw "
+            "cover descriptors. Track embeddings do include `lyrics_qwen3_embedding_0_6b` "
+            "and `image_siglip2`. The all-retrievers config already has a lyric dense "
+            "branch, so lyric residuals are likely query/source-formulation gaps. "
+            "The production config uses `image_siglip2` as an anchor-centroid branch, "
+            "while the focused matrix has a diagnostic SigLIP text visual variant; "
+            "visual/artwork residuals therefore need a real text-to-image branch or "
+            "derived visual descriptors rather than post-filtering.",
+        ])
+        lines.extend([
+            "",
             "| sample | family | GT | best branch/rank | next change |",
             "|---|---|---|---|---|",
         ])

@@ -292,6 +292,8 @@ This worksheet is the compact residual after current + targeted branches. It sep
 | `temporal_scene_constraint_missing` | 6 | state/query has useful scene terms, but the date/era interpretation or branch query is too narrow; treat era as soft unless explicit. |
 | `visual_cover_text_to_image_missing` | 3 | visual or artwork language needs a stronger text-to-image/cross-modal query or richer visual descriptors. |
 
+Source availability note: the catalog metadata exposes titles, artists, albums, tags, popularity, and release dates, but not raw lyrics or raw cover descriptors. Track embeddings do include `lyrics_qwen3_embedding_0_6b` and `image_siglip2`. The all-retrievers config already has a lyric dense branch, so lyric residuals are likely query/source-formulation gaps. The production config uses `image_siglip2` as an anchor-centroid branch, while the focused matrix has a diagnostic SigLIP text visual variant; visual/artwork residuals therefore need a real text-to-image branch or derived visual descriptors rather than post-filtering.
+
 | sample | family | GT | best branch/rank | next change |
 |---|---|---|---|---|
 | `41367174-552b-4117-9caa-d0ba1b307d37::t2` | `temporal_scene_constraint_missing` | Mercy by Muse | `analysis.era_tag_popularity` #239 | Sharpen scene/era query construction and score release-era compatibility softly; avoid hard year filtering unless the user gives explicit dates. |
