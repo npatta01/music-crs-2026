@@ -78,6 +78,7 @@ from mcrs.qu_modules.compiler_v0plus import (
     CompilerConfig,
     DenseBranch,
     V0PlusCompiler,
+    build_state_record,
 )
 from mcrs.qu_modules.user_embeddings import UserEmbeddings
 from mcrs.qu_modules.fuzzy_matcher import FuzzyMatcher, RapidfuzzCatalogMatcher
@@ -570,6 +571,7 @@ class V0PlusCompilerQU:
         session_memory: list[dict[str, Any]],
         topk: int = 1000,
         user_id: str | None = None,
+        session_context: dict[str, Any] | None = None,
     ) -> list[str]:
         """Return up to `topk` track_ids. May return an empty list when the
         extractor fails or the compiler finds no candidates that satisfy the
@@ -591,7 +593,8 @@ class V0PlusCompilerQU:
             )
             return []
         rs = self.resolver.resolve(state, played_track_ids=played)
-        track_ids = self.compiler.compile(rs, user_id=user_id)[:topk]
+        track_ids = self.compiler.compile(
+            rs, user_id=user_id, session_context=session_context)[:topk]
         if not track_ids:
             logger.warning(
                 "v0+ empty result: compiler returned 0 candidates | "
@@ -609,6 +612,7 @@ class V0PlusCompilerQU:
         topk: int,
         sem: asyncio.Semaphore,
         user_id: str | None = None,
+        session_context: dict[str, Any] | None = None,
     ) -> tuple[int, list[str], dict[str, Any]]:
         """Async per-session worker — extractor runs under the semaphore;
         the synchronous compiler runs off the event loop via
@@ -654,7 +658,7 @@ class V0PlusCompilerQU:
         # `branch_trace_topk > 0`. compile() is the thin public wrapper used by
         # the submission/blindset path (only needs .ranked).
         def _run_compile() -> CompileResult:
-            return self.compiler._compile(rs, user_id=user_id)
+            return self.compiler._compile(rs, user_id=user_id, session_context=session_context)
 
         compile_result = await asyncio.to_thread(_run_compile)
         track_ids = compile_result.ranked[:topk]
@@ -667,64 +671,17 @@ class V0PlusCompilerQU:
                 getattr(state.intent_mode, "value", state.intent_mode),
             )
 
-        # Build the per-turn trace. Resolver fields are pulled directly from
-        # `ResolvedConversationState` — currently exposes `resolved_rejections`
-        # (per-rejection artist/track ids) and `track_feedback_artist_ids`
-        # (resolved artist for each track-feedback entry). We flatten these
-        # into top-level rejection id lists for easier downstream inspection.
-        rejected_track_ids: list[str] = []
-        rejected_artist_ids: list[str] = []
-        for rej in rs.resolved_rejections.values():
-            rejected_track_ids.extend(rej.track_ids)
-            rejected_artist_ids.extend(rej.artist_ids)
-        # Track-feedback-derived artist rejections (compiler demotes these).
-        for tf in state.track_feedback:
-            if tf.role == "rejected":
-                aid = rs.track_feedback_artist_ids.get(tf.track_id)
-                if aid is not None:
-                    rejected_artist_ids.append(aid)
-        rejected_tags = [
-            er.value for er in state.explicit_rejections
-            if er.kind == "tag" and er.value
-        ]
-        positive_tags = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment > 0 and me.type == "tag" and me.value
-        ]
-        # Anchor tracks/artists for centroid + tag expansion (mirrors what
-        # the compiler considers a "positive" reference).
-        anchor_track_ids: list[str] = []
-        for tf in state.track_feedback:
-            if tf.role in ("accepted", "seed") and tf.overall_sentiment > 0:
-                anchor_track_ids.append(tf.track_id)
-        anchor_track_ids.extend(state.referenced_track_ids)
-        anchor_artist_ids = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment > 0 and me.type == "artist" and me.value
-        ]
+        # Build the per-turn trace. The {state, resolver, resolved_targets} record is produced
+        # by the shared `build_state_record` helper — the SAME function the online reranker uses
+        # in `compiler._compile`, so the training trace and the serving features never drift.
+        _record = build_state_record(state, rs)
         trace = {
             "trace_schema_version": TRACE_SCHEMA_VERSION,
             "idx": idx,
             "intent_mode": getattr(state.intent_mode, "value", str(state.intent_mode)),
-            "state": state.model_dump(mode="json"),
-            "resolver": {
-                "anchor_track_ids": anchor_track_ids,
-                "anchor_artist_ids": anchor_artist_ids,
-                "rejected_track_ids": rejected_track_ids,
-                "rejected_artist_ids": rejected_artist_ids,
-                "rejected_tags": rejected_tags,
-                "positive_tags": positive_tags,
-                "played_track_ids": list(rs.played_track_ids),
-            },
-            "resolved_targets": [
-                {
-                    "kind": t.kind,
-                    "source_text": t.source_text,
-                    "entity_id": t.entity_id,
-                    "confidence": t.confidence,
-                }
-                for t in rs.resolved_targets
-            ],
+            "state": _record["state"],
+            "resolver": _record["resolver"],
+            "resolved_targets": _record["resolved_targets"],
             "routing_tags": state.routing_tags.model_dump(),
             "lyrical_theme": state.lyrical_theme,
             "compiler": {
@@ -747,6 +704,7 @@ class V0PlusCompilerQU:
         session_memories: list[list[dict[str, Any]]],
         topk: int = 1000,
         user_ids: list[str | None] | None = None,
+        session_contexts: list[dict[str, Any] | None] | None = None,
     ) -> list[list[str]]:
         """Parallel batch fan-out via asyncio + semaphore. Each batch entry
         is independent (extractor is stateless re. prior turns), so we run
@@ -772,12 +730,20 @@ class V0PlusCompilerQU:
                 f"user_ids length {len(user_ids)} must match session_memories "
                 f"length {len(session_memories)}"
             )
+        if session_contexts is None:
+            session_contexts = [None] * len(session_memories)
+        elif len(session_contexts) != len(session_memories):
+            raise ValueError(
+                f"session_contexts length {len(session_contexts)} must match session_memories "
+                f"length {len(session_memories)}"
+            )
 
         async def _run() -> list[tuple[int, list[str], dict[str, Any]]]:
             sem = asyncio.Semaphore(self.max_in_flight)
             tasks = [
-                self._acompile_one(i, sm, topk, sem, user_id=uid)
-                for i, (sm, uid) in enumerate(zip(session_memories, user_ids))
+                self._acompile_one(i, sm, topk, sem, user_id=uid, session_context=sc)
+                for i, (sm, uid, sc) in enumerate(
+                    zip(session_memories, user_ids, session_contexts))
             ]
             return await asyncio.gather(*tasks)
 
@@ -998,6 +964,8 @@ def build_v0plus_compiler_qu(
                 "cf_bpr_vector_field",
                 "cf_bpr_distance_type",
                 "branch_trace_topk",
+                "ranker",
+                "reranker_model_path",
                 "enable_resolved_artist_discography",
                 "disco_weight",
                 "disco_cap",

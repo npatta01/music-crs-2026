@@ -20,3 +20,8 @@ experiments/analysis/extractor_prompt_v2/artifacts/gap/gap_table_v3.jsonl
 
 # one-time catalog embedding outputs (regenerable from the vLLM endpoints)
 artifacts/catalog_embeddings/
+
+# Local Dev Folders
+.vscode
+.claude/plans
+.claude/scheduled_tasks.lock

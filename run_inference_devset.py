@@ -175,7 +175,7 @@ def main(args):
         retrieval_config=_to_plain_dict(config.get("retrieval_config")),
         lm_kwargs=_to_plain_dict(config.get("lm_kwargs")),
     )
-    db = load_dataset(config.test_dataset_name, split="test")
+    db = load_dataset(config.test_dataset_name, split=getattr(args, "hf_split", "test"))
     if args.session_ids_file is not None:
         with open(args.session_ids_file) as f:
             keep = set(json.load(f)["session_ids"])
@@ -218,21 +218,32 @@ def main(args):
         print(f"Shard {shard_id}/{num_shards}: {len(db)} sessions "
               f"(indices [{start}, {end}))")
     # Prepare all batch data at once
+    from mcrs.rerank.session_meta import flatten_session_row
     batch_data, metadata = [], []
     for item in db:
         user_id = item['user_id']
         session_id = item['session_id']
+        # Session-level context for the reranker's block-U features (computed at serve so they
+        # are not NaN). Same fields the offline session_id join supplies during training.
+        session_context = {
+            'user_profile': item.get('user_profile'),
+            'conversation_goal': item.get('conversation_goal'),
+            'session_date': item.get('session_date'),
+        }
+        session_meta_flat = flatten_session_row(session_context)
         for target_turn_number in range(1, 9):
             chat_history, user_query = chat_history_parser(item['conversations'], music_crs, target_turn_number)
             batch_data.append({
                 'user_query': user_query,
                 'user_id': user_id,
-                'session_memory': chat_history
+                'session_memory': chat_history,
+                'session_context': session_context,
             })
             metadata.append({
                 'session_id': session_id,
                 'user_id': user_id,
-                'turn_number': target_turn_number
+                'turn_number': target_turn_number,
+                'session_meta': session_meta_flat,
             })
     inference_results = []
     trace_results = []
@@ -255,20 +266,26 @@ def main(args):
                 "session_id": batch_metadata[j]['session_id'],
                 "user_id": batch_metadata[j]['user_id'],
                 "turn_number": batch_metadata[j]['turn_number'],
+                # Carried so the rerank dataset builder gets block-U fields inline (no separate
+                # session_id join needed for traces produced after this change).
+                "session_meta": batch_metadata[j]['session_meta'],
                 "trace": _with_trace_run_metadata(
                     result.get("trace"),
                     trace_run_metadata,
                 ),
             })
-    os.makedirs(f"{args.exp_dir}/inference/devset", exist_ok=True)
+    # Output dataset dir. Defaults to "devset" (back-compat); set --out_split to target
+    # another split's artifacts (e.g. "train" for the reranker's Phase-2 training data).
+    out_split = getattr(args, "out_split", "devset")
+    os.makedirs(f"{args.exp_dir}/inference/{out_split}", exist_ok=True)
     # `output_suffix` is sharding-time metadata; programmatic callers may not set it.
     output_suffix = getattr(args, "output_suffix", "")
-    out_path = f"{args.exp_dir}/inference/devset/{args.tid}{output_suffix}.json"
+    out_path = f"{args.exp_dir}/inference/{out_split}/{args.tid}{output_suffix}.json"
     # Trace sidecar — JSONL (one record per line) so it streams/diffs cheaply
     # and shards concatenate by appending lines. `default=str` handles
     # datetime.date fields inside the extracted v0+ state's hard_filters.start/end
     # without a custom encoder.
-    trace_path = f"{args.exp_dir}/inference/devset/{args.tid}{output_suffix}_trace.jsonl"
+    trace_path = f"{args.exp_dir}/inference/{out_split}/{args.tid}{output_suffix}_trace.jsonl"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(inference_results, f, ensure_ascii=False)
     with open(trace_path, "w", encoding="utf-8") as f:
@@ -333,6 +350,20 @@ if __name__ == "__main__":
         default="",
         help="Optional suffix appended to the output filenames "
              "(e.g. '.shard_3' -> '{tid}.shard_3.json'). Empty = '{tid}.json'.",
+    )
+    parser.add_argument(
+        "--hf_split",
+        type=str,
+        default="test",
+        help="HuggingFace split to load from test_dataset_name. Default 'test' (devset). "
+             "Use 'train' to generate the reranker's Phase-2 training data.",
+    )
+    parser.add_argument(
+        "--out_split",
+        type=str,
+        default="devset",
+        help="Subdirectory under inference/ for the artifacts. Default 'devset'. "
+             "Set to 'train' alongside --hf_split train.",
     )
     args = parser.parse_args()
     main(args)
