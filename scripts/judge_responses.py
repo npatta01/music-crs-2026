@@ -133,7 +133,9 @@ def main() -> None:
                     judges_scores[jn] = parse_judge_json(raw)
                 except ValueError:
                     parse_failures += 1
-                    judges_scores[jn] = {"personalization": 1, "explanation": 1}
+                    # Do NOT score a parse failure as 1/1 — that corrupts the mean.
+                    # Exclude this (turn, judge) from aggregation instead (aggregate_model_report
+                    # already skips judges absent from a turn).
             per_turn.append({"turn": rec["turn_number"], "judges": judges_scores})
             audit.append({
                 "session_id": rec["session_id"],
