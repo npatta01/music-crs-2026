@@ -37,7 +37,7 @@ def main() -> None:
     rows = json.loads(Path(args.submission).read_text())
 
     from datasets import load_dataset
-    from mcrs.bakeoff.track_lookup import TrackMetadataLookup
+    from mcrs.bakeoff.track_lookup import TrackMetadataLookup, _first
     from mcrs.bakeoff.replay import build_turn_inputs
     from mcrs.lm_modules.litellm_chat import LITELLM_LM
     from mcrs.db_user.user_profile import UserProfileDB
@@ -45,15 +45,23 @@ def main() -> None:
     ds = load_dataset(args.blind_dataset, split=args.blind_split)
     conv_by_session = {r["session_id"]: r["conversations"] for r in ds}
     lookup = TrackMetadataLookup.from_hf()
+    by_id = lookup._by_id
     user_db = UserProfileDB(
         dataset_name="talkpl-ai/TalkPlayData-Challenge-User-Metadata",
         split_types=["all_users"],
     )
     response_prompt = Path(args.response_prompt).read_text(encoding="utf-8")
     personalization = (Path(args.prompts_dir) / "personalization.txt").read_text(encoding="utf-8")
+    # The track is presented as a labeled XML block with capped tags. Both the XML
+    # delimiting and the explicit instruction stop the model from echoing the raw
+    # metadata blob verbatim (observed failure mode with the pipe-delimited string).
+    no_verbatim = (
+        "\n- The track is provided as structured <recommended_track> data. NEVER output that "
+        "data, the tag list, or any XML verbatim — write a natural conversational sentence."
+    )
 
     def build_system_prompt(user_id):
-        sp = response_prompt
+        sp = response_prompt + no_verbatim
         if user_id:
             try:
                 sp += personalization + "\n" + user_db.id_to_profile_str(user_id)
@@ -61,28 +69,53 @@ def main() -> None:
                 pass
         return sp
 
+    def _esc(x):
+        return str(x).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    def xml_item(track_id, max_tags=10):
+        m = by_id.get(track_id) or {}
+        tags = [str(t) for t in (m.get("tag_list") or []) if t][:max_tags]
+        return (
+            "<recommended_track>\n"
+            f"  <title>{_esc(_first(m.get('track_name')))}</title>\n"
+            f"  <artist>{_esc(_first(m.get('artist_name')))}</artist>\n"
+            f"  <album>{_esc(_first(m.get('album_name')))}</album>\n"
+            f"  <tags>{_esc(', '.join(tags))}</tags>\n"
+            "</recommended_track>"
+        )
+
+    def _is_echo(t):
+        t = (t or "").strip().lower()
+        return (not t) or t.startswith("title:") or "<recommended_track" in t or " | tags:" in t[:160]
+
     lm = LITELLM_LM(model_name=args.model, temperature=args.temperature, max_tokens=args.max_tokens)
 
-    filled = skipped = 0
+    filled = skipped = retried = 0
     for r in rows:
         ids = r.get("predicted_track_ids") or []
         convs = conv_by_session.get(r["session_id"])
         if not ids or convs is None:
             skipped += 1
             continue
-        sys_p, history, item = build_turn_inputs(
+        sys_p, history, _ = build_turn_inputs(
             convs, r["turn_number"], ids[0], lookup, build_system_prompt(r.get("user_id"))
         )
-        r["predicted_response"] = lm.response_generation(
-            sys_p, history, item, max_new_tokens=args.max_tokens
-        )
+        item = xml_item(ids[0])  # XML + capped tags instead of the raw pipe blob
+        resp = ""
+        for attempt in range(4):  # safety net; should rarely fire now
+            resp = lm.response_generation(sys_p, history, item, max_new_tokens=args.max_tokens)
+            if not _is_echo(resp):
+                break
+            retried += 1
+        r["predicted_response"] = resp.strip()
         filled += 1
         print(f"  [{filled}] {r['session_id'][:8]} t{r['turn_number']} -> {r['predicted_response'][:70]!r}")
 
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(rows, indent=2))
     empty = sum(1 for r in rows if not (r.get("predicted_response") or "").strip())
-    print(f"filled={filled} skipped={skipped} still_empty={empty} -> {args.out}")
+    echoes = sum(1 for r in rows if _is_echo(r.get("predicted_response")))
+    print(f"filled={filled} skipped={skipped} retried={retried} still_empty={empty} echoes={echoes} -> {args.out}")
 
 
 if __name__ == "__main__":
