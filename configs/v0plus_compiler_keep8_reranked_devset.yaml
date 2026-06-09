@@ -1,0 +1,168 @@
+# v0+ ConversationState Compiler - KEEP-8 RETRIEVERS + LambdaMART reranker (devset)
+#
+# Pruned retriever set: keeps the 8 load-bearing retrievers and turns OFF the 3 found redundant
+# by a leave-one-out ablation (each cost <0.007 NDCG@20 when removed from the full 11-union):
+#   - dense.lyrics_qwen3                 (fires ~1.2% of turns; ~0 unique recall)
+#   - lookup.resolved_artist_discography (goldens already covered by bm25/dense)
+#   - lookup.era_popularity              (weak + redundant)
+# KEEP (8 canonical): bm25, dense.metadata_qwen3, dense.attributes_qwen3, dense.clap_text.sonic,
+#   centroid.image_siglip2, centroid.audio_clap, centroid.cf_bpr, centroid.user.cf_bpr.
+#
+# Offline devset (leakage-free CV-OOF): KEEP-8 NDCG@20 = 0.2460 vs all-11 = 0.2535 (-0.0075) at
+# 3 fewer retrievers (recall ceiling 0.864 vs 0.871). agg features ON (computed over the 8).
+#
+# Final ranker = the LambdaMART model trained on the KEEP-8 feature set (121 features, agg over 8).
+# That model must be deployed at compiler.reranker_model_path BELOW (NOT the all-11 model, whose
+# feature set differs). lancedb.db_uri is overridden to the remote catalog on Modal.
+
+lm_type: "dummy"
+retrieval_type: "bm25"
+
+qu_type: "v0plus_compiler"
+qu_kwargs:
+  max_in_flight: 8
+
+  extractor:
+    model_name: "openrouter/deepseek/deepseek-v4-flash"
+    prompt_version: "current"
+    temperature: 0.0
+    max_tokens: 8000
+    timeout_s: 120
+
+  catalog:
+    metadata_dataset: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
+    embeddings_dataset: "talkpl-ai/TalkPlayData-Challenge-Track-Embeddings"
+    metadata_split: "all_tracks"
+    embeddings_split: "all_tracks"
+
+  encoders:
+    qwen_0_6b:
+      backend: "litellm"
+      model_name: "openai/Qwen/Qwen3-Embedding-0.6B"
+      api_base: "https://api.deepinfra.com/v1/openai"
+      batch_size: 32
+      encoding_format: "float"
+    qwen_8b:
+      backend: "litellm"
+      model_name: "openai/Qwen/Qwen3-Embedding-8B"
+      vllm_endpoint: "qwen3-embedding-8b"
+      api_key: "${oc.env:VLLM_API_KEY,EMPTY}"
+      batch_size: 32
+      encoding_format: "float"
+      extra_params:
+        timeout: 600
+    clap_text:
+      backend: "modal_multimodal"
+      modal_app_name: "music-crs"
+      modal_cls_name: "MultimodalTextEncoder"
+      method: "embed_clap_text"
+
+  lancedb:
+    db_uri: "./cache/lancedb"
+    table_name: "music_track_catalog"
+
+  resolver:
+    score_cutoff: 80
+    artist_match_topk: 20
+    track_match_topk: 5
+
+  compiler:
+    branch_trace_topk: 1000
+    bm25_k: 1000
+    dense_k: 1000
+    rrf_k: 60
+    final_topk: 1000
+
+    # --- Final ranker: LightGBM LambdaMART (KEEP-8 model) ---
+    ranker: "lambdamart"
+    reranker_model_path: "/root/models/rerank/keep8/model.txt"
+
+    field_boosts:
+      track_name: 3.0
+      artist_name: 3.0
+      album_name: 2.0
+      tag_list: 1.5
+      release_year: 1.0
+      release_decade: 1.0
+
+    centroid_alpha:
+      refinement: 0.30
+      playlist_build: 0.30
+      pivot: 0.0
+      open_explore: 0.0
+    anchor_tag_expansion_n: 5
+    rejected_tag_multiplier: 0.5
+    positive_tag_multiplier_step: 0.15
+    same_artist_demote: 1.0
+
+    # KEEP-8 dense branches: dropped the lyrics_qwen3 branch (redundant); qwen-0.6B/8B metadata +
+    # attributes and the CLAP audio-text branch are retained.
+    enable_dense: true
+    dense_branches:
+      - vector_field: "metadata_qwen3_embedding_0_6b"
+        encoder_id: "qwen_0_6b"
+        query_id: "metadata"
+        weight: 1.0
+        distance_type: "cosine"
+      - vector_field: "attributes_qwen3_embedding_0_6b"
+        encoder_id: "qwen_0_6b"
+        query_id: "attributes"
+        weight: 1.0
+        distance_type: "cosine"
+      - vector_field: "metadata_qwen3_embedding_8b"
+        encoder_id: "qwen_8b"
+        query_id: "metadata"
+        weight: 1.0
+        distance_type: "cosine"
+      - vector_field: "attributes_qwen3_embedding_8b"
+        encoder_id: "qwen_8b"
+        query_id: "attributes"
+        weight: 1.0
+        distance_type: "cosine"
+      - vector_field: "audio_laion_clap"
+        encoder_id: "clap_text"
+        query_id: "sonic"
+        weight: 1.0
+        distance_type: "cosine"
+
+    centroid_only_branches:
+      - vector_field: "image_siglip2"
+        weight: 1.0
+        topk: 1000
+        distance_type: "cosine"
+      - vector_field: "audio_laion_clap"
+        weight: 1.0
+        topk: 1000
+        distance_type: "cosine"
+      - vector_field: "cf_bpr"
+        weight: 1.0
+        topk: 1000
+        distance_type: "cosine"
+      - vector_field: "cf_bpr"
+        weight: 1.0
+        topk: 1000
+        distance_type: "cosine"
+        centroid_source: "user"
+
+    routing_boost: {}
+
+    # --- KEEP-8: lookup retrievers turned OFF (redundant per leave-one-out) ---
+    enable_resolved_artist_discography: false
+    enable_era_popularity: false
+
+test_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Dataset"
+item_db_name: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
+user_db_name: "talkpl-ai/TalkPlayData-Challenge-User-Metadata"
+track_split_types:
+  - "all_tracks"
+user_split_types:
+  - "all_users"
+corpus_types:
+  - "track_name"
+  - "artist_name"
+  - "album_name"
+  - "tag_list"
+cache_dir: "./cache"
+device: "cpu"
+attn_implementation: "eager"
+retrieval_topk: 1000
