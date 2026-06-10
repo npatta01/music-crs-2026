@@ -1,0 +1,258 @@
+{
+  "state_labels": [
+    {
+      "sample_id": "d265b5a9-af57-4070-90f5-692a960c5aaa::t6",
+      "pack": "P1_rejection_guardrail_failure",
+      "fact_class": "album_rejection_visual",
+      "state_label": {
+        "allowed_request_types": [
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "striking"
+          },
+          {
+            "type": "tag",
+            "value": "artistically unique"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "album",
+            "value": "Random Access Memories",
+            "allowed_roles": [
+              "history",
+              "rejected",
+              "satisfied_prior"
+            ]
+          },
+          {
+            "type": "artist",
+            "value": "Daft Punk",
+            "allowed_roles": [
+              "history",
+              "rejected",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "album",
+            "value": "Random Access Memories"
+          },
+          {
+            "type": "artist",
+            "value": "Daft Punk"
+          },
+          {
+            "value": "Random Access Memories"
+          },
+          {
+            "value": "Daft Punk"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "album",
+            "value": "Random Access Memories",
+            "allowed_roles": [
+              "rejected",
+              "history",
+              "satisfied"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Daft Punk",
+            "allowed_roles": [
+              "rejected",
+              "history",
+              "satisfied"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "striking",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "artistically unique",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [
+          "Random Access Memories",
+          "Daft Punk"
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "692611f0-d9ef-406c-8327-902575197aee::t8",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "attribute_from_prior",
+      "state_label": {
+        "allowed_request_types": [
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "vivid storytelling"
+          },
+          {
+            "type": "tag",
+            "value": "watching a movie"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "artist",
+            "value": "Kendrick",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "Kendrick"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Kendrick",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "vivid storytelling",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "watching a movie",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "2db3ddc8-78a1-412c-a71e-e0d748aab0e7::t2",
+      "pack": "P0_good_state_ranker_near_miss_failure",
+      "fact_class": "artist_similarity",
+      "state_label": {
+        "allowed_request_types": [
+          "similar_to_prior",
+          "attribute_search"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [
+          {
+            "type": "artist",
+            "value": "John Fogerty"
+          },
+          {
+            "type": "artist",
+            "value": "Bruce Springsteen"
+          }
+        ],
+        "required_query_facets": [],
+        "required_context_entities": [
+          {
+            "type": "track",
+            "value": "Night Moves",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "track",
+            "value": "Night Moves"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "similar_to_prior",
+        "required_entities": [
+          {
+            "type": "track",
+            "value": "Night Moves",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "John Fogerty",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Bruce Springsteen",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      },
+      "label_version": "state_roles_v2"
+    }
+  ]
+}

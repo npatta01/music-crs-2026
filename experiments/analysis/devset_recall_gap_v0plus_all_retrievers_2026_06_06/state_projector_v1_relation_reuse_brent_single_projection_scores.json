@@ -1,0 +1,37 @@
+{
+  "summary": {
+    "samples": 1,
+    "pass_rate": 1.0,
+    "passes": 1,
+    "failures": 0
+  },
+  "rows": [
+    {
+      "sample_id": "8071d14d-7e0f-4f72-90a6-0941db80a371::t5",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "attribute_from_prior",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "tag",
+          "value": "chill R&B",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "smooth",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "groove",
+          "sentiment": 1
+        }
+      ],
+      "compiler_style_reference_entities": [],
+      "compiler_explicit_rejections": []
+    }
+  ],
+  "matching": "state_fact_eval token containment plus forbidden positives"
+}

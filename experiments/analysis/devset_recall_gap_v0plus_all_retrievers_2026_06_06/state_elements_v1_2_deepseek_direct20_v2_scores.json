@@ -1,0 +1,3783 @@
+{
+  "schema_version": "conversation_elements_v1_2_direct_deepseek20_v2_score",
+  "model": "openrouter/deepseek/deepseek-v4-flash",
+  "description": "Second direct extractor-only prompt iteration on same 20 focused70 cases. Prompt is current-turn-first, atomic facets, short evidence. No retrieval run.",
+  "selected_ids": [
+    "028027d3-ad67-4cfb-baca-516772ae7399::t1",
+    "0681d55b-98a0-4773-a9df-075a8050d805::t1",
+    "3664db63-1623-4ae7-9910-dd8bc3c2bd83::t1",
+    "13552d56-f3d8-443a-9272-11ec16c80fa1::t1",
+    "4a02d862-623b-4fab-a42c-2905f31a96db::t1",
+    "5080d5a0-336e-4bd1-b5bc-4cc611983429::t1",
+    "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+    "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+    "10a15ba2-4126-4ae4-ac6c-dc170735ae9e::t7",
+    "15b1caf3-d1ed-46ef-a8e3-c9f7657e6b77::t6",
+    "324ddfb5-8a18-4729-9acb-c851907a297c::t3",
+    "5861afef-85c0-4163-b8b9-5a11e308f352::t4",
+    "0fc60312-9a9d-4658-a950-06fc2441a2ac::t8",
+    "1e14a07f-7369-4d24-9285-9343b6b18353::t8",
+    "3ebc2b49-0f5c-4161-bbcf-e1615821103f::t2",
+    "67b9ba8a-382f-4b70-af76-576848d8cf67::t8",
+    "71bb177a-dab1-4bbc-8508-22d809b05c31::t6",
+    "9468e467-d396-461b-be29-b30b6cf87c35::t5",
+    "380a5ed5-3eb9-4201-8fa6-81381a583bf5::t3",
+    "38d8ba41-a4ea-48ea-b460-bd93d164302a::t4"
+  ],
+  "summary": {
+    "samples_requested": 20,
+    "samples_scored": 20,
+    "errors": 0,
+    "overall": {
+      "schema_valid": 1.0,
+      "request_type_captured": 0.75,
+      "required_elements_captured": 0.6,
+      "required_relations_correct": 0.55,
+      "required_subtypes_compatible": 0.6,
+      "reference_elements_captured": 0.45,
+      "reference_relations_correct": 0.45,
+      "reference_kind_present": 0.45,
+      "exclusions_captured": 0.95,
+      "exclusion_subtypes_compatible": 0.85,
+      "temporal_captured": 0.8,
+      "exactness_constraint_captured": 0.95,
+      "novelty_constraint_captured": 0.4,
+      "ambiguity_captured": 0.9,
+      "all_pass": 0.15
+    },
+    "failure_counts": {
+      "schema_valid": 0,
+      "request_type_captured": 5,
+      "required_elements_captured": 8,
+      "required_relations_correct": 9,
+      "required_subtypes_compatible": 8,
+      "reference_elements_captured": 11,
+      "reference_relations_correct": 11,
+      "reference_kind_present": 11,
+      "exclusions_captured": 1,
+      "exclusion_subtypes_compatible": 3,
+      "temporal_captured": 4,
+      "exactness_constraint_captured": 1,
+      "novelty_constraint_captured": 12,
+      "ambiguity_captured": 2,
+      "all_pass": 17
+    },
+    "by_pack": {
+      "P0_new_artist_union20_gap_failure": {
+        "schema_valid": 1.0,
+        "request_type_captured": 0.6666666666666666,
+        "required_elements_captured": 0.3333333333333333,
+        "required_relations_correct": 0.3333333333333333,
+        "required_subtypes_compatible": 0.3333333333333333,
+        "reference_elements_captured": 0.0,
+        "reference_relations_correct": 0.0,
+        "reference_kind_present": 0.0,
+        "exclusions_captured": 1.0,
+        "exclusion_subtypes_compatible": 1.0,
+        "temporal_captured": 0.6666666666666666,
+        "exactness_constraint_captured": 1.0,
+        "novelty_constraint_captured": 0.3333333333333333,
+        "ambiguity_captured": 0.6666666666666666,
+        "all_pass": 0.0
+      },
+      "P0_novelty_prior_anchor_failure": {
+        "schema_valid": 1.0,
+        "request_type_captured": 0.5,
+        "required_elements_captured": 0.5,
+        "required_relations_correct": 0.5,
+        "required_subtypes_compatible": 0.5,
+        "reference_elements_captured": 1.0,
+        "reference_relations_correct": 1.0,
+        "reference_kind_present": 1.0,
+        "exclusions_captured": 1.0,
+        "exclusion_subtypes_compatible": 1.0,
+        "temporal_captured": 1.0,
+        "exactness_constraint_captured": 1.0,
+        "novelty_constraint_captured": 0.5,
+        "ambiguity_captured": 1.0,
+        "all_pass": 0.0
+      },
+      "P0_roleless_stale_entity_failure": {
+        "schema_valid": 1.0,
+        "request_type_captured": 1.0,
+        "required_elements_captured": 0.6666666666666666,
+        "required_relations_correct": 0.6666666666666666,
+        "required_subtypes_compatible": 0.6666666666666666,
+        "reference_elements_captured": 0.3333333333333333,
+        "reference_relations_correct": 0.3333333333333333,
+        "reference_kind_present": 0.3333333333333333,
+        "exclusions_captured": 1.0,
+        "exclusion_subtypes_compatible": 1.0,
+        "temporal_captured": 1.0,
+        "exactness_constraint_captured": 1.0,
+        "novelty_constraint_captured": 0.0,
+        "ambiguity_captured": 1.0,
+        "all_pass": 0.0
+      },
+      "P1_rejection_guardrail_failure": {
+        "schema_valid": 1.0,
+        "request_type_captured": 0.6666666666666666,
+        "required_elements_captured": 0.3333333333333333,
+        "required_relations_correct": 0.3333333333333333,
+        "required_subtypes_compatible": 0.3333333333333333,
+        "reference_elements_captured": 0.0,
+        "reference_relations_correct": 0.0,
+        "reference_kind_present": 0.0,
+        "exclusions_captured": 0.6666666666666666,
+        "exclusion_subtypes_compatible": 0.0,
+        "temporal_captured": 1.0,
+        "exactness_constraint_captured": 1.0,
+        "novelty_constraint_captured": 0.0,
+        "ambiguity_captured": 0.6666666666666666,
+        "all_pass": 0.0
+      },
+      "P1_temporal_constraint_failure": {
+        "schema_valid": 1.0,
+        "request_type_captured": 0.6666666666666666,
+        "required_elements_captured": 0.3333333333333333,
+        "required_relations_correct": 0.3333333333333333,
+        "required_subtypes_compatible": 0.3333333333333333,
+        "reference_elements_captured": 0.0,
+        "reference_relations_correct": 0.0,
+        "reference_kind_present": 0.0,
+        "exclusions_captured": 1.0,
+        "exclusion_subtypes_compatible": 1.0,
+        "temporal_captured": 0.0,
+        "exactness_constraint_captured": 1.0,
+        "novelty_constraint_captured": 0.3333333333333333,
+        "ambiguity_captured": 1.0,
+        "all_pass": 0.0
+      },
+      "POS_clean_final_hit_control": {
+        "schema_valid": 1.0,
+        "request_type_captured": 0.6666666666666666,
+        "required_elements_captured": 1.0,
+        "required_relations_correct": 0.6666666666666666,
+        "required_subtypes_compatible": 1.0,
+        "reference_elements_captured": 1.0,
+        "reference_relations_correct": 1.0,
+        "reference_kind_present": 1.0,
+        "exclusions_captured": 1.0,
+        "exclusion_subtypes_compatible": 1.0,
+        "temporal_captured": 1.0,
+        "exactness_constraint_captured": 1.0,
+        "novelty_constraint_captured": 0.6666666666666666,
+        "ambiguity_captured": 1.0,
+        "all_pass": 0.3333333333333333
+      },
+      "POS_exact_entity_success_control": {
+        "schema_valid": 1.0,
+        "request_type_captured": 1.0,
+        "required_elements_captured": 1.0,
+        "required_relations_correct": 1.0,
+        "required_subtypes_compatible": 1.0,
+        "reference_elements_captured": 1.0,
+        "reference_relations_correct": 1.0,
+        "reference_kind_present": 1.0,
+        "exclusions_captured": 1.0,
+        "exclusion_subtypes_compatible": 1.0,
+        "temporal_captured": 1.0,
+        "exactness_constraint_captured": 0.6666666666666666,
+        "novelty_constraint_captured": 1.0,
+        "ambiguity_captured": 1.0,
+        "all_pass": 0.6666666666666666
+      }
+    }
+  },
+  "rows": [
+    {
+      "sample_id": "028027d3-ad67-4cfb-baca-516772ae7399::t1",
+      "pack": "POS_exact_entity_success_control",
+      "schema_valid": true,
+      "request_type_captured": true,
+      "required_elements_captured": true,
+      "required_relations_correct": true,
+      "required_subtypes_compatible": true,
+      "reference_elements_captured": true,
+      "reference_relations_correct": true,
+      "reference_kind_present": true,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": true,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": true,
+      "ambiguity_captured": true,
+      "all_pass": true,
+      "expected_request": "exact_entity",
+      "observed_request": "exact_entity",
+      "missing_required": [],
+      "missing_references": [],
+      "missing_exclusions": [],
+      "predicted": {
+        "schema_version": "conversation_elements_v1_2",
+        "request": {
+          "type": "exact_entity",
+          "evidence_text": "Play the iconic Britney Spears song about a 'toxic' relationship",
+          "certainty": "explicit"
+        },
+        "elements": [
+          {
+            "id": "e1",
+            "text": "Toxic",
+            "kind": "entity",
+            "subtype": "track",
+            "relation": "target",
+            "reference_kind": "none",
+            "source": "current_user",
+            "polarity": "positive",
+            "strength": "hard",
+            "certainty": "explicit",
+            "evidence_text": "song about a 'toxic' relationship",
+            "resolution_status": "resolved",
+            "candidate_subtypes": [
+              "track"
+            ]
+          },
+          {
+            "id": "e2",
+            "text": "Britney Spears",
+            "kind": "entity",
+            "subtype": "artist",
+            "relation": "target",
+            "reference_kind": "none",
+            "source": "current_user",
+            "polarity": "positive",
+            "strength": "hard",
+            "certainty": "explicit",
+            "evidence_text": "Britney Spears song",
+            "resolution_status": "resolved",
+            "candidate_subtypes": [
+              "artist"
+            ]
+          }
+        ],
+        "constraints": [
+          {
+            "type": "exactness",
+            "mode": "exact",
+            "target_element_ids": [
+              "e1",
+              "e2"
+            ],
+            "strength": "hard",
+            "certainty": "explicit",
+            "evidence_text": "Play the iconic Britney Spears song about a 'toxic' relationship",
+            "apply_as_filter": true
+          }
+        ],
+        "ambiguities": []
+      },
+      "error": null
+    },
+    {
+      "sample_id": "0681d55b-98a0-4773-a9df-075a8050d805::t1",
+      "pack": "POS_exact_entity_success_control",
+      "schema_valid": true,
+      "request_type_captured": true,
+      "required_elements_captured": true,
+      "required_relations_correct": true,
+      "required_subtypes_compatible": true,
+      "reference_elements_captured": true,
+      "reference_relations_correct": true,
+      "reference_kind_present": true,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": true,
+      "exactness_constraint_captured": false,
+      "novelty_constraint_captured": true,
+      "ambiguity_captured": true,
+      "all_pass": false,
+      "expected_request": "exact_entity",
+      "observed_request": "exact_entity",
+      "missing_required": [],
+      "missing_references": [],
+      "missing_exclusions": [],
+      "predicted": {
+        "ambiguities": [],
+        "constraints": [
+          {
+            "apply_as_filter": true,
+            "certainty": "explicit",
+            "evidence_text": "original 2003 release",
+            "mode": "exactness",
+            "strength": "hard",
+            "target_element_ids": [],
+            "type": "temporal"
+          }
+        ],
+        "elements": [
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Numb",
+            "id": "e1",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "target",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "hard",
+            "subtype": "track",
+            "text": "Numb"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Linkin Park",
+            "id": "e2",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "target",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "hard",
+            "subtype": "artist",
+            "text": "Linkin Park"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Meteora album",
+            "id": "e3",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "target",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "hard",
+            "subtype": "album",
+            "text": "Meteora"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "original 2003 release",
+            "id": "e4",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "hard",
+            "subtype": "era",
+            "text": "2003"
+          }
+        ],
+        "request": {
+          "certainty": "explicit",
+          "evidence_text": "I'm looking for the original 2003 release of 'Numb' by Linkin Park from the 'Meteora' album.",
+          "type": "exact_entity"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    },
+    {
+      "sample_id": "3664db63-1623-4ae7-9910-dd8bc3c2bd83::t1",
+      "pack": "POS_exact_entity_success_control",
+      "schema_valid": true,
+      "request_type_captured": true,
+      "required_elements_captured": true,
+      "required_relations_correct": true,
+      "required_subtypes_compatible": true,
+      "reference_elements_captured": true,
+      "reference_relations_correct": true,
+      "reference_kind_present": true,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": true,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": true,
+      "ambiguity_captured": true,
+      "all_pass": true,
+      "expected_request": "exact_entity",
+      "observed_request": "exact_entity",
+      "missing_required": [],
+      "missing_references": [],
+      "missing_exclusions": [],
+      "predicted": {
+        "schema_version": "conversation_elements_v1_2",
+        "request": {
+          "type": "exact_entity",
+          "evidence_text": "Play \"No Scrubs\" by TLC",
+          "certainty": "explicit"
+        },
+        "elements": [
+          {
+            "id": "e1",
+            "text": "No Scrubs",
+            "kind": "entity",
+            "subtype": "track",
+            "relation": "target",
+            "reference_kind": "none",
+            "source": "current_user",
+            "polarity": "positive",
+            "strength": "hard",
+            "certainty": "explicit",
+            "evidence_text": "Play \"No Scrubs\" by TLC",
+            "resolution_status": "resolved",
+            "candidate_subtypes": []
+          },
+          {
+            "id": "e2",
+            "text": "TLC",
+            "kind": "entity",
+            "subtype": "artist",
+            "relation": "target",
+            "reference_kind": "none",
+            "source": "current_user",
+            "polarity": "positive",
+            "strength": "hard",
+            "certainty": "explicit",
+            "evidence_text": "Play \"No Scrubs\" by TLC",
+            "resolution_status": "resolved",
+            "candidate_subtypes": []
+          }
+        ],
+        "constraints": [
+          {
+            "type": "exactness",
+            "mode": "strict",
+            "target_element_ids": [
+              "e1",
+              "e2"
+            ],
+            "strength": "hard",
+            "certainty": "explicit",
+            "evidence_text": "Play \"No Scrubs\" by TLC",
+            "apply_as_filter": true
+          }
+        ],
+        "ambiguities": []
+      },
+      "error": null
+    },
+    {
+      "sample_id": "13552d56-f3d8-443a-9272-11ec16c80fa1::t1",
+      "pack": "POS_clean_final_hit_control",
+      "schema_valid": true,
+      "request_type_captured": false,
+      "required_elements_captured": true,
+      "required_relations_correct": false,
+      "required_subtypes_compatible": true,
+      "reference_elements_captured": true,
+      "reference_relations_correct": true,
+      "reference_kind_present": true,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": true,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": true,
+      "ambiguity_captured": true,
+      "all_pass": false,
+      "expected_request": "exact_entity",
+      "observed_request": "attribute_search",
+      "missing_required": [],
+      "missing_references": [],
+      "missing_exclusions": [],
+      "predicted": {
+        "schema_version": "conversation_elements_v1_2",
+        "request": {
+          "type": "attribute_search",
+          "evidence_text": "Post Malone song I really like",
+          "certainty": "ambiguous"
+        },
+        "elements": [
+          {
+            "id": "e1",
+            "text": "Post Malone",
+            "kind": "entity",
+            "subtype": "artist",
+            "relation": "reference",
+            "reference_kind": "liked_prior",
+            "source": "current_user",
+            "polarity": "positive",
+            "strength": "soft",
+            "certainty": "explicit",
+            "evidence_text": "Post Malone song I really like",
+            "resolution_status": "resolved",
+            "candidate_subtypes": []
+          }
+        ],
+        "constraints": [],
+        "ambiguities": [
+          {
+            "type": "reference_use",
+            "element_ids": [
+              "e1"
+            ],
+            "valid_interpretations": [
+              "use as attribute source for similar sound",
+              "use as liked reference only"
+            ],
+            "evidence_text": "Post Malone song I really like, but can't describe what hooks me",
+            "reason": "User likes a Post Malone song but cannot articulate why, making it ambiguous whether they want similar attributes or just referencing a liked track."
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "sample_id": "4a02d862-623b-4fab-a42c-2905f31a96db::t1",
+      "pack": "POS_clean_final_hit_control",
+      "schema_valid": true,
+      "request_type_captured": true,
+      "required_elements_captured": true,
+      "required_relations_correct": true,
+      "required_subtypes_compatible": true,
+      "reference_elements_captured": true,
+      "reference_relations_correct": true,
+      "reference_kind_present": true,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": true,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": false,
+      "ambiguity_captured": true,
+      "all_pass": false,
+      "expected_request": "attribute_search",
+      "observed_request": "attribute_search",
+      "missing_required": [],
+      "missing_references": [],
+      "missing_exclusions": [],
+      "predicted": {
+        "ambiguities": [],
+        "constraints": [],
+        "elements": [
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "easy-going folk-rock",
+            "id": "1",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "genre",
+            "text": "folk-rock"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "easy-going",
+            "id": "2",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "easy-going"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Eagles or Fleetwood Mac era",
+            "id": "3",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "era",
+            "text": "1970s"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Eagles or Fleetwood Mac era",
+            "id": "4",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "era",
+            "text": "classic rock"
+          }
+        ],
+        "request": {
+          "certainty": "explicit",
+          "evidence_text": "I'd love to hear some easy-going folk-rock",
+          "type": "attribute_search"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    },
+    {
+      "sample_id": "5080d5a0-336e-4bd1-b5bc-4cc611983429::t1",
+      "pack": "POS_clean_final_hit_control",
+      "schema_valid": true,
+      "request_type_captured": true,
+      "required_elements_captured": true,
+      "required_relations_correct": true,
+      "required_subtypes_compatible": true,
+      "reference_elements_captured": true,
+      "reference_relations_correct": true,
+      "reference_kind_present": true,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": true,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": true,
+      "ambiguity_captured": true,
+      "all_pass": true,
+      "expected_request": "exact_entity",
+      "observed_request": "exact_entity",
+      "missing_required": [],
+      "missing_references": [],
+      "missing_exclusions": [],
+      "predicted": {
+        "ambiguities": [],
+        "constraints": [
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "from his 1979 album 'Off the Wall'",
+            "mode": "exactness",
+            "strength": "hard",
+            "target_element_ids": [
+              "element_2"
+            ],
+            "type": "exactness"
+          }
+        ],
+        "elements": [
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Play Michael Jackson's 'Rock with You'",
+            "id": "element_1",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "target",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "hard",
+            "subtype": "track",
+            "text": "Rock with You"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Michael Jackson",
+            "id": "element_2",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "target",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "hard",
+            "subtype": "artist",
+            "text": "Michael Jackson"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "from his 1979 album 'Off the Wall'",
+            "id": "element_3",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "target",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "hard",
+            "subtype": "album",
+            "text": "Off the Wall"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "1979",
+            "id": "element_4",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "hard",
+            "subtype": "era",
+            "text": "1979"
+          }
+        ],
+        "request": {
+          "certainty": "explicit",
+          "evidence_text": "Play Michael Jackson's 'Rock with You'",
+          "type": "exact_entity"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    },
+    {
+      "sample_id": "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+      "pack": "P0_roleless_stale_entity_failure",
+      "schema_valid": true,
+      "request_type_captured": true,
+      "required_elements_captured": true,
+      "required_relations_correct": true,
+      "required_subtypes_compatible": true,
+      "reference_elements_captured": true,
+      "reference_relations_correct": true,
+      "reference_kind_present": true,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": true,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": false,
+      "ambiguity_captured": true,
+      "all_pass": false,
+      "expected_request": "attribute_search",
+      "observed_request": "attribute_search",
+      "missing_required": [],
+      "missing_references": [],
+      "missing_exclusions": [],
+      "predicted": {
+        "ambiguities": [
+          {
+            "element_ids": [
+              "e1",
+              "e2",
+              "e3",
+              "e4",
+              "e5"
+            ],
+            "evidence_text": "similar raw power and darkness, but maybe a bit more stripped-down or minimalistic",
+            "reason": "reference_use: 'similar' could mean same artist or attribute-source; artist_reuse: unclear if same artist or different",
+            "type": "reference_use",
+            "valid_interpretations": [
+              "same_artist",
+              "different_artist"
+            ]
+          }
+        ],
+        "constraints": [
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "more stripped-down or minimalistic",
+            "mode": "style_era",
+            "strength": "soft",
+            "target_element_ids": [
+              "e4",
+              "e5"
+            ],
+            "type": "temporal"
+          }
+        ],
+        "elements": [
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Pallbearer",
+            "id": "e1",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "track",
+            "text": "Pallbearer"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Igorrr",
+            "id": "e2",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "artist",
+            "text": "Igorrr"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "raw power and darkness",
+            "id": "e3",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "raw"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "raw power and darkness",
+            "id": "e4",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "energy",
+            "text": "powerful"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "raw power and darkness",
+            "id": "e5",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "dark"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "more stripped-down or minimalistic",
+            "id": "e6",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "instrumentation",
+            "text": "stripped-down"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "more stripped-down or minimalistic",
+            "id": "e7",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "instrumentation",
+            "text": "minimalistic"
+          }
+        ],
+        "request": {
+          "certainty": "explicit",
+          "evidence_text": "Can you recommend something with a similar raw power and darkness, but maybe a bit more stripped-down or minimalistic",
+          "type": "attribute_search"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    },
+    {
+      "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+      "pack": "P0_roleless_stale_entity_failure",
+      "schema_valid": true,
+      "request_type_captured": true,
+      "required_elements_captured": true,
+      "required_relations_correct": true,
+      "required_subtypes_compatible": true,
+      "reference_elements_captured": false,
+      "reference_relations_correct": false,
+      "reference_kind_present": false,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": true,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": false,
+      "ambiguity_captured": true,
+      "all_pass": false,
+      "expected_request": "attribute_search",
+      "observed_request": "attribute_search",
+      "missing_required": [],
+      "missing_references": [
+        {
+          "id": "e4",
+          "text": "The Real Thing",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "inferred",
+          "evidence_text": "Yes! \"Can You Feel the Force\" is awesome, such a great track. That's exactly the kind of energy I'm looking for. What are some other high-energy, classic disco or funk tracks from that late 70s to early 80s period?",
+          "required": false,
+          "relation": "reference",
+          "reference_kind": "satisfied_prior",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_exclusions": [],
+      "predicted": {
+        "ambiguities": [
+          {
+            "element_ids": [
+              "e1",
+              "e2",
+              "e3",
+              "e4",
+              "e5",
+              "e6"
+            ],
+            "evidence_text": "What are some other high-energy, classic disco or funk tracks from that late 70s to early 80s period?",
+            "reason": "reference_use: 'other' implies reference to prior liked track 'Can You Feel the Force' but not exact same artist; artist_reuse unclear",
+            "type": "reference_use",
+            "valid_interpretations": [
+              "same_artist",
+              "different_artist"
+            ]
+          }
+        ],
+        "constraints": [
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "late 70s to early 80s period",
+            "mode": "style_era",
+            "strength": "soft",
+            "target_element_ids": [
+              "e5",
+              "e6"
+            ],
+            "type": "temporal"
+          },
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "other",
+            "mode": "use_as_reference_not_repeat",
+            "strength": "soft",
+            "target_element_ids": [
+              "e1"
+            ],
+            "type": "item_reuse"
+          },
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "other",
+            "mode": "unclear",
+            "strength": "soft",
+            "target_element_ids": [
+              "e2"
+            ],
+            "type": "artist_reuse"
+          }
+        ],
+        "elements": [
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Can You Feel the Force",
+            "id": "e1",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "track",
+            "text": "Can You Feel the Force"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Can You Feel the Force",
+            "id": "e2",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "artist",
+            "text": "The Real Thing"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "high-energy",
+            "id": "e3",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "energy",
+            "text": "high-energy"
+          },
+          {
+            "candidate_subtypes": [
+              "disco",
+              "funk"
+            ],
+            "certainty": "explicit",
+            "evidence_text": "classic disco or funk",
+            "id": "e4",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "genre",
+            "text": "disco"
+          },
+          {
+            "candidate_subtypes": [
+              "disco",
+              "funk"
+            ],
+            "certainty": "explicit",
+            "evidence_text": "classic disco or funk",
+            "id": "e5",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "genre",
+            "text": "funk"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "late 70s to early 80s",
+            "id": "e6",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "era",
+            "text": "late 70s to early 80s"
+          }
+        ],
+        "request": {
+          "certainty": "explicit",
+          "evidence_text": "What are some other high-energy, classic disco or funk tracks from that late 70s to early 80s period?",
+          "type": "attribute_search"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    },
+    {
+      "sample_id": "10a15ba2-4126-4ae4-ac6c-dc170735ae9e::t7",
+      "pack": "P0_roleless_stale_entity_failure",
+      "schema_valid": true,
+      "request_type_captured": true,
+      "required_elements_captured": false,
+      "required_relations_correct": false,
+      "required_subtypes_compatible": false,
+      "reference_elements_captured": false,
+      "reference_relations_correct": false,
+      "reference_kind_present": false,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": true,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": false,
+      "ambiguity_captured": true,
+      "all_pass": false,
+      "expected_request": "attribute_search",
+      "observed_request": "attribute_search",
+      "missing_required": [
+        {
+          "id": "e1",
+          "text": "narrative flow",
+          "kind": "facet",
+          "subtype": "tag",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "explicit",
+          "evidence_text": "This is exactly the kind of intricate storytelling I'm digging into. The way Kendrick builds a narrative and develops characters, with the music itself being a part of that journey, is just next level. 'untitled 03' definitely has that laye",
+          "required": true,
+          "relation": "desired",
+          "reference_kind": "none",
+          "candidate_subtypes": [
+            "tag"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_references": [
+        {
+          "id": "e4",
+          "text": "Deltron 3030",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "inferred",
+          "evidence_text": "This is exactly the kind of intricate storytelling I'm digging into. The way Kendrick builds a narrative and develops characters, with the music itself being a part of that journey, is just next level. 'untitled 03' definitely has that laye",
+          "required": false,
+          "relation": "reference",
+          "reference_kind": "satisfied_prior",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_exclusions": [],
+      "predicted": {
+        "ambiguities": [
+          {
+            "element_ids": [
+              "e1",
+              "e2",
+              "e3"
+            ],
+            "evidence_text": "intricate storytelling I'm digging into",
+            "reason": "reference_use: user praises prior Kendrick tracks, but 'this' could refer to the style or the specific artist; artist_reuse unclear",
+            "type": "reference_use",
+            "valid_interpretations": [
+              "same_artist",
+              "attribute_source"
+            ]
+          }
+        ],
+        "constraints": [
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "Keep '...",
+            "mode": "style_era",
+            "strength": "soft",
+            "target_element_ids": [
+              "e4"
+            ],
+            "type": "temporal"
+          }
+        ],
+        "elements": [
+          {
+            "candidate_subtypes": [
+              "narrative",
+              "storytelling"
+            ],
+            "certainty": "explicit",
+            "evidence_text": "intricate storytelling",
+            "id": "e1",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "lyrics",
+            "text": "intricate storytelling"
+          },
+          {
+            "candidate_subtypes": [
+              "character_development",
+              "narrative_arc"
+            ],
+            "certainty": "explicit",
+            "evidence_text": "builds a narrative and develops characters",
+            "id": "e2",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "lyrics",
+            "text": "narrative and character development"
+          },
+          {
+            "candidate_subtypes": [
+              "instrumental_integration",
+              "musical_storytelling"
+            ],
+            "certainty": "explicit",
+            "evidence_text": "music itself being a part of that journey",
+            "id": "e3",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "instrumentation",
+            "text": "music integrated with narrative"
+          },
+          {
+            "candidate_subtypes": [
+              "depth",
+              "complexity"
+            ],
+            "certainty": "explicit",
+            "evidence_text": "layered depth",
+            "id": "e4",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "layered depth"
+          },
+          {
+            "candidate_subtypes": [
+              "track"
+            ],
+            "certainty": "explicit",
+            "evidence_text": "'untitled 03'",
+            "id": "e5",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "track",
+            "text": "untitled 03"
+          },
+          {
+            "candidate_subtypes": [
+              "artist"
+            ],
+            "certainty": "explicit",
+            "evidence_text": "Kendrick",
+            "id": "e6",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "artist",
+            "text": "Kendrick Lamar"
+          }
+        ],
+        "request": {
+          "certainty": "explicit",
+          "evidence_text": "Keep '...",
+          "type": "attribute_search"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    },
+    {
+      "sample_id": "15b1caf3-d1ed-46ef-a8e3-c9f7657e6b77::t6",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "schema_valid": true,
+      "request_type_captured": false,
+      "required_elements_captured": true,
+      "required_relations_correct": true,
+      "required_subtypes_compatible": true,
+      "reference_elements_captured": false,
+      "reference_relations_correct": false,
+      "reference_kind_present": false,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": true,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": false,
+      "ambiguity_captured": false,
+      "all_pass": false,
+      "expected_request": "attribute_search",
+      "observed_request": "new_discovery",
+      "missing_required": [],
+      "missing_references": [
+        {
+          "id": "e4",
+          "text": "Boards of Canada",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "inferred",
+          "evidence_text": "Oh, Flying Lotus! This is cool, it's got a really interesting mix of sounds. It's like electronic but also soulful, very unique. What else have you got that's really out there?",
+          "required": false,
+          "relation": "reference",
+          "reference_kind": "liked_prior",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        },
+        {
+          "id": "e5",
+          "text": "Aphex Twin",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "inferred",
+          "evidence_text": "Oh, Flying Lotus! This is cool, it's got a really interesting mix of sounds. It's like electronic but also soulful, very unique. What else have you got that's really out there?",
+          "required": false,
+          "relation": "reference",
+          "reference_kind": "liked_prior",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        },
+        {
+          "id": "e6",
+          "text": "Severed Heads",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "inferred",
+          "evidence_text": "Oh, Flying Lotus! This is cool, it's got a really interesting mix of sounds. It's like electronic but also soulful, very unique. What else have you got that's really out there?",
+          "required": false,
+          "relation": "reference",
+          "reference_kind": "liked_prior",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        },
+        {
+          "id": "e7",
+          "text": "Liu Fang",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "inferred",
+          "evidence_text": "Oh, Flying Lotus! This is cool, it's got a really interesting mix of sounds. It's like electronic but also soulful, very unique. What else have you got that's really out there?",
+          "required": false,
+          "relation": "reference",
+          "reference_kind": "liked_prior",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        },
+        {
+          "id": "e8",
+          "text": "Noriko Miyamoto",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "inferred",
+          "evidence_text": "Oh, Flying Lotus! This is cool, it's got a really interesting mix of sounds. It's like electronic but also soulful, very unique. What else have you got that's really out there?",
+          "required": false,
+          "relation": "reference",
+          "reference_kind": "liked_prior",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_exclusions": [],
+      "predicted": {
+        "ambiguities": [],
+        "constraints": [],
+        "elements": [
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Flying Lotus",
+            "id": "e1",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "artist",
+            "text": "Flying Lotus"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "electronic but also soulful, very unique",
+            "id": "e2",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "genre",
+            "text": "electronic"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "electronic but also soulful, very unique",
+            "id": "e3",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "soulful"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "electronic but also soulful, very unique",
+            "id": "e4",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "unique"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "really out there",
+            "id": "e5",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "out there"
+          }
+        ],
+        "request": {
+          "certainty": "explicit",
+          "evidence_text": "What else have you got that's really out there?",
+          "type": "new_discovery"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    },
+    {
+      "sample_id": "324ddfb5-8a18-4729-9acb-c851907a297c::t3",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "schema_valid": true,
+      "request_type_captured": true,
+      "required_elements_captured": false,
+      "required_relations_correct": false,
+      "required_subtypes_compatible": false,
+      "reference_elements_captured": false,
+      "reference_relations_correct": false,
+      "reference_kind_present": false,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": false,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": false,
+      "ambiguity_captured": true,
+      "all_pass": false,
+      "expected_request": "attribute_search",
+      "observed_request": "attribute_search",
+      "missing_required": [
+        {
+          "id": "e2",
+          "text": "hip-hop",
+          "kind": "facet",
+          "subtype": "tag",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "explicit",
+          "evidence_text": "Yeah, that Dead Prez track is fire! Super authentic and exactly the kind of vibe I'm into from that era. What else hits like that? Maybe some more underground stuff from the late 90s or early 2000s?",
+          "required": true,
+          "relation": "desired",
+          "reference_kind": "none",
+          "candidate_subtypes": [
+            "tag"
+          ],
+          "resolution_status": "resolved"
+        },
+        {
+          "id": "e3",
+          "text": "hip hop",
+          "kind": "facet",
+          "subtype": "tag",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "explicit",
+          "evidence_text": "Yeah, that Dead Prez track is fire! Super authentic and exactly the kind of vibe I'm into from that era. What else hits like that? Maybe some more underground stuff from the late 90s or early 2000s?",
+          "required": true,
+          "relation": "desired",
+          "reference_kind": "none",
+          "candidate_subtypes": [
+            "tag"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_references": [
+        {
+          "id": "e4",
+          "text": "Mobb Deep",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "inferred",
+          "evidence_text": "Yeah, that Dead Prez track is fire! Super authentic and exactly the kind of vibe I'm into from that era. What else hits like that? Maybe some more underground stuff from the late 90s or early 2000s?",
+          "required": false,
+          "relation": "reference",
+          "reference_kind": "liked_prior",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_exclusions": [],
+      "predicted": {
+        "ambiguities": [
+          {
+            "element_ids": [
+              "e1",
+              "e2",
+              "e3",
+              "e4",
+              "e5",
+              "e6"
+            ],
+            "evidence_text": "What else hits like that?",
+            "reason": "reference_use: 'like that' could mean similar to Dead Prez track (same artist) or similar to the vibe (attribute-source).",
+            "type": "reference_use",
+            "valid_interpretations": [
+              "same_artist",
+              "attribute_source"
+            ]
+          }
+        ],
+        "constraints": [
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "late 90s or early 2000s",
+            "mode": "range",
+            "strength": "hard",
+            "target_element_ids": [
+              "e5"
+            ],
+            "type": "temporal"
+          }
+        ],
+        "elements": [
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Dead Prez track is fire",
+            "id": "e1",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "prior_user",
+            "strength": "soft",
+            "subtype": "artist",
+            "text": "Dead Prez"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Super authentic",
+            "id": "e2",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "prior_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "authentic"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "exactly the kind of vibe I'm into from that era",
+            "id": "e3",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "prior_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "vibe"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "What else hits like that?",
+            "id": "e4",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "hits like that"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "late 90s or early 2000s",
+            "id": "e5",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "hard",
+            "subtype": "era",
+            "text": "late 90s or early 2000s"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Maybe some more underground stuff",
+            "id": "e6",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "popularity",
+            "text": "underground"
+          }
+        ],
+        "request": {
+          "certainty": "explicit",
+          "evidence_text": "What else hits like that?",
+          "type": "attribute_search"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    },
+    {
+      "sample_id": "5861afef-85c0-4163-b8b9-5a11e308f352::t4",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "schema_valid": true,
+      "request_type_captured": true,
+      "required_elements_captured": false,
+      "required_relations_correct": false,
+      "required_subtypes_compatible": false,
+      "reference_elements_captured": false,
+      "reference_relations_correct": false,
+      "reference_kind_present": false,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": true,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": true,
+      "ambiguity_captured": true,
+      "all_pass": false,
+      "expected_request": "new_discovery",
+      "observed_request": "new_discovery",
+      "missing_required": [
+        {
+          "id": "e3",
+          "text": "Brazilian Funk",
+          "kind": "facet",
+          "subtype": "tag",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "explicit",
+          "evidence_text": "Yes, \"Tic Tac\" is super catchy and energetic! It's great to hear MC Lan with Lucas Lucco too. I'm finding some really good artists. Can you give me a few more diverse artists to check out, maybe with a slightly different take on that dancea",
+          "required": true,
+          "relation": "desired",
+          "reference_kind": "none",
+          "candidate_subtypes": [
+            "tag"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_references": [
+        {
+          "id": "e4",
+          "text": "MC WM",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "inferred",
+          "evidence_text": "Yes, \"Tic Tac\" is super catchy and energetic! It's great to hear MC Lan with Lucas Lucco too. I'm finding some really good artists. Can you give me a few more diverse artists to check out, maybe with a slightly different take on that dancea",
+          "required": false,
+          "relation": "reference",
+          "reference_kind": "satisfied_prior",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_exclusions": [],
+      "predicted": {
+        "ambiguities": [
+          {
+            "element_ids": [
+              "e1",
+              "e2",
+              "e3"
+            ],
+            "evidence_text": "different take on that danceable or Latin sound",
+            "reason": "reference_use: 'that danceable or Latin sound' refers to prior liked tracks but also to the attribute source. artist_reuse: unclear if same artists or different.",
+            "type": "reference_use",
+            "valid_interpretations": [
+              "same_artist",
+              "different_artist"
+            ]
+          },
+          {
+            "element_ids": [
+              "e1",
+              "e2",
+              "e3"
+            ],
+            "evidence_text": "different take on that danceable or Latin sound",
+            "reason": "artist_reuse: unclear if same artists or different.",
+            "type": "artist_reuse",
+            "valid_interpretations": [
+              "same_artist",
+              "different_artist"
+            ]
+          }
+        ],
+        "constraints": [
+          {
+            "apply_as_filter": false,
+            "certainty": "inferred",
+            "evidence_text": "slightly different take",
+            "mode": "style_era",
+            "strength": "soft",
+            "target_element_ids": [
+              "e1",
+              "e2",
+              "e3"
+            ],
+            "type": "temporal"
+          },
+          {
+            "apply_as_filter": false,
+            "certainty": "inferred",
+            "evidence_text": "more diverse artists",
+            "mode": "novelty",
+            "strength": "soft",
+            "target_element_ids": [
+              "e1",
+              "e2",
+              "e3"
+            ],
+            "type": "novelty"
+          },
+          {
+            "apply_as_filter": false,
+            "certainty": "inferred",
+            "evidence_text": "more diverse artists",
+            "mode": "explore_beyond_prior",
+            "strength": "soft",
+            "target_element_ids": [
+              "e1",
+              "e2",
+              "e3"
+            ],
+            "type": "novelty"
+          },
+          {
+            "apply_as_filter": false,
+            "certainty": "inferred",
+            "evidence_text": "different take on that danceable or Latin sound",
+            "mode": "item_reuse",
+            "strength": "soft",
+            "target_element_ids": [
+              "e1",
+              "e2",
+              "e3"
+            ],
+            "type": "item_reuse"
+          }
+        ],
+        "elements": [
+          {
+            "candidate_subtypes": [],
+            "certainty": "inferred",
+            "evidence_text": "danceable or Latin sound",
+            "id": "e1",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "genre",
+            "text": "danceable"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "inferred",
+            "evidence_text": "danceable or Latin sound",
+            "id": "e2",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "genre",
+            "text": "Latin"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "inferred",
+            "evidence_text": "slightly different take",
+            "id": "e3",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "ambiguous",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "genre",
+            "text": "different take"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "inferred",
+            "evidence_text": "Tic Tac track",
+            "id": "e4",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "track",
+            "text": "Tic Tac"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "inferred",
+            "evidence_text": "MC Lan and Lucas Lucco",
+            "id": "e5",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "artist",
+            "text": "MC Lan"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "inferred",
+            "evidence_text": "MC Lan and Lucas Lucco",
+            "id": "e6",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "artist",
+            "text": "Lucas Lucco"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "inferred",
+            "evidence_text": "Malandramente track",
+            "id": "e7",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "satisfied_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "prior_user",
+            "strength": "soft",
+            "subtype": "track",
+            "text": "Malandramente"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "inferred",
+            "evidence_text": "DENNIS, Nego Bam, MC Nandinho",
+            "id": "e8",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "satisfied_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "prior_user",
+            "strength": "soft",
+            "subtype": "artist",
+            "text": "DENNIS"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "inferred",
+            "evidence_text": "DENNIS, Nego Bam, MC Nandinho",
+            "id": "e9",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "satisfied_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "prior_user",
+            "strength": "soft",
+            "subtype": "artist",
+            "text": "Nego Bam"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "inferred",
+            "evidence_text": "DENNIS, Nego Bam, MC Nandinho",
+            "id": "e10",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "satisfied_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "prior_user",
+            "strength": "soft",
+            "subtype": "artist",
+            "text": "MC Nandinho"
+          }
+        ],
+        "request": {
+          "certainty": "inferred",
+          "evidence_text": "give me a few more diverse artists to check out",
+          "type": "new_discovery"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    },
+    {
+      "sample_id": "0fc60312-9a9d-4658-a950-06fc2441a2ac::t8",
+      "pack": "P1_rejection_guardrail_failure",
+      "schema_valid": true,
+      "request_type_captured": false,
+      "required_elements_captured": true,
+      "required_relations_correct": true,
+      "required_subtypes_compatible": true,
+      "reference_elements_captured": false,
+      "reference_relations_correct": false,
+      "reference_kind_present": false,
+      "exclusions_captured": false,
+      "exclusion_subtypes_compatible": false,
+      "temporal_captured": true,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": false,
+      "ambiguity_captured": true,
+      "all_pass": false,
+      "expected_request": "new_discovery",
+      "observed_request": "attribute_search",
+      "missing_required": [],
+      "missing_references": [
+        {
+          "id": "e4",
+          "text": "Have A Nice Life",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "inferred",
+          "evidence_text": "While I appreciate getting a new artist, \"Strange Weather\" isn't quite what I'm looking for. It doesn't have the heavy, dark post-rock elements or the experimental electronic textures I'm after. I'm still searching for music that truly *fus",
+          "required": false,
+          "relation": "reference",
+          "reference_kind": "satisfied_prior",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_exclusions": [
+        {
+          "id": "e5",
+          "text": "Julia Holter",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "negative",
+          "strength": "hard",
+          "certainty": "explicit",
+          "evidence_text": "While I appreciate getting a new artist, \"Strange Weather\" isn't quite what I'm looking for. It doesn't have the heavy, dark post-rock elements or the experimental electronic textures I'm after. I'm still searching for music that truly *fus",
+          "required": false,
+          "relation": "exclude",
+          "reference_kind": "none",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        },
+        {
+          "id": "e6",
+          "text": "David Byrne",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "negative",
+          "strength": "hard",
+          "certainty": "explicit",
+          "evidence_text": "While I appreciate getting a new artist, \"Strange Weather\" isn't quite what I'm looking for. It doesn't have the heavy, dark post-rock elements or the experimental electronic textures I'm after. I'm still searching for music that truly *fus",
+          "required": false,
+          "relation": "exclude",
+          "reference_kind": "none",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "predicted": {
+        "ambiguities": [
+          {
+            "element_ids": [
+              "e1",
+              "e2",
+              "e3",
+              "e4",
+              "e5",
+              "e6"
+            ],
+            "evidence_text": "music that truly fuses those specific elements",
+            "reason": "reference_use: unclear if user wants same-artist or different-artist fusion; also 'those specific elements' refers to prior heavy dark post-rock and experimental electronic textures",
+            "type": "reference_use",
+            "valid_interpretations": [
+              "same_artist",
+              "different_artist"
+            ]
+          }
+        ],
+        "constraints": [
+          {
+            "apply_as_filter": false,
+            "certainty": "ambiguous",
+            "evidence_text": "music that truly fuses those specific elements",
+            "mode": "style_era",
+            "strength": "soft",
+            "target_element_ids": [
+              "e1",
+              "e2",
+              "e3",
+              "e4",
+              "e5",
+              "e6"
+            ],
+            "type": "temporal"
+          },
+          {
+            "apply_as_filter": false,
+            "certainty": "ambiguous",
+            "evidence_text": "still searching for music that truly fuses",
+            "mode": "use_as_reference_not_repeat",
+            "strength": "soft",
+            "target_element_ids": [
+              "e1",
+              "e2",
+              "e3",
+              "e4",
+              "e5",
+              "e6"
+            ],
+            "type": "item_reuse"
+          },
+          {
+            "apply_as_filter": false,
+            "certainty": "ambiguous",
+            "evidence_text": "still searching for music that truly fuses",
+            "mode": "unclear",
+            "strength": "soft",
+            "target_element_ids": [
+              "e1",
+              "e2",
+              "e3",
+              "e4",
+              "e5",
+              "e6"
+            ],
+            "type": "artist_reuse"
+          }
+        ],
+        "elements": [
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Strange Weather isn't quite what I'm looking for",
+            "id": "e0",
+            "kind": "facet",
+            "polarity": "negative",
+            "reference_kind": "satisfied_prior",
+            "relation": "exclude",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "track",
+            "text": "Strange Weather"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "heavy, dark post-rock elements",
+            "id": "e1",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "genre",
+            "text": "heavy post-rock"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "heavy, dark post-rock elements",
+            "id": "e2",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "dark"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "experimental electronic textures",
+            "id": "e3",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "genre",
+            "text": "experimental electronic"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "music that truly fuses those specific elements",
+            "id": "e4",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "genre",
+            "text": "fusion"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "heavy, dark post-rock elements",
+            "id": "e5",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "energy",
+            "text": "heavy"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "experimental electronic textures",
+            "id": "e6",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "instrumentation",
+            "text": "electronic textures"
+          }
+        ],
+        "request": {
+          "certainty": "explicit",
+          "evidence_text": "still searching for music that truly fuses those specific elements",
+          "type": "attribute_search"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    },
+    {
+      "sample_id": "1e14a07f-7369-4d24-9285-9343b6b18353::t8",
+      "pack": "P1_rejection_guardrail_failure",
+      "schema_valid": true,
+      "request_type_captured": true,
+      "required_elements_captured": false,
+      "required_relations_correct": false,
+      "required_subtypes_compatible": false,
+      "reference_elements_captured": false,
+      "reference_relations_correct": false,
+      "reference_kind_present": false,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": false,
+      "temporal_captured": true,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": false,
+      "ambiguity_captured": false,
+      "all_pass": false,
+      "expected_request": "attribute_search",
+      "observed_request": "attribute_search",
+      "missing_required": [
+        {
+          "id": "e1",
+          "text": "delicate",
+          "kind": "facet",
+          "subtype": "tag",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "explicit",
+          "evidence_text": "Uh, \"Gladiatrix\" is a bit too heavy and intense for what I'm looking for right now. I was hoping for something much more atmospheric and haunting, with ethereal vocals and traditional instruments, not so much the metal side. Can you find tr",
+          "required": true,
+          "relation": "desired",
+          "reference_kind": "none",
+          "candidate_subtypes": [
+            "tag"
+          ],
+          "resolution_status": "resolved"
+        },
+        {
+          "id": "e2",
+          "text": "melancholic",
+          "kind": "facet",
+          "subtype": "tag",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "explicit",
+          "evidence_text": "Uh, \"Gladiatrix\" is a bit too heavy and intense for what I'm looking for right now. I was hoping for something much more atmospheric and haunting, with ethereal vocals and traditional instruments, not so much the metal side. Can you find tr",
+          "required": true,
+          "relation": "desired",
+          "reference_kind": "none",
+          "candidate_subtypes": [
+            "tag"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_references": [
+        {
+          "id": "e4",
+          "text": "Myrkur",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "inferred",
+          "evidence_text": "Uh, \"Gladiatrix\" is a bit too heavy and intense for what I'm looking for right now. I was hoping for something much more atmospheric and haunting, with ethereal vocals and traditional instruments, not so much the metal side. Can you find tr",
+          "required": false,
+          "relation": "reference",
+          "reference_kind": "satisfied_prior",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_exclusions": [],
+      "predicted": {
+        "ambiguities": [],
+        "constraints": [],
+        "elements": [
+          {
+            "candidate_subtypes": [],
+            "certainty": "ambiguous",
+            "evidence_text": "too heavy and intense",
+            "id": "e1",
+            "kind": "facet",
+            "polarity": "negative",
+            "reference_kind": "none",
+            "relation": "exclude",
+            "resolution_status": "ambiguous",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "ambiguous_facet",
+            "text": "heavy"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "ambiguous",
+            "evidence_text": "too heavy and intense",
+            "id": "e2",
+            "kind": "facet",
+            "polarity": "negative",
+            "reference_kind": "none",
+            "relation": "exclude",
+            "resolution_status": "ambiguous",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "ambiguous_facet",
+            "text": "intense"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "ambiguous",
+            "evidence_text": "atmospheric and haunting",
+            "id": "e3",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "unresolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "atmospheric"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "ambiguous",
+            "evidence_text": "atmospheric and haunting",
+            "id": "e4",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "unresolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "haunting"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "ambiguous",
+            "evidence_text": "ethereal vocals",
+            "id": "e5",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "unresolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "instrumentation",
+            "text": "ethereal vocals"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "ambiguous",
+            "evidence_text": "traditional instruments",
+            "id": "e6",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "unresolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "instrumentation",
+            "text": "traditional instruments"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "ambiguous",
+            "evidence_text": "not so much the metal side",
+            "id": "e7",
+            "kind": "facet",
+            "polarity": "negative",
+            "reference_kind": "none",
+            "relation": "exclude",
+            "resolution_status": "ambiguous",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "ambiguous_facet",
+            "text": "metal"
+          }
+        ],
+        "request": {
+          "certainty": "ambiguous",
+          "evidence_text": "Can you find tracks that are mor...",
+          "type": "attribute_search"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    },
+    {
+      "sample_id": "3ebc2b49-0f5c-4161-bbcf-e1615821103f::t2",
+      "pack": "P1_rejection_guardrail_failure",
+      "schema_valid": true,
+      "request_type_captured": true,
+      "required_elements_captured": false,
+      "required_relations_correct": false,
+      "required_subtypes_compatible": false,
+      "reference_elements_captured": false,
+      "reference_relations_correct": false,
+      "reference_kind_present": false,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": false,
+      "temporal_captured": true,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": false,
+      "ambiguity_captured": true,
+      "all_pass": false,
+      "expected_request": "attribute_search",
+      "observed_request": "attribute_search",
+      "missing_required": [
+        {
+          "id": "e2",
+          "text": "adventurous",
+          "kind": "facet",
+          "subtype": "tag",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "explicit",
+          "evidence_text": "This is a good start, and it definitely fits the Assassin's Creed vibe and artist. However, I'm looking for something that emphasizes the dramatic and exploratory orchestral elements more than direct combat. Could you suggest tracks with a ",
+          "required": true,
+          "relation": "desired",
+          "reference_kind": "none",
+          "candidate_subtypes": [
+            "tag"
+          ],
+          "resolution_status": "resolved"
+        },
+        {
+          "id": "e3",
+          "text": "orchestral",
+          "kind": "facet",
+          "subtype": "tag",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "explicit",
+          "evidence_text": "This is a good start, and it definitely fits the Assassin's Creed vibe and artist. However, I'm looking for something that emphasizes the dramatic and exploratory orchestral elements more than direct combat. Could you suggest tracks with a ",
+          "required": true,
+          "relation": "desired",
+          "reference_kind": "none",
+          "candidate_subtypes": [
+            "tag"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_references": [
+        {
+          "id": "e4",
+          "text": "Jesper Kyd",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "inferred",
+          "evidence_text": "This is a good start, and it definitely fits the Assassin's Creed vibe and artist. However, I'm looking for something that emphasizes the dramatic and exploratory orchestral elements more than direct combat. Could you suggest tracks with a ",
+          "required": false,
+          "relation": "reference",
+          "reference_kind": "satisfied_prior",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_exclusions": [],
+      "predicted": {
+        "ambiguities": [
+          {
+            "element_ids": [
+              "e1",
+              "e2",
+              "e3"
+            ],
+            "evidence_text": "similar epic feel",
+            "reason": "reference_use: 'similar' may refer to prior track or AC series attributes",
+            "type": "reference_use",
+            "valid_interpretations": [
+              "same_artist",
+              "attribute_source"
+            ]
+          }
+        ],
+        "constraints": [
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "emphasizes dramatic and exploratory orchestral elements more than direct combat",
+            "mode": "style_era",
+            "strength": "soft",
+            "target_element_ids": [
+              "e4",
+              "e5"
+            ],
+            "type": "temporal"
+          }
+        ],
+        "elements": [
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "This is a good start",
+            "id": "e1",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "track",
+            "text": "Fight of the Assassins"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "fits the Assassin's Creed vibe and artist",
+            "id": "e2",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "satisfied_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "artist",
+            "text": "Jesper Kyd"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "fits the Assassin's Creed vibe and artist",
+            "id": "e3",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "satisfied_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "soundscape",
+            "text": "Assassin's Creed vibe"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "emphasizes dramatic and exploratory orchestral elements",
+            "id": "e4",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "dramatic"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "emphasizes dramatic and exploratory orchestral elements",
+            "id": "e5",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "exploratory"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "more than direct combat",
+            "id": "e6",
+            "kind": "facet",
+            "polarity": "negative",
+            "reference_kind": "none",
+            "relation": "exclude",
+            "resolution_status": "ambiguous",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "theme",
+            "text": "direct combat"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "similar epic feel",
+            "id": "e7",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "explicit_similarity",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "epic"
+          }
+        ],
+        "request": {
+          "certainty": "explicit",
+          "evidence_text": "Could you suggest tracks with a similar epic feel...",
+          "type": "attribute_search"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    },
+    {
+      "sample_id": "67b9ba8a-382f-4b70-af76-576848d8cf67::t8",
+      "pack": "P1_temporal_constraint_failure",
+      "schema_valid": true,
+      "request_type_captured": true,
+      "required_elements_captured": false,
+      "required_relations_correct": false,
+      "required_subtypes_compatible": false,
+      "reference_elements_captured": false,
+      "reference_relations_correct": false,
+      "reference_kind_present": false,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": false,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": false,
+      "ambiguity_captured": true,
+      "all_pass": false,
+      "expected_request": "attribute_search",
+      "observed_request": "attribute_search",
+      "missing_required": [
+        {
+          "id": "e2",
+          "text": "heavy",
+          "kind": "facet",
+          "subtype": "tag",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "explicit",
+          "evidence_text": "DMX is a beast! \"Where The Hood At\" is definitely a raw, aggressive banger and fits that dark, intense vibe perfectly. You nailed it with these last few tracks. Thanks for the awesome recommendations! Can you suggest another track that's ju",
+          "required": true,
+          "relation": "desired",
+          "reference_kind": "none",
+          "candidate_subtypes": [
+            "tag"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_references": [
+        {
+          "id": "e4",
+          "text": "Jedi Mind Tricks",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "inferred",
+          "evidence_text": "DMX is a beast! \"Where The Hood At\" is definitely a raw, aggressive banger and fits that dark, intense vibe perfectly. You nailed it with these last few tracks. Thanks for the awesome recommendations! Can you suggest another track that's ju",
+          "required": false,
+          "relation": "reference",
+          "reference_kind": "satisfied_prior",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_exclusions": [],
+      "predicted": {
+        "ambiguities": [
+          {
+            "element_ids": [
+              "e1",
+              "e2",
+              "e3",
+              "e4",
+              "e5"
+            ],
+            "evidence_text": "another track that's just pure, unfilter...",
+            "reason": "reference_use",
+            "type": "reference_use",
+            "valid_interpretations": [
+              "same_artist",
+              "different_artist"
+            ]
+          }
+        ],
+        "constraints": [
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "another track",
+            "mode": "item_reuse",
+            "strength": "soft",
+            "target_element_ids": [],
+            "type": "item_reuse"
+          },
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "another track",
+            "mode": "use_as_reference_not_repeat",
+            "strength": "soft",
+            "target_element_ids": [],
+            "type": "item_reuse"
+          },
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "another group or artist",
+            "mode": "unclear",
+            "strength": "soft",
+            "target_element_ids": [],
+            "type": "artist_reuse"
+          }
+        ],
+        "elements": [
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "DMX is a beast!",
+            "id": "e1",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "artist",
+            "text": "DMX"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Where The Hood At is definitely a raw, aggressive banger",
+            "id": "e2",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "track",
+            "text": "Where The Hood At"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "raw, aggressive banger",
+            "id": "e3",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "raw"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "raw, aggressive banger",
+            "id": "e4",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "aggressive"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "dark, intense vibe",
+            "id": "e5",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "dark"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "dark, intense vibe",
+            "id": "e6",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "intense"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "pure, unfilter...",
+            "id": "e7",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "pure"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "pure, unfilter...",
+            "id": "e8",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "unfiltered"
+          }
+        ],
+        "request": {
+          "certainty": "explicit",
+          "evidence_text": "Can you suggest another track that's just pure, unfilter...",
+          "type": "attribute_search"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    },
+    {
+      "sample_id": "71bb177a-dab1-4bbc-8508-22d809b05c31::t6",
+      "pack": "P1_temporal_constraint_failure",
+      "schema_valid": true,
+      "request_type_captured": false,
+      "required_elements_captured": true,
+      "required_relations_correct": true,
+      "required_subtypes_compatible": true,
+      "reference_elements_captured": false,
+      "reference_relations_correct": false,
+      "reference_kind_present": false,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": false,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": true,
+      "ambiguity_captured": true,
+      "all_pass": false,
+      "expected_request": "new_discovery",
+      "observed_request": "attribute_search",
+      "missing_required": [],
+      "missing_references": [
+        {
+          "id": "e4",
+          "text": "Alanis Morissette",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "inferred",
+          "evidence_text": "Yes, Natalie Merchant is a great pick! 'Wonder' definitely fits that introspective and emotionally resonant style. Can you suggest another iconic female artist from the 90s who has a similar thoughtful, storytelling approach to their music?",
+          "required": false,
+          "relation": "reference",
+          "reference_kind": "liked_prior",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_exclusions": [],
+      "predicted": {
+        "ambiguities": [
+          {
+            "element_ids": [
+              "e4",
+              "e5"
+            ],
+            "evidence_text": "similar thoughtful, storytelling approach",
+            "reason": "reference_use: 'similar' could mean same artist or attribute-source",
+            "type": "reference_use",
+            "valid_interpretations": [
+              "same_artist",
+              "attribute_source"
+            ]
+          }
+        ],
+        "constraints": [
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "from the 90s",
+            "mode": "style_era",
+            "strength": "hard",
+            "target_element_ids": [
+              "e3"
+            ],
+            "type": "temporal"
+          },
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "another iconic female artist",
+            "mode": "novelty",
+            "strength": "hard",
+            "target_element_ids": [
+              "e1"
+            ],
+            "type": "novelty"
+          },
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "another iconic female artist",
+            "mode": "artist_reuse",
+            "strength": "hard",
+            "target_element_ids": [
+              "e1"
+            ],
+            "type": "artist_reuse"
+          }
+        ],
+        "elements": [
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Natalie Merchant is a great pick",
+            "id": "e1",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "artist",
+            "text": "Natalie Merchant"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "'Wonder' definitely fits that introspective and emotionally resonant style",
+            "id": "e2",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "track",
+            "text": "Wonder"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "from the 90s",
+            "id": "e3",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "hard",
+            "subtype": "era",
+            "text": "90s"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "similar thoughtful, storytelling approach",
+            "id": "e4",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "explicit_similarity",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "lyrics",
+            "text": "thoughtful"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "similar thoughtful, storytelling approach",
+            "id": "e5",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "explicit_similarity",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "lyrics",
+            "text": "storytelling"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "another iconic female artist",
+            "id": "e6",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "artist",
+            "text": "female"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "another iconic female artist",
+            "id": "e7",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "popularity",
+            "text": "iconic"
+          }
+        ],
+        "request": {
+          "certainty": "explicit",
+          "evidence_text": "Can you suggest another iconic female artist from the 90s who has a similar thoughtful, storytelling approach",
+          "type": "attribute_search"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    },
+    {
+      "sample_id": "9468e467-d396-461b-be29-b30b6cf87c35::t5",
+      "pack": "P1_temporal_constraint_failure",
+      "schema_valid": true,
+      "request_type_captured": true,
+      "required_elements_captured": false,
+      "required_relations_correct": false,
+      "required_subtypes_compatible": false,
+      "reference_elements_captured": false,
+      "reference_relations_correct": false,
+      "reference_kind_present": false,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": false,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": false,
+      "ambiguity_captured": true,
+      "all_pass": false,
+      "expected_request": "attribute_search",
+      "observed_request": "attribute_search",
+      "missing_required": [
+        {
+          "id": "e1",
+          "text": "atmospheric",
+          "kind": "facet",
+          "subtype": "tag",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "explicit",
+          "evidence_text": "Yes! \"Blinded By The Lights\" is exactly the track I was trying to recall! That's the one! You totally nailed it with that recommendation. Thanks so much! Now that you've found that one for me, can you recommend some other tracks that have a",
+          "required": true,
+          "relation": "desired",
+          "reference_kind": "none",
+          "candidate_subtypes": [
+            "tag"
+          ],
+          "resolution_status": "resolved"
+        },
+        {
+          "id": "e2",
+          "text": "late-night",
+          "kind": "facet",
+          "subtype": "tag",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "explicit",
+          "evidence_text": "Yes! \"Blinded By The Lights\" is exactly the track I was trying to recall! That's the one! You totally nailed it with that recommendation. Thanks so much! Now that you've found that one for me, can you recommend some other tracks that have a",
+          "required": true,
+          "relation": "desired",
+          "reference_kind": "none",
+          "candidate_subtypes": [
+            "tag"
+          ],
+          "resolution_status": "resolved"
+        },
+        {
+          "id": "e3",
+          "text": "storytelling",
+          "kind": "facet",
+          "subtype": "tag",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "explicit",
+          "evidence_text": "Yes! \"Blinded By The Lights\" is exactly the track I was trying to recall! That's the one! You totally nailed it with that recommendation. Thanks so much! Now that you've found that one for me, can you recommend some other tracks that have a",
+          "required": true,
+          "relation": "desired",
+          "reference_kind": "none",
+          "candidate_subtypes": [
+            "tag"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_references": [
+        {
+          "id": "e4",
+          "text": "The Streets",
+          "kind": "entity",
+          "subtype": "artist",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "inferred",
+          "evidence_text": "Yes! \"Blinded By The Lights\" is exactly the track I was trying to recall! That's the one! You totally nailed it with that recommendation. Thanks so much! Now that you've found that one for me, can you recommend some other tracks that have a",
+          "required": false,
+          "relation": "reference",
+          "reference_kind": "liked_prior",
+          "candidate_subtypes": [
+            "artist"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_exclusions": [],
+      "predicted": {
+        "ambiguities": [
+          {
+            "element_ids": [
+              "e1",
+              "e2"
+            ],
+            "evidence_text": "similar kind of...",
+            "reason": "reference_use: 'similar' could mean same-artist or attribute-source",
+            "type": "reference_use",
+            "valid_interpretations": [
+              "same_artist",
+              "attribute_source"
+            ]
+          }
+        ],
+        "constraints": [
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "similar kind of...",
+            "mode": "style_era",
+            "strength": "soft",
+            "target_element_ids": [
+              "e1"
+            ],
+            "type": "item_reuse"
+          },
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "similar kind of...",
+            "mode": "style_era",
+            "strength": "soft",
+            "target_element_ids": [
+              "e1"
+            ],
+            "type": "artist_reuse"
+          }
+        ],
+        "elements": [
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Blinded By The Lights",
+            "id": "e1",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "track",
+            "text": "Blinded By The Lights"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Blinded By The Lights",
+            "id": "e2",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "artist",
+            "text": "The Streets"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "similar kind of...",
+            "id": "e3",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "explicit_similarity",
+            "relation": "desired",
+            "resolution_status": "ambiguous",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "genre",
+            "text": "similar"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "similar kind of...",
+            "id": "e4",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "explicit_similarity",
+            "relation": "desired",
+            "resolution_status": "ambiguous",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "similar"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "similar kind of...",
+            "id": "e5",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "explicit_similarity",
+            "relation": "desired",
+            "resolution_status": "ambiguous",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "energy",
+            "text": "similar"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "similar kind of...",
+            "id": "e6",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "explicit_similarity",
+            "relation": "desired",
+            "resolution_status": "ambiguous",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "era",
+            "text": "similar"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "similar kind of...",
+            "id": "e7",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "explicit_similarity",
+            "relation": "desired",
+            "resolution_status": "ambiguous",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "lyrics",
+            "text": "similar"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "similar kind of...",
+            "id": "e8",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "explicit_similarity",
+            "relation": "desired",
+            "resolution_status": "ambiguous",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "instrumentation",
+            "text": "similar"
+          }
+        ],
+        "request": {
+          "certainty": "explicit",
+          "evidence_text": "can you recommend some other tracks that have a similar kind of...",
+          "type": "attribute_search"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    },
+    {
+      "sample_id": "380a5ed5-3eb9-4201-8fa6-81381a583bf5::t3",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "schema_valid": true,
+      "request_type_captured": false,
+      "required_elements_captured": false,
+      "required_relations_correct": false,
+      "required_subtypes_compatible": false,
+      "reference_elements_captured": true,
+      "reference_relations_correct": true,
+      "reference_kind_present": true,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": true,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": true,
+      "ambiguity_captured": true,
+      "all_pass": false,
+      "expected_request": "attribute_search",
+      "observed_request": "new_discovery",
+      "missing_required": [
+        {
+          "id": "e3",
+          "text": "unique vocalists",
+          "kind": "facet",
+          "subtype": "tag",
+          "source": "conversation_context",
+          "polarity": "positive",
+          "strength": "soft",
+          "certainty": "explicit",
+          "evidence_text": "Yes! Mr. Bungle! That's exactly the band I was trying to remember. \"Violenza Domestica\" is definitely a great example of their sound. Thanks! Now that we found them, what else could you recommend that has a similar experimental, genre-bendi",
+          "required": true,
+          "relation": "desired",
+          "reference_kind": "none",
+          "candidate_subtypes": [
+            "tag"
+          ],
+          "resolution_status": "resolved"
+        }
+      ],
+      "missing_references": [],
+      "missing_exclusions": [],
+      "predicted": {
+        "ambiguities": [
+          {
+            "element_ids": [
+              "e1",
+              "e2"
+            ],
+            "evidence_text": "similar experimental, genre-bending vibe",
+            "reason": "reference_use: 'similar' could mean same artist or attribute-source",
+            "type": "reference_use",
+            "valid_interpretations": [
+              "same_artist",
+              "attribute_source"
+            ]
+          }
+        ],
+        "constraints": [
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "maybe with a female vocalist",
+            "mode": "include",
+            "strength": "soft",
+            "target_element_ids": [
+              "e5"
+            ],
+            "type": "novelty"
+          }
+        ],
+        "elements": [
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Mr. Bungle! That's exactly the band",
+            "id": "e1",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "satisfied_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "prior_user",
+            "strength": "hard",
+            "subtype": "artist",
+            "text": "Mr. Bungle"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "Violenza Domestica is definitely a great example",
+            "id": "e2",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "satisfied_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "prior_user",
+            "strength": "soft",
+            "subtype": "track",
+            "text": "Violenza Domestica"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "similar experimental, genre-bending vibe",
+            "id": "e3",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "explicit_similarity",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "genre",
+            "text": "experimental"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "similar experimental, genre-bending vibe",
+            "id": "e4",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "explicit_similarity",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "genre",
+            "text": "genre-bending"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "maybe with a female vocalist",
+            "id": "e5",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "instrumentation",
+            "text": "female vocalist"
+          }
+        ],
+        "request": {
+          "certainty": "explicit",
+          "evidence_text": "what else could you recommend that has a similar experimental, genre-bending vibe, maybe with a female vocalist",
+          "type": "new_discovery"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    },
+    {
+      "sample_id": "38d8ba41-a4ea-48ea-b460-bd93d164302a::t4",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "schema_valid": true,
+      "request_type_captured": true,
+      "required_elements_captured": true,
+      "required_relations_correct": true,
+      "required_subtypes_compatible": true,
+      "reference_elements_captured": true,
+      "reference_relations_correct": true,
+      "reference_kind_present": true,
+      "exclusions_captured": true,
+      "exclusion_subtypes_compatible": true,
+      "temporal_captured": true,
+      "exactness_constraint_captured": true,
+      "novelty_constraint_captured": false,
+      "ambiguity_captured": true,
+      "all_pass": false,
+      "expected_request": "attribute_search",
+      "observed_request": "attribute_search",
+      "missing_required": [],
+      "missing_references": [],
+      "missing_exclusions": [],
+      "predicted": {
+        "ambiguities": [
+          {
+            "element_ids": [
+              "e1",
+              "e2",
+              "e3",
+              "e4",
+              "e5",
+              "e6"
+            ],
+            "evidence_text": "another one that brings that same kind of raw, uncompromising street vibe from the 90s",
+            "reason": "reference_use: 'that same kind' refers to prior liked track/artist attributes; artist_reuse: unclear if same artist or different artist is desired",
+            "type": "reference_use",
+            "valid_interpretations": [
+              "same artist (M.O.P.)",
+              "different artist"
+            ]
+          }
+        ],
+        "constraints": [
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "from the 90s",
+            "mode": "style_era",
+            "strength": "soft",
+            "target_element_ids": [
+              "e5"
+            ],
+            "type": "temporal"
+          },
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "another one",
+            "mode": "use_as_reference_not_repeat",
+            "strength": "hard",
+            "target_element_ids": [
+              "e1",
+              "e2"
+            ],
+            "type": "item_reuse"
+          },
+          {
+            "apply_as_filter": false,
+            "certainty": "explicit",
+            "evidence_text": "another one",
+            "mode": "unclear",
+            "strength": "soft",
+            "target_element_ids": [
+              "e1",
+              "e2"
+            ],
+            "type": "artist_reuse"
+          }
+        ],
+        "elements": [
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "M.O.P. is pure raw energy!",
+            "id": "e1",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "artist",
+            "text": "M.O.P."
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "\"Cold as Ice\" is a banger",
+            "id": "e2",
+            "kind": "entity",
+            "polarity": "positive",
+            "reference_kind": "liked_prior",
+            "relation": "reference",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "track",
+            "text": "Cold as Ice"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "raw, uncompromising street vibe",
+            "id": "e3",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "raw"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "raw, uncompromising street vibe",
+            "id": "e4",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "uncompromising"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "raw, uncompromising street vibe",
+            "id": "e5",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "mood",
+            "text": "street"
+          },
+          {
+            "candidate_subtypes": [],
+            "certainty": "explicit",
+            "evidence_text": "from the 90s",
+            "id": "e6",
+            "kind": "facet",
+            "polarity": "positive",
+            "reference_kind": "none",
+            "relation": "desired",
+            "resolution_status": "resolved",
+            "source": "current_user",
+            "strength": "soft",
+            "subtype": "era",
+            "text": "90s"
+          }
+        ],
+        "request": {
+          "certainty": "explicit",
+          "evidence_text": "Give me another one that brings that same kind of raw, uncompromising street vibe from the 90s",
+          "type": "attribute_search"
+        },
+        "schema_version": "conversation_elements_v1_2"
+      },
+      "error": null
+    }
+  ]
+}

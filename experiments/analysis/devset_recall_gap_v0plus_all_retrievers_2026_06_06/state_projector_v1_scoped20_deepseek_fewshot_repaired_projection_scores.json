@@ -1,0 +1,724 @@
+{
+  "summary": {
+    "samples": 20,
+    "pass_rate": 1.0,
+    "passes": 20,
+    "failures": 0
+  },
+  "rows": [
+    {
+      "sample_id": "15b1caf3-d1ed-46ef-a8e3-c9f7657e6b77::t6",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "fact_class": "attribute_from_prior",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "tag",
+          "value": "interesting mix of sounds",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "electronic but also soulful",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "very unique",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "really out there",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": []
+    },
+    {
+      "sample_id": "f2d85aa5-2086-4b1e-9974-d188c43621db::t8",
+      "pack": "P1_temporal_constraint_failure",
+      "fact_class": "negative_feedback_temporal",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "tag",
+          "value": "dark harsh",
+          "sentiment": -1
+        },
+        {
+          "type": "tag",
+          "value": "late 2000s",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "ambient electronic",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "dreamy serene",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "warm evolving pads",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "subtle rhythms",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "instrumental",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": [
+        {
+          "kind": "tag",
+          "value": "dark harsh",
+          "source_turn": 3
+        }
+      ]
+    },
+    {
+      "sample_id": "1e14a07f-7369-4d24-9285-9343b6b18353::t8",
+      "pack": "P1_rejection_guardrail_failure",
+      "fact_class": "style_rejection",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "tag",
+          "value": "heavy and intense",
+          "sentiment": -1
+        },
+        {
+          "type": "tag",
+          "value": "metal side",
+          "sentiment": -1
+        },
+        {
+          "type": "tag",
+          "value": "atmospheric",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "haunting",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "ethereal vocals",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "traditional instruments",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": [
+        {
+          "kind": "tag",
+          "value": "heavy and intense",
+          "source_turn": 3
+        },
+        {
+          "kind": "tag",
+          "value": "metal side",
+          "source_turn": 3
+        }
+      ]
+    },
+    {
+      "sample_id": "d265b5a9-af57-4070-90f5-692a960c5aaa::t6",
+      "pack": "P1_rejection_guardrail_failure",
+      "fact_class": "album_rejection_visual",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "artist",
+          "value": "Daft Punk",
+          "sentiment": -1
+        },
+        {
+          "type": "artist",
+          "value": "Four Tet",
+          "sentiment": -1
+        },
+        {
+          "type": "album",
+          "value": "Random Access Memories",
+          "sentiment": -1
+        },
+        {
+          "type": "album",
+          "value": "New Energy",
+          "sentiment": -1
+        },
+        {
+          "type": "tag",
+          "value": "electronic",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "striking cover art",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "artistically unique",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "2010s",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": [
+        {
+          "kind": "artist",
+          "value": "Daft Punk",
+          "source_turn": 3
+        },
+        {
+          "kind": "artist",
+          "value": "Four Tet",
+          "source_turn": 3
+        }
+      ]
+    },
+    {
+      "sample_id": "963b3ee7-17d1-4bb3-8a3f-0bc528a1f096::t5",
+      "pack": "P1_rejection_guardrail_failure",
+      "fact_class": "negative_feedback_attribute",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "artist",
+          "value": "Lupe Fiasco",
+          "sentiment": -1
+        },
+        {
+          "type": "tag",
+          "value": "heavy and intense",
+          "sentiment": -1
+        },
+        {
+          "type": "tag",
+          "value": "hip-hop",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "positive vibe",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "boost my energy",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "put me in a good mood",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": [
+        {
+          "kind": "artist",
+          "value": "Lupe Fiasco",
+          "source_turn": 3
+        },
+        {
+          "kind": "tag",
+          "value": "heavy and intense",
+          "source_turn": 3
+        }
+      ]
+    },
+    {
+      "sample_id": "899f906b-9b0b-42a6-9689-643eb9f1ed31::t8",
+      "pack": "P0_named_artist_ranker_failure",
+      "fact_class": "new_artist_from_prior",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "artist",
+          "value": "Linkin Park",
+          "sentiment": -1
+        },
+        {
+          "type": "artist",
+          "value": "Pantera",
+          "sentiment": -1
+        },
+        {
+          "type": "tag",
+          "value": "nu-metal",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "late 90s early 2000s",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "aggressive",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "rap vocals",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "electronic elements",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": [
+        {
+          "kind": "artist",
+          "value": "Linkin Park",
+          "source_turn": 3
+        },
+        {
+          "kind": "artist",
+          "value": "Pantera",
+          "source_turn": 3
+        }
+      ]
+    },
+    {
+      "sample_id": "93199894-d3db-4335-8278-e1be175944e4::t6",
+      "pack": "P0_named_artist_ranker_failure",
+      "fact_class": "exact_artist_alternatives",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "artist",
+          "value": "Soundgarden",
+          "sentiment": 1
+        },
+        {
+          "type": "track",
+          "value": "Spoonman",
+          "sentiment": 1
+        },
+        {
+          "type": "track",
+          "value": "Rusty Cage",
+          "sentiment": 1
+        },
+        {
+          "type": "artist",
+          "value": "Stone Temple Pilots",
+          "sentiment": 1
+        },
+        {
+          "type": "artist",
+          "value": "Nirvana",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": []
+    },
+    {
+      "sample_id": "692611f0-d9ef-406c-8327-902575197aee::t8",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "attribute_from_prior",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "tag",
+          "value": "vivid storytelling",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "watching a movie",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "super clear details",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": []
+    },
+    {
+      "sample_id": "8071d14d-7e0f-4f72-90a6-0941db80a371::t5",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "attribute_from_prior",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "tag",
+          "value": "smooth",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "chill R&B",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "more groove",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": []
+    },
+    {
+      "sample_id": "c863175a-bbaf-4f6c-aef7-cb16f2792cb5::t6",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "same_artist_or_attribute",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "artist",
+          "value": "Mac Miller",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "storytelling about relationships",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "hip-hop",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "deep introspective",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "lyrical storytelling",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": []
+    },
+    {
+      "sample_id": "c96d7bb9-65d4-44be-9bc2-891e8e485f4e::t7",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "attribute_new_artist",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "tag",
+          "value": "sertanejo",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "powerful emotional",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "deep longing",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "emotional storytelling",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": []
+    },
+    {
+      "sample_id": "2bbc0a7e-3ab0-4376-8135-182cd4ae075f::t1",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "fact_class": "hidden_target_temporal",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "tag",
+          "value": "Latin Pop",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "hit back then",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": []
+    },
+    {
+      "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+      "pack": "P0_roleless_stale_entity_failure",
+      "fact_class": "attribute_temporal",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "tag",
+          "value": "high-energy",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "classic disco",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "funk",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "late 70s to early 80s",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": []
+    },
+    {
+      "sample_id": "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+      "pack": "P0_roleless_stale_entity_failure",
+      "fact_class": "attribute_refinement",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "tag",
+          "value": "raw power and darkness",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "stripped-down minimalistic",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "darker and more atmospheric",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": []
+    },
+    {
+      "sample_id": "9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4",
+      "pack": "P0_roleless_stale_entity_failure",
+      "fact_class": "new_artist_from_prior",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "tag",
+          "value": "technical death metal",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "progressive death metal",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "pushing the envelope",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": []
+    },
+    {
+      "sample_id": "78cdaccb-0f9b-4876-80b1-c20bf0b444e6::t8",
+      "pack": "P0_roleless_stale_entity_failure",
+      "fact_class": "attribute_from_prior",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "tag",
+          "value": "rock",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "powerful",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "strong guitar riff",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": []
+    },
+    {
+      "sample_id": "d9a65836-7165-45bf-aa3e-3ef7ba5d073a::t2",
+      "pack": "P0_roleless_stale_entity_failure",
+      "fact_class": "attribute_temporal",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "tag",
+          "value": "heavier",
+          "sentiment": -1
+        },
+        {
+          "type": "tag",
+          "value": "energetic",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "angsty",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "pop-punk",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "alternative rock",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": [
+        {
+          "kind": "tag",
+          "value": "heavier",
+          "source_turn": 2
+        }
+      ]
+    },
+    {
+      "sample_id": "88beb200-0334-4aba-be15-8e1303725766::t6",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "fact_class": "hard_rejection",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "artist",
+          "value": "Drake",
+          "sentiment": -1
+        },
+        {
+          "type": "tag",
+          "value": "hip-hop",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "popular",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "major hits",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": [
+        {
+          "kind": "artist",
+          "value": "Drake",
+          "source_turn": 3
+        }
+      ]
+    },
+    {
+      "sample_id": "daeef24e-b041-4140-9101-882820c63408::t7",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "fact_class": "exact_entity",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "track",
+          "value": "Tom Sawyer",
+          "sentiment": -1
+        },
+        {
+          "type": "artist",
+          "value": "Rush",
+          "sentiment": 1
+        },
+        {
+          "type": "track",
+          "value": "The Spirit of Radio",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": [
+        {
+          "kind": "track",
+          "value": "Tom Sawyer",
+          "source_turn": 3
+        }
+      ]
+    },
+    {
+      "sample_id": "8bcb7d16-9be0-40cc-9a9d-28b654997b8d::t6",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "fact_class": "new_artist_from_prior",
+      "pass": true,
+      "missing": [],
+      "compiler_mentioned_entities": [
+        {
+          "type": "tag",
+          "value": "dark introspective",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "atmospheric production",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "intricate lyricism",
+          "sentiment": 1
+        },
+        {
+          "type": "tag",
+          "value": "underground hip-hop",
+          "sentiment": 1
+        }
+      ],
+      "compiler_explicit_rejections": []
+    }
+  ],
+  "matching": "state_fact_eval token containment plus forbidden positives"
+}

@@ -1,0 +1,2797 @@
+{
+  "summary": {
+    "samples": 20,
+    "all_pass_rate": 0.9
+  },
+  "by_pack": {
+    "P0_good_state_ranker_near_miss_failure": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 1.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P0_named_artist_ranker_failure": {
+      "samples": 2,
+      "all_pass_rate": 0.5,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 0.5,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P0_new_artist_union20_gap_failure": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 1.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P0_novelty_prior_anchor_failure": {
+      "samples": 2,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 1.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P1_positive_tag_retrieval_gap_failure": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 1.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P1_rejection_guardrail_failure": {
+      "samples": 2,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 1.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P1_temporal_constraint_failure": {
+      "samples": 3,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 1.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "POS_clean_final_hit_control": {
+      "samples": 3,
+      "all_pass_rate": 0.6666666666666666,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 0.6666666666666666,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 1.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "POS_exact_entity_success_control": {
+      "samples": 5,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 1.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    }
+  },
+  "rows": [
+    {
+      "sample_id": "c7a965c3-cd7f-46f6-b166-9dce9a800e0a::t3",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "role_correct",
+        "target_artist_mode_correct",
+        "retrieval_profile_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "unknown",
+        "retrieval_profile": "continuation",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Britney Spears",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "unknown",
+            "value": "Toxic",
+            "role": "history",
+            "use_as_retrieval_seed": false,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "driving beat",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "strong beat",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "empowering",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "pop",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "dance",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "confident",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "type": "track",
+            "value": "Toxic",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Britney Spears",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "driving beat",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "empowering pop",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [
+          "new_artist"
+        ],
+        "retrieval_profile": [
+          "novelty"
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Britney Spears",
+            "allowed_roles": [
+              "satisfied",
+              "history",
+              "contrast"
+            ],
+            "use_as_retrieval_seed": false,
+            "required": false
+          },
+          {
+            "type": "track",
+            "value": "Toxic",
+            "allowed_roles": [
+              "satisfied",
+              "history",
+              "contrast"
+            ],
+            "use_as_retrieval_seed": false,
+            "required": false
+          }
+        ],
+        "forbidden_seed_values": [
+          "Britney Spears",
+          "Toxic"
+        ],
+        "temporal_constraint": null,
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "88beb200-0334-4aba-be15-8e1303725766::t6",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2015,
+          2016
+        ]
+      },
+      "observed_rejections": [
+        {
+          "kind": "artist",
+          "value": "Drake",
+          "scope": "hard"
+        }
+      ],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "role_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Drake",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "popular",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "hip hop",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "hip-hop",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "rap",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "late 2015",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "early 2016",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "major hits",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "artist",
+            "value": "Drake",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            2015,
+            2016
+          ]
+        }
+      },
+      "new_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Drake",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "hip-hop",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "popular",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "artist",
+            "value": "Drake",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            2015,
+            2016
+          ]
+        }
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [
+          "new_artist"
+        ],
+        "retrieval_profile": [
+          "novelty"
+        ],
+        "entities": [],
+        "forbidden_seed_values": [
+          "Drake"
+        ],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false
+        },
+        "requires_hard_rejection": true,
+        "hard_rejection_values": [
+          "Drake"
+        ],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "a930da0d-07f1-46c6-909d-e4fd95ae1148::t6",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "previous_all_pass": true,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "type": "tag",
+            "value": "well-known",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "popular",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "feel-good",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "positive energy",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "upbeat",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "energetic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "not too niche",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "mainstream",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Michael Jackson",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "well-known",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "popular",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "feel-good",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [
+          "new_artist"
+        ],
+        "retrieval_profile": [
+          "novelty"
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Michael Jackson",
+            "allowed_roles": [
+              "satisfied",
+              "history",
+              "contrast"
+            ],
+            "use_as_retrieval_seed": false,
+            "required": false
+          }
+        ],
+        "forbidden_seed_values": [
+          "Michael Jackson",
+          "Will You Be There"
+        ],
+        "temporal_constraint": null,
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "d5fcb591-3744-4ebb-9d1a-5c57c314b7d0::t5",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1975,
+          1982
+        ]
+      },
+      "observed_rejections": [],
+      "previous_all_pass": true,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Sister Sledge",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": true
+          },
+          {
+            "type": "unknown",
+            "value": "He's the Greatest Dancer",
+            "role": "history",
+            "use_as_retrieval_seed": false,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "R&B",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "Soul",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "funky",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "funk",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "smooth",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "soulful",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            1975,
+            1984
+          ]
+        }
+      },
+      "new_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "type": "tag",
+            "value": "funky",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "soulful",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "R&B",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            1975,
+            1982
+          ]
+        }
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [
+          "new_artist"
+        ],
+        "retrieval_profile": [
+          "novelty"
+        ],
+        "entities": [],
+        "forbidden_seed_values": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false
+        },
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "a33a5df0-2c2b-429c-84e6-cde28affd4d5::t6",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2005,
+          2006
+        ]
+      },
+      "observed_rejections": [],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "role_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Panic! At The Disco",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "mid-2000s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "emo",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "pop-punk",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "alternative rock",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "dramatic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "theatrical",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "anthemic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            2005,
+            2006
+          ]
+        }
+      },
+      "new_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "hidden_target_search",
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Panic! At The Disco",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "album",
+            "value": "A Fever You Can't Sweat Out",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "mid-2000s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "dramatic driving sound",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "emotional lyrics",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            2005,
+            2006
+          ]
+        }
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [
+          "same_artist"
+        ],
+        "retrieval_profile": [
+          "exact_probe",
+          "hidden_target_search"
+        ],
+        "entities": [
+          {
+            "type": "album",
+            "value": "A Fever You Can't Sweat Out",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false
+        },
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "3676005d-5b7c-4c48-9b73-3e10dd509c07::t1",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2000,
+          2009
+        ]
+      },
+      "observed_rejections": [],
+      "previous_all_pass": true,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "unknown",
+        "retrieval_profile": "hidden_target_search",
+        "entities": [
+          {
+            "type": "tag",
+            "value": "powerful",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "orchestral",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "movie score",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "cinematic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "early 2000s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            2000,
+            2004
+          ]
+        }
+      },
+      "new_read": {
+        "target_artist_mode": "any_artist",
+        "retrieval_profile": "hidden_target_search",
+        "entities": [
+          {
+            "type": "tag",
+            "value": "orchestral",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "powerful",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "movie score style",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            2000,
+            2009
+          ]
+        }
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [
+          "any_artist",
+          "unknown",
+          "new_artist"
+        ],
+        "retrieval_profile": [
+          "hidden_target_search"
+        ],
+        "entities": [],
+        "forbidden_seed_values": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false
+        },
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "4d0afb6b-3705-493f-ab16-ca75ea311e1a::t7",
+      "pack": "P1_rejection_guardrail_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [
+        {
+          "kind": "style",
+          "value": "Blade Runner 2049 soundtrack",
+          "scope": "hard"
+        }
+      ],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "role_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Hans Zimmer",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": true
+          },
+          {
+            "type": "unknown",
+            "value": "Benjamin Wallfisch",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": true
+          },
+          {
+            "type": "tag",
+            "value": "dark",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "futuristic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "melancholic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "atmospheric",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "electronic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "instrumental",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "artist",
+            "value": "Hans Zimmer",
+            "scope": "hard"
+          },
+          {
+            "kind": "artist",
+            "value": "Benjamin Wallfisch",
+            "scope": "hard"
+          },
+          {
+            "kind": "track",
+            "value": "2049",
+            "scope": "hard"
+          },
+          {
+            "kind": "track",
+            "value": "Rain",
+            "scope": "hard"
+          },
+          {
+            "kind": "track",
+            "value": "Wallace",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "type": "tag",
+            "value": "Blade Runner 2049 soundtrack",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "dark futuristic melancholic electronic instrumental",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Hans Zimmer",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Benjamin Wallfisch",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "style",
+            "value": "Blade Runner 2049 soundtrack",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [
+          "new_artist"
+        ],
+        "retrieval_profile": [
+          "novelty"
+        ],
+        "entities": [],
+        "forbidden_seed_values": [
+          "Blade Runner 2049",
+          "Hans Zimmer",
+          "Benjamin Wallfisch"
+        ],
+        "temporal_constraint": null,
+        "requires_hard_rejection": true,
+        "hard_rejection_values": [
+          "Blade Runner 2049"
+        ],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "b2582e52-6d13-40b4-8552-2d8b63fa6c75::t8",
+      "pack": "P1_rejection_guardrail_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [
+        {
+          "kind": "artist",
+          "value": "System of a Down",
+          "scope": "hard"
+        }
+      ],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "role_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "System Of A Down",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "heavy",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "alternative metal",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "metal",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "political",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "powerful vocals",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "complex song structures",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "intense",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "artist",
+            "value": "System Of A Down",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Flying Lotus",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "System of a Down",
+            "role": "contrast",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "heavy alternative metal",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "artist",
+            "value": "System of a Down",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [
+          "new_artist"
+        ],
+        "retrieval_profile": [
+          "novelty"
+        ],
+        "entities": [],
+        "forbidden_seed_values": [
+          "System Of A Down"
+        ],
+        "temporal_constraint": null,
+        "requires_hard_rejection": true,
+        "hard_rejection_values": [
+          "System Of A Down"
+        ],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "37097db6-54b8-491b-8512-1df70648548b::t2",
+      "pack": "P0_named_artist_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [
+        {
+          "kind": "style",
+          "value": "upbeat",
+          "scope": "soft"
+        }
+      ],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "target_artist_mode_correct",
+        "retrieval_profile_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Frank Ocean",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "unknown",
+            "value": "Seigfried",
+            "role": "history",
+            "use_as_retrieval_seed": false,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "melancholic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "dreamy",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "late-night",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "atmospheric",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "introspective",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "chill",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "continuation",
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Frank Ocean",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "melancholic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "dreamy",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "upbeat",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "late-night",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "style",
+            "value": "upbeat",
+            "scope": "soft"
+          }
+        ],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [
+          "same_artist"
+        ],
+        "retrieval_profile": [
+          "continuation"
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Frank Ocean",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [],
+        "temporal_constraint": null,
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "fc78453a-8798-4402-a01a-e9c557f08a03::t2",
+      "pack": "P0_named_artist_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "previous_all_pass": false,
+      "new_all_pass": false,
+      "captured_expected_info": false,
+      "improved_checks": [],
+      "regressed_checks": [],
+      "still_missing_checks": [
+        "retrieval_profile_correct"
+      ],
+      "previous_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Natalia Lafourcade",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "early work",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "first album",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Natalia Lafourcade",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "album",
+            "value": "Natalia Lafourcade",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [
+          "same_artist"
+        ],
+        "retrieval_profile": [
+          "continuation"
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Natalia Lafourcade",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "album",
+            "value": "Natalia Lafourcade",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [],
+        "temporal_constraint": null,
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "2bbc0a7e-3ab0-4376-8135-182cd4ae075f::t1",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2000,
+          2005
+        ]
+      },
+      "observed_rejections": [],
+      "previous_all_pass": true,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "unknown",
+        "retrieval_profile": "hidden_target_search",
+        "entities": [
+          {
+            "type": "tag",
+            "value": "Latin pop",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "hit",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "popular",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "early 2000s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            2000,
+            2004
+          ]
+        }
+      },
+      "new_read": {
+        "target_artist_mode": "any_artist",
+        "retrieval_profile": "hidden_target_search",
+        "entities": [
+          {
+            "type": "tag",
+            "value": "Latin Pop",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            2000,
+            2005
+          ]
+        }
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [
+          "any_artist",
+          "unknown",
+          "new_artist"
+        ],
+        "retrieval_profile": [
+          "hidden_target_search"
+        ],
+        "entities": [],
+        "forbidden_seed_values": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false
+        },
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "a62ed6fc-e634-4d57-afab-36d9ffc0fcc1::t1",
+      "pack": "P0_good_state_ranker_near_miss_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1995,
+          1999
+        ]
+      },
+      "observed_rejections": [],
+      "previous_all_pass": true,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "unknown",
+        "retrieval_profile": "hidden_target_search",
+        "entities": [
+          {
+            "type": "tag",
+            "value": "sad",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "uplifting",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "late 90s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "popular",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            1995,
+            1999
+          ]
+        }
+      },
+      "new_read": {
+        "target_artist_mode": "any_artist",
+        "retrieval_profile": "hidden_target_search",
+        "entities": [
+          {
+            "type": "tag",
+            "value": "sad but uplifting",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            1995,
+            1999
+          ]
+        }
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [
+          "any_artist",
+          "unknown",
+          "new_artist"
+        ],
+        "retrieval_profile": [
+          "hidden_target_search"
+        ],
+        "entities": [],
+        "forbidden_seed_values": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false
+        },
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "0681d55b-98a0-4773-a9df-075a8050d805::t1",
+      "pack": "POS_exact_entity_success_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": {
+        "kind": "release_date",
+        "strength": "hard",
+        "apply_as_filter": true,
+        "range": [
+          2003,
+          2003
+        ]
+      },
+      "observed_rejections": [],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "role_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "unknown",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Numb",
+            "role": "history",
+            "use_as_retrieval_seed": false,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "unknown",
+            "value": "Linkin Park",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            2003,
+            2003
+          ]
+        }
+      },
+      "new_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Linkin Park",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "track",
+            "value": "Numb",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "album",
+            "value": "Meteora",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "release_date",
+          "strength": "hard",
+          "apply_as_filter": true,
+          "range": [
+            2003,
+            2003
+          ]
+        }
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [],
+        "retrieval_profile": [
+          "exact_probe"
+        ],
+        "entities": [
+          {
+            "type": "track",
+            "value": "Numb",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Linkin Park",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "album",
+            "value": "Meteora",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [],
+        "temporal_constraint": null,
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "8bee6f03-8cae-44ae-9325-455dc1138549::t1",
+      "pack": "POS_exact_entity_success_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "role_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "unknown",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Africa",
+            "role": "history",
+            "use_as_retrieval_seed": false,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "unknown",
+            "value": "Toto",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "track",
+            "value": "Africa",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Toto",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [],
+        "retrieval_profile": [
+          "exact_probe"
+        ],
+        "entities": [
+          {
+            "type": "track",
+            "value": "Africa",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Toto",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [],
+        "temporal_constraint": null,
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "d62387d0-3743-4ddc-bc92-8204c951ccee::t1",
+      "pack": "POS_exact_entity_success_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "role_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Linkin Park",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "unknown",
+            "value": "In the End",
+            "role": "history",
+            "use_as_retrieval_seed": false,
+            "was_stale_in_trace": false
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "track",
+            "value": "In the End",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Linkin Park",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [],
+        "retrieval_profile": [
+          "exact_probe"
+        ],
+        "entities": [
+          {
+            "type": "track",
+            "value": "In the End",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Linkin Park",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [],
+        "temporal_constraint": null,
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "bd2aa024-68e7-43c2-aa87-afce9b4d7cf1::t2",
+      "pack": "POS_exact_entity_success_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2010,
+          2019
+        ]
+      },
+      "observed_rejections": [],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "retrieval_profile_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "WALK THE MOON",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "alternative rock",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "2010s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "upbeat",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "danceable",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "hidden_target_search",
+        "entities": [
+          {
+            "type": "artist",
+            "value": "WALK THE MOON",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "alternative rock",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "upbeat",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            2010,
+            2019
+          ]
+        }
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [
+          "same_artist"
+        ],
+        "retrieval_profile": [
+          "hidden_target_search"
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "WALK THE MOON",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [],
+        "temporal_constraint": null,
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "fada63d6-1275-47a1-b3ab-30eae222fd72::t1",
+      "pack": "POS_exact_entity_success_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "role_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "unknown",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Britney Spears",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "unknown",
+            "value": "Toxic",
+            "role": "history",
+            "use_as_retrieval_seed": false,
+            "was_stale_in_trace": false
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "track",
+            "value": "Toxic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Britney Spears",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [],
+        "retrieval_profile": [
+          "exact_probe"
+        ],
+        "entities": [
+          {
+            "type": "track",
+            "value": "Toxic",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Britney Spears",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [],
+        "temporal_constraint": null,
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t8",
+      "pack": "POS_clean_final_hit_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "previous_all_pass": false,
+      "new_all_pass": false,
+      "captured_expected_info": false,
+      "improved_checks": [
+        "retrieval_profile_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [
+        "role_correct"
+      ],
+      "previous_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Gorillaz",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "upbeat",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "quirky",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "electronic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "instrumental",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "instrumental-focused",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "continuation",
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Gorillaz",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "upbeat",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "quirky electronic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "instrumental-focused",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [
+          "same_artist"
+        ],
+        "retrieval_profile": [
+          "continuation"
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Gorillaz",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "album",
+            "value": "Cracker Island",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [],
+        "temporal_constraint": null,
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": false,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "55388720-92b7-4972-9bb2-beb37c33c86b::t1",
+      "pack": "POS_clean_final_hit_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": {
+        "kind": "release_date",
+        "strength": "hard",
+        "apply_as_filter": true,
+        "range": [
+          2016,
+          2016
+        ]
+      },
+      "observed_rejections": [],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "role_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "unknown",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Ivy",
+            "role": "history",
+            "use_as_retrieval_seed": false,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "unknown",
+            "value": "Frank Ocean",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            2016,
+            2016
+          ]
+        }
+      },
+      "new_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "track",
+            "value": "Ivy",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Frank Ocean",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "release_date",
+          "strength": "hard",
+          "apply_as_filter": true,
+          "range": [
+            2016,
+            2016
+          ]
+        }
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [],
+        "retrieval_profile": [
+          "exact_probe"
+        ],
+        "entities": [
+          {
+            "type": "track",
+            "value": "Ivy",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Frank Ocean",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [],
+        "temporal_constraint": null,
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t3",
+      "pack": "POS_clean_final_hit_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "retrieval_profile_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Gorillaz",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "electronic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "synth",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "synth-driven",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "hip-hop",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "hip hop",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "continuation",
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Gorillaz",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "electronic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "synth",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "expected_check_source": "expected_state_checks",
+        "target_artist_mode": [
+          "same_artist"
+        ],
+        "retrieval_profile": [
+          "continuation"
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Gorillaz",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [],
+        "temporal_constraint": null,
+        "requires_hard_rejection": false,
+        "hard_rejection_values": [],
+        "notes": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "description": "Comparison of direct DeepSeek prompt iterations for conversation_elements_v1_2 on the same 20 focused70 examples. No retrieval run.",
+  "runs": [
+    {
+      "run": "v1_original_prompt",
+      "file": "state_elements_v1_2_deepseek_direct20_strict_scores.json",
+      "errors": 2,
+      "schema_valid": 0.9,
+      "request_type_captured": 0.35,
+      "required_elements_captured": 0.55,
+      "required_relations_correct": 0.4,
+      "reference_elements_captured": 0.7,
+      "reference_relations_correct": 0.7,
+      "exclusions_captured": 0.85,
+      "exclusion_subtypes_compatible": 0.8,
+      "temporal_captured": 0.85,
+      "novelty_constraint_captured": 0.65,
+      "ambiguity_captured": 0.6,
+      "all_pass": 0.1,
+      "compiler_core_pass": 0.2,
+      "compiler_core_failures": 16
+    },
+    {
+      "run": "v2_current_turn_atomic",
+      "file": "state_elements_v1_2_deepseek_direct20_v2_scores.json",
+      "errors": 0,
+      "schema_valid": 1.0,
+      "request_type_captured": 0.75,
+      "required_elements_captured": 0.6,
+      "required_relations_correct": 0.55,
+      "reference_elements_captured": 0.45,
+      "reference_relations_correct": 0.45,
+      "exclusions_captured": 0.95,
+      "exclusion_subtypes_compatible": 0.85,
+      "temporal_captured": 0.8,
+      "novelty_constraint_captured": 0.4,
+      "ambiguity_captured": 0.9,
+      "all_pass": 0.15,
+      "compiler_core_pass": 0.35,
+      "compiler_core_failures": 13
+    },
+    {
+      "run": "v3_reference_preserving",
+      "file": "state_elements_v1_2_deepseek_direct20_v3_scores.json",
+      "errors": 0,
+      "schema_valid": 1.0,
+      "request_type_captured": 0.25,
+      "required_elements_captured": 0.6,
+      "required_relations_correct": 0.6,
+      "reference_elements_captured": 0.55,
+      "reference_relations_correct": 0.55,
+      "exclusions_captured": 0.95,
+      "exclusion_subtypes_compatible": 0.9,
+      "temporal_captured": 0.75,
+      "novelty_constraint_captured": 0.9,
+      "ambiguity_captured": 1.0,
+      "all_pass": 0.15,
+      "compiler_core_pass": 0.25,
+      "compiler_core_failures": 15
+    }
+  ]
+}

@@ -1,0 +1,215 @@
+{
+  "summary": {
+    "samples": 1,
+    "all_pass_rate": 0.0
+  },
+  "by_pack": {
+    "P1_temporal_constraint_failure": {
+      "samples": 1,
+      "all_pass_rate": 0.0,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 0.0,
+      "retrieval_profile_correct_rate": 0.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    }
+  },
+  "rows": [
+    {
+      "sample_id": "f2d85aa5-2086-4b1e-9974-d188c43621db::t8",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2005,
+          2009
+        ]
+      },
+      "observed_rejections": [
+        {
+          "kind": "track",
+          "value": "Sleep Paralysis",
+          "scope": "hard"
+        },
+        {
+          "kind": "tag",
+          "value": "dark harsh",
+          "scope": "soft"
+        }
+      ],
+      "previous_all_pass": false,
+      "new_all_pass": false,
+      "captured_expected_info": false,
+      "improved_checks": [],
+      "regressed_checks": [],
+      "still_missing_checks": [
+        "target_artist_mode_correct",
+        "retrieval_profile_correct"
+      ],
+      "previous_read": {
+        "target_artist_mode": "unknown",
+        "retrieval_profile": "continuation",
+        "entities": [
+          {
+            "type": "tag",
+            "value": "ambient electronic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "dreamy",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "atmospheric",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "ethereal",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "shimmering",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "serene",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "melancholic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "floating",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "tag",
+            "value": "spoken word",
+            "scope": "hard"
+          },
+          {
+            "kind": "tag",
+            "value": "dark",
+            "scope": "hard"
+          },
+          {
+            "kind": "tag",
+            "value": "harsh",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            2007,
+            2009
+          ]
+        }
+      },
+      "new_read": {
+        "target_artist_mode": "any_artist",
+        "retrieval_profile": "hidden_target_search",
+        "entities": [
+          {
+            "type": "tag",
+            "value": "late 2000s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "dreamy serene",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "instrumental electronic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "track",
+            "value": "Sleep Paralysis",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "track",
+            "value": "Sleep Paralysis",
+            "scope": "hard"
+          },
+          {
+            "kind": "tag",
+            "value": "dark harsh",
+            "scope": "soft"
+          }
+        ],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            2005,
+            2009
+          ]
+        }
+      },
+      "desired_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "current_target_entities": [],
+        "prior_entities": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "range": [
+            2007,
+            2009
+          ],
+          "strength": "soft",
+          "apply_as_filter": false,
+          "reason": "the wording is compatible with an era/style cue, but the GT year sits outside the literal range"
+        },
+        "normalized_rejections": null,
+        "state_to_retriever_contract": null
+      },
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    }
+  ]
+}

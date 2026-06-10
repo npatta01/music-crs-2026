@@ -1,0 +1,847 @@
+{
+  "fact_labels": [
+    {
+      "sample_id": "15b1caf3-d1ed-46ef-a8e3-c9f7657e6b77::t6",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "fact_class": "attribute_from_prior",
+      "fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Flying Lotus",
+            "allowed_roles": [
+              "satisfied",
+              "history",
+              "positive_anchor"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "electronic",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "soulful",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "out there",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "f2d85aa5-2086-4b1e-9974-d188c43621db::t8",
+      "pack": "P1_temporal_constraint_failure",
+      "fact_class": "negative_feedback_temporal",
+      "fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "tag",
+            "value": "dreamy",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "serene",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "ambient electronic",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "required_exclusions": [
+          {
+            "type": "style",
+            "value": "dark and harsh",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": {
+          "kind": [
+            "style_era",
+            "reference_era"
+          ],
+          "strength": [
+            "hard",
+            "soft"
+          ],
+          "apply_as_filter": [
+            true,
+            false
+          ]
+        }
+      }
+    },
+    {
+      "sample_id": "1e14a07f-7369-4d24-9285-9343b6b18353::t8",
+      "pack": "P1_rejection_guardrail_failure",
+      "fact_class": "style_rejection",
+      "fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "tag",
+            "value": "atmospheric",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "haunting",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "ethereal vocals",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "required_exclusions": [
+          {
+            "type": "style",
+            "value": "metal",
+            "scope": "hard"
+          }
+        ],
+        "forbidden_seed_values": [
+          "Gladiatrix"
+        ]
+      }
+    },
+    {
+      "sample_id": "d265b5a9-af57-4070-90f5-692a960c5aaa::t6",
+      "pack": "P1_rejection_guardrail_failure",
+      "fact_class": "album_rejection_visual",
+      "fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "album",
+            "value": "Random Access Memories",
+            "allowed_roles": [
+              "rejected",
+              "history",
+              "satisfied"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Daft Punk",
+            "allowed_roles": [
+              "rejected",
+              "history",
+              "satisfied"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "striking",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "artistically unique",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [
+          "Random Access Memories",
+          "Daft Punk"
+        ]
+      }
+    },
+    {
+      "sample_id": "963b3ee7-17d1-4bb3-8a3f-0bc528a1f096::t5",
+      "pack": "P1_rejection_guardrail_failure",
+      "fact_class": "negative_feedback_attribute",
+      "fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Lupe Fiasco",
+            "allowed_roles": [
+              "history",
+              "contrast",
+              "satisfied"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "positive vibe",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "boost my energy",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "required_exclusions": [
+          {
+            "type": "style",
+            "value": "heavy and intense",
+            "scope": "hard"
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "899f906b-9b0b-42a6-9689-643eb9f1ed31::t8",
+      "pack": "P0_named_artist_ranker_failure",
+      "fact_class": "new_artist_from_prior",
+      "fact_label": {
+        "request_type": "new_artist",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Pantera",
+            "allowed_roles": [
+              "satisfied",
+              "history",
+              "rejected"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Linkin Park",
+            "allowed_roles": [
+              "history",
+              "rejected"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "aggressive nu-metal",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [
+          "Pantera",
+          "Linkin Park"
+        ]
+      }
+    },
+    {
+      "sample_id": "93199894-d3db-4335-8278-e1be175944e4::t6",
+      "pack": "P0_named_artist_ranker_failure",
+      "fact_class": "exact_artist_alternatives",
+      "fact_label": {
+        "request_type": "exact_artist",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Soundgarden",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "track",
+            "value": "Rusty Cage",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Stone Temple Pilots",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Nirvana",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "692611f0-d9ef-406c-8327-902575197aee::t8",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "attribute_from_prior",
+      "fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Kendrick",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "vivid storytelling",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "watching a movie",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "8071d14d-7e0f-4f72-90a6-0941db80a371::t5",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "attribute_from_prior",
+      "fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Brent Faiyaz",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "groove",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "chill R&B",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "c863175a-bbaf-4f6c-aef7-cb16f2792cb5::t6",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "same_artist_or_attribute",
+      "fact_label": {
+        "request_type": "similar_to_prior",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Mac Miller",
+            "allowed_roles": [
+              "current_target",
+              "seed",
+              "satisfied"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "lyrical storytelling",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "c96d7bb9-65d4-44be-9bc2-891e8e485f4e::t7",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "attribute_new_artist",
+      "fact_label": {
+        "request_type": "new_artist",
+        "required_entities": [
+          {
+            "type": "tag",
+            "value": "deep longing",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "emotional storytelling",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "sertanejo",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "2bbc0a7e-3ab0-4376-8135-182cd4ae075f::t1",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "fact_class": "hidden_target_temporal",
+      "fact_label": {
+        "request_type": "hidden_target",
+        "required_entities": [
+          {
+            "type": "tag",
+            "value": "Latin Pop",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "hit",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "temporal_constraint": {
+          "kind": [
+            "style_era",
+            "reference_era"
+          ],
+          "strength": "soft",
+          "apply_as_filter": false
+        }
+      }
+    },
+    {
+      "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+      "pack": "P0_roleless_stale_entity_failure",
+      "fact_class": "attribute_temporal",
+      "fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "tag",
+            "value": "high-energy",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "disco",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "funk",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [
+          "The Real Thing"
+        ],
+        "temporal_constraint": {
+          "kind": [
+            "style_era",
+            "reference_era"
+          ],
+          "strength": "soft",
+          "apply_as_filter": false
+        }
+      }
+    },
+    {
+      "sample_id": "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+      "pack": "P0_roleless_stale_entity_failure",
+      "fact_class": "attribute_refinement",
+      "fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "tag",
+            "value": "raw power",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "darkness",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "minimalistic",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4",
+      "pack": "P0_roleless_stale_entity_failure",
+      "fact_class": "new_artist_from_prior",
+      "fact_label": {
+        "request_type": "new_artist",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Suffocation",
+            "allowed_roles": [
+              "satisfied",
+              "history",
+              "contrast"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "technical death metal",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "progressive death metal",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [
+          "Suffocation"
+        ]
+      }
+    },
+    {
+      "sample_id": "78cdaccb-0f9b-4876-80b1-c20bf0b444e6::t8",
+      "pack": "P0_roleless_stale_entity_failure",
+      "fact_class": "attribute_from_prior",
+      "fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Guano Apes",
+            "allowed_roles": [
+              "satisfied",
+              "history",
+              "positive_anchor"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "powerful rock",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "strong guitar riff",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "d9a65836-7165-45bf-aa3e-3ef7ba5d073a::t2",
+      "pack": "P0_roleless_stale_entity_failure",
+      "fact_class": "attribute_temporal",
+      "fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "tag",
+            "value": "angsty",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "pop-punk",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "alternative rock",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "temporal_constraint": {
+          "kind": [
+            "style_era",
+            "reference_era"
+          ],
+          "strength": "soft",
+          "apply_as_filter": false
+        }
+      }
+    },
+    {
+      "sample_id": "88beb200-0334-4aba-be15-8e1303725766::t6",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "fact_class": "hard_rejection",
+      "fact_label": {
+        "request_type": "new_artist",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Drake",
+            "allowed_roles": [
+              "rejected"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "popular Hip-Hop",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "required_exclusions": [
+          {
+            "type": "artist",
+            "value": "Drake",
+            "scope": "hard"
+          }
+        ],
+        "forbidden_seed_values": [
+          "Drake"
+        ],
+        "temporal_constraint": {
+          "kind": [
+            "release_date",
+            "style_era",
+            "reference_era"
+          ],
+          "strength": [
+            "hard",
+            "soft"
+          ],
+          "apply_as_filter": [
+            true,
+            false
+          ]
+        }
+      }
+    },
+    {
+      "sample_id": "daeef24e-b041-4140-9101-882820c63408::t7",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "fact_class": "exact_entity",
+      "fact_label": {
+        "request_type": "exact_track",
+        "required_entities": [
+          {
+            "type": "track",
+            "value": "The Spirit of Radio",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Rush",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "required_exclusions": [
+          {
+            "type": "track",
+            "value": "Tom Sawyer",
+            "scope": "hard"
+          }
+        ],
+        "forbidden_seed_values": [
+          "Tom Sawyer"
+        ]
+      }
+    },
+    {
+      "sample_id": "8bcb7d16-9be0-40cc-9a9d-28b654997b8d::t6",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "fact_class": "new_artist_from_prior",
+      "fact_label": {
+        "request_type": "new_artist",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Sadistik",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "underground",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [
+          "Sadistik"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "samples": [
+    "0b9d547f-e748-464a-90e2-2199149f915c::t6"
+  ],
+  "variants": [
+    "current_config_state_selector_family"
+  ],
+  "summary": [
+    {
+      "variant": "official_trace_baseline",
+      "n": 1,
+      "union@20": 0.0,
+      "final@20": 0.0,
+      "union@50": 0.0,
+      "final@50": 0.0,
+      "union@100": 0.0,
+      "final@100": 0.0,
+      "union@200": 1.0,
+      "final@200": 1.0,
+      "final@1000": 1.0,
+      "ndcg@20": 0.0
+    },
+    {
+      "variant": "current_config_state_selector_family",
+      "n": 1,
+      "final@20": 0.0,
+      "union@20": 0.0,
+      "best_branch@20": 0.0,
+      "final@50": 0.0,
+      "union@50": 0.0,
+      "best_branch@50": 0.0,
+      "final@100": 0.0,
+      "union@100": 1.0,
+      "best_branch@100": 1.0,
+      "final@200": 0.0,
+      "union@200": 1.0,
+      "best_branch@200": 1.0,
+      "final@1000": 1.0,
+      "union@1000": 1.0,
+      "best_branch@1000": 1.0,
+      "ndcg@20": 0.0
+    }
+  ],
+  "additive_mode": false,
+  "class_summary": [
+    {
+      "pack": "P0_roleless_stale_entity_failure",
+      "n": 1,
+      "baseline_union@20": 0.0,
+      "baseline_union@50": 0.0,
+      "baseline_union@100": 0.0,
+      "baseline_final@20": 0.0,
+      "best_single_variant": null,
+      "best_single_union@20": null,
+      "best_single_union@50": null,
+      "best_single_union@100": null,
+      "combined_variant": "current_config_state_selector_family",
+      "combined_union@20": 0.0,
+      "combined_union@50": 0.0,
+      "combined_union@100": 1.0
+    }
+  ],
+  "examples": {
+    "current_config_state_selector_family": {
+      "rescued_union20": [],
+      "still_missed_union20": [
+        {
+          "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+          "pack": "P0_roleless_stale_entity_failure",
+          "gt_track": "Give It To Me Baby",
+          "gt_artist": "Rick James",
+          "best_branch": "dense.qwen_8b.attributes.attributes_qwen3_embedding_8b",
+          "best_branch_rank": 68,
+          "final_rank": 221,
+          "why": "branch_local_ranking_gap_51_100",
+          "current_user": "Yes! \"Can You Feel the Force\" is awesome, such a great track. That's exactly the kind of energy I'm looking for. What are some other high-energy, classic disco or funk tracks from that late 70s to early 80s period?",
+          "what_should_change": "Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles."
+        }
+      ]
+    }
+  },
+  "rows": [
+    {
+      "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+      "pack": "P0_roleless_stale_entity_failure",
+      "class_type": "failure",
+      "variant": "current_config_state_selector_family",
+      "gt_track": "Give It To Me Baby",
+      "gt_artist": "Rick James",
+      "final_rank": 221,
+      "fused_rank": 337,
+      "best_branch": "dense.qwen_8b.attributes.attributes_qwen3_embedding_8b",
+      "best_branch_rank": 68,
+      "n_branch_pools": 28,
+      "gt_release_date_masked": false,
+      "gt_hard_dropped": false,
+      "final@20": false,
+      "union@20": false,
+      "final@50": false,
+      "union@50": false,
+      "final@100": false,
+      "union@100": true,
+      "final@200": false,
+      "union@200": true,
+      "final@1000": true,
+      "union@1000": true,
+      "ndcg@20": 0.0
+    }
+  ]
+}

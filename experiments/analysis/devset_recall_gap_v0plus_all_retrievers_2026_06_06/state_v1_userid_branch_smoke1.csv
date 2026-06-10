@@ -1,0 +1,2 @@
+sample_id,pack,class_type,variant,gt_track,gt_artist,final_rank,fused_rank,ndcg@20,best_branch_rank,best_branch,n_branch_pools,gt_release_date_masked,gt_hard_dropped,union@20,union@50,union@100,union@200,union@1000,final@20,final@50,final@100,final@200,final@1000
+0b9d547f-e748-464a-90e2-2199149f915c::t6,P0_roleless_stale_entity_failure,failure,current_config_state_selector_family,Give It To Me Baby,Rick James,221,337,0.0,68,dense.qwen_8b.attributes.attributes_qwen3_embedding_8b,28,False,False,False,False,True,True,True,False,False,False,False,True

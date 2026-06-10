@@ -1,0 +1,110 @@
+{
+  "samples": [
+    "a33a5df0-2c2b-429c-84e6-cde28affd4d5::t6"
+  ],
+  "variants": [
+    "current_config_state_survivor"
+  ],
+  "summary": [
+    {
+      "variant": "official_trace_baseline",
+      "n": 1,
+      "union@20": 0.0,
+      "final@20": 0.0,
+      "union@50": 0.0,
+      "final@50": 0.0,
+      "union@100": 0.0,
+      "final@100": 1.0,
+      "union@200": 1.0,
+      "final@200": 1.0,
+      "final@1000": 1.0,
+      "ndcg@20": 0.0
+    },
+    {
+      "variant": "current_config_state_survivor",
+      "n": 1,
+      "final@20": 0.0,
+      "union@20": 0.0,
+      "best_branch@20": 0.0,
+      "final@50": 0.0,
+      "union@50": 0.0,
+      "best_branch@50": 0.0,
+      "final@100": 0.0,
+      "union@100": 0.0,
+      "best_branch@100": 0.0,
+      "final@200": 0.0,
+      "union@200": 0.0,
+      "best_branch@200": 0.0,
+      "final@1000": 0.0,
+      "union@1000": 1.0,
+      "best_branch@1000": 1.0,
+      "ndcg@20": 0.0
+    }
+  ],
+  "additive_mode": false,
+  "class_summary": [
+    {
+      "pack": "P1_temporal_constraint_failure",
+      "n": 1,
+      "baseline_union@20": 0.0,
+      "baseline_union@50": 0.0,
+      "baseline_union@100": 0.0,
+      "baseline_final@20": 0.0,
+      "best_single_variant": null,
+      "best_single_union@20": null,
+      "best_single_union@50": null,
+      "best_single_union@100": null,
+      "combined_variant": "current_config_state_survivor",
+      "combined_union@20": 0.0,
+      "combined_union@50": 0.0,
+      "combined_union@100": 0.0
+    }
+  ],
+  "examples": {
+    "current_config_state_survivor": {
+      "rescued_union20": [],
+      "still_missed_union20": [
+        {
+          "sample_id": "a33a5df0-2c2b-429c-84e6-cde28affd4d5::t6",
+          "pack": "P1_temporal_constraint_failure",
+          "gt_track": "Thriller",
+          "gt_artist": "Fall Out Boy",
+          "best_branch": "bm25",
+          "best_branch_rank": 479,
+          "final_rank": null,
+          "why": "deep_candidate_ranking_gap",
+          "current_user": "You're doing so well with Panic! At The Disco and the emotional vibe! \"Always\" is a great song, but it's still not the one that screams \"mid-2000s emo phase\" to me. The track I'm thinking of is definitely from their first album, \"A Fever You Can't Sweat Out...",
+          "what_should_change": "Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit date-bound language should hard-filter or heavily penalize candidates."
+        }
+      ]
+    }
+  },
+  "rows": [
+    {
+      "sample_id": "a33a5df0-2c2b-429c-84e6-cde28affd4d5::t6",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "variant": "current_config_state_survivor",
+      "gt_track": "Thriller",
+      "gt_artist": "Fall Out Boy",
+      "final_rank": null,
+      "fused_rank": null,
+      "best_branch": "bm25",
+      "best_branch_rank": 479,
+      "n_branch_pools": 19,
+      "gt_release_date_masked": false,
+      "gt_hard_dropped": false,
+      "final@20": false,
+      "union@20": false,
+      "final@50": false,
+      "union@50": false,
+      "final@100": false,
+      "union@100": false,
+      "final@200": false,
+      "union@200": false,
+      "final@1000": false,
+      "union@1000": true,
+      "ndcg@20": 0.0
+    }
+  ]
+}

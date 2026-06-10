@@ -1,0 +1,650 @@
+{
+  "state_labels": [
+    {
+      "sample_id": "78cdaccb-0f9b-4876-80b1-c20bf0b444e6::t8",
+      "pack": "P0_roleless_stale_entity_failure",
+      "fact_class": "attribute_from_prior",
+      "state_label": {
+        "allowed_request_types": [
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "powerful rock"
+          },
+          {
+            "type": "tag",
+            "value": "strong guitar riff"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "artist",
+            "value": "Guano Apes",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "Guano Apes"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Guano Apes",
+            "allowed_roles": [
+              "satisfied",
+              "history",
+              "positive_anchor"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "powerful rock",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "strong guitar riff",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "a930da0d-07f1-46c6-909d-e4fd95ae1148::t6",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "fact_class": "popular_new_artist",
+      "state_label": {
+        "allowed_request_types": [
+          "new_artist",
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "well-known"
+          },
+          {
+            "type": "tag",
+            "value": "popular"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "artist",
+            "value": "Michael Jackson",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "Michael Jackson"
+          },
+          {
+            "value": "Michael Jackson"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "new_artist",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Michael Jackson",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "well-known",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "popular",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [
+          "Michael Jackson"
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "15b1caf3-d1ed-46ef-a8e3-c9f7657e6b77::t6",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "fact_class": "attribute_from_prior",
+      "state_label": {
+        "allowed_request_types": [
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "electronic"
+          },
+          {
+            "type": "tag",
+            "value": "soulful"
+          },
+          {
+            "type": "tag",
+            "value": "out there"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "artist",
+            "value": "Flying Lotus",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "Flying Lotus"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Flying Lotus",
+            "allowed_roles": [
+              "satisfied",
+              "history",
+              "positive_anchor"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "electronic",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "soulful",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "out there",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "fact_class": "same_style_after_exact",
+      "state_label": {
+        "allowed_request_types": [
+          "similar_to_prior",
+          "attribute_search"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "90s dance hits"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "track",
+            "value": "Finally",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          },
+          {
+            "type": "artist",
+            "value": "CeCe Peniston",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "track",
+            "value": "Finally"
+          },
+          {
+            "type": "artist",
+            "value": "CeCe Peniston"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "similar_to_prior",
+        "required_entities": [
+          {
+            "type": "track",
+            "value": "Finally",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "CeCe Peniston",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "90s dance hits",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "d265b5a9-af57-4070-90f5-692a960c5aaa::t6",
+      "pack": "P1_rejection_guardrail_failure",
+      "fact_class": "album_rejection_visual",
+      "state_label": {
+        "allowed_request_types": [
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "striking"
+          },
+          {
+            "type": "tag",
+            "value": "artistically unique"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "album",
+            "value": "Random Access Memories",
+            "allowed_roles": [
+              "history",
+              "rejected",
+              "satisfied_prior"
+            ]
+          },
+          {
+            "type": "artist",
+            "value": "Daft Punk",
+            "allowed_roles": [
+              "history",
+              "rejected",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "album",
+            "value": "Random Access Memories"
+          },
+          {
+            "type": "artist",
+            "value": "Daft Punk"
+          },
+          {
+            "value": "Random Access Memories"
+          },
+          {
+            "value": "Daft Punk"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "album",
+            "value": "Random Access Memories",
+            "allowed_roles": [
+              "rejected",
+              "history",
+              "satisfied"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Daft Punk",
+            "allowed_roles": [
+              "rejected",
+              "history",
+              "satisfied"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "striking",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "artistically unique",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [
+          "Random Access Memories",
+          "Daft Punk"
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "692611f0-d9ef-406c-8327-902575197aee::t8",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "attribute_from_prior",
+      "state_label": {
+        "allowed_request_types": [
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "vivid storytelling"
+          },
+          {
+            "type": "tag",
+            "value": "watching a movie"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "artist",
+            "value": "Kendrick",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "Kendrick"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Kendrick",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "vivid storytelling",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "watching a movie",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t8",
+      "pack": "POS_clean_final_hit_control",
+      "fact_class": "same_artist_album",
+      "state_label": {
+        "allowed_request_types": [
+          "same_artist",
+          "exact_artist"
+        ],
+        "required_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "Gorillaz"
+          },
+          {
+            "type": "album",
+            "value": "Cracker Island"
+          }
+        ],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "upbeat"
+          },
+          {
+            "type": "tag",
+            "value": "quirky electronic"
+          }
+        ],
+        "required_context_entities": [],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": []
+      },
+      "source_fact_label": {
+        "request_type": "same_artist",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Gorillaz",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "album",
+            "value": "Cracker Island",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "upbeat",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "quirky electronic",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "a9b423bf-d05c-418d-98af-2a3b1e1d7917::t1",
+      "pack": "POS_clean_final_hit_control",
+      "fact_class": "lyric_hidden_target",
+      "state_label": {
+        "allowed_request_types": [
+          "hidden_target"
+        ],
+        "required_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "Ice Cube"
+          }
+        ],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "Just wakin' up in the morning"
+          }
+        ],
+        "required_context_entities": [],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [],
+        "temporal_constraint": {
+          "kind": [
+            "style_era",
+            "reference_era"
+          ],
+          "strength": "soft",
+          "apply_as_filter": false
+        }
+      },
+      "source_fact_label": {
+        "request_type": "hidden_target",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Ice Cube",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "Just wakin' up in the morning",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "temporal_constraint": {
+          "kind": [
+            "style_era",
+            "reference_era"
+          ],
+          "strength": "soft",
+          "apply_as_filter": false
+        }
+      },
+      "label_version": "state_roles_v2"
+    }
+  ]
+}

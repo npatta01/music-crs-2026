@@ -1,0 +1,244 @@
+{
+  "state_labels": [
+    {
+      "sample_id": "a930da0d-07f1-46c6-909d-e4fd95ae1148::t6",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "fact_class": "popular_new_artist",
+      "state_label": {
+        "allowed_request_types": [
+          "new_artist",
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "well-known"
+          },
+          {
+            "type": "tag",
+            "value": "popular"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "artist",
+            "value": "Michael Jackson",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "Michael Jackson"
+          },
+          {
+            "value": "Michael Jackson"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "new_artist",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Michael Jackson",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "well-known",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "popular",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [
+          "Michael Jackson"
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "15b1caf3-d1ed-46ef-a8e3-c9f7657e6b77::t6",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "fact_class": "attribute_from_prior",
+      "state_label": {
+        "allowed_request_types": [
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "electronic"
+          },
+          {
+            "type": "tag",
+            "value": "soulful"
+          },
+          {
+            "type": "tag",
+            "value": "out there"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "artist",
+            "value": "Flying Lotus",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "Flying Lotus"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Flying Lotus",
+            "allowed_roles": [
+              "satisfied",
+              "history",
+              "positive_anchor"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "electronic",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "soulful",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "out there",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "692611f0-d9ef-406c-8327-902575197aee::t8",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "attribute_from_prior",
+      "state_label": {
+        "allowed_request_types": [
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "vivid storytelling"
+          },
+          {
+            "type": "tag",
+            "value": "watching a movie"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "artist",
+            "value": "Kendrick",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "Kendrick"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Kendrick",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "vivid storytelling",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "watching a movie",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      },
+      "label_version": "state_roles_v2"
+    }
+  ]
+}

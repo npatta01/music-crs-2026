@@ -1,0 +1,354 @@
+{
+  "state_labels": [
+    {
+      "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "fact_class": "same_style_after_exact",
+      "state_label": {
+        "allowed_request_types": [
+          "similar_to_prior",
+          "attribute_search"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "90s dance hits"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "track",
+            "value": "Finally",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          },
+          {
+            "type": "artist",
+            "value": "CeCe Peniston",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "track",
+            "value": "Finally"
+          },
+          {
+            "type": "artist",
+            "value": "CeCe Peniston"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "similar_to_prior",
+        "required_entities": [
+          {
+            "type": "track",
+            "value": "Finally",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "CeCe Peniston",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "90s dance hits",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "1e14a07f-7369-4d24-9285-9343b6b18353::t8",
+      "pack": "P1_rejection_guardrail_failure",
+      "fact_class": "style_rejection",
+      "state_label": {
+        "allowed_request_types": [
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "atmospheric"
+          },
+          {
+            "type": "tag",
+            "value": "haunting"
+          },
+          {
+            "type": "tag",
+            "value": "ethereal vocals"
+          }
+        ],
+        "required_context_entities": [],
+        "required_exclusions": [
+          {
+            "type": "style",
+            "value": "metal",
+            "scope": "hard"
+          }
+        ],
+        "forbidden_exact_seeds": [
+          {
+            "value": "Gladiatrix"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "tag",
+            "value": "atmospheric",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "haunting",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "ethereal vocals",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "required_exclusions": [
+          {
+            "type": "style",
+            "value": "metal",
+            "scope": "hard"
+          }
+        ],
+        "forbidden_seed_values": [
+          "Gladiatrix"
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "71b80ec3-6cca-48b4-b471-08efa00afa2d::t4",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "same_album",
+      "state_label": {
+        "allowed_request_types": [
+          "same_album",
+          "exact_album",
+          "hidden_target",
+          "attribute_search"
+        ],
+        "required_exact_seeds": [
+          {
+            "type": "album",
+            "value": "Hamilton"
+          }
+        ],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "Eliza"
+          }
+        ],
+        "required_context_entities": [],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": []
+      },
+      "source_fact_label": {
+        "request_type": "same_album",
+        "required_entities": [
+          {
+            "type": "album",
+            "value": "Hamilton",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "Eliza",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "c863175a-bbaf-4f6c-aef7-cb16f2792cb5::t6",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "same_artist_or_attribute",
+      "state_label": {
+        "allowed_request_types": [
+          "similar_to_prior",
+          "attribute_search"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [
+          {
+            "type": "artist",
+            "value": "Mac Miller"
+          }
+        ],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "lyrical storytelling"
+          }
+        ],
+        "required_context_entities": [],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": []
+      },
+      "source_fact_label": {
+        "request_type": "similar_to_prior",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Mac Miller",
+            "allowed_roles": [
+              "current_target",
+              "seed",
+              "satisfied"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "lyrical storytelling",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "be88097f-b6b0-4fb4-bed9-857a92a733c0::t3",
+      "pack": "P0_good_state_ranker_near_miss_failure",
+      "fact_class": "attribute_from_prior",
+      "state_label": {
+        "allowed_request_types": [
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [
+          {
+            "type": "track",
+            "value": "Reelin' In The Years"
+          }
+        ],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "guitar"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "track",
+            "value": "Baker Street",
+            "allowed_roles": [
+              "contrast",
+              "history"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "track",
+            "value": "Baker Street"
+          },
+          {
+            "value": "Baker Street"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "track",
+            "value": "Baker Street",
+            "allowed_roles": [
+              "history",
+              "contrast"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "track",
+            "value": "Reelin' In The Years",
+            "allowed_roles": [
+              "current_target",
+              "seed",
+              "positive_anchor"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "guitar",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [
+          "Baker Street"
+        ]
+      },
+      "label_version": "state_roles_v2"
+    }
+  ]
+}

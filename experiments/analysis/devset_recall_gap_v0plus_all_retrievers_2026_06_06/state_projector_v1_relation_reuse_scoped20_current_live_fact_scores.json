@@ -1,0 +1,4025 @@
+{
+  "summary": {
+    "samples": 20,
+    "all_pass_rate": 0.6,
+    "compiler_core_pass_rate": 0.7,
+    "schema_valid_rate": 1.0,
+    "request_type_rate": 0.85,
+    "required_entities_rate": 0.85,
+    "forbidden_seeds_rate": 1.0,
+    "required_exclusions_rate": 0.95,
+    "temporal_constraint_rate": 0.9
+  },
+  "by_pack": {
+    "P0_named_artist_ranker_failure": {
+      "samples": 2,
+      "all_pass_rate": 0.0,
+      "compiler_core_pass_rate": 0.5,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 0.5,
+      "required_entities_rate": 0.5,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "P0_new_artist_union20_gap_failure": {
+      "samples": 1,
+      "all_pass_rate": 0.0,
+      "compiler_core_pass_rate": 0.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 0.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "P0_novelty_prior_anchor_failure": {
+      "samples": 3,
+      "all_pass_rate": 1.0,
+      "compiler_core_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "P0_roleless_stale_entity_failure": {
+      "samples": 5,
+      "all_pass_rate": 0.8,
+      "compiler_core_pass_rate": 0.8,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 0.8
+    },
+    "P0_same_album_ranker_failure": {
+      "samples": 4,
+      "all_pass_rate": 0.5,
+      "compiler_core_pass_rate": 0.75,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 0.75,
+      "required_entities_rate": 0.75,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "P1_positive_tag_retrieval_gap_failure": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "compiler_core_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "P1_rejection_guardrail_failure": {
+      "samples": 3,
+      "all_pass_rate": 0.6666666666666666,
+      "compiler_core_pass_rate": 0.6666666666666666,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 0.6666666666666666,
+      "temporal_constraint_rate": 1.0
+    },
+    "P1_temporal_constraint_failure": {
+      "samples": 1,
+      "all_pass_rate": 0.0,
+      "compiler_core_pass_rate": 0.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 0.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 0.0
+    }
+  },
+  "by_fact_class": {
+    "album_rejection_visual": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "compiler_core_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "attribute_from_prior": {
+      "samples": 4,
+      "all_pass_rate": 0.5,
+      "compiler_core_pass_rate": 0.5,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 0.5,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "attribute_new_artist": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "compiler_core_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "attribute_refinement": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "compiler_core_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "attribute_temporal": {
+      "samples": 2,
+      "all_pass_rate": 0.5,
+      "compiler_core_pass_rate": 0.5,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 0.5
+    },
+    "exact_artist_alternatives": {
+      "samples": 1,
+      "all_pass_rate": 0.0,
+      "compiler_core_pass_rate": 0.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 0.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "exact_entity": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "compiler_core_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "hard_rejection": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "compiler_core_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "hidden_target_temporal": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "compiler_core_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "negative_feedback_attribute": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "compiler_core_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "negative_feedback_temporal": {
+      "samples": 1,
+      "all_pass_rate": 0.0,
+      "compiler_core_pass_rate": 0.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 0.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 0.0
+    },
+    "new_artist_from_prior": {
+      "samples": 3,
+      "all_pass_rate": 0.6666666666666666,
+      "compiler_core_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 0.6666666666666666,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "same_artist_or_attribute": {
+      "samples": 1,
+      "all_pass_rate": 0.0,
+      "compiler_core_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 0.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "style_rejection": {
+      "samples": 1,
+      "all_pass_rate": 0.0,
+      "compiler_core_pass_rate": 0.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 0.0,
+      "temporal_constraint_rate": 1.0
+    }
+  },
+  "rows": [
+    {
+      "sample_id": "15b1caf3-d1ed-46ef-a8e3-c9f7657e6b77::t6",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "fact_class": "attribute_from_prior",
+      "request_type": "attribute_search",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": false,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": false,
+      "compiler_core_pass": false,
+      "missing_facts": [
+        "Flying Lotus"
+      ],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "Unique, out-there music with an interesting mix of electronic and soulful sounds.",
+          "source_turn": 3,
+          "evidence_text": "What else have you got that's really out there?"
+        },
+        "facts": [
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "out there",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "really out there"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "interesting mix of sounds",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "interesting mix of sounds"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "electronic soulful",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "electronic but also soulful"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "unique",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "unique"
+          }
+        ],
+        "entities": [
+          {
+            "type": "tag",
+            "value": "out there",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "interesting mix of sounds",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "electronic soulful",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "unique",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "exclusions": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Flying Lotus",
+            "allowed_roles": [
+              "satisfied",
+              "history",
+              "positive_anchor"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "electronic",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "soulful",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "out there",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "f2d85aa5-2086-4b1e-9974-d188c43621db::t8",
+      "pack": "P1_temporal_constraint_failure",
+      "fact_class": "negative_feedback_temporal",
+      "request_type": "attribute_search",
+      "checks": {
+        "schema_valid": true,
+        "request_type": false,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": false
+      },
+      "all_pass": false,
+      "compiler_core_pass": false,
+      "missing_facts": [
+        "request_type",
+        "temporal: kind"
+      ],
+      "observed_read": {
+        "current_request": {
+          "request_type": "hidden_target",
+          "summary": "An instrumental electronic track from the late 2000s (ca. 2009) with a dreamy, serene, warm, evolving, atmospheric feel, avoiding dark/harsh mood.",
+          "source_turn": 3,
+          "evidence_text": "late 2000s ambient electronic I'm trying to find"
+        },
+        "facts": [
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "ambient electronic",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "ambient electronic"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "dreamy serene",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "dreamy or serene"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "warm evolving pads",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 1,
+            "mentioned_current_turn": false,
+            "evidence_text": "warm, evolving pads"
+          },
+          {
+            "type": "track",
+            "facet": null,
+            "value": "A Glorious Dawn",
+            "role": "contrast",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "avoid_exact",
+            "source_turn": 2,
+            "mentioned_current_turn": false,
+            "evidence_text": "spoken word element is not what I want"
+          },
+          {
+            "type": "track",
+            "facet": null,
+            "value": "Sleep Paralysis",
+            "role": "rejected",
+            "anchor_use": "do_not_use",
+            "relation": "exclude",
+            "reuse": "must_exclude",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "not what I'm looking for at all"
+          },
+          {
+            "type": "attribute",
+            "facet": "era",
+            "value": "late 2000s",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "specifically looking for something"
+          },
+          {
+            "type": "attribute",
+            "facet": "instrument",
+            "value": "instrumental",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 2,
+            "mentioned_current_turn": false,
+            "evidence_text": "instrumental or purely electronic"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "dark harsh",
+            "role": "rejected",
+            "anchor_use": "do_not_use",
+            "relation": "exclude",
+            "reuse": "must_exclude",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "too dark and harsh"
+          }
+        ],
+        "entities": [
+          {
+            "type": "tag",
+            "value": "ambient electronic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "dreamy serene",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "late 2000s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "instrumental",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Sidewalks and Skeletons",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "warm evolving pads",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "track",
+            "value": "A Glorious Dawn",
+            "role": "contrast",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "track",
+            "value": "Sleep Paralysis",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "dark harsh",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "exclusions": [
+          {
+            "type": "track",
+            "facet": null,
+            "value": "Sleep Paralysis",
+            "scope": "next_turn_hard",
+            "source_turn": 3,
+            "evidence_text": "not what I'm looking for at all"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "dark and harsh",
+            "scope": "soft_preference",
+            "source_turn": 3,
+            "evidence_text": "dark and harsh"
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "track",
+            "value": "Sleep Paralysis",
+            "scope": "hard"
+          },
+          {
+            "kind": "style",
+            "value": "dark and harsh",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": {
+          "kind": "release_date",
+          "strength": "hard",
+          "apply_as_filter": true,
+          "range": [
+            2007,
+            2010
+          ]
+        }
+      },
+      "expected_read": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "tag",
+            "value": "dreamy",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "serene",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "ambient electronic",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "required_exclusions": [
+          {
+            "type": "style",
+            "value": "dark and harsh",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": {
+          "kind": [
+            "style_era",
+            "reference_era"
+          ],
+          "strength": [
+            "hard",
+            "soft"
+          ],
+          "apply_as_filter": [
+            true,
+            false
+          ]
+        }
+      }
+    },
+    {
+      "sample_id": "1e14a07f-7369-4d24-9285-9343b6b18353::t8",
+      "pack": "P1_rejection_guardrail_failure",
+      "fact_class": "style_rejection",
+      "request_type": "attribute_search",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": false,
+        "temporal_constraint": true
+      },
+      "all_pass": false,
+      "compiler_core_pass": false,
+      "missing_facts": [
+        "exclusion: metal"
+      ],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "Atmospheric and haunting tracks with ethereal vocals and traditional instruments, avoiding heavy/intense metal elements.",
+          "source_turn": 3,
+          "evidence_text": "more atmospheric and haunting, with ethereal vocals and traditional instruments, not so much the metal side"
+        },
+        "facts": [
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "atmospheric",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "atmospheric"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "haunting",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "haunting"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "ethereal vocals",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "ethereal vocals"
+          },
+          {
+            "type": "attribute",
+            "facet": "instrument",
+            "value": "traditional instruments",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "traditional instruments"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "heavy intense metal",
+            "role": "rejected",
+            "anchor_use": "do_not_use",
+            "relation": "exclude",
+            "reuse": "must_exclude",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "too heavy and intense"
+          }
+        ],
+        "entities": [
+          {
+            "type": "tag",
+            "value": "atmospheric",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "haunting",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "ethereal vocals",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "traditional instruments",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "heavy intense metal",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "exclusions": [
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "heavy intense metal",
+            "scope": "soft_preference",
+            "source_turn": 3,
+            "evidence_text": "too heavy and intense"
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "style",
+            "value": "heavy intense metal",
+            "scope": "soft"
+          }
+        ],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "tag",
+            "value": "atmospheric",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "haunting",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "ethereal vocals",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "required_exclusions": [
+          {
+            "type": "style",
+            "value": "metal",
+            "scope": "hard"
+          }
+        ],
+        "forbidden_seed_values": [
+          "Gladiatrix"
+        ]
+      }
+    },
+    {
+      "sample_id": "d265b5a9-af57-4070-90f5-692a960c5aaa::t6",
+      "pack": "P1_rejection_guardrail_failure",
+      "fact_class": "album_rejection_visual",
+      "request_type": "attribute_search",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "compiler_core_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "New electronic albums from the 2010s with striking, artistically unique cover art, excluding Daft Punk's Random Access Memories and Four Tet's New Energy.",
+          "source_turn": 3,
+          "evidence_text": "new album discoveries from the 2010s, specifically electronic albums with covers that are just as striking or artistclyc"
+        },
+        "facts": [
+          {
+            "type": "album",
+            "facet": null,
+            "value": "Random Access Memories",
+            "role": "rejected",
+            "anchor_use": "do_not_use",
+            "relation": "exclude",
+            "reuse": "must_exclude",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "I've listened to 'Random Access Memories' countless times"
+          },
+          {
+            "type": "album",
+            "facet": null,
+            "value": "New Energy",
+            "role": "rejected",
+            "anchor_use": "do_not_use",
+            "relation": "exclude",
+            "reuse": "must_exclude",
+            "source_turn": 2,
+            "mentioned_current_turn": false,
+            "evidence_text": "beyond 'Random Access Memories' and 'New Energy'"
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Daft Punk",
+            "role": "rejected",
+            "anchor_use": "do_not_use",
+            "relation": "exclude",
+            "reuse": "must_exclude",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "I've listened to 'Random Access Memories' countless times"
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Four Tet",
+            "role": "rejected",
+            "anchor_use": "do_not_use",
+            "relation": "exclude",
+            "reuse": "must_exclude",
+            "source_turn": 2,
+            "mentioned_current_turn": false,
+            "evidence_text": "beyond 'Random Access Memories' and 'New Energy'"
+          },
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "electronic",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "electronic albums"
+          },
+          {
+            "type": "attribute",
+            "facet": "visual",
+            "value": "striking cover art",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "covers that are just as striking"
+          },
+          {
+            "type": "attribute",
+            "facet": "visual",
+            "value": "artistically unique",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "artistically unique"
+          },
+          {
+            "type": "attribute",
+            "facet": "era",
+            "value": "2010s",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "from the 2010s"
+          }
+        ],
+        "entities": [
+          {
+            "type": "album",
+            "value": "Random Access Memories",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "album",
+            "value": "New Energy",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Daft Punk",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Four Tet",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "electronic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "striking cover art",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "artistically unique",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "2010s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "exclusions": [
+          {
+            "type": "album",
+            "facet": null,
+            "value": "Random Access Memories",
+            "scope": "next_turn_hard",
+            "source_turn": 3,
+            "evidence_text": "I've listened to 'Random Access Memories' countless times"
+          },
+          {
+            "type": "album",
+            "facet": null,
+            "value": "New Energy",
+            "scope": "next_turn_hard",
+            "source_turn": 2,
+            "evidence_text": "beyond 'Random Access Memories' and 'New Energy'"
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Daft Punk",
+            "scope": "next_turn_hard",
+            "source_turn": 3,
+            "evidence_text": "I've listened to 'Random Access Memories' countless times"
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Four Tet",
+            "scope": "next_turn_hard",
+            "source_turn": 2,
+            "evidence_text": "beyond 'Random Access Memories' and 'New Energy'"
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "album",
+            "value": "Random Access Memories",
+            "scope": "hard"
+          },
+          {
+            "kind": "album",
+            "value": "New Energy",
+            "scope": "hard"
+          },
+          {
+            "kind": "artist",
+            "value": "Daft Punk",
+            "scope": "hard"
+          },
+          {
+            "kind": "artist",
+            "value": "Four Tet",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            2010,
+            2019
+          ]
+        }
+      },
+      "expected_read": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "album",
+            "value": "Random Access Memories",
+            "allowed_roles": [
+              "rejected",
+              "history",
+              "satisfied"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Daft Punk",
+            "allowed_roles": [
+              "rejected",
+              "history",
+              "satisfied"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "striking",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "artistically unique",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [
+          "Random Access Memories",
+          "Daft Punk"
+        ]
+      }
+    },
+    {
+      "sample_id": "963b3ee7-17d1-4bb3-8a3f-0bc528a1f096::t5",
+      "pack": "P1_rejection_guardrail_failure",
+      "fact_class": "negative_feedback_attribute",
+      "request_type": "attribute_search",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "compiler_core_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "Positive, uplifting, energetic hip-hop to boost mood and energy; not Lupe Fiasco.",
+          "source_turn": 3,
+          "evidence_text": "hip-hop that has a *positive vibe* to boost my energy and put me in a good mood"
+        },
+        "facts": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Lupe Fiasco",
+            "role": "rejected",
+            "anchor_use": "do_not_use",
+            "relation": "exclude",
+            "reuse": "must_exclude",
+            "source_turn": 2,
+            "mentioned_current_turn": false,
+            "evidence_text": "I love Lupe Fiasco, he's my favorite artist for a reason"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "positive vibe",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "positive vibe"
+          },
+          {
+            "type": "attribute",
+            "facet": "energy",
+            "value": "boost my energy",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "boost my energy"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "put me in a good mood",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "put me in a good mood"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "uplifting",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 1,
+            "mentioned_current_turn": false,
+            "evidence_text": "uplifting"
+          },
+          {
+            "type": "attribute",
+            "facet": "energy",
+            "value": "energetic",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 1,
+            "mentioned_current_turn": false,
+            "evidence_text": "energetic"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "heavy and intense",
+            "role": "rejected",
+            "anchor_use": "do_not_use",
+            "relation": "exclude",
+            "reuse": "must_exclude",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "heavy and intense"
+          }
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Lupe Fiasco",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "positive vibe",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "boost my energy",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "put me in a good mood",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "uplifting",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "energetic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "heavy and intense",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "exclusions": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Lupe Fiasco",
+            "scope": "next_turn_hard",
+            "source_turn": 2,
+            "evidence_text": "not what I'm looking for right now"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "heavy and intense",
+            "scope": "soft_preference",
+            "source_turn": 3,
+            "evidence_text": "heavy and intense"
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "artist",
+            "value": "Lupe Fiasco",
+            "scope": "hard"
+          },
+          {
+            "kind": "style",
+            "value": "heavy and intense",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Lupe Fiasco",
+            "allowed_roles": [
+              "history",
+              "contrast",
+              "satisfied"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "positive vibe",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "boost my energy",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "required_exclusions": [
+          {
+            "type": "style",
+            "value": "heavy and intense",
+            "scope": "hard"
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "899f906b-9b0b-42a6-9689-643eb9f1ed31::t8",
+      "pack": "P0_named_artist_ranker_failure",
+      "fact_class": "new_artist_from_prior",
+      "request_type": "new_artist",
+      "checks": {
+        "schema_valid": true,
+        "request_type": false,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": false,
+      "compiler_core_pass": true,
+      "missing_facts": [
+        "request_type"
+      ],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "New-to-the-user aggressive nu-metal bands from the late 90s/early 2000s with heavy guitars, melodic or electronic elements, possibly rap vocals, excluding Linkin Park and Pantera.",
+          "source_turn": 3,
+          "evidence_text": "new bands for me, besides Linkin Park and Pantera, that fit that aggressive nu-metal sound"
+        },
+        "facts": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Linkin Park",
+            "role": "rejected",
+            "anchor_use": "do_not_use",
+            "relation": "exclude",
+            "reuse": "must_exclude",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "besides Linkin Park"
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Pantera",
+            "role": "rejected",
+            "anchor_use": "do_not_use",
+            "relation": "exclude",
+            "reuse": "must_exclude",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "besides Linkin Park and Pantera"
+          },
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "nu-metal",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "aggressive nu-metal sound"
+          },
+          {
+            "type": "attribute",
+            "facet": "era",
+            "value": "late 90s early 2000s",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "late 90s/early 2000s"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "heavy guitars with melodic or electronic parts",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 1,
+            "mentioned_current_turn": false,
+            "evidence_text": "bands that blend heavy guitars with more melodic or even electronic parts"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "rap vocals",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "rap vocals or electronic elements"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "electronic elements",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "rap vocals or electronic elements"
+          }
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Linkin Park",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Pantera",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "nu-metal",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "heavy guitars with melodic or electronic parts",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "rap vocals",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "electronic elements",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Korn",
+            "role": "history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Limp Bizkit",
+            "role": "history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Disturbed",
+            "role": "history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "System of a Down",
+            "role": "history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Slipknot",
+            "role": "history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "track",
+            "value": "Figure.09",
+            "role": "history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "late 90s early 2000s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "exclusions": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Linkin Park",
+            "scope": "next_turn_hard",
+            "source_turn": 3,
+            "evidence_text": "besides Linkin Park"
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Pantera",
+            "scope": "next_turn_hard",
+            "source_turn": 3,
+            "evidence_text": "besides Linkin Park and Pantera"
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "artist",
+            "value": "Linkin Park",
+            "scope": "hard"
+          },
+          {
+            "kind": "artist",
+            "value": "Pantera",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            1997,
+            2004
+          ]
+        }
+      },
+      "expected_read": {
+        "request_type": "new_artist",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Pantera",
+            "allowed_roles": [
+              "satisfied",
+              "history",
+              "rejected"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Linkin Park",
+            "allowed_roles": [
+              "history",
+              "rejected"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "aggressive nu-metal",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [
+          "Pantera",
+          "Linkin Park"
+        ]
+      }
+    },
+    {
+      "sample_id": "93199894-d3db-4335-8278-e1be175944e4::t6",
+      "pack": "P0_named_artist_ranker_failure",
+      "fact_class": "exact_artist_alternatives",
+      "request_type": "exact_artist",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": false,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": false,
+      "compiler_core_pass": false,
+      "missing_facts": [
+        "Rusty Cage",
+        "Rusty Cage role in ['current_target', 'seed']",
+        "Rusty Cage",
+        "Rusty Cage use_as_retrieval_seed=True"
+      ],
+      "observed_read": {
+        "current_request": {
+          "request_type": "exact_artist",
+          "summary": "Play a track by Soundgarden. If Soundgarden is unavailable, try Stone Temple Pilots or Nirvana instead.",
+          "source_turn": 3,
+          "evidence_text": "something by Stone Temple Pilots or Nirvana"
+        },
+        "facts": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Soundgarden",
+            "role": "current_target",
+            "anchor_use": "must_use",
+            "relation": "exact_target",
+            "reuse": "must_reuse",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "no Soundgarden at all"
+          },
+          {
+            "type": "track",
+            "facet": null,
+            "value": "Rusty Cage",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "may_reuse",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "not even Rusty Cage"
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Stone Temple Pilots",
+            "role": "current_target",
+            "anchor_use": "must_use",
+            "relation": "exact_target",
+            "reuse": "must_reuse",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "something by Stone Temple Pilots"
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Nirvana",
+            "role": "current_target",
+            "anchor_use": "must_use",
+            "relation": "exact_target",
+            "reuse": "must_reuse",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "something by Nirvana"
+          }
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Soundgarden",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Stone Temple Pilots",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Nirvana",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "track",
+            "value": "Rusty Cage",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "exclusions": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "request_type": "exact_artist",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Soundgarden",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "track",
+            "value": "Rusty Cage",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Stone Temple Pilots",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Nirvana",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "692611f0-d9ef-406c-8327-902575197aee::t8",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "attribute_from_prior",
+      "request_type": "attribute_search",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": false,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": false,
+      "compiler_core_pass": false,
+      "missing_facts": [
+        "Kendrick"
+      ],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "Tracks with vivid, movie-like storytelling where details are super clear, any artist.",
+          "source_turn": 3,
+          "evidence_text": "tracks with really vivid storytelling that almost feel like watching a movie, where the details are super clear"
+        },
+        "facts": [
+          {
+            "type": "attribute",
+            "facet": "lyrical_theme",
+            "value": "vivid storytelling",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "vivid storytelling"
+          },
+          {
+            "type": "attribute",
+            "facet": "lyrical_theme",
+            "value": "feels like watching a movie",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "feels like watching a movie"
+          },
+          {
+            "type": "attribute",
+            "facet": "lyrical_theme",
+            "value": "details are super clear",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "details are super clear"
+          }
+        ],
+        "entities": [
+          {
+            "type": "tag",
+            "value": "vivid storytelling",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "feels like watching a movie",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "details are super clear",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "exclusions": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Kendrick",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "vivid storytelling",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "watching a movie",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "8071d14d-7e0f-4f72-90a6-0941db80a371::t5",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "attribute_from_prior",
+      "request_type": "attribute_search",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "compiler_core_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "Chill R&B/Soul similar to Brent Faiyaz's smooth vibe, maybe with a bit more groove.",
+          "source_turn": 3,
+          "evidence_text": "similar to this, or maybe something with a bit more of a groove but still chill R&B"
+        },
+        "facts": [
+          {
+            "type": "track",
+            "facet": null,
+            "value": "Talk 2 U",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "avoid_exact",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "that's a good one"
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Brent Faiyaz",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "may_reuse",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "I like Brent Faiyaz"
+          },
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "chill R&B",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "chill R&B"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "smooth",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "smooth vibe"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "groove",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "bit more of a groove"
+          }
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Brent Faiyaz",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "chill R&B",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "smooth",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "groove",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "track",
+            "value": "Talk 2 U",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "exclusions": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Brent Faiyaz",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "groove",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "chill R&B",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "c863175a-bbaf-4f6c-aef7-cb16f2792cb5::t6",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "same_artist_or_attribute",
+      "request_type": "similar_to_prior",
+      "checks": {
+        "schema_valid": true,
+        "request_type": false,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": false,
+      "compiler_core_pass": true,
+      "missing_facts": [
+        "request_type"
+      ],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "More hip-hop tracks with strong lyrical storytelling about complex relationships and introspection, from Mac Miller or similar artists.",
+          "source_turn": 3,
+          "evidence_text": "more hip-hop tracks that are super strong on the lyrical storytelling about complex relationships"
+        },
+        "facts": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Mac Miller",
+            "role": "current_target",
+            "anchor_use": "must_use",
+            "relation": "exact_target",
+            "reuse": "must_reuse",
+            "source_turn": 3,
+            "mentioned_current_turn": false,
+            "evidence_text": "Mac Miller"
+          },
+          {
+            "type": "track",
+            "facet": null,
+            "value": "Planet God Damn",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "satisfied_prior",
+            "reuse": "avoid_exact",
+            "source_turn": 3,
+            "mentioned_current_turn": false,
+            "evidence_text": "Planet God Damn is perfect"
+          },
+          {
+            "type": "track",
+            "facet": null,
+            "value": "Soulmate",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "satisfied_prior",
+            "reuse": "avoid_exact",
+            "source_turn": 3,
+            "mentioned_current_turn": false,
+            "evidence_text": "Soulmate fantastic pick"
+          },
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "hip-hop",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "hip-hop tracks"
+          },
+          {
+            "type": "attribute",
+            "facet": "lyrical_theme",
+            "value": "lyrical storytelling about complex relationships",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "lyrical storytelling about complex relationships"
+          },
+          {
+            "type": "attribute",
+            "facet": "lyrical_theme",
+            "value": "introspective storytelling",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": false,
+            "evidence_text": "deep, introspective storytelling about relationships"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "deep",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "deep lyrical storytelling"
+          }
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Mac Miller",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "track",
+            "value": "Planet God Damn",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "track",
+            "value": "Soulmate",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "hip-hop",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "lyrical storytelling about complex relationships",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "introspective storytelling",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "deep",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "exclusions": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "request_type": "similar_to_prior",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Mac Miller",
+            "allowed_roles": [
+              "current_target",
+              "seed",
+              "satisfied"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "lyrical storytelling",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "c96d7bb9-65d4-44be-9bc2-891e8e485f4e::t7",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "attribute_new_artist",
+      "request_type": "new_artist",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "compiler_core_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "new_artist",
+          "summary": "Other artists with powerful emotional sertanejo, preserving deep longing and emotional storytelling from the liked prior song.",
+          "source_turn": 3,
+          "evidence_text": "by other artists but with a similar powerful, emotional sertanejo"
+        },
+        "facts": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Marília Mendonça",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "avoid_exact",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "by other artists"
+          },
+          {
+            "type": "attribute",
+            "facet": "lyrical_theme",
+            "value": "deep longing",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "deep longing and emotional storytelling"
+          },
+          {
+            "type": "attribute",
+            "facet": "lyrical_theme",
+            "value": "emotional storytelling",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "deep longing and emotional storytelling"
+          },
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "sertanejo",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "sertanejo"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "powerful emotional",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "powerful, emotional"
+          }
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Marília Mendonça",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "emotional storytelling",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "sertanejo",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "powerful",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "deep longing",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "powerful emotional",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "exclusions": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "request_type": "new_artist",
+        "required_entities": [
+          {
+            "type": "tag",
+            "value": "deep longing",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "emotional storytelling",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "sertanejo",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "2bbc0a7e-3ab0-4376-8135-182cd4ae075f::t1",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "fact_class": "hidden_target_temporal",
+      "request_type": "hidden_target",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "compiler_core_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "hidden_target",
+          "summary": "Find a Latin Pop song from the early 2000s that was a hit.",
+          "source_turn": 1,
+          "evidence_text": "trying to remember a Latin Pop song from around the early 2000s, it was quite a hit back then"
+        },
+        "facts": [
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "Latin Pop",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 1,
+            "mentioned_current_turn": true,
+            "evidence_text": "Latin Pop song"
+          },
+          {
+            "type": "attribute",
+            "facet": "era",
+            "value": "early 2000s",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 1,
+            "mentioned_current_turn": true,
+            "evidence_text": "early 2000s"
+          },
+          {
+            "type": "attribute",
+            "facet": "popularity",
+            "value": "hit",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 1,
+            "mentioned_current_turn": true,
+            "evidence_text": "quite a hit back then"
+          }
+        ],
+        "entities": [
+          {
+            "type": "tag",
+            "value": "Latin Pop",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "hit",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "early 2000s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "exclusions": [],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            2000,
+            2005
+          ]
+        }
+      },
+      "expected_read": {
+        "request_type": "hidden_target",
+        "required_entities": [
+          {
+            "type": "tag",
+            "value": "Latin Pop",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "hit",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "temporal_constraint": {
+          "kind": [
+            "style_era",
+            "reference_era"
+          ],
+          "strength": "soft",
+          "apply_as_filter": false
+        }
+      }
+    },
+    {
+      "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+      "pack": "P0_roleless_stale_entity_failure",
+      "fact_class": "attribute_temporal",
+      "request_type": "attribute_search",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "compiler_core_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "Other high-energy classic disco or funk tracks from the late 70s to early 80s period.",
+          "source_turn": 3,
+          "evidence_text": "Other high-energy, classic disco or funk tracks from that late 70s to early 80s period"
+        },
+        "facts": [
+          {
+            "type": "track",
+            "facet": null,
+            "value": "The Sweetest Pain",
+            "role": "history",
+            "anchor_use": "do_not_use",
+            "relation": "history",
+            "reuse": "not_applicable",
+            "source_turn": 1,
+            "mentioned_current_turn": false,
+            "evidence_text": null
+          },
+          {
+            "type": "track",
+            "facet": null,
+            "value": "Georgy Porgy",
+            "role": "history",
+            "anchor_use": "do_not_use",
+            "relation": "history",
+            "reuse": "not_applicable",
+            "source_turn": 2,
+            "mentioned_current_turn": false,
+            "evidence_text": null
+          },
+          {
+            "type": "track",
+            "facet": null,
+            "value": "Can You Feel the Force",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "satisfied_prior",
+            "reuse": "avoid_exact",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "is awesome, such a great track"
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Toto",
+            "role": "history",
+            "anchor_use": "do_not_use",
+            "relation": "history",
+            "reuse": "not_applicable",
+            "source_turn": 2,
+            "mentioned_current_turn": false,
+            "evidence_text": null
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "The Real Thing",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "satisfied_prior",
+            "reuse": "avoid_exact",
+            "source_turn": 2,
+            "mentioned_current_turn": false,
+            "evidence_text": "other high-energy"
+          },
+          {
+            "type": "attribute",
+            "facet": "energy",
+            "value": "high-energy",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "high-energy"
+          },
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "classic disco",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "classic disco"
+          },
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "funk",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "funk tracks"
+          },
+          {
+            "type": "attribute",
+            "facet": "era",
+            "value": "late 70s to early 80s",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "late 70s to early 80s"
+          }
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "The Real Thing",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "high-energy",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "classic disco",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "funk",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "late 70s to early 80s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "track",
+            "value": "The Sweetest Pain",
+            "role": "history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "track",
+            "value": "Georgy Porgy",
+            "role": "history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "track",
+            "value": "Can You Feel the Force",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Toto",
+            "role": "history",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "exclusions": [],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            1977,
+            1984
+          ]
+        }
+      },
+      "expected_read": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "tag",
+            "value": "high-energy",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "disco",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "funk",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [
+          "The Real Thing"
+        ],
+        "temporal_constraint": {
+          "kind": [
+            "style_era",
+            "reference_era"
+          ],
+          "strength": "soft",
+          "apply_as_filter": false
+        }
+      }
+    },
+    {
+      "sample_id": "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+      "pack": "P0_roleless_stale_entity_failure",
+      "fact_class": "attribute_refinement",
+      "request_type": "attribute_search",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "compiler_core_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "Raw, dark, relentless breakcore with a more stripped-down or minimalistic approach than the previous recommendation.",
+          "source_turn": 3,
+          "evidence_text": "similar raw power and darkness, but maybe a bit more stripped-down or minimalistic"
+        },
+        "facts": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": ":Wumpscut:",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "satisfied_prior",
+            "reuse": "avoid_exact",
+            "source_turn": 2,
+            "mentioned_current_turn": false,
+            "evidence_text": ""
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Igorrr",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "satisfied_prior",
+            "reuse": "avoid_exact",
+            "source_turn": 3,
+            "mentioned_current_turn": false,
+            "evidence_text": ""
+          },
+          {
+            "type": "track",
+            "facet": null,
+            "value": "Pallbearer",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "satisfied_prior",
+            "reuse": "avoid_exact",
+            "source_turn": 3,
+            "mentioned_current_turn": false,
+            "evidence_text": ""
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "raw power",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "similar raw power"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "darkness",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "darkness"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "relentless breakcore",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": false,
+            "evidence_text": "intricate and relentless breakcore"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "stripped-down and minimalistic",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "more stripped-down or minimalistic"
+          }
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": ":Wumpscut:",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Igorrr",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "track",
+            "value": "Pallbearer",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "raw power",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "darkness",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "relentless breakcore",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "stripped-down and minimalistic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "exclusions": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "tag",
+            "value": "raw power",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "darkness",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "minimalistic",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4",
+      "pack": "P0_roleless_stale_entity_failure",
+      "fact_class": "new_artist_from_prior",
+      "request_type": "new_artist",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "compiler_core_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "new_artist",
+          "summary": "Newer, more recent bands in the technical or progressive death metal scene that are pushing boundaries.",
+          "source_turn": 3,
+          "evidence_text": "discover some *new* bands"
+        },
+        "facts": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Brain Drill",
+            "role": "history",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "avoid_exact",
+            "source_turn": 1,
+            "mentioned_current_turn": false,
+            "evidence_text": "similarly brutal and technical"
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Suffocation",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "avoid_exact",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "always a solid listen"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "brutal technical death metal",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": false,
+            "evidence_text": "brutal and technical"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "progressive",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "progressive death metal"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "pushing the envelope",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "pushing the envelope"
+          }
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Brain Drill",
+            "role": "history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Suffocation",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "brutal technical death metal",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "progressive",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "pushing the envelope",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "exclusions": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "request_type": "new_artist",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Suffocation",
+            "allowed_roles": [
+              "satisfied",
+              "history",
+              "contrast"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "technical death metal",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "progressive death metal",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [
+          "Suffocation"
+        ]
+      }
+    },
+    {
+      "sample_id": "78cdaccb-0f9b-4876-80b1-c20bf0b444e6::t8",
+      "pack": "P0_roleless_stale_entity_failure",
+      "fact_class": "attribute_from_prior",
+      "request_type": "attribute_search",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "compiler_core_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "Powerful rock song with a really strong guitar riff, by any artist.",
+          "source_turn": 3,
+          "evidence_text": "powerful rock songs with a really strong guitar riff"
+        },
+        "facts": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Linkin Park",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "avoid_exact",
+            "source_turn": 2,
+            "mentioned_current_turn": false,
+            "evidence_text": "I love Linkin Park"
+          },
+          {
+            "type": "track",
+            "facet": null,
+            "value": "Numb",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "avoid_exact",
+            "source_turn": 2,
+            "mentioned_current_turn": false,
+            "evidence_text": "classic"
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Guano Apes",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "avoid_exact",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "I love this song"
+          },
+          {
+            "type": "track",
+            "facet": null,
+            "value": "Big in Japan",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "avoid_exact",
+            "source_turn": 3,
+            "mentioned_current_turn": false,
+            "evidence_text": "I love this song"
+          },
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "rock",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "rock songs"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "powerful",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "powerful"
+          },
+          {
+            "type": "attribute",
+            "facet": "instrument",
+            "value": "strong guitar riff",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "strong guitar riff"
+          }
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Linkin Park",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "track",
+            "value": "Numb",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Guano Apes",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "track",
+            "value": "Big in Japan",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "rock",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "powerful",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "strong guitar riff",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "exclusions": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Guano Apes",
+            "allowed_roles": [
+              "satisfied",
+              "history",
+              "positive_anchor"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "powerful rock",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "strong guitar riff",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "d9a65836-7165-45bf-aa3e-3ef7ba5d073a::t2",
+      "pack": "P0_roleless_stale_entity_failure",
+      "fact_class": "attribute_temporal",
+      "request_type": "attribute_search",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": false
+      },
+      "all_pass": false,
+      "compiler_core_pass": false,
+      "missing_facts": [
+        "temporal: temporal_constraint"
+      ],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "Another early 2000s pop-punk or alternative rock track with a stronger angsty feel, not heavier.",
+          "source_turn": 2,
+          "evidence_text": "a bit more... not quite heavier, but with a stronger angsty feel"
+        },
+        "facts": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Bowling For Soup",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "may_reuse",
+            "source_turn": 2,
+            "mentioned_current_turn": false,
+            "evidence_text": "good one"
+          },
+          {
+            "type": "track",
+            "facet": null,
+            "value": "Girl All the Bad Guys Want",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "may_reuse",
+            "source_turn": 2,
+            "mentioned_current_turn": false,
+            "evidence_text": "good one"
+          },
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "pop-punk",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 2,
+            "mentioned_current_turn": true,
+            "evidence_text": "pop-punk"
+          },
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "alternative rock",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 2,
+            "mentioned_current_turn": true,
+            "evidence_text": "alternative rock vibe"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "angsty",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 2,
+            "mentioned_current_turn": true,
+            "evidence_text": "stronger angsty feel"
+          },
+          {
+            "type": "attribute",
+            "facet": "era",
+            "value": "early 2000s",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 2,
+            "mentioned_current_turn": true,
+            "evidence_text": "early 2000s"
+          },
+          {
+            "type": "attribute",
+            "facet": "energy",
+            "value": "energetic",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 2,
+            "mentioned_current_turn": true,
+            "evidence_text": "energy"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "heavy",
+            "role": "rejected",
+            "anchor_use": "do_not_use",
+            "relation": "exclude",
+            "reuse": "must_exclude",
+            "source_turn": 2,
+            "mentioned_current_turn": true,
+            "evidence_text": "not quite heavier"
+          }
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Bowling For Soup",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "track",
+            "value": "Girl All the Bad Guys Want",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "pop-punk",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "alternative rock",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "angsty",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "early 2000s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "energetic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "heavy",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "exclusions": [
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "heavy",
+            "scope": "soft_preference",
+            "source_turn": 2,
+            "evidence_text": "not quite heavier"
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "style",
+            "value": "heavy",
+            "scope": "soft"
+          }
+        ],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "tag",
+            "value": "angsty",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "pop-punk",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "alternative rock",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "temporal_constraint": {
+          "kind": [
+            "style_era",
+            "reference_era"
+          ],
+          "strength": "soft",
+          "apply_as_filter": false
+        }
+      }
+    },
+    {
+      "sample_id": "88beb200-0334-4aba-be15-8e1303725766::t6",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "fact_class": "hard_rejection",
+      "request_type": "new_artist",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "compiler_core_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "new_artist",
+          "summary": "Popular hip-hop tracks from other artists around late 2015 to early 2016.",
+          "source_turn": 3,
+          "evidence_text": "popular Hip-Hop tracks from *other artists* around late 2015 to early 2016"
+        },
+        "facts": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Drake",
+            "role": "rejected",
+            "anchor_use": "do_not_use",
+            "relation": "exclude",
+            "reuse": "must_exclude",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "good on Drake for now"
+          },
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "hip-hop",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "Hip-Hop tracks"
+          },
+          {
+            "type": "attribute",
+            "facet": "popularity",
+            "value": "popular",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "popular"
+          },
+          {
+            "type": "attribute",
+            "facet": "era",
+            "value": "late 2015 to early 2016",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "around late 2015 to early 2016"
+          }
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Drake",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "hip-hop",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "popular",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "late 2015 to early 2016",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "exclusions": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Drake",
+            "scope": "next_turn_hard",
+            "source_turn": 3,
+            "evidence_text": "good on Drake for now"
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "artist",
+            "value": "Drake",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": {
+          "kind": "release_date",
+          "strength": "soft",
+          "apply_as_filter": true,
+          "range": [
+            2015,
+            2016
+          ]
+        }
+      },
+      "expected_read": {
+        "request_type": "new_artist",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Drake",
+            "allowed_roles": [
+              "rejected"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "popular Hip-Hop",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "required_exclusions": [
+          {
+            "type": "artist",
+            "value": "Drake",
+            "scope": "hard"
+          }
+        ],
+        "forbidden_seed_values": [
+          "Drake"
+        ],
+        "temporal_constraint": {
+          "kind": [
+            "release_date",
+            "style_era",
+            "reference_era"
+          ],
+          "strength": [
+            "hard",
+            "soft"
+          ],
+          "apply_as_filter": [
+            true,
+            false
+          ]
+        }
+      }
+    },
+    {
+      "sample_id": "daeef24e-b041-4140-9101-882820c63408::t7",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "fact_class": "exact_entity",
+      "request_type": "exact_track",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "compiler_core_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "exact_track",
+          "summary": "Play 'The Spirit of Radio' by Rush instead of the blocked 'Tom Sawyer'.",
+          "source_turn": 3,
+          "evidence_text": "play 'The Spirit of Radio' by Rush instead"
+        },
+        "facts": [
+          {
+            "type": "track",
+            "facet": null,
+            "value": "Tom Sawyer",
+            "role": "rejected",
+            "anchor_use": "do_not_use",
+            "relation": "exclude",
+            "reuse": "must_exclude",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "problem with Tom Sawyer"
+          },
+          {
+            "type": "track",
+            "facet": null,
+            "value": "The Spirit of Radio",
+            "role": "current_target",
+            "anchor_use": "must_use",
+            "relation": "exact_target",
+            "reuse": "must_reuse",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "play 'The Spirit of Radio' by Rush instead"
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Rush",
+            "role": "current_target",
+            "anchor_use": "must_use",
+            "relation": "exact_target",
+            "reuse": "must_reuse",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "by Rush"
+          }
+        ],
+        "entities": [
+          {
+            "type": "track",
+            "value": "Tom Sawyer",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "track",
+            "value": "The Spirit of Radio",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Rush",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "exclusions": [
+          {
+            "type": "track",
+            "facet": null,
+            "value": "Tom Sawyer",
+            "scope": "next_turn_hard",
+            "source_turn": 3,
+            "evidence_text": "problem with Tom Sawyer"
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "track",
+            "value": "Tom Sawyer",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "request_type": "exact_track",
+        "required_entities": [
+          {
+            "type": "track",
+            "value": "The Spirit of Radio",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Rush",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "required_exclusions": [
+          {
+            "type": "track",
+            "value": "Tom Sawyer",
+            "scope": "hard"
+          }
+        ],
+        "forbidden_seed_values": [
+          "Tom Sawyer"
+        ]
+      }
+    },
+    {
+      "sample_id": "8bcb7d16-9be0-40cc-9a9d-28b654997b8d::t6",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "fact_class": "new_artist_from_prior",
+      "request_type": "new_artist",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "compiler_core_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "new_artist",
+          "summary": "Different underground hip-hop artists with intricate lyricism, dark atmospheric production, and introspective themes, distinct from Sadistik.",
+          "source_turn": 3,
+          "evidence_text": "different artists, perhaps from the underground"
+        },
+        "facts": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Sadistik",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "avoid_exact",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "big fan of his work but branch out"
+          },
+          {
+            "type": "attribute",
+            "facet": "lyrical_theme",
+            "value": "intricate lyricism",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "intricate lyricism"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "dark atmospheric production",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "dark atmospheric production"
+          },
+          {
+            "type": "attribute",
+            "facet": "lyrical_theme",
+            "value": "introspective themes",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "introspective"
+          },
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "underground hip hop",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "underground"
+          }
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Sadistik",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "intricate lyricism",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "dark atmospheric production",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "introspective themes",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "underground hip hop",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "exclusions": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Sadistik",
+            "scope": "next_turn_hard",
+            "source_turn": 3,
+            "evidence_text": "different artists"
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "artist",
+            "value": "Sadistik",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "request_type": "new_artist",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Sadistik",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "underground",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "forbidden_seed_values": [
+          "Sadistik"
+        ]
+      }
+    }
+  ]
+}

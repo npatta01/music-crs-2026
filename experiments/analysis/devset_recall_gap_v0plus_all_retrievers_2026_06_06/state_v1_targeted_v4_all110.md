@@ -1,0 +1,181 @@
+# State V1 Retriever Matrix
+
+Focused candidate-generation matrix over saved V1 extraction states.
+The main gate is branch union@20/50; RRF/final ranking is reported separately.
+
+## Summary
+
+| Variant | n | final@20 | final@50 | union@20 | union@50 | union@100 | union@200 | union@1000 | best branch@50 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `official_trace_baseline` | 110 | 0.182 | 0.373 | 0.545 | 0.545 | 0.545 | 1.000 |  |  |
+| `all_candidate_plus_targeted_v4` | 110 | 0.309 | 0.391 | 0.655 | 0.782 | 0.845 | 0.927 | 0.982 | 0.782 |
+
+## Guardrails
+
+| Variant | n | GT release-date masked | GT hard-dropped |
+|---|---:|---:|---:|
+| `all_candidate_plus_targeted_v4` | 110 | 1 | 10 |
+
+## Per-Class Summary
+
+| Pack | n | baseline u@20 | baseline u@50 | best single | single u@20 | single u@50 | combined | combined u@20 | combined u@50 |
+|---|---:|---:|---:|---|---:|---:|---|---:|---:|
+| P0_good_state_ranker_near_miss_failure | 10 | 1.000 | 1.000 | `` |  |  | `all_candidate_plus_targeted_v4` | 1.000 | 1.000 |
+| P0_named_artist_ranker_failure | 10 | 1.000 | 1.000 | `` |  |  | `all_candidate_plus_targeted_v4` | 0.800 | 0.800 |
+| P0_new_artist_union20_gap_failure | 10 | 0.000 | 0.000 | `` |  |  | `all_candidate_plus_targeted_v4` | 0.400 | 0.600 |
+| P0_novelty_prior_anchor_failure | 10 | 0.000 | 0.000 | `` |  |  | `all_candidate_plus_targeted_v4` | 0.600 | 0.700 |
+| P0_roleless_stale_entity_failure | 10 | 0.000 | 0.000 | `` |  |  | `all_candidate_plus_targeted_v4` | 0.100 | 0.500 |
+| P0_same_album_ranker_failure | 10 | 1.000 | 1.000 | `` |  |  | `all_candidate_plus_targeted_v4` | 1.000 | 1.000 |
+| P1_positive_tag_retrieval_gap_failure | 10 | 0.000 | 0.000 | `` |  |  | `all_candidate_plus_targeted_v4` | 0.300 | 0.700 |
+| P1_rejection_guardrail_failure | 10 | 1.000 | 1.000 | `` |  |  | `all_candidate_plus_targeted_v4` | 0.700 | 0.700 |
+| P1_temporal_constraint_failure | 10 | 0.000 | 0.000 | `` |  |  | `all_candidate_plus_targeted_v4` | 0.500 | 0.800 |
+| POS_clean_final_hit_control | 10 | 1.000 | 1.000 | `` |  |  | `all_candidate_plus_targeted_v4` | 0.800 | 0.800 |
+| POS_exact_entity_success_control | 10 | 1.000 | 1.000 | `` |  |  | `all_candidate_plus_targeted_v4` | 1.000 | 1.000 |
+
+## Examples
+
+### `all_candidate_plus_targeted_v4` Rescued union@20
+
+- `0858f444-c9af-4f08-a9fc-2a731a24182b::t5` (P0_roleless_stale_entity_failure): GT=Armature by Emptyset; best_branch=`dense.clap_text.sonic.audio_laion_clap` rank=12; why=rescued_at_union20
+- `88beb200-0334-4aba-be15-8e1303725766::t6` (P0_novelty_prior_anchor_failure): GT=Used To by Lil Wayne, Drake; best_branch=`analysis.same_album_fanout` rank=14; why=rescued_at_union20
+- `380a5ed5-3eb9-4201-8fa6-81381a583bf5::t3` (P0_novelty_prior_anchor_failure): GT=God Hates a Coward by Tomahawk; best_branch=`dense.qwen_8b.attributes_enriched.attributes_qwen3_embedding_8b` rank=3; why=rescued_at_union20
+- `5f085552-b56b-440e-830b-b4e40b58f854::t6` (P0_novelty_prior_anchor_failure): GT=Redneck Yacht Club by Craig Morgan; best_branch=`analysis.scene_era_tag_popularity_v2` rank=1; why=rescued_at_union20
+- `d6e50fb5-a135-4008-80b6-d0be434369ac::t3` (P0_novelty_prior_anchor_failure): GT=Volare (Nel Blu Di Pinto Di Blu) - 1998 - Remastered by Dean Martin; best_branch=`analysis.era_tag_popularity` rank=4; why=rescued_at_union20
+- `38d8ba41-a4ea-48ea-b460-bd93d164302a::t4` (P0_novelty_prior_anchor_failure): GT=Woo Hah!! Got You All In Check by Busta Rhymes; best_branch=`centroid.anchor_tracks.audio_laion_clap` rank=18; why=rescued_at_union20
+- `8bcb7d16-9be0-40cc-9a9d-28b654997b8d::t6` (P0_novelty_prior_anchor_failure): GT=Exit Theme (feat. Astronautalis & Lotte Kestner) by Astronautalis, Sadistik, Lotte Kestner; best_branch=`centroid.anchor_tracks.audio_laion_clap` rank=1; why=rescued_at_union20
+- `a930da0d-07f1-46c6-909d-e4fd95ae1148::t6` (P0_new_artist_union20_gap_failure): GT=Without You by Christina Aguilera; best_branch=`analysis.scene_era_tag_popularity_v2` rank=1; why=rescued_at_union20
+- `4e2482dc-a76c-4f4b-9d3f-7becec2f8a3a::t4` (P0_new_artist_union20_gap_failure): GT=Goodbye Pork Pie Hat by Charles Mingus; best_branch=`analysis.scene_era_tag_popularity_v2` rank=12; why=rescued_at_union20
+- `ab5eac17-909e-4271-8cf9-40c06b27ee56::t2` (P0_new_artist_union20_gap_failure): GT=Sparks by Hilary Duff; best_branch=`analysis.query_text_tag_popularity` rank=2; why=rescued_at_union20
+- `b466a64b-b3cc-4c62-8a70-8261434f915f::t2` (P0_new_artist_union20_gap_failure): GT=Two To Make It Right by Seduction; best_branch=`analysis.scene_era_tag_popularity_v2` rank=6; why=rescued_at_union20
+- `d5fcb591-3744-4ebb-9d1a-5c57c314b7d0::t5` (P1_temporal_constraint_failure): GT=Love Train by The O'Jays; best_branch=`analysis.artist_tag_neighbor_popularity` rank=4; why=rescued_at_union20
+
+### `all_candidate_plus_targeted_v4` Still Missed union@20
+
+- `0b9d547f-e748-464a-90e2-2199149f915c::t6` (P0_roleless_stale_entity_failure): GT=Give It To Me Baby by Rick James; best_branch=`dense.qwen_8b.attributes.attributes_qwen3_embedding_8b` rank=67; why=branch_local_ranking_gap_51_100; change=Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles.
+- `e66c6a88-88ba-4117-9114-363bfa96294a::t7` (P0_roleless_stale_entity_failure): GT=Test Drive by John Powell; best_branch=`centroid.anchor_tracks.audio_laion_clap` rank=23; why=branch_local_ranking_gap_21_50; change=Keep prior entities as history/context, but decay or remove them from current anchors unless the user re-mentions them. The resolver should expose current-vs-history roles to retrievers and the ranker.
+- `41367174-552b-4117-9caa-d0ba1b307d37::t2` (P0_roleless_stale_entity_failure): GT=Mercy by Muse; best_branch=`analysis.era_tag_popularity` rank=61; why=branch_local_ranking_gap_51_100; change=Keep prior entities as history/context, but decay or remove them from current anchors unless the user re-mentions them. The resolver should expose current-vs-history roles to retrievers and the ranker.
+- `10a15ba2-4126-4ae4-ac6c-dc170735ae9e::t7` (P0_roleless_stale_entity_failure): GT=I Can't Go to Sleep by Wu-Tang Clan; best_branch=`dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b` rank=23; why=branch_local_ranking_gap_21_50; change=Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles.
+- `9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4` (P0_roleless_stale_entity_failure): GT=The Carbon Stampede by Cattle Decapitation; best_branch=`centroid.anchor_tracks.cf_bpr` rank=76; why=branch_local_ranking_gap_51_100; change=Add a deterministic post-final rejection filter/assertion over rejected track IDs, artist IDs, and normalized multi-artist names. Treat broad name matches as an audit sample, but make strict ID leakage impossible.
+- `5f29a9df-ad38-4349-a2f0-c9a690ea072d::t2` (P0_roleless_stale_entity_failure): GT=Shaft by Kashmere Stage Band; best_branch=`dense.qwen_8b.attributes_enriched.attributes_qwen3_embedding_8b` rank=50; why=branch_local_ranking_gap_21_50; change=Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit date-bound language should hard-filter or heavily penalize candidates.
+- `78cdaccb-0f9b-4876-80b1-c20bf0b444e6::t8` (P0_roleless_stale_entity_failure): GT=In the Shadows by The Rasmus; best_branch=`analysis.artist_tag_neighbor_popularity` rank=266; why=deep_candidate_ranking_gap; change=Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles.
+- `88af7ec3-c368-421b-9512-d0180da3d1f6::t2` (P0_roleless_stale_entity_failure): GT=I Believe in a Thing Called Love by The Darkness; best_branch=`` rank=; why=existing_retrievers_do_not_surface_gt; change=Keep prior entities as history/context, but decay or remove them from current anchors unless the user re-mentions them. The resolver should expose current-vs-history roles to retrievers and the ranker.
+- `d9a65836-7165-45bf-aa3e-3ef7ba5d073a::t2` (P0_roleless_stale_entity_failure): GT=Move Along by The All-American Rejects; best_branch=`analysis.artist_neighbor_scene_v2` rank=39; why=branch_local_ranking_gap_21_50; change=Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit date-bound language should hard-filter or heavily penalize candidates.
+- `c7a965c3-cd7f-46f6-b166-9dce9a800e0a::t3` (P0_novelty_prior_anchor_failure): GT=S&M by Rihanna; best_branch=`analysis.tag_popularity_alias` rank=30; why=branch_local_ranking_gap_21_50; change=Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles.
+- `daeef24e-b041-4140-9101-882820c63408::t7` (P0_novelty_prior_anchor_failure): GT=The Analog Kid by Rush; best_branch=`dense.qwen_8b.intent.metadata_qwen3_embedding_8b` rank=72; why=branch_local_ranking_gap_51_100; change=Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles.
+- `8dc4c630-8369-4720-b379-2a7dcd8d34aa::t7` (P0_novelty_prior_anchor_failure): GT=Transcentience by Animals As Leaders; best_branch=`dense.qwen_8b.intent.metadata_qwen3_embedding_8b` rank=103; why=deep_candidate_ranking_gap; change=Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles.
+
+
+## Per-Sample Rows
+
+| Sample | Pack | GT | Variant | final rank | best branch rank | best branch | union@20 | union@50 | union@100 | GT release masked | GT hard-dropped |
+|---|---|---|---|---:|---:|---|---:|---:|---:|---:|---:|
+| `0b9d547f-e748-464a-90e2-2199149f915c::t6` | `P0_roleless_stale_entity_failure` | Give It To Me Baby / Rick James | `all_candidate_plus_targeted_v4` | 185 | 67 | `dense.qwen_8b.attributes.attributes_qwen3_embedding_8b` | 0 | 0 | 1 | 0 | 0 |
+| `e66c6a88-88ba-4117-9114-363bfa96294a::t7` | `P0_roleless_stale_entity_failure` | Test Drive / John Powell | `all_candidate_plus_targeted_v4` | 269 | 23 | `centroid.anchor_tracks.audio_laion_clap` | 0 | 1 | 1 | 0 | 0 |
+| `0858f444-c9af-4f08-a9fc-2a731a24182b::t5` | `P0_roleless_stale_entity_failure` | Armature / Emptyset | `all_candidate_plus_targeted_v4` | 53 | 12 | `dense.clap_text.sonic.audio_laion_clap` | 1 | 1 | 1 | 0 | 0 |
+| `41367174-552b-4117-9caa-d0ba1b307d37::t2` | `P0_roleless_stale_entity_failure` | Mercy / Muse | `all_candidate_plus_targeted_v4` |  | 61 | `analysis.era_tag_popularity` | 0 | 0 | 1 | 0 | 0 |
+| `10a15ba2-4126-4ae4-ac6c-dc170735ae9e::t7` | `P0_roleless_stale_entity_failure` | I Can't Go to Sleep / Wu-Tang Clan | `all_candidate_plus_targeted_v4` | 761 | 23 | `dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b` | 0 | 1 | 1 | 0 | 0 |
+| `9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4` | `P0_roleless_stale_entity_failure` | The Carbon Stampede / Cattle Decapitation | `all_candidate_plus_targeted_v4` | 241 | 76 | `centroid.anchor_tracks.cf_bpr` | 0 | 0 | 1 | 0 | 0 |
+| `5f29a9df-ad38-4349-a2f0-c9a690ea072d::t2` | `P0_roleless_stale_entity_failure` | Shaft / Kashmere Stage Band | `all_candidate_plus_targeted_v4` |  | 50 | `dense.qwen_8b.attributes_enriched.attributes_qwen3_embedding_8b` | 0 | 1 | 1 | 0 | 0 |
+| `78cdaccb-0f9b-4876-80b1-c20bf0b444e6::t8` | `P0_roleless_stale_entity_failure` | In the Shadows / The Rasmus | `all_candidate_plus_targeted_v4` |  | 266 | `analysis.artist_tag_neighbor_popularity` | 0 | 0 | 0 | 0 | 0 |
+| `88af7ec3-c368-421b-9512-d0180da3d1f6::t2` | `P0_roleless_stale_entity_failure` | I Believe in a Thing Called Love / The Darkness | `all_candidate_plus_targeted_v4` |  |  | `` | 0 | 0 | 0 | 0 | 0 |
+| `d9a65836-7165-45bf-aa3e-3ef7ba5d073a::t2` | `P0_roleless_stale_entity_failure` | Move Along / The All-American Rejects | `all_candidate_plus_targeted_v4` | 352 | 39 | `analysis.artist_neighbor_scene_v2` | 0 | 1 | 1 | 0 | 0 |
+| `c7a965c3-cd7f-46f6-b166-9dce9a800e0a::t3` | `P0_novelty_prior_anchor_failure` | S&M / Rihanna | `all_candidate_plus_targeted_v4` | 142 | 30 | `analysis.tag_popularity_alias` | 0 | 1 | 1 | 0 | 0 |
+| `88beb200-0334-4aba-be15-8e1303725766::t6` | `P0_novelty_prior_anchor_failure` | Used To / Lil Wayne, Drake | `all_candidate_plus_targeted_v4` |  | 14 | `analysis.same_album_fanout` | 1 | 1 | 1 | 0 | 0 |
+| `daeef24e-b041-4140-9101-882820c63408::t7` | `P0_novelty_prior_anchor_failure` | The Analog Kid / Rush | `all_candidate_plus_targeted_v4` | 393 | 72 | `dense.qwen_8b.intent.metadata_qwen3_embedding_8b` | 0 | 0 | 1 | 0 | 0 |
+| `8dc4c630-8369-4720-b379-2a7dcd8d34aa::t7` | `P0_novelty_prior_anchor_failure` | Transcentience / Animals As Leaders | `all_candidate_plus_targeted_v4` |  | 103 | `dense.qwen_8b.intent.metadata_qwen3_embedding_8b` | 0 | 0 | 0 | 0 | 0 |
+| `380a5ed5-3eb9-4201-8fa6-81381a583bf5::t3` | `P0_novelty_prior_anchor_failure` | God Hates a Coward / Tomahawk | `all_candidate_plus_targeted_v4` | 251 | 3 | `dense.qwen_8b.attributes_enriched.attributes_qwen3_embedding_8b` | 1 | 1 | 1 | 0 | 0 |
+| `5f085552-b56b-440e-830b-b4e40b58f854::t6` | `P0_novelty_prior_anchor_failure` | Redneck Yacht Club / Craig Morgan | `all_candidate_plus_targeted_v4` | 43 | 1 | `analysis.scene_era_tag_popularity_v2` | 1 | 1 | 1 | 0 | 0 |
+| `d6e50fb5-a135-4008-80b6-d0be434369ac::t3` | `P0_novelty_prior_anchor_failure` | Volare (Nel Blu Di Pinto Di Blu) - 1998 - Remastered / Dean Martin | `all_candidate_plus_targeted_v4` | 33 | 4 | `analysis.era_tag_popularity` | 1 | 1 | 1 | 0 | 0 |
+| `38d8ba41-a4ea-48ea-b460-bd93d164302a::t4` | `P0_novelty_prior_anchor_failure` | Woo Hah!! Got You All In Check / Busta Rhymes | `all_candidate_plus_targeted_v4` | 183 | 18 | `centroid.anchor_tracks.audio_laion_clap` | 1 | 1 | 1 | 0 | 0 |
+| `8bcb7d16-9be0-40cc-9a9d-28b654997b8d::t6` | `P0_novelty_prior_anchor_failure` | Exit Theme (feat. Astronautalis & Lotte Kestner) / Astronautalis, Sadistik, Lotte Kestner | `all_candidate_plus_targeted_v4` | 9 | 1 | `centroid.anchor_tracks.audio_laion_clap` | 1 | 1 | 1 | 0 | 0 |
+| `cdd374ea-1ad9-4440-8c2d-4c76c5fb3f78::t3` | `P0_novelty_prior_anchor_failure` | Gib ihn einfach (Dies das 2) / Ghanaian Stallion | `all_candidate_plus_targeted_v4` |  | 101 | `dense.qwen_8b.attributes.attributes_qwen3_embedding_8b` | 0 | 0 | 0 | 0 | 0 |
+| `a930da0d-07f1-46c6-909d-e4fd95ae1148::t6` | `P0_new_artist_union20_gap_failure` | Without You / Christina Aguilera | `all_candidate_plus_targeted_v4` |  | 1 | `analysis.scene_era_tag_popularity_v2` | 1 | 1 | 1 | 0 | 0 |
+| `5ee0dbbc-c1d1-4bed-ba09-7dafeec198bc::t8` | `P0_new_artist_union20_gap_failure` | You Reposted in the Wrong Neighborhood I Glue70 Mashup / Shokk | `all_candidate_plus_targeted_v4` | 271 | 24 | `dense.qwen_8b.intent.metadata_qwen3_embedding_8b` | 0 | 1 | 1 | 0 | 0 |
+| `4e2482dc-a76c-4f4b-9d3f-7becec2f8a3a::t4` | `P0_new_artist_union20_gap_failure` | Goodbye Pork Pie Hat / Charles Mingus | `all_candidate_plus_targeted_v4` | 363 | 12 | `analysis.scene_era_tag_popularity_v2` | 1 | 1 | 1 | 0 | 0 |
+| `5861afef-85c0-4163-b8b9-5a11e308f352::t4` | `P0_new_artist_union20_gap_failure` | Carmesí / Vicente Garcia | `all_candidate_plus_targeted_v4` | 163 | 65 | `dense.qwen_8b.attributes.attributes_qwen3_embedding_8b` | 0 | 0 | 1 | 0 | 0 |
+| `15b1caf3-d1ed-46ef-a8e3-c9f7657e6b77::t6` | `P0_new_artist_union20_gap_failure` | Hong Kong 2046 / Hong Kong Express | `all_candidate_plus_targeted_v4` |  | 313 | `dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b` | 0 | 0 | 0 | 0 | 0 |
+| `907921a3-d08f-4ba1-8cce-0e760a9e7044::t7` | `P0_new_artist_union20_gap_failure` | Sunrise - Slow Hands Remix / Kasper Bjørke | `all_candidate_plus_targeted_v4` |  | 281 | `centroid.anchor_tracks.cf_bpr` | 0 | 0 | 0 | 0 | 0 |
+| `ab5eac17-909e-4271-8cf9-40c06b27ee56::t2` | `P0_new_artist_union20_gap_failure` | Sparks / Hilary Duff | `all_candidate_plus_targeted_v4` | 195 | 2 | `analysis.query_text_tag_popularity` | 1 | 1 | 1 | 0 | 0 |
+| `324ddfb5-8a18-4729-9acb-c851907a297c::t3` | `P0_new_artist_union20_gap_failure` | Acknowledge / Masta Ace | `all_candidate_plus_targeted_v4` | 400 | 149 | `analysis.artist_neighbor_scene_v2` | 0 | 0 | 0 | 0 | 0 |
+| `b466a64b-b3cc-4c62-8a70-8261434f915f::t2` | `P0_new_artist_union20_gap_failure` | Two To Make It Right / Seduction | `all_candidate_plus_targeted_v4` | 410 | 6 | `analysis.scene_era_tag_popularity_v2` | 1 | 1 | 1 | 0 | 0 |
+| `ba68a3cc-5278-4680-917a-4ca66d33ef31::t5` | `P0_new_artist_union20_gap_failure` | Buttons / The Pussycat Dolls | `all_candidate_plus_targeted_v4` | 206 | 44 | `analysis.artist_tag_neighbor_popularity` | 0 | 1 | 1 | 0 | 0 |
+| `d5fcb591-3744-4ebb-9d1a-5c57c314b7d0::t5` | `P1_temporal_constraint_failure` | Love Train / The O'Jays | `all_candidate_plus_targeted_v4` | 427 | 4 | `analysis.artist_tag_neighbor_popularity` | 1 | 1 | 1 | 0 | 0 |
+| `f2d85aa5-2086-4b1e-9974-d188c43621db::t8` | `P1_temporal_constraint_failure` | Leraine / Kettel | `all_candidate_plus_targeted_v4` | 24 | 7 | `dense.clap_text.sonic_nl_enriched.audio_laion_clap` | 1 | 1 | 1 | 0 | 0 |
+| `67b9ba8a-382f-4b70-af76-576848d8cf67::t8` | `P1_temporal_constraint_failure` | Gangsta Gangsta / N.W.A. | `all_candidate_plus_targeted_v4` |  | 21 | `analysis.artist_neighbor_scene_v2` | 0 | 1 | 1 | 0 | 0 |
+| `9468e467-d396-461b-be29-b30b6cf87c35::t5` | `P1_temporal_constraint_failure` | Midnight / A Tribe Called Quest | `all_candidate_plus_targeted_v4` |  | 176 | `dense.qwen_8b.metadata.metadata_qwen3_embedding_8b` | 0 | 0 | 0 | 0 | 0 |
+| `e978bb5b-26af-4c7d-b720-b9210bdddf25::t8` | `P1_temporal_constraint_failure` | Dear Yvette / Jane Doe, Masta Ace | `all_candidate_plus_targeted_v4` |  | 4 | `analysis.same_album_fanout` | 1 | 1 | 1 | 0 | 1 |
+| `3676005d-5b7c-4c48-9b73-3e10dd509c07::t3` | `P1_temporal_constraint_failure` | Conquest of Paradise / Vangelis | `all_candidate_plus_targeted_v4` |  | 12 | `analysis.tag_popularity_alias` | 1 | 1 | 1 | 0 | 0 |
+| `a33a5df0-2c2b-429c-84e6-cde28affd4d5::t6` | `P1_temporal_constraint_failure` | Thriller / Fall Out Boy | `all_candidate_plus_targeted_v4` |  | 23 | `analysis.scene_era_tag_popularity_v2` | 0 | 1 | 1 | 0 | 0 |
+| `3676005d-5b7c-4c48-9b73-3e10dd509c07::t1` | `P1_temporal_constraint_failure` | Breath and Life / Audiomachine | `all_candidate_plus_targeted_v4` | 371 | 26 | `dense.qwen_8b.attributes.attributes_qwen3_embedding_8b` | 0 | 1 | 1 | 0 | 0 |
+| `c4c0c288-dbcd-4970-ad52-901aafe91b88::t4` | `P1_temporal_constraint_failure` | I Juswanna Chill / Large Professor | `all_candidate_plus_targeted_v4` | 806 | 228 | `dense.qwen_8b.intent.metadata_qwen3_embedding_8b` | 0 | 0 | 0 | 0 | 0 |
+| `71bb177a-dab1-4bbc-8508-22d809b05c31::t6` | `P1_temporal_constraint_failure` | Constant Craving - Remastered / k.d. lang | `all_candidate_plus_targeted_v4` | 936 | 5 | `analysis.artist_tag_neighbor_popularity` | 1 | 1 | 1 | 0 | 0 |
+| `4d0afb6b-3705-493f-ab16-ca75ea311e1a::t7` | `P1_rejection_guardrail_failure` | Pilot / Benjamin Wallfisch, Hans Zimmer | `all_candidate_plus_targeted_v4` | 69 | 1 | `dense.qwen_8b.metadata.metadata_qwen3_embedding_8b` | 1 | 1 | 1 | 0 | 0 |
+| `1e14a07f-7369-4d24-9285-9343b6b18353::t8` | `P1_rejection_guardrail_failure` | Nordlys / Myrkur | `all_candidate_plus_targeted_v4` | 5 | 2 | `dense.siglip2_text.visual.image_siglip2` | 1 | 1 | 1 | 0 | 0 |
+| `d265b5a9-af57-4070-90f5-692a960c5aaa::t6` | `P1_rejection_guardrail_failure` | Get Lucky (feat. Pharrell Williams &amp; Nile Rodgers) - Radio Edit / Nile Rodgers, Pharrell Williams, Daft Punk | `all_candidate_plus_targeted_v4` |  | 6 | `centroid.anchor_tracks.cf_bpr` | 1 | 1 | 1 | 0 | 1 |
+| `b2582e52-6d13-40b4-8552-2d8b63fa6c75::t8` | `P1_rejection_guardrail_failure` | Soil / System Of A Down | `all_candidate_plus_targeted_v4` |  | 11 | `dense.qwen_0_6b.intent.metadata_qwen3_embedding_0_6b` | 1 | 1 | 1 | 0 | 1 |
+| `d265b5a9-af57-4070-90f5-692a960c5aaa::t8` | `P1_rejection_guardrail_failure` | Motherboard / Daft Punk | `all_candidate_plus_targeted_v4` |  | 123 | `analysis.query_text_tag_popularity` | 0 | 0 | 0 | 0 | 1 |
+| `3a4224d3-1e5b-4bb9-a424-886d5c45d5d3::t8` | `P1_rejection_guardrail_failure` | Brain Relaxation Sky / Sample Rain Library | `all_candidate_plus_targeted_v4` | 15 | 1 | `dense.qwen_8b.metadata.metadata_qwen3_embedding_8b` | 1 | 1 | 1 | 0 | 0 |
+| `963b3ee7-17d1-4bb3-8a3f-0bc528a1f096::t5` | `P1_rejection_guardrail_failure` | Go Go Gadget Flow / Lupe Fiasco | `all_candidate_plus_targeted_v4` |  | 19 | `dense.qwen_0_6b.intent.metadata_qwen3_embedding_0_6b` | 1 | 1 | 1 | 0 | 1 |
+| `08bea603-846a-428b-aa27-de4dfede7ba9::t8` | `P1_rejection_guardrail_failure` | Silhouette / Julia Holter | `all_candidate_plus_targeted_v4` |  |  | `` | 0 | 0 | 0 | 0 | 1 |
+| `0fc60312-9a9d-4658-a950-06fc2441a2ac::t8` | `P1_rejection_guardrail_failure` | Music Will Untune the Sky / Have A Nice Life | `all_candidate_plus_targeted_v4` |  | 802 | `dense.qwen_8b.attributes.attributes_qwen3_embedding_8b` | 0 | 0 | 0 | 0 | 0 |
+| `3ebc2b49-0f5c-4161-bbcf-e1615821103f::t2` | `P1_rejection_guardrail_failure` | The Animus 2.0 / Jesper Kyd | `all_candidate_plus_targeted_v4` | 6 | 3 | `dense.qwen_0_6b.intent.metadata_qwen3_embedding_0_6b` | 1 | 1 | 1 | 0 | 0 |
+| `37097db6-54b8-491b-8512-1df70648548b::t2` | `P0_named_artist_ranker_failure` | White Ferrari / Frank Ocean | `all_candidate_plus_targeted_v4` | 6 | 1 | `dense.siglip2_text.visual.image_siglip2` | 1 | 1 | 1 | 0 | 0 |
+| `f4115525-7e44-40df-8957-e38df99f214d::t4` | `P0_named_artist_ranker_failure` | Young And Beautiful / Lana Del Rey | `all_candidate_plus_targeted_v4` | 19 | 1 | `lookup.resolved_artist_discography` | 1 | 1 | 1 | 0 | 0 |
+| `eee89ca2-fc86-4a9a-b4c5-2d77cb3346c8::t7` | `P0_named_artist_ranker_failure` | Change (In the House of Flies) - In The House Of Flies LP Version / Deftones | `all_candidate_plus_targeted_v4` | 73 | 3 | `centroid.anchor_tracks.cf_bpr` | 1 | 1 | 1 | 0 | 0 |
+| `44c3948c-bc44-4e40-ae77-82c2fec9c944::t7` | `P0_named_artist_ranker_failure` | Me Dediqué a Perderte / Alejandro Fernandez, Alejandro Fernández | `all_candidate_plus_targeted_v4` |  | 1 | `centroid.anchor_tracks.cf_bpr` | 1 | 1 | 1 | 0 | 1 |
+| `899f906b-9b0b-42a6-9689-643eb9f1ed31::t8` | `P0_named_artist_ranker_failure` | Crawling / Linkin Park | `all_candidate_plus_targeted_v4` |  | 8 | `analysis.query_text_tag_popularity` | 1 | 1 | 1 | 0 | 1 |
+| `93199894-d3db-4335-8278-e1be175944e4::t6` | `P0_named_artist_ranker_failure` | Smells Like Teen Spirit / Nirvana | `all_candidate_plus_targeted_v4` | 943 | 215 | `bm25` | 0 | 0 | 0 | 0 | 0 |
+| `7d2bb60e-1046-4956-91d0-cf1dd73037cc::t3` | `P0_named_artist_ranker_failure` | Hung Up / Madonna | `all_candidate_plus_targeted_v4` | 1 | 1 | `lookup.resolved_artist_discography` | 1 | 1 | 1 | 0 | 0 |
+| `1b406c88-9dfd-42cd-a1f5-9683f35f849b::t1` | `P0_named_artist_ranker_failure` | 93 'Til Infinity / Souls Of Mischief | `all_candidate_plus_targeted_v4` | 15 | 1 | `dense.qwen_8b.metadata.metadata_qwen3_embedding_8b` | 1 | 1 | 1 | 0 | 0 |
+| `7be411cd-f002-459e-8326-3ebe8be10b42::t6` | `P0_named_artist_ranker_failure` | Army Dreamers / Kate Bush | `all_candidate_plus_targeted_v4` |  | 118 | `analysis.era_tag_popularity` | 0 | 0 | 0 | 0 | 1 |
+| `fc78453a-8798-4402-a01a-e9c557f08a03::t2` | `P0_named_artist_ranker_failure` | En el 2000 / Natalia Lafourcade | `all_candidate_plus_targeted_v4` | 32 | 1 | `bm25` | 1 | 1 | 1 | 0 | 0 |
+| `84803908-48e7-41b7-9269-a465a44f4c10::t2` | `P0_same_album_ranker_failure` | Runaway / Pusha T, Kanye West | `all_candidate_plus_targeted_v4` | 25 | 1 | `centroid.anchor_tracks.image_siglip2` | 1 | 1 | 1 | 0 | 0 |
+| `6d825b33-dc20-4b3c-a277-0c8214163007::t6` | `P0_same_album_ranker_failure` | Super Rich Kids / Frank Ocean, Earl Sweatshirt | `all_candidate_plus_targeted_v4` |  | 2 | `analysis.same_album_fanout` | 1 | 1 | 1 | 1 | 0 |
+| `942c0b23-c5ad-4270-b23f-3ba456ea0ccf::t5` | `P0_same_album_ranker_failure` | Alive / Pearl Jam | `all_candidate_plus_targeted_v4` | 2 | 1 | `dense.qwen_8b.attributes_enriched.attributes_qwen3_embedding_8b` | 1 | 1 | 1 | 0 | 0 |
+| `19c7e5bf-0797-40c5-b798-4d024af9558d::t4` | `P0_same_album_ranker_failure` | Satisfied / Original Broadway Cast of Hamilton, Renée Elise Goldsberry | `all_candidate_plus_targeted_v4` | 24 | 2 | `centroid.anchor_tracks.image_siglip2` | 1 | 1 | 1 | 0 | 0 |
+| `71b80ec3-6cca-48b4-b471-08efa00afa2d::t4` | `P0_same_album_ranker_failure` | That Would Be Enough / Lin-Manuel Miranda, Phillipa Soo | `all_candidate_plus_targeted_v4` | 27 | 1 | `centroid.anchor_tracks.image_siglip2` | 1 | 1 | 1 | 0 | 0 |
+| `692611f0-d9ef-406c-8327-902575197aee::t8` | `P0_same_album_ranker_failure` | YAH. / Kendrick Lamar | `all_candidate_plus_targeted_v4` | 15 | 10 | `analysis.same_album_fanout` | 1 | 1 | 1 | 0 | 0 |
+| `8071d14d-7e0f-4f72-90a6-0941db80a371::t5` | `P0_same_album_ranker_failure` | Stay Down / Brent Faiyaz | `all_candidate_plus_targeted_v4` | 1 | 1 | `dense.qwen_0_6b.intent.metadata_qwen3_embedding_0_6b` | 1 | 1 | 1 | 0 | 0 |
+| `c863175a-bbaf-4f6c-aef7-cb16f2792cb5::t6` | `P0_same_album_ranker_failure` | Cinderella (feat. Ty Dolla $ign) / Mac Miller | `all_candidate_plus_targeted_v4` | 7 | 2 | `analysis.same_album_fanout` | 1 | 1 | 1 | 0 | 0 |
+| `c96d7bb9-65d4-44be-9bc2-891e8e485f4e::t7` | `P0_same_album_ranker_failure` | Sentimento Louco - Ao Vivo / Marília Mendonça | `all_candidate_plus_targeted_v4` | 49 | 4 | `analysis.same_album_fanout` | 1 | 1 | 1 | 0 | 0 |
+| `e6ba98e1-9bee-4cc9-a6b7-0a8dcd767a1f::t7` | `P0_same_album_ranker_failure` | Boom / P.O.D. | `all_candidate_plus_targeted_v4` | 52 | 3 | `centroid.anchor_tracks.image_siglip2` | 1 | 1 | 1 | 0 | 0 |
+| `ad5348a7-d3bc-4882-bfca-54aa655eac96::t5` | `P1_positive_tag_retrieval_gap_failure` | Glitter / Tyler, The Creator | `all_candidate_plus_targeted_v4` |  | 79 | `analysis.tag_popularity_alias` | 0 | 0 | 1 | 0 | 0 |
+| `2bbc0a7e-3ab0-4376-8135-182cd4ae075f::t1` | `P1_positive_tag_retrieval_gap_failure` | Las Almas Del Silencio / Ricky Martin | `all_candidate_plus_targeted_v4` | 199 | 169 | `dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b` | 0 | 0 | 0 | 0 | 0 |
+| `464477e4-f186-47fb-8cb0-55691c8b8f57::t6` | `P1_positive_tag_retrieval_gap_failure` | Where Eagles Dare / Glenn Danzig, Misfits | `all_candidate_plus_targeted_v4` | 661 | 30 | `centroid.anchor_tracks.image_siglip2` | 0 | 1 | 1 | 0 | 0 |
+| `13066d2c-2d5e-4162-b3dc-354ecef3aff5::t5` | `P1_positive_tag_retrieval_gap_failure` | You Know What I Mean / Cults | `all_candidate_plus_targeted_v4` | 405 | 25 | `dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b` | 0 | 1 | 1 | 0 | 0 |
+| `a2cface7-c4fc-4eb5-80b2-e0c516093732::t3` | `P1_positive_tag_retrieval_gap_failure` | The City Is At War / Cobra Starship | `all_candidate_plus_targeted_v4` | 125 | 11 | `centroid.anchor_tracks.cf_bpr` | 1 | 1 | 1 | 0 | 0 |
+| `dd686049-59ba-439b-8c51-949a0876e1b3::t1` | `P1_positive_tag_retrieval_gap_failure` | Vengeance (The Return of the Night Driving Avenger) [Bonus Track] / Perturbator | `all_candidate_plus_targeted_v4` | 40 | 1 | `dense.siglip2_text.visual.image_siglip2` | 1 | 1 | 1 | 0 | 0 |
+| `a8df96e2-c196-462c-9484-72aa093aedf4::t1` | `P1_positive_tag_retrieval_gap_failure` | Do Everything / Steven Curtis Chapman | `all_candidate_plus_targeted_v4` | 98 | 4 | `analysis.scene_era_tag_popularity_v2` | 1 | 1 | 1 | 0 | 0 |
+| `5a0dfe9d-ec8a-4449-97df-35535cbf162f::t1` | `P1_positive_tag_retrieval_gap_failure` | A New World / Harry Gregson-Williams | `all_candidate_plus_targeted_v4` | 247 | 60 | `dense.qwen_8b.metadata.metadata_qwen3_embedding_8b` | 0 | 0 | 1 | 0 | 0 |
+| `1c567917-f931-4609-9695-a9c0f8e39f3d::t2` | `P1_positive_tag_retrieval_gap_failure` | Arregaçada / U Can't Touch This / Banda Uó | `all_candidate_plus_targeted_v4` | 172 | 35 | `dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b` | 0 | 1 | 1 | 0 | 0 |
+| `54cda581-3b2e-4245-a479-1a27589760d2::t3` | `P1_positive_tag_retrieval_gap_failure` | Deliberation - Studio / Katatonia | `all_candidate_plus_targeted_v4` | 667 | 46 | `analysis.artist_neighbor_scene_v2` | 0 | 1 | 1 | 0 | 0 |
+| `13066d2c-2d5e-4162-b3dc-354ecef3aff5::t3` | `P0_good_state_ranker_near_miss_failure` | Yellow / Coldplay | `all_candidate_plus_targeted_v4` | 145 | 1 | `lookup.era_popularity` | 1 | 1 | 1 | 0 | 0 |
+| `a62ed6fc-e634-4d57-afab-36d9ffc0fcc1::t1` | `P0_good_state_ranker_near_miss_failure` | Iris / The Goo Goo Dolls | `all_candidate_plus_targeted_v4` | 147 | 2 | `lookup.era_popularity` | 1 | 1 | 1 | 0 | 0 |
+| `be88097f-b6b0-4fb4-bed9-857a92a733c0::t3` | `P0_good_state_ranker_near_miss_failure` | Dreams - 2004 Remaster / Fleetwood Mac | `all_candidate_plus_targeted_v4` | 363 | 1 | `lookup.era_popularity` | 1 | 1 | 1 | 0 | 0 |
+| `2eb984dc-9c71-449a-a335-caaa113d2c2b::t3` | `P0_good_state_ranker_near_miss_failure` | Tennessee Whiskey / Chris Stapleton | `all_candidate_plus_targeted_v4` | 18 | 2 | `centroid.anchor_tracks.image_siglip2` | 1 | 1 | 1 | 0 | 0 |
+| `43a0926b-882e-403d-8cf7-2b0a598e0cc5::t2` | `P0_good_state_ranker_near_miss_failure` | Devil In A New Dress / Rick Ross, Kanye West | `all_candidate_plus_targeted_v4` | 14 | 1 | `centroid.anchor_tracks.cf_bpr` | 1 | 1 | 1 | 0 | 0 |
+| `401c369d-1eba-41b2-8eca-d93a6faeeddc::t3` | `P0_good_state_ranker_near_miss_failure` | Walk / Pantera | `all_candidate_plus_targeted_v4` | 1 | 1 | `analysis.artist_tag_neighbor_popularity` | 1 | 1 | 1 | 0 | 0 |
+| `2db3ddc8-78a1-412c-a71e-e0d748aab0e7::t2` | `P0_good_state_ranker_near_miss_failure` | Old Time Rock & Roll / Bob Seger | `all_candidate_plus_targeted_v4` | 1 | 2 | `dense.qwen_0_6b.intent.metadata_qwen3_embedding_0_6b` | 1 | 1 | 1 | 0 | 0 |
+| `b4ffa800-8173-4f16-800a-4b5e765d7f80::t4` | `P0_good_state_ranker_near_miss_failure` | And I Love Her - Remastered / The Beatles | `all_candidate_plus_targeted_v4` |  | 1 | `dense.siglip2_text.visual.image_siglip2` | 1 | 1 | 1 | 0 | 1 |
+| `66ff896f-fcbc-4c42-9d69-b0b5b5ae5a56::t3` | `P0_good_state_ranker_near_miss_failure` | Hungry Heart / Bruce Springsteen | `all_candidate_plus_targeted_v4` | 11 | 2 | `analysis.artist_neighbor_scene_v2` | 1 | 1 | 1 | 0 | 0 |
+| `c4c0c288-dbcd-4970-ad52-901aafe91b88::t1` | `P0_good_state_ranker_near_miss_failure` | Electric Relaxation / A Tribe Called Quest | `all_candidate_plus_targeted_v4` | 62 | 1 | `centroid.anchor_tracks.cf_bpr` | 1 | 1 | 1 | 0 | 0 |
+| `0681d55b-98a0-4773-a9df-075a8050d805::t1` | `POS_exact_entity_success_control` | Numb / Linkin Park | `all_candidate_plus_targeted_v4` | 1 | 1 | `bm25` | 1 | 1 | 1 | 0 | 0 |
+| `8bee6f03-8cae-44ae-9325-455dc1138549::t1` | `POS_exact_entity_success_control` | Africa / TOTO, Toto | `all_candidate_plus_targeted_v4` | 1 | 1 | `bm25` | 1 | 1 | 1 | 0 | 0 |
+| `d62387d0-3743-4ddc-bc92-8204c951ccee::t1` | `POS_exact_entity_success_control` | In the End / Linkin Park | `all_candidate_plus_targeted_v4` | 2 | 1 | `bm25` | 1 | 1 | 1 | 0 | 0 |
+| `bd2aa024-68e7-43c2-aa87-afce9b4d7cf1::t2` | `POS_exact_entity_success_control` | Shut Up and Dance / WALK THE MOON | `all_candidate_plus_targeted_v4` | 1 | 1 | `bm25` | 1 | 1 | 1 | 0 | 0 |
+| `028027d3-ad67-4cfb-baca-516772ae7399::t1` | `POS_exact_entity_success_control` | Toxic / Britney Spears | `all_candidate_plus_targeted_v4` | 1 | 1 | `bm25` | 1 | 1 | 1 | 0 | 0 |
+| `fada63d6-1275-47a1-b3ab-30eae222fd72::t1` | `POS_exact_entity_success_control` | Toxic / Britney Spears | `all_candidate_plus_targeted_v4` | 2 | 1 | `bm25` | 1 | 1 | 1 | 0 | 0 |
+| `7c3154c5-d1c2-4f07-9b8d-96d187334f1b::t1` | `POS_exact_entity_success_control` | Way Down We Go / Kaleo, KALEO | `all_candidate_plus_targeted_v4` | 1 | 1 | `bm25` | 1 | 1 | 1 | 0 | 0 |
+| `ba3da7b0-1e81-4d2a-90fa-65ee1f4d7348::t1` | `POS_exact_entity_success_control` | Heart-Shaped Box / Nirvana | `all_candidate_plus_targeted_v4` | 1 | 1 | `bm25` | 1 | 1 | 1 | 0 | 0 |
+| `3664db63-1623-4ae7-9910-dd8bc3c2bd83::t1` | `POS_exact_entity_success_control` | No Scrubs / TLC | `all_candidate_plus_targeted_v4` | 1 | 1 | `bm25` | 1 | 1 | 1 | 0 | 0 |
+| `7b550636-72fe-490e-ad38-a1912d08449f::t1` | `POS_exact_entity_success_control` | Believe / Cher | `all_candidate_plus_targeted_v4` | 2 | 1 | `bm25` | 1 | 1 | 1 | 0 | 0 |
+| `737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t8` | `POS_clean_final_hit_control` | Feel Good Inc / Gorillaz | `all_candidate_plus_targeted_v4` | 1 | 1 | `lookup.resolved_artist_discography` | 1 | 1 | 1 | 0 | 0 |
+| `4a02d862-623b-4fab-a42c-2905f31a96db::t1` | `POS_clean_final_hit_control` | Dreams - 2004 Remaster / Fleetwood Mac | `all_candidate_plus_targeted_v4` | 5 | 1 | `lookup.era_popularity` | 1 | 1 | 1 | 0 | 0 |
+| `5b44bff3-76ed-495e-9dc1-0f075e3d178b::t1` | `POS_clean_final_hit_control` | Dreams - 2004 Remaster / Fleetwood Mac | `all_candidate_plus_targeted_v4` | 175 | 1 | `lookup.era_popularity` | 1 | 1 | 1 | 0 | 0 |
+| `a61b366c-8cf5-48ad-a13f-181c033b9d89::t2` | `POS_clean_final_hit_control` | Pumped Up Kicks / Foster The People | `all_candidate_plus_targeted_v4` | 88 | 120 | `dense.qwen_8b.attributes.attributes_qwen3_embedding_8b` | 0 | 0 | 0 | 0 | 0 |
+| `55388720-92b7-4972-9bb2-beb37c33c86b::t1` | `POS_clean_final_hit_control` | Ivy / Frank Ocean | `all_candidate_plus_targeted_v4` | 2 | 1 | `bm25` | 1 | 1 | 1 | 0 | 0 |
+| `13552d56-f3d8-443a-9272-11ec16c80fa1::t1` | `POS_clean_final_hit_control` | Congratulations / Quavo, Post Malone | `all_candidate_plus_targeted_v4` |  | 185 | `bm25` | 0 | 0 | 0 | 0 | 0 |
+| `737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t3` | `POS_clean_final_hit_control` | DARE / Gorillaz | `all_candidate_plus_targeted_v4` | 2 | 1 | `analysis.artist_tag_neighbor_popularity` | 1 | 1 | 1 | 0 | 0 |
+| `93199894-d3db-4335-8278-e1be175944e4::t1` | `POS_clean_final_hit_control` | Even Flow / Pearl Jam | `all_candidate_plus_targeted_v4` | 1 | 1 | `bm25` | 1 | 1 | 1 | 0 | 0 |
+| `a9b423bf-d05c-418d-98af-2a3b1e1d7917::t1` | `POS_clean_final_hit_control` | It Was A Good Day / Ice Cube | `all_candidate_plus_targeted_v4` | 2 | 1 | `lookup.resolved_artist_discography` | 1 | 1 | 1 | 0 | 0 |
+| `5080d5a0-336e-4bd1-b5bc-4cc611983429::t1` | `POS_clean_final_hit_control` | Rock with You - Single Version / Michael Jackson | `all_candidate_plus_targeted_v4` | 1 | 1 | `bm25` | 1 | 1 | 1 | 0 | 0 |

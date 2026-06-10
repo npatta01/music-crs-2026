@@ -1,0 +1,303 @@
+{
+  "state_labels": [
+    {
+      "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "fact_class": "same_style_after_exact",
+      "state_label": {
+        "allowed_request_types": [
+          "similar_to_prior",
+          "attribute_search"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "90s dance hits"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "track",
+            "value": "Finally",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          },
+          {
+            "type": "artist",
+            "value": "CeCe Peniston",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "track",
+            "value": "Finally"
+          },
+          {
+            "type": "artist",
+            "value": "CeCe Peniston"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "similar_to_prior",
+        "required_entities": [
+          {
+            "type": "track",
+            "value": "Finally",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "CeCe Peniston",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "90s dance hits",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "b2582e52-6d13-40b4-8552-2d8b63fa6c75::t8",
+      "pack": "P1_rejection_guardrail_failure",
+      "fact_class": "hard_rejection",
+      "state_label": {
+        "allowed_request_types": [
+          "new_artist",
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "heavy alternative metal"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "artist",
+            "value": "System Of A Down",
+            "allowed_roles": [
+              "rejected"
+            ]
+          }
+        ],
+        "required_exclusions": [
+          {
+            "type": "artist",
+            "value": "System Of A Down",
+            "scope": "hard"
+          }
+        ],
+        "forbidden_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "System Of A Down"
+          },
+          {
+            "value": "System Of A Down"
+          }
+        ]
+      },
+      "source_fact_label": {
+        "request_type": "new_artist",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "System Of A Down",
+            "allowed_roles": [
+              "rejected"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "heavy alternative metal",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "required_exclusions": [
+          {
+            "type": "artist",
+            "value": "System Of A Down",
+            "scope": "hard"
+          }
+        ],
+        "forbidden_seed_values": [
+          "System Of A Down"
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "93199894-d3db-4335-8278-e1be175944e4::t6",
+      "pack": "P0_named_artist_ranker_failure",
+      "fact_class": "exact_artist_alternatives",
+      "state_label": {
+        "allowed_request_types": [
+          "exact_artist",
+          "same_artist"
+        ],
+        "required_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "Soundgarden"
+          },
+          {
+            "type": "track",
+            "value": "Rusty Cage"
+          },
+          {
+            "type": "artist",
+            "value": "Stone Temple Pilots"
+          },
+          {
+            "type": "artist",
+            "value": "Nirvana"
+          }
+        ],
+        "required_style_references": [],
+        "required_query_facets": [],
+        "required_context_entities": [],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": []
+      },
+      "source_fact_label": {
+        "request_type": "exact_artist",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Soundgarden",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "track",
+            "value": "Rusty Cage",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Stone Temple Pilots",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Nirvana",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      },
+      "label_version": "state_roles_v2"
+    },
+    {
+      "sample_id": "c96d7bb9-65d4-44be-9bc2-891e8e485f4e::t7",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "attribute_new_artist",
+      "state_label": {
+        "allowed_request_types": [
+          "new_artist",
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "deep longing"
+          },
+          {
+            "type": "tag",
+            "value": "emotional storytelling"
+          },
+          {
+            "type": "tag",
+            "value": "sertanejo"
+          }
+        ],
+        "required_context_entities": [],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": []
+      },
+      "source_fact_label": {
+        "request_type": "new_artist",
+        "required_entities": [
+          {
+            "type": "tag",
+            "value": "deep longing",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "emotional storytelling",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "sertanejo",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      },
+      "label_version": "state_roles_v2"
+    }
+  ]
+}

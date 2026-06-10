@@ -1,0 +1,1135 @@
+{
+  "summary": {
+    "samples": 6,
+    "all_pass_rate": 0.6666666666666666
+  },
+  "by_pack": {
+    "P0_new_artist_union20_gap_failure": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_correct_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 1.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P1_positive_tag_retrieval_gap_failure": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_correct_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 1.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P1_rejection_guardrail_failure": {
+      "samples": 1,
+      "all_pass_rate": 0.0,
+      "schema_valid_rate": 1.0,
+      "request_type_correct_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 1.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 0.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P1_temporal_constraint_failure": {
+      "samples": 2,
+      "all_pass_rate": 0.5,
+      "schema_valid_rate": 1.0,
+      "request_type_correct_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 0.5,
+      "retrieval_profile_correct_rate": 0.5,
+      "temporal_semantics_correct_rate": 0.5,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "POS_clean_final_hit_control": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_correct_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 1.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    }
+  },
+  "rows": [
+    {
+      "sample_id": "15b1caf3-d1ed-46ef-a8e3-c9f7657e6b77::t6",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "role_correct",
+        "target_artist_mode_correct",
+        "retrieval_profile_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "current_request": null,
+        "target_artist_mode": null,
+        "retrieval_profile": "feature_search",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Boards of Canada",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": true
+          },
+          {
+            "type": "unknown",
+            "value": "Aphex Twin",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": true
+          },
+          {
+            "type": "unknown",
+            "value": "Severed Heads",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": true
+          },
+          {
+            "type": "unknown",
+            "value": "Liu Fang",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": true
+          },
+          {
+            "type": "unknown",
+            "value": "Noriko Miyamoto",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": true
+          },
+          {
+            "type": "unknown",
+            "value": "Flying Lotus",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "fresh and unexpected",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "unique",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "Something really out there and unique, preserving the electronic-soulful mix from Flying Lotus as a style reference.",
+          "source_turn": 6,
+          "evidence_text": "really out there",
+          "candidate_types": [
+            {
+              "request_type": "attribute_search",
+              "confidence": 0.85,
+              "evidence_text": "really out there"
+            },
+            {
+              "request_type": "similar_to_prior",
+              "confidence": 0.4,
+              "evidence_text": "What else have you got"
+            }
+          ]
+        },
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "type": "tag",
+            "value": "out there",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "unique",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "electronic soulful",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "artist",
+            "value": "Flying Lotus",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "current_target_entities": [],
+        "prior_entities": [
+          {
+            "value": "Boards of Canada",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "value": "Flying Lotus",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "value": "Liu Fang",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "value": "Noriko Miyamoto",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "value": "Severed Heads",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "temporal_constraint": null,
+        "normalized_rejections": null,
+        "state_to_retriever_contract": null
+      },
+      "schema_valid": true,
+      "request_type_correct": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "f2d85aa5-2086-4b1e-9974-d188c43621db::t8",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": {
+        "kind": "release_date",
+        "strength": "hard",
+        "apply_as_filter": true,
+        "range": [
+          2007,
+          2009
+        ]
+      },
+      "observed_rejections": [
+        {
+          "kind": "style",
+          "value": "dark harsh",
+          "scope": "soft"
+        }
+      ],
+      "previous_all_pass": false,
+      "new_all_pass": false,
+      "captured_expected_info": false,
+      "improved_checks": [],
+      "regressed_checks": [
+        "temporal_semantics_correct"
+      ],
+      "still_missing_checks": [
+        "target_artist_mode_correct",
+        "retrieval_profile_correct"
+      ],
+      "previous_read": {
+        "current_request": null,
+        "target_artist_mode": "unknown",
+        "retrieval_profile": "continuation",
+        "entities": [
+          {
+            "type": "tag",
+            "value": "ambient electronic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "dreamy",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "atmospheric",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "ethereal",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "shimmering",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "serene",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "melancholic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "floating",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "tag",
+            "value": "spoken word",
+            "scope": "hard"
+          },
+          {
+            "kind": "tag",
+            "value": "dark",
+            "scope": "hard"
+          },
+          {
+            "kind": "tag",
+            "value": "harsh",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            2007,
+            2009
+          ]
+        }
+      },
+      "new_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "A warm, ethereal, subtly rhythmic, strictly instrumental ambient electronic track that defines the late 2000s (2007-2009) period.",
+          "source_turn": 8,
+          "evidence_text": "I'm specifically looking for something with a warm, ethereal, and subtly rhythmic quality that truly embodies the late 2",
+          "candidate_types": [
+            {
+              "request_type": "attribute_search",
+              "confidence": 0.95,
+              "evidence_text": "I'm specifically looking for something with a warm, ethereal, and subtly rhythmic quality that truly embodies the late 2"
+            },
+            {
+              "request_type": "hidden_target",
+              "confidence": 0.6,
+              "evidence_text": "We haven't quite found that yet"
+            }
+          ]
+        },
+        "target_artist_mode": "any_artist",
+        "retrieval_profile": "feature_search",
+        "entities": [
+          {
+            "type": "tag",
+            "value": "warm ethereal subtly rhythmic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "instrumental",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "ambient electronic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "dreamy atmospheric",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "dark harsh",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "style",
+            "value": "dark harsh",
+            "scope": "soft"
+          }
+        ],
+        "temporal_constraint": {
+          "kind": "release_date",
+          "strength": "hard",
+          "apply_as_filter": true,
+          "range": [
+            2007,
+            2009
+          ]
+        }
+      },
+      "desired_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "current_target_entities": [],
+        "prior_entities": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "range": [
+            2007,
+            2009
+          ],
+          "strength": "soft",
+          "apply_as_filter": false,
+          "reason": "the wording is compatible with an era/style cue, but the GT year sits outside the literal range"
+        },
+        "normalized_rejections": null,
+        "state_to_retriever_contract": null
+      },
+      "schema_valid": true,
+      "request_type_correct": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": false,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "71bb177a-dab1-4bbc-8508-22d809b05c31::t6",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1990,
+          1999
+        ]
+      },
+      "observed_rejections": [],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "target_artist_mode_correct",
+        "retrieval_profile_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "current_request": null,
+        "target_artist_mode": null,
+        "retrieval_profile": "continuation",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Alanis Morissette",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": true
+          },
+          {
+            "type": "unknown",
+            "value": "Natalie Merchant",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "female artist",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "female vocalist",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "90s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "introspective",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "raw",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "storytelling",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            1990,
+            1999
+          ]
+        }
+      },
+      "new_read": {
+        "current_request": {
+          "request_type": "new_artist",
+          "summary": "Another iconic female artist from the 90s with a thoughtful, storytelling approach similar to Alanis Morissette and Natalie Merchant.",
+          "source_turn": 6,
+          "evidence_text": "another iconic female artist from the 90s who has a similar thoughtful, storytelling approach",
+          "candidate_types": [
+            {
+              "request_type": "new_artist",
+              "confidence": 0.9,
+              "evidence_text": "another iconic female artist"
+            },
+            {
+              "request_type": "similar_to_prior",
+              "confidence": 0.5,
+              "evidence_text": "similar thoughtful, storytelling approach"
+            }
+          ]
+        },
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Alanis Morissette",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "artist",
+            "value": "Natalie Merchant",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "1990s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "thoughtful",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "storytelling",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "introspective",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "raw",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "emotionally resonant",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            1990,
+            1999
+          ]
+        }
+      },
+      "desired_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "current_target_entities": [],
+        "prior_entities": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "range": [
+            1990,
+            1999
+          ],
+          "strength": "soft",
+          "apply_as_filter": false,
+          "reason": "the wording is compatible with an era/style cue, but the GT year sits outside the literal range"
+        },
+        "normalized_rejections": null,
+        "state_to_retriever_contract": null
+      },
+      "schema_valid": true,
+      "request_type_correct": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "963b3ee7-17d1-4bb3-8a3f-0bc528a1f096::t5",
+      "pack": "P1_rejection_guardrail_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [
+        {
+          "kind": "style",
+          "value": "heavy and intense",
+          "scope": "soft"
+        }
+      ],
+      "previous_all_pass": true,
+      "new_all_pass": false,
+      "captured_expected_info": false,
+      "improved_checks": [],
+      "regressed_checks": [
+        "rejection_normalization_correct"
+      ],
+      "still_missing_checks": [],
+      "previous_read": {
+        "current_request": null,
+        "target_artist_mode": null,
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Lupe Fiasco",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "hip-hop",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "positive",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "upbeat",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "energetic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "uplifting",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "feel-good",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "good mood",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "tag",
+            "value": "heavy",
+            "scope": "hard"
+          },
+          {
+            "kind": "tag",
+            "value": "intense",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "Genuinely upbeat, energetic, feel-good hip-hop to boost mood and energy, not Lupe Fiasco.",
+          "source_turn": 5,
+          "evidence_text": "genuinely upbeat, energetic, and feel-good hip-hop",
+          "candidate_types": [
+            {
+              "request_type": "attribute_search",
+              "confidence": 0.95,
+              "evidence_text": "genuinely upbeat, energetic, and feel-good"
+            },
+            {
+              "request_type": "same_artist",
+              "confidence": 0.1,
+              "evidence_text": "I love Lupe Fiasco"
+            }
+          ]
+        },
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "feature_search",
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Lupe Fiasco",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "positive",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "upbeat",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "energetic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "feel-good",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "boost my energy",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "put me in a good mood",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "heavy and intense",
+            "role": "rejected",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "style",
+            "value": "heavy and intense",
+            "scope": "soft"
+          }
+        ],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "continuation",
+        "current_target_entities": [],
+        "prior_entities": [],
+        "temporal_constraint": null,
+        "normalized_rejections": {
+          "track_ids": "from resolver.rejected_track_ids",
+          "artist_ids": "from resolver.rejected_artist_ids",
+          "names": "verified aliases only"
+        },
+        "state_to_retriever_contract": null
+      },
+      "schema_valid": true,
+      "request_type_correct": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": false,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "1c567917-f931-4609-9695-a9c0f8e39f3d::t2",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "target_artist_mode_correct",
+        "retrieval_profile_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "current_request": null,
+        "target_artist_mode": null,
+        "retrieval_profile": "continuation",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Anitta",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "Brazilian",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "contemporary",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "dance",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "pop",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "recent",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "upbeat",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "tecno brega",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "Recent upbeat tracks from the tecno brega or funk carioca scenes, not necessarily by Anitta.",
+          "source_turn": 2,
+          "evidence_text": "something more recent and upbeat, specifically from the 'tecno brega' or 'funk carioca' scenes",
+          "candidate_types": [
+            {
+              "request_type": "attribute_search",
+              "confidence": 0.9,
+              "evidence_text": "something more recent and upbeat, specifically from the 'tecno brega' or 'funk carioca' scenes"
+            },
+            {
+              "request_type": "same_artist",
+              "confidence": 0.3,
+              "evidence_text": "Anitta is definitely on point"
+            }
+          ]
+        },
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Anitta",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "tecno brega",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "funk carioca",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "upbeat",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "recent",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "current_target_entities": [],
+        "prior_entities": [],
+        "temporal_constraint": null,
+        "normalized_rejections": null,
+        "state_to_retriever_contract": "derive a focused retrieval profile from current target, entity roles, tags, goal/profile context, and constraints"
+      },
+      "schema_valid": true,
+      "request_type_correct": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t8",
+      "pack": "POS_clean_final_hit_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "previous_all_pass": false,
+      "new_all_pass": true,
+      "captured_expected_info": true,
+      "improved_checks": [
+        "retrieval_profile_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [],
+      "previous_read": {
+        "current_request": null,
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Gorillaz",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "upbeat",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "quirky",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "electronic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "instrumental",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "instrumental-focused",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "current_request": {
+          "request_type": "same_artist",
+          "summary": "Another Gorillaz track with an upbeat, quirky electronic feel, possibly instrumental-focused or from Cracker Island.",
+          "source_turn": 8,
+          "evidence_text": "Gorillaz track with a more upbeat or quirky electronic feel, maybe instrumental-focused or from Cracker Island",
+          "candidate_types": [
+            {
+              "request_type": "attribute_search",
+              "confidence": 0.9,
+              "evidence_text": "upbeat or quirky electronic feel, instrumental-focused or from Cracker Island"
+            },
+            {
+              "request_type": "same_artist",
+              "confidence": 0.7,
+              "evidence_text": "Gorillaz track"
+            }
+          ]
+        },
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "continuation",
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Gorillaz",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "upbeat quirky electronic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "instrumental-focused",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "album",
+            "value": "Cracker Island",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "continuation",
+        "current_target_entities": [],
+        "prior_entities": [],
+        "temporal_constraint": null,
+        "normalized_rejections": null,
+        "state_to_retriever_contract": "derive a focused retrieval profile from current target, entity roles, tags, goal/profile context, and constraints"
+      },
+      "schema_valid": true,
+      "request_type_correct": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    }
+  ]
+}

@@ -1,0 +1,170 @@
+{
+  "summary": {
+    "samples": 1,
+    "all_pass_rate": 0.0
+  },
+  "by_pack": {
+    "P0_same_album_ranker_failure": {
+      "samples": 1,
+      "all_pass_rate": 0.0,
+      "schema_valid_rate": 1.0,
+      "request_type_correct_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 0.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    }
+  },
+  "rows": [
+    {
+      "sample_id": "8071d14d-7e0f-4f72-90a6-0941db80a371::t5",
+      "pack": "P0_same_album_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "previous_all_pass": false,
+      "new_all_pass": false,
+      "captured_expected_info": false,
+      "improved_checks": [
+        "role_correct",
+        "target_artist_mode_correct"
+      ],
+      "regressed_checks": [],
+      "still_missing_checks": [
+        "retrieval_profile_correct"
+      ],
+      "previous_read": {
+        "current_request": null,
+        "target_artist_mode": null,
+        "retrieval_profile": "continuation",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Brent Faiyaz",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "unknown",
+            "value": "Talk 2 U",
+            "role": "history",
+            "use_as_retrieval_seed": false,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "unknown",
+            "value": "Dennis Lloyd",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": true
+          },
+          {
+            "type": "tag",
+            "value": "smooth",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "R&B",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "Soul",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "chill",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "groove",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "More chill R&B with a smooth vibe like Brent Faiyaz, possibly with a bit more groove but still chill.",
+          "source_turn": 3,
+          "evidence_text": "a bit more groove but still chill R&B"
+        },
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "feature_search",
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Brent Faiyaz",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "track",
+            "value": "Talk 2 U",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "chill R&B",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "smooth",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "groove",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "current_target_entities": [],
+        "prior_entities": [
+          {
+            "value": "Brent Faiyaz",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "temporal_constraint": null,
+        "normalized_rejections": null,
+        "state_to_retriever_contract": null
+      },
+      "schema_valid": true,
+      "request_type_correct": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    }
+  ]
+}
