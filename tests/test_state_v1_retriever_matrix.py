@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from types import SimpleNamespace
 
 from mcrs.qu_modules.compiler_v0plus import BranchPool
@@ -12,16 +13,21 @@ from scripts.state_v1_retriever_matrix import (
     _additive_metrics_for_pools,
     _all_on_ledger,
     _analysis_branch_pools_for_variant,
+    _attach_user_ids,
     _artist_neighbor_scene_weighted_v3_pool,
     _baseline_summary,
     _class_summaries,
+    _compile_row_with_turn_meta,
+    _compile_variant,
     _expanded_tag_terms,
     _extract_trace_baseline_pools,
     _greedy_minimal_subset,
+    _load_user_id_sidecar,
     _pool_to_trace_payload,
     _pool_payload_to_branch_pool,
     _query_text_tag_popularity_pool,
     _rerank_branch_pools,
+    _single_relevant_ndcg,
     _scene_era_tag_popularity_v2_pool,
     _serialize_variant_pools,
     _scene_terms_from_text,
@@ -29,6 +35,44 @@ from scripts.state_v1_retriever_matrix import (
     _tag_popularity_pool,
     _variant_qu_kwargs,
 )
+
+
+def test_single_relevant_ndcg_uses_final_rank_discount():
+    assert _single_relevant_ndcg(1, 20) == 1.0
+    assert _single_relevant_ndcg(2, 20) == 1.0 / math.log2(3)
+    assert _single_relevant_ndcg(21, 20) == 0.0
+    assert _single_relevant_ndcg(None, 20) == 0.0
+
+
+def test_user_id_sidecar_attaches_to_turn_meta(tmp_path):
+    sidecar = tmp_path / "user_ids.json"
+    sidecar.write_text(json.dumps({"user_ids": {"s1::t1": "u-1", "missing::t1": "u-x"}}))
+    turn_meta = {"s1::t1": {"sample_id": "s1::t1"}, "s2::t1": {"sample_id": "s2::t1"}}
+
+    _attach_user_ids(turn_meta, _load_user_id_sidecar(sidecar))
+
+    assert turn_meta["s1::t1"]["user_id"] == "u-1"
+    assert "user_id" not in turn_meta["s2::t1"]
+
+
+def test_compile_row_with_turn_meta_preserves_user_id():
+    audit_row = {"sample_id": "s1::t1", "new_state": {"request": "x"}}
+    turn_row = {"sample_id": "s1::t1", "user_id": "u-1", "gt_track_id": "target"}
+
+    row = _compile_row_with_turn_meta(audit_row, turn_row)
+
+    assert row["new_state"] == {"request": "x"}
+    assert row["user_id"] == "u-1"
+    assert "user_id" not in audit_row
+
+
+def test_compile_row_with_turn_meta_does_not_override_audit_user_id():
+    audit_row = {"sample_id": "s1::t1", "user_id": "audit-user"}
+    turn_row = {"sample_id": "s1::t1", "user_id": "turn-user"}
+
+    row = _compile_row_with_turn_meta(audit_row, turn_row)
+
+    assert row["user_id"] == "audit-user"
 
 
 class _FakeCatalog:
@@ -225,6 +269,193 @@ def test_all_candidate_v4_hard_drop_variant_keeps_only_hard_drop_rule():
 
     assert variant.analysis_branches == VARIANTS["all_candidate_plus_targeted_v4"].analysis_branches
     assert variant.branch_local_rules == ("hard_drop",)
+
+
+def test_branch_local_feature_variant_enables_compiler_state_feature_branches(tmp_path):
+    base = {
+        "lancedb": {"db_uri": "old"},
+        "encoders": {"qwen_0_6b": {"backend": "litellm"}},
+        "compiler": {
+            "dense_branches": [],
+            "enable_dense": False,
+            "enable_branch_local_feature_rerank": False,
+        },
+    }
+
+    out = _variant_qu_kwargs(base, VARIANTS["bm25_lookup_state_features"], tmp_path)
+
+    assert out["compiler"]["enable_dense"] is False
+    assert out["compiler"]["enable_branch_local_feature_rerank"] is True
+    assert out["compiler"]["branch_local_feature_rerank_mode"] == "additive"
+    assert out["compiler"]["branch_local_feature_weight"] == 1.0
+
+    inplace = _variant_qu_kwargs(base, VARIANTS["bm25_lookup_state_features_inplace"], tmp_path)
+    assert inplace["compiler"]["enable_branch_local_feature_rerank"] is True
+    assert inplace["compiler"]["branch_local_feature_rerank_mode"] == "in_place"
+
+
+def test_state_feature_selector_variant_enables_single_selector_branch(tmp_path):
+    base = {
+        "lancedb": {"db_uri": "old"},
+        "compiler": {
+            "enable_state_feature_selector_branch": False,
+            "dense_branches": [],
+        },
+        "encoders": {"qwen_0_6b": {"backend": "litellm"}},
+    }
+
+    out = _variant_qu_kwargs(base, VARIANTS["current_config_state_selector"], tmp_path)
+
+    assert out["compiler"]["enable_state_feature_selector_branch"] is True
+    assert out["compiler"]["state_feature_selector_weight"] == 1.0
+    assert out["compiler"]["state_feature_selector_score_weight"] == 1.0
+
+
+def test_family_state_feature_selector_variant_enables_grouped_selector_branch(tmp_path):
+    base = {
+        "lancedb": {"db_uri": "old"},
+        "compiler": {
+            "enable_state_feature_selector_branch": False,
+            "dense_branches": [],
+        },
+        "encoders": {"qwen_0_6b": {"backend": "litellm"}},
+    }
+
+    out = _variant_qu_kwargs(base, VARIANTS["current_config_state_selector_family"], tmp_path)
+
+    assert out["compiler"]["enable_state_feature_selector_branch"] is True
+    assert out["compiler"]["state_feature_selector_grouping"] == "family"
+
+
+def test_state_feature_survivor_variant_enables_midrank_selector_branch(tmp_path):
+    base = {
+        "lancedb": {"db_uri": "old"},
+        "compiler": {
+            "enable_state_feature_survivor_branch": False,
+            "dense_branches": [],
+        },
+        "encoders": {"qwen_0_6b": {"backend": "litellm"}},
+    }
+
+    out = _variant_qu_kwargs(base, VARIANTS["current_config_state_survivor"], tmp_path)
+
+    assert out["compiler"]["enable_state_feature_survivor_branch"] is True
+    assert out["compiler"]["state_feature_survivor_min_rank"] == 21
+    assert out["compiler"]["state_feature_survivor_max_rank"] == 120
+    assert out["compiler"]["state_feature_survivor_rank_weight"] == 0.2
+    assert out["compiler"]["state_feature_survivor_support_weight"] == 0.05
+
+
+def test_targeted_v4_state_features_clones_targeted_recipe():
+    base = VARIANTS["all_candidate_plus_targeted_v4"]
+    variant = VARIANTS["all_candidate_plus_targeted_v4_state_features"]
+
+    assert variant.dense_branches == base.dense_branches
+    assert variant.analysis_branches == base.analysis_branches
+    assert variant.centroid == base.centroid
+    assert variant.similar_artist_anchors == base.similar_artist_anchors
+    assert variant.branch_local_feature_rerank is True
+
+
+def test_targeted_v4_state_selector_clones_targeted_recipe():
+    base = VARIANTS["all_candidate_plus_targeted_v4"]
+    variant = VARIANTS["all_candidate_plus_targeted_v4_state_selector"]
+
+    assert variant.dense_branches == base.dense_branches
+    assert variant.analysis_branches == base.analysis_branches
+    assert variant.centroid == base.centroid
+    assert variant.similar_artist_anchors == base.similar_artist_anchors
+    assert variant.branch_local_rules == base.branch_local_rules
+    assert variant.state_feature_selector is True
+    assert variant.branch_local_feature_rerank is False
+
+
+def test_targeted_v4_state_selector_family_clones_targeted_recipe():
+    base = VARIANTS["all_candidate_plus_targeted_v4"]
+    variant = VARIANTS["all_candidate_plus_targeted_v4_state_selector_family"]
+
+    assert variant.dense_branches == base.dense_branches
+    assert variant.analysis_branches == base.analysis_branches
+    assert variant.centroid == base.centroid
+    assert variant.similar_artist_anchors == base.similar_artist_anchors
+    assert variant.branch_local_rules == base.branch_local_rules
+    assert variant.state_feature_selector is True
+    assert variant.state_feature_selector_grouping == "family"
+    assert variant.branch_local_feature_rerank is False
+
+
+def test_targeted_v4_state_survivor_clones_targeted_recipe():
+    base = VARIANTS["all_candidate_plus_targeted_v4"]
+    variant = VARIANTS["all_candidate_plus_targeted_v4_state_survivor"]
+
+    assert variant.dense_branches == base.dense_branches
+    assert variant.analysis_branches == base.analysis_branches
+    assert variant.centroid == base.centroid
+    assert variant.similar_artist_anchors == base.similar_artist_anchors
+    assert variant.branch_local_rules == base.branch_local_rules
+    assert variant.state_feature_survivor is True
+    assert variant.branch_local_feature_rerank is False
+
+
+def test_targeted_v4_state_selector_family_survivor_clones_targeted_recipe():
+    base = VARIANTS["all_candidate_plus_targeted_v4"]
+    variant = VARIANTS["all_candidate_plus_targeted_v4_state_selector_family_survivor"]
+
+    assert variant.dense_branches == base.dense_branches
+    assert variant.analysis_branches == base.analysis_branches
+    assert variant.centroid == base.centroid
+    assert variant.similar_artist_anchors == base.similar_artist_anchors
+    assert variant.branch_local_rules == base.branch_local_rules
+    assert variant.state_feature_selector is True
+    assert variant.state_feature_selector_grouping == "family"
+    assert variant.state_feature_survivor is True
+    assert variant.branch_local_feature_rerank is False
+
+
+def test_compile_variant_forwards_user_id_to_compiler():
+    class _Resolver:
+        def resolve(self, state, played_track_ids):
+            return SimpleNamespace(state=state, played_track_ids=played_track_ids)
+
+    class _Compiler:
+        def __init__(self):
+            self.user_ids: list[str | None] = []
+
+        def _compile(self, rs, user_id=None):
+            self.user_ids.append(user_id)
+            return SimpleNamespace(
+                branch_pools=[BranchPool("centroid.user.cf_bpr", [("target", 1.0)])],
+                ranked=["target"],
+                fused=[("target", 1.0)],
+            )
+
+        def _release_date_mask(self, _state):
+            return {"target"}
+
+        def _hard_drop_set(self, _rs):
+            return set()
+
+    compiler = _Compiler()
+    qu = SimpleNamespace(resolver=_Resolver(), compiler=compiler)
+    row = {
+        "user_id": "u-123",
+        "new_state": {
+            "current_request": {
+                "request_type": "attribute_search",
+                "summary": "warm indie",
+                "source_turn": 1,
+            },
+            "facts": [],
+            "exclusions": [],
+            "track_feedback": [],
+            "referenced_track_ids": [],
+        },
+    }
+
+    out = _compile_variant(qu, row, "target", Variant("test"))
+
+    assert compiler.user_ids == ["u-123"]
+    assert out["union@20"] is True
 
 
 def test_baseline_summary_infers_union50_when_bounds_match():

@@ -1312,7 +1312,7 @@ def run_evaluate(
     volumes=_VOLUME_MOUNTS,
     cpu=LANCEDB_QUERY_CPU,
     memory=LANCEDB_QUERY_MEMORY,
-    timeout=3600,
+    timeout=14400,
 )
 def _state_v1_retriever_matrix(
     variants_json: str,
@@ -1351,7 +1351,6 @@ def _state_v1_retriever_matrix(
         str(output_md),
         "--output-csv",
         str(output_csv),
-        "--quiet",
     ]
     for variant in variants:
         cmd.extend(["--variant", str(variant)])
@@ -1367,6 +1366,7 @@ def _state_v1_retriever_matrix(
         cmd.extend(["--baseline-pools-json", str(baseline_pools_path)])
     if limit > 0:
         cmd.extend(["--limit", str(limit)])
+    print("Running state_v1_retriever_matrix:", " ".join(cmd), flush=True)
     subprocess.run(cmd, cwd="/app", check=True)
     results_vol.commit()
     return {

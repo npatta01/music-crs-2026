@@ -886,6 +886,50 @@ def test_routing_boost_survives_yaml_allowlist():
     assert qu.compiler.cfg.routing_boost == {"lyric_search": 4.0}
 
 
+def test_v1_attribute_routing_flags_survive_yaml_allowlist():
+    catalog = _catalog()
+    qu = build_v0plus_compiler_qu(
+        qu_kwargs={
+            "compiler": {
+                "bm25_include_v1_attribute_facets": False,
+                "bm25_include_turn_intent_tag_clause": False,
+                "bm25_v1_attribute_tag_policy": "catalog_exact",
+                "attribute_query_source": "v1_attribute_facts",
+                "attribute_query_allowed_facets": ["genre", "mood", "sonic"],
+                "enable_branch_local_feature_rerank": True,
+                "branch_local_feature_rerank_mode": "in_place",
+                "branch_local_feature_weight": 1.25,
+                "branch_local_feature_score_weight": 0.75,
+                "enable_state_feature_selector_branch": True,
+                "state_feature_selector_weight": 1.5,
+                "state_feature_selector_score_weight": 0.5,
+                "state_feature_selector_grouping": "family",
+            }
+        },
+        _overrides={
+            "catalog": catalog,
+            "matcher": RapidfuzzCatalogMatcher(catalog),
+            "encoder": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5]),
+            "retriever": FakeRetriever(),
+            "extractor": _FakeExtractor(state=_state()),
+        },
+    )
+
+    assert qu.compiler.cfg.bm25_include_v1_attribute_facets is False
+    assert qu.compiler.cfg.bm25_include_turn_intent_tag_clause is False
+    assert qu.compiler.cfg.bm25_v1_attribute_tag_policy == "catalog_exact"
+    assert qu.compiler.cfg.attribute_query_source == "v1_attribute_facts"
+    assert qu.compiler.cfg.attribute_query_allowed_facets == ["genre", "mood", "sonic"]
+    assert qu.compiler.cfg.enable_branch_local_feature_rerank is True
+    assert qu.compiler.cfg.branch_local_feature_rerank_mode == "in_place"
+    assert qu.compiler.cfg.branch_local_feature_weight == 1.25
+    assert qu.compiler.cfg.branch_local_feature_score_weight == 0.75
+    assert qu.compiler.cfg.enable_state_feature_selector_branch is True
+    assert qu.compiler.cfg.state_feature_selector_weight == 1.5
+    assert qu.compiler.cfg.state_feature_selector_score_weight == 0.5
+    assert qu.compiler.cfg.state_feature_selector_grouping == "family"
+
+
 def test_build_qu_allows_missing_configured_vector_fields_for_branch_skip():
     catalog = _catalog()
 

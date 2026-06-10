@@ -15,6 +15,7 @@ import argparse
 import copy
 import csv
 import json
+import math
 import re
 import sys
 from collections import Counter
@@ -49,6 +50,7 @@ DEFAULT_ANALYSIS_DIR = Path(
 )
 DEFAULT_CONFIG = Path("configs/v0plus_compiler_all_retrievers_devset.yaml")
 DEFAULT_MAIN_LANCEDB = Path("cache/lancedb")
+DEFAULT_USER_ID_JSON_NAME = "state_v1_focused110_user_ids.json"
 
 KS = (20, 50, 100, 200, 1000)
 ADDITIVE_KS = (20, 50, 100)
@@ -88,6 +90,13 @@ class Variant:
     branch_local_rules: tuple[str, ...] = ()
     compiler_pools: bool = True
     analysis_branches: tuple[str, ...] = ()
+    branch_local_feature_rerank: bool = False
+    branch_local_feature_mode: str = "additive"
+    state_feature_selector: bool = False
+    state_feature_selector_grouping: str = "global"
+    state_feature_survivor: bool = False
+    state_feature_survivor_min_rank: int = 21
+    state_feature_survivor_max_rank: int = 120
 
 
 QWEN06_METADATA = "metadata_qwen3_embedding_0_6b"
@@ -102,6 +111,44 @@ VARIANTS: dict[str, Variant] = {
     "current_config": Variant("current_config", use_base_config=True),
     "bm25_only": Variant("bm25_only", lookups=False),
     "bm25_lookup": Variant("bm25_lookup", lookups=True),
+    "bm25_lookup_state_features": Variant(
+        "bm25_lookup_state_features",
+        lookups=True,
+        branch_local_feature_rerank=True,
+    ),
+    "bm25_lookup_state_features_inplace": Variant(
+        "bm25_lookup_state_features_inplace",
+        lookups=True,
+        branch_local_feature_rerank=True,
+        branch_local_feature_mode="in_place",
+    ),
+    "current_config_state_features": Variant(
+        "current_config_state_features",
+        use_base_config=True,
+        branch_local_feature_rerank=True,
+    ),
+    "current_config_state_features_inplace": Variant(
+        "current_config_state_features_inplace",
+        use_base_config=True,
+        branch_local_feature_rerank=True,
+        branch_local_feature_mode="in_place",
+    ),
+    "current_config_state_selector": Variant(
+        "current_config_state_selector",
+        use_base_config=True,
+        state_feature_selector=True,
+    ),
+    "current_config_state_selector_family": Variant(
+        "current_config_state_selector_family",
+        use_base_config=True,
+        state_feature_selector=True,
+        state_feature_selector_grouping="family",
+    ),
+    "current_config_state_survivor": Variant(
+        "current_config_state_survivor",
+        use_base_config=True,
+        state_feature_survivor=True,
+    ),
     "bm25_discography": Variant(
         "bm25_discography",
         lookups=False,
@@ -345,10 +392,25 @@ VARIANTS: dict[str, Variant] = {
         compiler_pools=False,
         analysis_branches=("query_text_tag_popularity",),
     ),
+    "query_text_tag_popularity_soft_novelty": Variant(
+        "query_text_tag_popularity_soft_novelty",
+        compiler_pools=False,
+        analysis_branches=("query_text_tag_popularity_soft_novelty",),
+    ),
     "scene_era_tag_popularity_v2": Variant(
         "scene_era_tag_popularity_v2",
         compiler_pools=False,
         analysis_branches=("scene_era_tag_popularity_v2",),
+    ),
+    "scene_era_tag_popularity_v2_soft_novelty": Variant(
+        "scene_era_tag_popularity_v2_soft_novelty",
+        compiler_pools=False,
+        analysis_branches=("scene_era_tag_popularity_v2_soft_novelty",),
+    ),
+    "scene_era_fact_terms_v3": Variant(
+        "scene_era_fact_terms_v3",
+        compiler_pools=False,
+        analysis_branches=("scene_era_fact_terms_v3",),
     ),
     "artist_neighbor_scene_v2": Variant(
         "artist_neighbor_scene_v2",
@@ -359,6 +421,16 @@ VARIANTS: dict[str, Variant] = {
         "artist_neighbor_scene_weighted_v3",
         compiler_pools=False,
         analysis_branches=("artist_neighbor_scene_weighted_v3",),
+    ),
+    "artist_neighbor_scene_fact_v4": Variant(
+        "artist_neighbor_scene_fact_v4",
+        compiler_pools=False,
+        analysis_branches=("artist_neighbor_scene_fact_v4",),
+    ),
+    "reference_artist_discography": Variant(
+        "reference_artist_discography",
+        compiler_pools=False,
+        analysis_branches=("reference_artist_discography",),
     ),
     "all_synthetic_recall_v2": Variant(
         "all_synthetic_recall_v2",
@@ -504,6 +576,97 @@ VARIANTS: dict[str, Variant] = {
 }
 
 
+_TARGETED_V4 = VARIANTS["all_candidate_plus_targeted_v4"]
+VARIANTS["all_candidate_plus_targeted_v4_state_features"] = Variant(
+    "all_candidate_plus_targeted_v4_state_features",
+    dense_branches=_TARGETED_V4.dense_branches,
+    centroid=_TARGETED_V4.centroid,
+    centroid_fields=_TARGETED_V4.centroid_fields,
+    centroid_weight=_TARGETED_V4.centroid_weight,
+    similar_artist_anchors=_TARGETED_V4.similar_artist_anchors,
+    similar_artist_intents=_TARGETED_V4.similar_artist_intents,
+    lookups=_TARGETED_V4.lookups,
+    discography=_TARGETED_V4.discography,
+    era_popularity=_TARGETED_V4.era_popularity,
+    use_base_config=_TARGETED_V4.use_base_config,
+    branch_local_rules=_TARGETED_V4.branch_local_rules,
+    compiler_pools=_TARGETED_V4.compiler_pools,
+    analysis_branches=_TARGETED_V4.analysis_branches,
+    branch_local_feature_rerank=True,
+)
+VARIANTS["all_candidate_plus_targeted_v4_state_selector"] = Variant(
+    "all_candidate_plus_targeted_v4_state_selector",
+    dense_branches=_TARGETED_V4.dense_branches,
+    centroid=_TARGETED_V4.centroid,
+    centroid_fields=_TARGETED_V4.centroid_fields,
+    centroid_weight=_TARGETED_V4.centroid_weight,
+    similar_artist_anchors=_TARGETED_V4.similar_artist_anchors,
+    similar_artist_intents=_TARGETED_V4.similar_artist_intents,
+    lookups=_TARGETED_V4.lookups,
+    discography=_TARGETED_V4.discography,
+    era_popularity=_TARGETED_V4.era_popularity,
+    use_base_config=_TARGETED_V4.use_base_config,
+    branch_local_rules=_TARGETED_V4.branch_local_rules,
+    compiler_pools=_TARGETED_V4.compiler_pools,
+    analysis_branches=_TARGETED_V4.analysis_branches,
+    state_feature_selector=True,
+)
+VARIANTS["all_candidate_plus_targeted_v4_state_selector_family"] = Variant(
+    "all_candidate_plus_targeted_v4_state_selector_family",
+    dense_branches=_TARGETED_V4.dense_branches,
+    centroid=_TARGETED_V4.centroid,
+    centroid_fields=_TARGETED_V4.centroid_fields,
+    centroid_weight=_TARGETED_V4.centroid_weight,
+    similar_artist_anchors=_TARGETED_V4.similar_artist_anchors,
+    similar_artist_intents=_TARGETED_V4.similar_artist_intents,
+    lookups=_TARGETED_V4.lookups,
+    discography=_TARGETED_V4.discography,
+    era_popularity=_TARGETED_V4.era_popularity,
+    use_base_config=_TARGETED_V4.use_base_config,
+    branch_local_rules=_TARGETED_V4.branch_local_rules,
+    compiler_pools=_TARGETED_V4.compiler_pools,
+    analysis_branches=_TARGETED_V4.analysis_branches,
+    state_feature_selector=True,
+    state_feature_selector_grouping="family",
+)
+VARIANTS["all_candidate_plus_targeted_v4_state_survivor"] = Variant(
+    "all_candidate_plus_targeted_v4_state_survivor",
+    dense_branches=_TARGETED_V4.dense_branches,
+    centroid=_TARGETED_V4.centroid,
+    centroid_fields=_TARGETED_V4.centroid_fields,
+    centroid_weight=_TARGETED_V4.centroid_weight,
+    similar_artist_anchors=_TARGETED_V4.similar_artist_anchors,
+    similar_artist_intents=_TARGETED_V4.similar_artist_intents,
+    lookups=_TARGETED_V4.lookups,
+    discography=_TARGETED_V4.discography,
+    era_popularity=_TARGETED_V4.era_popularity,
+    use_base_config=_TARGETED_V4.use_base_config,
+    branch_local_rules=_TARGETED_V4.branch_local_rules,
+    compiler_pools=_TARGETED_V4.compiler_pools,
+    analysis_branches=_TARGETED_V4.analysis_branches,
+    state_feature_survivor=True,
+)
+VARIANTS["all_candidate_plus_targeted_v4_state_selector_family_survivor"] = Variant(
+    "all_candidate_plus_targeted_v4_state_selector_family_survivor",
+    dense_branches=_TARGETED_V4.dense_branches,
+    centroid=_TARGETED_V4.centroid,
+    centroid_fields=_TARGETED_V4.centroid_fields,
+    centroid_weight=_TARGETED_V4.centroid_weight,
+    similar_artist_anchors=_TARGETED_V4.similar_artist_anchors,
+    similar_artist_intents=_TARGETED_V4.similar_artist_intents,
+    lookups=_TARGETED_V4.lookups,
+    discography=_TARGETED_V4.discography,
+    era_popularity=_TARGETED_V4.era_popularity,
+    use_base_config=_TARGETED_V4.use_base_config,
+    branch_local_rules=_TARGETED_V4.branch_local_rules,
+    compiler_pools=_TARGETED_V4.compiler_pools,
+    analysis_branches=_TARGETED_V4.analysis_branches,
+    state_feature_selector=True,
+    state_feature_selector_grouping="family",
+    state_feature_survivor=True,
+)
+
+
 DEFAULT_VARIANTS = (
     "current_config",
     "bm25_only",
@@ -573,6 +736,18 @@ COMBINED_VARIANTS = {
     "all_candidate_plus_synthetic_v2",
     "all_candidate_plus_synthetic_v3",
     "all_candidate_plus_targeted_v4",
+    "all_candidate_plus_targeted_v4_state_features",
+    "all_candidate_plus_targeted_v4_state_selector",
+    "all_candidate_plus_targeted_v4_state_selector_family",
+    "all_candidate_plus_targeted_v4_state_survivor",
+    "all_candidate_plus_targeted_v4_state_selector_family_survivor",
+    "current_config_state_selector",
+    "current_config_state_selector_family",
+    "current_config_state_survivor",
+    "current_config_state_features",
+    "current_config_state_features_inplace",
+    "bm25_lookup_state_features",
+    "bm25_lookup_state_features_inplace",
 }
 
 
@@ -586,11 +761,52 @@ def _load_jsonl(path: Path) -> dict[str, dict[str, Any]]:
     return rows
 
 
+def _load_user_id_sidecar(path: Path) -> dict[str, str]:
+    if not path.exists():
+        return {}
+    payload = json.loads(path.read_text())
+    if isinstance(payload, dict) and "user_ids" in payload:
+        payload = payload["user_ids"]
+    if not isinstance(payload, dict):
+        raise ValueError(f"user id sidecar must be a mapping: {path}")
+    out: dict[str, str] = {}
+    for sample_id, user_id in payload.items():
+        if sample_id and user_id:
+            out[str(sample_id)] = str(user_id)
+    return out
+
+
+def _attach_user_ids(
+    turn_meta: dict[str, dict[str, Any]],
+    user_ids: dict[str, str],
+) -> None:
+    for sample_id, user_id in user_ids.items():
+        if sample_id in turn_meta:
+            turn_meta[sample_id]["user_id"] = user_id
+
+
+def _compile_row_with_turn_meta(
+    audit_row: dict[str, Any],
+    turn_row: dict[str, Any],
+) -> dict[str, Any]:
+    row = dict(audit_row)
+    user_id = turn_row.get("user_id")
+    if user_id and not row.get("user_id"):
+        row["user_id"] = user_id
+    return row
+
+
 def _rank(ids: list[str], target: str) -> int | None:
     try:
         return ids.index(target) + 1
     except ValueError:
         return None
+
+
+def _single_relevant_ndcg(rank: int | None, k: int) -> float:
+    if rank is None or rank > k:
+        return 0.0
+    return 1.0 / math.log2(rank + 1)
 
 
 def _branch_rank(branch_pools, target: str) -> tuple[str | None, int | None]:
@@ -1195,6 +1411,38 @@ def _state_query_text(state: Any) -> str:
     return "; ".join(out)
 
 
+def _state_fact_query_text(state: Any) -> str:
+    """Attribute-only text for tag/scene retrieval diagnostics.
+
+    Request summaries can include prior artist names; that is useful for dense
+    semantic search but pollutes tag/text-overlap branches. This helper consumes
+    only structured descriptive facts plus lyrical theme.
+    """
+
+    parts: list[str] = []
+    lyrical_theme = getattr(state, "lyrical_theme", None)
+    if lyrical_theme:
+        parts.append(str(lyrical_theme))
+    for fact in getattr(state, "facts", []) or []:
+        if _enum_value(getattr(fact, "type", None)) != "attribute":
+            continue
+        if _enum_value(getattr(fact, "role", None)) == "rejected":
+            continue
+        value = str(getattr(fact, "value", "") or "").strip()
+        if value:
+            parts.append(value)
+
+    seen: set[str] = set()
+    out: list[str] = []
+    for part in parts:
+        text = " ".join(part.split())
+        key = text.casefold()
+        if text and key not in seen:
+            seen.add(key)
+            out.append(text)
+    return "; ".join(out)
+
+
 def _scene_terms_from_text(text: str) -> set[str]:
     norm = _norm_term(text)
     out: set[str] = set()
@@ -1282,6 +1530,63 @@ def _year_match_bonus(release_range: Any | None, year: int | None) -> int:
     return 1
 
 
+def _soft_temporal_score(state: Any, year: int | None) -> int:
+    tc = getattr(state, "temporal_constraint", None)
+    if tc is None or year is None:
+        return 0
+    lo = getattr(tc, "start_year", None)
+    hi = getattr(tc, "end_year", None)
+    if lo is None and hi is None:
+        return 0
+    kind = _enum_value(getattr(tc, "kind", ""))
+    strength = _enum_value(getattr(tc, "strength", ""))
+    apply_as_filter = bool(getattr(tc, "apply_as_filter", False))
+    lower = lo if lo is not None else -10**9
+    upper = hi if hi is not None else 10**9
+    if lower <= year <= upper:
+        return 3
+    if not apply_as_filter and kind in {"style_era", "reference_era"}:
+        shoulder = 3 if strength != "hard" else 1
+        if lower - shoulder <= year <= upper + shoulder:
+            return 1
+        return 0
+    return -3
+
+
+@dataclass(frozen=True)
+class CatalogFeatureRow:
+    track_id: str
+    artist_id: str | None
+    tag_terms: frozenset[str]
+    text: str
+    year: int | None
+    pop_rank: int
+
+
+_CATALOG_FEATURE_CACHE: dict[int, list[CatalogFeatureRow]] = {}
+
+
+def _catalog_feature_rows(catalog: Any) -> list[CatalogFeatureRow]:
+    key = id(catalog)
+    cached = _CATALOG_FEATURE_CACHE.get(key)
+    if cached is not None:
+        return cached
+    pop_rank = _popularity_rank_for_catalog(catalog)
+    rows = [
+        CatalogFeatureRow(
+            track_id=track_id,
+            artist_id=catalog.artist_id_of(track_id),
+            tag_terms=frozenset(_expanded_tag_terms(catalog.tag_list(track_id))),
+            text=_norm_term(catalog.track_text(track_id, max_tags=40)),
+            year=catalog.release_year_of(track_id),
+            pop_rank=pop_rank.get(track_id, 10**9),
+        )
+        for track_id in catalog.all_track_ids()
+    ]
+    _CATALOG_FEATURE_CACHE[key] = rows
+    return rows
+
+
 def _query_text_tag_popularity_pool(
     catalog: Any,
     *,
@@ -1345,6 +1650,54 @@ def _scene_term_weight(term: str) -> int:
     if " " in term or "-" in term or "&" in term:
         return 8
     return 4
+
+
+def _scene_era_fact_terms_v3_pool(
+    catalog: Any,
+    *,
+    state: Any,
+    name: str,
+    topk: int = 1000,
+    exclude_artist_ids: set[str] | None = None,
+) -> BranchPool:
+    query_terms = _scene_terms_from_text(_state_fact_query_text(state))
+    query_terms = {term for term in query_terms if term}
+    if not query_terms:
+        return BranchPool(name, [])
+
+    exclude_artist_ids = exclude_artist_ids or set()
+    scored: list[tuple[int, int, int, int, str]] = []
+    for row in _catalog_feature_rows(catalog):
+        if exclude_artist_ids and row.artist_id in exclude_artist_ids:
+            continue
+        overlap = query_terms & set(row.tag_terms)
+        phrase_hits = {
+            term for term in query_terms if " " in term and term in row.text
+        }
+        if not overlap and not phrase_hits:
+            continue
+
+        term_score = sum(_scene_term_weight(term) for term in overlap)
+        phrase_score = sum(_scene_term_weight(term) + 2 for term in phrase_hits)
+        specific_overlap = {
+            term
+            for term in overlap | phrase_hits
+            if term not in _GENERIC_SCENE_TERMS
+        }
+        specificity_bonus = 10 if len(specific_overlap) >= 2 else 0
+        temporal_score = _soft_temporal_score(state, row.year)
+        score = term_score + phrase_score + specificity_bonus + temporal_score * 4
+        scored.append((score, term_score + phrase_score, temporal_score, row.pop_rank, row.track_id))
+
+    scored.sort(key=lambda item: (-item[0], -item[1], -item[2], item[3], item[4]))
+    n = min(topk, len(scored))
+    return BranchPool(
+        name,
+        [
+            (track_id, float(n - idx))
+            for idx, (_score, _term_score, _temporal_score, _rank, track_id) in enumerate(scored[:topk])
+        ],
+    )
 
 
 def _scene_era_tag_popularity_v2_pool(
@@ -1537,10 +1890,80 @@ def _artist_ids_from_resolved_and_anchors(qu, rs) -> list[str]:
     return artist_ids
 
 
+def _artist_ids_from_compiled_references(qu, rs) -> list[str]:
+    """Artist ids exposed by the compiler's structured reference surface.
+
+    This consumes V1/V0 state facts through compiler helpers instead of
+    rereading raw conversation text. Exact catalog resolution keeps the
+    diagnostic conservative and avoids pattern-specific phrase repair.
+    """
+
+    artist_ids = _artist_ids_from_resolved_and_anchors(qu, rs)
+    seen_artists = set(artist_ids)
+    for value in qu.compiler._artist_reference_values(rs.state):
+        artist_id = qu.compiler.catalog.artist_id_of_name(value)
+        if artist_id and artist_id not in seen_artists:
+            seen_artists.add(artist_id)
+            artist_ids.append(artist_id)
+    return artist_ids
+
+
+def _reference_artist_discography_pool(qu, rs, *, topk: int = 1000) -> BranchPool:
+    artist_ids = _artist_ids_from_compiled_references(qu, rs)
+    if not artist_ids:
+        return BranchPool("analysis.reference_artist_discography", [])
+
+    pop_rank = qu.compiler._popularity_rank()
+    anchor_track_ids = set(qu.compiler._anchor_track_ids(rs.state))
+    hits: list[tuple[int, str]] = []
+    seen_tracks: set[str] = set()
+    for artist_id in artist_ids[:8]:
+        for track_id in qu.compiler.catalog.tracks_by_artist_id(artist_id):
+            if track_id in anchor_track_ids or track_id in seen_tracks:
+                continue
+            seen_tracks.add(track_id)
+            hits.append((pop_rank.get(track_id, 10**9), track_id))
+
+    hits.sort(key=lambda item: (item[0], item[1]))
+    n = min(topk, len(hits))
+    return BranchPool(
+        "analysis.reference_artist_discography",
+        [(track_id, float(n - idx)) for idx, (_rank, track_id) in enumerate(hits[:topk])],
+    )
+
+
 def _artist_neighbor_scene_weighted_v3_pool(qu, rs, *, topk: int = 1000) -> BranchPool:
     artist_ids = _artist_ids_from_resolved_and_anchors(qu, rs)
+    return _artist_neighbor_scene_weighted_pool(
+        qu,
+        rs,
+        artist_ids=artist_ids,
+        name="analysis.artist_neighbor_scene_weighted_v3",
+        topk=topk,
+    )
+
+
+def _artist_neighbor_scene_fact_v4_pool(qu, rs, *, topk: int = 1000) -> BranchPool:
+    artist_ids = _artist_ids_from_compiled_references(qu, rs)
+    return _artist_neighbor_scene_weighted_pool(
+        qu,
+        rs,
+        artist_ids=artist_ids,
+        name="analysis.artist_neighbor_scene_fact_v4",
+        topk=topk,
+    )
+
+
+def _artist_neighbor_scene_weighted_pool(
+    qu,
+    rs,
+    *,
+    artist_ids: list[str],
+    name: str,
+    topk: int = 1000,
+) -> BranchPool:
     if not artist_ids:
-        return BranchPool("analysis.artist_neighbor_scene_weighted_v3", [])
+        return BranchPool(name, [])
 
     pop_rank = qu.compiler._popularity_rank()
     anchor_counter: Counter[str] = Counter()
@@ -1552,7 +1975,7 @@ def _artist_neighbor_scene_weighted_v3_pool(qu, rs, *, topk: int = 1000) -> Bran
         for track_id in tracks:
             anchor_counter.update(_expanded_tag_terms(qu.compiler.catalog.tag_list(track_id)))
     if not anchor_counter:
-        return BranchPool("analysis.artist_neighbor_scene_weighted_v3", [])
+        return BranchPool(name, [])
 
     state_terms = _scene_terms_from_text(_state_query_text(rs.state))
     target_mode = _enum_value(getattr(rs.state, "target_artist_mode", ""))
@@ -1591,7 +2014,7 @@ def _artist_neighbor_scene_weighted_v3_pool(qu, rs, *, topk: int = 1000) -> Bran
     scored.sort(key=lambda item: (-item[0], -item[1], -item[2], item[3], item[4]))
     n = min(topk, len(scored))
     return BranchPool(
-        "analysis.artist_neighbor_scene_weighted_v3",
+        name,
         [
             (track_id, float(n - idx))
             for idx, (_score, _term_score, _year_bonus, _rank, track_id) in enumerate(scored[:topk])
@@ -1644,6 +2067,15 @@ def _analysis_branch_pools(qu, rs, variant: Variant) -> list[BranchPool]:
                     exclude_artist_ids=exclude_artists,
                 )
             )
+        elif branch == "query_text_tag_popularity_soft_novelty":
+            pools.append(
+                _query_text_tag_popularity_pool(
+                    qu.compiler.catalog,
+                    state=rs.state,
+                    name="analysis.query_text_tag_popularity_soft_novelty",
+                    exclude_artist_ids=set(),
+                )
+            )
         elif branch == "scene_era_tag_popularity_v2":
             target_mode = _enum_value(getattr(rs.state, "target_artist_mode", ""))
             exclude_artists = _anchor_artist_ids(qu, rs) if target_mode == "new_artist" else set()
@@ -1655,10 +2087,34 @@ def _analysis_branch_pools(qu, rs, variant: Variant) -> list[BranchPool]:
                     exclude_artist_ids=exclude_artists,
                 )
             )
+        elif branch == "scene_era_tag_popularity_v2_soft_novelty":
+            pools.append(
+                _scene_era_tag_popularity_v2_pool(
+                    qu.compiler.catalog,
+                    state=rs.state,
+                    name="analysis.scene_era_tag_popularity_v2_soft_novelty",
+                    exclude_artist_ids=set(),
+                )
+            )
+        elif branch == "scene_era_fact_terms_v3":
+            target_mode = _enum_value(getattr(rs.state, "target_artist_mode", ""))
+            exclude_artists = _anchor_artist_ids(qu, rs) if target_mode == "new_artist" else set()
+            pools.append(
+                _scene_era_fact_terms_v3_pool(
+                    qu.compiler.catalog,
+                    state=rs.state,
+                    name="analysis.scene_era_fact_terms_v3",
+                    exclude_artist_ids=exclude_artists,
+                )
+            )
         elif branch == "artist_neighbor_scene_v2":
             pools.append(_artist_neighbor_scene_v2_pool(qu, rs))
         elif branch == "artist_neighbor_scene_weighted_v3":
             pools.append(_artist_neighbor_scene_weighted_v3_pool(qu, rs))
+        elif branch == "artist_neighbor_scene_fact_v4":
+            pools.append(_artist_neighbor_scene_fact_v4_pool(qu, rs))
+        elif branch == "reference_artist_discography":
+            pools.append(_reference_artist_discography_pool(qu, rs))
         else:
             raise KeyError(f"unknown analysis branch: {branch}")
     return pools
@@ -1730,6 +2186,25 @@ def _variant_qu_kwargs(
     comp["bm25_k"] = 1000
     comp["dense_k"] = 1000
     comp["final_topk"] = 1000
+    if variant.branch_local_feature_rerank:
+        comp["enable_branch_local_feature_rerank"] = True
+        comp["branch_local_feature_rerank_mode"] = variant.branch_local_feature_mode
+        comp.setdefault("branch_local_feature_weight", 1.0)
+        comp.setdefault("branch_local_feature_score_weight", 1.0)
+    if variant.state_feature_selector:
+        comp["enable_state_feature_selector_branch"] = True
+        comp["state_feature_selector_grouping"] = variant.state_feature_selector_grouping
+        comp.setdefault("state_feature_selector_weight", 1.0)
+        comp.setdefault("state_feature_selector_score_weight", 1.0)
+    if variant.state_feature_survivor:
+        comp["enable_state_feature_survivor_branch"] = True
+        comp["state_feature_survivor_min_rank"] = variant.state_feature_survivor_min_rank
+        comp["state_feature_survivor_max_rank"] = variant.state_feature_survivor_max_rank
+        comp.setdefault("state_feature_survivor_weight", 1.0)
+        comp.setdefault("state_feature_survivor_score_weight", 1.0)
+        comp.setdefault("state_feature_survivor_rank_weight", 0.2)
+        comp.setdefault("state_feature_survivor_support_weight", 0.05)
+        comp.setdefault("state_feature_survivor_min_feature_score", 0.0)
     if variant.use_base_config:
         return qu_kwargs
 
@@ -1917,7 +2392,9 @@ def _compile_variant(
     rs = qu.resolver.resolve(state, played_track_ids=played)
     use_compiler_pools = variant is None or variant.compiler_pools
     if use_compiler_pools:
-        result = qu.compiler._compile(rs, user_id=None)
+        raw_user_id = row.get("user_id")
+        user_id = str(raw_user_id) if raw_user_id else None
+        result = qu.compiler._compile(rs, user_id=user_id)
         branch_pools = _rerank_branch_pools(
             qu,
             rs,
@@ -1926,10 +2403,16 @@ def _compile_variant(
         )
         final_rank = _rank(result.ranked, target)
         fused_rank = _rank([track_id for track_id, _score in result.fused], target)
+        candidate_mask = qu.compiler._release_date_mask(rs.state)
+        hard_drop = qu.compiler._hard_drop_set(rs)
+        gt_release_date_masked = target not in candidate_mask
+        gt_hard_dropped = target in hard_drop
     else:
         branch_pools = []
         final_rank = None
         fused_rank = None
+        gt_release_date_masked = None
+        gt_hard_dropped = None
     if variant is not None and variant.analysis_branches:
         branch_pools.extend(_analysis_branch_pools_for_variant(qu, rs, variant))
     best_branch, best_branch_rank = _branch_rank(branch_pools, target)
@@ -1939,10 +2422,13 @@ def _compile_variant(
         "best_branch": best_branch,
         "best_branch_rank": best_branch_rank,
         "n_branch_pools": len(branch_pools),
+        "gt_release_date_masked": gt_release_date_masked,
+        "gt_hard_dropped": gt_hard_dropped,
     }
     for k in KS:
         out[f"final@{k}"] = final_rank is not None and final_rank <= k
         out[f"union@{k}"] = _union_hit(branch_pools, target, k)
+    out["ndcg@20"] = _single_relevant_ndcg(final_rank, 20)
     if protected_pools is not None:
         out.update(_additive_metrics_for_pools(protected_pools, branch_pools, target))
     if include_branch_pools:
@@ -1962,6 +2448,7 @@ def _summary(rows: list[dict[str, Any]], variant: str) -> dict[str, Any]:
         out[f"best_branch@{k}"] = (
             sum((row["best_branch_rank"] or 10**9) <= k for row in scoped) / n
         )
+    out["ndcg@20"] = sum(float(row.get("ndcg@20") or 0.0) for row in scoped) / n
     return out
 
 
@@ -2016,6 +2503,10 @@ def _baseline_summary(turn_meta: dict[str, dict[str, Any]], sample_ids: list[str
             (turn_meta[sid]["baseline"].get("final_rank") or 10**9) <= k
             for sid in sample_ids
         ) / len(sample_ids)
+    out["ndcg@20"] = sum(
+        _single_relevant_ndcg(turn_meta[sid]["baseline"].get("final_rank"), 20)
+        for sid in sample_ids
+    ) / len(sample_ids)
     return out
 
 
@@ -2190,9 +2681,12 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         "gt_artist",
         "final_rank",
         "fused_rank",
+        "ndcg@20",
         "best_branch_rank",
         "best_branch",
         "n_branch_pools",
+        "gt_release_date_masked",
+        "gt_hard_dropped",
     ] + [f"union@{k}" for k in KS] + [f"final@{k}" for k in KS]
     additive_fields = [
         "protected_best_branch",
@@ -2240,15 +2734,16 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "",
         "## Summary",
         "",
-        "| Variant | n | final@20 | final@50 | union@20 | union@50 | union@100 | union@200 | union@1000 | best branch@50 |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        "| Variant | n | final@20 | NDCG@20 | final@50 | union@20 | union@50 | union@100 | union@200 | union@1000 | best branch@50 |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for row in payload["summary"]:
         lines.append(
-            "| `{variant}` | {n} | {final20} | {final50} | {union20} | {union50} | {union100} | {union200} | {union1000} | {best50} |".format(
+            "| `{variant}` | {n} | {final20} | {ndcg20} | {final50} | {union20} | {union50} | {union100} | {union200} | {union1000} | {best50} |".format(
                 variant=row["variant"],
                 n=row["n"],
                 final20=_fmt(row.get("final@20")),
+                ndcg20=_fmt(row.get("ndcg@20")),
                 final50=_fmt(row.get("final@50")),
                 union20=_fmt(_summary_metric(row, "union@20")),
                 union50=_fmt(_summary_metric(row, "union@50")),
@@ -2258,6 +2753,37 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
                 best50=_fmt(row.get("best_branch@50")),
             )
         )
+
+    temporal_rows = [
+        row for row in payload["rows"]
+        if row.get("gt_release_date_masked") is not None
+    ]
+    if temporal_rows:
+        by_variant: dict[str, dict[str, int]] = {}
+        for row in temporal_rows:
+            stats = by_variant.setdefault(
+                row["variant"],
+                {"n": 0, "gt_release_date_masked": 0, "gt_hard_dropped": 0},
+            )
+            stats["n"] += 1
+            stats["gt_release_date_masked"] += int(bool(row.get("gt_release_date_masked")))
+            stats["gt_hard_dropped"] += int(bool(row.get("gt_hard_dropped")))
+        lines.extend([
+            "",
+            "## Guardrails",
+            "",
+            "| Variant | n | GT release-date masked | GT hard-dropped |",
+            "|---|---:|---:|---:|",
+        ])
+        for variant, stats in sorted(by_variant.items()):
+            lines.append(
+                "| `{variant}` | {n} | {masked} | {hard} |".format(
+                    variant=variant,
+                    n=stats["n"],
+                    masked=stats["gt_release_date_masked"],
+                    hard=stats["gt_hard_dropped"],
+                )
+            )
 
     lines.extend([
         "",
@@ -2329,23 +2855,26 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         "",
         "## Per-Sample Rows",
         "",
-        "| Sample | Pack | GT | Variant | final rank | best branch rank | best branch | union@20 | union@50 | union@100 |",
-        "|---|---|---|---|---:|---:|---|---:|---:|---:|",
+        "| Sample | Pack | GT | Variant | final rank | NDCG@20 | best branch rank | best branch | union@20 | union@50 | union@100 | GT release masked | GT hard-dropped |",
+        "|---|---|---|---|---:|---:|---:|---|---:|---:|---:|---:|---:|",
     ])
     for row in payload["rows"]:
         lines.append(
-            "| `{sample_id}` | `{pack}` | {gt_track} / {gt_artist} | `{variant}` | {final_rank} | {best_branch_rank} | `{best_branch}` | {u20} | {u50} | {u100} |".format(
+            "| `{sample_id}` | `{pack}` | {gt_track} / {gt_artist} | `{variant}` | {final_rank} | {ndcg20} | {best_branch_rank} | `{best_branch}` | {u20} | {u50} | {u100} | {masked} | {hard} |".format(
                 sample_id=row["sample_id"],
                 pack=row["pack"],
                 gt_track=row["gt_track"],
                 gt_artist=row["gt_artist"],
                 variant=row["variant"],
                 final_rank=row["final_rank"] or "",
+                ndcg20=_fmt(row.get("ndcg@20")),
                 best_branch_rank=row["best_branch_rank"] or "",
                 best_branch=row["best_branch"] or "",
                 u20=int(bool(row["union@20"])),
                 u50=int(bool(row["union@50"])),
                 u100=int(bool(row["union@100"])),
+                masked="" if row.get("gt_release_date_masked") is None else int(bool(row.get("gt_release_date_masked"))),
+                hard="" if row.get("gt_hard_dropped") is None else int(bool(row.get("gt_hard_dropped"))),
             )
         )
     path.write_text("\n".join(lines) + "\n")
@@ -2401,6 +2930,7 @@ def main() -> None:
     parser.add_argument("--write-ledger-json", type=Path)
     parser.add_argument("--write-minimal-subset-json", type=Path)
     parser.add_argument("--extract-baseline-only", action="store_true")
+    parser.add_argument("--user-id-json", type=Path)
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
 
@@ -2421,6 +2951,8 @@ def main() -> None:
     audit_rows = _load_jsonl(audit_path)
     pack = json.loads(pack_path.read_text())
     turn_meta = {turn["sample_id"]: turn for turn in pack["turns"]}
+    user_id_path = args.user_id_json or (args.analysis_dir / DEFAULT_USER_ID_JSON_NAME)
+    _attach_user_ids(turn_meta, _load_user_id_sidecar(user_id_path))
     sample_ids: list[str] = []
     if args.sample_ids:
         sample_ids.extend(args.sample_ids)
@@ -2516,7 +3048,7 @@ def main() -> None:
                 print(f"  [{idx}/{len(sample_ids)}] {sid}", flush=True)
             result = _compile_variant(
                 qu,
-                audit_rows[sid],
+                _compile_row_with_turn_meta(audit_rows[sid], meta),
                 meta["gt_track_id"],
                 variant,
                 protected_pools=baseline_pools_by_sample.get(sid),
