@@ -1,0 +1,182 @@
+{
+  "turns": [
+    {
+      "sample_id": "8071d14d-7e0f-4f72-90a6-0941db80a371::t5",
+      "pack": "P0_same_album_ranker_failure",
+      "class_type": "failure",
+      "session_id": "8071d14d-7e0f-4f72-90a6-0941db80a371",
+      "turn": 5,
+      "gt_track_id": "321ea631-10fa-45a5-93c7-661f5b846bed",
+      "gt_track": "Stay Down",
+      "gt_artist": "Brent Faiyaz",
+      "current_user": "Yeah, that's a good one, I like Brent Faiyaz. \"Talk 2 U\" has a nice smooth vibe. What else do you have that's similar to this, or maybe something with a bit more of a groove but still chill R&B?",
+      "baseline": {
+        "final_rank": 24,
+        "fused_rank": 1,
+        "best_branch_rank": 1,
+        "best_branch": "centroid.anchor_tracks.image_siglip2",
+        "union20": true,
+        "union100": true,
+        "union200": true
+      },
+      "cohort_labels": [
+        "gt_artist_named_current",
+        "continuation_same_artist",
+        "same_album_continuation",
+        "same_primary_album_continuation",
+        "novelty_cue"
+      ],
+      "diagnostics": [
+        "stale positive artist/track mentions: Dennis Lloyd",
+        "novelty cue but prior artist remains anchored: Brent Faiyaz",
+        "user named the GT artist but it did not land in final top-20"
+      ],
+      "state_snapshot": {
+        "turn_intent": "Something similar to this smooth R&B vibe from Brent Faiyaz - Talk 2 U, or maybe with a bit more groove but still chill R&B.",
+        "intent_mode": "refinement",
+        "policy": "diversify_artists",
+        "routing": [
+          "feature_articulation"
+        ],
+        "positive_entities": [
+          "Brent Faiyaz",
+          "Talk 2 U",
+          "Dennis Lloyd"
+        ],
+        "stale_entities": [
+          "Dennis Lloyd"
+        ],
+        "anchors": [
+          "Brent Faiyaz",
+          "Dennis Lloyd"
+        ],
+        "positive_tags": [
+          "smooth",
+          "R&B",
+          "r&b",
+          "Soul",
+          "soul",
+          "chill",
+          "groove",
+          "groovy"
+        ],
+        "field_counts": {
+          "mentioned_entities": 11,
+          "track_feedback": 1,
+          "referenced_track_ids": 0,
+          "hard_filters": 0,
+          "explicit_rejections": 0
+        },
+        "year_range": null,
+        "explicit_rejections": []
+      },
+      "ideal_state": {
+        "target": {
+          "track": "Stay Down",
+          "artist": "Brent Faiyaz",
+          "track_id": "321ea631-10fa-45a5-93c7-661f5b846bed"
+        },
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "prior_entities": [
+          {
+            "value": "Brent Faiyaz",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "branch_hints": [
+          "tag",
+          "metadata",
+          "popularity",
+          "user_cf"
+        ]
+      },
+      "recent_messages": [
+        {
+          "turn": 3,
+          "role": "user",
+          "content": "Yes, that's the one! The one with the wavy pink shape on the red background. Play 'Pussy' by Nick Monaco."
+        },
+        {
+          "turn": 3,
+          "role": "music",
+          "content": "c1043251-61b5-4554-9e3d-bfc6ce19df40"
+        },
+        {
+          "turn": 3,
+          "role": "assistant",
+          "content": "Awesome! Glad we found it for you. Playing \"Pussy\" by Nick Monaco now! Enjoy!"
+        },
+        {
+          "turn": 4,
+          "role": "user",
+          "content": "Hmm, that wasn't the track I asked for. Can you play something similar to Dennis Lloyd, maybe something with a chill R&B/Soul vibe?"
+        },
+        {
+          "turn": 4,
+          "role": "music",
+          "content": "d5722f36-39ad-4328-a799-266a21904879"
+        },
+        {
+          "turn": 4,
+          "role": "assistant",
+          "content": "My apologies for the mix-up! Let's get you something better. Given your love for Dennis Lloyd and a chill R&B/Soul vibe, how about \"Talk 2 U\" by Brent Faiyaz? It's got that smooth, laid-back feel that I think you'll really appreciate."
+        },
+        {
+          "turn": 5,
+          "role": "user",
+          "content": "Yeah, that's a good one, I like Brent Faiyaz. \"Talk 2 U\" has a nice smooth vibe. What else do you have that's similar to this, or maybe something with a bit more of a groove but still chill R&B?"
+        },
+        {
+          "turn": 5,
+          "role": "music",
+          "content": "321ea631-10fa-45a5-93c7-661f5b846bed"
+        },
+        {
+          "turn": 5,
+          "role": "assistant",
+          "content": "Glad you liked \"Talk 2 U\"! If you're looking for more of that smooth R&B vibe, or something with a bit more groove but still chill, how about another Brent Faiyaz track? \"Stay Down\" has a really similar feel and I think you'll dig it."
+        }
+      ],
+      "final_top_results": [
+        {
+          "rank": 1,
+          "track_id": "90999c3e-7fd1-40c2-b1d3-54066f4f31cc",
+          "track": "Still Ray",
+          "artist": "Raphael Saadiq"
+        },
+        {
+          "rank": 2,
+          "track_id": "95815196-6a8f-4060-be66-391fa1240ac2",
+          "track": "Small Talk",
+          "artist": "Majid Jordan"
+        },
+        {
+          "rank": 3,
+          "track_id": "df97155c-31f4-4a11-8e9c-72ed0c0d8488",
+          "track": "Talking In His Sleep",
+          "artist": "Toni Braxton"
+        },
+        {
+          "rank": 4,
+          "track_id": "06412a28-4092-4628-8629-0b4d9bafa356",
+          "track": "Talk Is Cheap",
+          "artist": "Chet Faker, Nick Murphy"
+        },
+        {
+          "rank": 5,
+          "track_id": "420b7300-50f8-4f1b-b29c-703354ba3c4d",
+          "track": "Simple",
+          "artist": "India.Arie"
+        }
+      ],
+      "reason_to_test": "The GT primary album has already been heard and the candidate is in union@20, but final ranking misses it.",
+      "expected_change": "Ranker should consume same_album_recent, artist_recency, track_feedback role, and branch-rank features.",
+      "success_metric": "Same-album continuation final@20/NDCG@20 improves while new-artist slices do not regress.",
+      "why_wrong": "The user asks for novelty or a different direction, but the state still keeps Brent Faiyaz as positive anchors. That sends retrievers toward already-satisfied artists instead of the new target space.",
+      "what_should_change": "Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles.",
+      "regression_test": "Replay this turn and assert prior anchors are marked satisfied/history, not current seed; measure union@20/100 for novelty + new-artist turns before checking final ranking."
+    }
+  ]
+}

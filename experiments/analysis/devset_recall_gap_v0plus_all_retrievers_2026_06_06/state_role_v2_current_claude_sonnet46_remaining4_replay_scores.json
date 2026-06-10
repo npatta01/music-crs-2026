@@ -1,0 +1,522 @@
+{
+  "summary": {
+    "samples": 4,
+    "all_pass_rate": 0.0
+  },
+  "by_pack": {
+    "P0_named_artist_ranker_failure": {
+      "samples": 1,
+      "all_pass_rate": 0.0,
+      "schema_valid_rate": 0.0,
+      "request_type_correct_rate": 1.0,
+      "role_correct_rate": 0.0,
+      "target_artist_mode_correct_rate": 0.0,
+      "retrieval_profile_correct_rate": 0.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P0_new_artist_union20_gap_failure": {
+      "samples": 1,
+      "all_pass_rate": 0.0,
+      "schema_valid_rate": 0.0,
+      "request_type_correct_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 0.0,
+      "retrieval_profile_correct_rate": 0.0,
+      "temporal_semantics_correct_rate": 0.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P0_same_album_ranker_failure": {
+      "samples": 1,
+      "all_pass_rate": 0.0,
+      "schema_valid_rate": 0.0,
+      "request_type_correct_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 0.0,
+      "retrieval_profile_correct_rate": 0.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P1_rejection_guardrail_failure": {
+      "samples": 1,
+      "all_pass_rate": 0.0,
+      "schema_valid_rate": 0.0,
+      "request_type_correct_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 1.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 0.0,
+      "positive_control_preserved_rate": 1.0
+    }
+  },
+  "rows": [
+    {
+      "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": null,
+      "observed_retrieval_profile": null,
+      "observed_temporal_constraint": null,
+      "observed_rejections": null,
+      "previous_all_pass": false,
+      "new_all_pass": false,
+      "captured_expected_info": false,
+      "improved_checks": [],
+      "regressed_checks": [
+        "schema_valid",
+        "temporal_semantics_correct"
+      ],
+      "still_missing_checks": [
+        "target_artist_mode_correct",
+        "retrieval_profile_correct"
+      ],
+      "previous_read": {
+        "current_request": null,
+        "target_artist_mode": null,
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "CeCe Peniston",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "unknown",
+            "value": "Finally",
+            "role": "history",
+            "use_as_retrieval_seed": false,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "energetic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "dance",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "dance-pop",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "iconic",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "90s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "house",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            1990,
+            1999
+          ]
+        }
+      },
+      "new_read": {
+        "current_request": null,
+        "target_artist_mode": null,
+        "retrieval_profile": null,
+        "entities": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "current_target_entities": [],
+        "prior_entities": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "range": [
+            1990,
+            1999
+          ],
+          "strength": "soft",
+          "apply_as_filter": false,
+          "reason": "the wording is compatible with an era/style cue, but the GT year sits outside the literal range"
+        },
+        "normalized_rejections": null,
+        "state_to_retriever_contract": null
+      },
+      "schema_valid": false,
+      "request_type_correct": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": false,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "b2582e52-6d13-40b4-8552-2d8b63fa6c75::t8",
+      "pack": "P1_rejection_guardrail_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": null,
+      "observed_retrieval_profile": null,
+      "observed_temporal_constraint": null,
+      "observed_rejections": null,
+      "previous_all_pass": true,
+      "new_all_pass": false,
+      "captured_expected_info": false,
+      "improved_checks": [],
+      "regressed_checks": [
+        "schema_valid",
+        "rejection_normalization_correct"
+      ],
+      "still_missing_checks": [],
+      "previous_read": {
+        "current_request": null,
+        "target_artist_mode": null,
+        "retrieval_profile": "continuation",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "System Of A Down",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "heavy",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "alternative metal",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "metal",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "political",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "powerful vocals",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "complex song structures",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "intense",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "artist",
+            "value": "System Of A Down",
+            "scope": "hard"
+          }
+        ],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "current_request": null,
+        "target_artist_mode": null,
+        "retrieval_profile": null,
+        "entities": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "continuation",
+        "current_target_entities": [],
+        "prior_entities": [],
+        "temporal_constraint": null,
+        "normalized_rejections": {
+          "track_ids": "from resolver.rejected_track_ids",
+          "artist_ids": "from resolver.rejected_artist_ids",
+          "names": "verified aliases only"
+        },
+        "state_to_retriever_contract": null
+      },
+      "schema_valid": false,
+      "request_type_correct": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": false,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "93199894-d3db-4335-8278-e1be175944e4::t6",
+      "pack": "P0_named_artist_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": null,
+      "observed_retrieval_profile": null,
+      "observed_temporal_constraint": null,
+      "observed_rejections": null,
+      "previous_all_pass": false,
+      "new_all_pass": false,
+      "captured_expected_info": false,
+      "improved_checks": [],
+      "regressed_checks": [
+        "schema_valid",
+        "role_correct"
+      ],
+      "still_missing_checks": [
+        "target_artist_mode_correct",
+        "retrieval_profile_correct"
+      ],
+      "previous_read": {
+        "current_request": null,
+        "target_artist_mode": null,
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Pearl Jam",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "unknown",
+            "value": "Soundgarden",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "unknown",
+            "value": "Rusty Cage",
+            "role": "history",
+            "use_as_retrieval_seed": false,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "unknown",
+            "value": "Stone Temple Pilots",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "unknown",
+            "value": "Nirvana",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": false
+          },
+          {
+            "type": "tag",
+            "value": "grunge",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "90s",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "alternative rock",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "current_request": null,
+        "target_artist_mode": null,
+        "retrieval_profile": null,
+        "entities": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "current_target_entities": [
+          {
+            "type": "artist",
+            "value": "Nirvana",
+            "role": "current_target",
+            "source": "current_user_turn",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "prior_entities": [],
+        "temporal_constraint": null,
+        "normalized_rejections": null,
+        "state_to_retriever_contract": null
+      },
+      "schema_valid": false,
+      "request_type_correct": true,
+      "role_correct": false,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "c96d7bb9-65d4-44be-9bc2-891e8e485f4e::t7",
+      "pack": "P0_same_album_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": null,
+      "observed_retrieval_profile": null,
+      "observed_temporal_constraint": null,
+      "observed_rejections": null,
+      "previous_all_pass": false,
+      "new_all_pass": false,
+      "captured_expected_info": false,
+      "improved_checks": [
+        "role_correct"
+      ],
+      "regressed_checks": [
+        "schema_valid"
+      ],
+      "still_missing_checks": [
+        "target_artist_mode_correct",
+        "retrieval_profile_correct"
+      ],
+      "previous_read": {
+        "current_request": null,
+        "target_artist_mode": null,
+        "retrieval_profile": "continuation",
+        "entities": [
+          {
+            "type": "unknown",
+            "value": "Mar\u00edlia Mendon\u00e7a",
+            "role": "current_target",
+            "use_as_retrieval_seed": true,
+            "was_stale_in_trace": true
+          },
+          {
+            "type": "tag",
+            "value": "sertanejo",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "emotional",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "powerful",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "deep",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "heartfelt",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "longing",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "sertanejo universit\u00e1rio",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "new_read": {
+        "current_request": null,
+        "target_artist_mode": null,
+        "retrieval_profile": null,
+        "entities": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "desired_read": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "current_target_entities": [],
+        "prior_entities": [
+          {
+            "value": "Mar\u00edlia Mendon\u00e7a",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "temporal_constraint": null,
+        "normalized_rejections": null,
+        "state_to_retriever_contract": null
+      },
+      "schema_valid": false,
+      "request_type_correct": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    }
+  ]
+}

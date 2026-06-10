@@ -1,0 +1,1123 @@
+{
+  "summary": {
+    "samples": 6,
+    "all_pass_rate": 0.6666666666666666,
+    "schema_valid_rate": 1.0,
+    "request_type_rate": 1.0,
+    "exact_seeds_rate": 1.0,
+    "style_references_rate": 1.0,
+    "query_facets_rate": 0.6666666666666666,
+    "context_entities_rate": 1.0,
+    "exclusions_rate": 1.0,
+    "forbidden_exact_seeds_rate": 1.0,
+    "temporal_constraint_rate": 0.8333333333333334
+  },
+  "by_pack": {
+    "P0_new_artist_union20_gap_failure": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "exact_seeds_rate": 1.0,
+      "style_references_rate": 1.0,
+      "query_facets_rate": 1.0,
+      "context_entities_rate": 1.0,
+      "exclusions_rate": 1.0,
+      "forbidden_exact_seeds_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "P1_positive_tag_retrieval_gap_failure": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "exact_seeds_rate": 1.0,
+      "style_references_rate": 1.0,
+      "query_facets_rate": 1.0,
+      "context_entities_rate": 1.0,
+      "exclusions_rate": 1.0,
+      "forbidden_exact_seeds_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "P1_rejection_guardrail_failure": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "exact_seeds_rate": 1.0,
+      "style_references_rate": 1.0,
+      "query_facets_rate": 1.0,
+      "context_entities_rate": 1.0,
+      "exclusions_rate": 1.0,
+      "forbidden_exact_seeds_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "P1_temporal_constraint_failure": {
+      "samples": 2,
+      "all_pass_rate": 0.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "exact_seeds_rate": 1.0,
+      "style_references_rate": 1.0,
+      "query_facets_rate": 0.0,
+      "context_entities_rate": 1.0,
+      "exclusions_rate": 1.0,
+      "forbidden_exact_seeds_rate": 1.0,
+      "temporal_constraint_rate": 0.5
+    },
+    "POS_clean_final_hit_control": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "exact_seeds_rate": 1.0,
+      "style_references_rate": 1.0,
+      "query_facets_rate": 1.0,
+      "context_entities_rate": 1.0,
+      "exclusions_rate": 1.0,
+      "forbidden_exact_seeds_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    }
+  },
+  "by_fact_class": {
+    "attribute_from_prior": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "exact_seeds_rate": 1.0,
+      "style_references_rate": 1.0,
+      "query_facets_rate": 1.0,
+      "context_entities_rate": 1.0,
+      "exclusions_rate": 1.0,
+      "forbidden_exact_seeds_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "genre_search": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "exact_seeds_rate": 1.0,
+      "style_references_rate": 1.0,
+      "query_facets_rate": 1.0,
+      "context_entities_rate": 1.0,
+      "exclusions_rate": 1.0,
+      "forbidden_exact_seeds_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "negative_feedback_attribute": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "exact_seeds_rate": 1.0,
+      "style_references_rate": 1.0,
+      "query_facets_rate": 1.0,
+      "context_entities_rate": 1.0,
+      "exclusions_rate": 1.0,
+      "forbidden_exact_seeds_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "negative_feedback_temporal": {
+      "samples": 1,
+      "all_pass_rate": 0.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "exact_seeds_rate": 1.0,
+      "style_references_rate": 1.0,
+      "query_facets_rate": 0.0,
+      "context_entities_rate": 1.0,
+      "exclusions_rate": 1.0,
+      "forbidden_exact_seeds_rate": 1.0,
+      "temporal_constraint_rate": 0.0
+    },
+    "new_artist_temporal": {
+      "samples": 1,
+      "all_pass_rate": 0.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "exact_seeds_rate": 1.0,
+      "style_references_rate": 1.0,
+      "query_facets_rate": 0.0,
+      "context_entities_rate": 1.0,
+      "exclusions_rate": 1.0,
+      "forbidden_exact_seeds_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    },
+    "same_artist_album": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "exact_seeds_rate": 1.0,
+      "style_references_rate": 1.0,
+      "query_facets_rate": 1.0,
+      "context_entities_rate": 1.0,
+      "exclusions_rate": 1.0,
+      "forbidden_exact_seeds_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    }
+  },
+  "rows": [
+    {
+      "sample_id": "15b1caf3-d1ed-46ef-a8e3-c9f7657e6b77::t6",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "fact_class": "attribute_from_prior",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "exact_seeds": true,
+        "style_references": true,
+        "query_facets": true,
+        "context_entities": true,
+        "exclusions": true,
+        "forbidden_exact_seeds": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "Something really out there and unique, preserving the electronic-soulful mix from Flying Lotus as a style reference.",
+          "source_turn": 6,
+          "evidence_text": "really out there",
+          "candidate_types": [
+            {
+              "request_type": "attribute_search",
+              "confidence": 0.85,
+              "evidence_text": "really out there"
+            },
+            {
+              "request_type": "similar_to_prior",
+              "confidence": 0.4,
+              "evidence_text": "What else have you got"
+            }
+          ]
+        },
+        "facts": [
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "out there",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 6,
+            "mentioned_current_turn": true,
+            "evidence_text": "really out there"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "unique",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 6,
+            "mentioned_current_turn": true,
+            "evidence_text": "unique"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "electronic soulful",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 6,
+            "mentioned_current_turn": true,
+            "evidence_text": "electronic but also soulful"
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Flying Lotus",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "avoid_exact",
+            "source_turn": 6,
+            "mentioned_current_turn": false,
+            "evidence_text": "What else have you got"
+          }
+        ],
+        "exclusions": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "allowed_request_types": [
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "electronic"
+          },
+          {
+            "type": "tag",
+            "value": "soulful"
+          },
+          {
+            "type": "tag",
+            "value": "out there"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "artist",
+            "value": "Flying Lotus",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "Flying Lotus"
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "f2d85aa5-2086-4b1e-9974-d188c43621db::t8",
+      "pack": "P1_temporal_constraint_failure",
+      "fact_class": "negative_feedback_temporal",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "exact_seeds": true,
+        "style_references": true,
+        "query_facets": false,
+        "context_entities": true,
+        "exclusions": true,
+        "forbidden_exact_seeds": true,
+        "temporal_constraint": false
+      },
+      "all_pass": false,
+      "missing_facts": [
+        "query_facet: serene",
+        "temporal: kind"
+      ],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "A warm, ethereal, subtly rhythmic, strictly instrumental ambient electronic track that defines the late 2000s (2007-2009) period.",
+          "source_turn": 8,
+          "evidence_text": "I'm specifically looking for something with a warm, ethereal, and subtly rhythmic quality that truly embodies the late 2",
+          "candidate_types": [
+            {
+              "request_type": "attribute_search",
+              "confidence": 0.95,
+              "evidence_text": "I'm specifically looking for something with a warm, ethereal, and subtly rhythmic quality that truly embodies the late 2"
+            },
+            {
+              "request_type": "hidden_target",
+              "confidence": 0.6,
+              "evidence_text": "We haven't quite found that yet"
+            }
+          ]
+        },
+        "facts": [
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "warm ethereal subtly rhythmic",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 8,
+            "mentioned_current_turn": true,
+            "evidence_text": "warm, ethereal, and subtly rhythmic quality"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "instrumental",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 8,
+            "mentioned_current_turn": true,
+            "evidence_text": "strictly instrumental"
+          },
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "ambient electronic",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 8,
+            "mentioned_current_turn": true,
+            "evidence_text": "ambient electronic"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "dreamy atmospheric",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 8,
+            "mentioned_current_turn": true,
+            "evidence_text": "dreamy, atmospheric"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "dark harsh",
+            "role": "rejected",
+            "anchor_use": "do_not_use",
+            "relation": "exclude",
+            "reuse": "must_exclude",
+            "source_turn": 8,
+            "mentioned_current_turn": true,
+            "evidence_text": "not dreamy or serene"
+          }
+        ],
+        "exclusions": [
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "dark harsh",
+            "scope": "soft_preference",
+            "source_turn": 8,
+            "evidence_text": "not dreamy or serene"
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "style",
+            "value": "dark harsh",
+            "scope": "soft"
+          }
+        ],
+        "temporal_constraint": {
+          "kind": "release_date",
+          "strength": "hard",
+          "apply_as_filter": true,
+          "range": [
+            2007,
+            2009
+          ]
+        }
+      },
+      "expected_read": {
+        "allowed_request_types": [
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "dreamy"
+          },
+          {
+            "type": "tag",
+            "value": "serene"
+          },
+          {
+            "type": "tag",
+            "value": "ambient electronic"
+          }
+        ],
+        "required_context_entities": [],
+        "required_exclusions": [
+          {
+            "type": "style",
+            "value": "dark and harsh",
+            "scope": "hard"
+          }
+        ],
+        "forbidden_exact_seeds": [],
+        "temporal_constraint": {
+          "kind": [
+            "style_era",
+            "reference_era"
+          ],
+          "strength": [
+            "hard",
+            "soft"
+          ],
+          "apply_as_filter": [
+            true,
+            false
+          ]
+        }
+      }
+    },
+    {
+      "sample_id": "71bb177a-dab1-4bbc-8508-22d809b05c31::t6",
+      "pack": "P1_temporal_constraint_failure",
+      "fact_class": "new_artist_temporal",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "exact_seeds": true,
+        "style_references": true,
+        "query_facets": false,
+        "context_entities": true,
+        "exclusions": true,
+        "forbidden_exact_seeds": true,
+        "temporal_constraint": true
+      },
+      "all_pass": false,
+      "missing_facts": [
+        "query_facet: female artist"
+      ],
+      "observed_read": {
+        "current_request": {
+          "request_type": "new_artist",
+          "summary": "Another iconic female artist from the 90s with a thoughtful, storytelling approach similar to Alanis Morissette and Natalie Merchant.",
+          "source_turn": 6,
+          "evidence_text": "another iconic female artist from the 90s who has a similar thoughtful, storytelling approach",
+          "candidate_types": [
+            {
+              "request_type": "new_artist",
+              "confidence": 0.9,
+              "evidence_text": "another iconic female artist"
+            },
+            {
+              "request_type": "similar_to_prior",
+              "confidence": 0.5,
+              "evidence_text": "similar thoughtful, storytelling approach"
+            }
+          ]
+        },
+        "facts": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Alanis Morissette",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "may_reuse",
+            "source_turn": 5,
+            "mentioned_current_turn": false,
+            "evidence_text": "YES! Alanis Morissette"
+          },
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Natalie Merchant",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "may_reuse",
+            "source_turn": 6,
+            "mentioned_current_turn": true,
+            "evidence_text": "Natalie Merchant is a great pick"
+          },
+          {
+            "type": "attribute",
+            "facet": "era",
+            "value": "1990s",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 6,
+            "mentioned_current_turn": true,
+            "evidence_text": "from the 90s"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "thoughtful",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 6,
+            "mentioned_current_turn": true,
+            "evidence_text": "thoughtful"
+          },
+          {
+            "type": "attribute",
+            "facet": "lyrical_theme",
+            "value": "storytelling",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 6,
+            "mentioned_current_turn": true,
+            "evidence_text": "storytelling approach"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "introspective",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 5,
+            "mentioned_current_turn": false,
+            "evidence_text": "introspective"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "raw",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 5,
+            "mentioned_current_turn": false,
+            "evidence_text": "raw style"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "emotionally resonant",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 6,
+            "mentioned_current_turn": true,
+            "evidence_text": "emotionally resonant"
+          }
+        ],
+        "exclusions": [],
+        "rejections": [],
+        "temporal_constraint": {
+          "kind": "style_era",
+          "strength": "soft",
+          "apply_as_filter": false,
+          "range": [
+            1990,
+            1999
+          ]
+        }
+      },
+      "expected_read": {
+        "allowed_request_types": [
+          "new_artist",
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "female artist"
+          },
+          {
+            "type": "tag",
+            "value": "storytelling"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "artist",
+            "value": "Natalie Merchant",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "Natalie Merchant"
+          },
+          {
+            "value": "Natalie Merchant"
+          }
+        ],
+        "temporal_constraint": {
+          "kind": [
+            "style_era",
+            "reference_era"
+          ],
+          "strength": "soft",
+          "apply_as_filter": false
+        }
+      }
+    },
+    {
+      "sample_id": "963b3ee7-17d1-4bb3-8a3f-0bc528a1f096::t5",
+      "pack": "P1_rejection_guardrail_failure",
+      "fact_class": "negative_feedback_attribute",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "exact_seeds": true,
+        "style_references": true,
+        "query_facets": true,
+        "context_entities": true,
+        "exclusions": true,
+        "forbidden_exact_seeds": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "Genuinely upbeat, energetic, feel-good hip-hop to boost mood and energy, not Lupe Fiasco.",
+          "source_turn": 5,
+          "evidence_text": "genuinely upbeat, energetic, and feel-good hip-hop",
+          "candidate_types": [
+            {
+              "request_type": "attribute_search",
+              "confidence": 0.95,
+              "evidence_text": "genuinely upbeat, energetic, and feel-good"
+            },
+            {
+              "request_type": "same_artist",
+              "confidence": 0.1,
+              "evidence_text": "I love Lupe Fiasco"
+            }
+          ]
+        },
+        "facts": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Lupe Fiasco",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "avoid_exact",
+            "source_turn": 4,
+            "mentioned_current_turn": false,
+            "evidence_text": "I love Lupe Fiasco"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "positive",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 5,
+            "mentioned_current_turn": true,
+            "evidence_text": "positive vibe"
+          },
+          {
+            "type": "attribute",
+            "facet": "energy",
+            "value": "upbeat",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 5,
+            "mentioned_current_turn": true,
+            "evidence_text": "upbeat"
+          },
+          {
+            "type": "attribute",
+            "facet": "energy",
+            "value": "energetic",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 5,
+            "mentioned_current_turn": true,
+            "evidence_text": "energetic"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "feel-good",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 5,
+            "mentioned_current_turn": true,
+            "evidence_text": "feel-good"
+          },
+          {
+            "type": "attribute",
+            "facet": "energy",
+            "value": "boost my energy",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 5,
+            "mentioned_current_turn": true,
+            "evidence_text": "boost my energy"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "put me in a good mood",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 5,
+            "mentioned_current_turn": true,
+            "evidence_text": "put me in a good mood"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "heavy and intense",
+            "role": "rejected",
+            "anchor_use": "do_not_use",
+            "relation": "exclude",
+            "reuse": "must_exclude",
+            "source_turn": 5,
+            "mentioned_current_turn": true,
+            "evidence_text": "heavy and intense"
+          }
+        ],
+        "exclusions": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Lupe Fiasco",
+            "scope": "soft_preference",
+            "source_turn": 4,
+            "evidence_text": "not what I'm looking for right now"
+          }
+        ],
+        "rejections": [
+          {
+            "kind": "style",
+            "value": "heavy and intense",
+            "scope": "soft"
+          }
+        ],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "allowed_request_types": [
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "positive vibe"
+          },
+          {
+            "type": "tag",
+            "value": "boost my energy"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "artist",
+            "value": "Lupe Fiasco",
+            "allowed_roles": [
+              "contrast",
+              "history",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [
+          {
+            "type": "style",
+            "value": "heavy and intense",
+            "scope": "hard"
+          }
+        ],
+        "forbidden_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "Lupe Fiasco"
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "1c567917-f931-4609-9695-a9c0f8e39f3d::t2",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "fact_class": "genre_search",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "exact_seeds": true,
+        "style_references": true,
+        "query_facets": true,
+        "context_entities": true,
+        "exclusions": true,
+        "forbidden_exact_seeds": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "Recent upbeat tracks from the tecno brega or funk carioca scenes, not necessarily by Anitta.",
+          "source_turn": 2,
+          "evidence_text": "something more recent and upbeat, specifically from the 'tecno brega' or 'funk carioca' scenes",
+          "candidate_types": [
+            {
+              "request_type": "attribute_search",
+              "confidence": 0.9,
+              "evidence_text": "something more recent and upbeat, specifically from the 'tecno brega' or 'funk carioca' scenes"
+            },
+            {
+              "request_type": "same_artist",
+              "confidence": 0.3,
+              "evidence_text": "Anitta is definitely on point"
+            }
+          ]
+        },
+        "facts": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Anitta",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "style_reference",
+            "reuse": "avoid_exact",
+            "source_turn": 2,
+            "mentioned_current_turn": true,
+            "evidence_text": "Anitta is definitely on point"
+          },
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "tecno brega",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 2,
+            "mentioned_current_turn": true,
+            "evidence_text": "tecno brega"
+          },
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "funk carioca",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 2,
+            "mentioned_current_turn": true,
+            "evidence_text": "funk carioca"
+          },
+          {
+            "type": "attribute",
+            "facet": "energy",
+            "value": "upbeat",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 2,
+            "mentioned_current_turn": true,
+            "evidence_text": "upbeat"
+          },
+          {
+            "type": "attribute",
+            "facet": "era",
+            "value": "recent",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 2,
+            "mentioned_current_turn": true,
+            "evidence_text": "recent"
+          }
+        ],
+        "exclusions": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "allowed_request_types": [
+          "attribute_search",
+          "similar_to_prior"
+        ],
+        "required_exact_seeds": [],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "tecno brega"
+          },
+          {
+            "type": "tag",
+            "value": "funk carioca"
+          }
+        ],
+        "required_context_entities": [
+          {
+            "type": "artist",
+            "value": "Anitta",
+            "allowed_roles": [
+              "history",
+              "satisfied_prior"
+            ]
+          }
+        ],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "Anitta"
+          },
+          {
+            "value": "Anitta"
+          }
+        ]
+      }
+    },
+    {
+      "sample_id": "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t8",
+      "pack": "POS_clean_final_hit_control",
+      "fact_class": "same_artist_album",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "exact_seeds": true,
+        "style_references": true,
+        "query_facets": true,
+        "context_entities": true,
+        "exclusions": true,
+        "forbidden_exact_seeds": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "same_artist",
+          "summary": "Another Gorillaz track with an upbeat, quirky electronic feel, possibly instrumental-focused or from Cracker Island.",
+          "source_turn": 8,
+          "evidence_text": "Gorillaz track with a more upbeat or quirky electronic feel, maybe instrumental-focused or from Cracker Island",
+          "candidate_types": [
+            {
+              "request_type": "attribute_search",
+              "confidence": 0.9,
+              "evidence_text": "upbeat or quirky electronic feel, instrumental-focused or from Cracker Island"
+            },
+            {
+              "request_type": "same_artist",
+              "confidence": 0.7,
+              "evidence_text": "Gorillaz track"
+            }
+          ]
+        },
+        "facts": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Gorillaz",
+            "role": "current_target",
+            "anchor_use": "must_use",
+            "relation": "exact_target",
+            "reuse": "must_reuse",
+            "source_turn": 8,
+            "mentioned_current_turn": true,
+            "evidence_text": "Gorillaz track"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "upbeat quirky electronic",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 8,
+            "mentioned_current_turn": true,
+            "evidence_text": "upbeat or quirky electronic feel"
+          },
+          {
+            "type": "attribute",
+            "facet": "sonic",
+            "value": "instrumental-focused",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 8,
+            "mentioned_current_turn": true,
+            "evidence_text": "instrumental-focused"
+          },
+          {
+            "type": "album",
+            "facet": null,
+            "value": "Cracker Island",
+            "role": "current_target",
+            "anchor_use": "must_use",
+            "relation": "exact_target",
+            "reuse": "must_reuse",
+            "source_turn": 8,
+            "mentioned_current_turn": true,
+            "evidence_text": "from Cracker Island"
+          }
+        ],
+        "exclusions": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "allowed_request_types": [
+          "same_artist",
+          "exact_artist"
+        ],
+        "required_exact_seeds": [
+          {
+            "type": "artist",
+            "value": "Gorillaz"
+          },
+          {
+            "type": "album",
+            "value": "Cracker Island"
+          }
+        ],
+        "required_style_references": [],
+        "required_query_facets": [
+          {
+            "type": "tag",
+            "value": "upbeat"
+          },
+          {
+            "type": "tag",
+            "value": "quirky electronic"
+          }
+        ],
+        "required_context_entities": [],
+        "required_exclusions": [],
+        "forbidden_exact_seeds": []
+      }
+    }
+  ],
+  "matching": "role-specific exact_seed/style_reference/query_facet/exclusion evaluation"
+}

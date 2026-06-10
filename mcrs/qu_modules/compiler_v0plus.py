@@ -44,7 +44,12 @@ from dataclasses import dataclass, field
 _LYRIC_TOKEN_RE = re.compile(r"\w+")
 
 from mcrs.conversation_state.schema import (
+    AnchorUse,
+    AttributeFacet,
     ConversationStateV0Plus,
+    FactRelation,
+    FactRole,
+    FactType,
 )
 from mcrs.embeddings.base import EmbeddingClient
 from mcrs.qu_modules.resolver_v0plus import ResolvedConversationState
@@ -307,21 +312,68 @@ class CompilerConfig:
     enable_era_popularity: bool = False
     era_pop_weight: float = 1.0
     era_pop_cap: int = 200
-    # Release-year pre-filter (#filter). When True AND the extractor emitted a
-    # release_year_range, narrow the candidate_mask to tracks whose release year
-    # falls in [start, end] (open bounds ok). Applies to ALL branches (it's the
-    # global candidate gate). Off by default. Unlike hard_filters (which the
-    # extractor never emits), this uses the soft year-range present on ~33% of
-    # turns. Permissive: if the range would blank the pool to < release_year_filter_min_keep
-    # tracks, it's skipped (treated as too-aggressive / likely-wrong extraction).
+    # Deprecated release-year pre-filter config. v1 hard release-date asks are
+    # represented as hard_filters via temporal_constraint.apply_as_filter=true;
+    # soft release_year_range/style-era hints do not gate candidates here. Keep
+    # the fields so older configs still parse.
     enable_release_year_filter: bool = False
     release_year_filter_min_keep: int = 50
     routing_boost: dict[str, float] = field(default_factory=dict)
+
+    # Diagnostic A/B switches for V1 fact consumption. Defaults preserve the
+    # current served behavior: V1 attribute facts projected as legacy tag
+    # mentions are eligible for BM25 `tag_list`, and `turn_intent` still fans
+    # out to both track_name and tag_list. Variant configs can route generated
+    # attribute phrases to dense attribute retrieval without letting them spam
+    # exact lexical tag clauses.
+    bm25_include_v1_attribute_facets: bool = True
+    bm25_include_turn_intent_tag_clause: bool = True
+    bm25_v1_attribute_tag_policy: str = "all"
+    attribute_query_source: str = "legacy_tags"
+    attribute_query_allowed_facets: tuple[str, ...] = field(default_factory=tuple)
+
+    # Optional additive branch-local candidate-quality pass. When enabled, each
+    # fired branch can emit a second `.state_features` branch whose order is
+    # based on structured state facts plus catalog-derived features. This is a
+    # candidate-recall diagnostic/promotable branch, not an LLM prompt change.
+    enable_branch_local_feature_rerank: bool = False
+    branch_local_feature_rerank_mode: str = "additive"
+    branch_local_feature_weight: float = 1.0
+    branch_local_feature_score_weight: float = 1.0
+    enable_state_feature_selector_branch: bool = False
+    state_feature_selector_weight: float = 1.0
+    state_feature_selector_score_weight: float = 1.0
+    state_feature_selector_grouping: str = "global"
+    enable_state_feature_survivor_branch: bool = False
+    state_feature_survivor_weight: float = 1.0
+    state_feature_survivor_score_weight: float = 1.0
+    state_feature_survivor_rank_weight: float = 0.2
+    state_feature_survivor_support_weight: float = 0.05
+    state_feature_survivor_min_rank: int = 21
+    state_feature_survivor_max_rank: int = 120
+    state_feature_survivor_min_feature_score: float = 0.0
 
     def __post_init__(self) -> None:
         # Partial config dicts inherit standard boosts without mutating the
         # caller-owned mapping passed to the dataclass constructor.
         self.field_boosts = {**DEFAULT_FIELD_BOOSTS, **self.field_boosts}
+        if self.branch_local_feature_rerank_mode not in {"additive", "in_place"}:
+            raise ValueError(
+                "branch_local_feature_rerank_mode must be 'additive' or "
+                f"'in_place'; got {self.branch_local_feature_rerank_mode!r}"
+            )
+        if self.state_feature_selector_grouping not in {"global", "family"}:
+            raise ValueError(
+                "state_feature_selector_grouping must be 'global' or "
+                f"'family'; got {self.state_feature_selector_grouping!r}"
+            )
+        if self.state_feature_survivor_min_rank < 1:
+            raise ValueError("state_feature_survivor_min_rank must be >= 1")
+        if self.state_feature_survivor_max_rank < self.state_feature_survivor_min_rank:
+            raise ValueError(
+                "state_feature_survivor_max_rank must be >= "
+                "state_feature_survivor_min_rank"
+            )
 
 
 class V0PlusCompiler:
@@ -353,6 +405,11 @@ class V0PlusCompiler:
         self.encoder: EmbeddingClient | None = self.encoders.get("default", encoder)
         self._pop_rank: dict[str, int] | None = None
         self.cfg = config or CompilerConfig()
+        self._catalog_tag_keys_cache: set[str] | None = None
+        self._catalog_tag_df_cache: dict[str, int] | None = None
+        self._track_tag_keys_cache: dict[str, set[str]] = {}
+        self._track_text_key_cache: dict[str, str] = {}
+        self._track_cf_bpr_cache: dict[str, list[float] | None] = {}
         # Optional user-side embeddings lookup. Required only when a config
         # uses `centroid_only_branches` with `centroid_source="user"`. None
         # otherwise, and the user branch is silently skipped.
@@ -390,6 +447,19 @@ class V0PlusCompiler:
         trace_enabled = _trace_k > 0
         branch_queries: dict[str, dict] = {}
         branch_status: dict[str, dict] = {}
+
+        def replace_named_pool(
+            name: str,
+            hits: list[tuple[str, float]],
+        ) -> None:
+            if not trace_enabled:
+                return
+            traced = list(hits[:_trace_k])
+            for idx, (pool_name, _pool_hits) in enumerate(named_pools):
+                if pool_name == name:
+                    named_pools[idx] = (name, traced)
+                    return
+            named_pools.append((name, traced))
 
         # 1. Pre-fusion catalog mask from hard_filters.release_date
         candidate_mask = self._release_date_mask(state)
@@ -439,6 +509,11 @@ class V0PlusCompiler:
                     "skip_reason": "disabled",
                 }
         if self.cfg.enable_dense:
+            supported_vector_fields = getattr(
+                self.retriever,
+                "supported_vector_fields",
+                frozenset(),
+            )
             for branch in self.cfg.dense_branches:
                 branch_name = self._dense_branch_trace_name(branch)
                 q_text = query_strings.get(branch.query_id)
@@ -447,6 +522,15 @@ class V0PlusCompiler:
                     if q_text is not None:
                         query_trace["query_text"] = q_text
                     branch_queries[branch_name] = query_trace
+                if branch.vector_field not in supported_vector_fields:
+                    dense_branch_results.append([])
+                    if trace_enabled:
+                        branch_status[branch_name] = {
+                            "configured": True,
+                            "fired": False,
+                            "skip_reason": "unsupported_vector_field",
+                        }
+                    continue
                 if q_text is None:
                     # Either query_id unknown OR state had no positive signal.
                     # Append empty hits to keep dense_branch_results aligned
@@ -501,7 +585,12 @@ class V0PlusCompiler:
         #    this field. Used for user_cf_bpr (only user-side modality in
         #    TalkPlayData).
         centroid_branches = self._resolve_centroid_only_branches()
-        centroid_branch_results: list[tuple[list[tuple[str, float]], float]] = []
+        centroid_branch_results: list[tuple[list[tuple[str, float]], float, str]] = []
+        supported_vector_fields = getattr(
+            self.retriever,
+            "supported_vector_fields",
+            frozenset(),
+        )
         for cb in centroid_branches:
             branch_name = self._centroid_branch_trace_name(cb)
             source_track_ids: list[str] = []
@@ -519,6 +608,14 @@ class V0PlusCompiler:
                 elif cb.centroid_source == "user":
                     query_trace["user_id_present"] = user_id is not None
                 branch_queries[branch_name] = query_trace
+            if cb.vector_field not in supported_vector_fields:
+                if trace_enabled:
+                    branch_status[branch_name] = {
+                        "configured": True,
+                        "fired": False,
+                        "skip_reason": "unsupported_vector_field",
+                    }
+                continue
             # On pivot turns the anchor set is intentionally cleared (the user
             # changed direction), so an anchor-sourced centroid would be stale
             # — skip it. Exception (issue #74 Fix 1): when similar-artist
@@ -573,7 +670,7 @@ class V0PlusCompiler:
                     else "centroid.audio" if "audio" in cb.vector_field
                     else "centroid.other")
             centroid_branch_results.append(
-                (hits, cb.weight * self._routing_multiplier(kind, rs))
+                (hits, cb.weight * self._routing_multiplier(kind, rs), branch_name)
             )
             if trace_enabled:
                 branch_status[branch_name] = {
@@ -593,8 +690,8 @@ class V0PlusCompiler:
             for hits in dense_branch_results
         ]
         centroid_branch_results = [
-            ([(t, s) for t, s in hits if t in candidate_mask], w)
-            for hits, w in centroid_branch_results
+            ([(t, s) for t, s in hits if t in candidate_mask], w, n)
+            for hits, w, n in centroid_branch_results
         ]
 
         # 5. Hard-drop set (played + rejections + tf.rejected)
@@ -605,8 +702,8 @@ class V0PlusCompiler:
             for hits in dense_branch_results
         ]
         centroid_branch_results = [
-            ([(t, s) for t, s in hits if t not in hard_drop], w)
-            for hits, w in centroid_branch_results
+            ([(t, s) for t, s in hits if t not in hard_drop], w, n)
+            for hits, w, n in centroid_branch_results
         ]
 
         # 5b. Resolved-artist discography pool. Trace the RAW pool (pre-mask/
@@ -657,12 +754,39 @@ class V0PlusCompiler:
             else:
                 kind = "dense.other"
             weighted_pools.append((hits, branch.weight * self._routing_multiplier(kind, rs)))
-        for hits, weight in centroid_branch_results:
+        feature_branch_inputs: list[tuple[str, list[tuple[str, float]], float]] = [
+            ("bm25", bm25_hits, 1.0 * self._routing_multiplier("bm25", rs))
+        ]
+        for hits, branch in zip(dense_branch_results, self.cfg.dense_branches):
+            if branch.query_id == "lyric":
+                kind = "dense.lyric"
+            elif "metadata" in branch.vector_field:
+                kind = "dense.metadata"
+            else:
+                kind = "dense.other"
+            feature_branch_inputs.append(
+                (
+                    self._dense_branch_trace_name(branch),
+                    hits,
+                    branch.weight * self._routing_multiplier(kind, rs),
+                )
+            )
+        for hits, weight, branch_name in centroid_branch_results:
+            feature_branch_inputs.append((branch_name, hits, weight))
+
+        for hits, weight, _branch_name in centroid_branch_results:
             if hits:
                 weighted_pools.append((hits, weight))
         if disco_hits:
             weighted_pools.append(
                 (disco_hits, self.cfg.disco_weight * self._routing_multiplier("lookup.discography", rs))
+            )
+            feature_branch_inputs.append(
+                (
+                    disco_branch_name,
+                    disco_hits,
+                    self.cfg.disco_weight * self._routing_multiplier("lookup.discography", rs),
+                )
             )
         era_hits = self._era_popularity_pool(rs)
         era_branch_name = "lookup.era_popularity"
@@ -682,11 +806,6 @@ class V0PlusCompiler:
                 }
         if trace_enabled and era_hits:
             named_pools.append((era_branch_name, list(era_hits[:_trace_k])))
-        candidate_filter_summary = (
-            self._candidate_filter_summary(named_pools, candidate_mask, hard_drop, rs)
-            if trace_enabled
-            else {}
-        )
         era_hits = [
             (t, s) for t, s in era_hits if t in candidate_mask and t not in hard_drop
         ]
@@ -694,6 +813,146 @@ class V0PlusCompiler:
             weighted_pools.append(
                 (era_hits, self.cfg.era_pop_weight * self._routing_multiplier("lookup.era_popularity", rs))
             )
+            feature_branch_inputs.append(
+                (
+                    era_branch_name,
+                    era_hits,
+                    self.cfg.era_pop_weight * self._routing_multiplier("lookup.era_popularity", rs),
+                )
+            )
+
+        feature_context = (
+            self._branch_local_feature_context(rs)
+            if (
+                self.cfg.enable_branch_local_feature_rerank
+                or self.cfg.enable_state_feature_selector_branch
+                or self.cfg.enable_state_feature_survivor_branch
+            )
+            else None
+        )
+        if self.cfg.enable_state_feature_survivor_branch:
+            survivor_name = "state_feature_survivor"
+            survivor_hits = self._state_feature_survivor_hits(
+                rs,
+                feature_branch_inputs,
+                context=feature_context,
+            )
+            if trace_enabled:
+                branch_queries[survivor_name] = self._state_feature_survivor_query_trace(
+                    rs,
+                    feature_branch_inputs,
+                    context=feature_context,
+                    top_hits=survivor_hits,
+                )
+                if survivor_hits:
+                    branch_status[survivor_name] = {
+                        "configured": True,
+                        "fired": True,
+                        "n_raw_hits": len(survivor_hits),
+                    }
+                    named_pools.append((survivor_name, list(survivor_hits[:_trace_k])))
+                else:
+                    branch_status[survivor_name] = {
+                        "configured": True,
+                        "fired": False,
+                        "skip_reason": "no_midrank_feature_signal",
+                    }
+            if survivor_hits:
+                weighted_pools.append(
+                    (survivor_hits, self.cfg.state_feature_survivor_weight)
+                )
+        if self.cfg.enable_state_feature_selector_branch:
+            for selector_name, source_group, selector_inputs in (
+                self._state_feature_selector_branch_inputs(feature_branch_inputs)
+            ):
+                selector_hits = self._state_feature_selector_hits(
+                    rs,
+                    selector_inputs,
+                    context=feature_context,
+                )
+                if trace_enabled:
+                    branch_queries[selector_name] = self._state_feature_selector_query_trace(
+                        rs,
+                        selector_inputs,
+                        context=feature_context,
+                        top_hits=selector_hits,
+                        source_group=source_group,
+                    )
+                    if selector_hits:
+                        branch_status[selector_name] = {
+                            "configured": True,
+                            "fired": True,
+                            "n_raw_hits": len(selector_hits),
+                        }
+                        named_pools.append((selector_name, list(selector_hits[:_trace_k])))
+                    else:
+                        branch_status[selector_name] = {
+                            "configured": True,
+                            "fired": False,
+                            "skip_reason": "no_feature_signal",
+                        }
+                if selector_hits:
+                    weighted_pools.append(
+                        (selector_hits, self.cfg.state_feature_selector_weight)
+                    )
+        if self.cfg.enable_branch_local_feature_rerank:
+            in_place_inputs: list[tuple[str, list[tuple[str, float]], float]] = []
+            for source_name, hits, source_weight in feature_branch_inputs:
+                reranked = self._branch_local_feature_rerank_hits(
+                    rs,
+                    hits,
+                    context=feature_context,
+                )
+                feature_name = f"{source_name}.state_features"
+                if trace_enabled:
+                    branch_queries[feature_name] = self._branch_local_feature_query_trace(
+                        source_name,
+                        rs,
+                        context=feature_context,
+                        top_hits=reranked,
+                        source_hits=hits,
+                    )
+                    branch_queries[feature_name]["applied_mode"] = (
+                        self.cfg.branch_local_feature_rerank_mode
+                    )
+                    if reranked:
+                        branch_status[feature_name] = {
+                            "configured": True,
+                            "fired": True,
+                            "n_raw_hits": len(reranked),
+                        }
+                        if self.cfg.branch_local_feature_rerank_mode == "additive":
+                            named_pools.append((feature_name, list(reranked[:_trace_k])))
+                    else:
+                        branch_status[feature_name] = {
+                            "configured": True,
+                            "fired": False,
+                            "skip_reason": "no_feature_signal",
+                        }
+                if self.cfg.branch_local_feature_rerank_mode == "in_place":
+                    next_hits = reranked if reranked else hits
+                    if reranked:
+                        replace_named_pool(source_name, next_hits)
+                    in_place_inputs.append((source_name, next_hits, source_weight))
+                elif reranked:
+                    weighted_pools.append(
+                        (
+                            reranked,
+                            source_weight * self.cfg.branch_local_feature_weight,
+                        )
+                    )
+            if self.cfg.branch_local_feature_rerank_mode == "in_place":
+                weighted_pools = [
+                    (hits, source_weight)
+                    for _source_name, hits, source_weight in in_place_inputs
+                    if hits
+                ]
+
+        candidate_filter_summary = (
+            self._candidate_filter_summary(named_pools, candidate_mask, hard_drop, rs)
+            if trace_enabled
+            else {}
+        )
         fused = self._rrf_fuse_weighted(weighted_pools, k=self.cfg.rrf_k)
 
         # 7. Soft (de)promotes
@@ -771,9 +1030,11 @@ class V0PlusCompiler:
                 "source_text": t.source_text,
                 "entity_id": t.entity_id,
                 "confidence": float(t.confidence),
+                "resolution_role": getattr(t, "resolution_role", "exact_target"),
             }
             for t in rs.resolved_targets
             if t.kind == "artist"
+            and getattr(t, "resolution_role", "exact_target") == "exact_target"
         ]
         return {
             "kind": "lookup",
@@ -852,9 +1113,16 @@ class V0PlusCompiler:
         dropped by the retriever; we keep the structure predictable here."""
         state = rs.state
         per_field: dict[str, list[str]] = {}
+        v1_attribute_facet_keys = self._v1_attribute_query_facet_keys(state)
 
         for me in state.mentioned_entities:
             if me.sentiment < 0:
+                continue
+            if (
+                me.type == "tag"
+                and self._catalog_tag_key(me.value) in v1_attribute_facet_keys
+                and not self._should_include_v1_attribute_tag_in_bm25(me.value)
+            ):
                 continue
             target = {
                 "artist": "artist_name",
@@ -874,6 +1142,11 @@ class V0PlusCompiler:
 
         release_range = state.release_year_range
         if release_range is not None:
+            supported_text_fields = getattr(
+                self.retriever,
+                "supported_text_fields",
+                frozenset(DEFAULT_FIELD_BOOSTS),
+            )
             year_boost = self.cfg.field_boosts.get("release_year", 0.0)
             decade_boost = self.cfg.field_boosts.get("release_decade", 0.0)
             exact_year = (
@@ -883,7 +1156,10 @@ class V0PlusCompiler:
             )
             if (exact_year and year_boost > 0.0) or (not exact_year and decade_boost > 0.0):
                 for field_name, term in self._release_year_range_bm25_terms(state):
-                    if self.cfg.field_boosts.get(field_name, 0.0) > 0.0:
+                    if (
+                        field_name in supported_text_fields
+                        and self.cfg.field_boosts.get(field_name, 0.0) > 0.0
+                    ):
                         per_field.setdefault(field_name, []).append(term)
 
         # turn_intent: free text routed where mood/title vocabulary fits.
@@ -892,7 +1168,8 @@ class V0PlusCompiler:
         intent = state.turn_intent.strip()
         if intent:
             per_field.setdefault("track_name", []).append(intent)
-            per_field.setdefault("tag_list", []).append(intent)
+            if self.cfg.bm25_include_turn_intent_tag_clause:
+                per_field.setdefault("tag_list", []).append(intent)
 
         # Emit one FieldQuery per term so each entity contributes a separate
         # MatchQuery to tantivy's Boolean SHOULD. Joining all terms into a
@@ -966,11 +1243,189 @@ class V0PlusCompiler:
         self._catalog_release_year_bounds_cached = True
         return self._catalog_release_year_bounds_cache
 
+    @staticmethod
+    def _catalog_tag_key(value: str) -> str:
+        return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9&]+", " ", value.casefold())).strip()
+
+    def _catalog_tag_keys(self) -> set[str]:
+        if self._catalog_tag_keys_cache is not None:
+            return self._catalog_tag_keys_cache
+        keys: set[str] = set()
+        for track_id in self.catalog.all_track_ids():
+            for tag in self.catalog.tag_list(track_id):
+                key = self._catalog_tag_key(str(tag))
+                if key:
+                    keys.add(key)
+        self._catalog_tag_keys_cache = keys
+        return keys
+
+    def _catalog_tag_document_frequency(self) -> dict[str, int]:
+        if self._catalog_tag_df_cache is not None:
+            return self._catalog_tag_df_cache
+        counts: Counter[str] = Counter()
+        for track_id in self.catalog.all_track_ids():
+            keys = {
+                self._catalog_tag_key(str(tag))
+                for tag in self.catalog.tag_list(track_id)
+            }
+            for key in keys:
+                if key:
+                    counts[key] += 1
+        self._catalog_tag_df_cache = dict(counts)
+        return self._catalog_tag_df_cache
+
+    def _should_include_v1_attribute_tag_in_bm25(self, value: str) -> bool:
+        if not self.cfg.bm25_include_v1_attribute_facets:
+            return False
+        policy = self.cfg.bm25_v1_attribute_tag_policy
+        if policy == "all":
+            return True
+        if policy == "none":
+            return False
+        if policy == "catalog_exact":
+            return self._catalog_tag_key(value) in self._catalog_tag_keys()
+        raise ValueError(
+            "bm25_v1_attribute_tag_policy must be one of 'all', 'none', "
+            f"or 'catalog_exact'; got {policy!r}"
+        )
+
     # -- Dense query templates --------------------------------------------
     # Each builder takes the resolved state and returns a query STRING (or
     # None to skip the branch). Branches reference templates by `query_id`.
     # New `query_id`s are added by writing a `_build_<name>_query_string`
     # method and registering it in `_query_builders` below.
+
+    @staticmethod
+    def _positive_mention_values(
+        state: ConversationStateV0Plus,
+        entity_type: str,
+    ) -> list[str]:
+        return [
+            me.value
+            for me in state.mentioned_entities
+            if me.sentiment >= 0 and me.type == entity_type and me.value
+        ]
+
+    @staticmethod
+    def _v1_attribute_query_facts(
+        state: ConversationStateV0Plus,
+    ) -> list:
+        """Return V1 attribute facts that are usable as descriptive facets.
+
+        This is deliberately structural. It does not inspect the raw user text
+        or repair phrases; it just consumes the fact-first state contract.
+        """
+        facts = getattr(state, "facts", None) or []
+        out: list = []
+        for fact in facts:
+            if getattr(fact, "type", None) != FactType.attribute:
+                continue
+            if getattr(fact, "role", None) != FactRole.current_target:
+                continue
+            if getattr(fact, "anchor_use", None) == AnchorUse.do_not_use:
+                continue
+            if getattr(fact, "relation", None) == FactRelation.exclude:
+                continue
+            value = str(getattr(fact, "value", "") or "").strip()
+            if value:
+                out.append(fact)
+        return out
+
+    @staticmethod
+    def _v1_attribute_query_facet_keys(
+        state: ConversationStateV0Plus,
+    ) -> set[str]:
+        return {
+            V0PlusCompiler._catalog_tag_key(str(getattr(fact, "value", "") or ""))
+            for fact in V0PlusCompiler._v1_attribute_query_facts(state)
+            if str(getattr(fact, "value", "") or "").strip()
+        }
+
+    def _v1_attribute_query_values(
+        self,
+        state: ConversationStateV0Plus,
+    ) -> list[str]:
+        allowed = {
+            str(facet).strip()
+            for facet in self.cfg.attribute_query_allowed_facets
+            if str(facet).strip()
+        }
+        seen: set[str] = set()
+        values: list[str] = []
+        for fact in self._v1_attribute_query_facts(state):
+            facet = getattr(fact, "facet", None)
+            facet_value = getattr(facet, "value", facet)
+            if allowed and str(facet_value) not in allowed:
+                continue
+            value = str(getattr(fact, "value", "") or "").strip()
+            key = value.casefold()
+            if not value or key in seen:
+                continue
+            seen.add(key)
+            values.append(value)
+        return values
+
+    def _attribute_query_values(
+        self,
+        state: ConversationStateV0Plus,
+    ) -> list[str]:
+        source = self.cfg.attribute_query_source
+        legacy_tags = [
+            value.strip()
+            for value in self._positive_mention_values(state, "tag")
+            if value.strip()
+        ]
+        v1_values = self._v1_attribute_query_values(state)
+
+        if source == "legacy_tags":
+            raw_values = legacy_tags
+        elif source == "v1_attribute_facts":
+            raw_values = v1_values
+        elif source == "legacy_tags_plus_v1_attribute_facts":
+            raw_values = legacy_tags + v1_values
+        else:
+            raise ValueError(
+                "attribute_query_source must be one of "
+                "'legacy_tags', 'v1_attribute_facts', or "
+                "'legacy_tags_plus_v1_attribute_facts'; got "
+                f"{source!r}"
+            )
+
+        seen: set[str] = set()
+        values: list[str] = []
+        for value in raw_values:
+            key = value.casefold()
+            if key in seen:
+                continue
+            seen.add(key)
+            values.append(value)
+        return values
+
+    @staticmethod
+    def _style_reference_values(
+        state: ConversationStateV0Plus,
+        entity_type: str,
+    ) -> list[str]:
+        return [
+            me.value
+            for me in state.style_reference_entities
+            if me.sentiment >= 0 and me.type == entity_type and me.value
+        ]
+
+    @classmethod
+    def _artist_reference_values(cls, state: ConversationStateV0Plus) -> list[str]:
+        seen: set[str] = set()
+        out: list[str] = []
+        for value in (
+            cls._positive_mention_values(state, "artist")
+            + cls._style_reference_values(state, "artist")
+        ):
+            key = value.casefold().strip()
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            out.append(value)
+        return out
 
     def _build_dense_query_string(self, rs: ResolvedConversationState) -> str | None:
         """`query_id="intent"` — canonical Qwen3/BM25-shaped query string.
@@ -985,14 +1440,8 @@ class V0PlusCompiler:
         if state.turn_intent.strip():
             text_parts.append(state.turn_intent.strip())
 
-        artists = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "artist"
-        ]
-        tags = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "tag"
-        ]
+        artists = self._artist_reference_values(state)
+        tags = self._positive_mention_values(state, "tag")
         if artists:
             text_parts.append("like: " + ", ".join(artists))
         if tags:
@@ -1014,18 +1463,9 @@ class V0PlusCompiler:
         if state.turn_intent.strip():
             text_parts.append(state.turn_intent.strip())
 
-        artists = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "artist"
-        ]
-        albums = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "album"
-        ]
-        tracks = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "track"
-        ]
+        artists = self._positive_mention_values(state, "artist")
+        albums = self._positive_mention_values(state, "album")
+        tracks = self._positive_mention_values(state, "track")
         if artists:
             text_parts.append("artists: " + ", ".join(artists))
         if albums:
@@ -1053,10 +1493,7 @@ class V0PlusCompiler:
             alone so the branch still fires when extraction is tag-poor.
         """
         state = rs.state
-        tags = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "tag"
-        ]
+        tags = self._positive_mention_values(state, "tag")
         intent = state.turn_intent.strip()
         if tags:
             joined_tags = ", ".join(tags)
@@ -1083,10 +1520,7 @@ class V0PlusCompiler:
           - Falls back to "album cover, {turn_intent}" otherwise.
         """
         state = rs.state
-        tags = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "tag"
-        ]
+        tags = self._positive_mention_values(state, "tag")
         if tags:
             return "album cover, " + ", ".join(tags)
         intent = state.turn_intent.strip()
@@ -1115,14 +1549,8 @@ class V0PlusCompiler:
             are empty (preserves any signal at all).
         """
         state = rs.state
-        tags = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "tag"
-        ]
-        artists = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "artist"
-        ]
+        tags = self._positive_mention_values(state, "tag")
+        artists = self._artist_reference_values(state)
         parts: list[str] = []
         if tags:
             parts.append(f"A song with {', '.join(tags)} sound")
@@ -1164,14 +1592,8 @@ class V0PlusCompiler:
         tags (deduped, source-order preserved).
         """
         state = rs.state
-        state_tags = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "tag" and me.value
-        ]
-        artists = [
-            me.value for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "artist" and me.value
-        ]
+        state_tags = self._positive_mention_values(state, "tag")
+        artists = self._artist_reference_values(state)
         # Top-N catalog-canonical tags from positive anchors (reuses the
         # same machinery BM25 uses for anchor_tag_expansion).
         anchor_tags = self._top_anchor_tags(rs, n=5)
@@ -1212,15 +1634,35 @@ class V0PlusCompiler:
         """`query_id="attributes"` — matches the catalog's attributes column,
         which talkpl-ai built as Qwen3 embeddings of
         `"music attributes, tags :{tags}"` (talkenv/dataset/attributes.py). We
-        mirror that document prefix so the query lands in the same subspace.
-        Built from positive tag mentions (genre/mood/instrument). Returns None
-        when there are no positive tags (branch is skipped on tag-poor turns)."""
+        mirror that document prefix so the query lands in the same subspace."""
         state = rs.state
-        tags = [
-            me.value.strip()
-            for me in state.mentioned_entities
-            if me.sentiment >= 0 and me.type == "tag" and me.value.strip()
-        ]
+        tags = self._attribute_query_values(state)
+        if not tags:
+            return None
+        return "music attributes, tags :" + ", ".join(tags)
+
+    def _build_attributes_enriched_query_string(
+        self, rs: ResolvedConversationState
+    ) -> str | None:
+        """`query_id="attributes_enriched"` — attributes-column query string
+        with current positive tags plus catalog-canonical tags from accepted
+        anchor tracks.
+
+        This is the Qwen-attributes analogue of `sonic_nl_enriched`: it keeps
+        the document prefix expected by the attributes embedding column, while
+        exposing useful anchor-track vocabulary when the state is tag-poor or
+        uses a synonym not present in the catalog tag list.
+        """
+        state = rs.state
+        seen: set[str] = set()
+        tags: list[str] = []
+        for value in self._positive_mention_values(state, "tag") + self._top_anchor_tags(rs, n=5):
+            tag = value.strip()
+            key = tag.casefold()
+            if not tag or key in seen:
+                continue
+            seen.add(key)
+            tags.append(tag)
         if not tags:
             return None
         return "music attributes, tags :" + ", ".join(tags)
@@ -1242,6 +1684,7 @@ class V0PlusCompiler:
             "sonic_nl_enriched": self._build_sonic_nl_enriched_query_string,
             "lyric": self._build_lyric_query_string,
             "attributes": self._build_attributes_query_string,
+            "attributes_enriched": self._build_attributes_enriched_query_string,
         }
 
     def _mix_for_branch(
@@ -1291,23 +1734,6 @@ class V0PlusCompiler:
                 continue
             valid = valid & step_mask
 
-        # Soft release_year_range pre-filter (config-gated). The extractor emits
-        # this on ~33% of turns but never a hard_filter; when enabled, treat the
-        # year-range as a candidate gate over ALL branches.
-        if self.cfg.enable_release_year_filter:
-            ryr = state.release_year_range
-            if ryr is not None and (ryr.start is not None or ryr.end is not None):
-                lo = ryr.start if ryr.start is not None else -(10**9)
-                hi = ryr.end if ryr.end is not None else 10**9
-                in_range = {
-                    tid for tid in valid
-                    if (yr := self.catalog.release_year_of(tid)) is not None
-                    and lo <= yr <= hi
-                }
-                # Permissive: a too-aggressive / likely-wrong range that would
-                # blank the pool is skipped rather than starving retrieval.
-                if len(in_range) >= self.cfg.release_year_filter_min_keep:
-                    valid = in_range
         return valid
 
     def _hard_drop_set(self, rs: ResolvedConversationState) -> set[str]:
@@ -1413,6 +1839,634 @@ class V0PlusCompiler:
                 mult *= float(self.cfg.routing_boost.get(tag, 1.0))
         return mult
 
+    _BRANCH_FEATURE_GENERIC_TERMS: frozenset[str] = frozenset({
+        "alternative",
+        "classic",
+        "dance",
+        "electronic",
+        "funk",
+        "hip hop",
+        "hip-hop",
+        "metal",
+        "pop",
+        "popular",
+        "rap",
+        "rock",
+    })
+
+    _BRANCH_FEATURE_TAG_ALIASES: dict[str, tuple[str, ...]] = {
+        "hip hop": ("hip-hop", "rap"),
+        "hip-hop": ("hip hop", "rap"),
+        "r&b": ("rnb", "rhythm and blues", "soul"),
+        "rnb": ("r&b", "rhythm and blues", "soul"),
+        "pop punk": ("pop-punk", "punk-pop", "emo"),
+        "pop-punk": ("pop punk", "punk-pop", "emo"),
+        "edm": ("electronic", "electronica", "dance"),
+        "electronic": ("electronica", "edm"),
+        "alt rock": ("alternative rock", "alternative"),
+        "alternative rock": ("alt rock", "alternative"),
+        "classic": ("popular", "hit"),
+        "popular": ("classic", "hit"),
+        "soundtrack": ("movie score", "score", "ost"),
+        "orchestral": ("orchestra", "classical"),
+        "latin pop": ("latin", "pop"),
+        "funk carioca": ("brazilian funk", "baile funk", "funk"),
+        "emo": ("emo rock", "pop-punk", "punk-pop"),
+        "technical death metal": ("death metal", "progressive death metal", "metal"),
+        "underground hip hop": ("underground hip-hop", "underground rap", "hip hop"),
+        "jazz rap": ("jazzy hip hop", "jazz hop", "hip hop"),
+        "country": ("americana", "folk country"),
+        "disco": ("dance", "funk"),
+    }
+
+    def _branch_feature_query_text(self, state: ConversationStateV0Plus) -> str:
+        parts: list[str] = []
+        current_request = getattr(state, "current_request", None)
+        if current_request is not None:
+            for attr in ("summary", "evidence_text"):
+                value = str(getattr(current_request, attr, "") or "").strip()
+                if value:
+                    parts.append(value)
+        if state.turn_intent.strip():
+            parts.append(state.turn_intent.strip())
+        parts.extend(self._attribute_query_values(state))
+        if state.lyrical_theme:
+            parts.append(state.lyrical_theme)
+        seen: set[str] = set()
+        out: list[str] = []
+        for part in parts:
+            text = " ".join(part.split())
+            key = text.casefold()
+            if text and key not in seen:
+                seen.add(key)
+                out.append(text)
+        return "; ".join(out)
+
+    def _branch_feature_terms_from_text(self, text: str) -> set[str]:
+        key = self._catalog_tag_key(text)
+        if not key:
+            return set()
+        terms: set[str] = set()
+        for part in re.split(r"[,;/|]+", text):
+            part_key = self._catalog_tag_key(part)
+            if part_key:
+                terms.add(part_key)
+        padded = f" {key} "
+        for catalog_key in self._catalog_tag_keys():
+            if catalog_key and f" {catalog_key} " in padded:
+                terms.add(catalog_key)
+        expanded = set(terms)
+        for term in list(terms):
+            expanded.update(
+                self._catalog_tag_key(alias)
+                for alias in self._BRANCH_FEATURE_TAG_ALIASES.get(term, ())
+            )
+        return {term for term in expanded if term}
+
+    def _track_tag_keys(self, track_id: str) -> set[str]:
+        cached = self._track_tag_keys_cache.get(track_id)
+        if cached is not None:
+            return cached
+        keys = {
+            self._catalog_tag_key(str(tag))
+            for tag in self.catalog.tag_list(track_id)
+        }
+        keys = {key for key in keys if key}
+        expanded = set(keys)
+        for key in list(keys):
+            expanded.update(
+                self._catalog_tag_key(alias)
+                for alias in self._BRANCH_FEATURE_TAG_ALIASES.get(key, ())
+            )
+        out = {term for term in expanded if term}
+        self._track_tag_keys_cache[track_id] = out
+        return out
+
+    def _track_text_key(self, track_id: str) -> str:
+        cached = self._track_text_key_cache.get(track_id)
+        if cached is not None:
+            return cached
+        text = ""
+        try:
+            text = self.catalog.track_text(track_id)
+        except AttributeError:
+            text = self.catalog.track_label(track_id)
+        out = self._catalog_tag_key(text)
+        self._track_text_key_cache[track_id] = out
+        return out
+
+    @staticmethod
+    def _cosine(a: list[float] | None, b: list[float] | None) -> float:
+        if a is None or b is None or len(a) != len(b):
+            return 0.0
+        dot = sum(float(x) * float(y) for x, y in zip(a, b))
+        an = sum(float(x) * float(x) for x in a) ** 0.5
+        bn = sum(float(y) * float(y) for y in b) ** 0.5
+        if an == 0.0 or bn == 0.0:
+            return 0.0
+        return dot / (an * bn)
+
+    def _track_cf_bpr(self, track_id: str) -> list[float] | None:
+        if track_id in self._track_cf_bpr_cache:
+            return self._track_cf_bpr_cache[track_id]
+        vec = self.catalog.vector(track_id, "cf_bpr")
+        out = _normalize([float(x) for x in vec]) if vec else None
+        self._track_cf_bpr_cache[track_id] = out
+        return out
+
+    def _anchor_cf_bpr_centroid(
+        self,
+        state: ConversationStateV0Plus,
+    ) -> list[float] | None:
+        vectors = [
+            self._track_cf_bpr(track_id)
+            for track_id in self._anchor_track_ids(state)
+        ]
+        clean = [vec for vec in vectors if vec]
+        if not clean:
+            return None
+        width = len(clean[0])
+        aligned = [vec for vec in clean if len(vec) == width]
+        if not aligned:
+            return None
+        return _normalize([
+            sum(vec[idx] for vec in aligned) / len(aligned)
+            for idx in range(width)
+        ])
+
+    @staticmethod
+    def _release_year_compatibility(
+        state: ConversationStateV0Plus,
+        year: int | None,
+    ) -> int:
+        release_range = state.release_year_range
+        if release_range is None or year is None:
+            return 0
+        lo = release_range.start
+        hi = release_range.end
+        if lo is not None and year < lo:
+            return -1
+        if hi is not None and year > hi:
+            return -1
+        return 1 if lo is not None or hi is not None else 0
+
+    @staticmethod
+    def _branch_feature_negative_terms(state: ConversationStateV0Plus) -> set[str]:
+        terms: set[str] = set()
+        for rejection in state.explicit_rejections:
+            if rejection.kind == "tag" and rejection.value.strip():
+                terms.add(V0PlusCompiler._catalog_tag_key(rejection.value))
+        for fact in getattr(state, "facts", None) or []:
+            if getattr(fact, "type", None) != FactType.attribute:
+                continue
+            if getattr(fact, "role", None) != FactRole.rejected:
+                continue
+            value = str(getattr(fact, "value", "") or "").strip()
+            if value:
+                terms.add(V0PlusCompiler._catalog_tag_key(value))
+        return {term for term in terms if term}
+
+    def _branch_local_feature_context(
+        self,
+        rs: ResolvedConversationState,
+    ) -> dict[str, object]:
+        state = rs.state
+        query_text = self._branch_feature_query_text(state)
+        query_terms = self._branch_feature_terms_from_text(query_text)
+        negative_terms = self._branch_feature_negative_terms(state)
+        anchor_cf = self._anchor_cf_bpr_centroid(state)
+        anchor_artist_ids = {
+            self.catalog.artist_id_of(track_id)
+            for track_id in self._anchor_track_ids(state)
+            if self.catalog.artist_id_of(track_id)
+        }
+        popularity_requested = bool(
+            {
+                "popular",
+                "classic",
+                "hit",
+                "hits",
+                "iconic",
+                "well known",
+            } & query_terms
+        )
+        return {
+            "query_text": query_text,
+            "query_terms": query_terms,
+            "negative_terms": negative_terms,
+            "anchor_cf": anchor_cf,
+            "anchor_artist_ids": anchor_artist_ids,
+            "popularity_requested": popularity_requested,
+        }
+
+    def _branch_local_feature_score(
+        self,
+        rs: ResolvedConversationState,
+        track_id: str,
+        context: dict[str, object],
+    ) -> float:
+        parts = self._branch_local_feature_score_breakdown(rs, track_id, context)
+        return float(parts["state_feature_score"])
+
+    def _branch_local_feature_score_breakdown(
+        self,
+        rs: ResolvedConversationState,
+        track_id: str,
+        context: dict[str, object],
+    ) -> dict[str, object]:
+        query_terms = context["query_terms"]
+        if not isinstance(query_terms, set):
+            query_terms = set()
+        tags = self._track_tag_keys(track_id)
+        tag_overlap = query_terms & tags
+        specific_overlap = {
+            term for term in tag_overlap if term not in self._BRANCH_FEATURE_GENERIC_TERMS
+        }
+        generic_overlap = tag_overlap - specific_overlap
+        text = self._track_text_key(track_id)
+        phrase_hits = {
+            term for term in query_terms if isinstance(term, str) and " " in term and term in text
+        }
+        negative_terms = context["negative_terms"]
+        if not isinstance(negative_terms, set):
+            negative_terms = set()
+        negative_overlap = negative_terms & tags
+
+        tag_overlap_score = min(0.060, 0.015 * len(specific_overlap))
+        generic_tag_overlap_score = min(0.020, 0.004 * len(generic_overlap))
+        phrase_hit_score = min(0.024, 0.008 * len(phrase_hits))
+        tag_df = self._catalog_tag_document_frequency()
+        rarity_tag_overlap_score = min(
+            0.024,
+            sum(
+                0.012 if tag_df.get(term, 10**9) <= 10
+                else 0.008 if tag_df.get(term, 10**9) <= 100
+                else 0.004 if tag_df.get(term, 10**9) <= 1000
+                else 0.0
+                for term in specific_overlap
+            ),
+        )
+
+        year_match = self._release_year_compatibility(
+            rs.state,
+            self.catalog.release_year_of(track_id),
+        )
+        year_compatibility_score = 0.0
+        if year_match > 0:
+            year_compatibility_score = 0.014
+        elif year_match < 0:
+            year_compatibility_score = -0.014
+
+        popularity_score = 0.0
+        if context.get("popularity_requested"):
+            pop_rank = self._popularity_rank().get(track_id)
+            if pop_rank is not None:
+                if pop_rank <= 200:
+                    popularity_score = 0.040
+                elif pop_rank <= 1000:
+                    popularity_score = 0.030
+                elif pop_rank <= 3000:
+                    popularity_score = 0.015
+
+        negative_tag_score = 0.0
+        if negative_overlap:
+            negative_tag_score = -min(0.060, 0.030 * len(negative_overlap))
+
+        anchor_cf_score = 0.0
+        anchor_cf = context.get("anchor_cf")
+        if isinstance(anchor_cf, list):
+            anchor_cf_score = 0.036 * max(
+                0.0,
+                self._cosine(anchor_cf, self._track_cf_bpr(track_id)),
+            )
+
+        new_artist_demote_score = 0.0
+        target_artist_mode = getattr(rs.state.target_artist_mode, "value", str(rs.state.target_artist_mode))
+        anchor_artist_ids = context.get("anchor_artist_ids")
+        if (
+            target_artist_mode == "new_artist"
+            and isinstance(anchor_artist_ids, set)
+            and self.catalog.artist_id_of(track_id) in anchor_artist_ids
+        ):
+            new_artist_demote_score = -0.030
+
+        state_feature_score = (
+            tag_overlap_score
+            + generic_tag_overlap_score
+            + rarity_tag_overlap_score
+            + phrase_hit_score
+            + year_compatibility_score
+            + popularity_score
+            + negative_tag_score
+            + anchor_cf_score
+            + new_artist_demote_score
+        )
+        return {
+            "state_feature_score": state_feature_score,
+            "tag_overlap_score": tag_overlap_score,
+            "generic_tag_overlap_score": generic_tag_overlap_score,
+            "rarity_tag_overlap_score": rarity_tag_overlap_score,
+            "phrase_hit_score": phrase_hit_score,
+            "year_compatibility_score": year_compatibility_score,
+            "popularity_requested_score": popularity_score,
+            "negative_tag_demotion": negative_tag_score,
+            "anchor_cf_contribution": anchor_cf_score,
+            "same_anchor_novelty_demotion": new_artist_demote_score,
+            "specific_tag_overlap": sorted(specific_overlap),
+            "generic_tag_overlap": sorted(generic_overlap),
+            "phrase_hits": sorted(phrase_hits),
+            "negative_tag_overlap": sorted(negative_overlap),
+        }
+
+    def _branch_local_feature_rerank_hits(
+        self,
+        rs: ResolvedConversationState,
+        hits: list[tuple[str, float]],
+        context: dict[str, object] | None = None,
+    ) -> list[tuple[str, float]]:
+        if not hits:
+            return []
+        context = context or self._branch_local_feature_context(rs)
+        has_signal = bool(context["query_terms"]) or context.get("anchor_cf") is not None
+        if not has_signal:
+            return []
+        adjusted: list[tuple[str, float, int]] = []
+        seen: set[str] = set()
+        for rank, (track_id, _score) in enumerate(hits, start=1):
+            if track_id in seen:
+                continue
+            seen.add(track_id)
+            feature_score = self._branch_local_feature_score(rs, track_id, context)
+            score = (1.0 / (self.cfg.rrf_k + rank)) + (
+                self.cfg.branch_local_feature_score_weight * feature_score
+            )
+            adjusted.append((track_id, score, rank))
+        adjusted.sort(key=lambda item: (-item[1], item[2], item[0]))
+        return [(track_id, score) for track_id, score, _rank in adjusted]
+
+    def _state_feature_selector_hits(
+        self,
+        rs: ResolvedConversationState,
+        branch_inputs: list[tuple[str, list[tuple[str, float]], float]],
+        context: dict[str, object] | None = None,
+    ) -> list[tuple[str, float]]:
+        context = context or self._branch_local_feature_context(rs)
+        has_signal = bool(context["query_terms"]) or context.get("anchor_cf") is not None
+        if not has_signal:
+            return []
+        branch_support: dict[str, float] = {}
+        first_seen_rank: dict[str, int] = {}
+        for source_name, hits, source_weight in branch_inputs:
+            seen_in_source: set[str] = set()
+            for rank, (track_id, _score) in enumerate(hits, start=1):
+                if track_id in seen_in_source:
+                    continue
+                seen_in_source.add(track_id)
+                branch_support[track_id] = branch_support.get(track_id, 0.0) + (
+                    source_weight / (self.cfg.rrf_k + rank)
+                )
+                first_seen_rank[track_id] = min(
+                    first_seen_rank.get(track_id, rank),
+                    rank,
+                )
+        scored: list[tuple[str, float, int]] = []
+        for track_id, support_score in branch_support.items():
+            feature_score = self._branch_local_feature_score(rs, track_id, context)
+            score = support_score + (
+                self.cfg.state_feature_selector_score_weight * feature_score
+            )
+            scored.append((track_id, score, first_seen_rank.get(track_id, 10**9)))
+        scored.sort(key=lambda item: (-item[1], item[2], item[0]))
+        return [(track_id, score) for track_id, score, _rank in scored]
+
+    @staticmethod
+    def _state_feature_selector_group_key(source_name: str) -> str:
+        if source_name == "bm25":
+            return "lexical"
+        if source_name.startswith("lookup."):
+            return "lookup"
+        if source_name.startswith("dense."):
+            parts = source_name.split(".")
+            if len(parts) >= 3 and parts[2]:
+                return f"dense.{parts[2]}"
+            return "dense"
+        if source_name.startswith("centroid."):
+            parts = source_name.split(".")
+            if len(parts) >= 2 and parts[1]:
+                return f"centroid.{parts[1]}"
+            return "centroid"
+        return source_name.split(".", 1)[0] or "other"
+
+    def _state_feature_selector_branch_inputs(
+        self,
+        branch_inputs: list[tuple[str, list[tuple[str, float]], float]],
+    ) -> list[tuple[str, str, list[tuple[str, list[tuple[str, float]], float]]]]:
+        non_empty_inputs = [
+            (source_name, hits, source_weight)
+            for source_name, hits, source_weight in branch_inputs
+            if hits
+        ]
+        if self.cfg.state_feature_selector_grouping == "global":
+            return [("state_feature_selector", "global", non_empty_inputs)]
+
+        grouped: dict[str, list[tuple[str, list[tuple[str, float]], float]]] = {}
+        for source_name, hits, source_weight in non_empty_inputs:
+            grouped.setdefault(
+                self._state_feature_selector_group_key(source_name),
+                [],
+            ).append((source_name, hits, source_weight))
+        return [
+            (f"state_feature_selector.{group}", group, inputs)
+            for group, inputs in sorted(grouped.items())
+        ]
+
+    def _state_feature_survivor_hits(
+        self,
+        rs: ResolvedConversationState,
+        branch_inputs: list[tuple[str, list[tuple[str, float]], float]],
+        context: dict[str, object] | None = None,
+    ) -> list[tuple[str, float]]:
+        context = context or self._branch_local_feature_context(rs)
+        has_signal = bool(context["query_terms"]) or context.get("anchor_cf") is not None
+        if not has_signal:
+            return []
+
+        min_rank = int(self.cfg.state_feature_survivor_min_rank)
+        max_rank = int(self.cfg.state_feature_survivor_max_rank)
+        first_seen_rank: dict[str, int] = {}
+        branch_support: dict[str, float] = {}
+        for _source_name, hits, source_weight in branch_inputs:
+            seen_in_source: set[str] = set()
+            for rank, (track_id, _score) in enumerate(hits[:max_rank], start=1):
+                if rank < min_rank or track_id in seen_in_source:
+                    continue
+                seen_in_source.add(track_id)
+                first_seen_rank[track_id] = min(
+                    first_seen_rank.get(track_id, rank),
+                    rank,
+                )
+                branch_support[track_id] = branch_support.get(track_id, 0.0) + (
+                    source_weight / (self.cfg.rrf_k + rank)
+                )
+
+        scored: list[tuple[str, float, int]] = []
+        for track_id, support_score in branch_support.items():
+            best_rank = first_seen_rank.get(track_id, max_rank)
+            feature_score = self._branch_local_feature_score(rs, track_id, context)
+            if feature_score < self.cfg.state_feature_survivor_min_feature_score:
+                continue
+            score = (
+                self.cfg.state_feature_survivor_score_weight * feature_score
+                + self.cfg.state_feature_survivor_rank_weight
+                / (self.cfg.rrf_k + best_rank)
+                + self.cfg.state_feature_survivor_support_weight * support_score
+            )
+            scored.append((track_id, score, best_rank))
+        scored.sort(key=lambda item: (-item[1], item[2], item[0]))
+        return [(track_id, score) for track_id, score, _rank in scored]
+
+    def _state_feature_selector_source_ranks(
+        self,
+        branch_inputs: list[tuple[str, list[tuple[str, float]], float]],
+    ) -> dict[str, list[dict[str, object]]]:
+        by_track: dict[str, list[dict[str, object]]] = {}
+        for source_name, hits, source_weight in branch_inputs:
+            seen_in_source: set[str] = set()
+            for rank, (track_id, _score) in enumerate(hits, start=1):
+                if track_id in seen_in_source:
+                    continue
+                seen_in_source.add(track_id)
+                by_track.setdefault(track_id, []).append(
+                    {
+                        "branch": source_name,
+                        "rank": rank,
+                        "weight": float(source_weight),
+                    }
+                )
+        for ranks in by_track.values():
+            ranks.sort(key=lambda item: (int(item["rank"]), str(item["branch"])))
+        return by_track
+
+    def _state_feature_survivor_query_trace(
+        self,
+        rs: ResolvedConversationState,
+        branch_inputs: list[tuple[str, list[tuple[str, float]], float]],
+        context: dict[str, object] | None = None,
+        top_hits: list[tuple[str, float]] | None = None,
+    ) -> dict:
+        context = context or self._branch_local_feature_context(rs)
+        query_terms = context["query_terms"]
+        trace = {
+            "kind": "state_feature_survivor",
+            "source_branches": [name for name, hits, _weight in branch_inputs if hits],
+            "source_rank_window": [
+                int(self.cfg.state_feature_survivor_min_rank),
+                int(self.cfg.state_feature_survivor_max_rank),
+            ],
+            "query_text": context["query_text"],
+            "query_terms": sorted(query_terms) if isinstance(query_terms, set) else [],
+            "uses_anchor_cf": context.get("anchor_cf") is not None,
+        }
+        if top_hits is not None:
+            source_ranks = self._state_feature_selector_source_ranks(branch_inputs)
+            trace["top_feature_scores"] = []
+            for track_id, score in top_hits[:20]:
+                ranks = [
+                    rank
+                    for rank in source_ranks.get(track_id, [])
+                    if self.cfg.state_feature_survivor_min_rank
+                    <= int(rank["rank"])
+                    <= self.cfg.state_feature_survivor_max_rank
+                ]
+                best_rank = ranks[0] if ranks else {}
+                trace["top_feature_scores"].append(
+                    {
+                        "track_id": track_id,
+                        "survivor_score": float(score),
+                        "best_source_branch": best_rank.get("branch"),
+                        "best_source_rank": best_rank.get("rank"),
+                        "source_ranks": ranks[:5],
+                        **self._branch_local_feature_score_breakdown(
+                            rs,
+                            track_id,
+                            context,
+                        ),
+                    }
+                )
+        return trace
+
+    def _state_feature_selector_query_trace(
+        self,
+        rs: ResolvedConversationState,
+        branch_inputs: list[tuple[str, list[tuple[str, float]], float]],
+        context: dict[str, object] | None = None,
+        top_hits: list[tuple[str, float]] | None = None,
+        source_group: str = "global",
+    ) -> dict:
+        context = context or self._branch_local_feature_context(rs)
+        query_terms = context["query_terms"]
+        trace = {
+            "kind": "state_feature_selector",
+            "source_group": source_group,
+            "source_branches": [name for name, hits, _weight in branch_inputs if hits],
+            "query_text": context["query_text"],
+            "query_terms": sorted(query_terms) if isinstance(query_terms, set) else [],
+            "uses_anchor_cf": context.get("anchor_cf") is not None,
+        }
+        if top_hits is not None:
+            source_ranks = self._state_feature_selector_source_ranks(branch_inputs)
+            trace["top_feature_scores"] = []
+            for track_id, score in top_hits[:20]:
+                ranks = source_ranks.get(track_id, [])
+                best_rank = ranks[0] if ranks else {}
+                trace["top_feature_scores"].append(
+                    {
+                        "track_id": track_id,
+                        "selector_score": float(score),
+                        "best_source_branch": best_rank.get("branch"),
+                        "best_source_rank": best_rank.get("rank"),
+                        "source_ranks": ranks[:5],
+                        **self._branch_local_feature_score_breakdown(
+                            rs,
+                            track_id,
+                            context,
+                        ),
+                    }
+                )
+        return trace
+
+    def _branch_local_feature_query_trace(
+        self,
+        source_branch: str,
+        rs: ResolvedConversationState,
+        context: dict[str, object] | None = None,
+        top_hits: list[tuple[str, float]] | None = None,
+        source_hits: list[tuple[str, float]] | None = None,
+    ) -> dict:
+        context = context or self._branch_local_feature_context(rs)
+        query_terms = context["query_terms"]
+        trace = {
+            "kind": "branch_local_feature_rerank",
+            "source_branch": source_branch,
+            "query_text": context["query_text"],
+            "query_terms": sorted(query_terms) if isinstance(query_terms, set) else [],
+            "uses_anchor_cf": context.get("anchor_cf") is not None,
+        }
+        if top_hits is not None:
+            source_rank = {
+                track_id: rank
+                for rank, (track_id, _score) in enumerate(source_hits or [], start=1)
+            }
+            trace["top_feature_scores"] = [
+                {
+                    "track_id": track_id,
+                    "original_branch_rank": source_rank.get(track_id),
+                    **self._branch_local_feature_score_breakdown(rs, track_id, context),
+                }
+                for track_id, _score in top_hits[:20]
+            ]
+        return trace
+
     def _popularity_rank(self) -> dict[str, int]:
         """track_id -> global popularity rank (0 = most popular). Built once."""
         if self._pop_rank is None:
@@ -1438,6 +2492,7 @@ class V0PlusCompiler:
         for tgt in rs.resolved_targets:
             if (
                 tgt.kind == "artist"
+                and getattr(tgt, "resolution_role", "exact_target") == "exact_target"
                 and tgt.entity_id is not None
                 and tgt.confidence >= cfg.disco_confidence_threshold
                 and tgt.entity_id not in seen_artists
@@ -1524,6 +2579,8 @@ class V0PlusCompiler:
         for tgt in rs.resolved_targets:
             if (
                 tgt.kind == "artist"
+                and getattr(tgt, "resolution_role", "exact_target")
+                in {"exact_target", "style_reference"}
                 and tgt.entity_id is not None
                 and tgt.confidence >= cfg.similar_artist_confidence_threshold
                 and tgt.entity_id not in seen_artists
@@ -1615,7 +2672,7 @@ class V0PlusCompiler:
         """Tracks that count as positive anchors for centroid / tag expansion."""
         ids: list[str] = []
         for tf in state.track_feedback:
-            if tf.role in ("accepted", "seed") and tf.overall_sentiment > 0:
+            if tf.role in ("accepted", "seed", "satisfied") and tf.overall_sentiment > 0:
                 ids.append(tf.track_id)
         ids.extend(state.referenced_track_ids)
         # Dedupe, preserve order

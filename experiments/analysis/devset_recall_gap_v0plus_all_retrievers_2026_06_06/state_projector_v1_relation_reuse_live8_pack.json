@@ -1,0 +1,1470 @@
+{
+  "turns": [
+    {
+      "sample_id": "15b1caf3-d1ed-46ef-a8e3-c9f7657e6b77::t6",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "class_type": "failure",
+      "session_id": "15b1caf3-d1ed-46ef-a8e3-c9f7657e6b77",
+      "turn": 6,
+      "gt_track_id": "405eff89-e7ed-4877-a5b2-7b5fc995ead6",
+      "gt_track": "Hong Kong 2046",
+      "gt_artist": "Hong Kong Express",
+      "current_user": "Oh, Flying Lotus! This is cool, it's got a really interesting mix of sounds. It's like electronic but also soulful, very unique. What else have you got that's really out there?",
+      "baseline": {
+        "final_rank": 699,
+        "fused_rank": 760,
+        "best_branch_rank": 104,
+        "best_branch": "centroid.anchor_tracks.audio_laion_clap",
+        "union20": false,
+        "union100": false,
+        "union200": true
+      },
+      "cohort_labels": [
+        "midconv_new_artist",
+        "novelty_cue"
+      ],
+      "diagnostics": [
+        "stale positive artist/track mentions: Boards of Canada, Aphex Twin, Severed Heads, Liu Fang",
+        "novelty cue but prior artist remains anchored: Boards of Canada, Flying Lotus, Liu Fang, Noriko Miyamoto"
+      ],
+      "state_snapshot": {
+        "turn_intent": "What else have you got that's really out there? Something unique and unexpected, like the recent discoveries.",
+        "intent_mode": "playlist_build",
+        "policy": "diversify_artists",
+        "routing": [
+          "feature_articulation"
+        ],
+        "positive_entities": [
+          "Boards of Canada",
+          "Aphex Twin",
+          "Severed Heads",
+          "Liu Fang",
+          "Noriko Miyamoto",
+          "Flying Lotus"
+        ],
+        "stale_entities": [
+          "Boards of Canada",
+          "Aphex Twin",
+          "Severed Heads",
+          "Liu Fang",
+          "Noriko Miyamoto"
+        ],
+        "anchors": [
+          "Boards of Canada",
+          "Aphex Twin",
+          "Severed Heads",
+          "Liu Fang",
+          "Noriko Miyamoto",
+          "Flying Lotus"
+        ],
+        "positive_tags": [
+          "fresh and unexpected",
+          "unique",
+          "unexpected",
+          "out there",
+          "experimental",
+          "soulful",
+          "electronic",
+          "different vibe",
+          "eclectic"
+        ],
+        "field_counts": {
+          "mentioned_entities": 15,
+          "track_feedback": 5,
+          "referenced_track_ids": 0,
+          "hard_filters": 0,
+          "explicit_rejections": 0
+        },
+        "year_range": null,
+        "explicit_rejections": []
+      },
+      "ideal_state": {
+        "target": {
+          "track": "Hong Kong 2046",
+          "artist": "Hong Kong Express",
+          "track_id": "405eff89-e7ed-4877-a5b2-7b5fc995ead6"
+        },
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "prior_entities": [
+          {
+            "value": "Boards of Canada",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "value": "Flying Lotus",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "value": "Liu Fang",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "value": "Noriko Miyamoto",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "value": "Severed Heads",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "branch_hints": [
+          "tag",
+          "metadata",
+          "popularity",
+          "user_cf"
+        ]
+      },
+      "recent_messages": [
+        {
+          "turn": 4,
+          "role": "user",
+          "content": "Yes! This is totally what I was looking for! So different and so cool. I never would have found this on my own. This is perfect! I really enjoyed this discovery journey."
+        },
+        {
+          "turn": 4,
+          "role": "music",
+          "content": "9516fd50-17ac-4c3b-98bb-d3953da822b7"
+        },
+        {
+          "turn": 4,
+          "role": "assistant",
+          "content": "That's awesome to hear! I'm so glad we found something completely new for you that you enjoyed. To keep that discovery journey going, how about \"My Life\" by Noriko Miyamoto next? It’s got a really different feel, leaning into some cool R&B/Soul vibes."
+        },
+        {
+          "turn": 5,
+          "role": "user",
+          "content": "Oh, this is a cool change of pace! I don't listen to a lot of R&B, but this has a nice groove. Keep this kind of music coming, I'm really liking these unexpected discoveries!"
+        },
+        {
+          "turn": 5,
+          "role": "music",
+          "content": "87f586dc-843e-43a5-a29e-06c67ebdb870"
+        },
+        {
+          "turn": 5,
+          "role": "assistant",
+          "content": "Awesome! Glad you're enjoying these new sounds. To keep the unexpected discoveries rolling, how about \"Coronus, the Terminator\" by Flying Lotus? It's got a really cool mix of experimental, soulful, and electronic vibes that I think you'll find pretty unique."
+        },
+        {
+          "turn": 6,
+          "role": "user",
+          "content": "Oh, Flying Lotus! This is cool, it's got a really interesting mix of sounds. It's like electronic but also soulful, very unique. What else have you got that's really out there?"
+        },
+        {
+          "turn": 6,
+          "role": "music",
+          "content": "405eff89-e7ed-4877-a5b2-7b5fc995ead6"
+        },
+        {
+          "turn": 6,
+          "role": "assistant",
+          "content": "Awesome! Flying Lotus definitely brings a unique flavor. If you're still looking for something \"really out there\" and unique, I've got one for you: \"Hong Kong 2046\" by Hong Kong Express. It's an electronic track but with a really distinct vaporwave vibe tha..."
+        }
+      ],
+      "final_top_results": [
+        {
+          "rank": 1,
+          "track_id": "78da6903-42b0-4fe7-9481-c2c4bef746e0",
+          "track": "4",
+          "artist": "Aphex Twin"
+        },
+        {
+          "rank": 2,
+          "track_id": "8a0ae409-ce15-4aef-a38c-f8fc2c6d4a08",
+          "track": "The Waxen Pith",
+          "artist": "Aphex Twin"
+        },
+        {
+          "rank": 3,
+          "track_id": "1a36c6a8-d23a-45a2-84f0-c3d0246e4931",
+          "track": "54 Cymru Beats",
+          "artist": "Aphex Twin"
+        },
+        {
+          "rank": 4,
+          "track_id": "97c9fef4-14b5-411f-bc0c-8383ac3ff5e1",
+          "track": "Petiatil Cx Htdui",
+          "artist": "Aphex Twin"
+        },
+        {
+          "rank": 5,
+          "track_id": "dd90c4c2-8fd6-4938-88e2-62aae8a08920",
+          "track": "Flim",
+          "artist": "Aphex Twin"
+        }
+      ],
+      "reason_to_test": "These turns are not in union@20, so a ranker alone cannot fix them. They test target_artist_mode plus retrieval_profile routing.",
+      "expected_change": "target_artist_mode should become new_artist/any_artist, prior artists should be satisfied/history, and routing should upweight tag/metadata/popularity/CF branches.",
+      "success_metric": "Primary: GT enters union@20 or improves best_branch_rank. Secondary: final@20 after a stable ranker should improve without continuation regression.",
+      "why_wrong": "The user asks for novelty or a different direction, but the state still keeps Boards of Canada, Flying Lotus, Liu Fang as positive anchors. That sends retrievers toward already-satisfied artists instead of the new target space.",
+      "what_should_change": "Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles.",
+      "regression_test": "Replay this turn and assert prior anchors are marked satisfied/history, not current seed; measure union@20/100 for novelty + new-artist turns before checking final ranking."
+    },
+    {
+      "sample_id": "899f906b-9b0b-42a6-9689-643eb9f1ed31::t8",
+      "pack": "P0_named_artist_ranker_failure",
+      "class_type": "failure",
+      "session_id": "899f906b-9b0b-42a6-9689-643eb9f1ed31",
+      "turn": 8,
+      "gt_track_id": "b8891115-5b45-4074-aec0-858ef3752a11",
+      "gt_track": "Crawling",
+      "gt_artist": "Linkin Park",
+      "current_user": "I appreciate the Pantera suggestions, but I've heard a lot of their stuff. I'm really trying to discover *new* bands for me, besides Linkin Park and Pantera, that fit that aggressive nu-metal sound from the late 90s/early 2000s. Specifically, bands with tha...",
+      "baseline": {
+        "final_rank": null,
+        "fused_rank": null,
+        "best_branch_rank": 1,
+        "best_branch": "centroid.anchor_tracks.image_siglip2",
+        "union20": true,
+        "union100": true,
+        "union200": true
+      },
+      "cohort_labels": [
+        "gt_artist_named_current",
+        "continuation_same_artist",
+        "same_album_continuation",
+        "same_primary_album_continuation",
+        "novelty_cue",
+        "release_range_set"
+      ],
+      "diagnostics": [
+        "stale positive artist/track mentions: Korn, Limp Bizkit, Disturbed, System Of A Down",
+        "novelty cue but prior artist remains anchored: Linkin Park, Pantera",
+        "user named the GT artist but it did not land in final top-20"
+      ],
+      "state_snapshot": {
+        "turn_intent": "I'm looking for new bands besides Linkin Park and Pantera that fit the aggressive nu-metal sound from the late 90s/early 2000s, specifically with heavy riffs and rap or industrial/electronic influences, like Disturbed, System Of A Down, or Slipknot.",
+        "intent_mode": "refinement",
+        "policy": "diversify_artists",
+        "routing": [
+          "feature_articulation"
+        ],
+        "positive_entities": [
+          "Linkin Park",
+          "Pantera",
+          "Korn",
+          "Limp Bizkit",
+          "Disturbed",
+          "System Of A Down",
+          "Slipknot"
+        ],
+        "stale_entities": [
+          "Korn",
+          "Limp Bizkit",
+          "Disturbed",
+          "System Of A Down",
+          "Slipknot"
+        ],
+        "anchors": [
+          "Linkin Park",
+          "Pantera",
+          "Korn",
+          "Limp Bizkit",
+          "Disturbed",
+          "System Of A Down",
+          "Slipknot"
+        ],
+        "positive_tags": [
+          "nu-metal",
+          "nu metal",
+          "hard rock",
+          "heavy",
+          "aggressive",
+          "melodic",
+          "rap",
+          "rap rock",
+          "industrial",
+          "electronic",
+          "heavy guitars",
+          "late 90s"
+        ],
+        "field_counts": {
+          "mentioned_entities": 20,
+          "track_feedback": 7,
+          "referenced_track_ids": 0,
+          "hard_filters": 0,
+          "explicit_rejections": 3
+        },
+        "year_range": [
+          1995,
+          2004
+        ],
+        "explicit_rejections": [
+          {
+            "kind": "artist",
+            "value": "Linkin Park",
+            "source_turn": 8
+          },
+          {
+            "kind": "artist",
+            "value": "Pantera",
+            "source_turn": 8
+          },
+          {
+            "kind": "artist",
+            "value": "Venom",
+            "source_turn": 6
+          }
+        ]
+      },
+      "ideal_state": {
+        "target": {
+          "track": "Crawling",
+          "artist": "Linkin Park",
+          "track_id": "b8891115-5b45-4074-aec0-858ef3752a11"
+        },
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "prior_entities": [
+          {
+            "value": "Linkin Park",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "value": "Pantera",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "branch_hints": [
+          "tag",
+          "metadata",
+          "popularity",
+          "user_cf"
+        ]
+      },
+      "recent_messages": [
+        {
+          "turn": 6,
+          "role": "user",
+          "content": "Hmm, that's interesting for sure, but it's a bit too old and raw for what I'm looking for right now. I'm more into that late 90s, early 2000s sound, especially bands that blend heavy guitars with more melodic or even electronic parts, like Korn or Limp Bizk..."
+        },
+        {
+          "turn": 6,
+          "role": "music",
+          "content": "d486142f-8ad2-4b3a-9068-4f2608250e8e"
+        },
+        {
+          "turn": 6,
+          "role": "assistant",
+          "content": "My apologies! I understand you're looking for that specific late 90s/early 2000s nu-metal sound, especially with those melodic or electronic twists like Korn or Limp Bizkit. How about \"Figure.09\" by Linkin Park? It's from their \"Meteora\" album and has that..."
+        },
+        {
+          "turn": 7,
+          "role": "user",
+          "content": "Figure.09\" is a good one, of course, but I'm really looking for something from a *different* band. I'm thinking of bands like Disturbed, System Of A Down, or Slipknot – that sort of heavy, aggressive sound, possibly with some rap vocals or electronic elemen..."
+        },
+        {
+          "turn": 7,
+          "role": "music",
+          "content": "d2caa012-7420-4bcd-817c-37b96e5fe3e1"
+        },
+        {
+          "turn": 7,
+          "role": "assistant",
+          "content": "I hear you! You're looking to dive into some other heavy hitters. While I don't have those specific bands in my current selection, if you're into that aggressive, powerful sound from around that era, you might really appreciate \"Domination\" by Pantera. It's..."
+        },
+        {
+          "turn": 8,
+          "role": "user",
+          "content": "I appreciate the Pantera suggestions, but I've heard a lot of their stuff. I'm really trying to discover *new* bands for me, besides Linkin Park and Pantera, that fit that aggressive nu-metal sound from the late 90s/early 2000s. Specifically, bands with tha..."
+        },
+        {
+          "turn": 8,
+          "role": "music",
+          "content": "b8891115-5b45-4074-aec0-858ef3752a11"
+        },
+        {
+          "turn": 8,
+          "role": "assistant",
+          "content": "I understand you're keen on finding something from a new band with those specific nu-metal elements! My current selection is a bit limited for artists outside Linkin Park and Pantera that perfectly match those rap or industrial influences. However, if you'r..."
+        }
+      ],
+      "final_top_results": [
+        {
+          "rank": 1,
+          "track_id": "324abada-ba5c-4a25-a520-8d91719ac604",
+          "track": "Down With the Sickness",
+          "artist": "Disturbed"
+        },
+        {
+          "rank": 2,
+          "track_id": "b185e070-de25-4896-8f6a-9a156af08d35",
+          "track": "Freak On a Leash",
+          "artist": "Korn"
+        },
+        {
+          "rank": 3,
+          "track_id": "8942a947-6be3-435f-aa05-62474117d9c8",
+          "track": "Break Stuff",
+          "artist": "Limp Bizkit"
+        },
+        {
+          "rank": 4,
+          "track_id": "e585a260-8892-454a-b501-d3ba629416da",
+          "track": "Before I Forget",
+          "artist": "Slipknot"
+        },
+        {
+          "rank": 5,
+          "track_id": "2ec89b26-9995-477e-8a80-da8cd6622e6a",
+          "track": "Ball Tongue",
+          "artist": "Korn"
+        }
+      ],
+      "reason_to_test": "The current user names the GT artist and the GT is reachable in union@20, so extraction is often adequate and ranker/finalization is the failure.",
+      "expected_change": "A state-aware scorer should protect named-artist candidates and use branch rank, exactness, album/artist recency, and popularity features.",
+      "success_metric": "GT moves into final top-20 without hurting exact-track or rejection guardrails.",
+      "why_wrong": "The user asks for novelty or a different direction, but the state still keeps Linkin Park, Pantera as positive anchors. That sends retrievers toward already-satisfied artists instead of the new target space.",
+      "what_should_change": "Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles.",
+      "regression_test": "Replay this turn and assert prior anchors are marked satisfied/history, not current seed; measure union@20/100 for novelty + new-artist turns before checking final ranking."
+    },
+    {
+      "sample_id": "93199894-d3db-4335-8278-e1be175944e4::t6",
+      "pack": "P0_named_artist_ranker_failure",
+      "class_type": "failure",
+      "session_id": "93199894-d3db-4335-8278-e1be175944e4",
+      "turn": 6,
+      "gt_track_id": "e9383e0c-5bad-4b9c-b146-917f2e3dfba1",
+      "gt_track": "Smells Like Teen Spirit",
+      "gt_artist": "Nirvana",
+      "current_user": "Once\" is cool! Pearl Jam is awesome. But really, no Soundgarden at all? Like, not even \"Rusty Cage\"? If not, how about something by Stone Temple Pilots or Nirvana?",
+      "baseline": {
+        "final_rank": 32,
+        "fused_rank": 81,
+        "best_branch_rank": 1,
+        "best_branch": "dense.qwen_8b.attributes.attributes_qwen3_embedding_8b",
+        "union20": true,
+        "union100": true,
+        "union200": true
+      },
+      "cohort_labels": [
+        "gt_artist_named_current",
+        "midconv_new_artist"
+      ],
+      "diagnostics": [
+        "user named the GT artist but it did not land in final top-20"
+      ],
+      "state_snapshot": {
+        "turn_intent": "Once is cool! Pearl Jam is awesome. But really, no Soundgarden at all? Like, not even 'Rusty Cage'? If not, how about something by Stone Temple Pilots or Nirvana?",
+        "intent_mode": "refinement",
+        "policy": "diversify_artists",
+        "routing": [
+          "exact_entity_probe"
+        ],
+        "positive_entities": [
+          "Pearl Jam",
+          "Soundgarden",
+          "Rusty Cage",
+          "Stone Temple Pilots",
+          "Nirvana"
+        ],
+        "stale_entities": [],
+        "anchors": [
+          "Pearl Jam",
+          "Soundgarden",
+          "Stone Temple Pilots",
+          "Nirvana"
+        ],
+        "positive_tags": [
+          "grunge",
+          "90s",
+          "alternative rock",
+          "rock"
+        ],
+        "field_counts": {
+          "mentioned_entities": 9,
+          "track_feedback": 5,
+          "referenced_track_ids": 0,
+          "hard_filters": 0,
+          "explicit_rejections": 0
+        },
+        "year_range": null,
+        "explicit_rejections": []
+      },
+      "ideal_state": {
+        "target": {
+          "track": "Smells Like Teen Spirit",
+          "artist": "Nirvana",
+          "track_id": "e9383e0c-5bad-4b9c-b146-917f2e3dfba1"
+        },
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "current_target_entities": [
+          {
+            "type": "artist",
+            "value": "Nirvana",
+            "role": "current_target",
+            "source": "current_user_turn",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "ranker_features": [
+          "exact_artist_match",
+          "branch_rank_bundle",
+          "artist_recency",
+          "album_affinity",
+          "popularity"
+        ]
+      },
+      "recent_messages": [
+        {
+          "turn": 4,
+          "role": "user",
+          "content": "Yes! \"Man in the Box\" is so epic! I love Alice In Chains. What about something by Soundgarden now? Like \"Black Hole Sun\"?"
+        },
+        {
+          "turn": 4,
+          "role": "music",
+          "content": "e4f59885-2aa0-4ac1-bf17-e92ecd1aefc7"
+        },
+        {
+          "turn": 4,
+          "role": "assistant",
+          "content": "Man in the Box\" is totally epic! You've got great taste! I don't have \"Black Hole Sun\" in the collection right now, but how about another super powerful track, \"Black\" by Pearl Jam? It's from the same time and has that incredible grunge feel!"
+        },
+        {
+          "turn": 5,
+          "role": "user",
+          "content": "Oh my gosh, \"Black\" is one of my absolute favorites! That's awesome. Do you have any Soundgarden then, like, \"Spoonman\" or something?"
+        },
+        {
+          "turn": 5,
+          "role": "music",
+          "content": "e45e5ae1-9daf-4152-b87e-a61275a2fc28"
+        },
+        {
+          "turn": 5,
+          "role": "assistant",
+          "content": "So awesome you loved \"Black\"! It really is a powerful one. Still no Soundgarden in the mix for me right now, but how about we dive back into Pearl Jam's \"Ten\" album with \"Once\"? It's another super high-energy grunge track that I bet you'll dig!"
+        },
+        {
+          "turn": 6,
+          "role": "user",
+          "content": "Once\" is cool! Pearl Jam is awesome. But really, no Soundgarden at all? Like, not even \"Rusty Cage\"? If not, how about something by Stone Temple Pilots or Nirvana?"
+        },
+        {
+          "turn": 6,
+          "role": "music",
+          "content": "e9383e0c-5bad-4b9c-b146-917f2e3dfba1"
+        },
+        {
+          "turn": 6,
+          "role": "assistant",
+          "content": "Hey! Yeah, still no Soundgarden or Stone Temple Pilots for me right now, but since you mentioned Nirvana, how about \"Smells Like Teen Spirit\"? It's the ultimate 90s grunge anthem!"
+        }
+      ],
+      "final_top_results": [
+        {
+          "rank": 1,
+          "track_id": "cb0f3643-edea-4f4c-8209-8807953e0b4e",
+          "track": "Rusty Cage",
+          "artist": "Soundgarden"
+        },
+        {
+          "rank": 2,
+          "track_id": "9cd6df55-a104-42b8-82de-fef40cb51f17",
+          "track": "Black - 2004 Remix",
+          "artist": "Pearl Jam, Brendan O'Brien"
+        },
+        {
+          "rank": 3,
+          "track_id": "b58b1426-5a8c-4d17-93c2-b0651a6ad97a",
+          "track": "Pretty Noose",
+          "artist": "Soundgarden"
+        },
+        {
+          "rank": 4,
+          "track_id": "0a8fe1bc-d7f6-4d69-8079-df06e892edfa",
+          "track": "Alive",
+          "artist": "Pearl Jam"
+        },
+        {
+          "rank": 5,
+          "track_id": "91452b76-e040-45a3-9380-8c130887f296",
+          "track": "Loud Love",
+          "artist": "Soundgarden"
+        }
+      ],
+      "reason_to_test": "The current user names the GT artist and the GT is reachable in union@20, so extraction is often adequate and ranker/finalization is the failure.",
+      "expected_change": "A state-aware scorer should protect named-artist candidates and use branch rank, exactness, album/artist recency, and popularity features.",
+      "success_metric": "GT moves into final top-20 without hurting exact-track or rejection guardrails.",
+      "why_wrong": "The current user names the target artist, but Smells Like Teen Spirit by Nirvana misses final top-20 (final 32; best branch 1 in dense.qwen_8b.attributes.attributes_qwen3_embedding_8b). The entity is understood, but track selection or final ranking fails.",
+      "what_should_change": "Protect named-artist candidate generation, then rank tracks with artist_recency, album affinity, exactness, branch-rank, and popularity features instead of relying on equal-weight RRF alone.",
+      "regression_test": "Replay the named-artist slice and require the target artist's plausible tracks in union@20/100, with final@20/NDCG@20 tracked separately from broad new-artist cases."
+    },
+    {
+      "sample_id": "8071d14d-7e0f-4f72-90a6-0941db80a371::t5",
+      "pack": "P0_same_album_ranker_failure",
+      "class_type": "failure",
+      "session_id": "8071d14d-7e0f-4f72-90a6-0941db80a371",
+      "turn": 5,
+      "gt_track_id": "321ea631-10fa-45a5-93c7-661f5b846bed",
+      "gt_track": "Stay Down",
+      "gt_artist": "Brent Faiyaz",
+      "current_user": "Yeah, that's a good one, I like Brent Faiyaz. \"Talk 2 U\" has a nice smooth vibe. What else do you have that's similar to this, or maybe something with a bit more of a groove but still chill R&B?",
+      "baseline": {
+        "final_rank": 24,
+        "fused_rank": 1,
+        "best_branch_rank": 1,
+        "best_branch": "centroid.anchor_tracks.image_siglip2",
+        "union20": true,
+        "union100": true,
+        "union200": true
+      },
+      "cohort_labels": [
+        "gt_artist_named_current",
+        "continuation_same_artist",
+        "same_album_continuation",
+        "same_primary_album_continuation",
+        "novelty_cue"
+      ],
+      "diagnostics": [
+        "stale positive artist/track mentions: Dennis Lloyd",
+        "novelty cue but prior artist remains anchored: Brent Faiyaz",
+        "user named the GT artist but it did not land in final top-20"
+      ],
+      "state_snapshot": {
+        "turn_intent": "Something similar to this smooth R&B vibe from Brent Faiyaz - Talk 2 U, or maybe with a bit more groove but still chill R&B.",
+        "intent_mode": "refinement",
+        "policy": "diversify_artists",
+        "routing": [
+          "feature_articulation"
+        ],
+        "positive_entities": [
+          "Brent Faiyaz",
+          "Talk 2 U",
+          "Dennis Lloyd"
+        ],
+        "stale_entities": [
+          "Dennis Lloyd"
+        ],
+        "anchors": [
+          "Brent Faiyaz",
+          "Dennis Lloyd"
+        ],
+        "positive_tags": [
+          "smooth",
+          "R&B",
+          "r&b",
+          "Soul",
+          "soul",
+          "chill",
+          "groove",
+          "groovy"
+        ],
+        "field_counts": {
+          "mentioned_entities": 11,
+          "track_feedback": 1,
+          "referenced_track_ids": 0,
+          "hard_filters": 0,
+          "explicit_rejections": 0
+        },
+        "year_range": null,
+        "explicit_rejections": []
+      },
+      "ideal_state": {
+        "target": {
+          "track": "Stay Down",
+          "artist": "Brent Faiyaz",
+          "track_id": "321ea631-10fa-45a5-93c7-661f5b846bed"
+        },
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "prior_entities": [
+          {
+            "value": "Brent Faiyaz",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "branch_hints": [
+          "tag",
+          "metadata",
+          "popularity",
+          "user_cf"
+        ]
+      },
+      "recent_messages": [
+        {
+          "turn": 3,
+          "role": "user",
+          "content": "Yes, that's the one! The one with the wavy pink shape on the red background. Play 'Pussy' by Nick Monaco."
+        },
+        {
+          "turn": 3,
+          "role": "music",
+          "content": "c1043251-61b5-4554-9e3d-bfc6ce19df40"
+        },
+        {
+          "turn": 3,
+          "role": "assistant",
+          "content": "Awesome! Glad we found it for you. Playing \"Pussy\" by Nick Monaco now! Enjoy!"
+        },
+        {
+          "turn": 4,
+          "role": "user",
+          "content": "Hmm, that wasn't the track I asked for. Can you play something similar to Dennis Lloyd, maybe something with a chill R&B/Soul vibe?"
+        },
+        {
+          "turn": 4,
+          "role": "music",
+          "content": "d5722f36-39ad-4328-a799-266a21904879"
+        },
+        {
+          "turn": 4,
+          "role": "assistant",
+          "content": "My apologies for the mix-up! Let's get you something better. Given your love for Dennis Lloyd and a chill R&B/Soul vibe, how about \"Talk 2 U\" by Brent Faiyaz? It's got that smooth, laid-back feel that I think you'll really appreciate."
+        },
+        {
+          "turn": 5,
+          "role": "user",
+          "content": "Yeah, that's a good one, I like Brent Faiyaz. \"Talk 2 U\" has a nice smooth vibe. What else do you have that's similar to this, or maybe something with a bit more of a groove but still chill R&B?"
+        },
+        {
+          "turn": 5,
+          "role": "music",
+          "content": "321ea631-10fa-45a5-93c7-661f5b846bed"
+        },
+        {
+          "turn": 5,
+          "role": "assistant",
+          "content": "Glad you liked \"Talk 2 U\"! If you're looking for more of that smooth R&B vibe, or something with a bit more groove but still chill, how about another Brent Faiyaz track? \"Stay Down\" has a really similar feel and I think you'll dig it."
+        }
+      ],
+      "final_top_results": [
+        {
+          "rank": 1,
+          "track_id": "90999c3e-7fd1-40c2-b1d3-54066f4f31cc",
+          "track": "Still Ray",
+          "artist": "Raphael Saadiq"
+        },
+        {
+          "rank": 2,
+          "track_id": "95815196-6a8f-4060-be66-391fa1240ac2",
+          "track": "Small Talk",
+          "artist": "Majid Jordan"
+        },
+        {
+          "rank": 3,
+          "track_id": "df97155c-31f4-4a11-8e9c-72ed0c0d8488",
+          "track": "Talking In His Sleep",
+          "artist": "Toni Braxton"
+        },
+        {
+          "rank": 4,
+          "track_id": "06412a28-4092-4628-8629-0b4d9bafa356",
+          "track": "Talk Is Cheap",
+          "artist": "Chet Faker, Nick Murphy"
+        },
+        {
+          "rank": 5,
+          "track_id": "420b7300-50f8-4f1b-b29c-703354ba3c4d",
+          "track": "Simple",
+          "artist": "India.Arie"
+        }
+      ],
+      "reason_to_test": "The GT primary album has already been heard and the candidate is in union@20, but final ranking misses it.",
+      "expected_change": "Ranker should consume same_album_recent, artist_recency, track_feedback role, and branch-rank features.",
+      "success_metric": "Same-album continuation final@20/NDCG@20 improves while new-artist slices do not regress.",
+      "why_wrong": "The user asks for novelty or a different direction, but the state still keeps Brent Faiyaz as positive anchors. That sends retrievers toward already-satisfied artists instead of the new target space.",
+      "what_should_change": "Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles.",
+      "regression_test": "Replay this turn and assert prior anchors are marked satisfied/history, not current seed; measure union@20/100 for novelty + new-artist turns before checking final ranking."
+    },
+    {
+      "sample_id": "c96d7bb9-65d4-44be-9bc2-891e8e485f4e::t7",
+      "pack": "P0_same_album_ranker_failure",
+      "class_type": "failure",
+      "session_id": "c96d7bb9-65d4-44be-9bc2-891e8e485f4e",
+      "turn": 7,
+      "gt_track_id": "50ee4589-2286-476a-9ba6-42b07d4a473c",
+      "gt_track": "Sentimento Louco - Ao Vivo",
+      "gt_artist": "Marília Mendonça",
+      "current_user": "This is wonderful! 'O Que Falta Em Você Sou Eu' definitely hits that spot of deep longing and emotional storytelling that I love. It's truly beautiful. Keep them coming! What other songs, maybe by other artists but with a similar powerful, emotional sertane...",
+      "baseline": {
+        "final_rank": 33,
+        "fused_rank": 7,
+        "best_branch_rank": 1,
+        "best_branch": "dense.qwen_8b.metadata.metadata_qwen3_embedding_8b",
+        "union20": true,
+        "union100": true,
+        "union200": true
+      },
+      "cohort_labels": [
+        "continuation_same_artist",
+        "same_album_continuation",
+        "same_primary_album_continuation",
+        "novelty_cue"
+      ],
+      "diagnostics": [
+        "stale positive artist/track mentions: Marília Mendonça",
+        "novelty cue but prior artist remains anchored: Marília Mendonça"
+      ],
+      "state_snapshot": {
+        "turn_intent": "What other songs, maybe by other artists but with a similar powerful, emotional sertanejo vibe, do you have for me?",
+        "intent_mode": "refinement",
+        "policy": "diversify_artists",
+        "routing": [
+          "feature_articulation"
+        ],
+        "positive_entities": [
+          "Marília Mendonça"
+        ],
+        "stale_entities": [
+          "Marília Mendonça"
+        ],
+        "anchors": [
+          "Marília Mendonça"
+        ],
+        "positive_tags": [
+          "sertanejo",
+          "emotional",
+          "powerful",
+          "deep",
+          "heartfelt",
+          "longing",
+          "sertanejo universitário"
+        ],
+        "field_counts": {
+          "mentioned_entities": 8,
+          "track_feedback": 6,
+          "referenced_track_ids": 0,
+          "hard_filters": 0,
+          "explicit_rejections": 0
+        },
+        "year_range": null,
+        "explicit_rejections": []
+      },
+      "ideal_state": {
+        "target": {
+          "track": "Sentimento Louco - Ao Vivo",
+          "artist": "Marília Mendonça",
+          "track_id": "50ee4589-2286-476a-9ba6-42b07d4a473c"
+        },
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "prior_entities": [
+          {
+            "value": "Marília Mendonça",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "branch_hints": [
+          "tag",
+          "metadata",
+          "popularity",
+          "user_cf"
+        ]
+      },
+      "recent_messages": [
+        {
+          "turn": 5,
+          "role": "user",
+          "content": "Absolutely, 'De Quem É a Culpa?' is another masterpiece! It perfectly continues the theme of deep emotional storytelling and heartbreak that I'm looking for. I love how it explores the complexities of relationships. This is great, exactly the kind of emotio..."
+        },
+        {
+          "turn": 5,
+          "role": "music",
+          "content": "771a5952-19f2-4f5a-b57e-8a2eedeaef30"
+        },
+        {
+          "turn": 5,
+          "role": "assistant",
+          "content": "Amazing, I'm so glad these are hitting the spot for you! Sticking with that incredible emotional depth and storytelling from Marília, you've got to hear \"Eu Sei de Cor - Ao Vivo.\" It's another powerful one that talks about knowing a difficult path by heart...."
+        },
+        {
+          "turn": 6,
+          "role": "user",
+          "content": "Yes, 'Eu Sei de Cor' is absolutely beautiful and perfectly in line with the emotional depth I'm looking for! It truly resonates. I'm really enjoying this journey through Marília's heartfelt songs. What other powerful, emotional tracks do you have for me, pe..."
+        },
+        {
+          "turn": 6,
+          "role": "music",
+          "content": "508c1e5e-4fd9-4da8-937f-9217590a0e8e"
+        },
+        {
+          "turn": 6,
+          "role": "assistant",
+          "content": "That's wonderful to hear! I'm so glad we're on the same page with Marília's emotional tracks. For another powerful, heartfelt song in that signature Sertanejo style, you have to hear \"O Que Falta Em Você Sou Eu - Ao Vivo.\" It's another fan favorite that rea..."
+        },
+        {
+          "turn": 7,
+          "role": "user",
+          "content": "This is wonderful! 'O Que Falta Em Você Sou Eu' definitely hits that spot of deep longing and emotional storytelling that I love. It's truly beautiful. Keep them coming! What other songs, maybe by other artists but with a similar powerful, emotional sertane..."
+        },
+        {
+          "turn": 7,
+          "role": "music",
+          "content": "50ee4589-2286-476a-9ba6-42b07d4a473c"
+        },
+        {
+          "turn": 7,
+          "role": "assistant",
+          "content": "I'm thrilled you're enjoying these! You really appreciate the emotional storytelling. While all the tracks I have left are by Marília, I think you'll still love \"Sentimento Louco - Ao Vivo.\" It's another powerful one that talks about an undeniable, almost c..."
+        }
+      ],
+      "final_top_results": [
+        {
+          "rank": 1,
+          "track_id": "adaa104c-c4b2-4871-8d10-3dacda8efe37",
+          "track": "Jeito Carinhoso - Ao Vivo",
+          "artist": "Jads & Jadson"
+        },
+        {
+          "rank": 2,
+          "track_id": "5a7c1b47-8d1e-4229-b16d-6e6fbfc661d0",
+          "track": "Meu Coração Deu PT - Ao Vivo",
+          "artist": "Wesley Safadão, Matheus & Kauan"
+        },
+        {
+          "rank": 3,
+          "track_id": "96b33b2c-b917-411f-a8a6-378b2f843238",
+          "track": "Medo Bobo - Ao Vivo",
+          "artist": "Maiara & Maraisa"
+        },
+        {
+          "rank": 4,
+          "track_id": "19ab0301-ae9a-41e2-af21-1ecbc0e61025",
+          "track": "Ninguém É de Ferro",
+          "artist": "Marília Mendonça, Wesley Safadão"
+        },
+        {
+          "rank": 5,
+          "track_id": "dfc25d06-095a-47b3-b0ed-f6d3b12fcbae",
+          "track": "Impasse - Ao Vivo",
+          "artist": "Henrique & Juliano, Marília Mendonça"
+        }
+      ],
+      "reason_to_test": "The GT primary album has already been heard and the candidate is in union@20, but final ranking misses it.",
+      "expected_change": "Ranker should consume same_album_recent, artist_recency, track_feedback role, and branch-rank features.",
+      "success_metric": "Same-album continuation final@20/NDCG@20 improves while new-artist slices do not regress.",
+      "why_wrong": "The user asks for novelty or a different direction, but the state still keeps Marília Mendonça as positive anchors. That sends retrievers toward already-satisfied artists instead of the new target space.",
+      "what_should_change": "Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles.",
+      "regression_test": "Replay this turn and assert prior anchors are marked satisfied/history, not current seed; measure union@20/100 for novelty + new-artist turns before checking final ranking."
+    },
+    {
+      "sample_id": "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+      "pack": "P0_roleless_stale_entity_failure",
+      "class_type": "failure",
+      "session_id": "0858f444-c9af-4f08-a9fc-2a731a24182b",
+      "turn": 5,
+      "gt_track_id": "af0e6b5d-4f33-46d7-b696-d838379abea6",
+      "gt_track": "Armature",
+      "gt_artist": "Emptyset",
+      "current_user": "Yes! \"Pallbearer\" is absolutely brutal, exactly the kind of intricate and relentless breakcore I was hoping for. Great pick! Can you recommend something with a similar raw power and darkness, but maybe a bit more stripped-down or minimalistic in its approac...",
+      "baseline": {
+        "final_rank": 368,
+        "fused_rank": 384,
+        "best_branch_rank": 101,
+        "best_branch": "dense.clap_text.sonic.audio_laion_clap",
+        "union20": false,
+        "union100": false,
+        "union200": true
+      },
+      "cohort_labels": [
+        "midconv_new_artist"
+      ],
+      "diagnostics": [
+        "stale positive artist/track mentions: Igorrr"
+      ],
+      "state_snapshot": {
+        "turn_intent": "Something with similar raw power and darkness to Igorrr - Pallbearer, but more stripped-down or minimalistic while maintaining intense electronic energy.",
+        "intent_mode": "refinement",
+        "policy": "balanced",
+        "routing": [
+          "feature_articulation"
+        ],
+        "positive_entities": [
+          "Igorrr",
+          "Pallbearer"
+        ],
+        "stale_entities": [
+          "Igorrr"
+        ],
+        "anchors": [
+          "Igorrr"
+        ],
+        "positive_tags": [
+          "raw",
+          "powerful",
+          "dark",
+          "stripped-down",
+          "minimalistic",
+          "intense",
+          "electronic",
+          "breakcore",
+          "industrial"
+        ],
+        "field_counts": {
+          "mentioned_entities": 11,
+          "track_feedback": 4,
+          "referenced_track_ids": 0,
+          "hard_filters": 0,
+          "explicit_rejections": 0
+        },
+        "year_range": null,
+        "explicit_rejections": []
+      },
+      "ideal_state": {
+        "target": {
+          "track": "Armature",
+          "artist": "Emptyset",
+          "track_id": "af0e6b5d-4f33-46d7-b696-d838379abea6"
+        },
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "entities": [
+          {
+            "value": "Igorrr",
+            "role": "history",
+            "mentioned_current_turn": false,
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "current_turn_entities": "only entities re-mentioned in the current user turn should become current targets/seeds"
+      },
+      "recent_messages": [
+        {
+          "turn": 3,
+          "role": "user",
+          "content": "YES! \"N.W.O.\" by Ministry perfectly captures that raw, early industrial sound. That's the one! Thank you, you nailed it. Since you're so good at this, can you recommend another track with a similar kind of raw, driving electronic energy, maybe something wit..."
+        },
+        {
+          "turn": 3,
+          "role": "music",
+          "content": "d57a3e41-5b10-4dc1-9cf0-8430332d5fae"
+        },
+        {
+          "turn": 3,
+          "role": "assistant",
+          "content": "Awesome, glad I could nail it for you! Since you're digging that raw, driving electronic energy with an industrial edge, you've got to hear \"Loyal To My Hate\" by :Wumpscut:. It definitely brings that powerful, industrial feel with a solid, relentless beat...."
+        },
+        {
+          "turn": 4,
+          "role": "user",
+          "content": "Yes, :Wumpscut: is a great choice for that industrial feel! \"Loyal To My Hate\" really hits that spot. Can you recommend something else with a similar raw energy, but perhaps a bit faster or with more intricate breakbeats? Something that leans closer to the..."
+        },
+        {
+          "turn": 4,
+          "role": "music",
+          "content": "7ac8e1ac-ec63-49eb-a572-76c491c71c9e"
+        },
+        {
+          "turn": 4,
+          "role": "assistant",
+          "content": "Absolutely! You want that raw energy but faster, with more intricate breakbeats, heading into the harder, experimental D&B or breakcore territory? I've got just the thing – check out \"Pallbearer\" by Igorrr. It's got that intense, complex sound with a relent..."
+        },
+        {
+          "turn": 5,
+          "role": "user",
+          "content": "Yes! \"Pallbearer\" is absolutely brutal, exactly the kind of intricate and relentless breakcore I was hoping for. Great pick! Can you recommend something with a similar raw power and darkness, but maybe a bit more stripped-down or minimalistic in its approac..."
+        },
+        {
+          "turn": 5,
+          "role": "music",
+          "content": "af0e6b5d-4f33-46d7-b696-d838379abea6"
+        },
+        {
+          "turn": 5,
+          "role": "assistant",
+          "content": "Glad to hear \"Pallbearer\" hit the mark! For something with similar raw power and darkness, but with a more stripped-down, minimalistic edge while keeping that intense electronic energy, you should definitely check out \"Armature\" by Emptyset. It's got that s..."
+        }
+      ],
+      "final_top_results": [
+        {
+          "rank": 1,
+          "track_id": "abbae757-cabf-4e0c-ab26-e33fa3149c82",
+          "track": "ieuD",
+          "artist": "Igorrr"
+        },
+        {
+          "rank": 2,
+          "track_id": "83629fa2-322e-4778-a527-1e91a0f1b320",
+          "track": "Apopathodiaphulatophobie",
+          "artist": "Igorrr"
+        },
+        {
+          "rank": 3,
+          "track_id": "be6e2045-8253-4fe3-ae3f-1790b1e75a45",
+          "track": "Cheval",
+          "artist": "Igorrr"
+        },
+        {
+          "rank": 4,
+          "track_id": "2dee6fec-969d-42e3-a08b-88e9adafbabe",
+          "track": "Raw Power",
+          "artist": "Perturbator"
+        },
+        {
+          "rank": 5,
+          "track_id": "5e9dd052-49d7-4626-a3bf-fe2af7764356",
+          "track": "Just One Fix",
+          "artist": "Ministry"
+        }
+      ],
+      "reason_to_test": "These turns show stale positive artist/track state and are good smoke tests for source_turn, recency, and seed/satisfied/history roles.",
+      "expected_change": "After extraction rerun, stale prior entities should move out of current positive anchors or get lower anchor_strength.",
+      "success_metric": "State QA first: stale-current-positive count drops on all sampled turns. Retrieval QA second: union@20/100 should not get worse, and target branch rank should improve on at least some samples.",
+      "why_wrong": "The state still treats Igorrr as positive artist/track evidence even though it is not present in the current user turn. This can over-anchor retrieval on conversation history rather than the current ask.",
+      "what_should_change": "Keep prior entities as history/context, but decay or remove them from current anchors unless the user re-mentions them. The resolver should expose current-vs-history roles to retrievers and the ranker.",
+      "regression_test": "Replay state extraction for this turn and assert stale entities are not emitted as current positive anchors; then compare branch union for current-turn target candidates."
+    },
+    {
+      "sample_id": "88beb200-0334-4aba-be15-8e1303725766::t6",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "class_type": "failure",
+      "session_id": "88beb200-0334-4aba-be15-8e1303725766",
+      "turn": 6,
+      "gt_track_id": "bad307e0-1f22-4c72-ab1a-23094bd9580f",
+      "gt_track": "Used To",
+      "gt_artist": "Lil Wayne, Drake",
+      "current_user": "Legend\" is a classic, no doubt! I'm good on Drake for now though. I was hoping for some popular Hip-Hop tracks from *other artists* around late 2015 to early 2016. Any major hits from that period by someone different?",
+      "baseline": {
+        "final_rank": 522,
+        "fused_rank": 252,
+        "best_branch_rank": 101,
+        "best_branch": "dense.clap_text.sonic.audio_laion_clap",
+        "union20": false,
+        "union100": false,
+        "union200": true
+      },
+      "cohort_labels": [
+        "gt_artist_named_current",
+        "continuation_same_artist",
+        "same_album_continuation",
+        "same_primary_album_continuation",
+        "novelty_cue",
+        "popularity_cue",
+        "release_range_set"
+      ],
+      "diagnostics": [
+        "novelty cue but prior artist remains anchored: Drake",
+        "top-20 contains rejected slot(s): 9 by Drake, Pop Style by Drake",
+        "user named the GT artist but it did not land in final top-20"
+      ],
+      "state_snapshot": {
+        "turn_intent": "I'm good on Drake for now. I was hoping for some popular Hip-Hop tracks from other artists around late 2015 to early 2016. Any major hits from that period by someone different?",
+        "intent_mode": "pivot",
+        "policy": "diversify_artists",
+        "routing": [],
+        "positive_entities": [
+          "Drake"
+        ],
+        "stale_entities": [],
+        "anchors": [
+          "Drake"
+        ],
+        "positive_tags": [
+          "popular",
+          "hip hop",
+          "hip-hop",
+          "rap",
+          "late 2015",
+          "early 2016",
+          "major hits"
+        ],
+        "field_counts": {
+          "mentioned_entities": 8,
+          "track_feedback": 5,
+          "referenced_track_ids": 0,
+          "hard_filters": 0,
+          "explicit_rejections": 1
+        },
+        "year_range": [
+          2015,
+          2016
+        ],
+        "explicit_rejections": [
+          {
+            "kind": "artist",
+            "value": "Drake",
+            "source_turn": 6
+          }
+        ]
+      },
+      "ideal_state": {
+        "target": {
+          "track": "Used To",
+          "artist": "Lil Wayne, Drake",
+          "track_id": "bad307e0-1f22-4c72-ab1a-23094bd9580f"
+        },
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "continuation",
+        "normalized_rejections": {
+          "track_ids": "from resolver.rejected_track_ids",
+          "artist_ids": "from resolver.rejected_artist_ids",
+          "names": "verified aliases only"
+        },
+        "finalization_assertion": "no final top-20 slot may intersect strict rejected IDs",
+        "uncertain_name_matches": "hand-label before widening beyond strict IDs"
+      },
+      "recent_messages": [
+        {
+          "turn": 4,
+          "role": "user",
+          "content": "Dope, \"10 Bands\" is definitely a key track from that project. I'm getting a really good sense of the popular tracks from that specific time. Could you give me one more recommendation that was a big hit or highly influential for Drake around 2015? Something..."
+        },
+        {
+          "turn": 4,
+          "role": "music",
+          "content": "0c116bd9-9470-4135-a161-40887d214752"
+        },
+        {
+          "turn": 4,
+          "role": "assistant",
+          "content": "Nice! \"10 Bands\" is definitely a banger. Since we're still deep in 'IYRTITL' territory, how about \"Preach\" featuring PARTYNEXTDOOR? It keeps that same energy and features another artist Drake frequently works with."
+        },
+        {
+          "turn": 5,
+          "role": "user",
+          "content": "Perfect! \"Preach\" is another solid one. This selection really captures the popular vibe of Drake's music back then. I've got a solid understanding of his key tracks from that time. Thanks! Can you suggest some other popular Hip-Hop tracks from other artists..."
+        },
+        {
+          "turn": 5,
+          "role": "music",
+          "content": "41dd77f6-5d4f-4dbe-aac7-c59ede5e37ac"
+        },
+        {
+          "turn": 5,
+          "role": "assistant",
+          "content": "Awesome, glad you liked \"Preach\"! Keeping the 'IYRTITL' vibe going strong, you definitely need to hear \"Legend\" next. It's another standout track from that album."
+        },
+        {
+          "turn": 6,
+          "role": "user",
+          "content": "Legend\" is a classic, no doubt! I'm good on Drake for now though. I was hoping for some popular Hip-Hop tracks from *other artists* around late 2015 to early 2016. Any major hits from that period by someone different?"
+        },
+        {
+          "turn": 6,
+          "role": "music",
+          "content": "bad307e0-1f22-4c72-ab1a-23094bd9580f"
+        },
+        {
+          "turn": 6,
+          "role": "assistant",
+          "content": "I hear you! 'IYRTITL' really has a legendary status. Since you're still on that album's wave, how about \"Used To\" with Lil Wayne? It's another strong one with that classic Drake sound you like."
+        }
+      ],
+      "final_top_results": [
+        {
+          "rank": 1,
+          "track_id": "02407551-eb13-4d24-b02c-4c907614bd60",
+          "track": "9",
+          "artist": "Drake"
+        },
+        {
+          "rank": 2,
+          "track_id": "940b023f-de26-4c5d-a836-1adb69517f36",
+          "track": "Pop Style",
+          "artist": "Drake"
+        },
+        {
+          "rank": 3,
+          "track_id": "990ae69b-aaa5-414e-ac16-16a947b14d84",
+          "track": "Feel No Ways",
+          "artist": "Drake"
+        },
+        {
+          "rank": 4,
+          "track_id": "e172e84f-2376-482d-826a-826b3656ca4f",
+          "track": "Trap Queen",
+          "artist": "Fetty Wap"
+        },
+        {
+          "rank": 5,
+          "track_id": "c9b95801-822b-46af-a274-152d71411336",
+          "track": "GDFR (feat. Sage the Gemini & Lookas)",
+          "artist": "Lookas, Flo Rida, Sage The Gemini"
+        }
+      ],
+      "reason_to_test": "These turns explicitly ask for novelty or a different direction while prior artists remain anchored.",
+      "expected_change": "Prior artists should be labeled satisfied/history/contrast rather than current seed; retrieval_profile should reduce old-artist discography and centroid pressure.",
+      "success_metric": "State QA: prior anchors are not current positive seeds. Recall QA: best_branch_rank or union@20 improves for novelty/new-artist targets.",
+      "why_wrong": "The state contains an explicit rejection, but final top-20 still includes 9 by Drake, Pop Style by Drake. That is a rejected name leak, independent of whether the ground-truth target was retrieved.",
+      "what_should_change": "Add a deterministic post-final rejection filter/assertion over rejected track IDs, artist IDs, and normalized multi-artist names. Treat broad name matches as an audit sample, but make strict ID leakage impossible.",
+      "regression_test": "For this turn, replay finalization and assert no final slot intersects explicit_rejections by track_id, artist_id, or verified rejected artist name."
+    },
+    {
+      "sample_id": "8bcb7d16-9be0-40cc-9a9d-28b654997b8d::t6",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "class_type": "failure",
+      "session_id": "8bcb7d16-9be0-40cc-9a9d-28b654997b8d",
+      "turn": 6,
+      "gt_track_id": "7fb37c5d-51f5-4827-8e5f-f4a31d3aea1d",
+      "gt_track": "Exit Theme (feat. Astronautalis & Lotte Kestner)",
+      "gt_artist": "Astronautalis, Sadistik, Lotte Kestner",
+      "current_user": "Yes, 'Virginia Woolf' is another excellent choice from Sadistik, really hits those deep, introspective notes. I'm clearly a big fan of his work. But I was hoping to branch out a little. Can you recommend any *different* artists, perhaps from the underground...",
+      "baseline": {
+        "final_rank": 485,
+        "fused_rank": 344,
+        "best_branch_rank": 103,
+        "best_branch": "bm25",
+        "union20": false,
+        "union100": false,
+        "union200": true
+      },
+      "cohort_labels": [
+        "gt_artist_named_current",
+        "continuation_same_artist",
+        "same_album_continuation",
+        "same_primary_album_continuation",
+        "novelty_cue"
+      ],
+      "diagnostics": [
+        "novelty cue but prior artist remains anchored: Sadistik",
+        "user named the GT artist but it did not land in final top-20"
+      ],
+      "state_snapshot": {
+        "turn_intent": "Recommend different artists from the underground hip-hop scene who delve into deeply philosophical or psychologically complex lyrical themes, similar to Sadistik.",
+        "intent_mode": "pivot",
+        "policy": "diversify_artists",
+        "routing": [
+          "feature_articulation"
+        ],
+        "positive_entities": [
+          "Sadistik"
+        ],
+        "stale_entities": [],
+        "anchors": [
+          "Sadistik"
+        ],
+        "positive_tags": [
+          "underground hip hop",
+          "underground",
+          "hip hop",
+          "hip-hop",
+          "philosophical",
+          "psychologically complex",
+          "lyrical",
+          "introspective",
+          "dark",
+          "atmospheric"
+        ],
+        "field_counts": {
+          "mentioned_entities": 11,
+          "track_feedback": 5,
+          "referenced_track_ids": 0,
+          "hard_filters": 0,
+          "explicit_rejections": 0
+        },
+        "year_range": null,
+        "explicit_rejections": []
+      },
+      "ideal_state": {
+        "target": {
+          "track": "Exit Theme (feat. Astronautalis & Lotte Kestner)",
+          "artist": "Astronautalis, Sadistik, Lotte Kestner",
+          "track_id": "7fb37c5d-51f5-4827-8e5f-f4a31d3aea1d"
+        },
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "prior_entities": [
+          {
+            "value": "Sadistik",
+            "role": "satisfied_or_history",
+            "use_as_retrieval_seed": false
+          }
+        ],
+        "branch_hints": [
+          "tag",
+          "metadata",
+          "popularity",
+          "user_cf"
+        ]
+      },
+      "recent_messages": [
+        {
+          "turn": 4,
+          "role": "user",
+          "content": "Absolutely spot on! 'Micheal' is incredible; the storytelling is next level. Can you recommend any other artists who are known for similar intricate lyricism and dark, atmospheric production, maybe not necessarily Sadistik but in a similar vein?"
+        },
+        {
+          "turn": 4,
+          "role": "music",
+          "content": "72aa504e-2b2b-4359-919e-c01f6caf5c10"
+        },
+        {
+          "turn": 4,
+          "role": "assistant",
+          "content": "Glad you loved 'Micheal'! I understand you're looking for other artists, but from the tracks I have available, staying with Sadistik, 'Memento Mori' really nails that intricate lyricism and dark, atmospheric production vibe you're after. It's a prime exampl..."
+        },
+        {
+          "turn": 5,
+          "role": "user",
+          "content": "You're absolutely right, 'Memento Mori' is a fantastic pick for that vibe. The dark atmosphere and Sadistik's depth are undeniable. I'm really enjoying these. What about artists who explore similarly dark or introspective themes through their lyrics, regard..."
+        },
+        {
+          "turn": 5,
+          "role": "music",
+          "content": "f761a1a5-ae6c-4bd0-a0d6-b4548507daf5"
+        },
+        {
+          "turn": 5,
+          "role": "assistant",
+          "content": "Happy to hear you're enjoying these! For tracks that dive deep into dark and introspective lyrical themes, I'd suggest 'Virginia Woolf.' It really explores some profound and heavy emotional territory."
+        },
+        {
+          "turn": 6,
+          "role": "user",
+          "content": "Yes, 'Virginia Woolf' is another excellent choice from Sadistik, really hits those deep, introspective notes. I'm clearly a big fan of his work. But I was hoping to branch out a little. Can you recommend any *different* artists, perhaps from the underground..."
+        },
+        {
+          "turn": 6,
+          "role": "music",
+          "content": "7fb37c5d-51f5-4827-8e5f-f4a31d3aea1d"
+        },
+        {
+          "turn": 6,
+          "role": "assistant",
+          "content": "Totally get that! While I'm limited to the tracks I have by Sadistik, I can offer 'Exit Theme' which features Astronautalis and Lotte Kestner. It brings in different lyrical perspectives that still delve into those deeply philosophical and psychologically c..."
+        }
+      ],
+      "final_top_results": [
+        {
+          "rank": 1,
+          "track_id": "ae0ae170-15ed-4850-ad83-3bb61b4308f3",
+          "track": "Mindstate [Deluxe Edition]",
+          "artist": "Cunninlynguists"
+        },
+        {
+          "rank": 2,
+          "track_id": "fa0f471f-0ec0-4dfe-9cf6-1bce36d67203",
+          "track": "Lickupon",
+          "artist": "Viktor Vaughn"
+        },
+        {
+          "rank": 3,
+          "track_id": "8db28f39-98af-4488-92dd-0f6b480c2582",
+          "track": "Shattered Dreams",
+          "artist": "Cunninlynguists"
+        },
+        {
+          "rank": 4,
+          "track_id": "4bb721db-ad0b-49d3-9709-66558c519d49",
+          "track": "Seasons (f. Masta Ace) [Deluxe Edition]",
+          "artist": "Cunninlynguists"
+        },
+        {
+          "rank": 5,
+          "track_id": "d8d9e6b9-88eb-45c3-ae7f-e40806726a03",
+          "track": "Burdock Root",
+          "artist": "MF DOOM"
+        }
+      ],
+      "reason_to_test": "These turns explicitly ask for novelty or a different direction while prior artists remain anchored.",
+      "expected_change": "Prior artists should be labeled satisfied/history/contrast rather than current seed; retrieval_profile should reduce old-artist discography and centroid pressure.",
+      "success_metric": "State QA: prior anchors are not current positive seeds. Recall QA: best_branch_rank or union@20 improves for novelty/new-artist targets.",
+      "why_wrong": "The user asks for novelty or a different direction, but the state still keeps Sadistik as positive anchors. That sends retrievers toward already-satisfied artists instead of the new target space.",
+      "what_should_change": "Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles.",
+      "regression_test": "Replay this turn and assert prior anchors are marked satisfied/history, not current seed; measure union@20/100 for novelty + new-artist turns before checking final ranking."
+    }
+  ]
+}

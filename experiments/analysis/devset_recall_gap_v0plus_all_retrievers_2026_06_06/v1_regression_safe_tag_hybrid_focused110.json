@@ -1,0 +1,1827 @@
+{
+  "summary": {
+    "n": 110,
+    "fired": 81,
+    "errors": 0,
+    "hit@20": 0.00909090909090909,
+    "hit@50": 0.00909090909090909,
+    "hit@100": 0.02727272727272727,
+    "hit@1000": 0.2636363636363636,
+    "safe_tag_turns": 81,
+    "query_turns": 93
+  },
+  "rows": [
+    {
+      "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+      "class_type": "failure",
+      "gt_track": "Give It To Me Baby",
+      "gt_artist": "Rick James",
+      "safe_tags": [
+        "high-energy",
+        "classic disco",
+        "funk"
+      ],
+      "query_text": "music attributes, tags :high-energy, classic disco, funk, late 70s to early 80s",
+      "rank": 171,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "e66c6a88-88ba-4117-9114-363bfa96294a::t7",
+      "class_type": "failure",
+      "gt_track": "Test Drive",
+      "gt_artist": "John Powell",
+      "safe_tags": [
+        "epic orchestral",
+        "powerful",
+        "uplifting"
+      ],
+      "query_text": "music attributes, tags :epic orchestral, powerful, uplifting",
+      "rank": 819,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+      "class_type": "failure",
+      "gt_track": "Armature",
+      "gt_artist": "Emptyset",
+      "safe_tags": [
+        "raw power",
+        "darkness"
+      ],
+      "query_text": "music attributes, tags :raw power, darkness, stripped-down minimalistic",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "41367174-552b-4117-9caa-d0ba1b307d37::t2",
+      "class_type": "failure",
+      "gt_track": "Mercy",
+      "gt_artist": "Muse",
+      "safe_tags": [
+        "alternative rock",
+        "intense",
+        "emotional"
+      ],
+      "query_text": "music attributes, tags :alternative rock, intense, emotional, 2000s or 2010s",
+      "rank": 632,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "10a15ba2-4126-4ae4-ac6c-dc170735ae9e::t7",
+      "class_type": "failure",
+      "gt_track": "I Can't Go to Sleep",
+      "gt_artist": "Wu-Tang Clan",
+      "safe_tags": [],
+      "query_text": "music attributes, tags :intricate storytelling, narrative and character development, music is part of the journey",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4",
+      "class_type": "failure",
+      "gt_track": "The Carbon Stampede",
+      "gt_artist": "Cattle Decapitation",
+      "safe_tags": [
+        "recent",
+        "technical death metal",
+        "progressive death metal"
+      ],
+      "query_text": "music attributes, tags :recent, technical death metal, progressive death metal, pushing the envelope",
+      "rank": 273,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "5f29a9df-ad38-4349-a2f0-c9a690ea072d::t2",
+      "class_type": "failure",
+      "gt_track": "Shaft",
+      "gt_artist": "Kashmere Stage Band",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "78cdaccb-0f9b-4876-80b1-c20bf0b444e6::t8",
+      "class_type": "failure",
+      "gt_track": "In the Shadows",
+      "gt_artist": "The Rasmus",
+      "safe_tags": [
+        "rock",
+        "powerful"
+      ],
+      "query_text": "music attributes, tags :rock, powerful, strong guitar riff",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "88af7ec3-c368-421b-9512-d0180da3d1f6::t2",
+      "class_type": "failure",
+      "gt_track": "I Believe in a Thing Called Love",
+      "gt_artist": "The Darkness",
+      "safe_tags": [
+        "2000s"
+      ],
+      "query_text": "music attributes, tags :overhearing gossip, bartender, wedding drama, 2000s",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "d9a65836-7165-45bf-aa3e-3ef7ba5d073a::t2",
+      "class_type": "failure",
+      "gt_track": "Move Along",
+      "gt_artist": "The All-American Rejects",
+      "safe_tags": [
+        "alternative rock",
+        "early 2000s",
+        "angsty",
+        "energetic"
+      ],
+      "query_text": "music attributes, tags :pop-punk, alternative rock, early 2000s, angsty, energetic",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "c7a965c3-cd7f-46f6-b166-9dce9a800e0a::t3",
+      "class_type": "failure",
+      "gt_track": "S&M",
+      "gt_artist": "Rihanna",
+      "safe_tags": [],
+      "query_text": "music attributes, tags :super strong driving beat, empowering pop energy, more recent",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "88beb200-0334-4aba-be15-8e1303725766::t6",
+      "class_type": "failure",
+      "gt_track": "Used To",
+      "gt_artist": "Lil Wayne, Drake",
+      "safe_tags": [
+        "hip-hop",
+        "popular"
+      ],
+      "query_text": "music attributes, tags :hip-hop, popular, major hits",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "daeef24e-b041-4140-9101-882820c63408::t7",
+      "class_type": "failure",
+      "gt_track": "The Analog Kid",
+      "gt_artist": "Rush",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "8dc4c630-8369-4720-b379-2a7dcd8d34aa::t7",
+      "class_type": "failure",
+      "gt_track": "Transcentience",
+      "gt_artist": "Animals As Leaders",
+      "safe_tags": [
+        "technical",
+        "orchestral",
+        "symphonic",
+        "melodic",
+        "atmospheric"
+      ],
+      "query_text": "music attributes, tags :technical, orchestral, symphonic, melodic, atmospheric",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "380a5ed5-3eb9-4201-8fa6-81381a583bf5::t3",
+      "class_type": "failure",
+      "gt_track": "God Hates a Coward",
+      "gt_artist": "Tomahawk",
+      "safe_tags": [
+        "high energy"
+      ],
+      "query_text": "music attributes, tags :experimental genre-bending, avant-garde theatrical, high energy",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "5f085552-b56b-440e-830b-b4e40b58f854::t6",
+      "class_type": "failure",
+      "gt_track": "Redneck Yacht Club",
+      "gt_artist": "Craig Morgan",
+      "safe_tags": [
+        "country"
+      ],
+      "query_text": "music attributes, tags :country, upbeat high-energy, late 90s or early 2000s",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "d6e50fb5-a135-4008-80b6-d0be434369ac::t3",
+      "class_type": "failure",
+      "gt_track": "Volare (Nel Blu Di Pinto Di Blu) - 1998 - Remastered",
+      "gt_artist": "Dean Martin",
+      "safe_tags": [
+        "nostalgic",
+        "contemplative",
+        "bittersweet"
+      ],
+      "query_text": "music attributes, tags :nostalgic, contemplative, bittersweet, classic vocal style, piano or string accompaniment",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "38d8ba41-a4ea-48ea-b460-bd93d164302a::t4",
+      "class_type": "failure",
+      "gt_track": "Woo Hah!! Got You All In Check",
+      "gt_artist": "Busta Rhymes",
+      "safe_tags": [
+        "raw",
+        "1990s"
+      ],
+      "query_text": "music attributes, tags :gritty 90s East Coast, raw, uncompromising street vibe, 1990s",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "8bcb7d16-9be0-40cc-9a9d-28b654997b8d::t6",
+      "class_type": "failure",
+      "gt_track": "Exit Theme (feat. Astronautalis & Lotte Kestner)",
+      "gt_artist": "Astronautalis, Sadistik, Lotte Kestner",
+      "safe_tags": [
+        "underground hip-hop"
+      ],
+      "query_text": "music attributes, tags :underground hip-hop, dark atmospheric production, intricate lyricism, introspective dark themes",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "cdd374ea-1ad9-4440-8c2d-4c76c5fb3f78::t3",
+      "class_type": "failure",
+      "gt_track": "Gib ihn einfach (Dies das 2)",
+      "gt_artist": "Ghanaian Stallion",
+      "safe_tags": [
+        "old-school hip-hop"
+      ],
+      "query_text": "music attributes, tags :old-school hip-hop, timeless era-defining",
+      "rank": 196,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "a930da0d-07f1-46c6-909d-e4fd95ae1148::t6",
+      "class_type": "failure",
+      "gt_track": "Without You",
+      "gt_artist": "Christina Aguilera",
+      "safe_tags": [
+        "well-known",
+        "feel-good",
+        "strong beat",
+        "upbeat",
+        "energetic"
+      ],
+      "query_text": "music attributes, tags :well-known, widely loved, feel-good, strong beat, upbeat, energetic",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "5ee0dbbc-c1d1-4bed-ba09-7dafeec198bc::t8",
+      "class_type": "failure",
+      "gt_track": "You Reposted in the Wrong Neighborhood I Glue70 Mashup",
+      "gt_artist": "Shokk",
+      "safe_tags": [],
+      "query_text": "music attributes, tags :meme song/goofy, absurd story with characters, famous viral, catchy vocal hook",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "4e2482dc-a76c-4f4b-9d3f-7becec2f8a3a::t4",
+      "class_type": "failure",
+      "gt_track": "Goodbye Pork Pie Hat",
+      "gt_artist": "Charles Mingus",
+      "safe_tags": [
+        "classic jazz",
+        "bluesy",
+        "soulful"
+      ],
+      "query_text": "music attributes, tags :classic jazz, bluesy, soulful",
+      "rank": 242,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "5861afef-85c0-4163-b8b9-5a11e308f352::t4",
+      "class_type": "failure",
+      "gt_track": "Carmesí",
+      "gt_artist": "Vicente Garcia",
+      "safe_tags": [
+        "danceable",
+        "Latin"
+      ],
+      "query_text": "music attributes, tags :danceable, Latin",
+      "rank": 194,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "15b1caf3-d1ed-46ef-a8e3-c9f7657e6b77::t6",
+      "class_type": "failure",
+      "gt_track": "Hong Kong 2046",
+      "gt_artist": "Hong Kong Express",
+      "safe_tags": [
+        "electronic",
+        "soulful"
+      ],
+      "query_text": "music attributes, tags :unique and out-there, electronic, soulful, interesting mix of sounds",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "907921a3-d08f-4ba1-8cce-0e760a9e7044::t7",
+      "class_type": "failure",
+      "gt_track": "Sunrise - Slow Hands Remix",
+      "gt_artist": "Kasper Bjørke",
+      "safe_tags": [
+        "electronic",
+        "begging"
+      ],
+      "query_text": "music attributes, tags :electronic, direct intense plea, begging",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "ab5eac17-909e-4271-8cf9-40c06b27ee56::t2",
+      "class_type": "failure",
+      "gt_track": "Sparks",
+      "gt_artist": "Hilary Duff",
+      "safe_tags": [
+        "pop",
+        "upbeat",
+        "dancey"
+      ],
+      "query_text": "music attributes, tags :pop, upbeat, dancey, super popular, 2015 to 2017",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "324ddfb5-8a18-4729-9acb-c851907a297c::t3",
+      "class_type": "failure",
+      "gt_track": "Acknowledge",
+      "gt_artist": "Masta Ace",
+      "safe_tags": [
+        "raw hip-hop",
+        "underground hip-hop",
+        "classic"
+      ],
+      "query_text": "music attributes, tags :raw hip-hop, underground hip-hop, classic, authentic vibe, late 90s or early 2000s",
+      "rank": 871,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2",
+      "class_type": "failure",
+      "gt_track": "Two To Make It Right",
+      "gt_artist": "Seduction",
+      "safe_tags": [
+        "iconic",
+        "1990s",
+        "dance",
+        "energetic",
+        "dance-worthy"
+      ],
+      "query_text": "music attributes, tags :iconic, 1990s, dance, energetic, dance-worthy",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "ba68a3cc-5278-4680-917a-4ca66d33ef31::t5",
+      "class_type": "failure",
+      "gt_track": "Buttons",
+      "gt_artist": "The Pussycat Dolls",
+      "safe_tags": [
+        "pop",
+        "high-energy",
+        "iconic",
+        "empowering",
+        "confident",
+        "early 2000s"
+      ],
+      "query_text": "music attributes, tags :pop, high-energy, iconic, empowering, confident, early 2000s",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "d5fcb591-3744-4ebb-9d1a-5c57c314b7d0::t5",
+      "class_type": "failure",
+      "gt_track": "Love Train",
+      "gt_artist": "The O'Jays",
+      "safe_tags": [
+        "R&B/Soul",
+        "funky",
+        "soulful",
+        "late 1970s",
+        "golden era"
+      ],
+      "query_text": "music attributes, tags :R&B/Soul, funky, soulful, late 1970s, golden era",
+      "rank": 131,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "f2d85aa5-2086-4b1e-9974-d188c43621db::t8",
+      "class_type": "failure",
+      "gt_track": "Leraine",
+      "gt_artist": "Kettel",
+      "safe_tags": [
+        "ambient electronic",
+        "late 2000s",
+        "instrumental"
+      ],
+      "query_text": "music attributes, tags :dreamy serene, ambient electronic, late 2000s, warm evolving pads, subtle rhythms, instrumental",
+      "rank": 131,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "67b9ba8a-382f-4b70-af76-576848d8cf67::t8",
+      "class_type": "failure",
+      "gt_track": "Gangsta Gangsta",
+      "gt_artist": "N.W.A.",
+      "safe_tags": [],
+      "query_text": "music attributes, tags :raw aggression, dark and intense, gritty beats, horrorcore-influenced lyrics, East Coast underground",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "9468e467-d396-461b-be29-b30b6cf87c35::t5",
+      "class_type": "failure",
+      "gt_track": "Midnight",
+      "gt_artist": "A Tribe Called Quest",
+      "safe_tags": [
+        "atmospheric"
+      ],
+      "query_text": "music attributes, tags :atmospheric, night-time city walk, spoken-word storytelling, early 2000s UK sound",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "e978bb5b-26af-4c7d-b720-b9210bdddf25::t8",
+      "class_type": "failure",
+      "gt_track": "Dear Yvette",
+      "gt_artist": "Jane Doe, Masta Ace",
+      "safe_tags": [
+        "East Coast hip-hop",
+        "1990s",
+        "classic"
+      ],
+      "query_text": "music attributes, tags :narrative-driven, East Coast hip-hop, 1990s, classic",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "3676005d-5b7c-4c48-9b73-3e10dd509c07::t3",
+      "class_type": "failure",
+      "gt_track": "Conquest of Paradise",
+      "gt_artist": "Vangelis",
+      "safe_tags": [
+        "epic",
+        "new-age",
+        "instrumental"
+      ],
+      "query_text": "music attributes, tags :epic, new-age, instrumental",
+      "rank": 629,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "a33a5df0-2c2b-429c-84e6-cde28affd4d5::t6",
+      "class_type": "failure",
+      "gt_track": "Thriller",
+      "gt_artist": "Fall Out Boy",
+      "safe_tags": [],
+      "query_text": "music attributes, tags :mid-2000s emo, dramatic driving sound, messy breakup angst",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "3676005d-5b7c-4c48-9b73-3e10dd509c07::t1",
+      "class_type": "failure",
+      "gt_track": "Breath and Life",
+      "gt_artist": "Audiomachine",
+      "safe_tags": [
+        "early 2000s"
+      ],
+      "query_text": "music attributes, tags :powerful orchestral, like something from a movie score, early 2000s",
+      "rank": 53,
+      "hit20": false,
+      "hit50": false,
+      "hit100": true,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "c4c0c288-dbcd-4970-ad52-901aafe91b88::t4",
+      "class_type": "failure",
+      "gt_track": "I Juswanna Chill",
+      "gt_artist": "Large Professor",
+      "safe_tags": [
+        "jazzy hip-hop",
+        "golden age hip-hop"
+      ],
+      "query_text": "music attributes, tags :jazzy hip-hop, golden age hip-hop, underground 90s hip-hop",
+      "rank": 626,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "71bb177a-dab1-4bbc-8508-22d809b05c31::t6",
+      "class_type": "failure",
+      "gt_track": "Constant Craving - Remastered",
+      "gt_artist": "k.d. lang",
+      "safe_tags": [
+        "female artist",
+        "1990s",
+        "thoughtful",
+        "storytelling"
+      ],
+      "query_text": "music attributes, tags :female artist, 1990s, thoughtful, storytelling",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "4d0afb6b-3705-493f-ab16-ca75ea311e1a::t7",
+      "class_type": "failure",
+      "gt_track": "Pilot",
+      "gt_artist": "Benjamin Wallfisch, Hans Zimmer",
+      "safe_tags": [],
+      "query_text": "music attributes, tags :dark futuristic melancholic electronic instrumental, deeply atmospheric",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "1e14a07f-7369-4d24-9285-9343b6b18353::t8",
+      "class_type": "failure",
+      "gt_track": "Nordlys",
+      "gt_artist": "Myrkur",
+      "safe_tags": [
+        "dark folk",
+        "gothic folk",
+        "atmospheric",
+        "haunting",
+        "ethereal vocals"
+      ],
+      "query_text": "music attributes, tags :dark folk, gothic folk, atmospheric, haunting, ethereal vocals, traditional instruments",
+      "rank": 56,
+      "hit20": false,
+      "hit50": false,
+      "hit100": true,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "d265b5a9-af57-4070-90f5-692a960c5aaa::t6",
+      "class_type": "failure",
+      "gt_track": "Get Lucky (feat. Pharrell Williams &amp; Nile Rodgers) - Radio Edit",
+      "gt_artist": "Nile Rodgers, Pharrell Williams, Daft Punk",
+      "safe_tags": [
+        "electronic",
+        "2010s"
+      ],
+      "query_text": "music attributes, tags :electronic, 2010s, striking cover art, artistically unique cover art",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "b2582e52-6d13-40b4-8552-2d8b63fa6c75::t8",
+      "class_type": "failure",
+      "gt_track": "Soil",
+      "gt_artist": "System Of A Down",
+      "safe_tags": [
+        "alternative metal",
+        "heavy",
+        "new bands"
+      ],
+      "query_text": "music attributes, tags :alternative metal, heavy, new bands",
+      "rank": 310,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "d265b5a9-af57-4070-90f5-692a960c5aaa::t8",
+      "class_type": "failure",
+      "gt_track": "Motherboard",
+      "gt_artist": "Daft Punk",
+      "safe_tags": [
+        "electronic",
+        "2010s"
+      ],
+      "query_text": "music attributes, tags :electronic, 2010s, striking iconic cover art, truly unique cover art",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "3a4224d3-1e5b-4bb9-a424-886d5c45d5d3::t8",
+      "class_type": "failure",
+      "gt_track": "Brain Relaxation Sky",
+      "gt_artist": "Sample Rain Library",
+      "safe_tags": [
+        "ambient",
+        "New Age",
+        "peaceful"
+      ],
+      "query_text": "music attributes, tags :ambient, New Age, peaceful, non-rain",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "963b3ee7-17d1-4bb3-8a3f-0bc528a1f096::t5",
+      "class_type": "failure",
+      "gt_track": "Go Go Gadget Flow",
+      "gt_artist": "Lupe Fiasco",
+      "safe_tags": [
+        "energetic",
+        "uplifting"
+      ],
+      "query_text": "music attributes, tags :he said 'positive vibe', energetic, uplifting",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "08bea603-846a-428b-aa27-de4dfede7ba9::t8",
+      "class_type": "failure",
+      "gt_track": "Silhouette",
+      "gt_artist": "Julia Holter",
+      "safe_tags": [
+        "experimental electronic"
+      ],
+      "query_text": "music attributes, tags :experimental electronic",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "0fc60312-9a9d-4658-a950-06fc2441a2ac::t8",
+      "class_type": "failure",
+      "gt_track": "Music Will Untune the Sky",
+      "gt_artist": "Have A Nice Life",
+      "safe_tags": [],
+      "query_text": "music attributes, tags :heavy dark post-rock, experimental electronic textures, desolate immersive, intense immersive experimental",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "3ebc2b49-0f5c-4161-bbcf-e1615821103f::t2",
+      "class_type": "failure",
+      "gt_track": "The Animus 2.0",
+      "gt_artist": "Jesper Kyd",
+      "safe_tags": [
+        "dramatic",
+        "exploratory",
+        "orchestral"
+      ],
+      "query_text": "music attributes, tags :epic adventurous, dramatic, exploratory, orchestral, tempo 80-120 BPM",
+      "rank": 876,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "37097db6-54b8-491b-8512-1df70648548b::t2",
+      "class_type": "failure",
+      "gt_track": "White Ferrari",
+      "gt_artist": "Frank Ocean",
+      "safe_tags": [
+        "melancholic",
+        "dreamy",
+        "late-night",
+        "introspective"
+      ],
+      "query_text": "music attributes, tags :melancholic, dreamy, late-night, introspective",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "f4115525-7e44-40df-8957-e38df99f214d::t4",
+      "class_type": "failure",
+      "gt_track": "Young And Beautiful",
+      "gt_artist": "Lana Del Rey",
+      "safe_tags": [
+        "melancholic",
+        "atmospheric"
+      ],
+      "query_text": "music attributes, tags :melancholic, atmospheric, emotional intensity",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "eee89ca2-fc86-4a9a-b4c5-2d77cb3346c8::t7",
+      "class_type": "failure",
+      "gt_track": "Change (In the House of Flies) - In The House Of Flies LP Version",
+      "gt_artist": "Deftones",
+      "safe_tags": [
+        "raw power",
+        "heavier",
+        "heavy metal/rock"
+      ],
+      "query_text": "music attributes, tags :raw power, heavier, heavy metal/rock, distinct immersive sound",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "44c3948c-bc44-4e40-ae77-82c2fec9c944::t7",
+      "class_type": "failure",
+      "gt_track": "Me Dediqué a Perderte",
+      "gt_artist": "Alejandro Fernandez, Alejandro Fernández",
+      "safe_tags": [
+        "Latin Pop",
+        "strong beat",
+        "new artist"
+      ],
+      "query_text": "music attributes, tags :Latin Pop, strong beat, new artist",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "899f906b-9b0b-42a6-9689-643eb9f1ed31::t8",
+      "class_type": "failure",
+      "gt_track": "Crawling",
+      "gt_artist": "Linkin Park",
+      "safe_tags": [
+        "aggressive nu-metal"
+      ],
+      "query_text": "music attributes, tags :aggressive nu-metal, late 90s early 2000s, rap vocals, electronic elements",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "93199894-d3db-4335-8278-e1be175944e4::t6",
+      "class_type": "failure",
+      "gt_track": "Smells Like Teen Spirit",
+      "gt_artist": "Nirvana",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "7d2bb60e-1046-4956-91d0-cf1dd73037cc::t3",
+      "class_type": "failure",
+      "gt_track": "Hung Up",
+      "gt_artist": "Madonna",
+      "safe_tags": [
+        "upbeat"
+      ],
+      "query_text": "music attributes, tags :upbeat, later era, dreamy island vibe",
+      "rank": 917,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "1b406c88-9dfd-42cd-a1f5-9683f35f849b::t1",
+      "class_type": "failure",
+      "gt_track": "93 'Til Infinity",
+      "gt_artist": "Souls Of Mischief",
+      "safe_tags": [
+        "underground hip-hop",
+        "1990s",
+        "classic"
+      ],
+      "query_text": "music attributes, tags :underground hip-hop, 1990s, jazzy laid-back, classic",
+      "rank": 467,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "7be411cd-f002-459e-8326-3ebe8be10b42::t6",
+      "class_type": "failure",
+      "gt_track": "Army Dreamers",
+      "gt_artist": "Kate Bush",
+      "safe_tags": [
+        "vintage",
+        "classic"
+      ],
+      "query_text": "music attributes, tags :1980s or 1970s, vintage, classic",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "fc78453a-8798-4402-a01a-e9c557f08a03::t2",
+      "class_type": "failure",
+      "gt_track": "En el 2000",
+      "gt_artist": "Natalia Lafourcade",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "84803908-48e7-41b7-9269-a465a44f4c10::t2",
+      "class_type": "failure",
+      "gt_track": "Runaway",
+      "gt_artist": "Pusha T, Kanye West",
+      "safe_tags": [
+        "hip-hop"
+      ],
+      "query_text": "music attributes, tags :hip-hop, intense anthemic, strong bold confident",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "6d825b33-dc20-4b3c-a277-0c8214163007::t6",
+      "class_type": "failure",
+      "gt_track": "Super Rich Kids",
+      "gt_artist": "Frank Ocean, Earl Sweatshirt",
+      "safe_tags": [],
+      "query_text": "music attributes, tags :neo-soul, cult classics, essential listens, deep introspective",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "942c0b23-c5ad-4270-b23f-3ba456ea0ccf::t5",
+      "class_type": "failure",
+      "gt_track": "Alive",
+      "gt_artist": "Pearl Jam",
+      "safe_tags": [
+        "powerful",
+        "thought-provoking",
+        "rock"
+      ],
+      "query_text": "music attributes, tags :powerful, thought-provoking, rock",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "19c7e5bf-0797-40c5-b798-4d024af9558d::t4",
+      "class_type": "failure",
+      "gt_track": "Satisfied",
+      "gt_artist": "Original Broadway Cast of Hamilton, Renée Elise Goldsberry",
+      "safe_tags": [],
+      "query_text": "music attributes, tags :deep, expressive emotion, dramatic longing, slower build",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "71b80ec3-6cca-48b4-b471-08efa00afa2d::t4",
+      "class_type": "failure",
+      "gt_track": "That Would Be Enough",
+      "gt_artist": "Lin-Manuel Miranda, Phillipa Soo",
+      "safe_tags": [],
+      "query_text": "music attributes, tags :Eliza character development, Eliza's relationship with Alexander",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "692611f0-d9ef-406c-8327-902575197aee::t8",
+      "class_type": "failure",
+      "gt_track": "YAH.",
+      "gt_artist": "Kendrick Lamar",
+      "safe_tags": [
+        "dense"
+      ],
+      "query_text": "music attributes, tags :vivid storytelling, watching a movie, dense",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "8071d14d-7e0f-4f72-90a6-0941db80a371::t5",
+      "class_type": "failure",
+      "gt_track": "Stay Down",
+      "gt_artist": "Brent Faiyaz",
+      "safe_tags": [
+        "chill",
+        "R&B",
+        "groove"
+      ],
+      "query_text": "music attributes, tags :chill, R&B, groove",
+      "rank": 125,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "c863175a-bbaf-4f6c-aef7-cb16f2792cb5::t6",
+      "class_type": "failure",
+      "gt_track": "Cinderella (feat. Ty Dolla $ign)",
+      "gt_artist": "Mac Miller",
+      "safe_tags": [
+        "hip-hop",
+        "relationships"
+      ],
+      "query_text": "music attributes, tags :hip-hop, lyrical storytelling, relationships",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "c96d7bb9-65d4-44be-9bc2-891e8e485f4e::t7",
+      "class_type": "failure",
+      "gt_track": "Sentimento Louco - Ao Vivo",
+      "gt_artist": "Marília Mendonça",
+      "safe_tags": [
+        "sertanejo"
+      ],
+      "query_text": "music attributes, tags :deep longing, emotional storytelling, sertanejo, powerful emotional",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "e6ba98e1-9bee-4cc9-a6b7-0a8dcd767a1f::t7",
+      "class_type": "failure",
+      "gt_track": "Boom",
+      "gt_artist": "P.O.D.",
+      "safe_tags": [
+        "rap-rock"
+      ],
+      "query_text": "music attributes, tags :rap-rock, raw aggressive, strong political or social commentary, late 90s to early 2000s",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "ad5348a7-d3bc-4882-bfca-54aa655eac96::t5",
+      "class_type": "failure",
+      "gt_track": "Glitter",
+      "gt_artist": "Tyler, The Creator",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "2bbc0a7e-3ab0-4376-8135-182cd4ae075f::t1",
+      "class_type": "failure",
+      "gt_track": "Las Almas Del Silencio",
+      "gt_artist": "Ricky Martin",
+      "safe_tags": [
+        "Latin Pop",
+        "early 2000s"
+      ],
+      "query_text": "music attributes, tags :Latin Pop, hit back then, early 2000s",
+      "rank": 236,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "464477e4-f186-47fb-8cb0-55691c8b8f57::t6",
+      "class_type": "failure",
+      "gt_track": "Where Eagles Dare",
+      "gt_artist": "Glenn Danzig, Misfits",
+      "safe_tags": [
+        "proto-punk",
+        "influential"
+      ],
+      "query_text": "music attributes, tags :proto-punk, early New York City punk, influential",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "13066d2c-2d5e-4162-b3dc-354ecef3aff5::t5",
+      "class_type": "failure",
+      "gt_track": "You Know What I Mean",
+      "gt_artist": "Cults",
+      "safe_tags": [
+        "indie rock",
+        "post-punk revival",
+        "late 2000s"
+      ],
+      "query_text": "music attributes, tags :indie rock, post-punk revival, late 2000s, early 2010s",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "a2cface7-c4fc-4eb5-80b2-e0c516093732::t3",
+      "class_type": "failure",
+      "gt_track": "The City Is At War",
+      "gt_artist": "Cobra Starship",
+      "safe_tags": [
+        "upbeat",
+        "energetic",
+        "powerful"
+      ],
+      "query_text": "music attributes, tags :visually striking artwork, bold colors, upbeat, energetic, powerful",
+      "rank": 608,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "dd686049-59ba-439b-8c51-949a0876e1b3::t1",
+      "class_type": "failure",
+      "gt_track": "Vengeance (The Return of the Night Driving Avenger) [Bonus Track]",
+      "gt_artist": "Perturbator",
+      "safe_tags": [
+        "electronic",
+        "intense"
+      ],
+      "query_text": "music attributes, tags :electronic, intense, speeding through a cyberpunk city at night",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "a8df96e2-c196-462c-9484-72aa093aedf4::t1",
+      "class_type": "failure",
+      "gt_track": "Do Everything",
+      "gt_artist": "Steven Curtis Chapman",
+      "safe_tags": [
+        "Christian",
+        "male artist"
+      ],
+      "query_text": "music attributes, tags :Christian, encouraging message, male artist",
+      "rank": 341,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "5a0dfe9d-ec8a-4449-97df-35535cbf162f::t1",
+      "class_type": "failure",
+      "gt_track": "A New World",
+      "gt_artist": "Harry Gregson-Williams",
+      "safe_tags": [
+        "epic orchestral",
+        "movie soundtrack",
+        "background music"
+      ],
+      "query_text": "music attributes, tags :epic orchestral, movie soundtrack, background music",
+      "rank": 713,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "1c567917-f931-4609-9695-a9c0f8e39f3d::t2",
+      "class_type": "failure",
+      "gt_track": "Arregaçada / U Can't Touch This",
+      "gt_artist": "Banda Uó",
+      "safe_tags": [
+        "tecno brega",
+        "funk carioca",
+        "recent",
+        "upbeat"
+      ],
+      "query_text": "music attributes, tags :tecno brega, funk carioca, recent, upbeat, contemporary Brazilian dance and pop",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "54cda581-3b2e-4245-a479-1a27589760d2::t3",
+      "class_type": "failure",
+      "gt_track": "Deliberation - Studio",
+      "gt_artist": "Katatonia",
+      "safe_tags": [
+        "heavy metal",
+        "dark",
+        "abstract",
+        "bleak"
+      ],
+      "query_text": "music attributes, tags :heavy metal, dark, abstract, ruined city, bleak, mid-2000s to mid-2010s",
+      "rank": 522,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "13066d2c-2d5e-4162-b3dc-354ecef3aff5::t3",
+      "class_type": "failure",
+      "gt_track": "Yellow",
+      "gt_artist": "Coldplay",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "a62ed6fc-e634-4d57-afab-36d9ffc0fcc1::t1",
+      "class_type": "failure",
+      "gt_track": "Iris",
+      "gt_artist": "The Goo Goo Dolls",
+      "safe_tags": [
+        "big hit"
+      ],
+      "query_text": "music attributes, tags :big hit, sad but uplifting",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "be88097f-b6b0-4fb4-bed9-857a92a733c0::t3",
+      "class_type": "failure",
+      "gt_track": "Dreams - 2004 Remaster",
+      "gt_artist": "Fleetwood Mac",
+      "safe_tags": [
+        "1970s"
+      ],
+      "query_text": "music attributes, tags :70s rock guitar, intricate guitar solos, smooth guitar solos, guitar is the star, 1970s, killer guitar work",
+      "rank": 497,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "2eb984dc-9c71-449a-a335-caaa113d2c2b::t3",
+      "class_type": "failure",
+      "gt_track": "Tennessee Whiskey",
+      "gt_artist": "Chris Stapleton",
+      "safe_tags": [
+        "traditional country",
+        "classic sound"
+      ],
+      "query_text": "music attributes, tags :traditional country, popular well-regarded, classic sound, strong narrative",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "43a0926b-882e-403d-8cf7-2b0a598e0cc5::t2",
+      "class_type": "failure",
+      "gt_track": "Devil In A New Dress",
+      "gt_artist": "Rick Ross, Kanye West",
+      "safe_tags": [
+        "grandiose",
+        "confident",
+        "powerful"
+      ],
+      "query_text": "music attributes, tags :grandiose, triumphant beat, confident, powerful",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "401c369d-1eba-41b2-8eca-d93a6faeeddc::t3",
+      "class_type": "failure",
+      "gt_track": "Walk",
+      "gt_artist": "Pantera",
+      "safe_tags": [
+        "heavy"
+      ],
+      "query_text": "music attributes, tags :heavy, overcoming challenges, empowering through struggle",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "2db3ddc8-78a1-412c-a71e-e0d748aab0e7::t2",
+      "class_type": "failure",
+      "gt_track": "Old Time Rock & Roll",
+      "gt_artist": "Bob Seger",
+      "safe_tags": [],
+      "query_text": "music attributes, tags :distinctive 70s rock, lyrical depth",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "b4ffa800-8173-4f16-800a-4b5e765d7f80::t4",
+      "class_type": "failure",
+      "gt_track": "And I Love Her - Remastered",
+      "gt_artist": "The Beatles",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "66ff896f-fcbc-4c42-9d69-b0b5b5ae5a56::t3",
+      "class_type": "failure",
+      "gt_track": "Hungry Heart",
+      "gt_artist": "Bruce Springsteen",
+      "safe_tags": [
+        "classic rock",
+        "powerful"
+      ],
+      "query_text": "music attributes, tags :classic rock, late 70s or early 80s, powerful, arena-rock feel",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "c4c0c288-dbcd-4970-ad52-901aafe91b88::t1",
+      "class_type": "failure",
+      "gt_track": "Electric Relaxation",
+      "gt_artist": "A Tribe Called Quest",
+      "safe_tags": [
+        "early 90s"
+      ],
+      "query_text": "music attributes, tags :jazz-infused hip-hop, underground fans, early 90s",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "0681d55b-98a0-4773-a9df-075a8050d805::t1",
+      "class_type": "positive_control",
+      "gt_track": "Numb",
+      "gt_artist": "Linkin Park",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "8bee6f03-8cae-44ae-9325-455dc1138549::t1",
+      "class_type": "positive_control",
+      "gt_track": "Africa",
+      "gt_artist": "TOTO, Toto",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "d62387d0-3743-4ddc-bc92-8204c951ccee::t1",
+      "class_type": "positive_control",
+      "gt_track": "In the End",
+      "gt_artist": "Linkin Park",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "bd2aa024-68e7-43c2-aa87-afce9b4d7cf1::t2",
+      "class_type": "positive_control",
+      "gt_track": "Shut Up and Dance",
+      "gt_artist": "WALK THE MOON",
+      "safe_tags": [
+        "shut up and dance"
+      ],
+      "query_text": "music attributes, tags :shut up and dance",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "028027d3-ad67-4cfb-baca-516772ae7399::t1",
+      "class_type": "positive_control",
+      "gt_track": "Toxic",
+      "gt_artist": "Britney Spears",
+      "safe_tags": [
+        "iconic"
+      ],
+      "query_text": "music attributes, tags :iconic",
+      "rank": 103,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "fada63d6-1275-47a1-b3ab-30eae222fd72::t1",
+      "class_type": "positive_control",
+      "gt_track": "Toxic",
+      "gt_artist": "Britney Spears",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "7c3154c5-d1c2-4f07-9b8d-96d187334f1b::t1",
+      "class_type": "positive_control",
+      "gt_track": "Way Down We Go",
+      "gt_artist": "Kaleo, KALEO",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "ba3da7b0-1e81-4d2a-90fa-65ee1f4d7348::t1",
+      "class_type": "positive_control",
+      "gt_track": "Heart-Shaped Box",
+      "gt_artist": "Nirvana",
+      "safe_tags": [
+        "grunge",
+        "1990s"
+      ],
+      "query_text": "music attributes, tags :grunge, highly popular, 1990s",
+      "rank": 19,
+      "hit20": true,
+      "hit50": true,
+      "hit100": true,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "3664db63-1623-4ae7-9910-dd8bc3c2bd83::t1",
+      "class_type": "positive_control",
+      "gt_track": "No Scrubs",
+      "gt_artist": "TLC",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "7b550636-72fe-490e-ad38-a1912d08449f::t1",
+      "class_type": "positive_control",
+      "gt_track": "Believe",
+      "gt_artist": "Cher",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t8",
+      "class_type": "positive_control",
+      "gt_track": "Feel Good Inc",
+      "gt_artist": "Gorillaz",
+      "safe_tags": [
+        "quirky"
+      ],
+      "query_text": "music attributes, tags :upbeat electronic, quirky, instrumental-focused",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "4a02d862-623b-4fab-a42c-2905f31a96db::t1",
+      "class_type": "positive_control",
+      "gt_track": "Dreams - 2004 Remaster",
+      "gt_artist": "Fleetwood Mac",
+      "safe_tags": [
+        "folk-rock",
+        "easy-going"
+      ],
+      "query_text": "music attributes, tags :folk-rock, easy-going",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "5b44bff3-76ed-495e-9dc1-0f075e3d178b::t1",
+      "class_type": "positive_control",
+      "gt_track": "Dreams - 2004 Remaster",
+      "gt_artist": "Fleetwood Mac",
+      "safe_tags": [
+        "folk"
+      ],
+      "query_text": "music attributes, tags :classic melodic rock, folk, 1960s/1970s",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "a61b366c-8cf5-48ad-a13f-181c033b9d89::t2",
+      "class_type": "positive_control",
+      "gt_track": "Pumped Up Kicks",
+      "gt_artist": "Foster The People",
+      "safe_tags": [
+        "indie rock",
+        "energetic"
+      ],
+      "query_text": "music attributes, tags :indie rock, energetic, pretty popular, memorable whistle, strong bassline",
+      "rank": 249,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "55388720-92b7-4972-9bb2-beb37c33c86b::t1",
+      "class_type": "positive_control",
+      "gt_track": "Ivy",
+      "gt_artist": "Frank Ocean",
+      "safe_tags": [
+        "2016"
+      ],
+      "query_text": "music attributes, tags :2016",
+      "rank": 161,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": true,
+      "error": null
+    },
+    {
+      "sample_id": "13552d56-f3d8-443a-9272-11ec16c80fa1::t1",
+      "class_type": "positive_control",
+      "gt_track": "Congratulations",
+      "gt_artist": "Quavo, Post Malone",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t3",
+      "class_type": "positive_control",
+      "gt_track": "DARE",
+      "gt_artist": "Gorillaz",
+      "safe_tags": [],
+      "query_text": "music attributes, tags :strong electronic synth vibe",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "93199894-d3db-4335-8278-e1be175944e4::t1",
+      "class_type": "positive_control",
+      "gt_track": "Even Flow",
+      "gt_artist": "Pearl Jam",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "a9b423bf-d05c-418d-98af-2a3b1e1d7917::t1",
+      "class_type": "positive_control",
+      "gt_track": "It Was A Good Day",
+      "gt_artist": "Ice Cube",
+      "safe_tags": [
+        "1990s",
+        "classic"
+      ],
+      "query_text": "music attributes, tags :1990s, classic, Just wakin' up in the morning, gotta thank God",
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    },
+    {
+      "sample_id": "5080d5a0-336e-4bd1-b5bc-4cc611983429::t1",
+      "class_type": "positive_control",
+      "gt_track": "Rock with You - Single Version",
+      "gt_artist": "Michael Jackson",
+      "safe_tags": [],
+      "query_text": null,
+      "rank": null,
+      "hit20": false,
+      "hit50": false,
+      "hit100": false,
+      "hit1000": false,
+      "error": null
+    }
+  ]
+}

@@ -325,6 +325,9 @@ def run_modal_sharded(args: argparse.Namespace, split: str, exp_dir: Path) -> No
         sharded_cmd.append("--clear-cache")
     run_command(sharded_cmd, cwd=PROJECT_ROOT)
 
+    # --overwrite: the run we just executed produced fresh remote artifacts;
+    # download_results.py skips files that already exist locally, so without this
+    # a re-run would silently keep the stale local copy.
     run_command(
         [
             sys.executable,
@@ -337,6 +340,7 @@ def run_modal_sharded(args: argparse.Namespace, split: str, exp_dir: Path) -> No
             run_id,
             "--out-dir",
             str(exp_dir),
+            "--overwrite",
         ],
         cwd=PROJECT_ROOT,
     )
@@ -388,6 +392,8 @@ def run_modal(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
         if args.clear_cache:
             cmd.append("--clear-cache")
         run_command(cmd, cwd=PROJECT_ROOT)
+        # --overwrite: refresh the local copy with the run we just produced;
+        # download_results.py otherwise skips files that already exist locally.
         run_command(
             [
                 sys.executable,
@@ -396,6 +402,7 @@ def run_modal(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
                 args.tid,
                 "--out-dir",
                 str(exp_dir),
+                "--overwrite",
             ],
             cwd=PROJECT_ROOT,
         )
@@ -419,6 +426,8 @@ def run_modal(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
         ],
         cwd=PROJECT_ROOT,
     )
+    # --overwrite: refresh the local copy with the run we just produced;
+    # download_results.py otherwise skips files that already exist locally.
     run_command(
         [
             sys.executable,
@@ -429,6 +438,7 @@ def run_modal(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
             split,
             "--out-dir",
             str(exp_dir),
+            "--overwrite",
         ],
         cwd=PROJECT_ROOT,
     )

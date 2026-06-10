@@ -1,0 +1,285 @@
+{
+  "description": "Human-reviewed extractor-state checks for a small state-v1 prompt experiment. These checks intentionally override GT/ranker-derived ideal labels when the user wording makes the extractor contract clear.",
+  "source_pack": "state_experiment_pack.json",
+  "overrides": {
+    "55388720-92b7-4972-9bb2-beb37c33c86b::t1": {
+      "label_review": {
+        "status": "clean",
+        "class": "direct_exact_track",
+        "notes": "Direct play request; score exact protection, not GT-derived novelty."
+      },
+      "expected_state_checks": {
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {"type": "track", "value": "Ivy", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true},
+          {"type": "artist", "value": "Frank Ocean", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true}
+        ]
+      }
+    },
+    "0681d55b-98a0-4773-a9df-075a8050d805::t1": {
+      "label_review": {
+        "status": "clean",
+        "class": "direct_exact_track_album",
+        "notes": "Original release, track, artist, and album are explicit."
+      },
+      "expected_state_checks": {
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {"type": "track", "value": "Numb", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true},
+          {"type": "artist", "value": "Linkin Park", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true},
+          {"type": "album", "value": "Meteora", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true}
+        ]
+      }
+    },
+    "8bee6f03-8cae-44ae-9325-455dc1138549::t1": {
+      "label_review": {
+        "status": "clean",
+        "class": "direct_exact_track",
+        "notes": "Direct play request."
+      },
+      "expected_state_checks": {
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {"type": "track", "value": "Africa", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true},
+          {"type": "artist", "value": "Toto", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true}
+        ]
+      }
+    },
+    "d62387d0-3743-4ddc-bc92-8204c951ccee::t1": {
+      "label_review": {
+        "status": "clean",
+        "class": "direct_exact_track",
+        "notes": "Direct play request."
+      },
+      "expected_state_checks": {
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {"type": "track", "value": "In the End", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true},
+          {"type": "artist", "value": "Linkin Park", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true}
+        ]
+      }
+    },
+    "fada63d6-1275-47a1-b3ab-30eae222fd72::t1": {
+      "label_review": {
+        "status": "clean",
+        "class": "direct_exact_track",
+        "notes": "Direct play request."
+      },
+      "expected_state_checks": {
+        "retrieval_profile": "exact_probe",
+        "entities": [
+          {"type": "track", "value": "Toxic", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true},
+          {"type": "artist", "value": "Britney Spears", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true}
+        ]
+      }
+    },
+    "bd2aa024-68e7-43c2-aa87-afce9b4d7cf1::t2": {
+      "label_review": {
+        "status": "clean",
+        "class": "hidden_target_artist_lyric",
+        "notes": "The band is explicit, but the title is recalled from a lyric clue."
+      },
+      "expected_state_checks": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "hidden_target_search",
+        "entities": [
+          {"type": "artist", "value": "WALK THE MOON", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true}
+        ]
+      }
+    },
+    "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t8": {
+      "label_review": {
+        "status": "clean",
+        "class": "same_artist_continuation",
+        "notes": "User explicitly asks for a Gorillaz track."
+      },
+      "expected_state_checks": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "continuation",
+        "entities": [
+          {"type": "artist", "value": "Gorillaz", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true},
+          {"type": "album", "value": "Cracker Island", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true}
+        ]
+      }
+    },
+    "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t3": {
+      "label_review": {
+        "status": "clean",
+        "class": "same_artist_continuation",
+        "notes": "User explicitly asks for more Gorillaz tracks."
+      },
+      "expected_state_checks": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "continuation",
+        "entities": [
+          {"type": "artist", "value": "Gorillaz", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true}
+        ]
+      }
+    },
+    "37097db6-54b8-491b-8512-1df70648548b::t2": {
+      "label_review": {
+        "status": "clean",
+        "class": "positive_named_artist_continuation",
+        "notes": "Current user positively names Frank Ocean and refines mood without asking for another artist."
+      },
+      "expected_state_checks": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "continuation",
+        "entities": [
+          {"type": "artist", "value": "Frank Ocean", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true}
+        ]
+      }
+    },
+    "fc78453a-8798-4402-a01a-e9c557f08a03::t2": {
+      "label_review": {
+        "status": "clean",
+        "class": "same_artist_album_continuation",
+        "notes": "Earlier work and first album imply same artist / album-family continuation."
+      },
+      "expected_state_checks": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": "continuation",
+        "entities": [
+          {"type": "artist", "value": "Natalia Lafourcade", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true},
+          {"type": "album", "value": "Natalia Lafourcade", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true}
+        ]
+      }
+    },
+    "c7a965c3-cd7f-46f6-b166-9dce9a800e0a::t3": {
+      "label_review": {
+        "status": "clean",
+        "class": "satisfied_prior_novelty",
+        "notes": "Toxic/Britney are satisfied context; something else should not seed Britney."
+      },
+      "expected_state_checks": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "forbidden_seed_values": ["Britney Spears", "Toxic"],
+        "entities": [
+          {"type": "artist", "value": "Britney Spears", "allowed_roles": ["satisfied", "history", "contrast"], "use_as_retrieval_seed": false, "required": false},
+          {"type": "track", "value": "Toxic", "allowed_roles": ["satisfied", "history", "contrast"], "use_as_retrieval_seed": false, "required": false}
+        ]
+      }
+    },
+    "a930da0d-07f1-46c6-909d-e4fd95ae1148::t6": {
+      "label_review": {
+        "status": "clean",
+        "class": "satisfied_prior_novelty",
+        "notes": "Other well-known songs after praise should move away from Michael Jackson."
+      },
+      "expected_state_checks": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "forbidden_seed_values": ["Michael Jackson", "Will You Be There"],
+        "entities": [
+          {"type": "artist", "value": "Michael Jackson", "allowed_roles": ["satisfied", "history", "contrast"], "use_as_retrieval_seed": false, "required": false}
+        ]
+      }
+    },
+    "4d0afb6b-3705-493f-ab16-ca75ea311e1a::t7": {
+      "label_review": {
+        "status": "clean",
+        "class": "album_rejection_new_artist",
+        "notes": "No more from Blade Runner 2049 plus new artists/different film scores."
+      },
+      "expected_state_checks": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "requires_hard_rejection": true,
+        "hard_rejection_values": ["Blade Runner 2049"],
+        "forbidden_seed_values": ["Blade Runner 2049", "Hans Zimmer", "Benjamin Wallfisch"]
+      }
+    },
+    "b2582e52-6d13-40b4-8552-2d8b63fa6c75::t8": {
+      "label_review": {
+        "status": "clean",
+        "class": "artist_rejection_new_artist",
+        "notes": "Similar style to System Of A Down, but not them."
+      },
+      "expected_state_checks": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "requires_hard_rejection": true,
+        "hard_rejection_values": ["System Of A Down"],
+        "forbidden_seed_values": ["System Of A Down"]
+      }
+    },
+    "88beb200-0334-4aba-be15-8e1303725766::t6": {
+      "label_review": {
+        "status": "clean",
+        "class": "artist_rejection_new_artist_temporal",
+        "notes": "Good on Drake for now / other artists / someone different."
+      },
+      "expected_state_checks": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "requires_hard_rejection": true,
+        "hard_rejection_values": ["Drake"],
+        "forbidden_seed_values": ["Drake"]
+      }
+    },
+    "d5fcb591-3744-4ebb-9d1a-5c57c314b7d0::t5": {
+      "label_review": {
+        "status": "clean",
+        "class": "soft_style_era",
+        "notes": "Golden era R&B is aesthetic/era language, not a strict release-date filter."
+      },
+      "expected_state_checks": {
+        "target_artist_mode": "new_artist",
+        "retrieval_profile": "novelty",
+        "temporal_constraint": {"kind": "style_era", "strength": "soft", "apply_as_filter": false}
+      }
+    },
+    "3676005d-5b7c-4c48-9b73-3e10dd509c07::t1": {
+      "label_review": {
+        "status": "clean",
+        "class": "hidden_target_soft_era",
+        "notes": "Trying to remember a specific powerful orchestral/movie-score song from an era."
+      },
+      "expected_state_checks": {
+        "target_artist_mode": ["any_artist", "unknown", "new_artist"],
+        "retrieval_profile": "hidden_target_search",
+        "temporal_constraint": {"kind": "style_era", "strength": "soft", "apply_as_filter": false}
+      }
+    },
+    "a33a5df0-2c2b-429c-84e6-cde28affd4d5::t6": {
+      "label_review": {
+        "status": "clean",
+        "class": "album_hidden_target",
+        "notes": "The user is searching within a named first album / mid-2000s emo phase."
+      },
+      "expected_state_checks": {
+        "target_artist_mode": "same_artist",
+        "retrieval_profile": ["exact_probe", "hidden_target_search"],
+        "entities": [
+          {"type": "album", "value": "A Fever You Can't Sweat Out", "allowed_roles": ["current_target", "seed"], "use_as_retrieval_seed": true}
+        ],
+        "temporal_constraint": {"kind": ["style_era", "reference_era"], "strength": "soft", "apply_as_filter": false}
+      }
+    },
+    "a62ed6fc-e634-4d57-afab-36d9ffc0fcc1::t1": {
+      "label_review": {
+        "status": "clean",
+        "class": "hidden_target_soft_era",
+        "notes": "Trying to remember a big late-90s song."
+      },
+      "expected_state_checks": {
+        "target_artist_mode": ["any_artist", "unknown", "new_artist"],
+        "retrieval_profile": "hidden_target_search",
+        "temporal_constraint": {"kind": "style_era", "strength": "soft", "apply_as_filter": false}
+      }
+    },
+    "2bbc0a7e-3ab0-4376-8135-182cd4ae075f::t1": {
+      "label_review": {
+        "status": "clean",
+        "class": "hidden_target_soft_era",
+        "notes": "Trying to remember a Latin Pop hit from around the early 2000s."
+      },
+      "expected_state_checks": {
+        "target_artist_mode": ["any_artist", "unknown", "new_artist"],
+        "retrieval_profile": "hidden_target_search",
+        "temporal_constraint": {"kind": "style_era", "strength": "soft", "apply_as_filter": false}
+      }
+    }
+  }
+}

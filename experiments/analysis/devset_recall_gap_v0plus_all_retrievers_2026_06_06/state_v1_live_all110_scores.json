@@ -1,0 +1,2474 @@
+{
+  "summary": {
+    "samples": 110,
+    "all_pass_rate": 0.45454545454545453
+  },
+  "by_pack": {
+    "P0_good_state_ranker_near_miss_failure": {
+      "samples": 10,
+      "all_pass_rate": 0.4,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 0.9,
+      "target_artist_mode_correct_rate": 0.5,
+      "retrieval_profile_correct_rate": 0.4,
+      "temporal_semantics_correct_rate": 0.9,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P0_named_artist_ranker_failure": {
+      "samples": 10,
+      "all_pass_rate": 0.4,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 0.7,
+      "target_artist_mode_correct_rate": 0.7,
+      "retrieval_profile_correct_rate": 0.4,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P0_new_artist_union20_gap_failure": {
+      "samples": 10,
+      "all_pass_rate": 0.8,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 0.9,
+      "retrieval_profile_correct_rate": 0.8,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P0_novelty_prior_anchor_failure": {
+      "samples": 10,
+      "all_pass_rate": 0.4,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 0.7,
+      "target_artist_mode_correct_rate": 0.6,
+      "retrieval_profile_correct_rate": 0.5,
+      "temporal_semantics_correct_rate": 0.9,
+      "rejection_normalization_correct_rate": 0.9,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P0_roleless_stale_entity_failure": {
+      "samples": 10,
+      "all_pass_rate": 0.5,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 0.9,
+      "target_artist_mode_correct_rate": 0.6,
+      "retrieval_profile_correct_rate": 0.6,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 0.9,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P0_same_album_ranker_failure": {
+      "samples": 10,
+      "all_pass_rate": 0.3,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 0.8,
+      "target_artist_mode_correct_rate": 0.5,
+      "retrieval_profile_correct_rate": 0.3,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P1_positive_tag_retrieval_gap_failure": {
+      "samples": 10,
+      "all_pass_rate": 0.4,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 0.4,
+      "retrieval_profile_correct_rate": 0.4,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P1_rejection_guardrail_failure": {
+      "samples": 10,
+      "all_pass_rate": 0.5,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 1.0,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 0.5,
+      "positive_control_preserved_rate": 1.0
+    },
+    "P1_temporal_constraint_failure": {
+      "samples": 10,
+      "all_pass_rate": 0.2,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 0.7,
+      "retrieval_profile_correct_rate": 0.5,
+      "temporal_semantics_correct_rate": 0.6,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    },
+    "POS_clean_final_hit_control": {
+      "samples": 10,
+      "all_pass_rate": 0.2,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 0.2,
+      "retrieval_profile_correct_rate": 0.2,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 0.2
+    },
+    "POS_exact_entity_success_control": {
+      "samples": 10,
+      "all_pass_rate": 0.9,
+      "schema_valid_rate": 1.0,
+      "role_correct_rate": 1.0,
+      "target_artist_mode_correct_rate": 1.0,
+      "retrieval_profile_correct_rate": 0.9,
+      "temporal_semantics_correct_rate": 1.0,
+      "rejection_normalization_correct_rate": 1.0,
+      "positive_control_preserved_rate": 1.0
+    }
+  },
+  "rows": [
+    {
+      "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+      "pack": "P0_roleless_stale_entity_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1975,
+          1984
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "e66c6a88-88ba-4117-9114-363bfa96294a::t7",
+      "pack": "P0_roleless_stale_entity_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+      "pack": "P0_roleless_stale_entity_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "41367174-552b-4117-9caa-d0ba1b307d37::t2",
+      "pack": "P0_roleless_stale_entity_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2000,
+          2019
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "10a15ba2-4126-4ae4-ac6c-dc170735ae9e::t7",
+      "pack": "P0_roleless_stale_entity_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": false,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4",
+      "pack": "P0_roleless_stale_entity_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": false,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "5f29a9df-ad38-4349-a2f0-c9a690ea072d::t2",
+      "pack": "P0_roleless_stale_entity_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1970,
+          1979
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "78cdaccb-0f9b-4876-80b1-c20bf0b444e6::t8",
+      "pack": "P0_roleless_stale_entity_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "88af7ec3-c368-421b-9512-d0180da3d1f6::t2",
+      "pack": "P0_roleless_stale_entity_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2000,
+          2009
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "d9a65836-7165-45bf-aa3e-3ef7ba5d073a::t2",
+      "pack": "P0_roleless_stale_entity_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2000,
+          2005
+        ]
+      },
+      "observed_rejections": [
+        {
+          "kind": "style",
+          "value": "heavier",
+          "scope": "soft"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "c7a965c3-cd7f-46f6-b166-9dce9a800e0a::t3",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "88beb200-0334-4aba-be15-8e1303725766::t6",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2015,
+          2016
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": false,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "daeef24e-b041-4140-9101-882820c63408::t7",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": false,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "8dc4c630-8369-4720-b379-2a7dcd8d34aa::t7",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "380a5ed5-3eb9-4201-8fa6-81381a583bf5::t3",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": false,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "5f085552-b56b-440e-830b-b4e40b58f854::t6",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "release_date",
+        "strength": "hard",
+        "apply_as_filter": true,
+        "range": [
+          1995,
+          2005
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": false,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "d6e50fb5-a135-4008-80b6-d0be434369ac::t3",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [
+        {
+          "kind": "style",
+          "value": "too cheerful",
+          "scope": "soft"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": false,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "38d8ba41-a4ea-48ea-b460-bd93d164302a::t4",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1990,
+          1999
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "8bcb7d16-9be0-40cc-9a9d-28b654997b8d::t6",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "cdd374ea-1ad9-4440-8c2d-4c76c5fb3f78::t3",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "a930da0d-07f1-46c6-909d-e4fd95ae1148::t6",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "5ee0dbbc-c1d1-4bed-ba09-7dafeec198bc::t8",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "4e2482dc-a76c-4f4b-9d3f-7becec2f8a3a::t4",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "5861afef-85c0-4163-b8b9-5a11e308f352::t4",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "15b1caf3-d1ed-46ef-a8e3-c9f7657e6b77::t6",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "907921a3-d08f-4ba1-8cce-0e760a9e7044::t7",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "ab5eac17-909e-4271-8cf9-40c06b27ee56::t2",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2015,
+          2017
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "324ddfb5-8a18-4729-9acb-c851907a297c::t3",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1995,
+          2005
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1990,
+          1999
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "ba68a3cc-5278-4680-917a-4ca66d33ef31::t5",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2000,
+          2005
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "d5fcb591-3744-4ebb-9d1a-5c57c314b7d0::t5",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1975,
+          1979
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "f2d85aa5-2086-4b1e-9974-d188c43621db::t8",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": {
+        "kind": "release_date",
+        "strength": "hard",
+        "apply_as_filter": true,
+        "range": [
+          2007,
+          2009
+        ]
+      },
+      "observed_rejections": [
+        {
+          "kind": "track",
+          "value": "78ed2dc2-8187-4ae7-b2ce-44dcfbb9321f",
+          "scope": "hard"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": false,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "67b9ba8a-382f-4b70-af76-576848d8cf67::t8",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": false,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "9468e467-d396-461b-be29-b30b6cf87c35::t5",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": false,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "e978bb5b-26af-4c7d-b720-b9210bdddf25::t8",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1990,
+          1999
+        ]
+      },
+      "observed_rejections": [
+        {
+          "kind": "artist",
+          "value": "The Roots",
+          "scope": "hard"
+        },
+        {
+          "kind": "artist",
+          "value": "Masta Ace",
+          "scope": "hard"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "3676005d-5b7c-4c48-9b73-3e10dd509c07::t3",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2000,
+          2005
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "a33a5df0-2c2b-429c-84e6-cde28affd4d5::t6",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2004,
+          2006
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "3676005d-5b7c-4c48-9b73-3e10dd509c07::t1",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2000,
+          2009
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "c4c0c288-dbcd-4970-ad52-901aafe91b88::t4",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1990,
+          1999
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "71bb177a-dab1-4bbc-8508-22d809b05c31::t6",
+      "pack": "P1_temporal_constraint_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": false,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "4d0afb6b-3705-493f-ab16-ca75ea311e1a::t7",
+      "pack": "P1_rejection_guardrail_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [
+        {
+          "kind": "style",
+          "value": "Blade Runner 2049 soundtrack",
+          "scope": "hard"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "1e14a07f-7369-4d24-9285-9343b6b18353::t8",
+      "pack": "P1_rejection_guardrail_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [
+        {
+          "kind": "style",
+          "value": "heavy",
+          "scope": "soft"
+        },
+        {
+          "kind": "style",
+          "value": "metal",
+          "scope": "soft"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": false,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "d265b5a9-af57-4070-90f5-692a960c5aaa::t6",
+      "pack": "P1_rejection_guardrail_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2010,
+          2019
+        ]
+      },
+      "observed_rejections": [
+        {
+          "kind": "album",
+          "value": "Random Access Memories",
+          "scope": "hard"
+        },
+        {
+          "kind": "album",
+          "value": "New Energy",
+          "scope": "hard"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "b2582e52-6d13-40b4-8552-2d8b63fa6c75::t8",
+      "pack": "P1_rejection_guardrail_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": false,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "d265b5a9-af57-4070-90f5-692a960c5aaa::t8",
+      "pack": "P1_rejection_guardrail_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2010,
+          2019
+        ]
+      },
+      "observed_rejections": [
+        {
+          "kind": "artist",
+          "value": "Daft Punk",
+          "scope": "hard"
+        },
+        {
+          "kind": "artist",
+          "value": "Four Tet",
+          "scope": "hard"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "3a4224d3-1e5b-4bb9-a424-886d5c45d5d3::t8",
+      "pack": "P1_rejection_guardrail_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [
+        {
+          "kind": "style",
+          "value": "rain",
+          "scope": "hard"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "963b3ee7-17d1-4bb3-8a3f-0bc528a1f096::t5",
+      "pack": "P1_rejection_guardrail_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [
+        {
+          "kind": "artist",
+          "value": "Lupe Fiasco",
+          "scope": "hard"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "08bea603-846a-428b-aa27-de4dfede7ba9::t8",
+      "pack": "P1_rejection_guardrail_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": false,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "0fc60312-9a9d-4658-a950-06fc2441a2ac::t8",
+      "pack": "P1_rejection_guardrail_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [
+        {
+          "kind": "style",
+          "value": "track #1's sound",
+          "scope": "soft"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": false,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "3ebc2b49-0f5c-4161-bbcf-e1615821103f::t2",
+      "pack": "P1_rejection_guardrail_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": false,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "37097db6-54b8-491b-8512-1df70648548b::t2",
+      "pack": "P0_named_artist_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [
+        {
+          "kind": "style",
+          "value": "upbeat",
+          "scope": "soft"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "f4115525-7e44-40df-8957-e38df99f214d::t4",
+      "pack": "P0_named_artist_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": false,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "eee89ca2-fc86-4a9a-b4c5-2d77cb3346c8::t7",
+      "pack": "P0_named_artist_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [
+        {
+          "kind": "style",
+          "value": "electronic",
+          "scope": "soft"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "44c3948c-bc44-4e40-ae77-82c2fec9c944::t7",
+      "pack": "P0_named_artist_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": false,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "899f906b-9b0b-42a6-9689-643eb9f1ed31::t8",
+      "pack": "P0_named_artist_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1995,
+          2005
+        ]
+      },
+      "observed_rejections": [
+        {
+          "kind": "artist",
+          "value": "Linkin Park",
+          "scope": "hard"
+        },
+        {
+          "kind": "artist",
+          "value": "Pantera",
+          "scope": "hard"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "93199894-d3db-4335-8278-e1be175944e4::t6",
+      "pack": "P0_named_artist_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "7d2bb60e-1046-4956-91d0-cf1dd73037cc::t3",
+      "pack": "P0_named_artist_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1990,
+          2024
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": false,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "1b406c88-9dfd-42cd-a1f5-9683f35f849b::t1",
+      "pack": "P0_named_artist_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1990,
+          1999
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "7be411cd-f002-459e-8326-3ebe8be10b42::t6",
+      "pack": "P0_named_artist_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "release_date",
+        "strength": "hard",
+        "apply_as_filter": true,
+        "range": [
+          null,
+          1989
+        ]
+      },
+      "observed_rejections": [
+        {
+          "kind": "artist",
+          "value": "Kate Bush",
+          "scope": "hard"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "fc78453a-8798-4402-a01a-e9c557f08a03::t2",
+      "pack": "P0_named_artist_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "84803908-48e7-41b7-9269-a465a44f4c10::t2",
+      "pack": "P0_same_album_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "6d825b33-dc20-4b3c-a277-0c8214163007::t6",
+      "pack": "P0_same_album_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1997,
+          2004
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "942c0b23-c5ad-4270-b23f-3ba456ea0ccf::t5",
+      "pack": "P0_same_album_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": false,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "19c7e5bf-0797-40c5-b798-4d024af9558d::t4",
+      "pack": "P0_same_album_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "71b80ec3-6cca-48b4-b471-08efa00afa2d::t4",
+      "pack": "P0_same_album_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "692611f0-d9ef-406c-8327-902575197aee::t8",
+      "pack": "P0_same_album_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "8071d14d-7e0f-4f72-90a6-0941db80a371::t5",
+      "pack": "P0_same_album_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "c863175a-bbaf-4f6c-aef7-cb16f2792cb5::t6",
+      "pack": "P0_same_album_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": false,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "c96d7bb9-65d4-44be-9bc2-891e8e485f4e::t7",
+      "pack": "P0_same_album_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "e6ba98e1-9bee-4cc9-a6b7-0a8dcd767a1f::t7",
+      "pack": "P0_same_album_ranker_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1996,
+          2004
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "ad5348a7-d3bc-4882-bfca-54aa655eac96::t5",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "2bbc0a7e-3ab0-4376-8135-182cd4ae075f::t1",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "unknown",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1998,
+          2003
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "464477e4-f186-47fb-8cb0-55691c8b8f57::t6",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          null,
+          null
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "13066d2c-2d5e-4162-b3dc-354ecef3aff5::t5",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2007,
+          2013
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "a2cface7-c4fc-4eb5-80b2-e0c516093732::t3",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [
+        {
+          "kind": "style",
+          "value": "intense/powerful music",
+          "scope": "soft"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "dd686049-59ba-439b-8c51-949a0876e1b3::t1",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "a8df96e2-c196-462c-9484-72aa093aedf4::t1",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "5a0dfe9d-ec8a-4449-97df-35535cbf162f::t1",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "1c567917-f931-4609-9695-a9c0f8e39f3d::t2",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "54cda581-3b2e-4245-a479-1a27589760d2::t3",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2005,
+          2015
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "13066d2c-2d5e-4162-b3dc-354ecef3aff5::t3",
+      "pack": "P0_good_state_ranker_near_miss_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1995,
+          2005
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "a62ed6fc-e634-4d57-afab-36d9ffc0fcc1::t1",
+      "pack": "P0_good_state_ranker_near_miss_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1995,
+          1999
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "be88097f-b6b0-4fb4-bed9-857a92a733c0::t3",
+      "pack": "P0_good_state_ranker_near_miss_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1970,
+          1979
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": false,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "2eb984dc-9c71-449a-a335-caaa113d2c2b::t3",
+      "pack": "P0_good_state_ranker_near_miss_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "43a0926b-882e-403d-8cf7-2b0a598e0cc5::t2",
+      "pack": "P0_good_state_ranker_near_miss_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "401c369d-1eba-41b2-8eca-d93a6faeeddc::t3",
+      "pack": "P0_good_state_ranker_near_miss_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "2db3ddc8-78a1-412c-a71e-e0d748aab0e7::t2",
+      "pack": "P0_good_state_ranker_near_miss_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "b4ffa800-8173-4f16-800a-4b5e765d7f80::t4",
+      "pack": "P0_good_state_ranker_near_miss_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [
+        {
+          "kind": "track",
+          "value": "I Want You (She's So Heavy)",
+          "scope": "hard"
+        },
+        {
+          "kind": "track",
+          "value": "Come Together",
+          "scope": "hard"
+        },
+        {
+          "kind": "track",
+          "value": "Happiness Is A Warm Gun",
+          "scope": "hard"
+        }
+      ],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "66ff896f-fcbc-4c42-9d69-b0b5b5ae5a56::t3",
+      "pack": "P0_good_state_ranker_near_miss_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "new_artist",
+      "observed_retrieval_profile": "novelty",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1975,
+          1984
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "c4c0c288-dbcd-4970-ad52-901aafe91b88::t1",
+      "pack": "P0_good_state_ranker_near_miss_failure",
+      "class_type": "failure",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": {
+        "kind": "release_date",
+        "strength": "hard",
+        "apply_as_filter": true,
+        "range": [
+          1990,
+          1994
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": false,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "0681d55b-98a0-4773-a9df-075a8050d805::t1",
+      "pack": "POS_exact_entity_success_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": {
+        "kind": "release_date",
+        "strength": "hard",
+        "apply_as_filter": true,
+        "range": [
+          2003,
+          2003
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "8bee6f03-8cae-44ae-9325-455dc1138549::t1",
+      "pack": "POS_exact_entity_success_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "d62387d0-3743-4ddc-bc92-8204c951ccee::t1",
+      "pack": "POS_exact_entity_success_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "bd2aa024-68e7-43c2-aa87-afce9b4d7cf1::t2",
+      "pack": "POS_exact_entity_success_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          2010,
+          2019
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": false
+    },
+    {
+      "sample_id": "028027d3-ad67-4cfb-baca-516772ae7399::t1",
+      "pack": "POS_exact_entity_success_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "fada63d6-1275-47a1-b3ab-30eae222fd72::t1",
+      "pack": "POS_exact_entity_success_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "7c3154c5-d1c2-4f07-9b8d-96d187334f1b::t1",
+      "pack": "POS_exact_entity_success_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "ba3da7b0-1e81-4d2a-90fa-65ee1f4d7348::t1",
+      "pack": "POS_exact_entity_success_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1990,
+          1999
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "3664db63-1623-4ae7-9910-dd8bc3c2bd83::t1",
+      "pack": "POS_exact_entity_success_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "7b550636-72fe-490e-ad38-a1912d08449f::t1",
+      "pack": "POS_exact_entity_success_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t8",
+      "pack": "POS_clean_final_hit_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "4a02d862-623b-4fab-a42c-2905f31a96db::t1",
+      "pack": "POS_clean_final_hit_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": false,
+      "all_pass": false
+    },
+    {
+      "sample_id": "5b44bff3-76ed-495e-9dc1-0f075e3d178b::t1",
+      "pack": "POS_clean_final_hit_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "unknown",
+      "observed_retrieval_profile": "feature_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1960,
+          1979
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": false,
+      "all_pass": false
+    },
+    {
+      "sample_id": "a61b366c-8cf5-48ad-a13f-181c033b9d89::t2",
+      "pack": "POS_clean_final_hit_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "any_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": false,
+      "all_pass": false
+    },
+    {
+      "sample_id": "55388720-92b7-4972-9bb2-beb37c33c86b::t1",
+      "pack": "POS_clean_final_hit_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": false,
+      "all_pass": false
+    },
+    {
+      "sample_id": "13552d56-f3d8-443a-9272-11ec16c80fa1::t1",
+      "pack": "POS_clean_final_hit_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": false,
+      "all_pass": false
+    },
+    {
+      "sample_id": "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t3",
+      "pack": "POS_clean_final_hit_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "continuation",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": true,
+      "retrieval_profile_correct": true,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": true,
+      "all_pass": true
+    },
+    {
+      "sample_id": "93199894-d3db-4335-8278-e1be175944e4::t1",
+      "pack": "POS_clean_final_hit_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": null,
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": false,
+      "all_pass": false
+    },
+    {
+      "sample_id": "a9b423bf-d05c-418d-98af-2a3b1e1d7917::t1",
+      "pack": "POS_clean_final_hit_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "hidden_target_search",
+      "observed_temporal_constraint": {
+        "kind": "style_era",
+        "strength": "soft",
+        "apply_as_filter": false,
+        "range": [
+          1990,
+          1999
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": false,
+      "all_pass": false
+    },
+    {
+      "sample_id": "5080d5a0-336e-4bd1-b5bc-4cc611983429::t1",
+      "pack": "POS_clean_final_hit_control",
+      "class_type": "positive_control",
+      "observed_target_artist_mode": "same_artist",
+      "observed_retrieval_profile": "exact_probe",
+      "observed_temporal_constraint": {
+        "kind": "release_date",
+        "strength": "hard",
+        "apply_as_filter": true,
+        "range": [
+          1979,
+          1979
+        ]
+      },
+      "observed_rejections": [],
+      "schema_valid": true,
+      "role_correct": true,
+      "target_artist_mode_correct": false,
+      "retrieval_profile_correct": false,
+      "temporal_semantics_correct": true,
+      "rejection_normalization_correct": true,
+      "positive_control_preserved": false,
+      "all_pass": false
+    }
+  ]
+}

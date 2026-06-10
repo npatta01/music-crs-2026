@@ -1,0 +1,624 @@
+{
+  "baseline_counts": {
+    "current_plus_targeted": {
+      "100": 93,
+      "20": 77,
+      "50": 90
+    },
+    "protected_trace_top100_pools": {
+      "100": 60,
+      "20": 60,
+      "50": 60
+    },
+    "reconstructed_current_or": {
+      "100": 91,
+      "20": 75,
+      "50": 87
+    },
+    "targeted_branches_only": {
+      "100": 60,
+      "20": 43,
+      "50": 53
+    },
+    "unique_targeted_rescues_over_current": {
+      "100": 2,
+      "20": 2,
+      "50": 3
+    }
+  },
+  "inputs": {
+    "current_files": [
+      "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_matrix_modal_all110_qwen06_clap_branch_rules.json",
+      "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_matrix_modal_all110_all_candidate.json",
+      "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_matrix_modal_all110_all_candidate_branch_rules.json",
+      "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_matrix_modal_all110_lookup.json",
+      "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_matrix_modal_all110_clap.json",
+      "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_matrix_modal_all110_qwen8.json",
+      "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_matrix_modal_all110_current_config.json",
+      "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_matrix_modal_all110_qwen06.json",
+      "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_matrix_modal_all110_centroid.json",
+      "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_additive_synthetic_branches_all110.json",
+      "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_additive_query_text_branches_all110.json"
+    ],
+    "targeted_files": [
+      "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_targeted_metadata_matrix_all110.json",
+      "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_siglip_visual_matrix_all110.json"
+    ]
+  },
+  "per_class": [
+    {
+      "current@100": 10,
+      "current@20": 10,
+      "current@50": 10,
+      "current_plus_targeted@100": 10,
+      "current_plus_targeted@20": 10,
+      "current_plus_targeted@50": 10,
+      "n": 10,
+      "new@100": 0,
+      "new@20": 0,
+      "new@50": 0,
+      "pack": "P0_good_state_ranker_near_miss_failure",
+      "targeted@100": 8,
+      "targeted@20": 7,
+      "targeted@50": 8
+    },
+    {
+      "current@100": 10,
+      "current@20": 10,
+      "current@50": 10,
+      "current_plus_targeted@100": 10,
+      "current_plus_targeted@20": 10,
+      "current_plus_targeted@50": 10,
+      "n": 10,
+      "new@100": 0,
+      "new@20": 0,
+      "new@50": 0,
+      "pack": "P0_named_artist_ranker_failure",
+      "targeted@100": 7,
+      "targeted@20": 7,
+      "targeted@50": 7
+    },
+    {
+      "current@100": 6,
+      "current@20": 3,
+      "current@50": 5,
+      "current_plus_targeted@100": 7,
+      "current_plus_targeted@20": 4,
+      "current_plus_targeted@50": 6,
+      "n": 10,
+      "new@100": 1,
+      "new@20": 1,
+      "new@50": 1,
+      "pack": "P0_new_artist_union20_gap_failure",
+      "targeted@100": 5,
+      "targeted@20": 4,
+      "targeted@50": 5
+    },
+    {
+      "current@100": 6,
+      "current@20": 4,
+      "current@50": 6,
+      "current_plus_targeted@100": 6,
+      "current_plus_targeted@20": 4,
+      "current_plus_targeted@50": 6,
+      "n": 10,
+      "new@100": 0,
+      "new@20": 0,
+      "new@50": 0,
+      "pack": "P0_novelty_prior_anchor_failure",
+      "targeted@100": 3,
+      "targeted@20": 2,
+      "targeted@50": 3
+    },
+    {
+      "current@100": 4,
+      "current@20": 1,
+      "current@50": 4,
+      "current_plus_targeted@100": 4,
+      "current_plus_targeted@20": 1,
+      "current_plus_targeted@50": 4,
+      "n": 10,
+      "new@100": 0,
+      "new@20": 0,
+      "new@50": 0,
+      "pack": "P0_roleless_stale_entity_failure",
+      "targeted@100": 0,
+      "targeted@20": 0,
+      "targeted@50": 0
+    },
+    {
+      "current@100": 10,
+      "current@20": 10,
+      "current@50": 10,
+      "current_plus_targeted@100": 10,
+      "current_plus_targeted@20": 10,
+      "current_plus_targeted@50": 10,
+      "n": 10,
+      "new@100": 0,
+      "new@20": 0,
+      "new@50": 0,
+      "pack": "P0_same_album_ranker_failure",
+      "targeted@100": 4,
+      "targeted@20": 2,
+      "targeted@50": 4
+    },
+    {
+      "current@100": 9,
+      "current@20": 3,
+      "current@50": 6,
+      "current_plus_targeted@100": 9,
+      "current_plus_targeted@20": 4,
+      "current_plus_targeted@50": 7,
+      "n": 10,
+      "new@100": 0,
+      "new@20": 1,
+      "new@50": 1,
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "targeted@100": 6,
+      "targeted@20": 2,
+      "targeted@50": 3
+    },
+    {
+      "current@100": 10,
+      "current@20": 10,
+      "current@50": 10,
+      "current_plus_targeted@100": 10,
+      "current_plus_targeted@20": 10,
+      "current_plus_targeted@50": 10,
+      "n": 10,
+      "new@100": 0,
+      "new@20": 0,
+      "new@50": 0,
+      "pack": "P1_rejection_guardrail_failure",
+      "targeted@100": 5,
+      "targeted@20": 1,
+      "targeted@50": 1
+    },
+    {
+      "current@100": 6,
+      "current@20": 4,
+      "current@50": 6,
+      "current_plus_targeted@100": 7,
+      "current_plus_targeted@20": 4,
+      "current_plus_targeted@50": 7,
+      "n": 10,
+      "new@100": 1,
+      "new@20": 0,
+      "new@50": 1,
+      "pack": "P1_temporal_constraint_failure",
+      "targeted@100": 4,
+      "targeted@20": 0,
+      "targeted@50": 4
+    },
+    {
+      "current@100": 10,
+      "current@20": 10,
+      "current@50": 10,
+      "current_plus_targeted@100": 10,
+      "current_plus_targeted@20": 10,
+      "current_plus_targeted@50": 10,
+      "n": 10,
+      "new@100": 0,
+      "new@20": 0,
+      "new@50": 0,
+      "pack": "POS_clean_final_hit_control",
+      "targeted@100": 8,
+      "targeted@20": 8,
+      "targeted@50": 8
+    },
+    {
+      "current@100": 10,
+      "current@20": 10,
+      "current@50": 10,
+      "current_plus_targeted@100": 10,
+      "current_plus_targeted@20": 10,
+      "current_plus_targeted@50": 10,
+      "n": 10,
+      "new@100": 0,
+      "new@20": 0,
+      "new@50": 0,
+      "pack": "POS_exact_entity_success_control",
+      "targeted@100": 10,
+      "targeted@20": 10,
+      "targeted@50": 10
+    }
+  ],
+  "rejected_or_deferred_branches": [
+    {
+      "branch": "artist_neighbor_scene_weighted_v3",
+      "decision": "reject_for_now",
+      "protected_additive_counts": {
+        "100": 67,
+        "20": 60,
+        "50": 65
+      },
+      "reason": "No unique union@20/50/100 rescues over reconstructed current baseline; worse than artist_neighbor_scene_v2 on the Gangsta Gangsta near miss."
+    }
+  ],
+  "remaining_gap_diagnosis": {
+    "label_or_gt_ambiguity": "Some remaining misses conflict with explicit user constraints, so they should be hand-audited before building narrow retrievers around them.",
+    "likely_new_source_needed": "Lyric/hidden-target cases and sparse-tag cases remain weak; current lyrics dense branch and catalog tags do not reliably express them.",
+    "retriever_fixable_now": "scene/era/tag/popularity and visual text-to-image are demonstrably fixable with current catalog/vector sources.",
+    "state_or_resolver_blocked": "Some artist-neighbor misses are blocked before retrieval. Example: Mr. Bungle style-reference resolved to the wrong catalog artist, so artist-neighbor retrieval has no useful seed."
+  },
+  "rescues": [
+    {
+      "all_targeted_hits": [
+        {
+          "branch": "analysis.scene_era_tag_popularity_v2",
+          "rank": 6,
+          "variant": "scene_era_tag_popularity_v2"
+        }
+      ],
+      "best": {
+        "branch": "analysis.scene_era_tag_popularity_v2",
+        "rank": 6,
+        "variant": "scene_era_tag_popularity_v2"
+      },
+      "current_user": "Yes! 'Finally' by CeCe Peniston! That's exactly the track I was trying to remember. Spot on! 'Finally' is it. Can you suggest other iconic 90s dance hits similar to this one?",
+      "gt_artist": "Seduction",
+      "gt_track": "Two To Make It Right",
+      "k": 20,
+      "pack": "P0_new_artist_union20_gap_failure",
+      "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2"
+    },
+    {
+      "all_targeted_hits": [
+        {
+          "branch": "dense.siglip2_text.visual.image_siglip2",
+          "rank": 1,
+          "variant": "siglip_visual"
+        }
+      ],
+      "best": {
+        "branch": "dense.siglip2_text.visual.image_siglip2",
+        "rank": 1,
+        "variant": "siglip_visual"
+      },
+      "current_user": "I'm looking for a really intense electronic song, something that makes you feel like you're speeding through a cyberpunk city at night.",
+      "gt_artist": "Perturbator",
+      "gt_track": "Vengeance (The Return of the Night Driving Avenger) [Bonus Track]",
+      "k": 20,
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "sample_id": "dd686049-59ba-439b-8c51-949a0876e1b3::t1"
+    },
+    {
+      "all_targeted_hits": [
+        {
+          "branch": "analysis.artist_neighbor_scene_v2",
+          "rank": 46,
+          "variant": "artist_neighbor_scene_v2"
+        }
+      ],
+      "best": {
+        "branch": "analysis.artist_neighbor_scene_v2",
+        "rank": 46,
+        "variant": "artist_neighbor_scene_v2"
+      },
+      "current_user": "This is getting really close! The album art for \"Character\" by Dark Tranquillity is definitely in the right ballpark with the ruined city and bleak atmosphere. However, the one I'm thinking of had a somewhat more abstract or symbolic image on the cover, rat...",
+      "gt_artist": "Katatonia",
+      "gt_track": "Deliberation - Studio",
+      "k": 50,
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "sample_id": "54cda581-3b2e-4245-a479-1a27589760d2::t3"
+    },
+    {
+      "all_targeted_hits": [
+        {
+          "branch": "analysis.artist_neighbor_scene_v2",
+          "rank": 21,
+          "variant": "artist_neighbor_scene_v2"
+        }
+      ],
+      "best": {
+        "branch": "analysis.artist_neighbor_scene_v2",
+        "rank": 21,
+        "variant": "artist_neighbor_scene_v2"
+      },
+      "current_user": "DMX is a beast! \"Where The Hood At\" is definitely a raw, aggressive banger and fits that dark, intense vibe perfectly. You nailed it with these last few tracks. Thanks for the awesome recommendations! Can you suggest another track that's just pure, unfilter...",
+      "gt_artist": "N.W.A.",
+      "gt_track": "Gangsta Gangsta",
+      "k": 50,
+      "pack": "P1_temporal_constraint_failure",
+      "sample_id": "67b9ba8a-382f-4b70-af76-576848d8cf67::t8"
+    },
+    {
+      "all_targeted_hits": [
+        {
+          "branch": "analysis.scene_era_tag_popularity_v2",
+          "rank": 6,
+          "variant": "scene_era_tag_popularity_v2"
+        }
+      ],
+      "best": {
+        "branch": "analysis.scene_era_tag_popularity_v2",
+        "rank": 6,
+        "variant": "scene_era_tag_popularity_v2"
+      },
+      "current_user": "Yes! 'Finally' by CeCe Peniston! That's exactly the track I was trying to remember. Spot on! 'Finally' is it. Can you suggest other iconic 90s dance hits similar to this one?",
+      "gt_artist": "Seduction",
+      "gt_track": "Two To Make It Right",
+      "k": 50,
+      "pack": "P0_new_artist_union20_gap_failure",
+      "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2"
+    },
+    {
+      "all_targeted_hits": [
+        {
+          "branch": "analysis.artist_neighbor_scene_v2",
+          "rank": 21,
+          "variant": "artist_neighbor_scene_v2"
+        }
+      ],
+      "best": {
+        "branch": "analysis.artist_neighbor_scene_v2",
+        "rank": 21,
+        "variant": "artist_neighbor_scene_v2"
+      },
+      "current_user": "DMX is a beast! \"Where The Hood At\" is definitely a raw, aggressive banger and fits that dark, intense vibe perfectly. You nailed it with these last few tracks. Thanks for the awesome recommendations! Can you suggest another track that's just pure, unfilter...",
+      "gt_artist": "N.W.A.",
+      "gt_track": "Gangsta Gangsta",
+      "k": 100,
+      "pack": "P1_temporal_constraint_failure",
+      "sample_id": "67b9ba8a-382f-4b70-af76-576848d8cf67::t8"
+    },
+    {
+      "all_targeted_hits": [
+        {
+          "branch": "analysis.scene_era_tag_popularity_v2",
+          "rank": 6,
+          "variant": "scene_era_tag_popularity_v2"
+        },
+        {
+          "branch": "analysis.artist_neighbor_scene_v2",
+          "rank": 78,
+          "variant": "artist_neighbor_scene_v2"
+        }
+      ],
+      "best": {
+        "branch": "analysis.scene_era_tag_popularity_v2",
+        "rank": 6,
+        "variant": "scene_era_tag_popularity_v2"
+      },
+      "current_user": "Yes! 'Finally' by CeCe Peniston! That's exactly the track I was trying to remember. Spot on! 'Finally' is it. Can you suggest other iconic 90s dance hits similar to this one?",
+      "gt_artist": "Seduction",
+      "gt_track": "Two To Make It Right",
+      "k": 100,
+      "pack": "P0_new_artist_union20_gap_failure",
+      "sample_id": "b466a64b-b3cc-4c62-8a70-8261434f915f::t2"
+    }
+  ],
+  "scope": "110 focused state-gap turns; V1 extraction/projection frozen; no global ranking/RRF change",
+  "still_missed_after_current_plus_targeted_top100": [
+    {
+      "best_targeted": [
+        [
+          737,
+          "siglip_visual",
+          "bm25"
+        ]
+      ],
+      "current_user": "Yes! Twenty One Pilots is a great choice, \"Stressed Out\" totally has that powerful vibe I'm looking for. Can you recommend a few more songs or artists from the 2000s or 2010s that have a similar intense and emotional alternative rock sound, maybe with a str...",
+      "gt_artist": "Muse",
+      "gt_track": "Mercy",
+      "pack": "P0_roleless_stale_entity_failure",
+      "sample_id": "41367174-552b-4117-9caa-d0ba1b307d37::t2",
+      "what_should_change": "Keep prior entities as history/context, but decay or remove them from current anchors unless the user re-mentions them. The resolver should expose current-vs-history roles to retrievers and the ranker."
+    },
+    {
+      "best_targeted": [
+        [
+          148,
+          "siglip_visual",
+          "dense.siglip2_text.visual.image_siglip2"
+        ],
+        [
+          289,
+          "scene_era_tag_popularity_v2",
+          "analysis.scene_era_tag_popularity_v2"
+        ]
+      ],
+      "current_user": "Suffocation is always a solid listen, but I'm really looking to discover some *new* bands. Can you suggest some more recent acts that are making waves in the technical or progressive death metal scene? I'm open to anything that's pushing the envelope.",
+      "gt_artist": "Cattle Decapitation",
+      "gt_track": "The Carbon Stampede",
+      "pack": "P0_roleless_stale_entity_failure",
+      "sample_id": "9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4",
+      "what_should_change": "Add a deterministic post-final rejection filter/assertion over rejected track IDs, artist IDs, and normalized multi-artist names. Treat broad name matches as an audit sample, but make strict ID leakage impossible."
+    },
+    {
+      "best_targeted": [],
+      "current_user": "Yes! That's a classic, I know that one well! It definitely fits the vibe of what I was looking for. It's got that undeniable groove.",
+      "gt_artist": "Kashmere Stage Band",
+      "gt_track": "Shaft",
+      "pack": "P0_roleless_stale_entity_failure",
+      "sample_id": "5f29a9df-ad38-4349-a2f0-c9a690ea072d::t2",
+      "what_should_change": "Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit date-bound language should hard-filter or heavily penalize candidates."
+    },
+    {
+      "best_targeted": [],
+      "current_user": "Yes! Guano Apes! I love this song, it's so powerful. The vocalist is amazing. Do you have any other powerful rock songs, maybe with a really strong guitar riff?",
+      "gt_artist": "The Rasmus",
+      "gt_track": "In the Shadows",
+      "pack": "P0_roleless_stale_entity_failure",
+      "sample_id": "78cdaccb-0f9b-4876-80b1-c20bf0b444e6::t8",
+      "what_should_change": "Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles."
+    },
+    {
+      "best_targeted": [],
+      "current_user": "Oh my goodness, that's a very interesting choice! \"I Write Sins Not Tragedies\" definitely has a strong story. I remember a song like that, with a wedding drama. Can you remind me of any specific lines about a bartender, or someone overhearing gossip?",
+      "gt_artist": "The Darkness",
+      "gt_track": "I Believe in a Thing Called Love",
+      "pack": "P0_roleless_stale_entity_failure",
+      "sample_id": "88af7ec3-c368-421b-9512-d0180da3d1f6::t2",
+      "what_should_change": "Keep prior entities as history/context, but decay or remove them from current anchors unless the user re-mentions them. The resolver should expose current-vs-history roles to retrievers and the ranker."
+    },
+    {
+      "best_targeted": [
+        [
+          432,
+          "scene_era_tag_popularity_v2",
+          "analysis.scene_era_tag_popularity_v2"
+        ],
+        [
+          523,
+          "siglip_visual",
+          "bm25"
+        ]
+      ],
+      "current_user": "That's a good one, it totally brings back early 2000s pop-punk! It's got the energy, but I'm looking for something that feels a bit more... not quite heavier, but with a stronger angsty feel. Still from that early 2000s pop-punk or alternative rock vibe, ma...",
+      "gt_artist": "The All-American Rejects",
+      "gt_track": "Move Along",
+      "pack": "P0_roleless_stale_entity_failure",
+      "sample_id": "d9a65836-7165-45bf-aa3e-3ef7ba5d073a::t2",
+      "what_should_change": "Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit date-bound language should hard-filter or heavily penalize candidates."
+    },
+    {
+      "best_targeted": [
+        [
+          884,
+          "scene_era_tag_popularity_v2",
+          "analysis.scene_era_tag_popularity_v2"
+        ]
+      ],
+      "current_user": "Legend\" is a classic, no doubt! I'm good on Drake for now though. I was hoping for some popular Hip-Hop tracks from *other artists* around late 2015 to early 2016. Any major hits from that period by someone different?",
+      "gt_artist": "Lil Wayne, Drake",
+      "gt_track": "Used To",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "sample_id": "88beb200-0334-4aba-be15-8e1303725766::t6",
+      "what_should_change": "Add a deterministic post-final rejection filter/assertion over rejected track IDs, artist IDs, and normalized multi-artist names. Treat broad name matches as an audit sample, but make strict ID leakage impossible."
+    },
+    {
+      "best_targeted": [],
+      "current_user": "This is excellent! The melodic technicality of Allegaeon is exactly the kind of balance I was looking for. Can you suggest something else that leans into orchestral or symphonic elements alongside the technicality?",
+      "gt_artist": "Animals As Leaders",
+      "gt_track": "Transcentience",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "sample_id": "8dc4c630-8369-4720-b379-2a7dcd8d34aa::t7",
+      "what_should_change": "Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles."
+    },
+    {
+      "best_targeted": [
+        [
+          122,
+          "scene_era_tag_popularity_v2",
+          "analysis.scene_era_tag_popularity_v2"
+        ],
+        [
+          282,
+          "artist_neighbor_scene_v2",
+          "analysis.artist_neighbor_scene_v2"
+        ],
+        [
+          828,
+          "siglip_visual",
+          "bm25"
+        ]
+      ],
+      "current_user": "Yes! Mr. Bungle! That's exactly the band I was trying to remember. \"Violenza Domestica\" is definitely a great example of their sound. Thanks! Now that we found them, what else could you recommend that has a similar experimental, genre-bending vibe, maybe wi...",
+      "gt_artist": "Tomahawk",
+      "gt_track": "God Hates a Coward",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "sample_id": "380a5ed5-3eb9-4201-8fa6-81381a583bf5::t3",
+      "what_should_change": "Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles."
+    },
+    {
+      "best_targeted": [],
+      "current_user": "Yes, this is exactly the kind of sound I was looking for! \"Welcome To Jamrock\" is a classic. That definitely fits the \"defined an era\" vibe. Can you give me another track that has that timeless, era-defining feeling, maybe an old-school hip-hop gem this time?",
+      "gt_artist": "Ghanaian Stallion",
+      "gt_track": "Gib ihn einfach (Dies das 2)",
+      "pack": "P0_novelty_prior_anchor_failure",
+      "sample_id": "cdd374ea-1ad9-4440-8c2d-4c76c5fb3f78::t3",
+      "what_should_change": "Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles."
+    },
+    {
+      "best_targeted": [],
+      "current_user": "Oh, Flying Lotus! This is cool, it's got a really interesting mix of sounds. It's like electronic but also soulful, very unique. What else have you got that's really out there?",
+      "gt_artist": "Hong Kong Express",
+      "gt_track": "Hong Kong 2046",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "sample_id": "15b1caf3-d1ed-46ef-a8e3-c9f7657e6b77::t6",
+      "what_should_change": "Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles."
+    },
+    {
+      "best_targeted": [],
+      "current_user": "This one has a cool electronic sound and it's definitely emotional. But I'm still looking for that really strong, direct \"plea\" or \"begging\" in the lyrics, like in \"Iris,\" but for electronic songs. Do you have any tracks that really hit that direct lyrical...",
+      "gt_artist": "Kasper Bj\u00f8rke",
+      "gt_track": "Sunrise - Slow Hands Remix",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "sample_id": "907921a3-d08f-4ba1-8cce-0e760a9e7044::t7",
+      "what_should_change": "Keep prior entities as history/context, but decay or remove them from current anchors unless the user re-mentions them. The resolver should expose current-vs-history roles to retrievers and the ranker."
+    },
+    {
+      "best_targeted": [
+        [
+          149,
+          "artist_neighbor_scene_v2",
+          "analysis.artist_neighbor_scene_v2"
+        ],
+        [
+          347,
+          "scene_era_tag_popularity_v2",
+          "analysis.scene_era_tag_popularity_v2"
+        ],
+        [
+          626,
+          "siglip_visual",
+          "dense.siglip2_text.visual.image_siglip2"
+        ]
+      ],
+      "current_user": "Yeah, that Dead Prez track is fire! Super authentic and exactly the kind of vibe I'm into from that era. What else hits like that? Maybe some more underground stuff from the late 90s or early 2000s?",
+      "gt_artist": "Masta Ace",
+      "gt_track": "Acknowledge",
+      "pack": "P0_new_artist_union20_gap_failure",
+      "sample_id": "324ddfb5-8a18-4729-9acb-c851907a297c::t3",
+      "what_should_change": "Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit date-bound language should hard-filter or heavily penalize candidates."
+    },
+    {
+      "best_targeted": [
+        [
+          742,
+          "siglip_visual",
+          "bm25"
+        ]
+      ],
+      "current_user": "Yes! \"Blinded By The Lights\" is exactly the track I was trying to recall! That's the one! You totally nailed it with that recommendation. Thanks so much! Now that you've found that one for me, can you recommend some other tracks that have a similar kind of...",
+      "gt_artist": "A Tribe Called Quest",
+      "gt_track": "Midnight",
+      "pack": "P1_temporal_constraint_failure",
+      "sample_id": "9468e467-d396-461b-be29-b30b6cf87c35::t5",
+      "what_should_change": "Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit date-bound language should hard-filter or heavily penalize candidates."
+    },
+    {
+      "best_targeted": [],
+      "current_user": "Make My\" is a strong track and Black Thought's lyrics are always on point, but I'm really trying to branch out from The Roots and Masta Ace for a bit. Can you definitely give me a narrative-driven track from a *different* classic 90s East Coast artist, like...",
+      "gt_artist": "Jane Doe, Masta Ace",
+      "gt_track": "Dear Yvette",
+      "pack": "P1_temporal_constraint_failure",
+      "sample_id": "e978bb5b-26af-4c7d-b720-b9210bdddf25::t8",
+      "what_should_change": "Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit date-bound language should hard-filter or heavily penalize candidates."
+    },
+    {
+      "best_targeted": [],
+      "current_user": "These selections are spot on for that underground 90s hip-hop sound. Exactly what I wanted! What else is out there that I might like with a similar vibe, maybe from other artists but still with that golden age jazzy feel?",
+      "gt_artist": "Large Professor",
+      "gt_track": "I Juswanna Chill",
+      "pack": "P1_temporal_constraint_failure",
+      "sample_id": "c4c0c288-dbcd-4970-ad52-901aafe91b88::t4",
+      "what_should_change": "Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit date-bound language should hard-filter or heavily penalize candidates."
+    },
+    {
+      "best_targeted": [],
+      "current_user": "Dope! \"REDMERCEDES\" is definitely on point with that vibrant energy, both in the song and the cover. These are exactly the kind of tracks I was looking for, where the artwork really brings out the music's vibe. What else have you got that fits this awesome...",
+      "gt_artist": "Tyler, The Creator",
+      "gt_track": "Glitter",
+      "pack": "P1_positive_tag_retrieval_gap_failure",
+      "sample_id": "ad5348a7-d3bc-4882-bfca-54aa655eac96::t5",
+      "what_should_change": "Improve turn-type routing and candidate generation: use listener_goal/current state, role-aware entities, tags, popularity, culture/CF affinity, and novelty profiles before spending effort only on final reranking."
+    }
+  ],
+  "targeted_branches": [
+    "siglip_visual",
+    "scene_era_tag_popularity_v2",
+    "artist_neighbor_scene_v2"
+  ]
+}

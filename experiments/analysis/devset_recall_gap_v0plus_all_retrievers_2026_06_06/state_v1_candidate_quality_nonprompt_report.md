@@ -1,0 +1,500 @@
+# State V1 Candidate Quality Non-Prompt Matrix
+
+Scope: focused-110 only. V1 state extractor prompt and schema are frozen. Metrics are additive against the protected current+targeted baseline. This is a branch-local top-k quality test: it reorders existing branch pools and measures a union ceiling, not the final served top-20 list.
+
+## Read This First
+
+- Current+targeted baseline: 77/110 union@20, 90/110 union@50, 93/110 union@100.
+- Best non-prompt lever: `promoted_feature_family` 84/110 union@20, 95/110 union@50, 100/110 union@100.
+- Valid-GT-only lift: 69/97 -> 74/97 union@20. That is +5 valid branch-union top-20 rescues with no state prompt/schema changes. It still needs final-fusion validation.
+- Plain `all_on_original` does not move top-20. The gap is not only whether branches fire; it is branch-local candidate ordering using catalog tags, year/popularity compatibility, anchor-CF, and soft novelty/negative evidence.
+- No new candidates are introduced by these feature variants. The result means reachable @21-100 candidates can be pulled upward inside branches; it does not prove final@20/nDCG lift until the real compiler/fusion path is smoked.
+- Saved-pool fusion proxy does not validate the feature family as a direct final-list fix: `protected_plus_all_on` gets 50/110 proxy@20, while `protected_plus_promoted_feature_family` gets 39/110 proxy@20. Treat the features as reranker/candidate-pool evidence, not as a production RRF patch.
+- Compiler-aware branch-family scoring also fails to create current-miss top-20 rescues. That rules out a simple RRF/branch-weight fix on the saved pools; the capped candidate-scorer, branch-survivor, and learned listwise proxies below also fail to create valid top-20 rescues. A feature-weight sweep also fails, so the current hand features are not merely underweighted. The next useful work is sharper branch queries or richer candidate features, not another plain RRF rewrite.
+- User-CF alone does not improve union@20, but it improves deeper recall and should be deferred as a ranking feature rather than promoted as a top-20 candidate-recall fix.
+- `strict_constraints` tests stronger recency and new-artist demotion. It trails `promoted_feature_family`, so keep it as a negative ablation rather than the production candidate-quality direction.
+
+## Source Truth And State Gate
+
+- Active prompt: `mcrs/conversation_state/prompts/current.py` (`ConversationStateV1` JSON schema).
+- Active schema/bridge: `mcrs/conversation_state/schema.py` (`project_v1_to_v0plus`).
+- Active extractor decode path: `mcrs/qu_modules/compiler_v0plus_qu.py` validates V1, then projects to V0Plus.
+- Active compiler consumers: `mcrs/qu_modules/compiler_v0plus.py` uses `mentioned_entities`, `style_reference_entities`, `turn_intent`, `lyrical_theme`, `release_year_range`, `explicit_rejections`, and `track_feedback` through the projected V0Plus view.
+
+| Gate | Samples | Pass/read | Notes |
+|---|---:|---:|---|
+| role labels | 56 | 0.929 | exact seeds 1.000, style refs 1.000, query facets 1.000, temporal 1.000 |
+| projected retriever contract | 56 | 53/56 | current failures are narrow synonym/phrase cases |
+| fact compiler core | 56 | 0.821 | strict fact all-pass 0.714; forbidden stale seeds 1.000 |
+| old V0Plus replay all-pass | 110 | 0.291 | low by design because V1 no longer asks the LLM to own policy fields |
+
+State-gate decision: do not spend another broad paid extraction pass yet. The cached V1 extraction is good enough for focused retrieval/projection smokes; remaining state issues are localized label/prompt cases such as `popular` vs `well-known`, `metal` vs `heavy and intense`, and preserving `boost my energy` as a fact value rather than only evidence text.
+
+## Tiny Local Retrieval Smoke
+
+This rerun uses saved V1 extraction and disables paid dense text embedding calls. It tests BM25, lookup, era-popularity, and local centroid/style-reference consumption on 12 representative turns.
+
+| Variant | final@20 | union@20 | union@100 | union@200 | union@1000 |
+|---|---:|---:|---:|---:|---:|
+| `tags_only` | 0.167 | 0.167 | 0.167 | 0.333 | 0.500 |
+| `centroid_no_style` | 0.167 | 0.167 | 0.167 | 0.333 | 0.500 |
+| `centroid_style_safe` | 0.167 | 0.167 | 0.250 | 0.500 | 0.583 |
+| `centroid_style_broad` | 0.167 | 0.167 | 0.250 | 0.583 | 0.667 |
+| `centroid_style_broad_w3` | 0.167 | 0.167 | 0.250 | 0.583 | 0.667 |
+| `centroid_style_broad_w5` | 0.167 | 0.167 | 0.250 | 0.583 | 0.667 |
+
+Smoke read: style-reference centroid consumption improves depth (`union@1000` 0.500 -> 0.667), but does not move `union@20` or `final@20`; this is ranking/order territory, not another state extraction call.
+
+## Headline Metrics
+
+| Variant | all n | all u@20 | all u@50 | all u@100 | valid n | valid u@20 | valid u@50 | valid u@100 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `current_or` | 110 | 75/110 | 87/110 | 91/110 | 97 | 67/97 | 77/97 | 81/97 |
+| `current_plus_targeted` | 110 | 77/110 | 90/110 | 93/110 | 97 | 69/97 | 80/97 | 83/97 |
+| `all_on_original` | 110 | 77/110 | 90/110 | 93/110 | 97 | 69/97 | 80/97 | 83/97 |
+| `catalog_features` | 110 | 80/110 | 92/110 | 98/110 | 97 | 70/97 | 82/97 | 87/97 |
+| `anchor_cf_features` | 110 | 80/110 | 91/110 | 96/110 | 97 | 70/97 | 80/97 | 85/97 |
+| `user_cf_features` | 110 | 77/110 | 91/110 | 101/110 | 97 | 69/97 | 81/97 | 90/97 |
+| `branch_local_hybrid` | 110 | 82/110 | 94/110 | 97/110 | 97 | 72/97 | 84/97 | 87/97 |
+| `strict_constraints` | 110 | 81/110 | 94/110 | 97/110 | 97 | 71/97 | 84/97 | 87/97 |
+| `catalog_plus_anchor_cf` | 110 | 81/110 | 93/110 | 99/110 | 97 | 71/97 | 82/97 | 88/97 |
+| `promoted_feature_family` | 110 | 84/110 | 95/110 | 100/110 | 97 | 74/97 | 84/97 | 89/97 |
+| `all_feature_family` | 110 | 84/110 | 95/110 | 104/110 | 97 | 74/97 | 84/97 | 92/97 |
+
+## Deep Branch Recall Curves
+
+These are branch-only raw pool hits from the saved top1000 pools. They answer whether a future reranker could possibly recover the GT from a branch.
+
+Coverage note: `state_v1_all_on_branch_pools.json` does not contain a raw SigLIP visual text-to-image pool or user-CF retrieval pool. SigLIP is reflected in the current+targeted baseline, and user-CF is tested below as a candidate feature, but their top500/top1000 branch curves are unavailable in this saved-pool run.
+
+| Branch | Family | fired | hit@20 | hit@50 | hit@100 | hit@200 | hit@500 | hit@1000 | marginal@20 |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `centroid.anchor_tracks.cf_bpr` | `cf_anchor_centroid` | 85 | 36 | 37 | 41 | 44 | 53 | 56 | 0 |
+| `dense.qwen_0_6b.intent.metadata_qwen3_embedding_0_6b` | `qwen_intent` | 110 | 30 | 33 | 37 | 40 | 41 | 47 | 0 |
+| `centroid.anchor_tracks.image_siglip2` | `image_anchor_centroid` | 85 | 30 | 34 | 37 | 39 | 41 | 45 | 0 |
+| `dense.qwen_8b.intent.metadata_qwen3_embedding_8b` | `qwen_intent` | 110 | 27 | 34 | 42 | 48 | 59 | 70 | 0 |
+| `dense.qwen_8b.metadata.metadata_qwen3_embedding_8b` | `qwen_metadata` | 110 | 26 | 32 | 39 | 44 | 53 | 61 | 0 |
+| `dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b` | `qwen_metadata` | 110 | 24 | 29 | 31 | 32 | 34 | 40 | 0 |
+| `bm25` | `bm25` | 110 | 23 | 25 | 29 | 33 | 46 | 59 | 0 |
+| `centroid.anchor_tracks.audio_laion_clap` | `audio_anchor_centroid` | 85 | 22 | 25 | 32 | 37 | 48 | 53 | 0 |
+| `analysis.artist_tag_neighbor_popularity` | `artist_neighbor` | 110 | 21 | 27 | 29 | 33 | 43 | 52 | 0 |
+| `analysis.query_text_tag_popularity` | `tag_scene` | 110 | 20 | 23 | 25 | 32 | 41 | 53 | 0 |
+| `lookup.resolved_artist_discography` | `exact_lookup_discography` | 26 | 19 | 19 | 19 | 19 | 19 | 19 | 0 |
+| `analysis.tag_popularity_alias` | `tag_scene` | 110 | 12 | 13 | 14 | 17 | 27 | 34 | 0 |
+| `analysis.era_tag_popularity` | `era_popularity` | 110 | 11 | 12 | 15 | 18 | 28 | 32 | 0 |
+| `lookup.era_popularity` | `era_popularity` | 46 | 10 | 12 | 14 | 16 | 16 | 16 | 0 |
+| `dense.qwen_8b.attributes_enriched.attributes_qwen3_embedding_8b` | `qwen_attributes_enriched` | 93 | 3 | 4 | 8 | 14 | 18 | 31 | 0 |
+| `dense.qwen_8b.attributes.attributes_qwen3_embedding_8b` | `qwen_attributes` | 93 | 2 | 3 | 7 | 12 | 16 | 30 | 0 |
+| `dense.clap_text.sonic_nl_enriched.audio_laion_clap` | `clap_sonic_nl_enriched` | 110 | 2 | 2 | 6 | 10 | 22 | 40 | 0 |
+| `dense.clap_text.sonic.audio_laion_clap` | `clap_sonic` | 110 | 2 | 3 | 4 | 8 | 20 | 32 | 0 |
+
+## Branch-Family Additive Recall
+
+Rows are additive against current+targeted. For k>100, protected baseline only has top100 saved pools, so use the branch-only counts as the clean deep-pool signal.
+
+| Family variant | all u@20 | valid u@20 | valid branch-only@100 | valid branch-only@1000 |
+|---|---:|---:|---:|---:|
+| `baseline_only` | 77/110 | 69/97 | 0/97 | 0/97 |
+| `all_candidate_branches` | 77/110 | 69/97 | 74/97 | 95/97 |
+| `all_branch_local_cleaned` | 84/110 | 74/97 | 84/97 | 95/97 |
+| `family_exact_lookup` | 77/110 | 69/97 | 20/97 | 20/97 |
+| `family_semantic_text` | 77/110 | 69/97 | 55/97 | 86/97 |
+| `family_tag_scene` | 77/110 | 69/97 | 44/97 | 72/97 |
+| `family_anchor_similarity` | 77/110 | 69/97 | 42/97 | 64/97 |
+| `family_modality` | 77/110 | 69/97 | 46/97 | 76/97 |
+
+## Reranker Pool Size Strategy
+
+| Recipe | depth/branch | avg unique | p90 unique | all GT in pool | valid GT in pool | dominant raw-slot families |
+|---|---:|---:|---:|---:|---:|---|
+| `small_top50_per_branch` | 50 | 542.218 | 670 | 76/110 | 70/97 | qwen_metadata:11000, qwen_intent:11000, qwen_attributes:9300, qwen_attributes_enriched:9300 |
+| `medium_top100_per_branch` | 100 | 1053.600 | 1302 | 81/110 | 74/97 | qwen_metadata:22000, qwen_intent:22000, qwen_attributes:18600, qwen_attributes_enriched:18600 |
+| `large_top200_per_branch` | 200 | 2024.800 | 2515 | 96/110 | 86/97 | qwen_metadata:44000, qwen_intent:44000, qwen_attributes:37200, qwen_attributes_enriched:37200 |
+| `very_large_top500_per_branch` | 500 | 4554.845 | 5622 | 104/110 | 93/97 | qwen_metadata:110000, qwen_intent:110000, qwen_attributes:93000, qwen_attributes_enriched:93000 |
+| `raw_deep_top1000_per_branch` | 1000 | 8195.045 | 10143 | 106/110 | 95/97 | qwen_metadata:220000, qwen_intent:220000, qwen_attributes:186000, qwen_attributes_enriched:186000 |
+
+Pool recommendation: use a large but capped reranker pool around top200 per active branch family as the first serious reranker recipe. It reaches 86/97 valid GT with about 2024.800 unique candidates/turn on this pack. Top500/top1000 recover more GT (93/97 and 95/97 valid), but the pool sizes explode to roughly 4,555 and 8,195 unique candidates/turn. Keep exact/lookup generous, keep BM25/Qwen/tag/scene/anchor branches around top100-200, trigger lyric/visual/sonic branches only when state evidence asks for them, and use popularity/user-CF as score features unless a separate branch proves top20 lift.
+
+## Saved-Pool Fusion Proxy
+
+This is not production final ranking. It runs unweighted RRF over saved analysis pools so we can tell whether branch-local top-20 movement survives a simple fusion step. Treat it as a cheap gate before touching global RRF or running full devset.
+
+| Proxy variant | all p@20 | all p@50 | all p@100 | valid p@20 | valid p@50 | valid p@100 | valid median rank |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `protected_trace_top100` | 43/110 | 54/110 | 58/110 | 36/97 | 47/97 | 50/97 | 10 |
+| `protected_plus_all_on` | 50/110 | 54/110 | 61/110 | 43/97 | 46/97 | 53/97 | 5 |
+| `protected_plus_catalog_features` | 42/110 | 53/110 | 62/110 | 36/97 | 45/97 | 53/97 | 7 |
+| `protected_plus_anchor_cf` | 48/110 | 56/110 | 62/110 | 42/97 | 47/97 | 53/97 | 5 |
+| `protected_plus_branch_local_hybrid` | 40/110 | 53/110 | 64/110 | 36/97 | 46/97 | 56/97 | 9 |
+| `protected_plus_promoted_feature_family` | 39/110 | 53/110 | 65/110 | 37/97 | 46/97 | 57/97 | 7 |
+
+Fusion-proxy read: if `protected_plus_promoted_feature_family` does not beat `protected_plus_all_on` at proxy@20, the +7 union@20 branch-local movement should be treated as candidate-quality evidence, not a production final-list fix. If it does beat it, the next step is a tiny real compiler final-list smoke with the same fixed features.
+
+## Compiler-Aware Saved-Pool Scorer Proxy
+
+This stronger proxy replaces plain RRF with state-conditioned branch-family weights, exact/album bonuses, hard drops for explicit rejected tracks, and cross-family agreement. It still uses only saved branch pools; no new retriever, prompt, or catalog metadata feature is introduced here.
+
+| Proxy variant | depth | all p@20 | valid p@20 | current+proxy u@20 | valid current+proxy u@20 | current-miss rescues@20 | valid rescues@20 | valid p@100 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `protected_plus_all_on_weighted` | 50 | 48/110 | 43/97 | 77/110 | 69/97 | 0 | 0 | 48/97 |
+| `protected_plus_all_on_weighted` | 100 | 49/110 | 43/97 | 77/110 | 69/97 | 0 | 0 | 50/97 |
+| `protected_plus_all_on_weighted` | 200 | 49/110 | 43/97 | 77/110 | 69/97 | 0 | 0 | 52/97 |
+| `protected_plus_all_on_weighted` | 500 | 49/110 | 43/97 | 77/110 | 69/97 | 0 | 0 | 53/97 |
+
+Weighted-scorer read: this does not rescue current union@20 misses. So the remaining focused gap is not solved by branch-family weights, intent routing, or a conservative RRF rewrite alone. The measurable branch-local +7 comes from candidate-level catalog/anchor features; downstream scalar/survivor/listwise selection proxies do not convert that signal into valid top-20 rescues. The 2 valid deep-pool absences are the clearest clear new-source candidates in this focused pack.
+
+## Capped Candidate-Level Scorer Proxy
+
+This proxy scores capped `protected + feature-reranked branch` pools with both branch-rank evidence and deterministic candidate features (catalog tag/phrase/year/popularity compatibility, anchor-CF, user-CF where tested, novelty demotion, and hard drops only for explicit resolved exclusions). This is the first proxy in this report that can see the same candidate-level evidence responsible for the branch-local top-20 rescues.
+
+| Feature set | depth | scorer p@20 | valid p@20 | current+scorer u@20 | valid current+scorer u@20 | rescues@20 | valid rescues@20 | valid current+scorer u@50 | valid current+scorer u@100 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `candidate_catalog_features` | 50 | 29/110 | 27/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| `candidate_catalog_features` | 100 | 31/110 | 29/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| `candidate_catalog_features` | 200 | 32/110 | 30/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| `candidate_anchor_cf_features` | 50 | 45/110 | 40/97 | 78/110 | 69/97 | 1 | 0 | 80/97 | 83/97 |
+| `candidate_anchor_cf_features` | 100 | 44/110 | 39/97 | 78/110 | 69/97 | 1 | 0 | 80/97 | 83/97 |
+| `candidate_anchor_cf_features` | 200 | 45/110 | 40/97 | 78/110 | 69/97 | 1 | 0 | 80/97 | 84/97 |
+| `candidate_branch_local_hybrid` | 50 | 29/110 | 27/97 | 78/110 | 69/97 | 1 | 0 | 81/97 | 84/97 |
+| `candidate_branch_local_hybrid` | 100 | 30/110 | 28/97 | 78/110 | 69/97 | 1 | 0 | 81/97 | 84/97 |
+| `candidate_branch_local_hybrid` | 200 | 30/110 | 28/97 | 78/110 | 69/97 | 1 | 0 | 82/97 | 84/97 |
+| `candidate_promoted_feature_family` | 50 | 34/110 | 32/97 | 78/110 | 69/97 | 1 | 0 | 80/97 | 84/97 |
+| `candidate_promoted_feature_family` | 100 | 33/110 | 32/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 84/97 |
+| `candidate_promoted_feature_family` | 200 | 31/110 | 30/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 84/97 |
+| `candidate_all_feature_family` | 50 | 37/110 | 35/97 | 78/110 | 69/97 | 1 | 0 | 80/97 | 84/97 |
+| `candidate_all_feature_family` | 100 | 35/110 | 34/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 84/97 |
+| `candidate_all_feature_family` | 200 | 35/110 | 34/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 84/97 |
+| `candidate_strict_constraints` | 50 | 29/110 | 27/97 | 78/110 | 69/97 | 1 | 0 | 80/97 | 84/97 |
+| `candidate_strict_constraints` | 100 | 30/110 | 28/97 | 78/110 | 69/97 | 1 | 0 | 81/97 | 84/97 |
+| `candidate_strict_constraints` | 200 | 30/110 | 28/97 | 78/110 | 69/97 | 1 | 0 | 81/97 | 84/97 |
+
+Candidate-scorer read: the best focused proxy is `candidate_branch_local_hybrid` at depth 200, with 0 valid current-miss rescues@20 and 69/97 valid current+scorer union@20. This does not pass the tiny final-list smoke gate. The feature evidence improves branch-local union, but a global candidate scorer still cannot decide which branch-local survivors belong in the top 20.
+
+## Candidate Feature-Weight Separability
+
+This diagnostic keeps the same protected + promoted candidate pools and only changes how strongly deterministic candidate features count inside the offline selector. It tests whether the features are merely underweighted or whether they fail to separate valid GTs from distractors.
+
+| feature weight | depth | scorer p@20 | valid p@20 | valid current+u@20 | valid rescues@20 | valid current+u@50 | valid current+u@100 |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 0.000 | 50 | 36/110 | 35/97 | 69/97 | 0 | 80/97 | 84/97 |
+| 0.500 | 50 | 35/110 | 33/97 | 69/97 | 0 | 80/97 | 84/97 |
+| 1.000 | 50 | 34/110 | 32/97 | 69/97 | 0 | 80/97 | 84/97 |
+| 2.000 | 50 | 30/110 | 28/97 | 69/97 | 0 | 80/97 | 84/97 |
+| 4.000 | 50 | 28/110 | 27/97 | 69/97 | 0 | 80/97 | 84/97 |
+| 8.000 | 50 | 25/110 | 24/97 | 69/97 | 0 | 81/97 | 84/97 |
+
+Separability read: the best feature-weight sweep row uses feature_weight=8.000 and gets 0 valid current-miss rescues@20. That means simply turning up existing feature scores is not enough; the next lever should be sharper query/source features, not scalar weight tuning.
+
+## Branch-Survivor Slot Proxy
+
+This proxy tests an explicit listwise policy: start with the protected current branch pools, reserve a tiny number of slots for promoted branch-local top candidates, then fill the rest from protected pools. It only hard-drops explicit resolved track exclusions. This is still an offline saved-pool diagnostic, not a production final-rank change.
+
+| slots | depth | survivor p@20 | valid p@20 | current+survivor u@20 | valid current+survivor u@20 | rescues@20 | valid rescues@20 | valid current+survivor u@50 | valid current+survivor u@100 |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 10 | 42/110 | 36/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 1 | 20 | 42/110 | 36/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 1 | 50 | 43/110 | 37/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 2 | 10 | 44/110 | 38/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 2 | 20 | 43/110 | 37/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 2 | 50 | 44/110 | 38/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 3 | 10 | 44/110 | 38/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 3 | 20 | 44/110 | 38/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 3 | 50 | 45/110 | 39/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 4 | 10 | 43/110 | 37/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 4 | 20 | 44/110 | 38/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+| 4 | 50 | 44/110 | 38/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 |
+
+Survivor-policy read: the best offline policy reserves 1 slot(s) at depth 10 and gets 0 valid current-miss rescues@20. Because this is also 0, a few reserved slots are not enough; the remaining gap needs a stronger listwise/learned selector or sharper branch queries, not just survivor-slot preservation.
+
+## Cross-Validated Learned Listwise Proxy
+
+This is an offline diagnostic over the same protected + promoted candidate pools. It trains a tiny logistic selector with deterministic sample-id folds, valid-GT training rows only, and no track-id features. It is not a production ranker and should be used only to decide whether learned/listwise selection is worth a separate goal.
+
+| depth | cap | listwise p@20 | valid p@20 | current+listwise u@20 | valid current+listwise u@20 | rescues@20 | valid rescues@20 | valid current+listwise u@50 | valid current+listwise u@100 | valid median rank |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 100 | 500 | 54/110 | 48/97 | 77/110 | 69/97 | 0 | 0 | 80/97 | 83/97 | 3 |
+
+Learned-listwise read: the best offline fold gets 0 valid current-miss rescues@20 and 69/97 valid current+listwise union@20. This means even the cheap learned selector cannot recover the branch-local rescues; focus next on sharper branch queries or richer candidate features before a full ranker run.
+
+## Branch-Local Rescues Versus Candidate Scorer
+
+This table explains the apparent contradiction: branch-local feature reranking can pull GT into at least one branch top-20, but the capped global scorer still has to choose 20 tracks across all branches. Rows below are only current-miss turns rescued by `promoted_feature_family`.
+
+- Scorer variant inspected: `candidate_promoted_feature_family_depth50`.
+- Branch-local rescues: 7 all, 5 valid, 2 noisy/contradictory.
+- Valid scorer placement: top20=0, rank21-50=0, rank51-100=2, missing_top100=3.
+
+| sample | valid | bucket | scorer rank | branch rank | GT | branch |
+|---|---:|---|---:|---:|---|---|
+| `9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4` | True | `rank_51_100` | 81 | 9 | The Carbon Stampede by Cattle Decapitation | `dense.clap_text.sonic_nl.audio_laion_clap.branch_local_hybrid` |
+| `5a0dfe9d-ec8a-4449-97df-35535cbf162f::t1` | True | `rank_51_100` | 82 | 18 | A New World by Harry Gregson-Williams | `dense.qwen_8b.metadata.metadata_qwen3_embedding_8b.branch_local_hybrid` |
+| `1c567917-f931-4609-9695-a9c0f8e39f3d::t2` | True | `missing_top100` |  | 16 | Arregaçada / U Can't Touch This by Banda Uó | `dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b.anchor_cf_features` |
+| `54cda581-3b2e-4245-a479-1a27589760d2::t3` | True | `missing_top100` |  | 8 | Deliberation - Studio by Katatonia | `dense.qwen_8b.attributes_enriched.attributes_qwen3_embedding_8b.branch_local_hybrid` |
+| `e66c6a88-88ba-4117-9114-363bfa96294a::t7` | True | `missing_top100` |  | 16 | Test Drive by John Powell | `centroid.anchor_tracks.audio_laion_clap.catalog_features` |
+| `daeef24e-b041-4140-9101-882820c63408::t7` | False | `rank_top20` | 17 | 3 | The Analog Kid by Rush | `dense.qwen_8b.intent.metadata_qwen3_embedding_8b.anchor_cf_features` |
+| `a33a5df0-2c2b-429c-84e6-cde28affd4d5::t6` | False | `missing_top100` |  | 16 | Thriller by Fall Out Boy | `bm25.branch_local_hybrid` |
+
+Read: valid branch-local rescues are not becoming top-20 under the aligned capped scorer. If they cluster in rank21-50, a stronger listwise or learned scorer is the next focused test. If they are missing_top100 despite branch-local top-20 rank, the global scorer is burying a branch survivor and should be compared against an explicit branch-survivor/listwise policy rather than treated as source absence.
+
+## GT Audit
+
+| Label | Count |
+|---|---:|
+| `gt_conflicts_with_explicit_user_constraint` | 12 |
+| `underspecified_next_play_behavior` | 1 |
+| `valid_gt_branch_local_ranking_weak` | 14 |
+| `valid_gt_retriever_source_weak` | 2 |
+| `valid_gt_state_signal_compiler_not_consumed` | 12 |
+| `valid_gt_state_supports_it` | 69 |
+
+Noisy/contradictory GT is excluded only for the valid-GT-only view. All-110 metrics still include every turn. The conflict labels are mostly literal cases like 'not Drake', 'not Daft Punk', or 'not System Of A Down' where the GT artist violates an explicit user constraint. Because the conflict detector uses name matching, keep this as an audit label rather than a leaderboard exclusion until the 12 conflict rows are hand-verified.
+
+## Decisions
+
+| Lever | Decision | all u@20 gain | valid u@20 gain | valid u@50 gain |
+|---|---|---:|---:|---:|
+| `all_on_original` | reject_without_branch_local_scoring | 0 | 0 | 0 |
+| `catalog_features` | keep_for_full_devset_smoke | 3 | 1 | 2 |
+| `anchor_cf_features` | keep_for_full_devset_smoke | 3 | 1 | 0 |
+| `user_cf_features` | defer_to_branch_ranking_work | 0 | 0 | 1 |
+| `branch_local_hybrid` | keep_for_full_devset_smoke | 5 | 3 | 4 |
+| `strict_constraints` | reject_as_promoted_replacement | 4 | 2 | 4 |
+| `catalog_plus_anchor_cf` | keep_for_full_devset_smoke | 4 | 2 | 2 |
+| `promoted_feature_family` | keep_for_full_devset_smoke | 7 | 5 | 4 |
+| `all_feature_family` | defer_user_cf_component | 7 | 5 | 4 |
+
+## Lever Readout
+
+- Projection-only state consumption: represented by `catalog_features` and `branch_local_hybrid`, which derive query terms from the existing frozen request summary/facts/lyrical theme and consume them as score features. This moved valid union@20 inside branch pools, but the saved-pool fusion proxy did not preserve the lift. Keep the features for a capped candidate ranker or learned scorer, not as a direct RRF branch duplication.
+- Derived catalog features: normalized tag aliases, broad track text, release year compatibility, and popularity-if-requested are positive. Keep for full-devset smoke.
+- Anchor-CF: positive top-20 lift. Keep as a branch-local feature when the state has liked/reference/accepted anchors.
+- User-CF: 89/110 focused users have vectors and user-CF improves union@100, but not union@20. Defer to ranking work; do not call it a candidate-recall fix yet.
+- Feature magnitudes are hand-set on the focused gap pack. The direction is credible because controls stay stable, but the exact focused-pack lift is overfit-risk until the same frozen weights pass a held-out/full-devset smoke.
+- Last-resort prompt ablation: not run. The frozen state contains enough usable signal to get +5 valid union@20 from non-prompt levers, so prompt iteration should be a separate later goal only for the remaining state/lyric failures.
+
+## Remaining Gap
+
+- Still-near @21-50: mostly branch-local scoring/query specificity. Examples include `5ee0dbbc...::t8` at rank 22, `3676005d...::t1` at rank 27, `10a15ba2...::t7` at rank 29, and `2bbc0a7e...::t1` at rank 30.
+- Deeper/missing: stale or roleless anchors still blur novelty requests, and some lyric/theme requests need a stronger lyric-aware source or better query text.
+- Some temporal residuals are state errors, not only scoring errors: if the frozen state emits a tight wrong release range, a non-prompt scorer can only soften the damage. It cannot recover the intended era semantics perfectly.
+- Rejection controls stayed stable in this additive analysis: the P1 rejection guardrail valid slice remains 5/5 union@20.
+
+## Residual Source-Gap Worksheet
+
+This worksheet is the compact residual after current + targeted branches. It separates source/query gaps from final selector issues, so the next experiment can target the right mechanism.
+
+| Source-gap family | n | Read |
+|---|---:|---|
+| `generic_source_or_query_missing` | 1 | broad sonic/style request is present but existing branches do not surface the GT high enough. |
+| `lyric_hidden_target_query_or_source_missing` | 5 | lyric/story/hidden-target asks are weak under current lyric dense/tag sources; likely need better lyric query/source evidence. |
+| `novelty_artist_neighbor_source_missing` | 2 | style-neighbor retrieval exists but the seed or neighbor scoring is too weak for top-20. |
+| `scene_popularity_prior_missing` | 2 | continuation/satisfied-prior turns need scene/popularity/context features beyond literal current text. |
+| `temporal_scene_constraint_missing` | 6 | state/query has useful scene terms, but the date/era interpretation or branch query is too narrow; treat era as soft unless explicit. |
+| `visual_cover_text_to_image_missing` | 3 | visual or artwork language needs a stronger text-to-image/cross-modal query or richer visual descriptors. |
+
+Source availability note: the catalog metadata exposes titles, artists, albums, tags, popularity, and release dates, but not raw lyrics or raw cover descriptors. Track embeddings do include `lyrics_qwen3_embedding_0_6b` and `image_siglip2`. The all-retrievers config already has a lyric dense branch, so lyric residuals are likely query/source-formulation gaps. The production config uses `image_siglip2` as an anchor-centroid branch, while the focused matrix has a diagnostic SigLIP text visual variant; visual/artwork residuals therefore need a real text-to-image branch or derived visual descriptors rather than post-filtering.
+
+| sample | family | GT | best branch/rank | next change |
+|---|---|---|---|---|
+| `41367174-552b-4117-9caa-d0ba1b307d37::t2` | `temporal_scene_constraint_missing` | Mercy by Muse | `analysis.era_tag_popularity` #239 | Sharpen scene/era query construction and score release-era compatibility softly; avoid hard year filtering unless the user gives explicit dates. |
+| `9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4` | `visual_cover_text_to_image_missing` | The Carbon Stampede by Cattle Decapitation | `centroid.anchor_tracks.cf_bpr` #137 | Add or improve a visual text-to-image branch that turns artwork/cover language into image-descriptor queries before candidate fusion. |
+| `5f29a9df-ad38-4349-a2f0-c9a690ea072d::t2` | `scene_popularity_prior_missing` | Shaft by Kashmere Stage Band | absent | Use satisfied-prior context plus scene/popularity features to create a continuation branch; do not rely only on current literal text. |
+| `78cdaccb-0f9b-4876-80b1-c20bf0b444e6::t8` | `generic_source_or_query_missing` | In the Shadows by The Rasmus | `centroid.anchor_tracks.audio_laion_clap` #253 | Inspect the branch query and source coverage manually; current broad sonic/style branches surface the GT only very deep. |
+| `88af7ec3-c368-421b-9512-d0180da3d1f6::t2` | `lyric_hidden_target_query_or_source_missing` | I Believe in a Thing Called Love by The Darkness | absent | Create a lyric/theme/hidden-target branch or stronger lyric query source; existing dense/tag branches are not surfacing these GTs. |
+| `d9a65836-7165-45bf-aa3e-3ef7ba5d073a::t2` | `temporal_scene_constraint_missing` | Move Along by The All-American Rejects | `analysis.tag_popularity_alias` #170 | Sharpen scene/era query construction and score release-era compatibility softly; avoid hard year filtering unless the user gives explicit dates. |
+| `88beb200-0334-4aba-be15-8e1303725766::t6` | `temporal_scene_constraint_missing` | Used To by Lil Wayne, Drake | `analysis.query_text_tag_popularity` #189 | Sharpen scene/era query construction and score release-era compatibility softly; avoid hard year filtering unless the user gives explicit dates. |
+| `8dc4c630-8369-4720-b379-2a7dcd8d34aa::t7` | `novelty_artist_neighbor_source_missing` | Transcentience by Animals As Leaders | `dense.qwen_8b.intent.metadata_qwen3_embedding_8b` #102 | Improve artist-neighbor seed selection and neighbor scoring for explicit new/different-artist requests. |
+| `380a5ed5-3eb9-4201-8fa6-81381a583bf5::t3` | `novelty_artist_neighbor_source_missing` | God Hates a Coward by Tomahawk | `analysis.query_text_tag_popularity` #547 | Improve artist-neighbor seed selection and neighbor scoring for explicit new/different-artist requests. |
+| `cdd374ea-1ad9-4440-8c2d-4c76c5fb3f78::t3` | `scene_popularity_prior_missing` | Gib ihn einfach (Dies das 2) by Ghanaian Stallion | `dense.qwen_8b.attributes.attributes_qwen3_embedding_8b` #101 | Use satisfied-prior context plus scene/popularity features to create a continuation branch; do not rely only on current literal text. |
+
+Source-gap read: most rows are not solved by another scalar scorer. The narrow candidates for new or sharper branches are lyric/hidden-target queries, visual text-to-image descriptions, and scene/era/popularity queries with soft temporal handling.
+
+### Existing Branch Evidence For Source Gaps
+
+| source family | best-rank buckets | best branch families |
+|---|---|---|
+| `generic_source_or_query_missing` | missing_top100:1 | audio_anchor_centroid:1 |
+| `lyric_hidden_target_query_or_source_missing` | absent:1, missing_top100:4 | absent:1, cf_anchor_centroid:1, qwen_intent:1, qwen_metadata:1, qwen_attributes_enriched:1 |
+| `novelty_artist_neighbor_source_missing` | missing_top100:2 | qwen_intent:1, tag_scene:1 |
+| `scene_popularity_prior_missing` | absent:1, missing_top100:1 | absent:1, qwen_attributes:1 |
+| `temporal_scene_constraint_missing` | missing_top100:6 | tag_scene:2, era_popularity:1, clap_sonic_nl:1, audio_anchor_centroid:1, qwen_intent:1 |
+| `visual_cover_text_to_image_missing` | absent:1, missing_top100:2 | cf_anchor_centroid:1, qwen_attributes_enriched:1, absent:1 |
+
+Branch-evidence read: when residual GTs are only present at rank101+ or absent, stronger final-list selection cannot fix them. The work should either sharpen that branch query or add a source that makes the GT appear in a smaller candidate pool.
+
+## Gap Reason By Slice
+
+| Slice | n | valid n | current u@20 | promoted u@20 | dominant reasons |
+|---|---:|---:|---:|---:|---|
+| `P0_new_artist_union20_gap_failure` | 10 | 10 | 4 | 4 | already_in_current_union20:4, deep_101_500_branch_query_or_noise:3, near_miss_21_50_branch_local_scoring:2, near_miss_51_100_branch_local_scoring:1 |
+| `P0_novelty_prior_anchor_failure` | 10 | 8 | 4 | 5 | already_in_current_union20:4, gt_conflicts_with_explicit_user_constraint:2, deep_101_500_branch_query_or_noise:2, near_miss_21_50_branch_local_scoring:1 |
+| `P0_roleless_stale_entity_failure` | 10 | 9 | 1 | 3 | deep_101_500_branch_query_or_noise:3, rescued_by_branch_local_scoring:2, near_miss_51_100_branch_local_scoring:1, already_in_current_union20:1 |
+| `P1_positive_tag_retrieval_gap_failure` | 10 | 10 | 4 | 7 | already_in_current_union20:4, rescued_by_branch_local_scoring:3, gt_absent_from_all_saved_deep_pools:1, deep_101_500_branch_query_or_noise:1 |
+| `P1_rejection_guardrail_failure` | 10 | 5 | 10 | 10 | already_in_current_union20:5, gt_conflicts_with_explicit_user_constraint:5 |
+| `P1_temporal_constraint_failure` | 10 | 8 | 4 | 5 | already_in_current_union20:4, deep_101_500_branch_query_or_noise:3, gt_conflicts_with_explicit_user_constraint:2, near_miss_21_50_branch_local_scoring:1 |
+| `POS_clean_final_hit_control` | 10 | 10 | 10 | 10 | already_in_current_union20:10 |
+| `POS_exact_entity_success_control` | 10 | 10 | 10 | 10 | already_in_current_union20:10 |
+| `lyric_or_theme_gap` | 18 | 15 | 10 | 11 | already_in_current_union20:10, deep_101_500_branch_query_or_noise:3, near_miss_21_50_branch_local_scoring:2, gt_conflicts_with_explicit_user_constraint:2 |
+| `visual_or_cover_art_gap` | 11 | 6 | 7 | 9 | gt_conflicts_with_explicit_user_constraint:5, rescued_by_branch_local_scoring:2, already_in_current_union20:2, deep_101_500_branch_query_or_noise:1 |
+
+## Top-20 Noise Examples
+
+These are valid/current misses where raw branch top slots are occupied by plausible but wrong candidates. Use them for branch-local scoring and query specificity debugging, not prompt tuning.
+
+- `0b9d547f-e748-464a-90e2-2199149f915c::t6` (P0_roleless_stale_entity_failure) GT=Give It To Me Baby by Rick James; top noise: bm25#1=Evelyn Thomas - High Energy; bm25#2=Nightmares On Wax - 70s 80s; bm25#3=Michael Jackson - Burn This Disco Out
+- `e66c6a88-88ba-4117-9114-363bfa96294a::t7` (P0_roleless_stale_entity_failure) GT=Test Drive by John Powell; top noise: bm25#1=blink-182 - Anthem Part Two; bm25#2=Two Steps from Hell - Heart of Courage; bm25#3=Steve Jablonsky - Downtown Battle
+- `41367174-552b-4117-9caa-d0ba1b307d37::t2` (P0_roleless_stale_entity_failure) GT=Mercy by Muse; top noise: bm25#1=Madonna - This Used To Be My Playground; bm25#2=Foo Fighters - Something from Nothing; bm25#3=Destiny's Child - Emotion
+- `10a15ba2-4126-4ae4-ac6c-dc170735ae9e::t7` (P0_roleless_stale_entity_failure) GT=I Can't Go to Sleep by Wu-Tang Clan; top noise: bm25#1=Kendrick Lamar - Illuminate (feat. Kendrick Lamar); bm25#2=Jay Rock - Pay for It (feat. Kendrick Lamar & Chantal); bm25#3=Jay Rock - Hood Gone Love It (feat. Kendrick Lamar)
+- `9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4` (P0_roleless_stale_entity_failure) GT=The Carbon Stampede by Cattle Decapitation; top noise: bm25#1=Cephalic Carnage - Dying Will Be the Death of Me; bm25#2=Static-X - Push It; bm25#3=The Faceless - Akeldama
+
+## Next Tests
+
+1. Do not promote the feature family or capped scalar scorer directly into production fusion. Scalar candidate scoring, feature-weight tuning, explicit survivor slots, and a cheap cross-validated listwise selector all produce zero valid current-miss top-20 rescues on this focused pack.
+2. Move the next focused work to sharper branch/query sources: visual or hidden-target branches for artwork/vibe asks, lyric/theme branches for direct lyrical constraints, and richer candidate features for the branch-local rank 8-20 rescues.
+3. Hand-audit the 12 `gt_conflicts_with_explicit_user_constraint` rows and keep all-110 metrics side by side with valid-only metrics.
+4. Separately replay the role-typed state branch against the remaining stale-anchor and temporal residuals. Branch-local scoring is complementary; it is not a substitute for extracting seed/satisfied/history/contrast/rejected roles or soft-era versus hard-date intent correctly.
+5. For lyric/theme cases, validate whether the existing lyric branch can move known @21-100 examples before adding a new retriever. If it cannot express the target even with good query text, then scope a lyric/theme source goal.
+
+## Per-Class Valid-Only union@20
+
+| Pack | Variant | valid n | valid u@20 | valid u@50 | valid u@100 |
+|---|---|---:|---:|---:|---:|
+| P0_good_state_ranker_near_miss_failure | `current_plus_targeted` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_good_state_ranker_near_miss_failure | `all_on_original` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_good_state_ranker_near_miss_failure | `catalog_features` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_good_state_ranker_near_miss_failure | `anchor_cf_features` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_good_state_ranker_near_miss_failure | `user_cf_features` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_good_state_ranker_near_miss_failure | `branch_local_hybrid` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_good_state_ranker_near_miss_failure | `catalog_plus_anchor_cf` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_good_state_ranker_near_miss_failure | `promoted_feature_family` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_good_state_ranker_near_miss_failure | `all_feature_family` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_named_artist_ranker_failure | `current_plus_targeted` | 7 | 7/7 | 7/7 | 7/7 |
+| P0_named_artist_ranker_failure | `all_on_original` | 7 | 7/7 | 7/7 | 7/7 |
+| P0_named_artist_ranker_failure | `catalog_features` | 7 | 7/7 | 7/7 | 7/7 |
+| P0_named_artist_ranker_failure | `anchor_cf_features` | 7 | 7/7 | 7/7 | 7/7 |
+| P0_named_artist_ranker_failure | `user_cf_features` | 7 | 7/7 | 7/7 | 7/7 |
+| P0_named_artist_ranker_failure | `branch_local_hybrid` | 7 | 7/7 | 7/7 | 7/7 |
+| P0_named_artist_ranker_failure | `catalog_plus_anchor_cf` | 7 | 7/7 | 7/7 | 7/7 |
+| P0_named_artist_ranker_failure | `promoted_feature_family` | 7 | 7/7 | 7/7 | 7/7 |
+| P0_named_artist_ranker_failure | `all_feature_family` | 7 | 7/7 | 7/7 | 7/7 |
+| P0_new_artist_union20_gap_failure | `current_plus_targeted` | 10 | 4/10 | 6/10 | 7/10 |
+| P0_new_artist_union20_gap_failure | `all_on_original` | 10 | 4/10 | 6/10 | 7/10 |
+| P0_new_artist_union20_gap_failure | `catalog_features` | 10 | 4/10 | 6/10 | 9/10 |
+| P0_new_artist_union20_gap_failure | `anchor_cf_features` | 10 | 4/10 | 6/10 | 7/10 |
+| P0_new_artist_union20_gap_failure | `user_cf_features` | 10 | 4/10 | 6/10 | 9/10 |
+| P0_new_artist_union20_gap_failure | `branch_local_hybrid` | 10 | 4/10 | 7/10 | 9/10 |
+| P0_new_artist_union20_gap_failure | `catalog_plus_anchor_cf` | 10 | 4/10 | 6/10 | 9/10 |
+| P0_new_artist_union20_gap_failure | `promoted_feature_family` | 10 | 4/10 | 7/10 | 9/10 |
+| P0_new_artist_union20_gap_failure | `all_feature_family` | 10 | 4/10 | 7/10 | 9/10 |
+| P0_novelty_prior_anchor_failure | `current_plus_targeted` | 8 | 4/8 | 5/8 | 5/8 |
+| P0_novelty_prior_anchor_failure | `all_on_original` | 8 | 4/8 | 5/8 | 5/8 |
+| P0_novelty_prior_anchor_failure | `catalog_features` | 8 | 4/8 | 5/8 | 5/8 |
+| P0_novelty_prior_anchor_failure | `anchor_cf_features` | 8 | 4/8 | 5/8 | 5/8 |
+| P0_novelty_prior_anchor_failure | `user_cf_features` | 8 | 4/8 | 5/8 | 6/8 |
+| P0_novelty_prior_anchor_failure | `branch_local_hybrid` | 8 | 4/8 | 5/8 | 5/8 |
+| P0_novelty_prior_anchor_failure | `catalog_plus_anchor_cf` | 8 | 4/8 | 5/8 | 5/8 |
+| P0_novelty_prior_anchor_failure | `promoted_feature_family` | 8 | 4/8 | 5/8 | 5/8 |
+| P0_novelty_prior_anchor_failure | `all_feature_family` | 8 | 4/8 | 5/8 | 6/8 |
+| P0_roleless_stale_entity_failure | `current_plus_targeted` | 9 | 1/9 | 4/9 | 4/9 |
+| P0_roleless_stale_entity_failure | `all_on_original` | 9 | 1/9 | 4/9 | 4/9 |
+| P0_roleless_stale_entity_failure | `catalog_features` | 9 | 2/9 | 4/9 | 6/9 |
+| P0_roleless_stale_entity_failure | `anchor_cf_features` | 9 | 1/9 | 4/9 | 5/9 |
+| P0_roleless_stale_entity_failure | `user_cf_features` | 9 | 1/9 | 4/9 | 7/9 |
+| P0_roleless_stale_entity_failure | `branch_local_hybrid` | 9 | 2/9 | 5/9 | 6/9 |
+| P0_roleless_stale_entity_failure | `catalog_plus_anchor_cf` | 9 | 2/9 | 4/9 | 6/9 |
+| P0_roleless_stale_entity_failure | `promoted_feature_family` | 9 | 3/9 | 5/9 | 7/9 |
+| P0_roleless_stale_entity_failure | `all_feature_family` | 9 | 3/9 | 5/9 | 8/9 |
+| P0_same_album_ranker_failure | `current_plus_targeted` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_same_album_ranker_failure | `all_on_original` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_same_album_ranker_failure | `catalog_features` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_same_album_ranker_failure | `anchor_cf_features` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_same_album_ranker_failure | `user_cf_features` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_same_album_ranker_failure | `branch_local_hybrid` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_same_album_ranker_failure | `catalog_plus_anchor_cf` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_same_album_ranker_failure | `promoted_feature_family` | 10 | 10/10 | 10/10 | 10/10 |
+| P0_same_album_ranker_failure | `all_feature_family` | 10 | 10/10 | 10/10 | 10/10 |
+| P1_positive_tag_retrieval_gap_failure | `current_plus_targeted` | 10 | 4/10 | 7/10 | 9/10 |
+| P1_positive_tag_retrieval_gap_failure | `all_on_original` | 10 | 4/10 | 7/10 | 9/10 |
+| P1_positive_tag_retrieval_gap_failure | `catalog_features` | 10 | 4/10 | 9/10 | 9/10 |
+| P1_positive_tag_retrieval_gap_failure | `anchor_cf_features` | 10 | 5/10 | 7/10 | 9/10 |
+| P1_positive_tag_retrieval_gap_failure | `user_cf_features` | 10 | 4/10 | 8/10 | 9/10 |
+| P1_positive_tag_retrieval_gap_failure | `branch_local_hybrid` | 10 | 6/10 | 9/10 | 9/10 |
+| P1_positive_tag_retrieval_gap_failure | `catalog_plus_anchor_cf` | 10 | 5/10 | 9/10 | 9/10 |
+| P1_positive_tag_retrieval_gap_failure | `promoted_feature_family` | 10 | 7/10 | 9/10 | 9/10 |
+| P1_positive_tag_retrieval_gap_failure | `all_feature_family` | 10 | 7/10 | 9/10 | 9/10 |
+| P1_rejection_guardrail_failure | `current_plus_targeted` | 5 | 5/5 | 5/5 | 5/5 |
+| P1_rejection_guardrail_failure | `all_on_original` | 5 | 5/5 | 5/5 | 5/5 |
+| P1_rejection_guardrail_failure | `catalog_features` | 5 | 5/5 | 5/5 | 5/5 |
+| P1_rejection_guardrail_failure | `anchor_cf_features` | 5 | 5/5 | 5/5 | 5/5 |
+| P1_rejection_guardrail_failure | `user_cf_features` | 5 | 5/5 | 5/5 | 5/5 |
+| P1_rejection_guardrail_failure | `branch_local_hybrid` | 5 | 5/5 | 5/5 | 5/5 |
+| P1_rejection_guardrail_failure | `catalog_plus_anchor_cf` | 5 | 5/5 | 5/5 | 5/5 |
+| P1_rejection_guardrail_failure | `promoted_feature_family` | 5 | 5/5 | 5/5 | 5/5 |
+| P1_rejection_guardrail_failure | `all_feature_family` | 5 | 5/5 | 5/5 | 5/5 |
+| P1_temporal_constraint_failure | `current_plus_targeted` | 8 | 4/8 | 6/8 | 6/8 |
+| P1_temporal_constraint_failure | `all_on_original` | 8 | 4/8 | 6/8 | 6/8 |
+| P1_temporal_constraint_failure | `catalog_features` | 8 | 4/8 | 6/8 | 6/8 |
+| P1_temporal_constraint_failure | `anchor_cf_features` | 8 | 4/8 | 6/8 | 7/8 |
+| P1_temporal_constraint_failure | `user_cf_features` | 8 | 4/8 | 6/8 | 7/8 |
+| P1_temporal_constraint_failure | `branch_local_hybrid` | 8 | 4/8 | 6/8 | 6/8 |
+| P1_temporal_constraint_failure | `catalog_plus_anchor_cf` | 8 | 4/8 | 6/8 | 7/8 |
+| P1_temporal_constraint_failure | `promoted_feature_family` | 8 | 4/8 | 6/8 | 7/8 |
+| P1_temporal_constraint_failure | `all_feature_family` | 8 | 4/8 | 6/8 | 8/8 |
+| POS_clean_final_hit_control | `current_plus_targeted` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_clean_final_hit_control | `all_on_original` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_clean_final_hit_control | `catalog_features` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_clean_final_hit_control | `anchor_cf_features` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_clean_final_hit_control | `user_cf_features` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_clean_final_hit_control | `branch_local_hybrid` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_clean_final_hit_control | `catalog_plus_anchor_cf` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_clean_final_hit_control | `promoted_feature_family` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_clean_final_hit_control | `all_feature_family` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_exact_entity_success_control | `current_plus_targeted` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_exact_entity_success_control | `all_on_original` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_exact_entity_success_control | `catalog_features` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_exact_entity_success_control | `anchor_cf_features` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_exact_entity_success_control | `user_cf_features` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_exact_entity_success_control | `branch_local_hybrid` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_exact_entity_success_control | `catalog_plus_anchor_cf` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_exact_entity_success_control | `promoted_feature_family` | 10 | 10/10 | 10/10 | 10/10 |
+| POS_exact_entity_success_control | `all_feature_family` | 10 | 10/10 | 10/10 | 10/10 |
+
+## Examples
+
+### `promoted_feature_family` rescued union@20
+
+- `54cda581-3b2e-4245-a479-1a27589760d2::t3` (P1_positive_tag_retrieval_gap_failure, valid_gt_branch_local_ranking_weak): GT=Deliberation - Studio by Katatonia; rank 46 -> 8 via `dense.qwen_8b.attributes_enriched.attributes_qwen3_embedding_8b.branch_local_hybrid`. User: This is getting really close! The album art for "Character" by Dark Tranquillity is definitely in the right ballpark with the ruined city and bleak atmosphere. However, the one I'm thinking of had a somewhat more abstrac
+- `9b9b7c6b-b376-4d6b-8716-aa7cf0127322::t4` (P0_roleless_stale_entity_failure, valid_gt_state_signal_compiler_not_consumed): GT=The Carbon Stampede by Cattle Decapitation; rank 108 -> 9 via `dense.clap_text.sonic_nl.audio_laion_clap.branch_local_hybrid`. User: Suffocation is always a solid listen, but I'm really looking to discover some *new* bands. Can you suggest some more recent acts that are making waves in the technical or progressive death metal scene? I'm open to anythi
+- `e66c6a88-88ba-4117-9114-363bfa96294a::t7` (P0_roleless_stale_entity_failure, valid_gt_branch_local_ranking_weak): GT=Test Drive by John Powell; rank 36 -> 16 via `centroid.anchor_tracks.audio_laion_clap.catalog_features`. User: This is absolutely perfect! "Anthem of the World" is exactly the powerful and uplifting epic music I was looking for. Can you give me more recommendations that are similar to this or Two Steps from Hell?
+- `1c567917-f931-4609-9695-a9c0f8e39f3d::t2` (P1_positive_tag_retrieval_gap_failure, valid_gt_branch_local_ranking_weak): GT=Arregaçada / U Can't Touch This by Banda Uó; rank 35 -> 16 via `dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b.anchor_cf_features`. User: That's a good start! Anitta is definitely on point for contemporary pop. What about something more recent and upbeat, specifically from the 'tecno brega' or 'funk carioca' scenes?
+- `5a0dfe9d-ec8a-4449-97df-35535cbf162f::t1` (P1_positive_tag_retrieval_gap_failure, valid_gt_branch_local_ranking_weak): GT=A New World by Harry Gregson-Williams; rank 60 -> 18 via `dense.qwen_8b.metadata.metadata_qwen3_embedding_8b.branch_local_hybrid`. User: Play something epic and orchestral, like a movie soundtrack, for background music.
+- `daeef24e-b041-4140-9101-882820c63408::t7` (P0_novelty_prior_anchor_failure, gt_conflicts_with_explicit_user_constraint): GT=The Analog Kid by Rush; rank 24 -> 3 via `dense.qwen_8b.intent.metadata_qwen3_embedding_8b.anchor_cf_features`. User: Okay, it sounds like there's a problem with 'Tom Sawyer'. That's a bummer. Can you please play 'The Spirit of Radio' by Rush instead?
+- `a33a5df0-2c2b-429c-84e6-cde28affd4d5::t6` (P1_temporal_constraint_failure, gt_conflicts_with_explicit_user_constraint): GT=Thriller by Fall Out Boy; rank 23 -> 16 via `bm25.branch_local_hybrid`. User: You're doing so well with Panic! At The Disco and the emotional vibe! "Always" is a great song, but it's still not the one that screams "mid-2000s emo phase" to me. The track I'm thinking of is definitely from their firs
+
+### `promoted_feature_family` still missed valid GT
+
+- `5ee0dbbc-c1d1-4bed-ba09-7dafeec198bc::t8` (P0_new_artist_union20_gap_failure): GT=You Reposted in the Wrong Neighborhood I Glue70 Mashup by Shokk; best rank=22; reason=The target is not in a strong candidate pool (best branch 102 in dense.qwen_8b.metadata.metadata_qwen3_embedding_8b; final -). This is mostly a retriever/state-to-retriever coverag; change=Improve turn-type routing and candidate generation: use listener_goal/current state, role-aware entities, tags, popularity, culture/CF affinity, and novelty profiles before spendin
+- `3676005d-5b7c-4c48-9b73-3e10dd509c07::t1` (P1_temporal_constraint_failure): GT=Breath and Life by Audiomachine; best rank=27; reason=The extracted release range (2000, 2004) excludes the target release year 2012. If this range is treated as a hard constraint or strong demotion, the correct item is pushed away be; change=Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit date-bound language should hard-filter or heavily pe
+- `10a15ba2-4126-4ae4-ac6c-dc170735ae9e::t7` (P0_roleless_stale_entity_failure): GT=I Can't Go to Sleep by Wu-Tang Clan; best rank=29; reason=The user asks for novelty or a different direction, but the state still keeps Deltron 3030, Kendrick Lamar as positive anchors. That sends retrievers toward already-satisfied artis; change=Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metada
+- `2bbc0a7e-3ab0-4376-8135-182cd4ae075f::t1` (P1_positive_tag_retrieval_gap_failure): GT=Las Almas Del Silencio by Ricky Martin; best rank=30; reason=The target is not in a strong candidate pool (best branch 101 in dense.qwen_0_6b.attributes.attributes_qwen3_embedding_0_6b; final 119). This is mostly a retriever/state-to-retriev; change=Improve turn-type routing and candidate generation: use listener_goal/current state, role-aware entities, tags, popularity, culture/CF affinity, and novelty profiles before spendin
+- `ba68a3cc-5278-4680-917a-4ca66d33ef31::t5` (P0_new_artist_union20_gap_failure): GT=Buttons by The Pussycat Dolls; best rank=34; reason=The user asks for novelty or a different direction, but the state still keeps Spice Girls as positive anchors. That sends retrievers toward already-satisfied artists instead of the; change=Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metada
+- `907921a3-d08f-4ba1-8cce-0e760a9e7044::t7` (P0_new_artist_union20_gap_failure): GT=Sunrise - Slow Hands Remix by Kasper Bjørke; best rank=36; reason=The state still treats Men I Trust, The Goo Goo Dolls as positive artist/track evidence even though it is not present in the current user turn. This can over-anchor retrieval on co; change=Keep prior entities as history/context, but decay or remove them from current anchors unless the user re-mentions them. The resolver should expose current-vs-history roles to retri
+- `464477e4-f186-47fb-8cb0-55691c8b8f57::t6` (P1_positive_tag_retrieval_gap_failure): GT=Where Eagles Dare by Glenn Danzig, Misfits; best rank=43; reason=The target is not in a strong candidate pool (best branch 102 in centroid.anchor_tracks.image_siglip2; final 475). This is mostly a retriever/state-to-retriever coverage gap, not j; change=Improve turn-type routing and candidate generation: use listener_goal/current state, role-aware entities, tags, popularity, culture/CF affinity, and novelty profiles before spendin
+- `c4c0c288-dbcd-4970-ad52-901aafe91b88::t4` (P1_temporal_constraint_failure): GT=I Juswanna Chill by Large Professor; best rank=71; reason=The extracted release range (1990, 1999) excludes the target release year 2009. If this range is treated as a hard constraint or strong demotion, the correct item is pushed away be; change=Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit date-bound language should hard-filter or heavily pe
+- `5861afef-85c0-4163-b8b9-5a11e308f352::t4` (P0_new_artist_union20_gap_failure): GT=Carmesí by Vicente Garcia; best rank=74; reason=The user asks for novelty or a different direction, but the state still keeps DENNIS, Lucas Lucco, MC Lan as positive anchors. That sends retrievers toward already-satisfied artist; change=Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metada
+- `41367174-552b-4117-9caa-d0ba1b307d37::t2` (P0_roleless_stale_entity_failure): GT=Mercy by Muse; best rank=80; reason=The state still treats My Chemical Romance, Foo Fighters as positive artist/track evidence even though it is not present in the current user turn. This can over-anchor retrieval on; change=Keep prior entities as history/context, but decay or remove them from current anchors unless the user re-mentions them. The resolver should expose current-vs-history roles to retri
+- `324ddfb5-8a18-4729-9acb-c851907a297c::t3` (P0_new_artist_union20_gap_failure): GT=Acknowledge by Masta Ace; best rank=81; reason=The extracted release range (1995, 2004) excludes the target release year 2005. If this range is treated as a hard constraint or strong demotion, the correct item is pushed away be; change=Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit date-bound language should hard-filter or heavily pe
+- `67b9ba8a-382f-4b70-af76-576848d8cf67::t8` (P1_temporal_constraint_failure): GT=Gangsta Gangsta by N.W.A.; best rank=85; reason=The extracted release range (1995, 2004) excludes the target release year 1988. If this range is treated as a hard constraint or strong demotion, the correct item is pushed away be; change=Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit date-bound language should hard-filter or heavily pe
+- `d9a65836-7165-45bf-aa3e-3ef7ba5d073a::t2` (P0_roleless_stale_entity_failure): GT=Move Along by The All-American Rejects; best rank=97; reason=The extracted release range (2000, 2004) excludes the target release year 2005. If this range is treated as a hard constraint or strong demotion, the correct item is pushed away be; change=Split hard date constraints from stylistic era cues. Era-like wording should become a soft compatibility feature; only explicit date-bound language should hard-filter or heavily pe
+- `0b9d547f-e748-464a-90e2-2199149f915c::t6` (P0_roleless_stale_entity_failure): GT=Give It To Me Baby by Rick James; best rank=109; reason=The user asks for novelty or a different direction, but the state still keeps The Real Thing as positive anchors. That sends retrievers toward already-satisfied artists instead of ; change=Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metada
+
+## User-CF Coverage
+
+- Focused users with `cf_bpr` vector: 89/110.
+- User ids found in trace: 110/110.
+
+## Recommendation
+
+Keep branch-local feature levers as focused candidate-quality evidence, but do not promote them as a final-list fix yet. Plain all-on branches, branch-family weighting, capped scalar scoring, explicit survivor slots, a feature-weight sweep, and a cheap learned listwise selector do not produce valid top-20 current-miss rescues. The next focused work should target sharper branch/query sources and richer candidate features; only the small absent-from-deep-pools slice should trigger a true new-source goal.
+
+Need-new-source note: only 2 valid GTs are absent from all saved deep pools in this run. Most remaining valid failures are not fundamentally absent; they are near/deep ranking, query specificity, or state-role consumption problems.

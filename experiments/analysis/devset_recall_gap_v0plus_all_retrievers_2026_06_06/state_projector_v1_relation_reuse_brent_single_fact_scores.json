@@ -1,0 +1,195 @@
+{
+  "summary": {
+    "samples": 1,
+    "all_pass_rate": 1.0,
+    "compiler_core_pass_rate": 1.0,
+    "schema_valid_rate": 1.0,
+    "request_type_rate": 1.0,
+    "required_entities_rate": 1.0,
+    "forbidden_seeds_rate": 1.0,
+    "required_exclusions_rate": 1.0,
+    "temporal_constraint_rate": 1.0
+  },
+  "by_pack": {
+    "P0_same_album_ranker_failure": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "compiler_core_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    }
+  },
+  "by_fact_class": {
+    "attribute_from_prior": {
+      "samples": 1,
+      "all_pass_rate": 1.0,
+      "compiler_core_pass_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 1.0,
+      "required_entities_rate": 1.0,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 1.0,
+      "temporal_constraint_rate": 1.0
+    }
+  },
+  "rows": [
+    {
+      "sample_id": "8071d14d-7e0f-4f72-90a6-0941db80a371::t5",
+      "pack": "P0_same_album_ranker_failure",
+      "fact_class": "attribute_from_prior",
+      "request_type": "attribute_search",
+      "checks": {
+        "schema_valid": true,
+        "request_type": true,
+        "required_entities": true,
+        "forbidden_seeds": true,
+        "required_exclusions": true,
+        "temporal_constraint": true
+      },
+      "all_pass": true,
+      "compiler_core_pass": true,
+      "missing_facts": [],
+      "observed_read": {
+        "current_request": {
+          "request_type": "attribute_search",
+          "summary": "More chill R&B with a smooth vibe like Brent Faiyaz, possibly with a bit more groove but still chill.",
+          "source_turn": 3,
+          "evidence_text": "a bit more groove but still chill R&B"
+        },
+        "facts": [
+          {
+            "type": "artist",
+            "facet": null,
+            "value": "Brent Faiyaz",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "satisfied_prior",
+            "reuse": "avoid_exact",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "I like Brent Faiyaz"
+          },
+          {
+            "type": "track",
+            "facet": null,
+            "value": "Talk 2 U",
+            "role": "satisfied_prior",
+            "anchor_use": "do_not_use",
+            "relation": "satisfied_prior",
+            "reuse": "avoid_exact",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "nice smooth vibe"
+          },
+          {
+            "type": "attribute",
+            "facet": "genre",
+            "value": "chill R&B",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "chill R&B"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "smooth",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "smooth vibe"
+          },
+          {
+            "type": "attribute",
+            "facet": "mood",
+            "value": "groove",
+            "role": "current_target",
+            "anchor_use": "query_facet",
+            "relation": "query_facet",
+            "reuse": "not_applicable",
+            "source_turn": 3,
+            "mentioned_current_turn": true,
+            "evidence_text": "bit more groove"
+          }
+        ],
+        "entities": [
+          {
+            "type": "artist",
+            "value": "Brent Faiyaz",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "track",
+            "value": "Talk 2 U",
+            "role": "satisfied",
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "chill R&B",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "smooth",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "groove",
+            "role": "current_target",
+            "use_as_retrieval_seed": true
+          }
+        ],
+        "exclusions": [],
+        "rejections": [],
+        "temporal_constraint": null
+      },
+      "expected_read": {
+        "request_type": "attribute_search",
+        "required_entities": [
+          {
+            "type": "artist",
+            "value": "Brent Faiyaz",
+            "allowed_roles": [
+              "satisfied",
+              "history"
+            ],
+            "use_as_retrieval_seed": false
+          },
+          {
+            "type": "tag",
+            "value": "groove",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          },
+          {
+            "type": "tag",
+            "value": "chill R&B",
+            "allowed_roles": [
+              "current_target",
+              "seed"
+            ],
+            "use_as_retrieval_seed": true
+          }
+        ]
+      }
+    }
+  ]
+}

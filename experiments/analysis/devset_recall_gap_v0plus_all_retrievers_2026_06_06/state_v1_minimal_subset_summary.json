@@ -1,0 +1,86 @@
+{
+  "summary": {
+    "n": 110,
+    "selected_branches": [
+      "analysis.query_text_tag_popularity",
+      "analysis.artist_tag_neighbor_popularity",
+      "dense.qwen_8b.metadata.metadata_qwen3_embedding_8b",
+      "dense.qwen_8b.attributes_enriched.attributes_qwen3_embedding_8b",
+      "centroid.anchor_tracks.cf_bpr",
+      "dense.qwen_0_6b.attributes_enriched.attributes_qwen3_embedding_0_6b",
+      "dense.clap_text.sonic_nl_enriched.audio_laion_clap",
+      "analysis.tag_popularity_alias",
+      "dense.qwen_8b.intent.metadata_qwen3_embedding_8b",
+      "dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b"
+    ],
+    "subset_union@20_count": 71,
+    "all_on_union@20_count": 74,
+    "subset_union@50_count": 83,
+    "all_on_union@50_count": 85,
+    "subset_union@100_count": 89,
+    "all_on_union@100_count": 89
+  },
+  "steps": [
+    {
+      "branch": "analysis.query_text_tag_popularity",
+      "subset_union@20_count": 65,
+      "subset_union@50_count": 66,
+      "subset_union@100_count": 67
+    },
+    {
+      "branch": "analysis.artist_tag_neighbor_popularity",
+      "subset_union@20_count": 67,
+      "subset_union@50_count": 72,
+      "subset_union@100_count": 72
+    },
+    {
+      "branch": "dense.qwen_8b.metadata.metadata_qwen3_embedding_8b",
+      "subset_union@20_count": 67,
+      "subset_union@50_count": 73,
+      "subset_union@100_count": 76
+    },
+    {
+      "branch": "dense.qwen_8b.attributes_enriched.attributes_qwen3_embedding_8b",
+      "subset_union@20_count": 67,
+      "subset_union@50_count": 74,
+      "subset_union@100_count": 80
+    },
+    {
+      "branch": "centroid.anchor_tracks.cf_bpr",
+      "subset_union@20_count": 69,
+      "subset_union@50_count": 76,
+      "subset_union@100_count": 83
+    },
+    {
+      "branch": "dense.qwen_0_6b.attributes_enriched.attributes_qwen3_embedding_0_6b",
+      "subset_union@20_count": 69,
+      "subset_union@50_count": 78,
+      "subset_union@100_count": 85
+    },
+    {
+      "branch": "dense.clap_text.sonic_nl_enriched.audio_laion_clap",
+      "subset_union@20_count": 70,
+      "subset_union@50_count": 79,
+      "subset_union@100_count": 86
+    },
+    {
+      "branch": "analysis.tag_popularity_alias",
+      "subset_union@20_count": 71,
+      "subset_union@50_count": 80,
+      "subset_union@100_count": 87
+    },
+    {
+      "branch": "dense.qwen_8b.intent.metadata_qwen3_embedding_8b",
+      "subset_union@20_count": 71,
+      "subset_union@50_count": 82,
+      "subset_union@100_count": 88
+    },
+    {
+      "branch": "dense.qwen_0_6b.metadata.metadata_qwen3_embedding_0_6b",
+      "subset_union@20_count": 71,
+      "subset_union@50_count": 83,
+      "subset_union@100_count": 89
+    }
+  ],
+  "variant": "all_candidate_plus_synthetic_v3"
+}

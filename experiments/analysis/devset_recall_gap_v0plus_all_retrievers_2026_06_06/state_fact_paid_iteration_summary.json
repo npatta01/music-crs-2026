@@ -1,0 +1,81 @@
+{
+  "summary": {
+    "paid_current_full_original": {
+      "samples": 56,
+      "all_pass_rate": 0.625,
+      "compiler_core_pass_rate": 0.75,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 0.8392857142857143,
+      "required_entities_rate": 0.7678571428571429,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 0.9464285714285714,
+      "temporal_constraint_rate": 0.9821428571428571
+    },
+    "paid_current_full_schema_merge": {
+      "samples": 56,
+      "all_pass_rate": 0.6607142857142857,
+      "compiler_core_pass_rate": 0.7857142857142857,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 0.8392857142857143,
+      "required_entities_rate": 0.8035714285714286,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 0.9464285714285714,
+      "temporal_constraint_rate": 0.9821428571428571
+    },
+    "paid_rubric_corefail": {
+      "samples": 14,
+      "all_pass_rate": 0.21428571428571427,
+      "compiler_core_pass_rate": 0.2857142857142857,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 0.7142857142857143,
+      "required_entities_rate": 0.42857142857142855,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 0.7857142857142857,
+      "temporal_constraint_rate": 0.9285714285714286
+    },
+    "paid_rejection_corefail": {
+      "samples": 14,
+      "all_pass_rate": 0.0,
+      "compiler_core_pass_rate": 0.0,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 0.7857142857142857,
+      "required_entities_rate": 0.07142857142857142,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 0.7857142857142857,
+      "temporal_constraint_rate": 0.9285714285714286
+    },
+    "paid_current_literal_corefail": {
+      "samples": 12,
+      "all_pass_rate": 0.08333333333333333,
+      "compiler_core_pass_rate": 0.08333333333333333,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 0.75,
+      "required_entities_rate": 0.25,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 0.75,
+      "temporal_constraint_rate": 0.9166666666666666
+    },
+    "paid_current_carry_corefail": {
+      "samples": 12,
+      "all_pass_rate": 0.4166666666666667,
+      "compiler_core_pass_rate": 0.4166666666666667,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 0.8333333333333334,
+      "required_entities_rate": 0.5833333333333334,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 0.75,
+      "temporal_constraint_rate": 0.9166666666666666
+    },
+    "paid_current_carry_full_rejected": {
+      "samples": 56,
+      "all_pass_rate": 0.6428571428571429,
+      "compiler_core_pass_rate": 0.7678571428571429,
+      "schema_valid_rate": 1.0,
+      "request_type_rate": 0.8035714285714286,
+      "required_entities_rate": 0.8214285714285714,
+      "forbidden_seeds_rate": 1.0,
+      "required_exclusions_rate": 0.9285714285714286,
+      "temporal_constraint_rate": 0.9642857142857143
+    }
+  }
+}

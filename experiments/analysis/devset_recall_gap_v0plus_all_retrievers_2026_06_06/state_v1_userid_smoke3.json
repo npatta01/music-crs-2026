@@ -1,0 +1,189 @@
+{
+  "samples": [
+    "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+    "e66c6a88-88ba-4117-9114-363bfa96294a::t7",
+    "0858f444-c9af-4f08-a9fc-2a731a24182b::t5"
+  ],
+  "variants": [
+    "current_config_state_selector_family"
+  ],
+  "summary": [
+    {
+      "variant": "official_trace_baseline",
+      "n": 3,
+      "union@20": 0.0,
+      "final@20": 0.0,
+      "union@50": 0.0,
+      "final@50": 0.0,
+      "union@100": 0.0,
+      "final@100": 0.0,
+      "union@200": 1.0,
+      "final@200": 0.6666666666666666,
+      "final@1000": 1.0,
+      "ndcg@20": 0.0
+    },
+    {
+      "variant": "current_config_state_selector_family",
+      "n": 3,
+      "final@20": 0.0,
+      "union@20": 0.3333333333333333,
+      "best_branch@20": 0.3333333333333333,
+      "final@50": 0.0,
+      "union@50": 0.3333333333333333,
+      "best_branch@50": 0.3333333333333333,
+      "final@100": 0.3333333333333333,
+      "union@100": 0.6666666666666666,
+      "best_branch@100": 0.6666666666666666,
+      "final@200": 0.3333333333333333,
+      "union@200": 1.0,
+      "best_branch@200": 1.0,
+      "final@1000": 1.0,
+      "union@1000": 1.0,
+      "best_branch@1000": 1.0,
+      "ndcg@20": 0.0
+    }
+  ],
+  "additive_mode": false,
+  "class_summary": [
+    {
+      "pack": "P0_roleless_stale_entity_failure",
+      "n": 3,
+      "baseline_union@20": 0.0,
+      "baseline_union@50": 0.0,
+      "baseline_union@100": 0.0,
+      "baseline_final@20": 0.0,
+      "best_single_variant": null,
+      "best_single_union@20": null,
+      "best_single_union@50": null,
+      "best_single_union@100": null,
+      "combined_variant": "current_config_state_selector_family",
+      "combined_union@20": 0.3333333333333333,
+      "combined_union@50": 0.3333333333333333,
+      "combined_union@100": 0.6666666666666666
+    }
+  ],
+  "examples": {
+    "current_config_state_selector_family": {
+      "rescued_union20": [
+        {
+          "sample_id": "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+          "pack": "P0_roleless_stale_entity_failure",
+          "gt_track": "Armature",
+          "gt_artist": "Emptyset",
+          "best_branch": "dense.clap_text.sonic.audio_laion_clap",
+          "best_branch_rank": 12,
+          "final_rank": 91,
+          "why": "rescued_at_union20",
+          "current_user": "Yes! \"Pallbearer\" is absolutely brutal, exactly the kind of intricate and relentless breakcore I was hoping for. Great pick! Can you recommend something with a similar raw power and darkness, but maybe a bit more stripped-down or minimalistic in its approac...",
+          "what_should_change": "Keep prior entities as history/context, but decay or remove them from current anchors unless the user re-mentions them. The resolver should expose current-vs-history roles to retrievers and the ranker."
+        }
+      ],
+      "still_missed_union20": [
+        {
+          "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+          "pack": "P0_roleless_stale_entity_failure",
+          "gt_track": "Give It To Me Baby",
+          "gt_artist": "Rick James",
+          "best_branch": "dense.qwen_8b.attributes.attributes_qwen3_embedding_8b",
+          "best_branch_rank": 67,
+          "final_rank": 215,
+          "why": "branch_local_ranking_gap_51_100",
+          "current_user": "Yes! \"Can You Feel the Force\" is awesome, such a great track. That's exactly the kind of energy I'm looking for. What are some other high-energy, classic disco or funk tracks from that late 70s to early 80s period?",
+          "what_should_change": "Add entity roles such as seed, satisfied, contrast, history, and rejected. For novelty/diversify turns, demote satisfied/history anchors as retrieval seeds and upweight tag, metadata, popularity, and CF profiles."
+        },
+        {
+          "sample_id": "e66c6a88-88ba-4117-9114-363bfa96294a::t7",
+          "pack": "P0_roleless_stale_entity_failure",
+          "gt_track": "Test Drive",
+          "gt_artist": "John Powell",
+          "best_branch": "dense.clap_text.sonic_nl.audio_laion_clap",
+          "best_branch_rank": 180,
+          "final_rank": 368,
+          "why": "deep_candidate_ranking_gap",
+          "current_user": "This is absolutely perfect! \"Anthem of the World\" is exactly the powerful and uplifting epic music I was looking for. Can you give me more recommendations that are similar to this or Two Steps from Hell?",
+          "what_should_change": "Keep prior entities as history/context, but decay or remove them from current anchors unless the user re-mentions them. The resolver should expose current-vs-history roles to retrievers and the ranker."
+        }
+      ]
+    }
+  },
+  "rows": [
+    {
+      "sample_id": "0b9d547f-e748-464a-90e2-2199149f915c::t6",
+      "pack": "P0_roleless_stale_entity_failure",
+      "class_type": "failure",
+      "variant": "current_config_state_selector_family",
+      "gt_track": "Give It To Me Baby",
+      "gt_artist": "Rick James",
+      "final_rank": 215,
+      "fused_rank": 331,
+      "best_branch": "dense.qwen_8b.attributes.attributes_qwen3_embedding_8b",
+      "best_branch_rank": 67,
+      "n_branch_pools": 26,
+      "gt_release_date_masked": false,
+      "gt_hard_dropped": false,
+      "final@20": false,
+      "union@20": false,
+      "final@50": false,
+      "union@50": false,
+      "final@100": false,
+      "union@100": true,
+      "final@200": false,
+      "union@200": true,
+      "final@1000": true,
+      "union@1000": true,
+      "ndcg@20": 0.0
+    },
+    {
+      "sample_id": "e66c6a88-88ba-4117-9114-363bfa96294a::t7",
+      "pack": "P0_roleless_stale_entity_failure",
+      "class_type": "failure",
+      "variant": "current_config_state_selector_family",
+      "gt_track": "Test Drive",
+      "gt_artist": "John Powell",
+      "final_rank": 368,
+      "fused_rank": 366,
+      "best_branch": "dense.clap_text.sonic_nl.audio_laion_clap",
+      "best_branch_rank": 180,
+      "n_branch_pools": 24,
+      "gt_release_date_masked": false,
+      "gt_hard_dropped": false,
+      "final@20": false,
+      "union@20": false,
+      "final@50": false,
+      "union@50": false,
+      "final@100": false,
+      "union@100": false,
+      "final@200": false,
+      "union@200": true,
+      "final@1000": true,
+      "union@1000": true,
+      "ndcg@20": 0.0
+    },
+    {
+      "sample_id": "0858f444-c9af-4f08-a9fc-2a731a24182b::t5",
+      "pack": "P0_roleless_stale_entity_failure",
+      "class_type": "failure",
+      "variant": "current_config_state_selector_family",
+      "gt_track": "Armature",
+      "gt_artist": "Emptyset",
+      "final_rank": 91,
+      "fused_rank": 90,
+      "best_branch": "dense.clap_text.sonic.audio_laion_clap",
+      "best_branch_rank": 12,
+      "n_branch_pools": 24,
+      "gt_release_date_masked": false,
+      "gt_hard_dropped": false,
+      "final@20": false,
+      "union@20": true,
+      "final@50": false,
+      "union@50": true,
+      "final@100": true,
+      "union@100": true,
+      "final@200": true,
+      "union@200": true,
+      "final@1000": true,
+      "union@1000": true,
+      "ndcg@20": 0.0
+    }
+  ]
+}

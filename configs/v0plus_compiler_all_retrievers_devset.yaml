@@ -105,9 +105,19 @@ qu_kwargs:
         query_id: "metadata"
         weight: 1.0
         distance_type: "cosine"
+      - vector_field: "metadata_qwen3_embedding_0_6b"
+        encoder_id: "qwen_0_6b"
+        query_id: "intent"
+        weight: 1.0
+        distance_type: "cosine"
       - vector_field: "attributes_qwen3_embedding_0_6b"
         encoder_id: "qwen_0_6b"
         query_id: "attributes"
+        weight: 1.0
+        distance_type: "cosine"
+      - vector_field: "attributes_qwen3_embedding_0_6b"
+        encoder_id: "qwen_0_6b"
+        query_id: "attributes_enriched"
         weight: 1.0
         distance_type: "cosine"
       - vector_field: "lyrics_qwen3_embedding_0_6b"
@@ -120,14 +130,34 @@ qu_kwargs:
         query_id: "metadata"
         weight: 1.0
         distance_type: "cosine"
+      - vector_field: "metadata_qwen3_embedding_8b"
+        encoder_id: "qwen_8b"
+        query_id: "intent"
+        weight: 1.0
+        distance_type: "cosine"
       - vector_field: "attributes_qwen3_embedding_8b"
         encoder_id: "qwen_8b"
         query_id: "attributes"
         weight: 1.0
         distance_type: "cosine"
+      - vector_field: "attributes_qwen3_embedding_8b"
+        encoder_id: "qwen_8b"
+        query_id: "attributes_enriched"
+        weight: 1.0
+        distance_type: "cosine"
       - vector_field: "audio_laion_clap"
         encoder_id: "clap_text"
         query_id: "sonic"
+        weight: 1.0
+        distance_type: "cosine"
+      - vector_field: "audio_laion_clap"
+        encoder_id: "clap_text"
+        query_id: "sonic_nl"
+        weight: 1.0
+        distance_type: "cosine"
+      - vector_field: "audio_laion_clap"
+        encoder_id: "clap_text"
+        query_id: "sonic_nl_enriched"
         weight: 1.0
         distance_type: "cosine"
 
@@ -151,6 +181,12 @@ qu_kwargs:
         centroid_source: "user"
 
     routing_boost: {}
+
+    # Consume V1 style-reference entities as soft centroid anchors. This keeps
+    # exact/entity/tag projection unchanged, but lets "similar to X" and liked
+    # prior artists contribute representative tracks to audio/image/CF centroid
+    # branches when the compiler safety gates allow it.
+    enable_similar_artist_anchors: true
 
     enable_resolved_artist_discography: true
     disco_weight: 1.0

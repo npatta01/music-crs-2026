@@ -352,6 +352,7 @@ def test_modal_blindset_downloads_into_requested_exp_dir(tmp_path, monkeypatch):
                 "blindset_A",
                 "--out-dir",
                 str(project_root / "exp-out"),
+                "--overwrite",
             ],
             project_root,
         ),
@@ -716,6 +717,7 @@ def test_modal_sharded_devset_builds_command_then_download_merge_eval(tmp_path, 
         "--split", "devset",
         "--run-id", _FIXED_RUN_ID,
         "--out-dir", str(exp),
+        "--overwrite",
     ]
     assert commands[2][0] == [
         "/usr/bin/python3", "scripts/merge_shard_results.py",
