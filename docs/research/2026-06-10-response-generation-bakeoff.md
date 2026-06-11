@@ -89,27 +89,39 @@ Submitting actual backfilled predictions resolved the proxy's ambiguity. **Compl
 - **Do not** ship `gemini-flash-lite` (issue #96's suggested default — weakest of the candidates).
 - Keep the **role+goal prompt**, **XML track block + ≤10 tags**, **profile**, and the **echo/empty retry guard**.
 
-## 7. How to reproduce / produce a blind submission
+## 7. How to reproduce — single full run
 
-- **Transcript (in-pipeline path):** `scripts/backfill_blindset_responses.py` — or enable
-  `lm_type: litellm` in `configs/v0plus_compiler_blindset_A.yaml` (see §8).
-- **State-conditioned (best, 4.2):** `scripts/backfill_blindset_state.py` — extracts
-  `ConversationStateV0Plus` per session via `deepseek-v4-flash`, renders the `[LISTENER CONTEXT]`
-  block, generates with `qwen3-30b-a3b`. Only fills `predicted_response`; `predicted_track_ids`
-  untouched.
+The best (4.2) setup is now wired **into the live pipeline** and gated by config, so one ordinary
+inference run reproduces it — no backfill/post-processing:
+
+```bash
+python run_inference_blindset.py --tid v0plus_compiler_blindset_A --eval_dataset blindset_A --batch_size 16
+# (or via Modal: run_experiment.py --backend modal --tid v0plus_compiler_blindset_A ...)
+```
+
+`CRS_BASELINE.batch_chat` reads `response_kwargs` from the config and, when `conditioning: state`,
+feeds the per-session `ConversationStateV0Plus` (already extracted during retrieval and stashed in
+the QU's `last_traces`) as the compact `[LISTENER CONTEXT]` block instead of the transcript; with
+`item_format: xml` it presents the track as a delimited `<recommended_track>` block with capped tags;
+`echo_retries` regenerates any reply that parrots the metadata. Helpers live in
+`mcrs/response_context.py`.
+
+- The standalone scripts (`scripts/backfill_blindset_responses.py`,
+  `scripts/backfill_blindset_state.py`) remain for offline re-scoring/iteration but are **not needed**
+  to produce a submission.
 - **CodaBench gotcha:** the submission *name* = filename minus `.zip`, capped at **64 chars** — keep
   filenames short.
 
 ## 8. Enablement status & follow-ups
 
-- **Enabled for blind set:** `configs/v0plus_compiler_blindset_A.yaml` flips `lm_type: dummy → litellm`
-  with `qwen3-30b-a3b`. The devset config stays `dummy`. This gives the in-pipeline **transcript**
-  path (~4.0).
-- **The proven-best 4.2 is state-conditioned**, produced by `scripts/backfill_blindset_state.py` as a
-  post-processing step. **Recommended for the actual submission** until state-conditioning is wired
-  into the live pipeline.
-- **Follow-ups (not done):** (a) expose the compiler's extracted state to
-  `CRS_BASELINE.batch_chat` so in-pipeline response generation can be state-conditioned; (b) fold the
-  XML/tag-cap/no-verbatim echo guard into production `_build_messages` / `_format_recommend_item`;
-  (c) feed `conversation_goal.listener_goal` (leak-safe, on Blind-A, still unused) — the best untried
-  lever to push past 4.2; (d) expand the eval slice beyond 8 English-only sessions.
+- **Blind set reproduces 4.2 in a single run.** `configs/v0plus_compiler_blindset_A.yaml`:
+  `lm_type: litellm` + `qwen3-30b-a3b`, plus `response_kwargs: {conditioning: state, item_format: xml,
+  max_tags: 10, echo_retries: 3}`. The devset config stays `dummy` with no `response_kwargs`
+  (default = legacy transcript behaviour), so only the blind set is affected.
+- **Wired (this branch):** state side-channel exposed to `batch_chat` via the QU's `last_traces`; XML
+  track item + capped tags + no-verbatim prompt line; echo/empty regeneration — all in
+  `mcrs/response_context.py` + `mcrs/crs_baseline.py`, config-gated, unit-tested.
+- **Follow-ups (not done):** (a) feed `conversation_goal.listener_goal` (leak-safe, on Blind-A, still
+  unused) — the best untried lever to push past 4.2; (b) expand the eval slice beyond 8 English-only
+  sessions; (c) wire the same options into single-turn `chat()` (only `batch_chat` is on the inference
+  path today).

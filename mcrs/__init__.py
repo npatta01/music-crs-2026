@@ -20,6 +20,7 @@ def load_crs_baseline(
     retrieval_config: dict | None = None,
     qu_kwargs=None,
     lm_kwargs=None,
+    response_kwargs=None,
 ):
     if dtype is None:
         if torch is None:
@@ -47,4 +48,5 @@ def load_crs_baseline(
         retrieval_config=retrieval_config,
         qu_kwargs=qu_kwargs,
         lm_kwargs=lm_kwargs,
+        response_kwargs=response_kwargs,
     )

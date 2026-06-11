@@ -4,6 +4,7 @@ from typing import Optional, Any, List, Dict
 from mcrs.db_item import MusicCatalogDB
 from mcrs.db_user import UserProfileDB
 from mcrs.lm_modules import load_lm_module
+from mcrs.response_context import format_state_block, is_metadata_echo, xml_track_item
 from mcrs.retrieval_modules import load_retrieval_module
 from mcrs.qu_modules import load_qu_module
 
@@ -45,6 +46,7 @@ class CRS_BASELINE:
         retrieval_config: dict | None = None,
         qu_kwargs: Optional[dict[str, Any]] = None,
         lm_kwargs: Optional[dict[str, Any]] = None,
+        response_kwargs: Optional[dict[str, Any]] = None,
     ):
         """Initialize the CRS baseline components.
 
@@ -73,6 +75,14 @@ class CRS_BASELINE:
         self.attn_implementation = attn_implementation
         self.retrieval_topk = retrieval_topk
         self.retrieval_config = retrieval_config or {}
+        # Response-generation options (default = legacy transcript behaviour).
+        # Blind-A enables the validated best setup: state-conditioned input +
+        # XML track item + echo-retry. See docs/research/2026-06-10-response-generation-bakeoff.md.
+        _rk = response_kwargs or {}
+        self.response_conditioning = _rk.get("conditioning", "transcript")  # "transcript" | "state"
+        self.response_item_format = _rk.get("item_format", "plain")          # "plain" | "xml"
+        self.response_max_tags = int(_rk.get("max_tags", 10))
+        self.response_echo_retries = int(_rk.get("echo_retries", 0))
         self.qu_kwargs = qu_kwargs or {}
         self.lm_kwargs = lm_kwargs or {}
         self.lm = load_lm_module(
@@ -260,19 +270,57 @@ class CRS_BASELINE:
                 # Fallback to sequential retrieval if batch method not available
                 batch_retrieval_items = [self.retrieval.text_to_item_retrieval(inp, topk=self.retrieval_topk) for inp in retrieval_inputs]
 
-        # See `chat` above — empty retrieval -> recommend_item=None, not a crash.
-        recommend_items = [
-            self.item_db.id_to_metadata(items[0]) if items else None
-            for items in batch_retrieval_items
-        ]
+        # Recommend-item formatting: plain metadata string (default) or a
+        # delimited XML block with capped tags (echo-resistant; response_kwargs).
+        def _safe_label(track_id):
+            try:
+                return self.item_db.id_to_metadata(track_id)
+            except Exception:
+                return track_id
+
+        def _recommend_item(items):
+            # See `chat` above — empty retrieval -> recommend_item=None, not a crash.
+            if not items:
+                return None
+            track_id = items[0]
+            if self.response_item_format == "xml":
+                meta = getattr(self.item_db, "metadata_dict", {}).get(track_id)
+                return xml_track_item(meta, track_id=track_id, max_tags=self.response_max_tags)
+            return self.item_db.id_to_metadata(track_id)
+
+        recommend_items = [_recommend_item(items) for items in batch_retrieval_items]
+
+        # Response context: raw transcript (default) or the compact structured
+        # state block (state-conditioned — uses the per-session extracted state
+        # the v0+ QU stashed in `last_traces`/`batch_traces`).
+        if self.response_conditioning == "state":
+            response_contexts = []
+            for i in range(len(session_memories)):
+                trace = batch_traces[i] if i < len(batch_traces) else None
+                state = trace.get("state") if isinstance(trace, dict) else None
+                block = format_state_block(state, _safe_label)
+                response_contexts.append([{"role": "user", "content": block}])
+        else:
+            response_contexts = session_memories
 
         # Stage 2: Batch response generation
         if hasattr(self.lm, 'batch_response_generation'):
-            responses = self.lm.batch_response_generation(sys_prompts, session_memories, recommend_items)
+            responses = self.lm.batch_response_generation(sys_prompts, response_contexts, recommend_items)
         else:
             # Fallback to sequential generation if batch method not available
-            responses = [self.lm.response_generation(sys_prompts[i], session_memories[i], recommend_items[i])
+            responses = [self.lm.response_generation(sys_prompts[i], response_contexts[i], recommend_items[i])
                         for i in range(len(batch_data))]
+
+        # Regenerate any reply that echoed the track metadata or came back empty.
+        if self.response_echo_retries > 0:
+            for i, resp in enumerate(responses):
+                attempts = 0
+                while is_metadata_echo(resp) and attempts < self.response_echo_retries:
+                    resp = self.lm.response_generation(
+                        sys_prompts[i], response_contexts[i], recommend_items[i]
+                    )
+                    attempts += 1
+                responses[i] = resp
 
         # Pad traces to match batch length so non-v0+ QUs (which don't produce
         # traces) get `None` rather than IndexError.

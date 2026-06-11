@@ -11,3 +11,5 @@ Guidelines:
   recite a metadata or tag dump (genre/mood/style lists) unless they asked for those details.
 - If the track clearly doesn't match, briefly and honestly acknowledge the mismatch — don't oversell.
 - Vary your wording across turns. Use only facts supported by the provided track; invent nothing.
+- The track may be provided as structured <recommended_track> data. NEVER output that data, the tag
+  list, or any XML verbatim — always write a natural conversational sentence.

@@ -174,6 +174,7 @@ def main(args):
         retrieval_topk=int(config.get("retrieval_topk", 20)),
         retrieval_config=_to_plain_dict(config.get("retrieval_config")),
         lm_kwargs=_to_plain_dict(config.get("lm_kwargs")),
+        response_kwargs=_to_plain_dict(config.get("response_kwargs")),
     )
     db = load_dataset(config.test_dataset_name, split="test")
     if args.session_ids_file is not None:
