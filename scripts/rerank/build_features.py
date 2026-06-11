@@ -66,8 +66,8 @@ class Catalog:
 
         db = lancedb.connect(db_uri)
         self.ds = db.open_table(table_name).to_lance()
-        scalars = ["track_id", "popularity", "release_date", "artist_id",
-                   "album_id", "tag_list", "duration"]
+        scalars = ["track_id", "track_name", "popularity", "release_date",
+                   "artist_id", "album_id", "tag_list", "duration"]
         names = set(self.ds.schema.names)
         cols = [c for c in scalars if c in names]
         tbl = self.ds.to_table(columns=cols).to_pydict()
@@ -88,10 +88,14 @@ class Catalog:
                 pass
             tags = [str(t) for t in (tbl["tag_list"][i] or [])]
             tag_keys = frozenset(catalog_tag_key(t) for t in tags) - {""}
+            name_raw = tbl["track_name"][i] if "track_name" in tbl else ""
+            if isinstance(name_raw, (list, tuple)):
+                name_raw = " ".join(str(x) for x in name_raw)
             self.meta[tid] = {
                 "artists": artists, "albums": albums, "year": year,
                 "pop": float(tbl["popularity"][i] or 0.0),
                 "tag_keys": tag_keys, "n_tags": len(tags),
+                "name_tokens": frozenset(catalog_tag_key(str(name_raw or "")).split()) - {""},
                 "duration": float(tbl["duration"][i]) if self.has_duration and tbl["duration"][i] is not None else np.nan,
             }
             pops[tid] = self.meta[tid]["pop"]
@@ -113,6 +117,29 @@ class Catalog:
         for m in self.meta.values():
             dfc.update(m["tag_keys"])
         self.tag_idf = {t: math.log((n + 1) / (c + 1)) for t, c in dfc.items()}
+
+        # within-artist popularity percentile: how famous is this track among
+        # its (most prolific) artist's tracks — head-ordering discriminator.
+        artist_pops: dict[str, list[float]] = defaultdict(list)
+        for tid, m in self.meta.items():
+            for a in m["artists"]:
+                artist_pops[a].append(m["pop"])
+        artist_pop_sorted = {a: np.sort(np.array(v)) for a, v in artist_pops.items()}
+        self.within_artist_pop = {}
+        for tid, m in self.meta.items():
+            best = 0.0
+            for a in m["artists"]:
+                arr = artist_pop_sorted[a]
+                if len(arr) > 1:
+                    best = max(best, float(np.searchsorted(arr, m["pop"]) / (len(arr) - 1)))
+                else:
+                    best = max(best, 1.0)
+            self.within_artist_pop[tid] = best
+
+        durs = np.array([m["duration"] for m in self.meta.values() if not math.isnan(m["duration"])])
+        self.median_duration = float(np.median(durs)) if len(durs) else 0.0
+        yrs = [m["year"] for m in self.meta.values() if m["year"]]
+        self.median_year = int(np.median(yrs)) if yrs else 2008
 
         self.vec: dict[str, np.ndarray] = {}
         self.vec_idx: dict[str, dict[str, int]] = {}
@@ -423,13 +450,25 @@ def main():
                         cv = cat.v(cand_field, tid_)
                         if qv is not None and cv is not None and len(qv) == len(cv):
                             return float(qv @ cv)
-                return np.nan
+                return 0.0
 
             session_year = None
             try:
                 session_year = int(sess.get("session_date", "")[:4])
             except Exception:
                 pass
+
+            # per-turn, per-branch lowest retrieved score: imputation floor for
+            # candidates a branch did not retrieve ("worse than everything seen")
+            branch_min_score = {p["name"]: (float(p["hits"][-1][1]) if p["hits"] else 0.0)
+                                for p in pools}
+            has_history = float(bool(played))
+            has_user_vec = float(uvec is not None)
+            request_tokens = set()
+            for qt in q_texts.values():
+                request_tokens.update(catalog_tag_key(qt).split())
+            request_tokens -= {""}
+            has_constraint = float(bool(tc and (tc.get("start_year") or tc.get("end_year"))))
 
             rows_out = []
             for tid_, branch_hits in cand_rank.items():
@@ -440,17 +479,19 @@ def main():
 
                 def cos(vec, field="cf_bpr"):
                     cv = cat.v(field, tid_)
-                    return float(cv @ vec) if (vec is not None and cv is not None) else np.nan
+                    return float(cv @ vec) if (vec is not None and cv is not None) else 0.0
 
-                in_constraint = np.nan
-                if tc and (tc.get("start_year") or tc.get("end_year")) and year:
+                in_constraint = 0.0
+                if has_constraint and year:
                     s, e = tc.get("start_year"), tc.get("end_year")
                     in_constraint = float((s is None or year >= s) and (e is None or year <= e))
                 overlap = m["tag_keys"] & q_keys
                 same_artist = float(bool(set(m["artists"]) & played_artists))
                 ttv = track_tag_vec(tid_)
-                fr = fused_pos.get(tid_, (np.nan, np.nan))
+                fr = fused_pos.get(tid_, (1001.0, 0.0))
                 albums = set(m["albums"])
+                name_tokens = m["name_tokens"]
+                title_overlap = (len(name_tokens & request_tokens) / len(name_tokens)) if name_tokens else 0.0
                 rec = {
                     "session_id": sid, "turn_number": tn, "track_id": tid_,
                     "label": int(tid_ == gt),
@@ -460,12 +501,14 @@ def main():
                     "best_branch_rank": min(r for r, _ in branch_hits.values()),
                     # catalog
                     "pop_pct": cat.pop_pct.get(tid_, 0.0),
-                    "era_pop_pct": cat.era_pop_pct.get(tid_, np.nan),
-                    "release_year": year or np.nan,
+                    "era_pop_pct": cat.era_pop_pct.get(tid_, cat.pop_pct.get(tid_, 0.0)),
+                    "within_artist_pop": cat.within_artist_pop.get(tid_, 0.0),
+                    "release_year": float(year or cat.median_year),
+                    "has_year": float(year is not None),
                     "tag_count": m["n_tags"],
                     "n_artists": len(m["artists"]),
                     "artist_track_count": max((cat.artist_track_count.get(a, 0) for a in m["artists"]), default=0),
-                    "duration_ms": m["duration"],
+                    "duration_ms": m["duration"] if not math.isnan(m["duration"]) else cat.median_duration,
                     # session
                     "cf_last": cos(cf_lastv), "cf_centroid": cos(cf_cent),
                     "cf_drift": cos(drift),
@@ -480,22 +523,26 @@ def main():
                     "artist_played_count": max((artist_play_counts.get(a, 0) for a in m["artists"]), default=0),
                     "artist_share": (max((artist_play_counts.get(a, 0) for a in m["artists"]), default=0) / max(len(played), 1)),
                     "turn_number_f": tn, "n_played": len(played),
+                    "has_history": has_history,
                     # user
                     "user_cf": cos(uvec),
-                    "age_era_affinity": np.nan,
+                    "has_user_vec": has_user_vec,
+                    "age_era_affinity": 0.0,
                     "culture_match": float(len(m["tag_keys"] & {catalog_tag_key(w) for w in sess.get("culture", "").split()} - {""})),
                     "age_group": sess.get("age_group", ""), "gender": sess.get("gender", ""),
                     # organizer
                     "goal_category": sess.get("goal_category", ""),
                     "goal_specificity": sess.get("goal_specificity", ""),
                     "listener_goal_cos": (float(lg_vec @ cat.v("metadata_qwen3_embedding_0_6b", tid_))
-                                          if lg_vec is not None and cat.v("metadata_qwen3_embedding_0_6b", tid_) is not None else np.nan),
-                    "session_minus_release_year": (session_year - year) if (session_year and year) else np.nan,
+                                          if lg_vec is not None and cat.v("metadata_qwen3_embedding_0_6b", tid_) is not None else 0.0),
+                    "session_minus_release_year": float((session_year - year) if (session_year and year) else 0.0),
                     # state
                     "tag_overlap": float(len(overlap)),
                     "tag_overlap_idf": float(sum(cat.tag_idf.get(t, 0.0) for t in overlap)),
                     "n_exact_tier": n_exact_tier, "max_tag_match_score": max_match,
-                    "tag_emb_cos": (float(q_tagv @ ttv) if q_tagv is not None and ttv is not None else np.nan),
+                    "tag_emb_cos": (float(q_tagv @ ttv) if q_tagv is not None and ttv is not None else 0.0),
+                    "title_request_overlap": title_overlap,
+                    "has_constraint": has_constraint,
                     "request_type": str((state.get("current_request") or {}).get("request_type") or ""),
                     "intent_mode": str(row["trace"].get("intent_mode") or ""),
                     "target_artist_mode": tam,
@@ -513,36 +560,38 @@ def main():
                     # crosses
                     "x_same_artist_wants_new": same_artist * wants_new,
                     "x_cflast_turn": (cos(cf_lastv) * tn / 8.0),
-                    "x_era_hard": ((0.0 if math.isnan(in_constraint) else in_constraint) * float(tc.get("strength") == "hard")),
+                    "x_era_hard": (in_constraint * float(tc.get("strength") == "hard")),
+                    "x_pop_within_artist": cat.pop_pct.get(tid_, 0.0) * cat.within_artist_pop.get(tid_, 0.0),
                 }
                 # age-era
                 age = sess.get("age")
                 if age and year and session_year:
                     birth = session_year - int(age)
                     rec["age_era_affinity"] = float(birth + 12 <= year <= birth + 25)
-                # per-branch ranks/scores
+                # per-branch ranks/scores — null-free: rank sentinel = pool_k+1,
+                # score imputed just below the branch's lowest retrieved score
                 for b in branch_names:
                     r_s = branch_hits.get(b)
-                    rec[f"rank__{b}"] = float(r_s[0]) if r_s else np.nan
-                    rec[f"score__{b}"] = float(r_s[1]) if r_s else np.nan
+                    if r_s:
+                        rec[f"rank__{b}"] = float(r_s[0])
+                        rec[f"score__{b}"] = float(r_s[1])
+                    else:
+                        rec[f"rank__{b}"] = float(args.pool_k + 1)
+                        ms = branch_min_score.get(b, 0.0)
+                        rec[f"score__{b}"] = ms - abs(ms) * 0.01 - 1e-6
                     rec[f"hit__{b}"] = float(bool(r_s))
                 rows_out.append(rec)
 
-            # within-pool percentiles
+            # within-pool percentiles (inputs are null-free now)
             for feat in PCT_FEATURES:
-                vals = np.array([r.get(feat, np.nan) for r in rows_out], dtype=np.float64)
-                ok = ~np.isnan(vals)
-                if ok.sum() > 1:
-                    order = vals[ok].argsort().argsort() / max(ok.sum() - 1, 1)
-                    j = 0
+                vals = np.array([r.get(feat, 0.0) for r in rows_out], dtype=np.float64)
+                if len(vals) > 1:
+                    order = vals.argsort().argsort() / (len(vals) - 1)
                     for i, r in enumerate(rows_out):
-                        if ok[i]:
-                            r[f"pct_{feat}"] = float(order[j]); j += 1
-                        else:
-                            r[f"pct_{feat}"] = np.nan
+                        r[f"pct_{feat}"] = float(order[i])
                 else:
                     for r in rows_out:
-                        r[f"pct_{feat}"] = np.nan
+                        r[f"pct_{feat}"] = 0.5
 
             buffer.extend(rows_out)
             if len(buffer) >= 200_000:

@@ -24,11 +24,15 @@ import numpy as np
 import pandas as pd
 
 ID_COLS = ["session_id", "turn_number", "track_id", "label"]
+# RRF-derived columns are NEVER model inputs (user decision 2026-06-11): the
+# ranker must not depend on the fusion it replaces. rrf_rank stays in the
+# parquet only to compute the eval baseline.
+RRF_COLS = ["rrf_rank", "rrf_score", "pct_rrf_score"]
 CATEGORICALS = ["age_group", "gender", "goal_category", "goal_specificity",
                 "request_type", "intent_mode", "target_artist_mode",
                 "temporal_strength"]
 POOL_PREFIXES = ("rank__", "score__", "hit__")
-POOL_COLS = ["n_branches", "rrf_rank", "rrf_score", "best_branch_rank", "pct_rrf_score"]
+POOL_COLS = ["n_branches", "best_branch_rank"]
 
 
 def ndcg20(rank: float | None) -> float:
@@ -96,7 +100,7 @@ def main():
     for c in CATEGORICALS:
         if c in df.columns:
             df[c] = df[c].fillna("").astype("category")
-    feature_cols = [c for c in df.columns if c not in ID_COLS]
+    feature_cols = [c for c in df.columns if c not in ID_COLS and c not in RRF_COLS]
     print(f"  {len(df):,} rows, {len(feature_cols)} features, "
           f"{df.groupby(['session_id','turn_number']).ngroups} turns", flush=True)
 
