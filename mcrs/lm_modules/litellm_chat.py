@@ -71,7 +71,11 @@ class LITELLM_LM:
         # User-supplied params (reasoning_effort, extra_body, top_p, ...) win,
         # but cannot clobber model/messages (messages set at call time).
         kwargs.update(self.completion_kwargs)
+        # Strip protected keys that must not be overridden
         kwargs.pop("messages", None)
+        kwargs.pop("model", None)
+        # Restore model_name to prevent silent misrouting
+        kwargs["model"] = self.model_name
         return kwargs
 
     def response_generation(

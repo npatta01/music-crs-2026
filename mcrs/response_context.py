@@ -47,7 +47,7 @@ def format_state_block(state: dict | None, track_label: Callable[[str], str] | N
     """Render a compact [LISTENER CONTEXT] block from a ConversationStateV0Plus dict.
 
     `track_label(track_id) -> str` resolves accepted/rejected feedback tracks to a
-    human-readable label (the leading "title ... artist" portion is used)."""
+    human-readable label (extracts the track_name from metadata)."""
     if not state:
         return "[LISTENER CONTEXT]\n(unavailable)"
 
@@ -55,7 +55,22 @@ def format_state_block(state: dict | None, track_label: Callable[[str], str] | N
         if track_label is None:
             return tid
         s = track_label(tid) or tid
-        return s.split(" | tags:")[0].split(" | album:")[0]
+        # Extract track_name from multi-line metadata format (field: value\n...)
+        # or pipe-delimited format (field | field) for backwards compatibility.
+        if "\n" in s:
+            # Multi-line format: extract the line that starts with "track_name:"
+            for line in s.split("\n"):
+                if line.startswith("track_name:"):
+                    return line.split(":", 1)[1].strip()
+            # Fallback: use first non-empty line
+            for line in s.split("\n"):
+                stripped = line.strip()
+                if stripped and not stripped.startswith("track_id:"):
+                    return stripped.split(":", 1)[-1].strip()
+            return tid
+        # Pipe-delimited format: trim to avoid echoing metadata beyond the first field
+        # Format: "field: value | field: value | ..." -> extract just "field: value"
+        return s.split(" | ")[0]
 
     lines = ["[LISTENER CONTEXT]"]
     ti = state.get("turn_intent")
