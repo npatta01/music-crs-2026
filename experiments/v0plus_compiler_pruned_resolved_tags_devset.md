@@ -36,17 +36,23 @@ paired seeded smokes (50 then 100 sessions — see
 
 ## Branch Union Coverage
 
-| Metric | Value |
-|---|---:|
-| union@20 | 0.4305 |
-| union@100 | 0.6260 |
-| union@200 | 0.7219 |
-| union@1000 | 0.8926 |
-| fusion_efficiency@20 | 0.6809 |
-| fusion_efficiency@1000 | 0.7820 |
+Union = GT in any branch's top-k (pre-fusion); fusion_efficiency = hit@k /
+union@k. This is the candidate-pool ceiling the union reranker (#95) plays
+against.
+
+| k | union@k | hit@k | fusion_efficiency@k |
+|---:|---:|---:|---:|
+| 20 | 0.4305 | 0.2931 | 0.6809 |
+| 50 | 0.5404 | 0.3949 | 0.7307 |
+| 100 | 0.6260 | 0.4632 | 0.7400 |
+| 200 | 0.7219 | 0.5310 | 0.7354 |
+| 1000 | 0.8926 | 0.6980 | 0.7820 |
 
 union@1000 0.8926 vs all_retrievers 0.905: the pruning costs ~1pp of deep
 union on the full devset — far less than the 3pp seen on smoke slices.
+A perfect reranker over this config's union pool tops out at hit@20 = 0.43
+(union@20); over the top-200 union, 0.72 — vs 0.29 achieved by RRF today.
+That ~25-40pp fusion gap is the reranker's addressable headroom.
 
 ## Per-Turn Breakdown (NDCG@20)
 
