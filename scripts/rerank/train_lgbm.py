@@ -1,22 +1,26 @@
 """Train a LambdaMART reranker on devset union-pool features (local CPU).
 
-Session-level split (70/15/15), lambdarank@NDCG, paired per-turn eval vs the
-RRF baseline ordering on held-out sessions, feature importances, and a
-pool-features-off ablation arm.
+Memory-conscious design (18GB machine):
+- parquet -> arrow scan (filter + float32 cast at scan time)
+- ONE packed numpy float32 matrix for all features (categoricals as int codes);
+  the pandas frame keeps only ids/label/cohort columns
+- native lgb.train + lgb.Dataset(free_raw_data) so raw slices release after
+  binning; per-arm train/val binaries saved for instant sweep reuse
+- user-grouped split (devset = 500 users x 2 sessions), deterministic
+  sampling, all-pair overlap asserts
 
 Usage:
-  python scripts/rerank/train_lgbm.py \
-      --features exp/analysis/rerank/features.parquet \
-      --out-dir exp/analysis/rerank/model_v1
+  python scripts/rerank/train_lgbm.py --features exp/analysis/rerank/features_v3 \
+      --max-pool-rank 200 --out-dir exp/analysis/rerank/model_X
 """
 
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import math
 import random
-import sys
 from pathlib import Path
 
 import lightgbm as lgb
@@ -24,73 +28,48 @@ import numpy as np
 import pandas as pd
 
 ID_COLS = ["session_id", "turn_number", "track_id", "label"]
-# RRF-derived columns are NEVER model inputs (user decision 2026-06-11): the
-# ranker must not depend on the fusion it replaces. rrf_rank stays in the
-# parquet only to compute the eval baseline.
+# RRF-derived columns are NEVER model inputs (user decision 2026-06-11).
 RRF_COLS = ["rrf_rank", "rrf_score", "pct_rrf_score"]
 CATEGORICALS = ["age_group", "gender", "goal_category", "goal_specificity",
                 "request_type", "intent_mode", "target_artist_mode",
                 "temporal_strength"]
-POOL_PREFIXES = ("rank__", "score__", "hit__")
-POOL_COLS = ["n_branches", "best_branch_rank"]
+POOL_PREFIXES = ("rank__", "score__", "hit__", "margin__")
+POOL_COLS = ["n_branches", "best_branch_rank", "margin_min", "pct_margin_min"]
+COHORT_COLS = ["request_type", "goal_category", "has_user_vec"]
+
+LGB_PARAMS = dict(
+    objective="lambdarank",
+    learning_rate=0.025,
+    num_leaves=127,
+    min_data_in_leaf=50,
+    lambdarank_truncation_level=200,
+    metric="ndcg",
+    ndcg_eval_at=[20],
+    verbosity=-1,
+    num_threads=0,
+)
 
 
-def ndcg20(rank: float | None) -> float:
-    if rank is None or (isinstance(rank, float) and (math.isnan(rank) or rank > 20)):
-        return 0.0
-    return 1.0 / math.log2(rank + 1)
+def ndcg20(rank: float) -> float:
+    return 1.0 / math.log2(rank + 1) if rank <= 20 else 0.0
 
 
 def turn_metrics(df: pd.DataFrame, score_col: str, ascending: bool) -> pd.DataFrame:
     rows = []
     for (sid, tn), g in df.groupby(["session_id", "turn_number"], sort=False):
         order = g[score_col].rank(ascending=ascending, method="first", na_option="bottom")
-        gt_row = g[g["label"] == 1]
-        gt_rank = float(order[g["label"] == 1].iloc[0])
+        gt = g["label"] == 1
+        if not gt.any():
+            continue
+        gt_row = g[gt]
+        r = float(order[gt].iloc[0])
         rows.append({"session_id": sid, "turn_number": tn,
-                     "gt_rank": gt_rank, "ndcg20": ndcg20(gt_rank),
-                     "hit20": float(gt_rank <= 20), "hit1": float(gt_rank <= 1),
+                     "gt_rank": r, "ndcg20": ndcg20(r),
+                     "hit20": float(r <= 20), "hit1": float(r <= 1),
                      "request_type": str(gt_row["request_type"].iloc[0]) if "request_type" in g else "",
                      "goal_category": str(gt_row["goal_category"].iloc[0]) if "goal_category" in g else "",
-                     "warm_user": (float(gt_row["has_user_vec"].iloc[0]) if "has_user_vec" in g else 1.0)})
+                     "warm_user": float(gt_row["has_user_vec"].iloc[0]) if "has_user_vec" in g else 1.0})
     return pd.DataFrame(rows)
-
-
-def train_arm(df: pd.DataFrame, feature_cols: list[str], cats: list[str],
-              train_sids: set, val_sids: set, seed: int):
-    def prep(part: pd.DataFrame):
-        part = part.sort_values(["session_id", "turn_number"], kind="stable")
-        groups = part.groupby(["session_id", "turn_number"], sort=False).size().to_numpy()
-        x = part[feature_cols]
-        return x, part["label"].to_numpy(), groups, part
-
-    tr_x, tr_y, tr_g, _ = prep(df[df.session_id.isin(train_sids)])
-    va_x, va_y, va_g, _ = prep(df[df.session_id.isin(val_sids)])
-
-    # Tuned for ~1,258-candidate pools with deep GTs:
-    # - truncation_level 200 (was 40): gradients must reach GTs at rank 51-200,
-    #   half the addressable misses; 40 starved them.
-    # - lr 0.025 + patience 200 (was 0.05/100): v1 stopped at 110 trees —
-    #   step too coarse for 5M+ rows.
-    # - num_leaves 127 (was 63): capacity matched to data scale.
-    model = lgb.LGBMRanker(
-        objective="lambdarank",
-        n_estimators=4000,
-        learning_rate=0.025,
-        num_leaves=127,
-        min_child_samples=50,
-        random_state=seed,
-        lambdarank_truncation_level=200,
-        n_jobs=-1,
-    )
-    model.fit(
-        tr_x, tr_y, group=tr_g,
-        eval_set=[(va_x, va_y)], eval_group=[va_g],
-        eval_at=[20], eval_metric="ndcg",
-        callbacks=[lgb.early_stopping(200, verbose=False), lgb.log_evaluation(400)],
-        categorical_feature=[c for c in cats if c in feature_cols],
-    )
-    return model
 
 
 def main():
@@ -98,53 +77,68 @@ def main():
     ap.add_argument("--features", required=True)
     ap.add_argument("--out-dir", default="exp/analysis/rerank/model_v1")
     ap.add_argument("--seed", type=int, default=13)
-    ap.add_argument("--ground-truth", default="exp/ground_truth/devset.json",
-                    help="Used for the session->user mapping (user-grouped split).")
-    ap.add_argument("--user-dropout", type=float, default=0.25,
-                    help="Fraction of TRAIN sessions whose user_cf features are "
-                         "zeroed (cold-start robustness; Gemini review rec).")
-    ap.add_argument("--max-pool-rank", type=int, default=0,
-                    help="Keep only candidates with best_branch_rank <= N (and drop "
-                         "groups whose GT falls outside) — lets one @500 extraction "
-                         "serve @200/@500 arms.")
-    ap.add_argument("--stage1-scores", default="",
-                    help="Optional parquet of (session_id, turn_number, track_id, "
-                         "stage1_score) to join as an extra feature (stage-2 stack).")
+    ap.add_argument("--ground-truth", default="exp/ground_truth/devset.json")
+    ap.add_argument("--user-dropout", type=float, default=0.25)
+    ap.add_argument("--max-pool-rank", type=int, default=0)
+    ap.add_argument("--stage1-scores", default="")
+    ap.add_argument("--reuse-bins", action="store_true",
+                    help="Load previously saved train/val .bin datasets (same "
+                         "out-dir, same arm) instead of rebinning — for sweeps.")
+    ap.add_argument("--num-boost-round", type=int, default=4000)
+    ap.add_argument("--early-stopping", type=int, default=200)
     args = ap.parse_args()
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
 
-    print("loading parquet ...", flush=True)
-    df = pd.read_parquet(args.features)
-    for c in df.columns:
-        if df[c].dtype == np.float64:
-            df[c] = df[c].astype(np.float32)
-    for c in CATEGORICALS:
-        if c in df.columns:
-            df[c] = df[c].fillna("").astype("category")
+    print("loading parquet (arrow scan) ...", flush=True)
+    import pyarrow as pa
+    import pyarrow.compute as pc
+    import pyarrow.dataset as pds
+    dataset = pds.dataset(args.features)
+    filt = (pc.field("best_branch_rank") <= args.max_pool_rank) if args.max_pool_rank > 0 else None
+    tbl = dataset.to_table(filter=filt)
+    names = tbl.schema.names
+    n = tbl.num_rows
+    print(f"  {n:,} rows, {len(names)} cols", flush=True)
+
+    # ids/label/cohorts as a slim pandas frame
+    slim_cols = list(dict.fromkeys(ID_COLS + COHORT_COLS))
+    slim = tbl.select([c for c in slim_cols if c in names]).to_pandas()
+
+    # stage1 join (optional)
+    stage1 = None
     if args.stage1_scores:
         s1 = pd.read_parquet(args.stage1_scores)
-        df = df.merge(s1, on=["session_id", "turn_number", "track_id"], how="left")
-        df["stage1_score"] = df["stage1_score"].fillna(df["stage1_score"].min()).astype(np.float32)
-        print(f"  joined stage1_score from {args.stage1_scores}", flush=True)
-    if args.max_pool_rank > 0:
-        before = len(df)
-        df = df[df.best_branch_rank <= args.max_pool_rank]
-        keep = df.groupby(["session_id", "turn_number"])["label"].transform("max") == 1
-        df = df[keep].copy()
-        print(f"  pool-rank filter @{args.max_pool_rank}: {before:,} -> {len(df):,} rows, "
-              f"{df.groupby(['session_id','turn_number']).ngroups} playable turns", flush=True)
-    feature_cols = [c for c in df.columns if c not in ID_COLS and c not in RRF_COLS]
-    print(f"  {len(df):,} rows, {len(feature_cols)} features, "
-          f"{df.groupby(['session_id','turn_number']).ngroups} turns", flush=True)
+        merged = slim[["session_id", "turn_number", "track_id"]].merge(
+            s1, on=["session_id", "turn_number", "track_id"], how="left")
+        stage1 = merged["stage1_score"].to_numpy(np.float32)
+        stage1 = np.nan_to_num(stage1, nan=float(np.nanmin(stage1)))
+        print("  joined stage1_score", flush=True)
 
-    # USER-grouped split (Gemini review finding: devset = 500 users x 2
-    # sessions; a session-level split puts ~52% of test users' other session
-    # in train -> user-preference memorization inflates test metrics).
-    sess_user = {}
-    for r in json.load(open(args.ground_truth)):
-        sess_user[str(r["session_id"])] = str(r["user_id"])
-    sids_all = sorted(df.session_id.unique())
+    feature_cols = [c for c in names if c not in ID_COLS and c not in RRF_COLS]
+    cat_idx_map = {}
+    X = np.empty((n, len(feature_cols) + (1 if stage1 is not None else 0)), dtype=np.float32)
+    for j, c in enumerate(feature_cols):
+        col = tbl.column(c)
+        if c in CATEGORICALS:
+            codes, _ = pd.factorize(col.to_pandas().fillna(""), sort=True)
+            X[:, j] = codes.astype(np.float32)
+            cat_idx_map[j] = c
+        else:
+            X[:, j] = np.nan_to_num(
+                col.to_numpy(zero_copy_only=False).astype(np.float32, copy=False), nan=0.0)
+    if stage1 is not None:
+        X[:, len(feature_cols)] = stage1
+        feature_cols = feature_cols + ["stage1_score"]
+    y = tbl.column("label").to_numpy(zero_copy_only=False).astype(np.int8)
+    del tbl
+    gc.collect()
+    print(f"  packed X {X.shape} ({X.nbytes/1e9:.1f} GB)", flush=True)
+
+    # user-grouped split
+    sess_user = {str(r["session_id"]): str(r["user_id"])
+                 for r in json.load(open(args.ground_truth))}
+    sids_all = sorted(slim.session_id.unique())
     users = sorted({sess_user.get(s, s) for s in sids_all})
     rng = random.Random(args.seed)
     rng.shuffle(users)
@@ -154,81 +148,136 @@ def main():
     train_sids = {s for s in sids_all if sess_user.get(s, s) in train_users}
     val_sids = {s for s in sids_all if sess_user.get(s, s) in val_users}
     test_sids = set(sids_all) - train_sids - val_sids
-    u_tr = {sess_user.get(s) for s in train_sids}
-    u_va = {sess_user.get(s) for s in val_sids}
-    u_te = {sess_user.get(s) for s in test_sids}
-    print(f"  users: {n_u}; sessions: train={len(train_sids)} val={len(val_sids)} "
-          f"test={len(test_sids)}; overlaps tr-te={len(u_tr & u_te)} "
-          f"tr-va={len(u_tr & u_va)} va-te={len(u_va & u_te)} (all must be 0)",
+    u = lambda S: {sess_user.get(s) for s in S}
+    assert not (u(train_sids) & u(test_sids)) and not (u(train_sids) & u(val_sids)) \
+        and not (u(val_sids) & u(test_sids)), "user leakage across split"
+    print(f"  users={n_u} sessions tr/va/te = {len(train_sids)}/{len(val_sids)}/{len(test_sids)}",
           flush=True)
-    assert not (u_tr & u_te) and not (u_tr & u_va) and not (u_va & u_te), \
-        "user leakage across split"
 
-    # user-embedding dropout on a fraction of TRAIN sessions
+    # drop GT-less groups (after pool-rank filter some turns lose their GT)
+    grp_has_gt = slim.groupby(["session_id", "turn_number"])["label"].transform("max").to_numpy() == 1
+    sid_arr = slim.session_id.to_numpy()
+    membership = np.full(n, 2, dtype=np.int8)  # 0 train 1 val 2 test
+    membership[np.isin(sid_arr, list(train_sids))] = 0
+    membership[np.isin(sid_arr, list(val_sids))] = 1
+
+    # user-dropout on TRAIN rows only
     if args.user_dropout > 0:
         drop_sids = {s for s in sorted(train_sids) if rng.random() < args.user_dropout}
-        mask = df.session_id.isin(drop_sids)
+        dmask = np.isin(sid_arr, list(drop_sids))
         for col, fill in [("user_cf", 0.0), ("pct_user_cf", 0.5), ("has_user_vec", 0.0)]:
-            if col in df.columns:
-                df.loc[mask, col] = fill
-        print(f"  user-dropout applied to {len(drop_sids)} train sessions", flush=True)
+            if col in feature_cols:
+                X[dmask, feature_cols.index(col)] = fill
+        print(f"  user-dropout on {len(drop_sids)} train sessions", flush=True)
 
-    test_df = df[df.session_id.isin(test_sids)].copy()
-    rrf = turn_metrics(test_df, "rrf_rank", ascending=True)
+    # group ordering: lexsort by (session, turn) within each membership slice
+    turn_arr = slim.turn_number.to_numpy()
+    sid_codes = pd.factorize(sid_arr, sort=True)[0]
+
+    def split_arrays(mem_val, require_gt=True):
+        mask = membership == mem_val
+        if require_gt:
+            mask = mask & grp_has_gt
+        idx = np.flatnonzero(mask)
+        order = np.lexsort((turn_arr[idx], sid_codes[idx]))
+        idx = idx[order]
+        keys = sid_codes[idx].astype(np.int64) * 100 + turn_arr[idx]
+        _, starts = np.unique(keys, return_index=True)
+        starts = np.sort(starts)
+        groups = np.diff(np.append(starts, len(idx)))
+        return idx, groups
 
     arms = {
-        "full": feature_cols,
-        "no_pool": [c for c in feature_cols
+        "full": list(range(len(feature_cols))),
+        "no_pool": [j for j, c in enumerate(feature_cols)
                     if not c.startswith(POOL_PREFIXES) and c not in POOL_COLS],
     }
-    report = {"n_test_turns": len(rrf), "rrf": {
-        "ndcg20": float(rrf.ndcg20.mean()), "hit20": float(rrf.hit20.mean()),
-        "hit1": float(rrf.hit1.mean())}}
-    lines = [f"# Reranker v1 — devset union-pool LambdaMART ({pd.Timestamp.now().date()})",
-             f"\nTest sessions: {len(test_sids)} ({len(rrf)} playable turns). "
-             f"RRF baseline: ndcg20={report['rrf']['ndcg20']:.4f} "
-             f"hit20={report['rrf']['hit20']:.4f} hit1={report['rrf']['hit1']:.4f}\n",
-             "| arm | ndcg@20 | Δ vs RRF | t | hit@20 | hit@1 | best_iter | train ndcg@20 | val ndcg@20 |",
-             "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
 
-    train_eval_sids = set(sorted(train_sids)[:150])
-    train_eval_df = df[df.session_id.isin(train_eval_sids)].copy()
-    val_df = df[df.session_id.isin(val_sids)].copy()
+    tr_idx, tr_groups = split_arrays(0)
+    va_idx, va_groups = split_arrays(1)
+    te_idx, _ = split_arrays(2)
+    test_slim = slim.iloc[te_idx].copy()
+    rrf_scores = None
+    rrf_path_cols = [c for c in names if c == "rrf_rank"]
+    if rrf_path_cols:
+        import pyarrow.dataset as pds2
+        rrf_tbl = pds2.dataset(args.features).to_table(
+            columns=["session_id", "turn_number", "track_id", "rrf_rank"], filter=filt)
+        rrf_df = rrf_tbl.to_pandas()
+        test_slim = test_slim.merge(rrf_df, on=["session_id", "turn_number", "track_id"], how="left")
+        del rrf_tbl, rrf_df
 
-    for arm_name, cols in arms.items():
-        print(f"training arm: {arm_name} ({len(cols)} features) ...", flush=True)
-        model = train_arm(df, cols, CATEGORICALS, train_sids, val_sids, args.seed)
-        train_eval_df["_score"] = model.predict(train_eval_df[cols])
-        val_df["_score"] = model.predict(val_df[cols])
-        tr_m = turn_metrics(train_eval_df, "_score", ascending=False)
-        va_m = turn_metrics(val_df, "_score", ascending=False)
-        test_df["_score"] = model.predict(test_df[cols])
-        mm = turn_metrics(test_df, "_score", ascending=False)
-        print(f"  {arm_name}: train ndcg@20={tr_m.ndcg20.mean():.4f} "
-              f"val={va_m.ndcg20.mean():.4f} test={mm.ndcg20.mean():.4f}", flush=True)
-        merged = rrf.merge(mm, on=["session_id", "turn_number"], suffixes=("_rrf", "_m"))
+    rrf_m = turn_metrics(test_slim, "rrf_rank", ascending=True)
+    report = {"n_test_turns": len(rrf_m),
+              "rrf": {"ndcg20": float(rrf_m.ndcg20.mean()),
+                      "hit20": float(rrf_m.hit20.mean()), "hit1": float(rrf_m.hit1.mean())}}
+    lines = [f"# Reranker — packed-matrix trainer ({pd.Timestamp.now().date()})",
+             f"\nTest: {len(test_sids)} sessions, {len(rrf_m)} playable turns. RRF: "
+             f"ndcg20={report['rrf']['ndcg20']:.4f} hit20={report['rrf']['hit20']:.4f}\n",
+             "| arm | ndcg@20 | Δ vs RRF | t | hit@20 | hit@1 | best_iter | val ndcg@20 |",
+             "|---|---:|---:|---:|---:|---:|---:|---:|"]
+
+    for arm_name, col_idx in arms.items():
+        print(f"arm {arm_name}: {len(col_idx)} features", flush=True)
+        cat_features = [k for k, j in enumerate(col_idx) if j in cat_idx_map]
+        bin_tr = out / f"train_{arm_name}.bin"
+        bin_va = out / f"val_{arm_name}.bin"
+        if args.reuse_bins and bin_tr.exists() and bin_va.exists():
+            dtrain = lgb.Dataset(str(bin_tr), free_raw_data=True)
+            dval = lgb.Dataset(str(bin_va), free_raw_data=True, reference=dtrain)
+        else:
+            Xtr = np.ascontiguousarray(X[tr_idx][:, col_idx])
+            dtrain = lgb.Dataset(Xtr, label=y[tr_idx], group=tr_groups,
+                                 feature_name=[feature_cols[j] for j in col_idx],
+                                 categorical_feature=cat_features,
+                                 free_raw_data=True)
+            dtrain.construct()
+            bin_tr.unlink(missing_ok=True)
+            dtrain.save_binary(str(bin_tr))
+            del Xtr
+            gc.collect()
+            Xva = np.ascontiguousarray(X[va_idx][:, col_idx])
+            dval = lgb.Dataset(Xva, label=y[va_idx], group=va_groups,
+                               feature_name=[feature_cols[j] for j in col_idx],
+                               categorical_feature=cat_features,
+                               reference=dtrain, free_raw_data=True)
+            dval.construct()
+            bin_va.unlink(missing_ok=True)
+            dval.save_binary(str(bin_va))
+            del Xva
+            gc.collect()
+
+        evals = {}
+        booster = lgb.train(
+            LGB_PARAMS, dtrain, num_boost_round=args.num_boost_round,
+            valid_sets=[dval], valid_names=["val"],
+            callbacks=[lgb.early_stopping(args.early_stopping, verbose=False),
+                       lgb.record_evaluation(evals), lgb.log_evaluation(400)])
+        booster.save_model(str(out / f"model_{arm_name}.txt"))
+        val_best = float(max(evals["val"]["ndcg@20"])) if evals.get("val") else float("nan")
+
+        test_slim["_score"] = booster.predict(X[te_idx][:, col_idx])
+        mm = turn_metrics(test_slim, "_score", ascending=False)
+        merged = rrf_m.merge(mm, on=["session_id", "turn_number"], suffixes=("_rrf", "_m"))
         d = merged.ndcg20_m - merged.ndcg20_rrf
-        t = d.mean() / (d.std() / math.sqrt(len(d))) if len(d) > 1 else float("nan")
+        t = d.mean() / (d.std() / math.sqrt(len(d)))
         report[arm_name] = {
             "ndcg20": float(mm.ndcg20.mean()), "hit20": float(mm.hit20.mean()),
-            "hit1": float(mm.hit1.mean()), "delta_ndcg20": float(d.mean()),
-            "t": float(t), "best_iteration": int(model.best_iteration_ or 0),
-            "train_ndcg20": float(tr_m.ndcg20.mean()),
-            "val_ndcg20": float(va_m.ndcg20.mean()),
+            "hit1": float(mm.hit1.mean()), "delta_ndcg20": float(d.mean()), "t": float(t),
+            "best_iteration": int(booster.best_iteration), "val_ndcg20": val_best,
         }
-        lines.append(f"| {arm_name} | {report[arm_name]['ndcg20']:.4f} | "
-                     f"{d.mean():+.4f} | {t:+.2f} | {report[arm_name]['hit20']:.4f} | "
-                     f"{report[arm_name]['hit1']:.4f} | {report[arm_name]['best_iteration']} | "
-                     f"{report[arm_name]['train_ndcg20']:.4f} | {report[arm_name]['val_ndcg20']:.4f} |")
-        imp = pd.Series(model.feature_importances_, index=cols).sort_values(ascending=False)
+        imp = pd.Series(booster.feature_importance("gain"),
+                        index=[feature_cols[j] for j in col_idx]).sort_values(ascending=False)
         report[arm_name]["top_features"] = {k: float(v) for k, v in imp.head(30).items()}
-        model.booster_.save_model(str(out / f"model_{arm_name}.txt"))
+        lines.append(f"| {arm_name} | {report[arm_name]['ndcg20']:.4f} | {d.mean():+.4f} | "
+                     f"{t:+.2f} | {report[arm_name]['hit20']:.4f} | "
+                     f"{report[arm_name]['hit1']:.4f} | {booster.best_iteration} | {val_best:.4f} |")
         if arm_name == "full":
-            lines.append("\n## Per-cohort conversion (full arm vs RRF, test)\n")
             cohort = merged.copy()
-            cohort["request_type"] = cohort.get("request_type_m", cohort.get("request_type", ""))
-            cohort["goal_category"] = cohort.get("goal_category_m", cohort.get("goal_category", ""))
-            cohort["warm_user"] = cohort.get("warm_user_m", cohort.get("warm_user", 1.0))
+            cohort["request_type"] = cohort.get("request_type_m", "")
+            cohort["goal_category"] = cohort.get("goal_category_m", "")
+            cohort["warm_user"] = cohort.get("warm_user_m", 1.0)
+            lines.append("\n## Per-cohort (full arm vs RRF, test)\n")
             for dim in ["warm_user", "request_type", "goal_category", "turn_number"]:
                 lines.append(f"\n### by {dim}\n")
                 lines.append("| value | n | RRF ndcg@20 | model ndcg@20 | model hit@20 |")
@@ -239,16 +288,17 @@ def main():
                     lines.append(f"| {val} | {len(grp)} | {grp.ndcg20_rrf.mean():.4f} | "
                                  f"{grp.ndcg20_m.mean():.4f} | {grp.hit20_m.mean():.4f} |")
             lines.append("\n## Top-25 features (gain, full arm)\n")
-            lines.append("| feature | importance |")
+            lines.append("| feature | gain |")
             lines.append("|---|---:|")
             for k, v in imp.head(25).items():
                 lines.append(f"| {k} | {v:.0f} |")
-            lines.append("")
+        del dtrain, dval
+        gc.collect()
 
     (out / "report.json").write_text(json.dumps(report, indent=2))
     (out / "report.md").write_text("\n".join(lines) + "\n")
-    print(json.dumps({k: v for k, v in report.items() if k != "rrf"} | {"rrf": report["rrf"]},
-                     indent=2, default=str)[:2000], flush=True)
+    print(json.dumps({k: (v if k != "rrf" else v) for k, v in report.items()
+                      if k in ("rrf", "full", "no_pool")}, indent=2, default=str)[:1200], flush=True)
     print(f"wrote {out}/report.md", flush=True)
 
 
