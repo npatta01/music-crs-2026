@@ -154,16 +154,17 @@ class EmbedMemo:
                 batch_size=64, encoding_format="float")
         return self._client.embed_batch(texts)
 
-    def get_many(self, texts: list[str]) -> dict[str, np.ndarray]:
-        missing = [t for t in texts if t and hashlib.sha1(t.encode()).hexdigest() not in self.memo]
-        missing = list(dict.fromkeys(missing))
-        for start in range(0, len(missing), 64):
-            chunk = missing[start:start + 64]
-            for text, vec in zip(chunk, self._embed_remote(chunk)):
-                self.memo[hashlib.sha1(text.encode()).hexdigest()] = vec
-                self._dirty += 1
-        if self._dirty >= 500:
-            self.flush()
+    def get_many(self, texts: list[str], offline: bool = False) -> dict[str, np.ndarray]:
+        if not offline:
+            missing = [t for t in texts if t and hashlib.sha1(t.encode()).hexdigest() not in self.memo]
+            missing = list(dict.fromkeys(missing))
+            for start in range(0, len(missing), 64):
+                chunk = missing[start:start + 64]
+                for text, vec in zip(chunk, self._embed_remote(chunk)):
+                    self.memo[hashlib.sha1(text.encode()).hexdigest()] = vec
+                    self._dirty += 1
+            if self._dirty >= 500:
+                self.flush()
         out = {}
         for t in texts:
             if not t:
@@ -252,7 +253,38 @@ def main():
     ap.add_argument("--out", default="exp/analysis/rerank/features.parquet")
     ap.add_argument("--embed-memo", default="exp/analysis/rerank/q06_memo.json")
     ap.add_argument("--max-turns", type=int, default=0)
+    ap.add_argument("--prefetch-only", action="store_true",
+                    help="Pass 1: collect every unique query/listener_goal string "
+                         "from the trace, embed in large batches, save memo, exit.")
+    ap.add_argument("--offline", action="store_true",
+                    help="Pass 2: never call the embedding API; use memo only.")
     args = ap.parse_args()
+
+    if args.prefetch_only:
+        memo = EmbedMemo(Path(args.embed_memo))
+        sessions = load_sessions()
+        texts: set[str] = set()
+        for s in sessions.values():
+            if s.get("listener_goal"):
+                texts.add(s["listener_goal"])
+        with open(args.trace) as f:
+            for line in f:
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                for q in (row["trace"]["branches"].get("branch_queries") or {}).values():
+                    if isinstance(q, dict) and q.get("kind") == "dense" and q.get("query_text"):
+                        texts.add(str(q["query_text"]))
+        ordered = sorted(texts)
+        print(f"prefetching {len(ordered)} unique strings ...", flush=True)
+        for start in range(0, len(ordered), 2048):
+            memo.get_many(ordered[start:start + 2048])
+            memo.flush()
+            print(f"  {min(start + 2048, len(ordered))}/{len(ordered)}", flush=True)
+        memo.flush()
+        print("prefetch done", flush=True)
+        return
 
     print("loading catalog (scalars + 6 vector fields) ...", flush=True)
     cat = Catalog(args.db_uri, args.table_name)
@@ -380,7 +412,8 @@ def main():
                 if isinstance(q, dict) and q.get("kind") == "dense" and q.get("query_text"):
                     q_texts[bname] = str(q["query_text"])
             lg_text = sess.get("listener_goal", "")
-            emb = memo.get_many(list(q_texts.values()) + ([lg_text] if lg_text else []))
+            emb = memo.get_many(list(q_texts.values()) + ([lg_text] if lg_text else []),
+                                offline=args.offline)
             lg_vec = emb.get(lg_text)
 
             def qcos(branch_substr, cand_field, tid_):
