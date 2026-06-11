@@ -8,16 +8,19 @@ misleading agents about the current system. Use Git history for older waves.
 
 | Config | Role | Notes |
 |---|---|---|
-| `configs/v0plus_compiler_all_retrievers_devset.yaml` | Latest devset experiment | Current-prompt all-retrievers candidate-pool config. Best tracked Hit@1000, but weaker top-20 ranking than the image anchor. |
-| `configs/v0plus_compiler_image_devset.yaml` | Score anchor | Current v0+ top-20 retrieval baseline after bugfixes. |
+| `configs/v0plus_compiler_pruned_resolved_tags_devset.yaml` | **Current baseline** | Pruned dense branches (0.6B dedup) + tiered tag resolver. NDCG@20 0.1374 full devset (2026-06-11). |
+| `configs/v0plus_compiler_pruned_devset.yaml` | Ablation arm | Pruning without the resolver; statistically identical head ranking. |
+| `configs/v0plus_compiler_all_retrievers_devset.yaml` | Candidate-pool generator | Best union/deep coverage (union@1000 0.905); feeds the union-pool reranker (#95). |
 | `configs/v0plus_compiler_blindset_A.yaml` | Submission path | Blind A config; keep split-specific behavior separate from devset experiments. |
 
 ## Current Reports
 
 | Report | Why it remains |
 |---|---|
-| [v0plus_compiler_all_retrievers_devset.md](v0plus_compiler_all_retrievers_devset.md) | Latest full devset run: NDCG@20 0.1219, Hit@1000 0.6967. Treat as coverage/reranker evidence, not as the score anchor. |
-| [v0plus_compiler_image_devset.md](v0plus_compiler_image_devset.md) | Current score anchor: NDCG@20 0.1452 after retrieval bugfixes. |
+| [v0plus_compiler_pruned_resolved_tags_devset.md](v0plus_compiler_pruned_resolved_tags_devset.md) | **Current baseline**: NDCG@20 0.1374 full devset; branch-dedup win (paired t=3.1) + retrieval-neutral tag resolver shipping ranker-feature metadata. |
+| [seed50_paired_smoke_matrix.md](seed50_paired_smoke_matrix.md) | Paired seeded-slice methodology + the 5-arm ablation that attributed the win to branch dedup and retired catalog_exact. |
+| [v0plus_compiler_all_retrievers_devset.md](v0plus_compiler_all_retrievers_devset.md) | Candidate-pool generator: best union/deep coverage; reranker evidence. |
+| [v0plus_compiler_image_devset.md](v0plus_compiler_image_devset.md) | Retired image-only anchor: NDCG@20 0.1452 but hit@1000 0.626 and no multi-retriever union. |
 | [analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/index.html](analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/index.html) | Durable baseline recall-gap snapshot for the all-retrievers devset run. Treat as an experiment analysis and replay contract; rerun after extractor, retriever, ranker, catalog, or split changes. |
 | [analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_additive_retriever_matrix_all110_summary.md](analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_additive_retriever_matrix_all110_summary.md) | Focused 110-pack additive candidate-recall matrix for frozen V1 state/projection. Treat as candidate-source evidence only, not as a full-devset or ranking result. |
 | [analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_all_on_candidate_recall_report.md](analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_v1_all_on_candidate_recall_report.md) | Focused 110-pack all-on branch-pool attribution. Shows expanded existing branches do not improve the current 75/87/91 focused baseline; use it to separate source gaps from top-20 ordering tail work. |

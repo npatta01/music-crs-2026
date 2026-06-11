@@ -184,3 +184,37 @@ Next step:
   targeted branches, then evaluate a small production-gating config. Do not
   claim full-devset or leaderboard lift until focused-gated gains survive a
   real devset run.
+
+## 2026-06-11 - Pruned Branches + Tiered Tag Resolver = New Baseline
+
+Decision:
+
+- Promote `v0plus_compiler_pruned_resolved_tags_devset` to the production
+  ranking baseline (NDCG@20 0.1374, +9.5% over all_retrievers on the full
+  devset; paired-smoke validated at t=3.1 before the full run).
+- Retire `bm25_v1_attribute_tag_policy: "catalog_exact"` (consistent paired
+  regression) and the `image_devset` score anchor.
+- Keep `all_retrievers` as the candidate-pool generator for the union-pool
+  reranker (#95); do not delete its config.
+- Skip the LLM tier of the tag resolver: on 271 real attribute phrases the
+  lexical tiers ground 97% (exact 43% / substring 54%), embedding 3%,
+  unresolved 0%.
+
+Current read:
+
+- Branch dedup (Qwen 0.6B duplicates removed) is the causal win: paired
+  +0.0137 ndcg@20 (t=3.1, 43/13 hit@20 flips, n=800); fusion_efficiency@20
+  0.57 -> 0.72. Full devset: hit@20 0.293, hit@1000 0.698, union@1000 0.893.
+- The tiered resolver is retrieval-neutral (+0.0006 paired) but ships
+  per-fact `(tag, score, tier)` resolution metadata for trained-ranker
+  features.
+- Method note: smoke slices must be compared PAIRED on identical seeded
+  sessions (`run_experiment.py --num_sessions N`); comparing slice numbers
+  to full-devset numbers misled an earlier readout (the seed-50 slice runs
+  ~2pp harder than the full devset).
+
+Next step:
+
+- Union-pool reranker (#95) over all_retrievers pools, consuming resolver
+  metadata + `.state_features` scorer outputs as features; train on the
+  unused train split.
