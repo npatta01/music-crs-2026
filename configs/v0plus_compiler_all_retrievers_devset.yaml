@@ -19,6 +19,15 @@
 # 3. Modal app `music-crs-vllm` deployed with qwen3-embedding-8b.
 # 4. Env keys: OPENROUTER_API_KEY, DEEPINFRA_API_KEY, VLLM_API_KEY.
 
+# ─────────────────────────────────────────────────────────────────────────────
+# EXPLANATION / RESPONSE-GENERATION LM  (NOT retrieval)
+# `lm_type` selects ONLY the model that writes the natural-language reply shown to
+# the listener (`predicted_response`). Retrieval/ranking is configured separately
+# below via `retrieval_type` + `qu_type`/`qu_kwargs` and is unaffected by this.
+#   "dummy"   = skip explanation generation (emit an empty predicted_response)
+#   "litellm" = generate via a hosted model in `lm_kwargs` (see blindset config)
+# Devset keeps "dummy": retrieval metrics (nDCG/Hit) don't depend on the reply text.
+# ─────────────────────────────────────────────────────────────────────────────
 lm_type: "dummy"
 retrieval_type: "bm25"
 
