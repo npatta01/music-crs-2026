@@ -51,7 +51,8 @@ def turn_metrics(df: pd.DataFrame, score_col: str, ascending: bool) -> pd.DataFr
                      "gt_rank": gt_rank, "ndcg20": ndcg20(gt_rank),
                      "hit20": float(gt_rank <= 20), "hit1": float(gt_rank <= 1),
                      "request_type": str(gt_row["request_type"].iloc[0]) if "request_type" in g else "",
-                     "goal_category": str(gt_row["goal_category"].iloc[0]) if "goal_category" in g else ""})
+                     "goal_category": str(gt_row["goal_category"].iloc[0]) if "goal_category" in g else "",
+                     "warm_user": (float(gt_row["has_user_vec"].iloc[0]) if "has_user_vec" in g else 1.0)})
     return pd.DataFrame(rows)
 
 
@@ -97,6 +98,11 @@ def main():
     ap.add_argument("--features", required=True)
     ap.add_argument("--out-dir", default="exp/analysis/rerank/model_v1")
     ap.add_argument("--seed", type=int, default=13)
+    ap.add_argument("--ground-truth", default="exp/ground_truth/devset.json",
+                    help="Used for the session->user mapping (user-grouped split).")
+    ap.add_argument("--user-dropout", type=float, default=0.25,
+                    help="Fraction of TRAIN sessions whose user_cf features are "
+                         "zeroed (cold-start robustness; Gemini review rec).")
     args = ap.parse_args()
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -113,14 +119,37 @@ def main():
     print(f"  {len(df):,} rows, {len(feature_cols)} features, "
           f"{df.groupby(['session_id','turn_number']).ngroups} turns", flush=True)
 
-    sids = sorted(df.session_id.unique())
+    # USER-grouped split (Gemini review finding: devset = 500 users x 2
+    # sessions; a session-level split puts ~52% of test users' other session
+    # in train -> user-preference memorization inflates test metrics).
+    sess_user = {}
+    for r in json.load(open(args.ground_truth)):
+        sess_user[str(r["session_id"])] = str(r["user_id"])
+    sids_all = sorted(df.session_id.unique())
+    users = sorted({sess_user.get(s, s) for s in sids_all})
     rng = random.Random(args.seed)
-    rng.shuffle(sids)
-    n = len(sids)
-    train_sids = set(sids[: int(0.7 * n)])
-    val_sids = set(sids[int(0.7 * n): int(0.85 * n)])
-    test_sids = set(sids[int(0.85 * n):])
-    print(f"  sessions: train={len(train_sids)} val={len(val_sids)} test={len(test_sids)}", flush=True)
+    rng.shuffle(users)
+    n_u = len(users)
+    train_users = set(users[: int(0.7 * n_u)])
+    val_users = set(users[int(0.7 * n_u): int(0.85 * n_u)])
+    train_sids = {s for s in sids_all if sess_user.get(s, s) in train_users}
+    val_sids = {s for s in sids_all if sess_user.get(s, s) in val_users}
+    test_sids = set(sids_all) - train_sids - val_sids
+    overlap = ({sess_user.get(s) for s in test_sids} &
+               {sess_user.get(s) for s in train_sids})
+    print(f"  users: {n_u}; sessions: train={len(train_sids)} val={len(val_sids)} "
+          f"test={len(test_sids)}; train-test user overlap={len(overlap)} (must be 0)",
+          flush=True)
+    assert not overlap, "user leakage across split"
+
+    # user-embedding dropout on a fraction of TRAIN sessions
+    if args.user_dropout > 0:
+        drop_sids = {s for s in train_sids if rng.random() < args.user_dropout}
+        mask = df.session_id.isin(drop_sids)
+        for col, fill in [("user_cf", 0.0), ("pct_user_cf", 0.5), ("has_user_vec", 0.0)]:
+            if col in df.columns:
+                df.loc[mask, col] = fill
+        print(f"  user-dropout applied to {len(drop_sids)} train sessions", flush=True)
 
     test_df = df[df.session_id.isin(test_sids)].copy()
     rrf = turn_metrics(test_df, "rrf_rank", ascending=True)
@@ -137,14 +166,24 @@ def main():
              f"\nTest sessions: {len(test_sids)} ({len(rrf)} playable turns). "
              f"RRF baseline: ndcg20={report['rrf']['ndcg20']:.4f} "
              f"hit20={report['rrf']['hit20']:.4f} hit1={report['rrf']['hit1']:.4f}\n",
-             "| arm | ndcg@20 | Δ vs RRF | t | hit@20 | hit@1 | best_iter |",
-             "|---|---:|---:|---:|---:|---:|---:|"]
+             "| arm | ndcg@20 | Δ vs RRF | t | hit@20 | hit@1 | best_iter | train ndcg@20 | val ndcg@20 |",
+             "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+
+    train_eval_sids = set(list(train_sids)[:150])
+    train_eval_df = df[df.session_id.isin(train_eval_sids)].copy()
+    val_df = df[df.session_id.isin(val_sids)].copy()
 
     for arm_name, cols in arms.items():
         print(f"training arm: {arm_name} ({len(cols)} features) ...", flush=True)
         model = train_arm(df, cols, CATEGORICALS, train_sids, val_sids, args.seed)
+        train_eval_df["_score"] = model.predict(train_eval_df[cols])
+        val_df["_score"] = model.predict(val_df[cols])
+        tr_m = turn_metrics(train_eval_df, "_score", ascending=False)
+        va_m = turn_metrics(val_df, "_score", ascending=False)
         test_df["_score"] = model.predict(test_df[cols])
         mm = turn_metrics(test_df, "_score", ascending=False)
+        print(f"  {arm_name}: train ndcg@20={tr_m.ndcg20.mean():.4f} "
+              f"val={va_m.ndcg20.mean():.4f} test={mm.ndcg20.mean():.4f}", flush=True)
         merged = rrf.merge(mm, on=["session_id", "turn_number"], suffixes=("_rrf", "_m"))
         d = merged.ndcg20_m - merged.ndcg20_rrf
         t = d.mean() / (d.std() / math.sqrt(len(d))) if len(d) > 1 else float("nan")
@@ -152,10 +191,13 @@ def main():
             "ndcg20": float(mm.ndcg20.mean()), "hit20": float(mm.hit20.mean()),
             "hit1": float(mm.hit1.mean()), "delta_ndcg20": float(d.mean()),
             "t": float(t), "best_iteration": int(model.best_iteration_ or 0),
+            "train_ndcg20": float(tr_m.ndcg20.mean()),
+            "val_ndcg20": float(va_m.ndcg20.mean()),
         }
         lines.append(f"| {arm_name} | {report[arm_name]['ndcg20']:.4f} | "
                      f"{d.mean():+.4f} | {t:+.2f} | {report[arm_name]['hit20']:.4f} | "
-                     f"{report[arm_name]['hit1']:.4f} | {report[arm_name]['best_iteration']} |")
+                     f"{report[arm_name]['hit1']:.4f} | {report[arm_name]['best_iteration']} | "
+                     f"{report[arm_name]['train_ndcg20']:.4f} | {report[arm_name]['val_ndcg20']:.4f} |")
         imp = pd.Series(model.feature_importances_, index=cols).sort_values(ascending=False)
         report[arm_name]["top_features"] = {k: float(v) for k, v in imp.head(30).items()}
         model.booster_.save_model(str(out / f"model_{arm_name}.txt"))
@@ -164,7 +206,8 @@ def main():
             cohort = merged.copy()
             cohort["request_type"] = cohort.get("request_type_m", cohort.get("request_type", ""))
             cohort["goal_category"] = cohort.get("goal_category_m", cohort.get("goal_category", ""))
-            for dim in ["request_type", "goal_category", "turn_number"]:
+            cohort["warm_user"] = cohort.get("warm_user_m", cohort.get("warm_user", 1.0))
+            for dim in ["warm_user", "request_type", "goal_category", "turn_number"]:
                 lines.append(f"\n### by {dim}\n")
                 lines.append("| value | n | RRF ndcg@20 | model ndcg@20 | model hit@20 |")
                 lines.append("|---|---:|---:|---:|---:|")
