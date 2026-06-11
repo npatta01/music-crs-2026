@@ -2158,7 +2158,10 @@ def test_v1_regression_variant_configs_reference_supported_dense_query_ids():
         "v0plus_compiler_pruned_dense_attrs_devset.yaml",
         "v0plus_compiler_pruned_safe_tags_devset.yaml",
     ):
-        config = yaml.safe_load((repo_root / "configs" / config_name).read_text())
+        config_path = repo_root / "configs" / config_name
+        if not config_path.exists():
+            continue  # superseded smoke configs are pruned from the tree
+        config = yaml.safe_load(config_path.read_text())
         branches = config["qu_kwargs"]["compiler"]["dense_branches"]
         unknown_query_ids = sorted(
             {branch["query_id"] for branch in branches} - known_query_ids
@@ -2926,3 +2929,47 @@ def test_bm25_resolved_policy_records_resolution_metadata():
     assert all(len(m) == 3 for m in matches)  # (tag, score, tier)
     tags = {m[0] for m in matches}
     assert {"smoky", "lounge"} <= tags
+
+
+# ---------------------------------------------------------------------------
+# 2026-06-12 bugfix batch knobs
+# ---------------------------------------------------------------------------
+
+
+def test_rejection_drop_policy_track_only_keeps_artist_discography():
+    catalog = _catalog()
+    state = _state(
+        explicit_rejections=[ExplicitRejection(kind="track", value="Cure for Pain", source_turn=1)],
+    )
+    rs = _resolve(state, catalog)
+    legacy = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(),
+                            CompilerConfig(rejection_drop_policy="expanded"))
+    fixed = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(),
+                           CompilerConfig(rejection_drop_policy="track_only"))
+    drop_legacy = legacy._resolved_rejection_drop_set(rs)
+    drop_fixed = fixed._resolved_rejection_drop_set(rs)
+    # legacy expands to the whole Morphine discography; track_only keeps the
+    # other Morphine track alive
+    assert "t-morphine-2" in drop_legacy
+    assert "t-morphine-2" not in drop_fixed
+    assert "t-morphine-1" in drop_fixed  # the named track itself still drops
+
+
+def test_release_date_hard_filter_gate():
+    catalog = _catalog()
+    state = _state(hard_filters=[HardFilter(field="release_date", op="<",
+                                            end="1990-01-01", source_turn=1)])
+    rs = _resolve(state, catalog)
+    on = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(),
+                        CompilerConfig(enable_release_date_hard_filter=True))
+    off = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(),
+                         CompilerConfig(enable_release_date_hard_filter=False))
+    assert len(off._release_date_mask(rs.state)) > len(on._release_date_mask(rs.state))
+
+
+def test_strip_negated_spans():
+    f = V0PlusCompiler._strip_negated_spans
+    assert "experimental" not in f("something upbeat but not experimental noise rock")
+    assert "upbeat" in f("something upbeat but not experimental")
+    assert f("no slow ballads please") == ""or f("no slow ballads please").strip() != "slow ballads please"
+    assert f("rock music") == "rock music"

@@ -326,6 +326,25 @@ class CompilerConfig:
     # out to both track_name and tag_list. Variant configs can route generated
     # attribute phrases to dense attribute retrieval without letting them spam
     # exact lexical tag clauses.
+    # Audit 2026-06-12: kind-insensitive rejection expansion hard-dropped whole
+    # fuzzy-matched artist discographies (228 GT kills / 8000 turns). Policy:
+    #   "expanded"   - legacy: drop track_ids AND every track of artist_ids
+    #   "track_only" - drop only the directly-matched track_ids (artist-level
+    #                  rejections stay soft; the generator recycles rejected
+    #                  artists, so hard-dropping executes correct answers)
+    rejection_drop_policy: str = "expanded"
+    # Release-date hard filter is wrong on 43% of the turns it fires (48 GT
+    # kills). False disables the hard mask (era branches/features still carry
+    # the soft signal).
+    enable_release_date_hard_filter: bool = True
+    # Post-fusion soft adjustments destroyed 20/37 pivot-turn GT hits; allows
+    # gating them off on pivot turns.
+    soft_adjust_skip_intents: tuple[str, ...] = field(default_factory=tuple)
+    # Scrub negated spans ("not X", "no X", "without X") from turn_intent
+    # before it joins the BM25 tag clause (negation was inverting into
+    # positive tag signal on ~4% of turns).
+    scrub_negated_intent_tags: bool = False
+
     bm25_include_v1_attribute_facets: bool = True
     bm25_include_turn_intent_tag_clause: bool = True
     bm25_v1_attribute_tag_policy: str = "all"
@@ -972,8 +991,11 @@ class V0PlusCompiler:
         )
         fused = self._rrf_fuse_weighted(weighted_pools, k=self.cfg.rrf_k)
 
-        # 7. Soft (de)promotes
-        adjusted = self._apply_soft_adjustments(fused, rs)
+        # 7. Soft (de)promotes (gated: destroys GT hits on pivot turns)
+        if rs.state.intent_mode.value in self.cfg.soft_adjust_skip_intents:
+            adjusted = fused
+        else:
+            adjusted = self._apply_soft_adjustments(fused, rs)
 
         # 8. Backfill to topk (popularity-sorted, mask + hard-drop-respecting)
         ranked = [tid for tid, _ in adjusted]
@@ -1087,6 +1109,8 @@ class V0PlusCompiler:
         drop: set[str] = set()
         for rej in rs.resolved_rejections.values():
             drop.update(rej.track_ids)
+            if self.cfg.rejection_drop_policy == "track_only":
+                continue
             for aid in rej.artist_ids:
                 drop.update(self.catalog.tracks_by_artist_id(aid))
         return drop
@@ -1206,7 +1230,10 @@ class V0PlusCompiler:
         if intent:
             per_field.setdefault("track_name", []).append(intent)
             if self.cfg.bm25_include_turn_intent_tag_clause:
-                per_field.setdefault("tag_list", []).append(intent)
+                tag_intent = (self._strip_negated_spans(intent)
+                              if self.cfg.scrub_negated_intent_tags else intent)
+                if tag_intent:
+                    per_field.setdefault("tag_list", []).append(tag_intent)
 
         # Emit one FieldQuery per term so each entity contributes a separate
         # MatchQuery to tantivy's Boolean SHOULD. Joining all terms into a
@@ -1310,6 +1337,18 @@ class V0PlusCompiler:
                     counts[key] += 1
         self._catalog_tag_df_cache = dict(counts)
         return self._catalog_tag_df_cache
+
+    _NEGATION_SCRUB_RE = __import__("re").compile(
+        r"\b(?:not|no|without|don'?t want|nothing|never|avoid(?:ing)?|"
+        r"other than|except|besides|instead of)\b"
+        r"(?:\s+\S+){0,4}", __import__("re").I)
+
+    @classmethod
+    def _strip_negated_spans(cls, text: str) -> str:
+        """Remove negation cues plus their 4-token window so negated concepts
+        don't become positive BM25 tag signal ("not experimental" was matching
+        the tag `experimental`)."""
+        return " ".join(cls._NEGATION_SCRUB_RE.sub(" ", text).split())
 
     def _should_include_v1_attribute_tag_in_bm25(self, value: str) -> bool:
         if not self.cfg.bm25_include_v1_attribute_facets:
@@ -1797,6 +1836,8 @@ class V0PlusCompiler:
         are valid candidates."""
         all_ids = set(self.catalog.all_track_ids())
         valid = all_ids
+        if not self.cfg.enable_release_date_hard_filter:
+            return valid
         for hf in state.hard_filters:
             if hf.field != "release_date":
                 continue
