@@ -332,6 +332,19 @@ class CompilerConfig:
     attribute_query_source: str = "legacy_tags"
     attribute_query_allowed_facets: tuple[str, ...] = field(default_factory=tuple)
 
+    # Tiered tag resolution for the BM25 tag clause (policy "resolved"):
+    # attribute phrases that ground to catalog tags emit those tags; phrases
+    # that don't resolve keep the raw text (fallback, never worse than "all").
+    # The embedding tier needs an offline index (scripts/
+    # build_tag_embedding_index.py) plus a query-side encoder; without either,
+    # the lexical tiers (exact/alias/substring) still run.
+    tag_resolver_embedding_index_path: str = ""
+    tag_resolver_encoder_id: str = "qwen_0_6b"
+    tag_resolver_embedding_min_score: float = 0.60
+    tag_resolver_embedding_topk: int = 3
+    tag_resolver_max_tags_per_phrase: int = 3
+    tag_resolver_min_track_count: int = 5
+
     # Optional additive branch-local candidate-quality pass. When enabled, each
     # fired branch can emit a second `.state_features` branch whose order is
     # based on structured state facts plus catalog-derived features. This is a
@@ -416,6 +429,10 @@ class V0PlusCompiler:
         self.user_embeddings = user_embeddings
         self._catalog_release_year_bounds_cached = False
         self._catalog_release_year_bounds_cache: tuple[int, int] | None = None
+        self._tag_resolver_cache = None
+        # phrase -> [(tag, score, tier)] from the latest _build_bm25_clauses
+        # call; surfaced for tracing/ranker features.
+        self._last_tag_resolutions: dict[str, list[tuple[str, float, str]]] = {}
 
     # ------------------------------------------------------------------
     # Top-level
@@ -1114,16 +1131,36 @@ class V0PlusCompiler:
         state = rs.state
         per_field: dict[str, list[str]] = {}
         v1_attribute_facet_keys = self._v1_attribute_query_facet_keys(state)
+        self._last_tag_resolutions = {}
 
         for me in state.mentioned_entities:
             if me.sentiment < 0:
                 continue
-            if (
+            is_v1_attribute_tag = (
                 me.type == "tag"
                 and self._catalog_tag_key(me.value) in v1_attribute_facet_keys
-                and not self._should_include_v1_attribute_tag_in_bm25(me.value)
-            ):
-                continue
+            )
+            if is_v1_attribute_tag:
+                if not self.cfg.bm25_include_v1_attribute_facets:
+                    continue
+                if self.cfg.bm25_v1_attribute_tag_policy == "resolved":
+                    resolution = self._tag_resolver().resolve(me.value)
+                    self._last_tag_resolutions[me.value] = [
+                        (m.tag, m.score, m.tier) for m in resolution.matches
+                    ]
+                    clause = per_field.setdefault("tag_list", [])
+                    if resolution.resolved:
+                        clause.extend(
+                            tag for tag in resolution.tags() if tag not in clause
+                        )
+                    else:
+                        # Unresolved phrase: keep the raw text so BM25 token
+                        # matching still contributes recall (never worse than
+                        # policy "all" for this phrase).
+                        clause.append(me.value)
+                    continue
+                if not self._should_include_v1_attribute_tag_in_bm25(me.value):
+                    continue
             target = {
                 "artist": "artist_name",
                 "album": "album_name",
@@ -1284,10 +1321,58 @@ class V0PlusCompiler:
             return False
         if policy == "catalog_exact":
             return self._catalog_tag_key(value) in self._catalog_tag_keys()
+        if policy == "resolved":
+            # Inclusion is always true under "resolved"; the clause builder
+            # substitutes the grounded tags (or keeps the raw phrase as
+            # fallback) instead of gating on a boolean.
+            return True
         raise ValueError(
             "bm25_v1_attribute_tag_policy must be one of 'all', 'none', "
-            f"or 'catalog_exact'; got {policy!r}"
+            f"'catalog_exact', or 'resolved'; got {policy!r}"
         )
+
+    def _tag_resolver(self):
+        """Lazily build the tiered phrase->tag resolver (policy "resolved").
+
+        Vocabulary and frequencies come from the catalog caches; the alias
+        table is shared with the branch-feature scorer so both paths ground
+        phrases identically. The embedding tier activates only when the
+        offline index exists AND the configured encoder is registered —
+        otherwise the lexical tiers still run and unresolved phrases fall
+        back to raw text in the clause builder.
+        """
+        if self._tag_resolver_cache is None:
+            from pathlib import Path as _Path
+
+            from .tag_resolver import (
+                TagEmbeddingIndex,
+                TieredTagResolver,
+                filtered_tag_vocab,
+            )
+
+            embedding_index = None
+            embed_fn = None
+            index_path = self.cfg.tag_resolver_embedding_index_path
+            if index_path and _Path(index_path).exists():
+                embedding_index = TagEmbeddingIndex.load(index_path)
+                client = self.encoders.get(self.cfg.tag_resolver_encoder_id)
+                if client is not None:
+                    embed_fn = client.embed_batch
+            self._tag_resolver_cache = TieredTagResolver(
+                catalog_tag_keys=frozenset(self._catalog_tag_keys()),
+                aliases=self._BRANCH_FEATURE_TAG_ALIASES,
+                substring_vocab=filtered_tag_vocab(
+                    self._catalog_tag_document_frequency(),
+                    self.cfg.tag_resolver_min_track_count,
+                ),
+                embedding_index=embedding_index,
+                embed_fn=embed_fn,
+                embedding_min_score=self.cfg.tag_resolver_embedding_min_score,
+                embedding_topk=self.cfg.tag_resolver_embedding_topk,
+                max_matches=self.cfg.tag_resolver_max_tags_per_phrase,
+                normalize_fn=self._catalog_tag_key,
+            )
+        return self._tag_resolver_cache
 
     # -- Dense query templates --------------------------------------------
     # Each builder takes the resolved state and returns a query STRING (or

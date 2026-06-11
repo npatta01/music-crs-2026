@@ -2811,3 +2811,118 @@ def test_release_year_filter_respects_hard_empty_range():
                               _ryr_cfg(release_year_filter_min_keep=1))
     mask = compiler._release_date_mask(rs.state)
     assert mask == set()
+
+
+# ---------------------------------------------------------------------------
+# bm25_v1_attribute_tag_policy = "resolved" (tiered tag resolver)
+# ---------------------------------------------------------------------------
+
+
+def _resolved_policy_compiler(catalog):
+    return V0PlusCompiler(
+        catalog,
+        FakeRetriever(),
+        _fake_encoder(),
+        CompilerConfig(
+            bm25_v1_attribute_tag_policy="resolved",
+            bm25_include_turn_intent_tag_clause=False,
+            tag_resolver_min_track_count=1,
+        ),
+    )
+
+
+def _attribute_fact(facet, value):
+    return {
+        "type": "attribute",
+        "facet": facet,
+        "value": value,
+        "role": "current_target",
+        "anchor_use": "query_facet",
+        "relation": "query_facet",
+        "reuse": "not_applicable",
+        "source_turn": 1,
+        "mentioned_current_turn": True,
+    }
+
+
+def test_bm25_resolved_policy_substitutes_grounded_tags():
+    catalog = _catalog()
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "attribute_search",
+            "summary": "Smoky lounge revival sounds.",
+            "source_turn": 1,
+        },
+        facts=[_attribute_fact("sonic", "smoky lounge revival")],
+    )
+    rs = _resolve(state, catalog)
+    compiler = _resolved_policy_compiler(catalog)
+
+    clauses = compiler._build_bm25_clauses(rs)
+    tag_queries = [c.query for c in clauses if c.field == "tag_list"]
+
+    # phrase grounded via substring tier -> emits the catalog tags it
+    # contains, not the raw phrase
+    assert "smoky" in tag_queries
+    assert "lounge" in tag_queries
+    assert "smoky lounge revival" not in tag_queries
+
+
+def test_bm25_resolved_policy_exact_match_normalizes():
+    catalog = _catalog()
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "attribute_search",
+            "summary": "Post-hardcore please.",
+            "source_turn": 1,
+        },
+        facts=[_attribute_fact("genre", "Post-Hardcore")],
+    )
+    rs = _resolve(state, catalog)
+    compiler = _resolved_policy_compiler(catalog)
+
+    clauses = compiler._build_bm25_clauses(rs)
+    tag_queries = [c.query for c in clauses if c.field == "tag_list"]
+
+    assert tag_queries == ["post hardcore"]
+
+
+def test_bm25_resolved_policy_unresolved_phrase_keeps_raw_text():
+    catalog = _catalog()
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "attribute_search",
+            "summary": "Driving music.",
+            "source_turn": 1,
+        },
+        facts=[_attribute_fact("sonic", "songs about late night drives")],
+    )
+    rs = _resolve(state, catalog)
+    compiler = _resolved_policy_compiler(catalog)
+
+    clauses = compiler._build_bm25_clauses(rs)
+    tag_queries = [c.query for c in clauses if c.field == "tag_list"]
+
+    assert tag_queries == ["songs about late night drives"]
+
+
+def test_bm25_resolved_policy_records_resolution_metadata():
+    catalog = _catalog()
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "attribute_search",
+            "summary": "Smoky lounge revival sounds.",
+            "source_turn": 1,
+        },
+        facts=[_attribute_fact("sonic", "smoky lounge revival")],
+    )
+    rs = _resolve(state, catalog)
+    compiler = _resolved_policy_compiler(catalog)
+
+    compiler._build_bm25_clauses(rs)
+
+    assert "smoky lounge revival" in compiler._last_tag_resolutions
+    matches = compiler._last_tag_resolutions["smoky lounge revival"]
+    assert all(len(m) == 3 for m in matches)  # (tag, score, tier)
+    tags = {m[0] for m in matches}
+    assert {"smoky", "lounge"} <= tags
