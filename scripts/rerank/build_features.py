@@ -41,6 +41,14 @@ from mcrs.qu_modules.tag_resolver import (  # noqa: E402
     catalog_tag_key,
 )
 
+import re
+
+NEGATION_RE = re.compile(
+    r"\b(no|not|don'?t|other than|different|enough|besides|except|instead of|tired of|good on)\b",
+    re.I)
+WANTS_NEW_RE = re.compile(
+    r"\b(different|new|other|else|someone else|another artist|fresh|haven'?t heard)\b", re.I)
+
 VECTOR_FIELDS = {
     "cf_bpr": "cf",
     "audio_laion_clap": "clap",
@@ -52,7 +60,8 @@ VECTOR_FIELDS = {
 
 PCT_FEATURES = [
     "pop_pct", "era_pop_pct", "cf_last", "cf_centroid", "user_cf",
-    "tag_overlap_idf", "q06_metadata_cos", "rrf_score",
+    "tag_overlap_idf", "q06_metadata_cos", "rrf_score", "msg_meta_cos",
+    "lex_overlap_idf", "margin_min",
 ]
 
 
@@ -215,6 +224,105 @@ class EmbedMemo:
             self._dirty = 0
 
 
+class NpzEmbedStore:
+    """Chunked float16 embedding store — replaces the JSON memo at train-split
+    scale (250k strings would need ~14GB+ as a Python dict; this caps RAM at
+    the hash index plus lazily-loaded chunks)."""
+
+    def __init__(self, dir_path):
+        import hashlib
+        self._sha = lambda t: hashlib.sha1(t.encode()).hexdigest()
+        self.dir = Path(dir_path)
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.index: dict[str, tuple[str, int]] = {}
+        self._chunks: dict[str, np.ndarray] = {}
+        for f in sorted(self.dir.glob("chunk_*.npz")):
+            keys = np.load(f, allow_pickle=False)["keys"]
+            cid = f.stem
+            for i, k in enumerate(keys):
+                self.index[str(k)] = (cid, i)
+        self._pend_keys: list[str] = []
+        self._pend_vecs: list[np.ndarray] = []
+        self._client = None
+
+    def _matrix(self, cid: str) -> np.ndarray:
+        if cid not in self._chunks:
+            self._chunks[cid] = np.load(self.dir / f"{cid}.npz", allow_pickle=False)["vectors"]
+        return self._chunks[cid]
+
+    def _embed_remote(self, texts: list[str]) -> list[list[float]]:
+        if self._client is None:
+            import os
+
+            from mcrs.embeddings.litellm_client import LiteLLMEmbeddingClient
+            self._client = LiteLLMEmbeddingClient(
+                model_name="openai/Qwen/Qwen3-Embedding-0.6B",
+                api_base="https://api.deepinfra.com/v1/openai",
+                api_key=os.environ.get("DEEPINFRA_API_KEY"),
+                batch_size=64, encoding_format="float")
+        return self._client.embed_batch(texts)
+
+    def add(self, text: str, vec) -> None:
+        h = self._sha(text)
+        if h in self.index or h in set(self._pend_keys):
+            return
+        self._pend_keys.append(h)
+        self._pend_vecs.append(np.asarray(vec, dtype=np.float16))
+
+    def add_hashed(self, h: str, vec) -> None:
+        if h in self.index or h in set(self._pend_keys):
+            return
+        self._pend_keys.append(h)
+        self._pend_vecs.append(np.asarray(vec, dtype=np.float16))
+
+    def get_many(self, texts: list[str], offline: bool = False) -> dict[str, np.ndarray]:
+        pend_idx = {k: i for i, k in enumerate(self._pend_keys)}
+        if not offline:
+            missing = list(dict.fromkeys(
+                t for t in texts
+                if t and self._sha(t) not in self.index and self._sha(t) not in pend_idx))
+            for start in range(0, len(missing), 64):
+                chunk = missing[start:start + 64]
+                for text, vec in zip(chunk, self._embed_remote(chunk)):
+                    self.add(text, vec)
+            pend_idx = {k: i for i, k in enumerate(self._pend_keys)}
+            if len(self._pend_keys) >= 8192:
+                self.flush()
+                pend_idx = {}
+        out: dict[str, np.ndarray] = {}
+        for t in texts:
+            if not t:
+                continue
+            h = self._sha(t)
+            v = None
+            if h in self.index:
+                cid, row = self.index[h]
+                v = self._matrix(cid)[row].astype(np.float32)
+            elif h in pend_idx:
+                v = self._pend_vecs[pend_idx[h]].astype(np.float32)
+            if v is not None:
+                n = float(np.linalg.norm(v))
+                out[t] = v / n if n > 0 else v
+        return out
+
+    def flush(self) -> None:
+        if not self._pend_keys:
+            return
+        cid = f"chunk_{len(list(self.dir.glob('chunk_*.npz'))):05d}"
+        np.savez_compressed(
+            self.dir / f"{cid}.npz",
+            keys=np.asarray(self._pend_keys),
+            vectors=np.vstack(self._pend_vecs).astype(np.float16))
+        for i, k in enumerate(self._pend_keys):
+            self.index[k] = (cid, i)
+        self._pend_keys, self._pend_vecs = [], []
+from mcrs.qu_modules.tag_resolver import (  # noqa: E402
+    TagEmbeddingIndex,
+    TieredTagResolver,
+    catalog_tag_key,
+)
+
+
 def load_sessions():
     from datasets import load_dataset
 
@@ -222,14 +330,17 @@ def load_sessions():
     out = {}
     for row in ds:
         sid = str(row["session_id"])
-        played, _user_text = defaultdict(list), {}
+        played, user_text = defaultdict(list), {}
         for msg in row["conversations"]:
             if msg["role"] == "music":
                 played[int(msg["turn_number"])].append(str(msg["content"]))
+            elif msg["role"] == "user":
+                user_text[int(msg["turn_number"])] = str(msg["content"])
         p = row.get("user_profile") or {}
         g = row.get("conversation_goal") or {}
         out[sid] = {
             "played_by_turn": dict(played),
+            "user_text_by_turn": user_text,
             "session_date": str(row.get("session_date") or ""),
             "age": p.get("age"), "age_group": str(p.get("age_group") or ""),
             "gender": str(p.get("gender") or ""),
@@ -285,6 +396,11 @@ def main():
     ap.add_argument("--pool-k", type=int, default=200)
     ap.add_argument("--out", default="exp/analysis/rerank/features.parquet")
     ap.add_argument("--embed-memo", default="exp/analysis/rerank/q06_memo.json")
+    ap.add_argument("--branch-names", default="exp/analysis/rerank/branch_names.json",
+                    help="Canonical branch list (pre-pass over the full trace). "
+                         "Fixes the per-shard schema-drift bug.")
+    ap.add_argument("--msg-store", default="exp/analysis/rerank/raw_msg_store",
+                    help="NpzEmbedStore dir with raw message/context embeddings.")
     ap.add_argument("--max-turns", type=int, default=0)
     ap.add_argument("--prefetch-only", action="store_true",
                     help="Pass 1: collect every unique query/listener_goal string "
@@ -335,6 +451,18 @@ def main():
     gt_map = {(r["session_id"], int(r["turn_number"])): r["ground_truth_track_id"]
               for r in json.load(open(args.ground_truth))}
 
+    branch_names = json.load(open(args.branch_names))
+    msg_store = NpzEmbedStore(args.msg_store)
+
+    # token IDF over catalog names+tags for the lexical-overlap feature
+    tok_df_counter: Counter = Counter()
+    name_tokens_all: dict[str, frozenset] = {}
+    for t_, m_ in cat.meta.items():
+        toks_ = m_["name_tokens"] | m_["tag_keys"]
+        name_tokens_all[t_] = toks_
+        tok_df_counter.update(toks_)
+    tok_idf = {t_: math.log((len(cat.meta) + 1) / (c_ + 1)) for t_, c_ in tok_df_counter.items()}
+
     track_tag_vec_cache: dict[str, np.ndarray | None] = {}
 
     def track_tag_vec(tid: str) -> np.ndarray | None:
@@ -351,7 +479,6 @@ def main():
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     buffer: list[dict] = []
-    branch_names: list[str] = []
     n_turns = n_playable = 0
 
     def flush_buffer():
@@ -380,8 +507,6 @@ def main():
             n_turns += 1
             br = row["trace"]["branches"]
             pools = br["pools"]
-            if not branch_names:
-                branch_names = [p["name"] for p in pools]
 
             cand_rank: dict[str, dict[str, tuple[int, float]]] = defaultdict(dict)
             for p in pools:
@@ -466,7 +591,9 @@ def main():
 
             # per-turn, per-branch lowest retrieved score: imputation floor for
             # candidates a branch did not retrieve ("worse than everything seen")
-            branch_min_score = {p["name"]: (float(p["hits"][-1][1]) if p["hits"] else 0.0)
+            branch_min_score = {p["name"]: (float(p["hits"][: args.pool_k][-1][1])
+                                            if p["hits"] else 0.0) for p in pools}
+            branch_top_score = {p["name"]: (float(p["hits"][0][1]) if p["hits"] else 0.0)
                                 for p in pools}
             has_history = float(bool(played))
             has_user_vec = float(uvec is not None)
@@ -475,6 +602,14 @@ def main():
                 request_tokens.update(catalog_tag_key(qt).split())
             request_tokens -= {""}
             has_constraint = float(bool(tc and (tc.get("start_year") or tc.get("end_year"))))
+            msg = sess.get("user_text_by_turn", {}).get(tn, "")
+            ctx3 = " ".join(sess.get("user_text_by_turn", {}).get(k, "")
+                            for k in (tn - 2, tn - 1, tn)).strip()
+            memb = msg_store.get_many([t for t in (msg, ctx3) if t], offline=True)
+            msg_vec, ctx_vec = memb.get(msg), memb.get(ctx3)
+            msg_norm = catalog_tag_key(msg)
+            msg_tokens = frozenset(msg_norm.split()) - {""}
+            wants_new_rx = float(bool(WANTS_NEW_RE.search(msg)))
 
             rows_out = []
             for tid_, branch_hits in cand_rank.items():
@@ -563,12 +698,35 @@ def main():
                     "q06_metadata_cos": qcos("metadata", "metadata_qwen3_embedding_0_6b", tid_),
                     "q06_attributes_cos": qcos("attributes", "attributes_qwen3_embedding_0_6b", tid_),
                     "q06_lyric_cos": qcos("lyric", "lyrics_qwen3_embedding_0_6b", tid_),
+                    # conversation proxies (raw text, no extractor)
+                    "msg_meta_cos": (float(msg_vec @ cat.v("metadata_qwen3_embedding_0_6b", tid_))
+                                     if msg_vec is not None and cat.v("metadata_qwen3_embedding_0_6b", tid_) is not None else 0.0),
+                    "msg_attr_cos": (float(msg_vec @ cat.v("attributes_qwen3_embedding_0_6b", tid_))
+                                     if msg_vec is not None and cat.v("attributes_qwen3_embedding_0_6b", tid_) is not None else 0.0),
+                    "msg_lyr_cos": (float(msg_vec @ cat.v("lyrics_qwen3_embedding_0_6b", tid_))
+                                    if msg_vec is not None and cat.v("lyrics_qwen3_embedding_0_6b", tid_) is not None else 0.0),
+                    "ctx_meta_cos": (float(ctx_vec @ cat.v("metadata_qwen3_embedding_0_6b", tid_))
+                                     if ctx_vec is not None and cat.v("metadata_qwen3_embedding_0_6b", tid_) is not None else 0.0),
+                    "lex_overlap_idf": float(sum(tok_idf.get(t_, 0.0)
+                                                 for t_ in (name_tokens_all.get(tid_, frozenset()) & msg_tokens))),
+                    "title_in_msg": float(bool(m["name_tokens"]) and m["name_tokens"] <= msg_tokens),
+                    "wants_new_proxy": wants_new_rx,
                     # crosses
                     "x_same_artist_wants_new": same_artist * wants_new,
                     "x_cflast_turn": (cos(cf_lastv) * tn / 8.0),
                     "x_era_hard": (in_constraint * float(tc.get("strength") == "hard")),
                     "x_pop_within_artist": cat.pop_pct.get(tid_, 0.0) * cat.within_artist_pop.get(tid_, 0.0),
                 }
+                # artist mention + negation-window rejection proxy
+                rec["artist_mention"] = 0.0
+                rec["rejected_artist_proxy"] = 0.0
+                for ak in m.get("artist_name_keys", ()):
+                    pos = msg_norm.find(ak)
+                    if pos >= 0:
+                        rec["artist_mention"] = 1.0
+                        if NEGATION_RE.search(msg_norm[max(0, pos - 45): pos]):
+                            rec["rejected_artist_proxy"] = 1.0
+                        break
                 # age-era
                 age = sess.get("age")
                 if age and year and session_year:
@@ -576,16 +734,23 @@ def main():
                     rec["age_era_affinity"] = float(birth + 12 <= year <= birth + 25)
                 # per-branch ranks/scores — null-free: rank sentinel = pool_k+1,
                 # score imputed just below the branch's lowest retrieved score
+                margin_min = None
                 for b in branch_names:
                     r_s = branch_hits.get(b)
+                    top = branch_top_score.get(b, 0.0)
                     if r_s:
                         rec[f"rank__{b}"] = float(r_s[0])
                         rec[f"score__{b}"] = float(r_s[1])
+                        mg = top - float(r_s[1])
+                        margin_min = mg if margin_min is None else min(margin_min, mg)
                     else:
                         rec[f"rank__{b}"] = float(args.pool_k + 1)
                         ms = branch_min_score.get(b, 0.0)
                         rec[f"score__{b}"] = ms - abs(ms) * 0.01 - 1e-6
+                        mg = top - rec[f"score__{b}"]
                     rec[f"hit__{b}"] = float(bool(r_s))
+                    rec[f"margin__{b}"] = mg
+                rec["margin_min"] = margin_min if margin_min is not None else 0.0
                 rows_out.append(rec)
 
             # within-pool percentiles (inputs are null-free now)

@@ -103,6 +103,10 @@ def main():
     ap.add_argument("--user-dropout", type=float, default=0.25,
                     help="Fraction of TRAIN sessions whose user_cf features are "
                          "zeroed (cold-start robustness; Gemini review rec).")
+    ap.add_argument("--max-pool-rank", type=int, default=0,
+                    help="Keep only candidates with best_branch_rank <= N (and drop "
+                         "groups whose GT falls outside) — lets one @500 extraction "
+                         "serve @200/@500 arms.")
     ap.add_argument("--stage1-scores", default="",
                     help="Optional parquet of (session_id, turn_number, track_id, "
                          "stage1_score) to join as an extra feature (stage-2 stack).")
@@ -123,6 +127,13 @@ def main():
         df = df.merge(s1, on=["session_id", "turn_number", "track_id"], how="left")
         df["stage1_score"] = df["stage1_score"].fillna(df["stage1_score"].min()).astype(np.float32)
         print(f"  joined stage1_score from {args.stage1_scores}", flush=True)
+    if args.max_pool_rank > 0:
+        before = len(df)
+        df = df[df.best_branch_rank <= args.max_pool_rank]
+        keep = df.groupby(["session_id", "turn_number"])["label"].transform("max") == 1
+        df = df[keep].copy()
+        print(f"  pool-rank filter @{args.max_pool_rank}: {before:,} -> {len(df):,} rows, "
+              f"{df.groupby(['session_id','turn_number']).ngroups} playable turns", flush=True)
     feature_cols = [c for c in df.columns if c not in ID_COLS and c not in RRF_COLS]
     print(f"  {len(df):,} rows, {len(feature_cols)} features, "
           f"{df.groupby(['session_id','turn_number']).ngroups} turns", flush=True)
@@ -143,16 +154,19 @@ def main():
     train_sids = {s for s in sids_all if sess_user.get(s, s) in train_users}
     val_sids = {s for s in sids_all if sess_user.get(s, s) in val_users}
     test_sids = set(sids_all) - train_sids - val_sids
-    overlap = ({sess_user.get(s) for s in test_sids} &
-               {sess_user.get(s) for s in train_sids})
+    u_tr = {sess_user.get(s) for s in train_sids}
+    u_va = {sess_user.get(s) for s in val_sids}
+    u_te = {sess_user.get(s) for s in test_sids}
     print(f"  users: {n_u}; sessions: train={len(train_sids)} val={len(val_sids)} "
-          f"test={len(test_sids)}; train-test user overlap={len(overlap)} (must be 0)",
+          f"test={len(test_sids)}; overlaps tr-te={len(u_tr & u_te)} "
+          f"tr-va={len(u_tr & u_va)} va-te={len(u_va & u_te)} (all must be 0)",
           flush=True)
-    assert not overlap, "user leakage across split"
+    assert not (u_tr & u_te) and not (u_tr & u_va) and not (u_va & u_te), \
+        "user leakage across split"
 
     # user-embedding dropout on a fraction of TRAIN sessions
     if args.user_dropout > 0:
-        drop_sids = {s for s in train_sids if rng.random() < args.user_dropout}
+        drop_sids = {s for s in sorted(train_sids) if rng.random() < args.user_dropout}
         mask = df.session_id.isin(drop_sids)
         for col, fill in [("user_cf", 0.0), ("pct_user_cf", 0.5), ("has_user_vec", 0.0)]:
             if col in df.columns:
@@ -177,7 +191,7 @@ def main():
              "| arm | ndcg@20 | Δ vs RRF | t | hit@20 | hit@1 | best_iter | train ndcg@20 | val ndcg@20 |",
              "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
 
-    train_eval_sids = set(list(train_sids)[:150])
+    train_eval_sids = set(sorted(train_sids)[:150])
     train_eval_df = df[df.session_id.isin(train_eval_sids)].copy()
     val_df = df[df.session_id.isin(val_sids)].copy()
 
