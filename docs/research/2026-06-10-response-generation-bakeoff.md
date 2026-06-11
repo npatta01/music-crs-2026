@@ -32,8 +32,8 @@ proxy is a **relative** signal only.
   (turn intent, liked/disliked entities, accepted/rejected tracks, filters, year range) instead of
   the transcript.
 
-Code: `mcrs/bakeoff/` (`track_lookup`, `replay`, `judge`, `state_context`), `scripts/response_bakeoff.py`,
-`scripts/judge_responses.py`, `configs/bakeoff/models.yaml`.
+The throwaway harness used to run this bake-off (replay driver, proxy-judge panel, candidate registry)
+is **not retained** in the repo — only the findings and the production wiring below matter.
 
 ## 3. Bugs found and fixed (several hit production too)
 
@@ -106,9 +106,6 @@ the QU's `last_traces`) as the compact `[LISTENER CONTEXT]` block instead of the
 `echo_retries` regenerates any reply that parrots the metadata. Helpers live in
 `mcrs/response_context.py`.
 
-- The standalone scripts (`scripts/backfill_blindset_responses.py`,
-  `scripts/backfill_blindset_state.py`) remain for offline re-scoring/iteration but are **not needed**
-  to produce a submission.
 - **CodaBench gotcha:** the submission *name* = filename minus `.zip`, capped at **64 chars** — keep
   filenames short.
 
