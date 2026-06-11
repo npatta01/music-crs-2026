@@ -66,8 +66,8 @@ class Catalog:
 
         db = lancedb.connect(db_uri)
         self.ds = db.open_table(table_name).to_lance()
-        scalars = ["track_id", "track_name", "popularity", "release_date",
-                   "artist_id", "album_id", "tag_list", "duration"]
+        scalars = ["track_id", "track_name", "artist_name", "popularity",
+                   "release_date", "artist_id", "album_id", "tag_list", "duration"]
         names = set(self.ds.schema.names)
         cols = [c for c in scalars if c in names]
         tbl = self.ds.to_table(columns=cols).to_pydict()
@@ -91,11 +91,17 @@ class Catalog:
             name_raw = tbl["track_name"][i] if "track_name" in tbl else ""
             if isinstance(name_raw, (list, tuple)):
                 name_raw = " ".join(str(x) for x in name_raw)
+            a_raw = tbl["artist_name"][i] if "artist_name" in tbl else []
+            if not isinstance(a_raw, (list, tuple, np.ndarray)):
+                a_raw = [a_raw]
+            artist_name_keys = tuple(
+                k for k in (catalog_tag_key(str(a or "")) for a in a_raw) if k)
             self.meta[tid] = {
                 "artists": artists, "albums": albums, "year": year,
                 "pop": float(tbl["popularity"][i] or 0.0),
                 "tag_keys": tag_keys, "n_tags": len(tags),
                 "name_tokens": frozenset(catalog_tag_key(str(name_raw or "")).split()) - {""},
+                "artist_name_keys": artist_name_keys,
                 "duration": float(tbl["duration"][i]) if self.has_duration and tbl["duration"][i] is not None else np.nan,
             }
             pops[tid] = self.meta[tid]["pop"]
