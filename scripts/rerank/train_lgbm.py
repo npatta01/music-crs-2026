@@ -105,19 +105,10 @@ def main():
     slim_cols = list(dict.fromkeys(ID_COLS + COHORT_COLS))
     slim = tbl.select([c for c in slim_cols if c in names]).to_pandas()
 
-    # stage1 join (optional)
-    stage1 = None
-    if args.stage1_scores:
-        s1 = pd.read_parquet(args.stage1_scores)
-        merged = slim[["session_id", "turn_number", "track_id"]].merge(
-            s1, on=["session_id", "turn_number", "track_id"], how="left")
-        stage1 = merged["stage1_score"].to_numpy(np.float32)
-        stage1 = np.nan_to_num(stage1, nan=float(np.nanmin(stage1)))
-        print("  joined stage1_score", flush=True)
-
     feature_cols = [c for c in names if c not in ID_COLS and c not in RRF_COLS]
+    stage1 = args.stage1_scores != ""
     cat_idx_map = {}
-    X = np.empty((n, len(feature_cols) + (1 if stage1 is not None else 0)), dtype=np.float32)
+    X = np.empty((n, len(feature_cols) + (1 if stage1 else 0)), dtype=np.float32)
     for j, c in enumerate(feature_cols):
         col = tbl.column(c)
         if c in CATEGORICALS:
@@ -127,13 +118,35 @@ def main():
         else:
             X[:, j] = np.nan_to_num(
                 col.to_numpy(zero_copy_only=False).astype(np.float32, copy=False), nan=0.0)
-    if stage1 is not None:
-        X[:, len(feature_cols)] = stage1
-        feature_cols = feature_cols + ["stage1_score"]
     y = tbl.column("label").to_numpy(zero_copy_only=False).astype(np.int8)
     del tbl
     gc.collect()
     print(f"  packed X {X.shape} ({X.nbytes/1e9:.1f} GB)", flush=True)
+
+    if stage1:
+        # memory-light join: both sides sorted by the (sid, turn, track) triple,
+        # then scores scattered back — no pandas merge frames.
+        import pyarrow.parquet as pq_
+        s1t = pq_.read_table(args.stage1_scores)
+        key_left = (slim.session_id + "|" + slim.turn_number.astype(str) + "|"
+                    + slim.track_id).to_numpy()
+        key_right = np.array([f"{a}|{b}|{c}" for a, b, c in zip(
+            s1t.column("session_id").to_pylist(),
+            s1t.column("turn_number").to_pylist(),
+            s1t.column("track_id").to_pylist())])
+        sc = s1t.column("stage1_score").to_numpy(zero_copy_only=False).astype(np.float32)
+        del s1t
+        lo = np.argsort(key_left, kind="stable")
+        ro = np.argsort(key_right, kind="stable")
+        assert len(key_left) == len(key_right) and \
+            (key_left[lo[:1000]] == key_right[ro[:1000]]).all(), "stage1 rows misaligned"
+        col = np.empty(n, dtype=np.float32)
+        col[lo] = sc[ro]
+        X[:, len(feature_cols)] = col
+        feature_cols = feature_cols + ["stage1_score"]
+        del key_left, key_right, sc, lo, ro, col
+        gc.collect()
+        print("  joined stage1_score (sorted alignment)", flush=True)
 
     # user-grouped split
     sess_user = {str(r["session_id"]): str(r["user_id"])
