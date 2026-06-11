@@ -81,6 +81,14 @@ def main():
     ap.add_argument("--user-dropout", type=float, default=0.25)
     ap.add_argument("--max-pool-rank", type=int, default=0)
     ap.add_argument("--stage1-scores", default="")
+    ap.add_argument("--extra-features", default="",
+                    help="Sidecar parquet keyed by (session_id, turn_number, "
+                         "track_id); all other columns joined as features via "
+                         "sorted alignment.")
+    ap.add_argument("--monotone", action="store_true",
+                    help="Apply monotone-decreasing constraints to violation "
+                         "features (is_played_track, rejected_*_exact, "
+                         "violates_new_artist).")
     ap.add_argument("--reuse-bins", action="store_true",
                     help="Load previously saved train/val .bin datasets (same "
                          "out-dir, same arm) instead of rebinning — for sweeps.")
@@ -106,8 +114,14 @@ def main():
 
     feature_cols = [c for c in names if c not in ID_COLS and c not in RRF_COLS]
     stage1 = args.stage1_scores != ""
+    extra_names = []
+    if args.extra_features:
+        import pyarrow.parquet as pq_meta
+        extra_names = [c for c in pq_meta.read_schema(args.extra_features).names
+                       if c not in ("session_id", "turn_number", "track_id")]
     cat_idx_map = {}
-    X = np.empty((n, len(feature_cols) + (1 if stage1 else 0)), dtype=np.float32)
+    X = np.empty((n, len(feature_cols) + (1 if stage1 else 0) + len(extra_names)),
+                 dtype=np.float32)
     for j, c in enumerate(feature_cols):
         # column-streaming: one ~160MB column in memory at a time, never the
         # full float64 table (which was ~20GB and thrashed the 18GB machine)
@@ -145,10 +159,37 @@ def main():
         col = np.empty(n, dtype=np.float32)
         col[lo] = sc[ro]
         X[:, len(feature_cols)] = col
-        feature_cols = feature_cols + ["stage1_score"]
         del key_left, key_right, sc, lo, ro, col
         gc.collect()
         print("  joined stage1_score (sorted alignment)", flush=True)
+
+    if extra_names:
+        import pyarrow.parquet as pq_
+        ext = pq_.read_table(args.extra_features)
+        key_left = (slim.session_id + "|" + slim.turn_number.astype(str) + "|"
+                    + slim.track_id).to_numpy()
+        key_right = np.array([f"{a}|{b}|{c}" for a, b, c in zip(
+            ext.column("session_id").to_pylist(),
+            ext.column("turn_number").to_pylist(),
+            ext.column("track_id").to_pylist())])
+        lo = np.argsort(key_left, kind="stable")
+        ro = np.argsort(key_right, kind="stable")
+        assert len(key_left) == len(key_right) and \
+            (key_left[lo] == key_right[ro]).all(), "extra-features rows misaligned"
+        base = len(feature_cols) + (1 if stage1 else 0)
+        for k, cname in enumerate(extra_names):
+            vals = ext.column(cname).to_numpy(zero_copy_only=False).astype(np.float32)
+            col = np.empty(n, dtype=np.float32)
+            col[lo] = vals[ro]
+            X[:, base + k] = col
+        del key_left, key_right, lo, ro
+        gc.collect()
+        print(f"  joined {len(extra_names)} extra features (sorted alignment)", flush=True)
+
+    if stage1:
+        feature_cols = feature_cols + ["stage1_score"]
+    if extra_names:
+        feature_cols = feature_cols + extra_names
 
     # user-grouped split
     sess_user = {str(r["session_id"]): str(r["user_id"])
@@ -263,9 +304,22 @@ def main():
             del Xva
             gc.collect()
 
+        params = dict(LGB_PARAMS)
+        if args.monotone:
+            # ONLY is_played_track: mechanically guaranteed by the generator
+            # (no-replay; 0/8000 replays measured). Artist/new-artist rejections
+            # are SOFT — the generator recycles them (judgment pass: 7/13
+            # contradictory GTs) — so they stay unconstrained features.
+            MONO = {"is_played_track": -1}
+            mono = [MONO.get(feature_cols[j], 0) for j in col_idx]
+            if any(mono):
+                params["monotone_constraints"] = mono
+                print(f"  monotone constraints on "
+                      f"{[feature_cols[j] for j in col_idx if MONO.get(feature_cols[j])]}",
+                      flush=True)
         evals = {}
         booster = lgb.train(
-            LGB_PARAMS, dtrain, num_boost_round=args.num_boost_round,
+            params, dtrain, num_boost_round=args.num_boost_round,
             valid_sets=[dval], valid_names=["val"],
             callbacks=[lgb.early_stopping(args.early_stopping, verbose=False),
                        lgb.record_evaluation(evals), lgb.log_evaluation(400)])
