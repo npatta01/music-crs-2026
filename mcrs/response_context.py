@@ -1,0 +1,112 @@
+"""Response-generation context helpers: structured-state block, XML track item,
+and a metadata-echo guard.
+
+Used by `CRS_BASELINE.batch_chat` when `response_kwargs` enable state-conditioning
+and/or the XML item format (e.g. the Blind-A config). Kept independent of the
+bake-off package so the production response path has no dev-only dependency.
+
+Validated setup (best Blind-A LLM-judge result, 4.2/5): state-conditioned input
++ XML track item (<=10 tags) + role+goal "track explainer" prompt + profile.
+See docs/research/2026-06-10-response-generation-bakeoff.md.
+"""
+from __future__ import annotations
+
+from typing import Any, Callable
+
+
+def _first(value: Any) -> str:
+    if isinstance(value, (list, tuple)):
+        return str(value[0]).strip() if value else ""
+    return str(value).strip() if value is not None else ""
+
+
+def _esc(x: Any) -> str:
+    return str(x).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def xml_track_item(meta: dict | None, track_id: str = "", max_tags: int = 10) -> str:
+    """Render a track as a delimited <recommended_track> block with capped tags.
+
+    The XML delimiting + tag cap stop the model from echoing the raw metadata
+    blob verbatim (a failure mode observed with the pipe-delimited string)."""
+    meta = meta or {}
+    if not meta:
+        return f"<recommended_track>\n  <track_id>{_esc(track_id)}</track_id>\n</recommended_track>"
+    tags = [str(t) for t in (meta.get("tag_list") or []) if t][:max_tags]
+    return (
+        "<recommended_track>\n"
+        f"  <title>{_esc(_first(meta.get('track_name')))}</title>\n"
+        f"  <artist>{_esc(_first(meta.get('artist_name')))}</artist>\n"
+        f"  <album>{_esc(_first(meta.get('album_name')))}</album>\n"
+        f"  <tags>{_esc(', '.join(tags))}</tags>\n"
+        "</recommended_track>"
+    )
+
+
+def format_state_block(state: dict | None, track_label: Callable[[str], str] | None = None) -> str:
+    """Render a compact [LISTENER CONTEXT] block from a ConversationStateV0Plus dict.
+
+    `track_label(track_id) -> str` resolves accepted/rejected feedback tracks to a
+    human-readable label (extracts the track_name from metadata)."""
+    if not state:
+        return "[LISTENER CONTEXT]\n(unavailable)"
+
+    def label(tid: str) -> str:
+        if track_label is None:
+            return tid
+        s = track_label(tid) or tid
+        # Extract track_name from multi-line metadata format (field: value\n...)
+        # or pipe-delimited format (field | field) for backwards compatibility.
+        if "\n" in s:
+            # Multi-line format: extract the line that starts with "track_name:"
+            for line in s.split("\n"):
+                if line.startswith("track_name:"):
+                    return line.split(":", 1)[1].strip()
+            # Fallback: use first non-empty line
+            for line in s.split("\n"):
+                stripped = line.strip()
+                if stripped and not stripped.startswith("track_id:"):
+                    return stripped.split(":", 1)[-1].strip()
+            return tid
+        # Pipe-delimited format: trim to avoid echoing metadata beyond the first field
+        # Format: "field: value | field: value | ..." -> extract just "field: value"
+        return s.split(" | ")[0]
+
+    lines = ["[LISTENER CONTEXT]"]
+    ti = state.get("turn_intent")
+    if ti:
+        lines.append(f"Current request: {ti}")
+
+    ents = state.get("mentioned_entities") or []
+    liked = [e["value"] for e in ents if (e.get("sentiment") or 0) > 0]
+    disliked = [e["value"] for e in ents if (e.get("sentiment") or 0) < 0]
+
+    fb = state.get("track_feedback") or []
+    liked += [label(t["track_id"]) for t in fb if t.get("role") == "accepted"]
+    disliked += [label(t["track_id"]) for t in fb if t.get("role") == "rejected"]
+
+    if liked:
+        lines.append("Liked / wants: " + ", ".join(dict.fromkeys(liked)))
+    if disliked:
+        lines.append("Disliked / avoid: " + ", ".join(dict.fromkeys(disliked)))
+
+    er = state.get("explicit_rejections") or []
+    if er:
+        lines.append("Explicit rejections: " + ", ".join(f"{x.get('kind')}:{x.get('value')}" for x in er))
+
+    yr = state.get("release_year_range")
+    if yr and (yr.get("start") or yr.get("end")):
+        lines.append(f"Release year range: {yr.get('start')}-{yr.get('end')}")
+
+    lt = state.get("lyrical_theme")
+    if lt:
+        lines.append(f"Lyrical theme: {lt}")
+
+    return "\n".join(lines)
+
+
+def is_metadata_echo(text: str) -> bool:
+    """True when the model parroted the track metadata (or returned nothing) —
+    used to trigger a regeneration."""
+    t = (text or "").strip().lower()
+    return (not t) or t.startswith("title:") or "<recommended_track" in t or " | tags:" in t[:160]

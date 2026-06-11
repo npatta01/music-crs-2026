@@ -1,0 +1,94 @@
+"""batch_chat response-generation options (state-conditioning, XML item, echo-retry).
+
+Builds a CRS_BASELINE via __new__ and injects fakes so we don't load any model/DB."""
+from __future__ import annotations
+
+from mcrs.crs_baseline import CRS_BASELINE
+
+
+class FakeQU:
+    def __init__(self, states):
+        self._states = states
+        self.last_traces = []
+
+    def batch_compile_track_ids(self, session_memories, topk, user_ids=None):
+        self.last_traces = [{"state": s} for s in self._states]
+        return [["t1"], ["t2"]]
+
+
+class FakeItemDB:
+    metadata_dict = {
+        "t1": {"track_name": ["Olvidarte"], "artist_name": ["Arjona"], "album_name": ["A"],
+               "tag_list": ["balada", "spanish"]},
+        "t2": {"track_name": ["Rock"], "artist_name": ["Band"], "album_name": ["B"], "tag_list": ["rock"]},
+    }
+
+    def id_to_metadata(self, track_id, use_semantic_id=False):
+        m = self.metadata_dict[track_id]
+        return f"title: {m['track_name'][0]} | artist: {m['artist_name'][0]} | tags: {', '.join(m['tag_list'])}"
+
+
+class FakeLM:
+    """Echoes the context + item so the test can see what was fed."""
+    def batch_response_generation(self, sys_prompts, contexts, items):
+        return [f"CTX[{contexts[i][0]['content']}]|ITEM[{items[i]}]" for i in range(len(contexts))]
+
+
+def _make_crs(**resp_opts):
+    crs = CRS_BASELINE.__new__(CRS_BASELINE)
+    crs.qu = FakeQU(states=[{"turn_intent": "play jazz"}, {"turn_intent": "play rock"}])
+    crs.lm = FakeLM()
+    crs.item_db = FakeItemDB()
+    crs.retrieval_topk = 20
+    crs.role_prompt = {"role_play": "", "response_generation": "SYS", "personalization": ""}
+    crs.user_db = None
+    crs.response_conditioning = resp_opts.get("conditioning", "transcript")
+    crs.response_item_format = resp_opts.get("item_format", "plain")
+    crs.response_max_tags = resp_opts.get("max_tags", 10)
+    crs.response_echo_retries = resp_opts.get("echo_retries", 0)
+    return crs
+
+
+def _batch():
+    return [
+        {"user_query": "play jazz", "user_id": None, "session_memory": []},
+        {"user_query": "play rock", "user_id": None, "session_memory": []},
+    ]
+
+
+def test_state_conditioning_feeds_state_block_not_transcript():
+    crs = _make_crs(conditioning="state", item_format="xml")
+    out = crs.batch_chat(_batch())
+    # response context was the [LISTENER CONTEXT] state block, with the turn_intent
+    assert "[LISTENER CONTEXT]" in out[0]["response"]
+    assert "play jazz" in out[0]["response"]
+    # item was the XML block, not the raw "title: ..." pipe string
+    assert "<recommended_track>" in out[0]["response"]
+    assert "Olvidarte" in out[0]["response"]
+
+
+def test_transcript_default_uses_session_memory_and_plain_item():
+    crs = _make_crs()  # defaults: transcript + plain
+    out = crs.batch_chat(_batch())
+    assert "[LISTENER CONTEXT]" not in out[0]["response"]
+    assert "title: Olvidarte" in out[0]["response"]  # plain metadata item
+
+
+def test_echo_retry_regenerates_metadata_echo():
+    crs = _make_crs(conditioning="state", item_format="xml", echo_retries=2)
+
+    class EchoThenGoodLM:
+        def __init__(self):
+            self.calls = 0
+
+        def batch_response_generation(self, sys_prompts, contexts, items):
+            return ["title: Olvidarte | artist: Arjona | tags: x", "ok reply"]
+
+        def response_generation(self, sys_p, context, item, max_new_tokens=512):
+            self.calls += 1
+            return "recovered natural reply"
+
+    crs.lm = EchoThenGoodLM()
+    out = crs.batch_chat(_batch())
+    assert out[0]["response"] == "recovered natural reply"  # echo regenerated
+    assert out[1]["response"] == "ok reply"  # non-echo left alone
