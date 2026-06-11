@@ -38,7 +38,101 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from build_features import Catalog, EmbedMemo, _norm_rows  # noqa: E402
+from build_features import Catalog, _norm_rows  # noqa: E402
+
+
+class NpzEmbedStore:
+    """Chunked float16 embedding store — replaces the JSON memo at train-split
+    scale (250k strings would need ~14GB+ as a Python dict; this caps RAM at
+    the hash index plus lazily-loaded chunks)."""
+
+    def __init__(self, dir_path):
+        import hashlib
+        self._sha = lambda t: hashlib.sha1(t.encode()).hexdigest()
+        self.dir = Path(dir_path)
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.index: dict[str, tuple[str, int]] = {}
+        self._chunks: dict[str, np.ndarray] = {}
+        for f in sorted(self.dir.glob("chunk_*.npz")):
+            keys = np.load(f, allow_pickle=False)["keys"]
+            cid = f.stem
+            for i, k in enumerate(keys):
+                self.index[str(k)] = (cid, i)
+        self._pend_keys: list[str] = []
+        self._pend_vecs: list[np.ndarray] = []
+        self._client = None
+
+    def _matrix(self, cid: str) -> np.ndarray:
+        if cid not in self._chunks:
+            self._chunks[cid] = np.load(self.dir / f"{cid}.npz", allow_pickle=False)["vectors"]
+        return self._chunks[cid]
+
+    def _embed_remote(self, texts: list[str]) -> list[list[float]]:
+        if self._client is None:
+            import os
+
+            from mcrs.embeddings.litellm_client import LiteLLMEmbeddingClient
+            self._client = LiteLLMEmbeddingClient(
+                model_name="openai/Qwen/Qwen3-Embedding-0.6B",
+                api_base="https://api.deepinfra.com/v1/openai",
+                api_key=os.environ.get("DEEPINFRA_API_KEY"),
+                batch_size=64, encoding_format="float")
+        return self._client.embed_batch(texts)
+
+    def add(self, text: str, vec) -> None:
+        h = self._sha(text)
+        if h in self.index or h in set(self._pend_keys):
+            return
+        self._pend_keys.append(h)
+        self._pend_vecs.append(np.asarray(vec, dtype=np.float16))
+
+    def add_hashed(self, h: str, vec) -> None:
+        if h in self.index or h in set(self._pend_keys):
+            return
+        self._pend_keys.append(h)
+        self._pend_vecs.append(np.asarray(vec, dtype=np.float16))
+
+    def get_many(self, texts: list[str], offline: bool = False) -> dict[str, np.ndarray]:
+        pend_idx = {k: i for i, k in enumerate(self._pend_keys)}
+        if not offline:
+            missing = list(dict.fromkeys(
+                t for t in texts
+                if t and self._sha(t) not in self.index and self._sha(t) not in pend_idx))
+            for start in range(0, len(missing), 64):
+                chunk = missing[start:start + 64]
+                for text, vec in zip(chunk, self._embed_remote(chunk)):
+                    self.add(text, vec)
+            pend_idx = {k: i for i, k in enumerate(self._pend_keys)}
+            if len(self._pend_keys) >= 8192:
+                self.flush()
+                pend_idx = {}
+        out: dict[str, np.ndarray] = {}
+        for t in texts:
+            if not t:
+                continue
+            h = self._sha(t)
+            v = None
+            if h in self.index:
+                cid, row = self.index[h]
+                v = self._matrix(cid)[row].astype(np.float32)
+            elif h in pend_idx:
+                v = self._pend_vecs[pend_idx[h]].astype(np.float32)
+            if v is not None:
+                n = float(np.linalg.norm(v))
+                out[t] = v / n if n > 0 else v
+        return out
+
+    def flush(self) -> None:
+        if not self._pend_keys:
+            return
+        cid = f"chunk_{len(list(self.dir.glob('chunk_*.npz'))):05d}"
+        np.savez_compressed(
+            self.dir / f"{cid}.npz",
+            keys=np.asarray(self._pend_keys),
+            vectors=np.vstack(self._pend_vecs).astype(np.float16))
+        for i, k in enumerate(self._pend_keys):
+            self.index[k] = (cid, i)
+        self._pend_keys, self._pend_vecs = [], []
 from mcrs.qu_modules.tag_resolver import (  # noqa: E402
     TagEmbeddingIndex,
     TieredTagResolver,
@@ -197,7 +291,8 @@ def main():
                     help="v2 parquet dir (devset mode: candidate triples source)")
     ap.add_argument("--ground-truth", default="exp/ground_truth/devset.json")
     ap.add_argument("--out", required=True)
-    ap.add_argument("--embed-memo", default="exp/analysis/rerank/raw_msg_memo.json")
+    ap.add_argument("--embed-memo", default="exp/analysis/rerank/raw_msg_store",
+                    help="Directory for the chunked npz embedding store.")
     ap.add_argument("--prefetch-only", action="store_true")
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--num-shards", type=int, default=1)
@@ -215,7 +310,7 @@ def main():
         sessions = sessions[: args.max_sessions]
     print(f"mode={args.mode} sessions={len(sessions)}", flush=True)
 
-    memo = EmbedMemo(Path(args.embed_memo))
+    memo = NpzEmbedStore(args.embed_memo)
     if args.prefetch_only:
         texts: set[str] = set()
         for s in sessions:
