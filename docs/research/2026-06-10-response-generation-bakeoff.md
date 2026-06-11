@@ -99,7 +99,7 @@ python run_inference_blindset.py --tid v0plus_compiler_blindset_A --eval_dataset
 # (or via Modal: run_experiment.py --backend modal --tid v0plus_compiler_blindset_A ...)
 ```
 
-`CRS_BASELINE.batch_chat` reads `response_kwargs` from the config and, when `conditioning: state`,
+`CRS_BASELINE.batch_chat` reads `explanation_kwargs` from the config and, when `conditioning: state`,
 feeds the per-session `ConversationStateV0Plus` (already extracted during retrieval and stashed in
 the QU's `last_traces`) as the compact `[LISTENER CONTEXT]` block instead of the transcript; with
 `item_format: xml` it presents the track as a delimited `<recommended_track>` block with capped tags;
@@ -115,8 +115,8 @@ the QU's `last_traces`) as the compact `[LISTENER CONTEXT]` block instead of the
 ## 8. Enablement status & follow-ups
 
 - **Blind set reproduces 4.2 in a single run.** `configs/v0plus_compiler_blindset_A.yaml`:
-  `lm_type: litellm` + `qwen3-30b-a3b`, plus `response_kwargs: {conditioning: state, item_format: xml,
-  max_tags: 10, echo_retries: 3}`. The devset config stays `dummy` with no `response_kwargs`
+  `explanation_lm_type: litellm` + `qwen3-30b-a3b`, plus `explanation_kwargs: {conditioning: state, item_format: xml,
+  max_tags: 10, echo_retries: 3}`. The devset config stays `dummy` with no `explanation_kwargs`
   (default = legacy transcript behaviour), so only the blind set is affected.
 - **Wired (this branch):** state side-channel exposed to `batch_chat` via the QU's `last_traces`; XML
   track item + capped tags + no-verbatim prompt line; echo/empty regeneration — all in

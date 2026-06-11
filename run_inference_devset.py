@@ -154,7 +154,7 @@ def main(args):
         _vs_spec.loader.exec_module(_vs_mod)
         _vs_mod.resolve_vllm_endpoints_in_qu_kwargs(qu_kwargs)
     music_crs = load_crs_baseline(
-        lm_type=config.lm_type,
+        lm_type=config.get("explanation_lm_type", config.get("lm_type", "dummy")),
         retrieval_type=config.retrieval_type,
         qu_type=config.get("qu_type", "passthrough"),
         qu_kwargs=resolve_qu_kwargs_placeholders(
@@ -173,8 +173,8 @@ def main(args):
         dtype=getattr(torch, config.get("dtype", "bfloat16")),
         retrieval_topk=int(config.get("retrieval_topk", 20)),
         retrieval_config=_to_plain_dict(config.get("retrieval_config")),
-        lm_kwargs=_to_plain_dict(config.get("lm_kwargs")),
-        response_kwargs=_to_plain_dict(config.get("response_kwargs")),
+        lm_kwargs=_to_plain_dict(config.get("explanation_lm_kwargs", config.get("lm_kwargs"))),
+        response_kwargs=_to_plain_dict(config.get("explanation_kwargs", config.get("response_kwargs"))),
     )
     db = load_dataset(config.test_dataset_name, split="test")
     if args.session_ids_file is not None:

@@ -21,14 +21,14 @@
 
 # ─────────────────────────────────────────────────────────────────────────────
 # EXPLANATION / RESPONSE-GENERATION LM  (NOT retrieval)
-# `lm_type` selects ONLY the model that writes the natural-language reply shown to
-# the listener (`predicted_response`). Retrieval/ranking is configured separately
-# below via `retrieval_type` + `qu_type`/`qu_kwargs` and is unaffected by this.
+# `explanation_lm_type` selects ONLY the model that writes the natural-language
+# reply shown to the listener (`predicted_response`). Retrieval/ranking is
+# configured separately below via `retrieval_type` + `qu_type`/`qu_kwargs`.
 #   "dummy"   = skip explanation generation (emit an empty predicted_response)
-#   "litellm" = generate via a hosted model in `lm_kwargs` (see blindset config)
+#   "litellm" = generate via a hosted model in `explanation_lm_kwargs` (see blindset config)
 # Devset keeps "dummy": retrieval metrics (nDCG/Hit) don't depend on the reply text.
 # ─────────────────────────────────────────────────────────────────────────────
-lm_type: "dummy"
+explanation_lm_type: "dummy"
 retrieval_type: "bm25"
 
 qu_type: "v0plus_compiler"

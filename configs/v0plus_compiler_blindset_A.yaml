@@ -8,21 +8,21 @@
 
 # ─────────────────────────────────────────────────────────────────────────────
 # EXPLANATION / RESPONSE-GENERATION LM  (NOT retrieval)
-# `lm_type`/`lm_kwargs`/`response_kwargs` configure ONLY the model that writes the
-# natural-language reply (`predicted_response`). Retrieval/ranking is separate
-# (`retrieval_type` + `qu_type`/`qu_kwargs`) and unaffected.
+# `explanation_lm_type` / `explanation_lm_kwargs` / `explanation_kwargs` configure
+# ONLY the model that writes the natural-language reply (`predicted_response`).
+# Retrieval/ranking is separate (`retrieval_type` + `qu_type`/`qu_kwargs`).
 #
 # Enabled for the blind set only (devset stays "dummy"). Reproduces the best
 # Blind-A LLM-judge result (4.2/5) IN A SINGLE RUN: qwen3-30b-a3b (non-thinking
 # instruct) + state-conditioned input + XML track item + echo-retry.
 # See docs/research/2026-06-10-response-generation-bakeoff.md.
 # ─────────────────────────────────────────────────────────────────────────────
-lm_type: "litellm"
-lm_kwargs:
+explanation_lm_type: "litellm"
+explanation_lm_kwargs:
   model_name: "openrouter/qwen/qwen3-30b-a3b-instruct-2507"
   temperature: 0.7
   max_tokens: 2048
-response_kwargs:
+explanation_kwargs:
   conditioning: "state"   # feed the extracted ConversationStateV0Plus block, not the raw transcript
   item_format: "xml"      # present the track as <recommended_track> with capped tags (echo-resistant)
   max_tags: 10
