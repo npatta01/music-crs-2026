@@ -60,7 +60,7 @@ def build_examples(sessions, cat, user_cf, cf_idx):
             examples.append({
                 "session_id": sess["session_id"],
                 "turn": tn, "gt": gt, "played": played,
-                "uvec": uvec,
+                "uvec": uvec, "msg": sess["user_text_by_turn"].get(tn, ""),
                 "cats": tuple(sess[f] for f in CAT_FIELDS),
             })
     return examples
@@ -70,7 +70,7 @@ class ContextEncoder(nn.Module):
     def __init__(self, cat_sizes, cf_dim=128, out_dim=128, hidden=512):
         super().__init__()
         self.embs = nn.ModuleList([nn.Embedding(n, 16) for n in cat_sizes])
-        in_dim = cf_dim * 4 + 16 * len(cat_sizes) + 10  # turn onehot(8)+has_hist+has_user
+        in_dim = cf_dim * 4 + 1024 + 16 * len(cat_sizes) + 10  # +msg emb
         self.net = nn.Sequential(
             nn.Linear(in_dim, hidden), nn.ReLU(),
             nn.Linear(hidden, hidden), nn.ReLU(),
@@ -84,10 +84,10 @@ class ContextEncoder(nn.Module):
 
 
 class TrackTower(nn.Module):
-    def __init__(self, cf_dim=128, prior_dim=3, out_dim=128, hidden=256):
+    def __init__(self, cf_dim=128, prior_dim=3, meta_dim=1024, out_dim=128, hidden=256):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(cf_dim + prior_dim, hidden), nn.ReLU(),
+            nn.Linear(cf_dim + prior_dim + meta_dim, hidden), nn.ReLU(),
             nn.Linear(hidden, out_dim),
         )
 
@@ -140,7 +140,14 @@ def main():
         np.array([cat.era_pop_pct.get(t, cat.pop_pct.get(t, 0.0)) for t in cf_ids]),
         np.array([cat.within_artist_pop.get(t, 0.0) for t in cf_ids]),
     ], axis=1), dtype=torch.float32)
-    trk_in = torch.cat([cf, priors], dim=1).to(device)
+    meta_field = "metadata_qwen3_embedding_0_6b"
+    meta_rows = np.zeros((n_tracks, 1024), dtype=np.float32)
+    midx = cat.vec_idx.get(meta_field, {})
+    for i, t in enumerate(cf_ids):
+        j = midx.get(t)
+        if j is not None:
+            meta_rows[i] = cat.vec[meta_field][j]
+    trk_in = torch.cat([cf, priors, torch.tensor(meta_rows)], dim=1).to(device)
     # popularity^0.75 negative-sampling distribution
     pop = np.array([cat.pop_pct.get(t, 0.0) for t in cf_ids]) + 0.01
     neg_p = pop ** 0.75
@@ -187,6 +194,9 @@ def main():
     print(f"  devset test examples: {len(test_ex)} ({len(test_sessions)} sessions)", flush=True)
 
     zero = np.zeros(128, dtype=np.float32)
+    zero_msg = np.zeros(1024, dtype=np.float32)
+    from build_train_features import NpzEmbedStore
+    store = NpzEmbedStore('exp/analysis/rerank/raw_msg_store')
 
     def ctx_arrays(batch):
         cf_feats, cat_ids, scalars = [], [], []
@@ -204,7 +214,9 @@ def main():
                 n = np.linalg.norm(d)
                 driftv = d / n if n > 0 else zero
             uv = ex["uvec"] if ex["uvec"] is not None else zero
-            cf_feats.append(np.concatenate([uv, lastv, centv, driftv]))
+            mv = store.get_many([ex["msg"]], offline=True).get(ex["msg"]) if ex["msg"] else None
+            cf_feats.append(np.concatenate([uv, lastv, centv, driftv,
+                                            mv if mv is not None else zero_msg]))
             cat_ids.append([cat_vocab[i].get(v, len(cat_vocab[i])) for i, v in enumerate(ex["cats"])])
             turn_onehot = np.zeros(8, dtype=np.float32)
             turn_onehot[min(ex["turn"], 8) - 1] = 1.0
