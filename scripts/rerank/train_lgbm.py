@@ -103,6 +103,9 @@ def main():
     ap.add_argument("--user-dropout", type=float, default=0.25,
                     help="Fraction of TRAIN sessions whose user_cf features are "
                          "zeroed (cold-start robustness; Gemini review rec).")
+    ap.add_argument("--stage1-scores", default="",
+                    help="Optional parquet of (session_id, turn_number, track_id, "
+                         "stage1_score) to join as an extra feature (stage-2 stack).")
     args = ap.parse_args()
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -115,6 +118,11 @@ def main():
     for c in CATEGORICALS:
         if c in df.columns:
             df[c] = df[c].fillna("").astype("category")
+    if args.stage1_scores:
+        s1 = pd.read_parquet(args.stage1_scores)
+        df = df.merge(s1, on=["session_id", "turn_number", "track_id"], how="left")
+        df["stage1_score"] = df["stage1_score"].fillna(df["stage1_score"].min()).astype(np.float32)
+        print(f"  joined stage1_score from {args.stage1_scores}", flush=True)
     feature_cols = [c for c in df.columns if c not in ID_COLS and c not in RRF_COLS]
     print(f"  {len(df):,} rows, {len(feature_cols)} features, "
           f"{df.groupby(['session_id','turn_number']).ngroups} turns", flush=True)

@@ -101,3 +101,22 @@ lift was user memorization. Cohorts: new_artist 0.147→0.267, cold users
 +12% (no regression), every turn improves. Train 0.699 vs val 0.278: model
 memorizes train turns → train-split scale-up (real Modal pools) is the next
 data unlock. Projected overall devset ≈0.167 vs shipped 0.1374.
+
+## Stage-1 / Stage-2 experiment (train-split scale-up probe, 2026-06-11)
+
+$5 probe of the cheap data-scaling path: raw-only model (no state, no
+retrieval; conversation proxies incl. resolver-on-raw-text) trained on all
+121k train-split turns with pool-mimicking sampled negatives (24.4M rows).
+
+- **Stage-1 direct transfer to devset real pools: FAILED** — ndcg@20 0.055 vs
+  RRF 0.187 (t=−13). Real pools are uniformly query-matched; sampled-negative
+  boundaries collapse. Gemini's distribution-mismatch warning confirmed in
+  full.
+- **Stage-2 stack (stage1_score as v2 feature): +0.003** (0.2418 vs 0.2389) —
+  no meaningful prior value either.
+
+**Conclusion:** train-split scale-up requires REAL retrieved pools
+(extraction + retrieval, ~$300–400) or doesn't happen. The raw-feature
+pipeline (`build_train_features.py`) remains useful: its conversation-proxy
+features (resolver-on-raw-text tag overlap, lexical mentions, negation
+rejection) separated strongly and can be ported into the devset feature set.
