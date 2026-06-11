@@ -45,10 +45,13 @@ def turn_metrics(df: pd.DataFrame, score_col: str, ascending: bool) -> pd.DataFr
     rows = []
     for (sid, tn), g in df.groupby(["session_id", "turn_number"], sort=False):
         order = g[score_col].rank(ascending=ascending, method="first", na_option="bottom")
+        gt_row = g[g["label"] == 1]
         gt_rank = float(order[g["label"] == 1].iloc[0])
         rows.append({"session_id": sid, "turn_number": tn,
                      "gt_rank": gt_rank, "ndcg20": ndcg20(gt_rank),
-                     "hit20": float(gt_rank <= 20), "hit1": float(gt_rank <= 1)})
+                     "hit20": float(gt_rank <= 20), "hit1": float(gt_rank <= 1),
+                     "request_type": str(gt_row["request_type"].iloc[0]) if "request_type" in g else "",
+                     "goal_category": str(gt_row["goal_category"].iloc[0]) if "goal_category" in g else ""})
     return pd.DataFrame(rows)
 
 
@@ -157,6 +160,19 @@ def main():
         report[arm_name]["top_features"] = {k: float(v) for k, v in imp.head(30).items()}
         model.booster_.save_model(str(out / f"model_{arm_name}.txt"))
         if arm_name == "full":
+            lines.append("\n## Per-cohort conversion (full arm vs RRF, test)\n")
+            cohort = merged.copy()
+            cohort["request_type"] = cohort.get("request_type_m", cohort.get("request_type", ""))
+            cohort["goal_category"] = cohort.get("goal_category_m", cohort.get("goal_category", ""))
+            for dim in ["request_type", "goal_category", "turn_number"]:
+                lines.append(f"\n### by {dim}\n")
+                lines.append("| value | n | RRF ndcg@20 | model ndcg@20 | model hit@20 |")
+                lines.append("|---|---:|---:|---:|---:|")
+                for val, grp in cohort.groupby(dim):
+                    if len(grp) < 15:
+                        continue
+                    lines.append(f"| {val} | {len(grp)} | {grp.ndcg20_rrf.mean():.4f} | "
+                                 f"{grp.ndcg20_m.mean():.4f} | {grp.hit20_m.mean():.4f} |")
             lines.append("\n## Top-25 features (gain, full arm)\n")
             lines.append("| feature | importance |")
             lines.append("|---|---:|")
