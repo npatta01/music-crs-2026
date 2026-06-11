@@ -63,21 +63,27 @@ def train_arm(df: pd.DataFrame, feature_cols: list[str], cats: list[str],
     tr_x, tr_y, tr_g, _ = prep(df[df.session_id.isin(train_sids)])
     va_x, va_y, va_g, _ = prep(df[df.session_id.isin(val_sids)])
 
+    # Tuned for ~1,258-candidate pools with deep GTs:
+    # - truncation_level 200 (was 40): gradients must reach GTs at rank 51-200,
+    #   half the addressable misses; 40 starved them.
+    # - lr 0.025 + patience 200 (was 0.05/100): v1 stopped at 110 trees —
+    #   step too coarse for 5M+ rows.
+    # - num_leaves 127 (was 63): capacity matched to data scale.
     model = lgb.LGBMRanker(
         objective="lambdarank",
-        n_estimators=2000,
-        learning_rate=0.05,
-        num_leaves=63,
+        n_estimators=4000,
+        learning_rate=0.025,
+        num_leaves=127,
         min_child_samples=50,
         random_state=seed,
-        lambdarank_truncation_level=40,
+        lambdarank_truncation_level=200,
         n_jobs=-1,
     )
     model.fit(
         tr_x, tr_y, group=tr_g,
         eval_set=[(va_x, va_y)], eval_group=[va_g],
         eval_at=[20], eval_metric="ndcg",
-        callbacks=[lgb.early_stopping(100, verbose=False), lgb.log_evaluation(200)],
+        callbacks=[lgb.early_stopping(200, verbose=False), lgb.log_evaluation(400)],
         categorical_feature=[c for c in cats if c in feature_cols],
     )
     return model
