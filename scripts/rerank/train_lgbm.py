@@ -96,21 +96,22 @@ def main():
     import pyarrow.dataset as pds
     dataset = pds.dataset(args.features)
     filt = (pc.field("best_branch_rank") <= args.max_pool_rank) if args.max_pool_rank > 0 else None
-    tbl = dataset.to_table(filter=filt)
-    names = tbl.schema.names
-    n = tbl.num_rows
-    print(f"  {n:,} rows, {len(names)} cols", flush=True)
+    names = dataset.schema.names
 
-    # ids/label/cohorts as a slim pandas frame
-    slim_cols = list(dict.fromkeys(ID_COLS + COHORT_COLS))
-    slim = tbl.select([c for c in slim_cols if c in names]).to_pandas()
+    # ids/label/cohorts as a slim pandas frame (small column subset only)
+    slim_cols = [c for c in dict.fromkeys(ID_COLS + COHORT_COLS) if c in names]
+    slim = dataset.to_table(columns=slim_cols, filter=filt).to_pandas()
+    n = len(slim)
+    print(f"  {n:,} rows, {len(names)} cols", flush=True)
 
     feature_cols = [c for c in names if c not in ID_COLS and c not in RRF_COLS]
     stage1 = args.stage1_scores != ""
     cat_idx_map = {}
     X = np.empty((n, len(feature_cols) + (1 if stage1 else 0)), dtype=np.float32)
     for j, c in enumerate(feature_cols):
-        col = tbl.column(c)
+        # column-streaming: one ~160MB column in memory at a time, never the
+        # full float64 table (which was ~20GB and thrashed the 18GB machine)
+        col = dataset.to_table(columns=[c], filter=filt).column(c)
         if c in CATEGORICALS:
             codes, _ = pd.factorize(col.to_pandas().fillna(""), sort=True)
             X[:, j] = codes.astype(np.float32)
@@ -118,8 +119,9 @@ def main():
         else:
             X[:, j] = np.nan_to_num(
                 col.to_numpy(zero_copy_only=False).astype(np.float32, copy=False), nan=0.0)
-    y = tbl.column("label").to_numpy(zero_copy_only=False).astype(np.int8)
-    del tbl
+        del col
+    y = dataset.to_table(columns=["label"], filter=filt).column("label").to_numpy(
+        zero_copy_only=False).astype(np.int8)
     gc.collect()
     print(f"  packed X {X.shape} ({X.nbytes/1e9:.1f} GB)", flush=True)
 
@@ -217,6 +219,7 @@ def main():
         rrf_tbl = pds2.dataset(args.features).to_table(
             columns=["session_id", "turn_number", "track_id", "rrf_rank"], filter=filt)
         rrf_df = rrf_tbl.to_pandas()
+        rrf_df = rrf_df[rrf_df.session_id.isin(test_sids)]
         test_slim = test_slim.merge(rrf_df, on=["session_id", "turn_number", "track_id"], how="left")
         del rrf_tbl, rrf_df
 
