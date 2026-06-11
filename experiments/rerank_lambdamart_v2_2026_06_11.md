@@ -120,3 +120,9 @@ retrieval; conversation proxies incl. resolver-on-raw-text) trained on all
 pipeline (`build_train_features.py`) remains useful: its conversation-proxy
 features (resolver-on-raw-text tag overlap, lexical mentions, negation
 rejection) separated strongly and can be ported into the devset feature set.
+
+**Correction note (2026-06-11):** the original stage-1 transfer eval had a bug
+— devset message-embedding features were silently all-zero (store only had
+train-split strings prefetched). Re-evaluated after fixing: ndcg@20 0.052 vs
+RRF 0.187 (t=−13.05) — statistically identical. The bug was real but
+immaterial; the distribution-mismatch verdict stands.
