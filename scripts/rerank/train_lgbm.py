@@ -89,6 +89,12 @@ def main():
                     help="Apply monotone-decreasing constraints to violation "
                          "features (is_played_track, rejected_*_exact, "
                          "violates_new_artist).")
+    ap.add_argument("--derive-interactions", action="store_true",
+                    help="Append hand-built interaction/consensus features "
+                         "(similarity-family products+aggregates, branch-family "
+                         "hits, rank variance) — the explicit version of what "
+                         "stage1_score and n_branches capture implicitly. "
+                         "Excludes mean-reciprocal-rank (== RRF, banned).")
     ap.add_argument("--reuse-bins", action="store_true",
                     help="Load previously saved train/val .bin datasets (same "
                          "out-dir, same arm) instead of rebinning — for sweeps.")
@@ -120,8 +126,38 @@ def main():
         extra_names = [c for c in pq_meta.read_schema(args.extra_features).names
                        if c not in ("session_id", "turn_number", "track_id")]
     cat_idx_map = {}
-    X = np.empty((n, len(feature_cols) + (1 if stage1 else 0) + len(extra_names)),
-                 dtype=np.float32)
+
+    def derived_spec(cols):
+        have = set(cols)
+        SIM = [c for c in ["cf_last", "cf_centroid", "user_cf", "clap_last",
+                           "clap_centroid", "siglip_centroid", "msg_meta_cos",
+                           "msg_attr_cos", "q06_metadata_cos", "tag_emb_cos"]
+               if c in have]
+        PRODUCTS = [(a, b) for a, b in
+                    [("user_cf", "cf_last"), ("user_cf", "cf_centroid"),
+                     ("cf_last", "cf_centroid"), ("cf_centroid", "clap_centroid"),
+                     ("cf_last", "clap_last"), ("msg_meta_cos", "cf_centroid"),
+                     ("user_cf", "msg_meta_cos"), ("clap_centroid", "siglip_centroid")]
+                    if a in have and b in have]
+        FAMILIES = {
+            "fam_text": [c for c in cols if c.startswith("hit__") and ("bm25" in c or "qwen" in c)],
+            "fam_audio": [c for c in cols if c.startswith("hit__") and ("clap" in c or "audio" in c)],
+            "fam_visual": [c for c in cols if c.startswith("hit__") and "siglip" in c],
+            "fam_cf": [c for c in cols if c.startswith("hit__") and "cf_bpr" in c],
+            "fam_lookup": [c for c in cols if c.startswith("hit__") and "lookup" in c],
+        }
+        names_out = ([f"x_{a}__{b}" for a, b in PRODUCTS]
+                     + ["sim_mean", "sim_std", "sim_min", "sim_max"]
+                     + list(FAMILIES) + ["fam_count", "rank_var_hit", "rank_gap12"])
+        return SIM, PRODUCTS, FAMILIES, names_out
+
+    _base_cols = ([c for c in names if c not in ID_COLS and c not in RRF_COLS]
+                  + (["stage1_score"] if args.stage1_scores else []) + extra_names)
+    _SIM, _PRODUCTS, _FAMILIES, _DERIVED_NAMES = derived_spec(_base_cols) \
+        if args.derive_interactions else ([], [], {}, [])
+    N_DERIVED = len(_DERIVED_NAMES)
+    X = np.empty((n, len(feature_cols) + (1 if stage1 else 0) + len(extra_names)
+                  + N_DERIVED), dtype=np.float32)
     for j, c in enumerate(feature_cols):
         # column-streaming: one ~160MB column in memory at a time, never the
         # full float64 table (which was ~20GB and thrashed the 18GB machine)
@@ -190,6 +226,42 @@ def main():
         feature_cols = feature_cols + ["stage1_score"]
     if extra_names:
         feature_cols = feature_cols + extra_names
+
+    if args.derive_interactions:
+        ci = {c: i for i, c in enumerate(feature_cols)}
+        SIM, PRODUCTS, FAMILIES = _SIM, _PRODUCTS, _FAMILIES
+        rank_cols = [c for c in feature_cols if c.startswith("rank__")]
+        new_names = _DERIVED_NAMES
+        print(f"  derived spec: {len(PRODUCTS)} products, {len(SIM)} sims, "
+              f"{len(FAMILIES)} families -> {len(new_names)} cols", flush=True)
+        dbase = len(feature_cols) + (1 if stage1 else 0) + len(extra_names)
+        Xd = X[:, dbase:dbase + N_DERIVED]  # view into preallocated tail
+        k = 0
+        for a, b in PRODUCTS:
+            Xd[:, k] = X[:, ci[a]] * X[:, ci[b]]; k += 1
+        simM = X[:, [ci[c] for c in SIM]]
+        Xd[:, k] = simM.mean(axis=1); k += 1
+        Xd[:, k] = simM.std(axis=1); k += 1
+        Xd[:, k] = simM.min(axis=1); k += 1
+        Xd[:, k] = simM.max(axis=1); k += 1
+        fam_start = k
+        for fam, cols in FAMILIES.items():
+            Xd[:, k] = (X[:, [ci[c] for c in cols]].max(axis=1)
+                        if cols else 0.0); k += 1
+        Xd[:, k] = Xd[:, fam_start:k].sum(axis=1); k += 1
+        # rank variance + best/second gap among HITTING branches (sentinel 501 = miss)
+        R = X[:, [ci[c] for c in rank_cols]].copy()
+        R[R > 500] = np.nan
+        with np.errstate(invalid="ignore"):
+            Xd[:, k] = np.nan_to_num(np.nanstd(R, axis=1), nan=0.0); k += 1
+            Rs = np.sort(np.nan_to_num(R, nan=1e9), axis=1)
+            gap = Rs[:, 1] - Rs[:, 0]
+            gap[Rs[:, 1] >= 1e9] = 0.0
+            Xd[:, k] = gap; k += 1
+        del simM, R, Rs
+        gc.collect()
+        feature_cols = feature_cols + new_names
+        print(f"  derived {len(new_names)} interaction/consensus features", flush=True)
 
     # user-grouped split
     sess_user = {str(r["session_id"]): str(r["user_id"])
