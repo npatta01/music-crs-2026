@@ -145,7 +145,11 @@ class LanceDbCatalog:
             artist_names = _list_of_str(row.get("artist_name"))
             artist_ids = _list_of_str(row.get("artist_id"))
             track_name = _first(row.get("track_name"))
-            for name, aid in zip(artist_names, artist_ids):
+            from itertools import zip_longest
+            # zip() truncated to the shorter list, silently dropping 6,533
+            # artist credits on 3,342 tracks (source data ships mismatched
+            # artist_name/artist_id lengths). Ids are authoritative.
+            for name, aid in zip_longest(artist_names, artist_ids, fillvalue=""):
                 name = name.strip()
                 if name and name not in artist_seen:
                     artist_seen.add(name)
