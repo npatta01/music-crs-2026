@@ -175,53 +175,48 @@ def main():
     gc.collect()
     print(f"  packed X {X.shape} ({X.nbytes/1e9:.1f} GB)", flush=True)
 
-    if stage1:
-        # memory-light join: both sides sorted by the (sid, turn, track) triple,
-        # then scores scattered back — no pandas merge frames.
-        import pyarrow.parquet as pq_
-        s1t = pq_.read_table(args.stage1_scores)
-        key_left = (slim.session_id + "|" + slim.turn_number.astype(str) + "|"
-                    + slim.track_id).to_numpy()
-        key_right = np.array([f"{a}|{b}|{c}" for a, b, c in zip(
-            s1t.column("session_id").to_pylist(),
-            s1t.column("turn_number").to_pylist(),
-            s1t.column("track_id").to_pylist())])
-        sc = s1t.column("stage1_score").to_numpy(zero_copy_only=False).astype(np.float32)
-        del s1t
-        lo = np.argsort(key_left, kind="stable")
-        ro = np.argsort(key_right, kind="stable")
-        assert len(key_left) == len(key_right) and \
-            (key_left[lo[:1000]] == key_right[ro[:1000]]).all(), "stage1 rows misaligned"
-        col = np.empty(n, dtype=np.float32)
-        col[lo] = sc[ro]
-        X[:, len(feature_cols)] = col
-        del key_left, key_right, sc, lo, ro, col
-        gc.collect()
-        print("  joined stage1_score (sorted alignment)", flush=True)
+    # int-key join machinery (string keys at 20M rows cost ~5GB; ints ~160MB)
+    _sid_code = {v: i for i, v in enumerate(pd.unique(slim.session_id))}
+    _trk_code = {v: i for i, v in enumerate(pd.unique(slim.track_id))}
 
-    if extra_names:
+    def _int_keys(sids, turns, tracks):
+        out = np.empty(len(sids), dtype=np.int64)
+        for i, (a, b, c) in enumerate(zip(sids, turns, tracks)):
+            out[i] = ((_sid_code[a] * 10 + int(b)) * 50000) + _trk_code[c]
+        return out
+
+    key_left = _int_keys(slim.session_id.to_numpy(), slim.turn_number.to_numpy(),
+                         slim.track_id.to_numpy())
+    lo = np.argsort(key_left, kind="stable")
+
+    def _aligned_join(path, col_names, base):
         import pyarrow.parquet as pq_
-        ext = pq_.read_table(args.extra_features)
-        key_left = (slim.session_id + "|" + slim.turn_number.astype(str) + "|"
-                    + slim.track_id).to_numpy()
-        key_right = np.array([f"{a}|{b}|{c}" for a, b, c in zip(
-            ext.column("session_id").to_pylist(),
-            ext.column("turn_number").to_pylist(),
-            ext.column("track_id").to_pylist())])
-        lo = np.argsort(key_left, kind="stable")
+        t = pq_.read_table(path)
+        key_right = _int_keys(t.column("session_id").to_pylist(),
+                              t.column("turn_number").to_pylist(),
+                              t.column("track_id").to_pylist())
         ro = np.argsort(key_right, kind="stable")
-        assert len(key_left) == len(key_right) and \
-            (key_left[lo] == key_right[ro]).all(), "extra-features rows misaligned"
-        base = len(feature_cols) + (1 if stage1 else 0)
-        for k, cname in enumerate(extra_names):
-            vals = ext.column(cname).to_numpy(zero_copy_only=False).astype(np.float32)
+        assert len(key_right) == n and (key_left[lo] == key_right[ro]).all(), \
+            f"{path}: rows misaligned"
+        for k, cname in enumerate(col_names):
+            vals = t.column(cname).to_numpy(zero_copy_only=False).astype(np.float32)
             col = np.empty(n, dtype=np.float32)
             col[lo] = vals[ro]
             X[:, base + k] = col
-        del key_left, key_right, lo, ro
+        del t, key_right, ro
         gc.collect()
-        print(f"  joined {len(extra_names)} extra features (sorted alignment)", flush=True)
 
+    if stage1:
+        _aligned_join(args.stage1_scores, ["stage1_score"], len(feature_cols))
+        print("  joined stage1_score (int-key alignment)", flush=True)
+
+    if extra_names:
+        _aligned_join(args.extra_features, extra_names,
+                      len(feature_cols) + (1 if stage1 else 0))
+        print(f"  joined {len(extra_names)} extra features (int-key alignment)", flush=True)
+
+    del key_left, lo
+    gc.collect()
     if stage1:
         feature_cols = feature_cols + ["stage1_score"]
     if extra_names:
@@ -234,8 +229,9 @@ def main():
         new_names = _DERIVED_NAMES
         print(f"  derived spec: {len(PRODUCTS)} products, {len(SIM)} sims, "
               f"{len(FAMILIES)} families -> {len(new_names)} cols", flush=True)
-        dbase = len(feature_cols) + (1 if stage1 else 0) + len(extra_names)
-        Xd = X[:, dbase:dbase + N_DERIVED]  # view into preallocated tail
+        dbase = X.shape[1] - N_DERIVED  # tail-anchored: immune to bookkeeping drift
+        Xd = X[:, dbase:]
+        assert Xd.shape[1] == N_DERIVED, (Xd.shape, N_DERIVED)
         k = 0
         for a, b in PRODUCTS:
             Xd[:, k] = X[:, ci[a]] * X[:, ci[b]]; k += 1
