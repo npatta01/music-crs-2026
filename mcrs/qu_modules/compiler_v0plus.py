@@ -318,6 +318,22 @@ class CompilerConfig:
     release_year_filter_min_keep: int = 50
     routing_boost: dict[str, float] = field(default_factory=dict)
 
+    # Audit 2026-06-12 (branch claude/busy-ishizaka-f3d4a7, full-devset trace):
+    # kind-insensitive rejection expansion hard-dropped whole fuzzy-matched
+    # artist discographies (228 GT kills / 8000 turns). Policy:
+    #   "expanded"   - legacy: drop track_ids AND every track of artist_ids
+    #   "track_only" - drop only directly-matched track_ids (artist-level
+    #                  rejections stay soft)
+    rejection_drop_policy: str = "expanded"
+    # Release-date hard filter is wrong on 43% of the turns it fires (48 GT
+    # kills). False disables the hard mask (era branches keep the soft signal).
+    enable_release_date_hard_filter: bool = True
+    # Post-fusion soft adjustments destroyed 20/37 pivot-turn GT hits.
+    soft_adjust_skip_intents: tuple[str, ...] = field(default_factory=tuple)
+    # Scrub negated spans from turn_intent before the BM25 tag clause
+    # (negation was inverting into positive tag signal on ~4% of turns).
+    scrub_negated_intent_tags: bool = False
+
     def __post_init__(self) -> None:
         # Partial config dicts inherit standard boosts without mutating the
         # caller-owned mapping passed to the dataclass constructor.
@@ -697,7 +713,10 @@ class V0PlusCompiler:
         fused = self._rrf_fuse_weighted(weighted_pools, k=self.cfg.rrf_k)
 
         # 7. Soft (de)promotes
-        adjusted = self._apply_soft_adjustments(fused, rs)
+        if rs.state.intent_mode.value in self.cfg.soft_adjust_skip_intents:
+            adjusted = fused
+        else:
+            adjusted = self._apply_soft_adjustments(fused, rs)
 
         # 8. Backfill to topk (popularity-sorted, mask + hard-drop-respecting)
         ranked = [tid for tid, _ in adjusted]
@@ -809,6 +828,8 @@ class V0PlusCompiler:
         drop: set[str] = set()
         for rej in rs.resolved_rejections.values():
             drop.update(rej.track_ids)
+            if self.cfg.rejection_drop_policy == "track_only":
+                continue
             for aid in rej.artist_ids:
                 drop.update(self.catalog.tracks_by_artist_id(aid))
         return drop
@@ -892,7 +913,10 @@ class V0PlusCompiler:
         intent = state.turn_intent.strip()
         if intent:
             per_field.setdefault("track_name", []).append(intent)
-            per_field.setdefault("tag_list", []).append(intent)
+            tag_intent = (self._strip_negated_spans(intent)
+                          if self.cfg.scrub_negated_intent_tags else intent)
+            if tag_intent:
+                per_field.setdefault("tag_list", []).append(tag_intent)
 
         # Emit one FieldQuery per term so each entity contributes a separate
         # MatchQuery to tantivy's Boolean SHOULD. Joining all terms into a
@@ -971,6 +995,17 @@ class V0PlusCompiler:
     # None to skip the branch). Branches reference templates by `query_id`.
     # New `query_id`s are added by writing a `_build_<name>_query_string`
     # method and registering it in `_query_builders` below.
+
+    _NEGATION_SCRUB_RE = __import__("re").compile(
+        r"\b(?:not|no|without|don'?t want|nothing|never|avoid(?:ing)?|"
+        r"other than|except|besides|instead of)\b"
+        r"(?:\s+\S+){0,4}", __import__("re").I)
+
+    @classmethod
+    def _strip_negated_spans(cls, text: str) -> str:
+        """Remove negation cues plus their 4-token window so negated concepts
+        don't become positive BM25 tag signal."""
+        return " ".join(cls._NEGATION_SCRUB_RE.sub(" ", text).split())
 
     def _build_dense_query_string(self, rs: ResolvedConversationState) -> str | None:
         """`query_id="intent"` — canonical Qwen3/BM25-shaped query string.
@@ -1269,6 +1304,8 @@ class V0PlusCompiler:
         are valid candidates."""
         all_ids = set(self.catalog.all_track_ids())
         valid = all_ids
+        if not self.cfg.enable_release_date_hard_filter:
+            return valid
         for hf in state.hard_filters:
             if hf.field != "release_date":
                 continue

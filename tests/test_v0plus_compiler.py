@@ -1700,3 +1700,42 @@ def test_release_year_filter_skips_when_too_aggressive():
                               _ryr_cfg(release_year_filter_min_keep=1))
     mask = compiler._release_date_mask(rs.state)
     assert mask == set(catalog.all_track_ids())  # unchanged (no in-range tracks)
+
+
+# ---------------------------------------------------------------------------
+# 2026-06-12 audit bugfix knobs
+# ---------------------------------------------------------------------------
+
+
+def test_rejection_drop_policy_track_only_keeps_artist_discography():
+    catalog = _catalog()
+    state = _state(
+        explicit_rejections=[ExplicitRejection(kind="track", value="Cure for Pain", source_turn=1)],
+    )
+    rs = _resolve(state, catalog)
+    legacy = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(),
+                            CompilerConfig(rejection_drop_policy="expanded"))
+    fixed = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(),
+                           CompilerConfig(rejection_drop_policy="track_only"))
+    assert "t-morphine-2" in legacy._resolved_rejection_drop_set(rs)
+    assert "t-morphine-2" not in fixed._resolved_rejection_drop_set(rs)
+    assert "t-morphine-1" in fixed._resolved_rejection_drop_set(rs)
+
+
+def test_release_date_hard_filter_gate():
+    catalog = _catalog()
+    state = _state(hard_filters=[HardFilter(field="release_date", op="<",
+                                            end="1990-01-01", source_turn=1)])
+    rs = _resolve(state, catalog)
+    on = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(),
+                        CompilerConfig(enable_release_date_hard_filter=True))
+    off = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(),
+                         CompilerConfig(enable_release_date_hard_filter=False))
+    assert len(off._release_date_mask(rs.state)) > len(on._release_date_mask(rs.state))
+
+
+def test_strip_negated_spans():
+    f = V0PlusCompiler._strip_negated_spans
+    assert "experimental" not in f("something upbeat but not experimental noise rock")
+    assert "upbeat" in f("something upbeat but not experimental")
+    assert f("rock music") == "rock music"
