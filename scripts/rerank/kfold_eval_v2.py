@@ -74,6 +74,10 @@ def main():
     ap.add_argument("--seed", type=int, default=13)
     ap.add_argument("--num-boost-round", type=int, default=3000)
     ap.add_argument("--early-stopping", type=int, default=150)
+    ap.add_argument("--fold-range", default="0-4",
+                    help="Inclusive fold range for this process (memory sharding).")
+    ap.add_argument("--finalize", action="store_true",
+                    help="Merge per-fold partial scores and emit metrics.")
     args = ap.parse_args()
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -94,7 +98,10 @@ def main():
     base_cols = feature_cols + extra_names
     SIM, PRODUCTS, FAMILIES, derived_names = derived_spec(base_cols)
     all_cols = base_cols + derived_names
-    X = np.empty((n, len(all_cols)), dtype=np.float32)
+    # memmap: the 12.2GB matrix lives on SSD; the OS pages/evicts at will, so
+    # resident peak = the per-fold training copy (~8GB), not X itself.
+    X = np.lib.format.open_memmap(str(out / "X.npy"), mode="w+",
+                                  dtype=np.float32, shape=(n, len(all_cols)))
     cat_idx = []
     for j, c in enumerate(feature_cols):
         col = dataset.to_table(columns=[c]).column(c)
@@ -195,7 +202,8 @@ def main():
 
     scores_all = np.full(n, np.nan, dtype=np.float32)
     best_iters = []
-    for fold in range(args.folds):
+    fold_lo, fold_hi = (int(x) for x in args.fold_range.split("-"))
+    for fold in range(fold_lo, fold_hi + 1):
         # nested split: 15% of this fold's TRAIN users -> early-stop val
         tr_users = [u for u, f in fold_of_user.items() if f != fold]
         rng_f = random.Random(args.seed * 100 + fold)
@@ -235,7 +243,18 @@ def main():
         del dtrain, dval; gc.collect()
         print(f"fold {fold} done (best_iter {booster.best_iteration})", flush=True)
 
-    assert not np.isnan(scores_all).any()
+    X.flush()
+    np.save(out / f"scores_folds_{fold_lo}_{fold_hi}.npy", scores_all)
+    print(f"saved partial scores for folds {fold_lo}-{fold_hi}", flush=True)
+    if not args.finalize:
+        return
+
+    for f in sorted(out.glob("scores_folds_*.npy")):
+        part = np.load(f)
+        mask = ~np.isnan(part)
+        scores_all[mask] = part[mask]
+    assert not np.isnan(scores_all).any(), \
+        f"missing scores for {int(np.isnan(scores_all).sum())} rows — run all fold ranges first"
     slim["score"] = scores_all
     slim["is_lockbox"] = sid_fold == -1
 
