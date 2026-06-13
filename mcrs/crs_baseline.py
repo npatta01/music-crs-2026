@@ -214,6 +214,7 @@ class CRS_BASELINE:
         sys_prompts = []
         session_memories = []
         user_ids: list[Any] = []
+        session_meta: list[Any] = []
 
         for data in batch_data:
             user_query = data['user_query']
@@ -224,6 +225,10 @@ class CRS_BASELINE:
             sys_prompts.append(self._get_system_prompt(user_id))
             session_memories.append(session_memory)
             user_ids.append(user_id)
+            # Raw dataset-row context (conversations with raw track ids,
+            # profile, goal) for QUs whose online reranker needs the
+            # session-history feature block. Optional; None is fine.
+            session_meta.append(data.get('session_meta'))
 
         # QUs that own the full pipeline (V0PlusCompilerQU) provide
         # `batch_compile_track_ids` and bypass `self.retrieval`. Forward
@@ -234,14 +239,14 @@ class CRS_BASELINE:
         if hasattr(self.qu, "batch_compile_track_ids"):
             import inspect
             sig = inspect.signature(self.qu.batch_compile_track_ids)
+            kwargs: dict[str, Any] = {}
             if "user_ids" in sig.parameters:
-                batch_retrieval_items = self.qu.batch_compile_track_ids(
-                    session_memories, topk=self.retrieval_topk, user_ids=user_ids,
-                )
-            else:
-                batch_retrieval_items = self.qu.batch_compile_track_ids(
-                    session_memories, topk=self.retrieval_topk,
-                )
+                kwargs["user_ids"] = user_ids
+            if "session_meta" in sig.parameters and any(m is not None for m in session_meta):
+                kwargs["session_meta"] = session_meta
+            batch_retrieval_items = self.qu.batch_compile_track_ids(
+                session_memories, topk=self.retrieval_topk, **kwargs,
+            )
             # V0PlusCompilerQU stashes per-session traces here as a side effect.
             batch_traces = list(getattr(self.qu, "last_traces", []) or [])
         elif hasattr(self.qu, "compile_track_ids"):

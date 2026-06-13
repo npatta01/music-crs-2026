@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
+
+import yaml
 
 from mcrs.conversation_state.schema import (
     ConversationStateV0Plus,
@@ -100,6 +103,18 @@ class CountingReleaseYearCatalog(DictCatalog):
     def release_year_of(self, track_id: str) -> int | None:
         self.release_year_calls += 1
         return super().release_year_of(track_id)
+
+
+class NoReleaseTextFieldRetriever(FakeRetriever):
+    @property
+    def supported_text_fields(self) -> frozenset[str]:
+        return frozenset({"track_name", "artist_name", "album_name", "tag_list"})
+
+
+class LimitedVectorFieldRetriever(FakeRetriever):
+    @property
+    def supported_vector_fields(self) -> frozenset[str]:
+        return frozenset({"metadata_qwen3_embedding_0_6b"})
 
 
 def _fake_encoder():
@@ -249,6 +264,23 @@ def test_compiler_includes_anchor_tags_on_refinement():
     clauses = retriever.search_calls[0]
     tag_query = next((c.query for c in clauses if c.field == "tag_list"), "")
     assert "smoky" in tag_query  # anchor tag from the accepted morphine track
+
+
+def test_compiler_uses_satisfied_track_feedback_as_soft_anchor_on_refinement():
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state(
+        turn_intent="yes, keep going",
+        intent_mode="refinement",
+        track_feedback=[
+            TrackFeedback(track_id="t-morphine-1", overall_sentiment=1, role="satisfied"),
+        ],
+    )
+    V0PlusCompiler(catalog, retriever, _fake_encoder()).compile(_resolve(state, catalog))
+
+    clauses = retriever.search_calls[0]
+    tag_query = next((c.query for c in clauses if c.field == "tag_list"), "")
+    assert "smoky" in tag_query
 
 
 def test_compiler_centroid_alpha_zero_on_pivot_means_no_mixing():
@@ -810,6 +842,31 @@ def test_compiler_respects_custom_dense_branches_config():
     assert retriever.embedding_calls[0]["vector_field"] == "metadata_qwen3_embedding_0_6b"
 
 
+def test_compiler_skips_dense_branches_for_unsupported_vector_fields():
+    catalog = _catalog()
+    retriever = LimitedVectorFieldRetriever(
+        text_hits_by_field={"artist_name": [("t-morphine-1", 5.0)]},
+        embedding_hits=[("t-morphine-1", 0.9)],
+    )
+    state = _state(
+        mentioned_entities=[
+            MentionedEntity(type="artist", value="Morphine", sentiment=1),
+        ],
+    )
+    cfg = CompilerConfig(
+        dense_branches=[
+            DenseBranch(vector_field="metadata_qwen3_embedding_0_6b"),
+            DenseBranch(vector_field="metadata_qwen3_embedding_8b"),
+        ]
+    )
+
+    V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_resolve(state, catalog))
+
+    assert [call["vector_field"] for call in retriever.embedding_calls] == [
+        "metadata_qwen3_embedding_0_6b"
+    ]
+
+
 # ---------------------------------------------------------------------
 # Per-branch encoder / query-template dispatch (R1-R4 text-side work)
 # ---------------------------------------------------------------------
@@ -1194,6 +1251,61 @@ def test_resolver_grounds_positive_artist_mention():
     assert arts[0].source_text == "Morphine"
 
 
+def test_resolver_grounds_only_v1_seed_entities_as_targets():
+    catalog = _catalog()
+    state = _state(
+        entities=[
+            {
+                "type": "artist",
+                "value": "Morphine",
+                "role": "satisfied",
+                "source_turn": 2,
+                "mentioned_current_turn": True,
+                "use_as_retrieval_seed": False,
+                "evidence_text": "another artist",
+            },
+            {
+                "type": "tag",
+                "value": "smoky",
+                "role": "current_target",
+                "source_turn": 2,
+                "mentioned_current_turn": True,
+                "use_as_retrieval_seed": True,
+                "evidence_text": "smoky",
+            },
+        ],
+        target_artist_mode="new_artist",
+        retrieval_profile="novelty",
+    )
+    rs = _resolve(state, catalog)
+
+    assert rs.resolved_targets == ()
+
+
+def test_resolver_grounds_v1_current_artist_seed_as_target():
+    catalog = _catalog()
+    state = _state(
+        entities=[
+            {
+                "type": "artist",
+                "value": "Morphine",
+                "role": "current_target",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+                "use_as_retrieval_seed": True,
+                "evidence_text": "more Morphine",
+            }
+        ],
+        target_artist_mode="same_artist",
+        retrieval_profile="exact_probe",
+    )
+    rs = _resolve(state, catalog)
+
+    arts = [t for t in rs.resolved_targets if t.kind == "artist"]
+    assert len(arts) == 1
+    assert arts[0].entity_id == "a-morphine"
+
+
 def test_resolver_grounds_fuzzy_artist_spelling():
     catalog = _catalog()
     state = _state(mentioned_entities=[MentionedEntity(type="artist", value="morphine", sentiment=1)])
@@ -1336,36 +1448,35 @@ def test_lyric_query_none_without_theme():
 
 
 def test_routing_multiplier_boosts_matching_branch():
-    from mcrs.conversation_state.schema import RoutingTags
     catalog = _catalog()
     cfg = CompilerConfig(routing_boost={"lyric_search": 3.0, "exact_entity_probe": 2.0})
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)
-    rs = _resolve(_state(routing_tags=RoutingTags(lyric_search=True)), catalog)
+    rs = _resolve(_state(lyrical_theme="late night loneliness"), catalog)
     assert compiler._routing_multiplier("dense.lyric", rs) == 3.0
     assert compiler._routing_multiplier("bm25", rs) == 1.0          # exact_entity_probe not set
     assert compiler._routing_multiplier("centroid.image", rs) == 1.0
 
 
 def test_routing_multiplier_default_one_when_unconfigured():
-    from mcrs.conversation_state.schema import RoutingTags
     catalog = _catalog()
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())  # no routing_boost
-    rs = _resolve(_state(routing_tags=RoutingTags(lyric_search=True, exact_entity_probe=True)), catalog)
+    rs = _resolve(
+        _state(lyrical_theme="late night loneliness", retrieval_profile="exact_probe"),
+        catalog,
+    )
     assert compiler._routing_multiplier("dense.lyric", rs) == 1.0
     assert compiler._routing_multiplier("bm25", rs) == 1.0
 
 
 def test_routing_multiplier_unmapped_kind_is_one():
-    from mcrs.conversation_state.schema import RoutingTags
     catalog = _catalog()
     cfg = CompilerConfig(routing_boost={"lyric_search": 3.0})
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)
-    rs = _resolve(_state(routing_tags=RoutingTags(lyric_search=True)), catalog)
+    rs = _resolve(_state(lyrical_theme="late night loneliness"), catalog)
     assert compiler._routing_multiplier("dense.other", rs) == 1.0
 
 
 def test_lyric_branch_fires_and_is_weighted_on_lyric_search():
-    from mcrs.conversation_state.schema import RoutingTags
     catalog = _catalog()
     enc = _fake_encoder()  # FakeEmbeddingClient records every embed_batch() text in `.calls`
     cfg = CompilerConfig(
@@ -1376,8 +1487,7 @@ def test_lyric_branch_fires_and_is_weighted_on_lyric_search():
         branch_trace_topk=50,
     )
     retr = FakeRetriever(embedding_hits=[("t-morphine-1", 0.9)])
-    state = _state(lyrical_theme="late night loneliness",
-                   routing_tags=RoutingTags(lyric_search=True))
+    state = _state(lyrical_theme="late night loneliness")
     rs = _resolve(state, catalog)
     res = V0PlusCompiler(catalog, retr, enc, cfg)._compile(rs)
     traces = {p.name: [t for t, _ in p.hits] for p in res.branch_pools}
@@ -1582,6 +1692,121 @@ def test_similar_artist_anchors_intent_gate():
     assert compiler2._similar_artist_anchor_track_ids(rs_eep) == []
 
 
+def test_style_reference_resolves_for_centroid_but_not_discography():
+    catalog = _sa_catalog()
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "new_artist",
+            "summary": "New bands with the smoky Morphine feel, but not Morphine.",
+            "source_turn": 1,
+            "evidence_text": "new bands with the smoky Morphine feel",
+        },
+        facts=[
+            {
+                "type": "artist",
+                "value": "Morphine",
+                "role": "current_target",
+                "anchor_use": "partial_anchor",
+                "relation": "style_reference",
+                "reuse": "avoid_exact",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+                "evidence_text": "Morphine feel",
+            },
+            {
+                "type": "attribute",
+                "facet": "mood",
+                "value": "smoky",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+                "evidence_text": "smoky",
+            },
+        ],
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        FakeRetriever(),
+        _fake_encoder(),
+        _sa_cfg(enable_resolved_artist_discography=True),
+    )
+
+    assert [(target.source_text, target.resolution_role) for target in rs.resolved_targets] == [
+        ("Morphine", "style_reference"),
+    ]
+    assert compiler._resolved_artist_discography_pool(rs) == []
+    assert compiler._similar_artist_anchor_track_ids(rs) == [
+        "t-mor-1",
+        "t-mor-2",
+        "t-mor-3",
+    ]
+
+
+def test_style_reference_with_hard_exclusion_keeps_similarity_but_drops_exact_artist():
+    catalog = _sa_catalog()
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "new_artist",
+            "summary": "New bands with the smoky Morphine feel, but not Morphine.",
+            "source_turn": 1,
+            "evidence_text": "new bands with the smoky Morphine feel",
+        },
+        facts=[
+            {
+                "type": "artist",
+                "value": "Morphine",
+                "role": "satisfied_prior",
+                "anchor_use": "do_not_use",
+                "relation": "style_reference",
+                "reuse": "avoid_exact",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+                "evidence_text": "Morphine feel, but not Morphine",
+            },
+            {
+                "type": "attribute",
+                "facet": "mood",
+                "value": "smoky",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+                "evidence_text": "smoky",
+            },
+        ],
+        exclusions=[
+            {
+                "type": "artist",
+                "value": "Morphine",
+                "scope": "next_turn_hard",
+                "source_turn": 1,
+                "evidence_text": "but not Morphine",
+            }
+        ],
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        FakeRetriever(),
+        _fake_encoder(),
+        _sa_cfg(enable_resolved_artist_discography=True),
+    )
+
+    assert compiler._resolved_artist_discography_pool(rs) == []
+    assert compiler._similar_artist_anchor_track_ids(rs) == [
+        "t-mor-1",
+        "t-mor-2",
+        "t-mor-3",
+    ]
+    assert {"t-mor-1", "t-mor-2", "t-mor-3"} <= compiler._hard_drop_set(rs)
+
+
 def test_attributes_query_matches_doc_format():
     catalog = _catalog()
     state = _state(mentioned_entities=[
@@ -1594,6 +1819,355 @@ def test_attributes_query_matches_doc_format():
     q = compiler._build_attributes_query_string(rs)
     # mirrors the catalog doc "music attributes, tags :..."; artist excluded
     assert q == "music attributes, tags :dark, synthwave"
+
+
+def test_attributes_query_can_read_v1_attribute_facts_directly():
+    catalog = _catalog()
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "attribute_search",
+            "summary": "80s hardcore punk with raw energy and short intense songs.",
+            "source_turn": 1,
+        },
+        facts=[
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "hardcore punk",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+            {
+                "type": "attribute",
+                "facet": "sonic",
+                "value": "raw energy",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+        ],
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        FakeRetriever(),
+        _fake_encoder(),
+        CompilerConfig(attribute_query_source="v1_attribute_facts"),
+    )
+
+    assert compiler._build_attributes_query_string(rs) == (
+        "music attributes, tags :hardcore punk, raw energy"
+    )
+
+
+def test_attributes_query_can_filter_v1_attribute_facets():
+    catalog = _catalog()
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "attribute_search",
+            "summary": "album covers with red and black artwork.",
+            "source_turn": 1,
+        },
+        facts=[
+            {
+                "type": "attribute",
+                "facet": "visual",
+                "value": "red and black artwork",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+            {
+                "type": "attribute",
+                "facet": "mood",
+                "value": "dark",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+        ],
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        FakeRetriever(),
+        _fake_encoder(),
+        CompilerConfig(
+            attribute_query_source="v1_attribute_facts",
+            attribute_query_allowed_facets=("mood", "genre", "sonic"),
+        ),
+    )
+
+    assert compiler._build_attributes_query_string(rs) == "music attributes, tags :dark"
+
+
+def test_bm25_can_exclude_v1_attribute_facets_from_tag_list():
+    catalog = _catalog()
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "attribute_search",
+            "summary": "80s hardcore punk with raw energy and short intense songs.",
+            "source_turn": 1,
+        },
+        facts=[
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "hardcore punk",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+            {
+                "type": "attribute",
+                "facet": "sonic",
+                "value": "raw energy",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+        ],
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        FakeRetriever(),
+        _fake_encoder(),
+        CompilerConfig(
+            bm25_include_v1_attribute_facets=False,
+            bm25_include_turn_intent_tag_clause=False,
+        ),
+    )
+
+    clauses = compiler._build_bm25_clauses(rs)
+    tag_queries = [clause.query for clause in clauses if clause.field == "tag_list"]
+    track_queries = [clause.query for clause in clauses if clause.field == "track_name"]
+
+    assert "hardcore punk" not in tag_queries
+    assert "raw energy" not in tag_queries
+    assert track_queries == ["80s hardcore punk with raw energy and short intense songs."]
+
+
+def test_bm25_catalog_exact_policy_keeps_only_catalog_safe_v1_attribute_tags():
+    catalog = _catalog()
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "attribute_search",
+            "summary": "Post-hardcore with raw energy.",
+            "source_turn": 1,
+        },
+        facts=[
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "post hardcore",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+            {
+                "type": "attribute",
+                "facet": "sonic",
+                "value": "raw energy",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+        ],
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        FakeRetriever(),
+        _fake_encoder(),
+        CompilerConfig(
+            bm25_v1_attribute_tag_policy="catalog_exact",
+            bm25_include_turn_intent_tag_clause=False,
+        ),
+    )
+
+    clauses = compiler._build_bm25_clauses(rs)
+    tag_queries = [clause.query for clause in clauses if clause.field == "tag_list"]
+
+    assert tag_queries == ["post hardcore"]
+
+
+def test_bm25_catalog_exact_policy_normalizes_v1_attribute_mentions():
+    catalog = _catalog()
+    state = ConversationStateV0Plus(
+        mentioned_entities=[
+            MentionedEntity(type="tag", value="post hardcore", sentiment=1),
+            MentionedEntity(type="tag", value="raw energy", sentiment=1),
+        ],
+        facts=[
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "post-hardcore",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+            {
+                "type": "attribute",
+                "facet": "sonic",
+                "value": "raw-energy",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+        ],
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        FakeRetriever(),
+        _fake_encoder(),
+        CompilerConfig(
+            bm25_v1_attribute_tag_policy="catalog_exact",
+            bm25_include_turn_intent_tag_clause=False,
+        ),
+    )
+
+    clauses = compiler._build_bm25_clauses(rs)
+    tag_queries = [clause.query for clause in clauses if clause.field == "tag_list"]
+
+    assert tag_queries == ["post-hardcore"]
+
+
+def test_bm25_v1_attribute_filter_preserves_legacy_tags():
+    catalog = _catalog()
+    state = _state(
+        turn_intent="",
+        mentioned_entities=[MentionedEntity(type="tag", value="classic disco", sentiment=1)],
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        FakeRetriever(),
+        _fake_encoder(),
+        CompilerConfig(bm25_include_v1_attribute_facets=False),
+    )
+
+    clauses = compiler._build_bm25_clauses(rs)
+
+    assert [clause.query for clause in clauses if clause.field == "tag_list"] == [
+        "classic disco"
+    ]
+
+
+def test_attributes_enriched_query_adds_anchor_catalog_tags():
+    catalog = _catalog()
+    state = _state(
+        mentioned_entities=[
+            MentionedEntity(type="tag", value="dark", sentiment=1),
+            MentionedEntity(type="tag", value="synthwave", sentiment=1),
+            MentionedEntity(type="tag", value="heavy", sentiment=-1),
+        ],
+        track_feedback=[
+            TrackFeedback(
+                track_id="t-morphine-1",
+                overall_sentiment=1,
+                role="accepted",
+            ),
+            TrackFeedback(
+                track_id="t-fugazi-1",
+                overall_sentiment=1,
+                role="seed",
+            ),
+        ],
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())
+
+    q = compiler._build_attributes_enriched_query_string(rs)
+
+    assert q == (
+        "music attributes, tags :dark, synthwave, smoky, lounge, "
+        "post-hardcore, punk"
+    )
+    assert "heavy" not in q
+
+
+def test_current_configs_reference_supported_dense_query_ids():
+    compiler = V0PlusCompiler(_catalog(), FakeRetriever(), _fake_encoder())
+    known_query_ids = set(compiler._query_builders)
+    repo_root = Path(__file__).resolve().parents[1]
+    branch_signatures_by_config = {}
+
+    for config_name in (
+        "v0plus_compiler_all_retrievers_devset.yaml",
+        "v0plus_compiler_blindset_A.yaml",
+    ):
+        config = yaml.safe_load((repo_root / "configs" / config_name).read_text())
+        branches = config["qu_kwargs"]["compiler"]["dense_branches"]
+        unknown_query_ids = sorted(
+            {branch["query_id"] for branch in branches} - known_query_ids
+        )
+        branch_signatures_by_config[config_name] = [
+            (branch["vector_field"], branch["encoder_id"], branch["query_id"])
+            for branch in branches
+        ]
+
+        assert unknown_query_ids == []
+
+    assert (
+        branch_signatures_by_config["v0plus_compiler_all_retrievers_devset.yaml"]
+        == branch_signatures_by_config["v0plus_compiler_blindset_A.yaml"]
+    )
+
+
+def test_v1_regression_variant_configs_reference_supported_dense_query_ids():
+    compiler = V0PlusCompiler(_catalog(), FakeRetriever(), _fake_encoder())
+    known_query_ids = set(compiler._query_builders)
+    repo_root = Path(__file__).resolve().parents[1]
+
+    for config_name in (
+        "v0plus_compiler_pruned_devset.yaml",
+        "v0plus_compiler_pruned_dense_attrs_devset.yaml",
+        "v0plus_compiler_pruned_safe_tags_devset.yaml",
+    ):
+        config_path = repo_root / "configs" / config_name
+        if not config_path.exists():
+            continue  # superseded smoke configs are pruned from the tree
+        config = yaml.safe_load(config_path.read_text())
+        branches = config["qu_kwargs"]["compiler"]["dense_branches"]
+        unknown_query_ids = sorted(
+            {branch["query_id"] for branch in branches} - known_query_ids
+        )
+
+        assert unknown_query_ids == []
 
 
 def test_metadata_query_excludes_explicit_state_tags():
@@ -1627,6 +2201,42 @@ def test_attributes_query_none_without_tags():
     assert compiler._build_attributes_query_string(rs) is None
 
 
+def test_bm25_release_year_terms_skip_when_retriever_lacks_text_fields():
+    state = _state(
+        turn_intent="late 70s classic rock",
+        temporal_constraint={
+            "kind": "style_era",
+            "start_year": 1977,
+            "end_year": 1984,
+            "strength": "soft",
+            "apply_as_filter": False,
+            "evidence_text": "late 70s or early 80s",
+        },
+    )
+    rs = _resolve(state)
+    compiler = V0PlusCompiler(
+        _catalog(),
+        NoReleaseTextFieldRetriever(),
+        _fake_encoder(),
+        CompilerConfig(
+            enable_dense=False,
+            field_boosts={
+                "track_name": 3.0,
+                "artist_name": 3.0,
+                "album_name": 2.0,
+                "tag_list": 1.5,
+                "release_year": 1.0,
+                "release_decade": 1.0,
+            },
+        ),
+    )
+
+    clauses = compiler._build_bm25_clauses(rs)
+
+    assert "release_year" not in {clause.field for clause in clauses}
+    assert "release_decade" not in {clause.field for clause in clauses}
+
+
 def _era_cfg(**overrides):
     cfg = dict(enable_dense=False, enable_era_popularity=True, era_pop_cap=200,
                branch_trace_topk=50)
@@ -1658,6 +2268,451 @@ def test_era_popularity_pool_empty_when_disabled_or_no_range():
     assert V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _era_cfg())._era_popularity_pool(rs2) == []
 
 
+def _scene_feature_catalog() -> DictCatalog:
+    tracks: dict[str, dict] = {}
+    for idx in range(20):
+        tracks[f"t-generic-{idx:02d}"] = {
+            "artist_id": f"a-generic-{idx:02d}",
+            "artist_name": f"Generic {idx}",
+            "track_name": f"Generic Rap {idx}",
+            "tag_list": ["rap", "pop"],
+            "popularity": 100.0 - idx,
+            "release_date": "1994-01-01",
+            "vectors": {"cf_bpr": [0.0, 1.0, 0.0]},
+        }
+    tracks["t-target"] = {
+        "artist_id": "a-target",
+        "artist_name": "Specific Artist",
+        "track_name": "Specific Scene",
+        "tag_list": ["underground hip-hop", "jazz rap"],
+        "popularity": 1.0,
+        "release_date": "1993-01-01",
+        "vectors": {"cf_bpr": [1.0, 0.0, 0.0]},
+    }
+    tracks["t-anchor"] = {
+        "artist_id": "a-anchor",
+        "artist_name": "Anchor Artist",
+        "track_name": "Anchor Track",
+        "tag_list": ["underground hip-hop", "jazz rap"],
+        "popularity": 50.0,
+        "release_date": "1992-01-01",
+        "vectors": {"cf_bpr": [1.0, 0.0, 0.0]},
+    }
+    return DictCatalog(tracks=tracks)
+
+
+def test_branch_local_feature_rerank_is_off_by_default():
+    catalog = _scene_feature_catalog()
+    raw_hits = [(f"t-generic-{idx:02d}", float(100 - idx)) for idx in range(20)]
+    raw_hits.append(("t-target", 1.0))
+    retriever = FakeRetriever(text_hits_by_field={"track_name": raw_hits})
+    state = ConversationStateV0Plus(
+        turn_intent="jazzy underground hip hop from the early 90s",
+        facts=[
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "underground hip hop",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "jazz rap",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+        ],
+        release_year_range={"start": 1990, "end": 1996},
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        retriever,
+        _fake_encoder(),
+        CompilerConfig(enable_dense=False, branch_trace_topk=25, final_topk=25),
+    )
+
+    result = compiler._compile(rs)
+    bm25 = next(pool for pool in result.branch_pools if pool.name == "bm25")
+
+    assert [track_id for track_id, _score in bm25.hits].index("t-target") == 20
+    assert all(not pool.name.endswith(".state_features") for pool in result.branch_pools)
+    assert all(pool.name != "state_feature_selector" for pool in result.branch_pools)
+    assert all(pool.name != "state_feature_survivor" for pool in result.branch_pools)
+
+
+def test_branch_local_feature_rerank_promotes_specific_catalog_match():
+    catalog = _scene_feature_catalog()
+    raw_hits = [(f"t-generic-{idx:02d}", float(100 - idx)) for idx in range(20)]
+    raw_hits.append(("t-target", 1.0))
+    retriever = FakeRetriever(text_hits_by_field={"track_name": raw_hits})
+    state = ConversationStateV0Plus(
+        turn_intent="jazzy underground hip hop from the early 90s",
+        facts=[
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "underground hip hop",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "jazz rap",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+        ],
+        track_feedback=[
+            TrackFeedback(track_id="t-anchor", overall_sentiment=1, role="accepted"),
+        ],
+        release_year_range={"start": 1990, "end": 1996},
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        retriever,
+        _fake_encoder(),
+        CompilerConfig(
+            enable_dense=False,
+            branch_trace_topk=25,
+            final_topk=25,
+            enable_branch_local_feature_rerank=True,
+        ),
+    )
+
+    result = compiler._compile(rs)
+    feature_pool = next(
+        pool for pool in result.branch_pools if pool.name == "bm25.state_features"
+    )
+    ids = [track_id for track_id, _score in feature_pool.hits]
+
+    assert ids.index("t-target") < 20
+    assert ids[0] == "t-target"
+
+
+def test_state_feature_selector_branch_promotes_deep_state_match_without_replacing_source_branch():
+    catalog = _scene_feature_catalog()
+    raw_hits = [(f"t-generic-{idx:02d}", float(100 - idx)) for idx in range(20)]
+    raw_hits.append(("t-target", 1.0))
+    retriever = FakeRetriever(text_hits_by_field={"track_name": raw_hits})
+    state = ConversationStateV0Plus(
+        turn_intent="jazzy underground hip hop from the early 90s",
+        facts=[
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "underground hip hop",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "jazz rap",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+        ],
+        track_feedback=[
+            TrackFeedback(track_id="t-anchor", overall_sentiment=1, role="accepted"),
+        ],
+        release_year_range={"start": 1990, "end": 1996},
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        retriever,
+        _fake_encoder(),
+        CompilerConfig(
+            enable_dense=False,
+            branch_trace_topk=25,
+            final_topk=25,
+            enable_state_feature_selector_branch=True,
+        ),
+    )
+
+    result = compiler._compile(rs)
+    bm25 = next(pool for pool in result.branch_pools if pool.name == "bm25")
+    selector = next(pool for pool in result.branch_pools if pool.name == "state_feature_selector")
+    bm25_ids = [track_id for track_id, _score in bm25.hits]
+    selector_ids = [track_id for track_id, _score in selector.hits]
+
+    assert bm25_ids.index("t-target") == 20
+    assert selector_ids[0] == "t-target"
+    assert result.branch_queries["state_feature_selector"]["kind"] == "state_feature_selector"
+    assert result.branch_queries["state_feature_selector"]["top_feature_scores"][0]["best_source_branch"] == "bm25"
+
+
+def test_state_feature_survivor_branch_promotes_midrank_state_match_only():
+    catalog = _scene_feature_catalog()
+    raw_hits = [(f"t-generic-{idx:02d}", float(100 - idx)) for idx in range(20)]
+    raw_hits.append(("t-target", 1.0))
+    retriever = FakeRetriever(text_hits_by_field={"track_name": raw_hits})
+    state = ConversationStateV0Plus(
+        turn_intent="jazzy underground hip hop from the early 90s",
+        facts=[
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "underground hip hop",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "jazz rap",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+        ],
+        track_feedback=[
+            TrackFeedback(track_id="t-anchor", overall_sentiment=1, role="accepted"),
+        ],
+        release_year_range={"start": 1990, "end": 1996},
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        retriever,
+        _fake_encoder(),
+        CompilerConfig(
+            enable_dense=False,
+            branch_trace_topk=25,
+            final_topk=25,
+            enable_state_feature_survivor_branch=True,
+            state_feature_survivor_min_rank=21,
+            state_feature_survivor_max_rank=25,
+        ),
+    )
+
+    result = compiler._compile(rs)
+    bm25 = next(pool for pool in result.branch_pools if pool.name == "bm25")
+    survivor = next(pool for pool in result.branch_pools if pool.name == "state_feature_survivor")
+    bm25_ids = [track_id for track_id, _score in bm25.hits]
+    survivor_ids = [track_id for track_id, _score in survivor.hits]
+
+    assert bm25_ids.index("t-target") == 20
+    assert survivor_ids[0] == "t-target"
+    assert result.branch_queries["state_feature_survivor"]["kind"] == "state_feature_survivor"
+    assert result.branch_queries["state_feature_survivor"]["source_rank_window"] == [21, 25]
+    assert result.branch_queries["state_feature_survivor"]["top_feature_scores"][0]["best_source_rank"] == 21
+
+
+def test_state_feature_selector_can_group_by_source_family():
+    catalog = _scene_feature_catalog()
+    raw_hits = [(f"t-generic-{idx:02d}", float(100 - idx)) for idx in range(20)]
+    raw_hits.append(("t-target", 1.0))
+    retriever = FakeRetriever(
+        text_hits_by_field={"track_name": raw_hits},
+        embedding_hits=raw_hits,
+    )
+    state = ConversationStateV0Plus(
+        turn_intent="jazzy underground hip hop from the early 90s",
+        facts=[
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "underground hip hop",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "jazz rap",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+        ],
+        track_feedback=[
+            TrackFeedback(track_id="t-anchor", overall_sentiment=1, role="accepted"),
+        ],
+        release_year_range={"start": 1990, "end": 1996},
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        retriever,
+        _fake_encoder(),
+        CompilerConfig(
+            enable_dense=True,
+            branch_trace_topk=25,
+            final_topk=25,
+            dense_branches=[
+                DenseBranch(
+                    vector_field="metadata_qwen3_embedding_0_6b",
+                    query_id="intent",
+                ),
+                DenseBranch(
+                    vector_field="attributes_qwen3_embedding_0_6b",
+                    query_id="attributes",
+                ),
+            ],
+            enable_state_feature_selector_branch=True,
+            state_feature_selector_grouping="family",
+        ),
+    )
+
+    result = compiler._compile(rs)
+    pools = {pool.name: [track_id for track_id, _score in pool.hits] for pool in result.branch_pools}
+
+    assert pools["state_feature_selector.lexical"][0] == "t-target"
+    assert pools["state_feature_selector.dense.intent"][0] == "t-target"
+    assert pools["state_feature_selector.dense.attributes"][0] == "t-target"
+    assert result.branch_queries["state_feature_selector.dense.intent"]["source_group"] == "dense.intent"
+
+
+def test_branch_local_feature_rerank_can_reorder_source_branch_in_place():
+    catalog = _scene_feature_catalog()
+    raw_hits = [(f"t-generic-{idx:02d}", float(100 - idx)) for idx in range(20)]
+    raw_hits.append(("t-target", 1.0))
+    retriever = FakeRetriever(text_hits_by_field={"track_name": raw_hits})
+    state = ConversationStateV0Plus(
+        turn_intent="jazzy underground hip hop from the early 90s",
+        facts=[
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "underground hip hop",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "jazz rap",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+        ],
+        track_feedback=[
+            TrackFeedback(track_id="t-anchor", overall_sentiment=1, role="accepted"),
+        ],
+        release_year_range={"start": 1990, "end": 1996},
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        retriever,
+        _fake_encoder(),
+        CompilerConfig(
+            enable_dense=False,
+            branch_trace_topk=25,
+            final_topk=25,
+            enable_branch_local_feature_rerank=True,
+            branch_local_feature_rerank_mode="in_place",
+        ),
+    )
+
+    result = compiler._compile(rs)
+    bm25 = next(pool for pool in result.branch_pools if pool.name == "bm25")
+    ids = [track_id for track_id, _score in bm25.hits]
+
+    assert ids[0] == "t-target"
+    assert all(not pool.name.endswith(".state_features") for pool in result.branch_pools)
+    assert result.branch_queries["bm25.state_features"]["applied_mode"] == "in_place"
+
+
+def test_branch_local_feature_context_is_reused_for_trace():
+    catalog = _scene_feature_catalog()
+    raw_hits = [(f"t-generic-{idx:02d}", float(100 - idx)) for idx in range(20)]
+    raw_hits.append(("t-target", 1.0))
+    retriever = FakeRetriever(text_hits_by_field={"track_name": raw_hits})
+    state = ConversationStateV0Plus(
+        turn_intent="jazzy underground hip hop",
+        facts=[
+            {
+                "type": "attribute",
+                "facet": "genre",
+                "value": "underground hip hop",
+                "role": "current_target",
+                "anchor_use": "query_facet",
+                "relation": "query_facet",
+                "reuse": "not_applicable",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+            },
+        ],
+    )
+    rs = _resolve(state, catalog)
+    compiler = V0PlusCompiler(
+        catalog,
+        retriever,
+        _fake_encoder(),
+        CompilerConfig(
+            enable_dense=False,
+            branch_trace_topk=25,
+            final_topk=25,
+            enable_branch_local_feature_rerank=True,
+        ),
+    )
+    original_context = compiler._branch_local_feature_context
+    call_count = {"n": 0}
+
+    def counted_context(resolved_state):
+        call_count["n"] += 1
+        return original_context(resolved_state)
+
+    compiler._branch_local_feature_context = counted_context
+
+    compiler._compile(rs)
+
+    assert call_count["n"] == 1
+
+
 def _ryr_cfg(**overrides):
     cfg = dict(enable_dense=False, enable_release_year_filter=True,
                release_year_filter_min_keep=1)
@@ -1667,13 +2722,47 @@ def _ryr_cfg(**overrides):
 
 def test_release_year_filter_narrows_mask_to_in_range():
     catalog = _catalog()  # tracks span 1988-2010
-    rs = _resolve(_state(release_year_range={"start": 1990, "end": 1999}), catalog)
+    rs = _resolve(
+        _state(
+            temporal_constraint={
+                "kind": "release_date",
+                "start_year": 1990,
+                "end_year": 1999,
+                "strength": "hard",
+                "apply_as_filter": True,
+                "evidence_text": "only 90s tracks",
+            }
+        ),
+        catalog,
+    )
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _ryr_cfg())
     mask = compiler._release_date_mask(rs.state)
     # only 1990s tracks: Morphine Buena 1995, Fugazi Repeater 1990, Tom Waits 1999
     assert "t-morphine-2" in mask and "t-fugazi-2" in mask and "t-tomwaits-1" in mask
     assert "t-fugazi-1" not in mask   # 1988
     assert "t-filler-1" not in mask   # 2010
+
+
+def test_release_year_filter_does_not_narrow_soft_style_era():
+    catalog = _catalog()
+    rs = _resolve(
+        _state(
+            temporal_constraint={
+                "kind": "style_era",
+                "start_year": 1990,
+                "end_year": 1999,
+                "strength": "soft",
+                "apply_as_filter": False,
+                "evidence_text": "90s vibe",
+            }
+        ),
+        catalog,
+    )
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _ryr_cfg())
+
+    mask = compiler._release_date_mask(rs.state)
+
+    assert mask == set(catalog.all_track_ids())
 
 
 def test_release_year_filter_off_by_default_keeps_all():
@@ -1686,24 +2775,164 @@ def test_release_year_filter_off_by_default_keeps_all():
 
 def test_release_year_filter_open_bounds():
     catalog = _catalog()
-    rs = _resolve(_state(release_year_range={"start": 2000, "end": None}), catalog)
+    rs = _resolve(
+        _state(
+            temporal_constraint={
+                "kind": "release_date",
+                "start_year": 2000,
+                "end_year": None,
+                "strength": "hard",
+                "apply_as_filter": True,
+                "evidence_text": "released after 2000",
+            }
+        ),
+        catalog,
+    )
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), _ryr_cfg())
     mask = compiler._release_date_mask(rs.state)
     assert mask == {"t-filler-1"}  # only 2010 is >= 2000
 
 
-def test_release_year_filter_skips_when_too_aggressive():
+def test_release_year_filter_respects_hard_empty_range():
     catalog = _catalog()
-    # a range matching 0 tracks would blank the pool -> skipped (min_keep guard)
-    rs = _resolve(_state(release_year_range={"start": 1700, "end": 1750}), catalog)
+    # v1 hard temporal filters are explicit user constraints, so an impossible
+    # range is allowed to produce an empty candidate mask.
+    rs = _resolve(
+        _state(
+            temporal_constraint={
+                "kind": "release_date",
+                "start_year": 1700,
+                "end_year": 1750,
+                "strength": "hard",
+                "apply_as_filter": True,
+                "evidence_text": "only 1700s tracks",
+            }
+        ),
+        catalog,
+    )
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(),
                               _ryr_cfg(release_year_filter_min_keep=1))
     mask = compiler._release_date_mask(rs.state)
-    assert mask == set(catalog.all_track_ids())  # unchanged (no in-range tracks)
+    assert mask == set()
 
 
 # ---------------------------------------------------------------------------
-# 2026-06-12 audit bugfix knobs
+# bm25_v1_attribute_tag_policy = "resolved" (tiered tag resolver)
+# ---------------------------------------------------------------------------
+
+
+def _resolved_policy_compiler(catalog):
+    return V0PlusCompiler(
+        catalog,
+        FakeRetriever(),
+        _fake_encoder(),
+        CompilerConfig(
+            bm25_v1_attribute_tag_policy="resolved",
+            bm25_include_turn_intent_tag_clause=False,
+            tag_resolver_min_track_count=1,
+        ),
+    )
+
+
+def _attribute_fact(facet, value):
+    return {
+        "type": "attribute",
+        "facet": facet,
+        "value": value,
+        "role": "current_target",
+        "anchor_use": "query_facet",
+        "relation": "query_facet",
+        "reuse": "not_applicable",
+        "source_turn": 1,
+        "mentioned_current_turn": True,
+    }
+
+
+def test_bm25_resolved_policy_substitutes_grounded_tags():
+    catalog = _catalog()
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "attribute_search",
+            "summary": "Smoky lounge revival sounds.",
+            "source_turn": 1,
+        },
+        facts=[_attribute_fact("sonic", "smoky lounge revival")],
+    )
+    rs = _resolve(state, catalog)
+    compiler = _resolved_policy_compiler(catalog)
+
+    clauses = compiler._build_bm25_clauses(rs)
+    tag_queries = [c.query for c in clauses if c.field == "tag_list"]
+
+    # phrase grounded via substring tier -> emits the catalog tags it
+    # contains, not the raw phrase
+    assert "smoky" in tag_queries
+    assert "lounge" in tag_queries
+    assert "smoky lounge revival" not in tag_queries
+
+
+def test_bm25_resolved_policy_exact_match_normalizes():
+    catalog = _catalog()
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "attribute_search",
+            "summary": "Post-hardcore please.",
+            "source_turn": 1,
+        },
+        facts=[_attribute_fact("genre", "Post-Hardcore")],
+    )
+    rs = _resolve(state, catalog)
+    compiler = _resolved_policy_compiler(catalog)
+
+    clauses = compiler._build_bm25_clauses(rs)
+    tag_queries = [c.query for c in clauses if c.field == "tag_list"]
+
+    assert tag_queries == ["post hardcore"]
+
+
+def test_bm25_resolved_policy_unresolved_phrase_keeps_raw_text():
+    catalog = _catalog()
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "attribute_search",
+            "summary": "Driving music.",
+            "source_turn": 1,
+        },
+        facts=[_attribute_fact("sonic", "songs about late night drives")],
+    )
+    rs = _resolve(state, catalog)
+    compiler = _resolved_policy_compiler(catalog)
+
+    clauses = compiler._build_bm25_clauses(rs)
+    tag_queries = [c.query for c in clauses if c.field == "tag_list"]
+
+    assert tag_queries == ["songs about late night drives"]
+
+
+def test_bm25_resolved_policy_records_resolution_metadata():
+    catalog = _catalog()
+    state = ConversationStateV0Plus(
+        current_request={
+            "request_type": "attribute_search",
+            "summary": "Smoky lounge revival sounds.",
+            "source_turn": 1,
+        },
+        facts=[_attribute_fact("sonic", "smoky lounge revival")],
+    )
+    rs = _resolve(state, catalog)
+    compiler = _resolved_policy_compiler(catalog)
+
+    compiler._build_bm25_clauses(rs)
+
+    assert "smoky lounge revival" in compiler._last_tag_resolutions
+    matches = compiler._last_tag_resolutions["smoky lounge revival"]
+    assert all(len(m) == 3 for m in matches)  # (tag, score, tier)
+    tags = {m[0] for m in matches}
+    assert {"smoky", "lounge"} <= tags
+
+
+# ---------------------------------------------------------------------------
+# 2026-06-12 bugfix batch knobs
 # ---------------------------------------------------------------------------
 
 
@@ -1717,9 +2946,13 @@ def test_rejection_drop_policy_track_only_keeps_artist_discography():
                             CompilerConfig(rejection_drop_policy="expanded"))
     fixed = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(),
                            CompilerConfig(rejection_drop_policy="track_only"))
-    assert "t-morphine-2" in legacy._resolved_rejection_drop_set(rs)
-    assert "t-morphine-2" not in fixed._resolved_rejection_drop_set(rs)
-    assert "t-morphine-1" in fixed._resolved_rejection_drop_set(rs)
+    drop_legacy = legacy._resolved_rejection_drop_set(rs)
+    drop_fixed = fixed._resolved_rejection_drop_set(rs)
+    # legacy expands to the whole Morphine discography; track_only keeps the
+    # other Morphine track alive
+    assert "t-morphine-2" in drop_legacy
+    assert "t-morphine-2" not in drop_fixed
+    assert "t-morphine-1" in drop_fixed  # the named track itself still drops
 
 
 def test_release_date_hard_filter_gate():
@@ -1738,4 +2971,5 @@ def test_strip_negated_spans():
     f = V0PlusCompiler._strip_negated_spans
     assert "experimental" not in f("something upbeat but not experimental noise rock")
     assert "upbeat" in f("something upbeat but not experimental")
+    assert f("no slow ballads please") == ""or f("no slow ballads please").strip() != "slow ballads please"
     assert f("rock music") == "rock music"

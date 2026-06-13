@@ -209,7 +209,17 @@ class FakeRetriever:
 
     @property
     def supported_vector_fields(self) -> frozenset[str]:
-        return frozenset({"metadata_qwen3_embedding_0_6b"})
+        return frozenset({
+            "metadata_qwen3_embedding_0_6b",
+            "attributes_qwen3_embedding_0_6b",
+            "lyrics_qwen3_embedding_0_6b",
+            "audio_laion_clap",
+            "image_siglip2",
+            "cf_bpr",
+            "vec_a",
+            "vec_b",
+            "vec_c",
+        })
 
     def search(self, clauses: list[FieldQuery], *, topk: int = 1000) -> list[tuple[str, float]]:
         # Record (drop blanks like the real one does)

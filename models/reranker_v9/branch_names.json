@@ -1,0 +1,13 @@
+[
+ "bm25",
+ "centroid.anchor_tracks.audio_laion_clap",
+ "centroid.anchor_tracks.cf_bpr",
+ "centroid.anchor_tracks.image_siglip2",
+ "centroid.user.cf_bpr",
+ "dense.clap_text.sonic_nl.audio_laion_clap",
+ "dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b",
+ "dense.qwen_8b.attributes.attributes_qwen3_embedding_8b",
+ "dense.qwen_8b.metadata.metadata_qwen3_embedding_8b",
+ "lookup.era_popularity",
+ "lookup.resolved_artist_discography"
+]

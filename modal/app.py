@@ -213,6 +213,12 @@ def _run_inference_command(cmd: list[str], *, lancedb_uri: str | None = None) ->
     # shared volume dir the encoder service commits to, so repeated query texts
     # are served without a Modal RPC and prior committed vectors are reused.
     env["MCRS_EMBEDDING_CACHE_DIR"] = EMBEDDING_CACHE_DIR
+    # Reranker artifacts directory (model_full.txt, meta.json, etc.) on the
+    # cache volume; configs reference it via ${oc.env:MCRS_RERANKER_DIR,...}.
+    env.setdefault("MCRS_RERANKER_DIR", f"{CACHE_DIR}/rerank")
+    # Cache root for volume-backed files referenced via ${oc.env:MCRS_CACHE_DIR,...}
+    # (e.g. tag_embedding_index). Defaults to ./cache for local runs.
+    env.setdefault("MCRS_CACHE_DIR", CACHE_DIR)
 
     result = subprocess.run(cmd, cwd="/app", env=env)
     if result.returncode != 0:
@@ -271,8 +277,14 @@ def _inference_devset(
     print(f"Results saved to volume: inference/devset/{tid}{output_suffix}.json")
 
 
+# LightGBM (+ pylance) added on top of the base image for the online LambdaMART
+# reranker configs. Defined before the first decorator that references it, since
+# Python evaluates decorator expressions at module-import time.
+rerank_image = image.uv_pip_install("lightgbm==4.6.0", "pylance")
+
+
 @app.function(
-    image=image,
+    image=rerank_image,  # lightgbm needed for online LambdaMART reranker configs
     volumes=_VOLUME_MOUNTS,
     secrets=[ENV_SECRET],
     cpu=LANCEDB_INFERENCE_CPU,
@@ -347,7 +359,7 @@ def _inference_blindset(
 
 
 @app.function(
-    image=image,
+    image=rerank_image,  # includes lightgbm for the online LambdaMART reranker
     volumes=_VOLUME_MOUNTS,
     secrets=[ENV_SECRET],
     cpu=LANCEDB_INFERENCE_CPU,
@@ -378,6 +390,383 @@ def _inference_blindset_cpu(
     _run_inference_command(cmd, lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI)
     results_vol.commit()
     print(f"CPU results saved to volume: inference/{eval_dataset}/{tid}{output_suffix}.json")
+
+
+# NOTE: the deprecated offline staged-rerank path (_inference_blindset_reranked /
+# run_blindset_reranked, which shelled scripts/rerank/run_blindA_reranked_pipeline.py)
+# was removed. The reranker is now served ONLINE in-pipeline via the config-driven
+# LgbmOnlineReranker — run the rr2 configs through run_inference_blindset /
+# run_inference_sharded instead (e.g. tid=v0plus_compiler_blindset_A_rr2).
+
+
+# ── Feature engineering on Modal ──────────────────────────────────────────────
+# All inputs live on volumes already:
+#   Traces  → music-crs-results  at EXP_DIR/inference/devset/<tid>.run_<run_id>.shard_N_trace.jsonl
+#   LanceDB → music-crs-models   at MODELS_DIR/lancedb
+#   Tag idx → music-crs-cache    at CACHE_DIR/tag_embedding_index/qwen_0_6b.npz
+#   Memo    → music-crs-cache    at CACHE_DIR/rerank/q06_memo.json
+#   GT      → music-crs-cache    at CACHE_DIR/rerank/ground_truth_devset.json  (upload once)
+#
+# One-time upload:
+#   modal volume put music-crs-cache exp/ground_truth/devset.json rerank/ground_truth_devset.json
+#
+# Run:
+#   modal run modal/app.py::run_build_features_modal --tid <tid> --run-id <run_id> --n-shards <N>
+#
+# Download features after:
+#   modal volume get music-crs-cache rerank/features_v9/ exp/analysis/rerank/features_v9/
+#   modal volume get music-crs-cache rerank/constraint_features.parquet exp/analysis/rerank/
+
+
+@app.function(
+    image=rerank_image,  # build_features Catalog.to_lance() needs pylance (lance module)
+    volumes=_VOLUME_MOUNTS,
+    secrets=[ENV_SECRET],
+    cpu=4,
+    memory=16384,
+    timeout=3600,
+)
+def _build_features_shard(shard_idx: int, trace_path: str, out_dir: str, pool_k: int = 500):
+    """Build LTR features for one trace shard. Writes shard_{N}.parquet to out_dir.
+
+    pool_k truncates each branch's pool before features are computed; it must
+    match the serving reranker's pool_k (rr2 configs use 500) for train/serve
+    value parity (the per-pool features z__score__*/ratio__*/pct_* normalize
+    over the truncated pool).
+    """
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable, "/app/scripts/rerank/build_features.py",
+            "--trace", trace_path,
+            "--ground-truth", f"{CACHE_DIR}/rerank/ground_truth_devset.json",
+            "--db-uri", DEFAULT_REMOTE_LANCEDB_URI,
+            "--tag-index", f"{CACHE_DIR}/tag_embedding_index/qwen_0_6b.npz",
+            "--embed-memo", f"{CACHE_DIR}/rerank/q06_memo.json",
+            "--branch-names", f"{CACHE_DIR}/rerank/branch_names.json",
+            "--msg-store", f"{CACHE_DIR}/rerank/raw_msg_store",
+            "--out", f"{out_dir}/shard_{shard_idx}.parquet",
+            "--pool-k", str(pool_k),
+            "--offline",
+        ],
+        capture_output=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"feature build shard {shard_idx} failed (exit {result.returncode})")
+    cache_vol.commit()
+    print(f"shard {shard_idx} features done → {out_dir}/shard_{shard_idx}.parquet", flush=True)
+
+
+@app.function(
+    image=rerank_image,  # build_constraint_features opens the LanceDB catalog (pylance)
+    volumes=_VOLUME_MOUNTS,
+    secrets=[ENV_SECRET],
+    cpu=4,
+    memory=16384,
+    timeout=3600,
+)
+def _build_constraint_features(trace_glob: str, features_dir: str, out_path: str):
+    """Build constraint sidecar (is_played_track, rejected_*, violates_new_artist)."""
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable, "/app/scripts/rerank/build_constraint_features.py",
+            "--trace-glob", trace_glob,
+            "--features", features_dir,
+            "--db-uri", DEFAULT_REMOTE_LANCEDB_URI,
+            "--out", out_path,
+        ],
+        capture_output=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"constraint features failed (exit {result.returncode})")
+    cache_vol.commit()
+    print(f"constraint features done → {out_path}", flush=True)
+
+
+@app.function(
+    image=rerank_image,  # build_label_weights opens the LanceDB catalog (pylance)
+    volumes=_VOLUME_MOUNTS,
+    secrets=[ENV_SECRET],
+    cpu=4,
+    memory=16384,
+    timeout=3600,
+)
+def _build_label_weights(trace_glob: str, out_path: str):
+    """Build train-time label-quality weights (next-turn-rejection downweighting)."""
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable, "/app/scripts/rerank/build_label_weights.py",
+            "--trace-glob", trace_glob,
+            "--ground-truth", f"{CACHE_DIR}/rerank/ground_truth_devset.json",
+            "--db-uri", DEFAULT_REMOTE_LANCEDB_URI,
+            "--out", out_path,
+        ],
+        capture_output=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"label weights failed (exit {result.returncode})")
+    cache_vol.commit()
+    print(f"label weights done → {out_path}", flush=True)
+
+
+@app.local_entrypoint()
+def run_build_features_modal(
+    tid: str = "v0plus_compiler_pruned_resolved_tags_devset",
+    run_id: str = "20260611T035130Z-2e6dfc",
+    n_shards: int = 5,
+    out_name: str = "features_v9",
+    skip_constraint: bool = False,
+    pool_k: int = 500,
+):
+    """Build LTR features from sharded trace files on Modal.
+
+    pool_k defaults to 500 to match the rr2 serving configs (qu_kwargs.reranker
+    .pool_k). Keep them equal — the per-pool features normalize over the pool
+    truncated to pool_k, so a build/serve mismatch is train/serve value drift.
+
+    Prereq (one-time upload):
+      modal volume put music-crs-cache exp/ground_truth/devset.json rerank/ground_truth_devset.json
+
+    Example:
+      modal run modal/app.py::run_build_features_modal \\
+          --tid v0plus_compiler_devset_rr2 --run-id 20260613T095225Z-8aec6e --n-shards 50
+
+    Download after:
+      modal volume get music-crs-cache rerank/<out_name>/ exp/analysis/rerank/<out_name>/
+      modal volume get music-crs-cache rerank/constraint_features.parquet exp/analysis/rerank/
+    """
+    out_dir = f"{CACHE_DIR}/rerank/{out_name}"
+    trace_paths = [
+        f"{EXP_DIR}/inference/devset/{tid}.run_{run_id}.shard_{i}_trace.jsonl"
+        for i in range(n_shards)
+    ]
+    trace_glob = f"{EXP_DIR}/inference/devset/{tid}.run_{run_id}.shard_*_trace.jsonl"
+
+    # Keep the canonical sidecar name for the default build; isolate it for any
+    # other out_name (e.g. validation runs) so they never clobber the training
+    # input the train pipeline reads (rerank/constraint_features.parquet).
+    suffix = "" if out_name == "features_v9" else f"_{out_name}"
+    constraint_file = f"constraint_features{suffix}.parquet"
+    weights_file = f"label_weights_v9{suffix}.parquet"
+
+    print(f"Building features from {n_shards} trace shards → {out_dir} (pool_k={pool_k})")
+    list(_build_features_shard.starmap(
+        [(i, path, out_dir, pool_k) for i, path in enumerate(trace_paths)]
+    ))
+    if skip_constraint:
+        print("Skipping constraint sidecar + label weights (skip_constraint=True).")
+        print(f"Done. Download with:")
+        print(f"  modal volume get music-crs-cache rerank/{out_name}/ exp/analysis/rerank/{out_name}/")
+        return
+    # Both training sidecars read the catalog + traces; run them in parallel.
+    print("All feature shards done. Building constraint sidecar + label weights …")
+    handles = [
+        _build_constraint_features.spawn(
+            trace_glob=trace_glob, features_dir=out_dir,
+            out_path=f"{CACHE_DIR}/rerank/{constraint_file}"),
+        _build_label_weights.spawn(
+            trace_glob=trace_glob, out_path=f"{CACHE_DIR}/rerank/{weights_file}"),
+    ]
+    for h in handles:
+        h.get()
+    print(f"Done. Download with:")
+    print(f"  modal volume get music-crs-cache rerank/{out_name}/ exp/analysis/rerank/{out_name}/")
+    print(f"  modal volume get music-crs-cache rerank/{constraint_file} exp/analysis/rerank/")
+    print(f"  modal volume get music-crs-cache rerank/{weights_file} exp/analysis/rerank/")
+
+
+# ── LightGBM CV training (CPU) ──────────────────────────────────────────────────
+# build → 5 parallel CV folds → finalize → full_model. Training is CPU-only: the
+# PyPI lightgbm wheel has no GPU/CUDA build (device_type='gpu' raises "GPU Tree
+# Learner was not enabled"), and at this data scale CPU lambdarank is fast.
+# Prereq: the feature parquet + sidecars on cache_vol (run_build_features_modal).
+#   python -m modal run modal/app.py::run_train_v9
+
+_TRAIN_IMAGE = (
+    # Plain CPU base (NOT nvidia/cuda — training never uses the GPU; the cuda base
+    # only added a misleading "NVIDIA driver not detected" banner and bulk).
+    modal.Image.debian_slim(python_version="3.11")
+    # libgomp1: lightgbm's native extension dlopens the OpenMP runtime
+    # (libgomp.so.1) at import.
+    .apt_install("libgomp1")
+    # omegaconf: Modal imports the whole modal/app.py module in every container
+    # (to locate the @app.function), and app.py's top-level imports include
+    # `from omegaconf import OmegaConf`. Training only shells out to train_v9.py
+    # (lightgbm/numpy/pandas/pyarrow), but the module-import still needs omegaconf.
+    .pip_install("lightgbm>=4.6.0", "numpy", "pandas", "pyarrow>=16.0", "omegaconf")
+    .add_local_file(
+        "scripts/rerank/train_v9.py",
+        "/app/train_v9.py",
+        copy=True,
+    )
+    # app.py reads modal/config.yaml at module-import time (OmegaConf.load via
+    # _config_path → /app/modal/config.yaml). Without it the container can't
+    # import app.py to locate the train function.
+    .add_local_file(
+        "modal/config.yaml",
+        "/app/modal/config.yaml",
+        copy=True,
+    )
+)
+
+# Paths inside the cache volume for training data
+_TRAIN_V9_REMOTE_DIR   = f"{CACHE_DIR}/rerank/train_v9"
+_TRAIN_FEATURES_DIR    = f"{CACHE_DIR}/rerank/features_v9"
+_TRAIN_SIDECAR         = f"{CACHE_DIR}/rerank/constraint_features.parquet"
+_TRAIN_WEIGHTS         = f"{CACHE_DIR}/rerank/label_weights_v9.parquet"
+_TRAIN_LOCKBOX         = f"{CACHE_DIR}/rerank/lockbox_users.json"
+_TRAIN_GT              = f"{CACHE_DIR}/rerank/ground_truth_devset.json"
+
+
+def _train_cmd(stage: str, fold: int | None = None) -> list:
+    import sys
+    cmd = [
+        # sys.executable, not a hardcoded path — the interpreter location varies
+        # by base image.
+        sys.executable, "/app/train_v9.py",
+        "--stage", stage,
+        "--out-dir", _TRAIN_V9_REMOTE_DIR,
+        "--features-dir", _TRAIN_FEATURES_DIR,
+        "--sidecar", _TRAIN_SIDECAR,
+        "--weights", _TRAIN_WEIGHTS,
+        "--lockbox", _TRAIN_LOCKBOX,
+        "--gt", _TRAIN_GT,
+    ]
+    if fold is not None:
+        cmd += ["--fold", str(fold)]
+    return cmd
+
+
+@app.function(
+    image=_TRAIN_IMAGE,
+    cpu=8,
+    memory=32768,
+    timeout=3600,
+    volumes={CACHE_DIR: cache_vol},
+)
+def _train_build_cpu():
+    """Build the feature matrix (X.npy + id arrays) from parquet on the volume."""
+    import subprocess
+    result = subprocess.run(_train_cmd("build"), capture_output=False)
+    if result.returncode != 0:
+        raise RuntimeError(f"build stage failed (exit {result.returncode})")
+    cache_vol.commit()
+    print("build complete", flush=True)
+
+
+@app.function(
+    image=_TRAIN_IMAGE,
+    cpu=8,
+    memory=32768,
+    timeout=3600,
+    volumes={CACHE_DIR: cache_vol},
+)
+def _train_fold(fold: int):
+    """Run one LambdaMART CV fold. Reads/writes artifacts from cache_vol.
+
+    CPU, not GPU: the PyPI lightgbm wheel is built without GPU/CUDA support
+    (device_type='gpu' raises "GPU Tree Learner was not enabled in this build").
+    At this data scale (~1.2M rows × 148 cols) CPU lambdarank is fast enough.
+    """
+    import subprocess
+    result = subprocess.run(_train_cmd("fold", fold=fold), capture_output=False)
+    if result.returncode != 0:
+        raise RuntimeError(f"fold {fold} failed (exit {result.returncode})")
+    cache_vol.commit()
+    print(f"fold {fold} complete", flush=True)
+
+
+@app.function(
+    image=_TRAIN_IMAGE,
+    cpu=4,
+    memory=16384,
+    timeout=1800,
+    volumes={CACHE_DIR: cache_vol},
+)
+def _train_finalize_cpu():
+    """Aggregate fold scores, train full model, report OOF metrics."""
+    import subprocess
+    result = subprocess.run(_train_cmd("finalize"), capture_output=False)
+    if result.returncode != 0:
+        raise RuntimeError(f"finalize failed (exit {result.returncode})")
+    cache_vol.commit()
+    print("finalize complete", flush=True)
+
+
+@app.function(
+    image=_TRAIN_IMAGE,
+    cpu=4,
+    memory=16384,
+    timeout=1800,
+    volumes={CACHE_DIR: cache_vol},
+)
+def _train_full_model_cpu():
+    """Train the single full-data model at the CV-median round count.
+
+    This is the stage that writes model_full.txt — the artifact published into
+    the committed models/reranker_v9/ bundle. finalize only reports OOF metrics.
+    """
+    import subprocess
+    result = subprocess.run(_train_cmd("full_model"), capture_output=False)
+    if result.returncode != 0:
+        raise RuntimeError(f"full_model failed (exit {result.returncode})")
+    cache_vol.commit()
+    print("full_model complete → model_full.txt", flush=True)
+
+
+@app.local_entrypoint()
+def run_train_v9():
+    """Full training pipeline on Modal (CPU): build → 5× CV fold → finalize → full_model.
+
+    Always rebuilds the feature matrix from scratch — no cached X.npy reuse, so a
+    stale matrix can never silently train the wrong model.
+
+    Stages, all reading/writing the cache volume under rerank/train_v9/:
+      build       — assemble the feature matrix (X.npy + id arrays) from the
+                    features_v9 parquet (produced by run_build_features_modal,
+                    which routes through the SAME compute_turn_features the
+                    online reranker uses → train/serve schema parity).
+      fold ×5     — user-grouped CV folds, run in parallel.
+      finalize    — OOF metrics + by-turn/cold-slice diagnostics (no model file).
+      full_model  — the served model: model_full.txt at the CV-median rounds.
+
+    One-time data upload (run from repo root), OR build on Modal first via
+    run_build_features_modal (writes features_v9/ + constraint_features.parquet
+    straight to the cache volume):
+      modal volume put music-crs-cache exp/analysis/rerank/label_weights_v9.parquet rerank/label_weights_v9.parquet
+      modal volume put music-crs-cache exp/analysis/rerank/lockbox_users.json       rerank/lockbox_users.json
+      modal volume put music-crs-cache exp/ground_truth/devset.json                 rerank/ground_truth_devset.json
+    """
+    import time
+    t0 = time.time()
+    def _lap(label, since):
+        print(f"  [{label}] {time.time() - since:.0f}s (total {time.time() - t0:.0f}s)", flush=True)
+
+    print("Step 1/4: building feature matrix on Modal …")
+    s = time.time(); _train_build_cpu.remote(); _lap("build", s)
+    print("Step 2/4: training 5 CV folds in parallel …")
+    s = time.time(); list(_train_fold.starmap([(f,) for f in range(5)])); _lap("folds", s)
+    print("Step 3/4: finalize + OOF metrics …")
+    s = time.time(); _train_finalize_cpu.remote(); _lap("finalize", s)
+    print("Step 4/4: training full-data model → model_full.txt …")
+    s = time.time(); _train_full_model_cpu.remote(); _lap("full_model", s)
+    print(f"Training complete in {time.time() - t0:.0f}s total.")
+    print("Fetch the served-bundle artifacts:")
+    print("  modal volume get music-crs-cache rerank/train_v9/model_full.txt   exp/analysis/rerank/train_v9/")
+    print("  modal volume get music-crs-cache rerank/train_v9/meta.json        exp/analysis/rerank/train_v9/")
+    print("  modal volume get music-crs-cache rerank/train_v9/cat_maps_v9.json exp/analysis/rerank/train_v9/")
+    print("Then publish into the committed bundle (models/reranker_v9/):")
+    print("  cp exp/analysis/rerank/train_v9/model_full.txt   models/reranker_v9/model.txt")
+    print("  cp exp/analysis/rerank/train_v9/meta.json        models/reranker_v9/meta.json")
+    print("  cp exp/analysis/rerank/train_v9/cat_maps_v9.json models/reranker_v9/cat_maps.json")
 
 
 @app.cls(
@@ -1304,6 +1693,96 @@ def run_evaluate(
 ):
     """Score predictions using the evaluator submodule (CPU)."""
     _evaluate.remote(tid=tid, split=split)
+
+
+@app.function(
+    image=image,
+    secrets=[ENV_SECRET],
+    volumes=_VOLUME_MOUNTS,
+    cpu=LANCEDB_QUERY_CPU,
+    memory=LANCEDB_QUERY_MEMORY,
+    timeout=14400,
+)
+def _state_v1_retriever_matrix(
+    variants_json: str,
+    limit: int,
+    output_prefix: str,
+    sample_id_file: str,
+    baseline_pools_json: str,
+) -> dict:
+    import json
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    variants = json.loads(variants_json)
+    analysis_dir = (
+        Path("/app")
+        / "experiments"
+        / "analysis"
+        / "devset_recall_gap_v0plus_all_retrievers_2026_06_06"
+    )
+    output_dir = Path(EXP_DIR) / "analysis" / "state_v1_retriever_matrix"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_json = output_dir / f"{output_prefix}.json"
+    output_md = output_dir / f"{output_prefix}.md"
+    output_csv = output_dir / f"{output_prefix}.csv"
+    cmd = [
+        sys.executable,
+        "scripts/state_v1_retriever_matrix.py",
+        "--analysis-dir",
+        str(analysis_dir),
+        "--lancedb-uri",
+        DEFAULT_REMOTE_LANCEDB_URI,
+        "--output-json",
+        str(output_json),
+        "--output-md",
+        str(output_md),
+        "--output-csv",
+        str(output_csv),
+    ]
+    for variant in variants:
+        cmd.extend(["--variant", str(variant)])
+    if sample_id_file:
+        sample_id_path = Path(sample_id_file)
+        if not sample_id_path.is_absolute():
+            sample_id_path = Path("/app") / sample_id_path
+        cmd.extend(["--sample-id-file", str(sample_id_path)])
+    if baseline_pools_json:
+        baseline_pools_path = Path(baseline_pools_json)
+        if not baseline_pools_path.is_absolute():
+            baseline_pools_path = Path("/app") / baseline_pools_path
+        cmd.extend(["--baseline-pools-json", str(baseline_pools_path)])
+    if limit > 0:
+        cmd.extend(["--limit", str(limit)])
+    print("Running state_v1_retriever_matrix:", " ".join(cmd), flush=True)
+    subprocess.run(cmd, cwd="/app", check=True)
+    results_vol.commit()
+    return {
+        "summary": json.loads(output_json.read_text())["summary"],
+        "json": str(output_json),
+        "md": str(output_md),
+        "csv": str(output_csv),
+    }
+
+
+@app.local_entrypoint()
+def run_state_v1_retriever_matrix(
+    variants_json: str = '["all_candidate_recall"]',
+    limit: int = 0,
+    output_prefix: str = "state_v1_retriever_matrix_modal",
+    sample_id_file: str = "",
+    baseline_pools_json: str = "",
+):
+    """Run the V1 retriever matrix inside Modal against remote LanceDB."""
+    result = _state_v1_retriever_matrix.remote(
+        variants_json=variants_json,
+        limit=limit,
+        output_prefix=output_prefix,
+        sample_id_file=sample_id_file,
+        baseline_pools_json=baseline_pools_json,
+    )
+    print(json.dumps(result, indent=2))
 
 
 @app.local_entrypoint()
