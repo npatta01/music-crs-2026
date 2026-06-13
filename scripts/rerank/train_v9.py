@@ -396,11 +396,31 @@ if __name__ == "__main__":
     ap.add_argument("--fold", type=int, default=0)
     ap.add_argument("--out-dir", type=str, default=None,
                     help="Override output directory (default: exp/analysis/rerank/train_v9)")
+    ap.add_argument("--features-dir", type=str, default=None,
+                    help="Override features_v9 parquet directory")
+    ap.add_argument("--sidecar", type=str, default=None,
+                    help="Override constraint_features.parquet path")
+    ap.add_argument("--weights", type=str, default=None,
+                    help="Override label_weights_v9.parquet path")
+    ap.add_argument("--lockbox", type=str, default=None,
+                    help="Override lockbox_users.json path")
+    ap.add_argument("--gt", type=str, default=None,
+                    help="Override ground_truth devset.json path")
     ap.add_argument("--device", type=str, default="cpu", choices=["cpu", "gpu"],
                     help="LightGBM device (gpu uses CUDA histogram acceleration)")
     a = ap.parse_args()
     if a.out_dir:
         OUT = Path(a.out_dir)
+    if a.features_dir:
+        FEATURES = Path(a.features_dir)
+    if a.sidecar:
+        SIDECAR = Path(a.sidecar)
+    if a.weights:
+        WEIGHTS = Path(a.weights)
+    if a.lockbox:
+        LOCKBOX = Path(a.lockbox)
+    if a.gt:
+        GT_PATH = Path(a.gt)
     if a.device == "gpu":
         LGB_PARAMS["device_type"] = "gpu"
     if a.stage == "build":

@@ -399,6 +399,144 @@ def _inference_blindset_cpu(
 # run_inference_sharded instead (e.g. tid=v0plus_compiler_blindset_A_rr2).
 
 
+# ── Feature engineering on Modal ──────────────────────────────────────────────
+# All inputs live on volumes already:
+#   Traces  → music-crs-results  at EXP_DIR/inference/devset/<tid>.run_<run_id>.shard_N_trace.jsonl
+#   LanceDB → music-crs-models   at MODELS_DIR/lancedb
+#   Tag idx → music-crs-cache    at CACHE_DIR/tag_embedding_index/qwen_0_6b.npz
+#   Memo    → music-crs-cache    at CACHE_DIR/rerank/q06_memo.json
+#   GT      → music-crs-cache    at CACHE_DIR/rerank/ground_truth_devset.json  (upload once)
+#
+# One-time upload:
+#   modal volume put music-crs-cache exp/ground_truth/devset.json rerank/ground_truth_devset.json
+#
+# Run:
+#   modal run modal/app.py::run_build_features_modal --tid <tid> --run-id <run_id> --n-shards <N>
+#
+# Download features after:
+#   modal volume get music-crs-cache rerank/features_v9/ exp/analysis/rerank/features_v9/
+#   modal volume get music-crs-cache rerank/constraint_features.parquet exp/analysis/rerank/
+
+
+@app.function(
+    image=rerank_image,  # build_features Catalog.to_lance() needs pylance (lance module)
+    volumes=_VOLUME_MOUNTS,
+    secrets=[ENV_SECRET],
+    cpu=4,
+    memory=16384,
+    timeout=3600,
+)
+def _build_features_shard(shard_idx: int, trace_path: str, out_dir: str):
+    """Build LTR features for one trace shard. Writes shard_{N}.parquet to out_dir."""
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable, "/app/scripts/rerank/build_features.py",
+            "--trace", trace_path,
+            "--ground-truth", f"{CACHE_DIR}/rerank/ground_truth_devset.json",
+            "--db-uri", DEFAULT_REMOTE_LANCEDB_URI,
+            "--tag-index", f"{CACHE_DIR}/tag_embedding_index/qwen_0_6b.npz",
+            "--embed-memo", f"{CACHE_DIR}/rerank/q06_memo.json",
+            "--branch-names", f"{CACHE_DIR}/rerank/branch_names.json",
+            "--msg-store", f"{CACHE_DIR}/rerank/raw_msg_store",
+            "--out", f"{out_dir}/shard_{shard_idx}.parquet",
+            "--offline",
+        ],
+        capture_output=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"feature build shard {shard_idx} failed (exit {result.returncode})")
+    cache_vol.commit()
+    print(f"shard {shard_idx} features done → {out_dir}/shard_{shard_idx}.parquet", flush=True)
+
+
+@app.function(
+    image=rerank_image,  # build_constraint_features opens the LanceDB catalog (pylance)
+    volumes=_VOLUME_MOUNTS,
+    secrets=[ENV_SECRET],
+    cpu=4,
+    memory=16384,
+    timeout=3600,
+)
+def _build_constraint_features(trace_glob: str, features_dir: str, out_path: str):
+    """Build constraint sidecar (is_played_track, rejected_*, violates_new_artist)."""
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable, "/app/scripts/rerank/build_constraint_features.py",
+            "--trace-glob", trace_glob,
+            "--features", features_dir,
+            "--db-uri", DEFAULT_REMOTE_LANCEDB_URI,
+            "--out", out_path,
+        ],
+        capture_output=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"constraint features failed (exit {result.returncode})")
+    cache_vol.commit()
+    print(f"constraint features done → {out_path}", flush=True)
+
+
+@app.local_entrypoint()
+def run_build_features_modal(
+    tid: str = "v0plus_compiler_pruned_resolved_tags_devset",
+    run_id: str = "20260611T035130Z-2e6dfc",
+    n_shards: int = 5,
+    out_name: str = "features_v9",
+    skip_constraint: bool = False,
+):
+    """Build LTR features from sharded trace files on Modal.
+
+    Prereq (one-time upload):
+      modal volume put music-crs-cache exp/ground_truth/devset.json rerank/ground_truth_devset.json
+
+    Example:
+      modal run modal/app.py::run_build_features_modal \\
+          --tid v0plus_compiler_devset_rr2 --run-id 20260613T095225Z-8aec6e --n-shards 50
+
+    Download after:
+      modal volume get music-crs-cache rerank/<out_name>/ exp/analysis/rerank/<out_name>/
+      modal volume get music-crs-cache rerank/constraint_features.parquet exp/analysis/rerank/
+    """
+    out_dir = f"{CACHE_DIR}/rerank/{out_name}"
+    trace_paths = [
+        f"{EXP_DIR}/inference/devset/{tid}.run_{run_id}.shard_{i}_trace.jsonl"
+        for i in range(n_shards)
+    ]
+    trace_glob = f"{EXP_DIR}/inference/devset/{tid}.run_{run_id}.shard_*_trace.jsonl"
+
+    # Keep the canonical sidecar name for the default build; isolate it for any
+    # other out_name (e.g. validation runs) so they never clobber the training
+    # input the train pipeline reads (rerank/constraint_features.parquet).
+    constraint_file = (
+        "constraint_features.parquet" if out_name == "features_v9"
+        else f"constraint_features_{out_name}.parquet"
+    )
+
+    print(f"Building features from {n_shards} trace shards → {out_dir}")
+    list(_build_features_shard.starmap(
+        [(i, path, out_dir) for i, path in enumerate(trace_paths)]
+    ))
+    if skip_constraint:
+        print("Skipping constraint sidecar (skip_constraint=True).")
+        print(f"Done. Download with:")
+        print(f"  modal volume get music-crs-cache rerank/{out_name}/ exp/analysis/rerank/{out_name}/")
+        return
+    print("All feature shards done. Building constraint sidecar …")
+    _build_constraint_features.remote(
+        trace_glob=trace_glob,
+        features_dir=out_dir,
+        out_path=f"{CACHE_DIR}/rerank/{constraint_file}",
+    )
+    print(f"Done. Download with:")
+    print(f"  modal volume get music-crs-cache rerank/{out_name}/ exp/analysis/rerank/{out_name}/")
+    print(f"  modal volume get music-crs-cache rerank/{constraint_file} exp/analysis/rerank/")
+
+
 # ── GPU LightGBM training ──────────────────────────────────────────────────────
 # Parallel 5-fold runner. Prereq: X.npy + sidecars must already be on
 # cache_vol at rerank/train_v9/. Upload once with:
@@ -418,7 +556,48 @@ _TRAIN_GPU_IMAGE = (
         copy=True,
     )
 )
-_TRAIN_V9_REMOTE_DIR = f"{CACHE_DIR}/rerank/train_v9"
+
+# Paths inside the cache volume for training data
+_TRAIN_V9_REMOTE_DIR   = f"{CACHE_DIR}/rerank/train_v9"
+_TRAIN_FEATURES_DIR    = f"{CACHE_DIR}/rerank/features_v9"
+_TRAIN_SIDECAR         = f"{CACHE_DIR}/rerank/constraint_features.parquet"
+_TRAIN_WEIGHTS         = f"{CACHE_DIR}/rerank/label_weights_v9.parquet"
+_TRAIN_LOCKBOX         = f"{CACHE_DIR}/rerank/lockbox_users.json"
+_TRAIN_GT              = f"{CACHE_DIR}/rerank/ground_truth_devset.json"
+
+
+def _train_cmd(stage: str, fold: int | None = None, device: str = "gpu") -> list:
+    cmd = [
+        "/usr/bin/python3", "/app/train_v9.py",
+        "--stage", stage,
+        "--out-dir", _TRAIN_V9_REMOTE_DIR,
+        "--features-dir", _TRAIN_FEATURES_DIR,
+        "--sidecar", _TRAIN_SIDECAR,
+        "--weights", _TRAIN_WEIGHTS,
+        "--lockbox", _TRAIN_LOCKBOX,
+        "--gt", _TRAIN_GT,
+        "--device", device,
+    ]
+    if fold is not None:
+        cmd += ["--fold", str(fold)]
+    return cmd
+
+
+@app.function(
+    image=_TRAIN_GPU_IMAGE,
+    cpu=8,
+    memory=32768,
+    timeout=3600,
+    volumes={CACHE_DIR: cache_vol},
+)
+def _train_build_cpu():
+    """Build the feature matrix (X.npy + id arrays) from parquet on the volume."""
+    import subprocess
+    result = subprocess.run(_train_cmd("build", device="cpu"), capture_output=False)
+    if result.returncode != 0:
+        raise RuntimeError(f"build stage failed (exit {result.returncode})")
+    cache_vol.commit()
+    print("build complete", flush=True)
 
 
 @app.function(
@@ -432,56 +611,87 @@ _TRAIN_V9_REMOTE_DIR = f"{CACHE_DIR}/rerank/train_v9"
 def _train_fold_gpu(fold: int):
     """Run one LambdaMART fold on GPU. Reads/writes artifacts from cache_vol."""
     import subprocess
-    import sys
-
-    result = subprocess.run(
-        [
-            sys.executable, "/app/train_v9.py",
-            "--stage", "fold",
-            "--fold", str(fold),
-            "--out-dir", _TRAIN_V9_REMOTE_DIR,
-            "--device", "gpu",
-        ],
-        capture_output=False,
-    )
+    result = subprocess.run(_train_cmd("fold", fold=fold, device="gpu"), capture_output=False)
     if result.returncode != 0:
         raise RuntimeError(f"fold {fold} failed (exit {result.returncode})")
     cache_vol.commit()
     print(f"fold {fold} complete", flush=True)
 
 
-@app.local_entrypoint()
-def run_train_v9_gpu():
-    """Spawn 5 GPU fold jobs in parallel, then download artifacts.
+@app.function(
+    image=_TRAIN_GPU_IMAGE,
+    cpu=4,
+    memory=16384,
+    timeout=1800,
+    volumes={CACHE_DIR: cache_vol},
+)
+def _train_finalize_cpu():
+    """Aggregate fold scores, train full model, report OOF metrics."""
+    import subprocess
+    result = subprocess.run(_train_cmd("finalize", device="cpu"), capture_output=False)
+    if result.returncode != 0:
+        raise RuntimeError(f"finalize failed (exit {result.returncode})")
+    cache_vol.commit()
+    print("finalize complete", flush=True)
 
-    Prerequisites (run once):
-      python -m modal volume put music-crs-cache \\
-          exp/analysis/rerank/train_v9/ rerank/train_v9/
 
-    After this completes, model files are at:
-      exp/analysis/rerank/train_v9/model_fold{0..4}.txt  (downloaded locally)
-    and on the volume at:
-      {CACHE_DIR}/rerank/train_v9/model_fold{0..4}.txt
+@app.function(
+    image=_TRAIN_GPU_IMAGE,
+    cpu=4,
+    memory=16384,
+    timeout=1800,
+    volumes={CACHE_DIR: cache_vol},
+)
+def _train_full_model_cpu():
+    """Train the single full-data model at the CV-median round count.
+
+    This is the stage that writes model_full.txt — the artifact published into
+    the committed models/reranker_v9/ bundle. finalize only reports OOF metrics.
     """
     import subprocess
-    import sys
-    from pathlib import Path as _Path
+    result = subprocess.run(_train_cmd("full_model", device="cpu"), capture_output=False)
+    if result.returncode != 0:
+        raise RuntimeError(f"full_model failed (exit {result.returncode})")
+    cache_vol.commit()
+    print("full_model complete → model_full.txt", flush=True)
 
-    print("Spawning 5 GPU fold jobs in parallel …")
-    jobs = list(_train_fold_gpu.starmap([(f,) for f in range(5)]))
-    print("All folds complete. Running finalize locally …")
-    result = subprocess.run(
-        [sys.executable, "scripts/rerank/train_v9.py", "--stage", "finalize"],
-        check=True,
-    )
-    print("Done. Training artifacts in exp/analysis/rerank/train_v9/")
-    print(
-        "To publish the served model, copy into the committed bundle:\n"
-        "  cp exp/analysis/rerank/train_v9/model_full.txt  models/reranker_v9/model.txt\n"
-        "  cp exp/analysis/rerank/train_v9/meta.json       models/reranker_v9/meta.json\n"
-        "  cp exp/analysis/rerank/train_v9/cat_maps_v9.json models/reranker_v9/cat_maps.json\n"
-        "(branch_names.json is stable — already in models/reranker_v9/)"
-    )
+
+@app.local_entrypoint()
+def run_train_v9_gpu():
+    """Full training pipeline on Modal: build → 5×GPU fold → finalize → full_model.
+
+    Stages, all reading/writing the cache volume under rerank/train_v9/:
+      build       — assemble the feature matrix (X.npy + id arrays) from the
+                    features_v9 parquet (produced by run_build_features_modal,
+                    which routes through the SAME compute_turn_features the
+                    online reranker uses → train/serve schema parity).
+      fold ×5     — user-grouped CV folds on T4 GPUs.
+      finalize    — OOF metrics + by-turn/cold-slice diagnostics (no model file).
+      full_model  — the served model: model_full.txt at the CV-median rounds.
+
+    One-time data upload (run from repo root), OR build on Modal first via
+    run_build_features_modal (writes features_v9/ + constraint_features.parquet
+    straight to the cache volume):
+      modal volume put music-crs-cache exp/analysis/rerank/label_weights_v9.parquet rerank/label_weights_v9.parquet
+      modal volume put music-crs-cache exp/analysis/rerank/lockbox_users.json       rerank/lockbox_users.json
+      modal volume put music-crs-cache exp/ground_truth/devset.json                 rerank/ground_truth_devset.json
+    """
+    print("Step 1/4: building feature matrix on Modal …")
+    _train_build_cpu.remote()
+    print("Step 2/4: training 5 folds in parallel on T4 GPUs …")
+    list(_train_fold_gpu.starmap([(f,) for f in range(5)]))
+    print("Step 3/4: finalize + OOF metrics …")
+    _train_finalize_cpu.remote()
+    print("Step 4/4: training full-data model → model_full.txt …")
+    _train_full_model_cpu.remote()
+    print("Done. Fetch the served-bundle artifacts:")
+    print("  modal volume get music-crs-cache rerank/train_v9/model_full.txt   exp/analysis/rerank/train_v9/")
+    print("  modal volume get music-crs-cache rerank/train_v9/meta.json        exp/analysis/rerank/train_v9/")
+    print("  modal volume get music-crs-cache rerank/train_v9/cat_maps_v9.json exp/analysis/rerank/train_v9/")
+    print("Then publish into the committed bundle (models/reranker_v9/):")
+    print("  cp exp/analysis/rerank/train_v9/model_full.txt   models/reranker_v9/model.txt")
+    print("  cp exp/analysis/rerank/train_v9/meta.json        models/reranker_v9/meta.json")
+    print("  cp exp/analysis/rerank/train_v9/cat_maps_v9.json models/reranker_v9/cat_maps.json")
 
 
 @app.cls(

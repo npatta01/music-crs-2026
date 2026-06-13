@@ -14,11 +14,11 @@ ways to reproduce: **FAST** (use the trained model) and **FULL** (retrain).
 | `models/reranker_v9/cat_maps.json` | categorical value→code maps (8 categoricals) | <1 KB |
 | `models/reranker_v9/branch_names.json` | canonical 11 retrieval branches | <1 KB |
 | `mcrs/qu_modules/lgbm_reranker.py` | online in-pipeline reranker (config-driven) | — |
-| `scripts/rerank/features_v9.py` | `compute_turn_features` — shared by trainer **and** server (anti-drift) | — |
-| `scripts/rerank/build_features.py` | offline feature builder (Catalog, EmbedMemo, NpzEmbedStore) | — |
+| `scripts/rerank/features_v9.py` | `compute_turn_features` — the single per-turn feature function called by **both** the offline builder and the online server (anti-drift) | — |
+| `scripts/rerank/build_features.py` | offline builder — loads the catalog/caches and writes the training parquet by calling `compute_turn_features` (same schema as serving) | — |
 | `scripts/rerank/build_constraint_features.py` | constraint sidecar (is_played, rejection flags) | — |
 | `scripts/rerank/build_label_weights.py` | train-time label-quality weights | — |
-| `scripts/rerank/train_v9.py` | LightGBM trainer (build → 5-fold → finalize) | — |
+| `scripts/rerank/train_v9.py` | LightGBM trainer — stages `build → fold ×5 → finalize → full_model` (`full_model` writes `model_full.txt`) | — |
 | `scripts/build_tag_embedding_index.py` | builds the tag-embedding index (below) | — |
 | `configs/v0plus_compiler_devset_rr2.yaml` | devset rr2 (reranker ON) | — |
 | `configs/v0plus_compiler_blindset_A_rr2.yaml` | blind-A rr2 (reranker ON + response gen) | — |
@@ -87,7 +87,17 @@ python -m modal volume put music-crs-cache  exp/analysis/rerank/raw_msg_store/ r
 python run_experiment.py --backend modal \
   --tid v0plus_compiler_pruned_resolved_tags_devset --batch_size 64
 
-# 3. Prefetch query embeddings, then build features per trace shard:
+# 3. Build features per trace shard. Both paths call the SAME
+#    features_v9.compute_turn_features the server uses, so the parquet schema
+#    matches the served model's meta.json by construction.
+#
+#  (a) Recommended — on Modal (no local catalog/caches needed; reads volumes):
+python -m modal volume put music-crs-cache exp/ground_truth/devset.json rerank/ground_truth_devset.json  # once
+modal run modal/app.py::run_build_features_modal \
+  --tid v0plus_compiler_pruned_resolved_tags_devset --run-id <RUN_ID> --n-shards 50
+# writes rerank/features_v9/ + rerank/constraint_features.parquet to the cache volume.
+#
+#  (b) Local alternative — needs the catalog + warm caches on disk:
 python scripts/rerank/build_features.py \
   --trace exp/inference/devset/<TID>.run_<RUN_ID>.shard_<i>_trace.jsonl \
   --ground-truth exp/ground_truth/devset.json \
@@ -95,20 +105,28 @@ python scripts/rerank/build_features.py \
   --tag-index cache/tag_embedding_index/qwen_0_6b.npz \
   --embed-memo exp/analysis/rerank/q06_memo.json \
   --branch-names models/reranker_v9/branch_names.json \
-  --out exp/analysis/rerank/features_v9/shard_<i>.parquet
-# (drop --offline / add --prefetch-only first so q06_memo + raw_msg_store fill from DeepInfra)
+  --msg-store exp/analysis/rerank/raw_msg_store \
+  --out exp/analysis/rerank/features_v9/shard_<i>.parquet --offline
+# (run once with --prefetch-only, dropping --offline, to fill q06_memo from DeepInfra first)
 
-# 4. Constraint sidecar + label weights:
+# 4. Constraint sidecar + label weights (local path; the Modal builder in step 3a
+#    already produced constraint_features.parquet):
 python scripts/rerank/build_constraint_features.py --db-uri cache/lancedb \
   --features exp/analysis/rerank/features_v9 \
   --out exp/analysis/rerank/constraint_features.parquet
 python scripts/rerank/build_label_weights.py \
   --out exp/analysis/rerank/label_weights_v9.parquet
 
-# 5. Train: build matrix → 5 GPU folds → finalize (finalize writes model_full.txt):
+# 5. Train on Modal: build matrix → 5 GPU folds → finalize → full_model.
+#    full_model is the stage that writes model_full.txt (finalize only reports
+#    OOF metrics). Upload label_weights/lockbox/ground-truth once (see the
+#    run_train_v9_gpu docstring), then:
 modal run modal/app.py::run_train_v9_gpu
 
-# 6. Publish the finalized model into the committed bundle:
+# 6. Fetch + publish the full-data model into the committed bundle:
+modal volume get music-crs-cache rerank/train_v9/model_full.txt   exp/analysis/rerank/train_v9/
+modal volume get music-crs-cache rerank/train_v9/meta.json        exp/analysis/rerank/train_v9/
+modal volume get music-crs-cache rerank/train_v9/cat_maps_v9.json exp/analysis/rerank/train_v9/
 cp exp/analysis/rerank/train_v9/model_full.txt   models/reranker_v9/model.txt
 cp exp/analysis/rerank/train_v9/meta.json        models/reranker_v9/meta.json
 cp exp/analysis/rerank/train_v9/cat_maps_v9.json models/reranker_v9/cat_maps.json
@@ -122,8 +140,15 @@ cp exp/analysis/rerank/train_v9/cat_maps_v9.json models/reranker_v9/cat_maps.jso
 
 ## Train/serve parity
 
-The server (`lgbm_reranker.py`) and the offline trainer both call
-`features_v9.compute_turn_features`, so feature drift is structural, not
-incidental. The contract that must match between them: `pool_k` (500), the tag
-index, and — for exact reproduction — the warm caches. Keep `pool_k: 500` in the
-rr2 configs aligned with the feature build.
+The server (`lgbm_reranker.py`) and the offline builder (`build_features.py`)
+both produce features through the SAME `features_v9.compute_turn_features`, so
+the feature **schema** is identical by construction — there is no parallel
+offline schema that can drift, and the regenerated parquet's columns match the
+served `meta.json` (148) exactly.
+
+For numeric reproduction also keep the other inputs consistent between build and
+serve: the catalog, the tag index, the warm embedding caches, and `pool_k` (the
+per-pool features — `z__score__*`, `ratio__*`, `pct_*` — are normalized over the
+pool truncated to `pool_k`). `build_features.py` defaults to `--pool-k 200`; the
+rr2 serving configs use `pool_k: 500`. Pass a matching `--pool-k` to the builder
+(or align the config) if you need build-time and serve-time values to coincide.
