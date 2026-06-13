@@ -109,19 +109,23 @@ python scripts/rerank/build_features.py \
   --out exp/analysis/rerank/features_v9/shard_<i>.parquet --offline
 # (run once with --prefetch-only, dropping --offline, to fill q06_memo from DeepInfra first)
 
-# 4. Constraint sidecar + label weights (local path; the Modal builder in step 3a
-#    already produced constraint_features.parquet):
+# 4. Constraint sidecar + label weights — SKIP if you used the Modal builder in
+#    step 3a: run_build_features_modal already wrote BOTH constraint_features.parquet
+#    and label_weights_v9.parquet to the cache volume. Only needed for the local
+#    path 3b:
 python scripts/rerank/build_constraint_features.py --db-uri cache/lancedb \
   --features exp/analysis/rerank/features_v9 \
   --out exp/analysis/rerank/constraint_features.parquet
 python scripts/rerank/build_label_weights.py \
+  --trace-glob "exp/inference/devset/<TID>.run_<RUN_ID>.shard_*_trace.jsonl" \
+  --db-uri cache/lancedb \
   --out exp/analysis/rerank/label_weights_v9.parquet
 
-# 5. Train on Modal: build matrix → 5 GPU folds → finalize → full_model.
+# 5. Train on Modal (CPU): build matrix → 5 CV folds → finalize → full_model.
 #    full_model is the stage that writes model_full.txt (finalize only reports
 #    OOF metrics). Upload label_weights/lockbox/ground-truth once (see the
-#    run_train_v9_gpu docstring), then:
-modal run modal/app.py::run_train_v9_gpu
+#    run_train_v9 docstring), then:
+modal run modal/app.py::run_train_v9
 
 # 6. Fetch + publish the full-data model into the committed bundle:
 modal volume get music-crs-cache rerank/train_v9/model_full.txt   exp/analysis/rerank/train_v9/

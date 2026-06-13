@@ -488,6 +488,35 @@ def _build_constraint_features(trace_glob: str, features_dir: str, out_path: str
     print(f"constraint features done → {out_path}", flush=True)
 
 
+@app.function(
+    image=rerank_image,  # build_label_weights opens the LanceDB catalog (pylance)
+    volumes=_VOLUME_MOUNTS,
+    secrets=[ENV_SECRET],
+    cpu=4,
+    memory=16384,
+    timeout=3600,
+)
+def _build_label_weights(trace_glob: str, out_path: str):
+    """Build train-time label-quality weights (next-turn-rejection downweighting)."""
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable, "/app/scripts/rerank/build_label_weights.py",
+            "--trace-glob", trace_glob,
+            "--ground-truth", f"{CACHE_DIR}/rerank/ground_truth_devset.json",
+            "--db-uri", DEFAULT_REMOTE_LANCEDB_URI,
+            "--out", out_path,
+        ],
+        capture_output=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"label weights failed (exit {result.returncode})")
+    cache_vol.commit()
+    print(f"label weights done → {out_path}", flush=True)
+
+
 @app.local_entrypoint()
 def run_build_features_modal(
     tid: str = "v0plus_compiler_pruned_resolved_tags_devset",
@@ -524,47 +553,66 @@ def run_build_features_modal(
     # Keep the canonical sidecar name for the default build; isolate it for any
     # other out_name (e.g. validation runs) so they never clobber the training
     # input the train pipeline reads (rerank/constraint_features.parquet).
-    constraint_file = (
-        "constraint_features.parquet" if out_name == "features_v9"
-        else f"constraint_features_{out_name}.parquet"
-    )
+    suffix = "" if out_name == "features_v9" else f"_{out_name}"
+    constraint_file = f"constraint_features{suffix}.parquet"
+    weights_file = f"label_weights_v9{suffix}.parquet"
 
     print(f"Building features from {n_shards} trace shards → {out_dir} (pool_k={pool_k})")
     list(_build_features_shard.starmap(
         [(i, path, out_dir, pool_k) for i, path in enumerate(trace_paths)]
     ))
     if skip_constraint:
-        print("Skipping constraint sidecar (skip_constraint=True).")
+        print("Skipping constraint sidecar + label weights (skip_constraint=True).")
         print(f"Done. Download with:")
         print(f"  modal volume get music-crs-cache rerank/{out_name}/ exp/analysis/rerank/{out_name}/")
         return
-    print("All feature shards done. Building constraint sidecar …")
-    _build_constraint_features.remote(
-        trace_glob=trace_glob,
-        features_dir=out_dir,
-        out_path=f"{CACHE_DIR}/rerank/{constraint_file}",
-    )
+    # Both training sidecars read the catalog + traces; run them in parallel.
+    print("All feature shards done. Building constraint sidecar + label weights …")
+    handles = [
+        _build_constraint_features.spawn(
+            trace_glob=trace_glob, features_dir=out_dir,
+            out_path=f"{CACHE_DIR}/rerank/{constraint_file}"),
+        _build_label_weights.spawn(
+            trace_glob=trace_glob, out_path=f"{CACHE_DIR}/rerank/{weights_file}"),
+    ]
+    for h in handles:
+        h.get()
     print(f"Done. Download with:")
     print(f"  modal volume get music-crs-cache rerank/{out_name}/ exp/analysis/rerank/{out_name}/")
     print(f"  modal volume get music-crs-cache rerank/{constraint_file} exp/analysis/rerank/")
+    print(f"  modal volume get music-crs-cache rerank/{weights_file} exp/analysis/rerank/")
 
 
-# ── GPU LightGBM training ──────────────────────────────────────────────────────
-# Parallel 5-fold runner. Prereq: X.npy + sidecars must already be on
-# cache_vol at rerank/train_v9/. Upload once with:
-#   python -m modal volume put music-crs-cache \
-#       exp/analysis/rerank/train_v9/ rerank/train_v9/
-# Then run all 5 folds in parallel (~5-6 min each on T4):
-#   python -m modal run modal/app.py::run_train_v9_gpu
+# ── LightGBM CV training (CPU) ──────────────────────────────────────────────────
+# build → 5 parallel CV folds → finalize → full_model. Training is CPU-only: the
+# PyPI lightgbm wheel has no GPU/CUDA build (device_type='gpu' raises "GPU Tree
+# Learner was not enabled"), and at this data scale CPU lambdarank is fast.
+# Prereq: the feature parquet + sidecars on cache_vol (run_build_features_modal).
+#   python -m modal run modal/app.py::run_train_v9
 
-_TRAIN_GPU_IMAGE = (
-    modal.Image.from_registry(
-        "nvidia/cuda:12.4.1-runtime-ubuntu22.04", add_python="3.11"
-    )
-    .pip_install("lightgbm>=4.6.0", "numpy", "pandas", "pyarrow>=16.0")
+_TRAIN_IMAGE = (
+    # Plain CPU base (NOT nvidia/cuda — training never uses the GPU; the cuda base
+    # only added a misleading "NVIDIA driver not detected" banner and bulk).
+    modal.Image.debian_slim(python_version="3.11")
+    # libgomp1: lightgbm's native extension dlopens the OpenMP runtime
+    # (libgomp.so.1) at import.
+    .apt_install("libgomp1")
+    # omegaconf: Modal imports the whole modal/app.py module in every container
+    # (to locate the @app.function), and app.py's top-level imports include
+    # `from omegaconf import OmegaConf`. Training only shells out to train_v9.py
+    # (lightgbm/numpy/pandas/pyarrow), but the module-import still needs omegaconf.
+    .pip_install("lightgbm>=4.6.0", "numpy", "pandas", "pyarrow>=16.0", "omegaconf")
     .add_local_file(
         "scripts/rerank/train_v9.py",
         "/app/train_v9.py",
+        copy=True,
+    )
+    # app.py reads modal/config.yaml at module-import time (OmegaConf.load via
+    # _config_path → /app/modal/config.yaml). Without it the container can't
+    # import app.py to locate the train function.
+    .add_local_file(
+        "modal/config.yaml",
+        "/app/modal/config.yaml",
         copy=True,
     )
 )
@@ -578,9 +626,12 @@ _TRAIN_LOCKBOX         = f"{CACHE_DIR}/rerank/lockbox_users.json"
 _TRAIN_GT              = f"{CACHE_DIR}/rerank/ground_truth_devset.json"
 
 
-def _train_cmd(stage: str, fold: int | None = None, device: str = "gpu") -> list:
+def _train_cmd(stage: str, fold: int | None = None) -> list:
+    import sys
     cmd = [
-        "/usr/bin/python3", "/app/train_v9.py",
+        # sys.executable, not a hardcoded path — the interpreter location varies
+        # by base image.
+        sys.executable, "/app/train_v9.py",
         "--stage", stage,
         "--out-dir", _TRAIN_V9_REMOTE_DIR,
         "--features-dir", _TRAIN_FEATURES_DIR,
@@ -588,7 +639,6 @@ def _train_cmd(stage: str, fold: int | None = None, device: str = "gpu") -> list
         "--weights", _TRAIN_WEIGHTS,
         "--lockbox", _TRAIN_LOCKBOX,
         "--gt", _TRAIN_GT,
-        "--device", device,
     ]
     if fold is not None:
         cmd += ["--fold", str(fold)]
@@ -596,7 +646,7 @@ def _train_cmd(stage: str, fold: int | None = None, device: str = "gpu") -> list
 
 
 @app.function(
-    image=_TRAIN_GPU_IMAGE,
+    image=_TRAIN_IMAGE,
     cpu=8,
     memory=32768,
     timeout=3600,
@@ -605,7 +655,7 @@ def _train_cmd(stage: str, fold: int | None = None, device: str = "gpu") -> list
 def _train_build_cpu():
     """Build the feature matrix (X.npy + id arrays) from parquet on the volume."""
     import subprocess
-    result = subprocess.run(_train_cmd("build", device="cpu"), capture_output=False)
+    result = subprocess.run(_train_cmd("build"), capture_output=False)
     if result.returncode != 0:
         raise RuntimeError(f"build stage failed (exit {result.returncode})")
     cache_vol.commit()
@@ -613,17 +663,21 @@ def _train_build_cpu():
 
 
 @app.function(
-    image=_TRAIN_GPU_IMAGE,
-    gpu="T4",
-    cpu=4,
+    image=_TRAIN_IMAGE,
+    cpu=8,
     memory=32768,
     timeout=3600,
     volumes={CACHE_DIR: cache_vol},
 )
-def _train_fold_gpu(fold: int):
-    """Run one LambdaMART fold on GPU. Reads/writes artifacts from cache_vol."""
+def _train_fold(fold: int):
+    """Run one LambdaMART CV fold. Reads/writes artifacts from cache_vol.
+
+    CPU, not GPU: the PyPI lightgbm wheel is built without GPU/CUDA support
+    (device_type='gpu' raises "GPU Tree Learner was not enabled in this build").
+    At this data scale (~1.2M rows × 148 cols) CPU lambdarank is fast enough.
+    """
     import subprocess
-    result = subprocess.run(_train_cmd("fold", fold=fold, device="gpu"), capture_output=False)
+    result = subprocess.run(_train_cmd("fold", fold=fold), capture_output=False)
     if result.returncode != 0:
         raise RuntimeError(f"fold {fold} failed (exit {result.returncode})")
     cache_vol.commit()
@@ -631,7 +685,7 @@ def _train_fold_gpu(fold: int):
 
 
 @app.function(
-    image=_TRAIN_GPU_IMAGE,
+    image=_TRAIN_IMAGE,
     cpu=4,
     memory=16384,
     timeout=1800,
@@ -640,7 +694,7 @@ def _train_fold_gpu(fold: int):
 def _train_finalize_cpu():
     """Aggregate fold scores, train full model, report OOF metrics."""
     import subprocess
-    result = subprocess.run(_train_cmd("finalize", device="cpu"), capture_output=False)
+    result = subprocess.run(_train_cmd("finalize"), capture_output=False)
     if result.returncode != 0:
         raise RuntimeError(f"finalize failed (exit {result.returncode})")
     cache_vol.commit()
@@ -648,7 +702,7 @@ def _train_finalize_cpu():
 
 
 @app.function(
-    image=_TRAIN_GPU_IMAGE,
+    image=_TRAIN_IMAGE,
     cpu=4,
     memory=16384,
     timeout=1800,
@@ -661,7 +715,7 @@ def _train_full_model_cpu():
     the committed models/reranker_v9/ bundle. finalize only reports OOF metrics.
     """
     import subprocess
-    result = subprocess.run(_train_cmd("full_model", device="cpu"), capture_output=False)
+    result = subprocess.run(_train_cmd("full_model"), capture_output=False)
     if result.returncode != 0:
         raise RuntimeError(f"full_model failed (exit {result.returncode})")
     cache_vol.commit()
@@ -669,15 +723,18 @@ def _train_full_model_cpu():
 
 
 @app.local_entrypoint()
-def run_train_v9_gpu():
-    """Full training pipeline on Modal: build → 5×GPU fold → finalize → full_model.
+def run_train_v9():
+    """Full training pipeline on Modal (CPU): build → 5× CV fold → finalize → full_model.
+
+    Always rebuilds the feature matrix from scratch — no cached X.npy reuse, so a
+    stale matrix can never silently train the wrong model.
 
     Stages, all reading/writing the cache volume under rerank/train_v9/:
       build       — assemble the feature matrix (X.npy + id arrays) from the
                     features_v9 parquet (produced by run_build_features_modal,
                     which routes through the SAME compute_turn_features the
                     online reranker uses → train/serve schema parity).
-      fold ×5     — user-grouped CV folds on T4 GPUs.
+      fold ×5     — user-grouped CV folds, run in parallel.
       finalize    — OOF metrics + by-turn/cold-slice diagnostics (no model file).
       full_model  — the served model: model_full.txt at the CV-median rounds.
 
@@ -688,15 +745,21 @@ def run_train_v9_gpu():
       modal volume put music-crs-cache exp/analysis/rerank/lockbox_users.json       rerank/lockbox_users.json
       modal volume put music-crs-cache exp/ground_truth/devset.json                 rerank/ground_truth_devset.json
     """
+    import time
+    t0 = time.time()
+    def _lap(label, since):
+        print(f"  [{label}] {time.time() - since:.0f}s (total {time.time() - t0:.0f}s)", flush=True)
+
     print("Step 1/4: building feature matrix on Modal …")
-    _train_build_cpu.remote()
-    print("Step 2/4: training 5 folds in parallel on T4 GPUs …")
-    list(_train_fold_gpu.starmap([(f,) for f in range(5)]))
+    s = time.time(); _train_build_cpu.remote(); _lap("build", s)
+    print("Step 2/4: training 5 CV folds in parallel …")
+    s = time.time(); list(_train_fold.starmap([(f,) for f in range(5)])); _lap("folds", s)
     print("Step 3/4: finalize + OOF metrics …")
-    _train_finalize_cpu.remote()
+    s = time.time(); _train_finalize_cpu.remote(); _lap("finalize", s)
     print("Step 4/4: training full-data model → model_full.txt …")
-    _train_full_model_cpu.remote()
-    print("Done. Fetch the served-bundle artifacts:")
+    s = time.time(); _train_full_model_cpu.remote(); _lap("full_model", s)
+    print(f"Training complete in {time.time() - t0:.0f}s total.")
+    print("Fetch the served-bundle artifacts:")
     print("  modal volume get music-crs-cache rerank/train_v9/model_full.txt   exp/analysis/rerank/train_v9/")
     print("  modal volume get music-crs-cache rerank/train_v9/meta.json        exp/analysis/rerank/train_v9/")
     print("  modal volume get music-crs-cache rerank/train_v9/cat_maps_v9.json exp/analysis/rerank/train_v9/")

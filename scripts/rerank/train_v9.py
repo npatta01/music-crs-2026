@@ -406,8 +406,6 @@ if __name__ == "__main__":
                     help="Override lockbox_users.json path")
     ap.add_argument("--gt", type=str, default=None,
                     help="Override ground_truth devset.json path")
-    ap.add_argument("--device", type=str, default="cpu", choices=["cpu", "gpu"],
-                    help="LightGBM device (gpu uses CUDA histogram acceleration)")
     a = ap.parse_args()
     if a.out_dir:
         OUT = Path(a.out_dir)
@@ -421,8 +419,6 @@ if __name__ == "__main__":
         LOCKBOX = Path(a.lockbox)
     if a.gt:
         GT_PATH = Path(a.gt)
-    if a.device == "gpu":
-        LGB_PARAMS["device_type"] = "gpu"
     if a.stage == "build":
         stage_build()
     elif a.stage == "fold":
