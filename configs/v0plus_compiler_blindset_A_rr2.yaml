@@ -1,6 +1,6 @@
 # Blind-A submission: pruned-retrieval + LambdaMART v9 reranker + qwen3-30b response gen.
 # Based on v0plus_compiler_blindset_A_pruned.yaml, with:
-#   - qu_kwargs.reranker: LgbmOnlineReranker (model_full.txt, 136 rounds, 148 features)
+#   - qu_kwargs.reranker: LgbmOnlineReranker (models/reranker_v9/model.txt, 136 trees, 148 features)
 #   - branch_trace_topk: 1000 (required for reranker — pools only populated when tracing)
 #   - explanation_lm: qwen3-30b-a3b-instruct (state-conditioned, PR #114 settings)
 
@@ -22,7 +22,7 @@ qu_kwargs:
   max_in_flight: 8
   extractor:
     model_name: openrouter/deepseek/deepseek-v4-flash
-    prompt_version: current
+    prompt_version: v1  # v0plus for old V0Plus extraction
     temperature: 0.0
     max_tokens: 8000
     timeout_s: 120
@@ -141,12 +141,15 @@ qu_kwargs:
     era_pop_cap: 200
   reranker:
     enabled: true
-    # MCRS_RERANKER_DIR is set by modal/app.py on Modal (→ /root/cache/rerank);
-    # defaults to ./exp/analysis/rerank for local runs.
-    model_path: ${oc.env:MCRS_RERANKER_DIR,./exp/analysis/rerank}/train_v9/model_full.txt
-    meta_path: ${oc.env:MCRS_RERANKER_DIR,./exp/analysis/rerank}/train_v9/meta.json
-    cat_maps: ${oc.env:MCRS_RERANKER_DIR,./exp/analysis/rerank}/train_v9/cat_maps_v9.json
-    branch_names: ${oc.env:MCRS_RERANKER_DIR,./exp/analysis/rerank}/branch_names.json
+    # Model bundle is committed under models/reranker_v9/ (ships in the repo and
+    # the Modal image). MCRS_MODEL_DIR overrides the location if needed.
+    model_path: ${oc.env:MCRS_MODEL_DIR,models/reranker_v9}/model.txt
+    meta_path: ${oc.env:MCRS_MODEL_DIR,models/reranker_v9}/meta.json
+    cat_maps: ${oc.env:MCRS_MODEL_DIR,models/reranker_v9}/cat_maps.json
+    branch_names: ${oc.env:MCRS_MODEL_DIR,models/reranker_v9}/branch_names.json
+    # Large serving caches (not committed; MCRS_RERANKER_DIR is set by
+    # modal/app.py on Modal → /root/cache/rerank, defaults to ./exp/analysis/rerank
+    # locally — see docs/reproduce_reranker.md).
     tag_index: ${oc.env:MCRS_CACHE_DIR,./cache}/tag_embedding_index/qwen_0_6b.npz
     embed_memo: ${oc.env:MCRS_RERANKER_DIR,./exp/analysis/rerank}/q06_memo_blindA.json
     msg_store: ${oc.env:MCRS_RERANKER_DIR,./exp/analysis/rerank}/raw_msg_store

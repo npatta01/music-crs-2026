@@ -71,13 +71,13 @@ from mcrs.conversation_state.schema import (
 def _resolve_prompt_fns(prompt_version: str | None):
     """Return prompt builders for the current extractor or prior reference."""
     pv = (prompt_version or "current").lower()
-    if pv in ("current", "v4", "default"):
+    if pv in ("current", "v4", "default", "v1"):
         return current_prompt.build_messages, current_prompt.json_schema_for_response_format
     if pv in ("rubric", "decision_rubric", "v5"):
         return rubric_prompt.build_messages, rubric_prompt.json_schema_for_response_format
     if pv in ("rejection", "rejection_fewshot", "v5_rejection"):
         return rejection_prompt.build_messages, rejection_prompt.json_schema_for_response_format
-    if pv in ("previous", "reference", "v3"):
+    if pv in ("previous", "reference", "v3", "v0plus"):
         return previous_prompt.build_messages, previous_prompt.json_schema_for_response_format
     raise ValueError(f"unknown extractor prompt_version: {prompt_version!r}")
 from mcrs.embeddings.base import EmbeddingClient

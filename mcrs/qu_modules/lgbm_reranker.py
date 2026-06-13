@@ -5,12 +5,14 @@ features via the SAME `compute_turn_features` (scripts/rerank/features_v9.py),
 so train/serve drift is structurally impossible. Hooked by V0PlusCompilerQU
 right after trace assembly; replaces the RRF order over the branch-pool union.
 
-Config (qu_kwargs.reranker):
+Config (qu_kwargs.reranker). The model bundle is committed under
+models/reranker_v9/ (ships in the repo + the Modal image); the large caches are
+not committed (see docs/reproduce_reranker.md):
   enabled: true
-  model_path:    .../model_v9.txt          (LightGBM booster)
-  meta_path:     .../model_v9.meta.json    ({cols, cat_idx}; trainer output)
-  cat_maps:      .../cat_maps_v9.json      (categorical value->code, training)
-  branch_names:  .../branch_names.json     (canonical 11)
+  model_path:    models/reranker_v9/model.txt        (LightGBM booster)
+  meta_path:     models/reranker_v9/meta.json        ({cols, cat_idx})
+  cat_maps:      models/reranker_v9/cat_maps.json    (categorical value->code)
+  branch_names:  models/reranker_v9/branch_names.json (canonical 11)
   tag_index:     .../tag_embedding_index/qwen_0_6b.npz
   embed_memo:    .../q06_memo.json         (query-text embedding cache; live
                                             DeepInfra fill for unseen strings)

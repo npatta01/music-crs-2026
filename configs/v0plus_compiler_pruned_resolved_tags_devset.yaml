@@ -19,7 +19,7 @@ qu_kwargs:
 
   extractor:
     model_name: "openrouter/deepseek/deepseek-v4-flash"
-    prompt_version: "current"
+    prompt_version: "v1"  # "v0plus" for old V0Plus extraction
     temperature: 0.0
     max_tokens: 8000
     timeout_s: 120

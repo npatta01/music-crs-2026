@@ -11,6 +11,9 @@ def test_current_config_surface_has_no_deleted_devset_references():
     assert configs == [
         "v0plus_compiler_all_retrievers_devset.yaml",
         "v0plus_compiler_blindset_A.yaml",
+        "v0plus_compiler_blindset_A_rr2.yaml",
+        "v0plus_compiler_devset_rr2.yaml",
+        "v0plus_compiler_pruned_resolved_tags_devset.yaml",
     ]
 
     checked_paths = [

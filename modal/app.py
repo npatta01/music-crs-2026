@@ -277,6 +277,12 @@ def _inference_devset(
     print(f"Results saved to volume: inference/devset/{tid}{output_suffix}.json")
 
 
+# LightGBM (+ pylance) added on top of the base image for the online LambdaMART
+# reranker configs. Defined before the first decorator that references it, since
+# Python evaluates decorator expressions at module-import time.
+rerank_image = image.uv_pip_install("lightgbm==4.6.0", "pylance")
+
+
 @app.function(
     image=rerank_image,  # lightgbm needed for online LambdaMART reranker configs
     volumes=_VOLUME_MOUNTS,
@@ -317,10 +323,6 @@ def _inference_devset_cpu(
     _run_inference_command(cmd, lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI)
     results_vol.commit()
     print(f"CPU results saved to volume: inference/devset/{tid}{output_suffix}.json")
-
-
-# LightGBM added here (before first use in _inference_blindset_cpu decorator).
-rerank_image = image.uv_pip_install("lightgbm==4.6.0", "pylance")
 
 
 @app.function(
@@ -390,56 +392,11 @@ def _inference_blindset_cpu(
     print(f"CPU results saved to volume: inference/{eval_dataset}/{tid}{output_suffix}.json")
 
 
-@app.function(
-    image=rerank_image,
-    volumes=_VOLUME_MOUNTS,
-    secrets=[ENV_SECRET],
-    cpu=LANCEDB_INFERENCE_CPU,
-    memory=LANCEDB_INFERENCE_MEMORY,
-    timeout=10800,
-)
-def _inference_blindset_reranked(
-    retrieval_tid: str,
-    final_tid: str,
-    eval_dataset: str,
-    batch_size: int,
-):
-    """Retrieval -> features -> v7b 5-fold rerank -> state-conditioned responses,
-    one container run. Artifacts (model folds, cat_maps, branch_names) live on the
-    cache volume under rerank/; the staged driver shells the byte-identical
-    validated scripts (devset round-trip 338/338)."""
-    import sys
-
-    cmd = [
-        sys.executable, "/app/scripts/rerank/run_blindA_reranked_pipeline.py",
-        "--retrieval-tid", retrieval_tid,
-        "--final-tid", final_tid,
-        "--eval-dataset", eval_dataset,
-        "--exp-dir", EXP_DIR,
-        "--artifacts-dir", f"{CACHE_DIR}/rerank",
-        "--tag-index", f"{CACHE_DIR}/tag_embedding_index/qwen_0_6b.npz",
-        "--scratch-dir", f"{CACHE_DIR}/rerank/scratch",
-        "--batch-size", str(batch_size),
-    ]
-    _run_inference_command(cmd, lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI)
-    results_vol.commit()
-    cache_vol.commit()
-    print(f"Reranked results saved to volume: inference/{eval_dataset}/{final_tid}.json")
-
-
-@app.local_entrypoint()
-def run_blindset_reranked(
-    retrieval_tid: str = "v0plus_compiler_blindset_A_pruned",
-    final_tid: str = "v0plus_compiler_blindset_A_rr",
-    eval_dataset: str = "blindset_A",
-    batch_size: int = BLINDSET_BATCH_SIZE,
-):
-    _inference_blindset_reranked.remote(
-        retrieval_tid=retrieval_tid,
-        final_tid=final_tid,
-        eval_dataset=eval_dataset,
-        batch_size=batch_size,
-    )
+# NOTE: the deprecated offline staged-rerank path (_inference_blindset_reranked /
+# run_blindset_reranked, which shelled scripts/rerank/run_blindA_reranked_pipeline.py)
+# was removed. The reranker is now served ONLINE in-pipeline via the config-driven
+# LgbmOnlineReranker — run the rr2 configs through run_inference_blindset /
+# run_inference_sharded instead (e.g. tid=v0plus_compiler_blindset_A_rr2).
 
 
 # ── GPU LightGBM training ──────────────────────────────────────────────────────
@@ -517,7 +474,14 @@ def run_train_v9_gpu():
         [sys.executable, "scripts/rerank/train_v9.py", "--stage", "finalize"],
         check=True,
     )
-    print("Done. Artifacts in exp/analysis/rerank/train_v9/")
+    print("Done. Training artifacts in exp/analysis/rerank/train_v9/")
+    print(
+        "To publish the served model, copy into the committed bundle:\n"
+        "  cp exp/analysis/rerank/train_v9/model_full.txt  models/reranker_v9/model.txt\n"
+        "  cp exp/analysis/rerank/train_v9/meta.json       models/reranker_v9/meta.json\n"
+        "  cp exp/analysis/rerank/train_v9/cat_maps_v9.json models/reranker_v9/cat_maps.json\n"
+        "(branch_names.json is stable — already in models/reranker_v9/)"
+    )
 
 
 @app.cls(
