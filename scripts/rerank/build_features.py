@@ -405,7 +405,10 @@ def main():
     ap.add_argument("--db-uri", required=True)
     ap.add_argument("--table-name", default="music_track_catalog")
     ap.add_argument("--tag-index", required=True)
-    ap.add_argument("--pool-k", type=int, default=200)
+    ap.add_argument("--pool-k", type=int, default=500,
+                    help="Branch-pool truncation before feature computation. "
+                         "Must match the serving reranker pool_k (rr2 = 500) "
+                         "for train/serve parity of per-pool features.")
     ap.add_argument("--out", default="exp/analysis/rerank/features.parquet")
     ap.add_argument("--embed-memo", default="exp/analysis/rerank/q06_memo.json")
     ap.add_argument("--branch-names", default="exp/analysis/rerank/branch_names.json",

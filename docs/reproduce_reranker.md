@@ -149,6 +149,7 @@ served `meta.json` (148) exactly.
 For numeric reproduction also keep the other inputs consistent between build and
 serve: the catalog, the tag index, the warm embedding caches, and `pool_k` (the
 per-pool features — `z__score__*`, `ratio__*`, `pct_*` — are normalized over the
-pool truncated to `pool_k`). `build_features.py` defaults to `--pool-k 200`; the
-rr2 serving configs use `pool_k: 500`. Pass a matching `--pool-k` to the builder
-(or align the config) if you need build-time and serve-time values to coincide.
+pool truncated to `pool_k`). To keep build and serve aligned, `build_features.py`
+(`--pool-k`) and `run_build_features_modal` (`--pool-k`) both default to **500**,
+matching the rr2 serving configs (`qu_kwargs.reranker.pool_k: 500`). If you change
+the serving `pool_k`, rebuild features with a matching `--pool-k`.

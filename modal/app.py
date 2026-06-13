@@ -426,8 +426,14 @@ def _inference_blindset_cpu(
     memory=16384,
     timeout=3600,
 )
-def _build_features_shard(shard_idx: int, trace_path: str, out_dir: str):
-    """Build LTR features for one trace shard. Writes shard_{N}.parquet to out_dir."""
+def _build_features_shard(shard_idx: int, trace_path: str, out_dir: str, pool_k: int = 500):
+    """Build LTR features for one trace shard. Writes shard_{N}.parquet to out_dir.
+
+    pool_k truncates each branch's pool before features are computed; it must
+    match the serving reranker's pool_k (rr2 configs use 500) for train/serve
+    value parity (the per-pool features z__score__*/ratio__*/pct_* normalize
+    over the truncated pool).
+    """
     import subprocess
     import sys
 
@@ -442,6 +448,7 @@ def _build_features_shard(shard_idx: int, trace_path: str, out_dir: str):
             "--branch-names", f"{CACHE_DIR}/rerank/branch_names.json",
             "--msg-store", f"{CACHE_DIR}/rerank/raw_msg_store",
             "--out", f"{out_dir}/shard_{shard_idx}.parquet",
+            "--pool-k", str(pool_k),
             "--offline",
         ],
         capture_output=False,
@@ -488,8 +495,13 @@ def run_build_features_modal(
     n_shards: int = 5,
     out_name: str = "features_v9",
     skip_constraint: bool = False,
+    pool_k: int = 500,
 ):
     """Build LTR features from sharded trace files on Modal.
+
+    pool_k defaults to 500 to match the rr2 serving configs (qu_kwargs.reranker
+    .pool_k). Keep them equal — the per-pool features normalize over the pool
+    truncated to pool_k, so a build/serve mismatch is train/serve value drift.
 
     Prereq (one-time upload):
       modal volume put music-crs-cache exp/ground_truth/devset.json rerank/ground_truth_devset.json
@@ -517,9 +529,9 @@ def run_build_features_modal(
         else f"constraint_features_{out_name}.parquet"
     )
 
-    print(f"Building features from {n_shards} trace shards → {out_dir}")
+    print(f"Building features from {n_shards} trace shards → {out_dir} (pool_k={pool_k})")
     list(_build_features_shard.starmap(
-        [(i, path, out_dir) for i, path in enumerate(trace_paths)]
+        [(i, path, out_dir, pool_k) for i, path in enumerate(trace_paths)]
     ))
     if skip_constraint:
         print("Skipping constraint sidecar (skip_constraint=True).")
