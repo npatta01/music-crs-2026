@@ -228,7 +228,17 @@ def main(args):
             batch_data.append({
                 'user_query': user_query,
                 'user_id': user_id,
-                'session_memory': chat_history
+                'session_memory': chat_history,
+                # raw dataset row for the online reranker's session-history
+                # block (raw track ids; chat_history holds metadata strings)
+                'session_meta': {
+                    'session_id': session_id,
+                    'turn_number': target_turn_number,
+                    'conversations': item['conversations'],
+                    'user_profile': item.get('user_profile'),
+                    'conversation_goal': item.get('conversation_goal'),
+                    'session_date': item.get('session_date'),
+                },
             })
             metadata.append({
                 'session_id': session_id,

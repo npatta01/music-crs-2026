@@ -137,7 +137,18 @@ def main(args):
         batch_data.append({
             'user_query': user_query,
             'user_id': user_id,
-            'session_memory': chat_history
+            'session_memory': chat_history,
+            # raw dataset row for the online reranker's session-history block
+            # (conversations keep RAW track ids; chat_history converts them to
+            # metadata strings, which would zero those features)
+            'session_meta': {
+                'session_id': session_id,
+                'turn_number': turn_number,
+                'conversations': item['conversations'],
+                'user_profile': item.get('user_profile'),
+                'conversation_goal': item.get('conversation_goal'),
+                'session_date': item.get('session_date'),
+            },
         })
         metadata.append({
             'session_id': session_id,
@@ -145,6 +156,7 @@ def main(args):
             'turn_number': turn_number
         })
     inference_results = []
+    trace_results = []
     for i in tqdm(range(0, len(batch_data), args.batch_size), desc="Batch inference"):
         batch = batch_data[i:i+args.batch_size]
         batch_metadata = metadata[i:i+args.batch_size]
@@ -157,11 +169,26 @@ def main(args):
                 "predicted_track_ids": result['retrieval_items'],
                 "predicted_response": result["response"]
             })
+            # V0PlusCompilerQU populates result["trace"] (per-branch pools, state,
+            # resolver). Needed for the offline reranker; mirrors the devset path.
+            trace_results.append({
+                "session_id": batch_metadata[j]['session_id'],
+                "user_id": batch_metadata[j]['user_id'],
+                "turn_number": batch_metadata[j]['turn_number'],
+                "trace": result.get("trace"),
+            })
     output_suffix = getattr(args, "output_suffix", "")
     os.makedirs(f"{args.exp_dir}/inference/{args.eval_dataset}", exist_ok=True)
     out_path = f"{args.exp_dir}/inference/{args.eval_dataset}/{args.tid}{output_suffix}.json"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(inference_results, f, ensure_ascii=False)
+    if any(r["trace"] for r in trace_results):
+        trace_path = (
+            f"{args.exp_dir}/inference/{args.eval_dataset}/"
+            f"{args.tid}{output_suffix}_trace.jsonl")
+        with open(trace_path, "w", encoding="utf-8") as f:
+            for record in trace_results:
+                f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

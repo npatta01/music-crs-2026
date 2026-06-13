@@ -45,6 +45,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from pydantic import ValidationError
+
 # `chat_history_parser` (mcrs/inference_utils.py) rewrites music-role content
 # from a bare track_id into the line-oriented metadata blob returned by
 # `MusicCatalogDB.id_to_metadata`, starting with:
@@ -57,8 +59,12 @@ _METADATA_BLOB_TRACK_ID_RE = re.compile(r"^track_id:\s*([0-9a-fA-F\-]{36})\b")
 
 from mcrs.conversation_state.prompts import current as current_prompt
 from mcrs.conversation_state.prompts import previous as previous_prompt
+from mcrs.conversation_state.prompts import rejection as rejection_prompt
+from mcrs.conversation_state.prompts import rubric as rubric_prompt
 from mcrs.conversation_state.schema import (
+    ConversationStateV1,
     ConversationStateV0Plus,
+    project_v1_to_v0plus,
 )
 
 
@@ -67,6 +73,10 @@ def _resolve_prompt_fns(prompt_version: str | None):
     pv = (prompt_version or "current").lower()
     if pv in ("current", "v4", "default"):
         return current_prompt.build_messages, current_prompt.json_schema_for_response_format
+    if pv in ("rubric", "decision_rubric", "v5"):
+        return rubric_prompt.build_messages, rubric_prompt.json_schema_for_response_format
+    if pv in ("rejection", "rejection_fewshot", "v5_rejection"):
+        return rejection_prompt.build_messages, rejection_prompt.json_schema_for_response_format
     if pv in ("previous", "reference", "v3"):
         return previous_prompt.build_messages, previous_prompt.json_schema_for_response_format
     raise ValueError(f"unknown extractor prompt_version: {prompt_version!r}")
@@ -273,7 +283,13 @@ def _sanitize_parsed_state(parsed: Any) -> Any:
 class LiteLLMExtractor:
     """Calls a hosted LLM (via litellm) with the v0+ extraction prompt and
     strict json_schema response_format. Returns a parsed
-    ConversationStateV0Plus or None on failure."""
+    ConversationStateV0Plus or None on failure.
+
+    The current prompt asks for ConversationStateV1. Decode validates that
+    LLM-facing contract first, then projects it to the existing V0Plus compiler
+    contract. Legacy prompt variants may still return V0Plus-shaped JSON, so
+    decode falls back to V0Plus validation when V1 validation fails.
+    """
 
     model_name: str
     api_base: str | None = None
@@ -371,7 +387,10 @@ class LiteLLMExtractor:
             cleaned = cleaned.rsplit("```", 1)[0].strip()
         parsed = json.loads(cleaned)
         parsed = _sanitize_parsed_state(parsed)
-        return ConversationStateV0Plus.model_validate(parsed)
+        try:
+            return project_v1_to_v0plus(ConversationStateV1.model_validate(parsed))
+        except ValidationError:
+            return ConversationStateV0Plus.model_validate(parsed)
 
     def extract(
         self,
@@ -537,12 +556,29 @@ class V0PlusCompilerQU:
     resolver: V0PlusResolver
     compiler: V0PlusCompiler
     max_in_flight: int = DEFAULT_MAX_IN_FLIGHT
+    # Online LightGBM reranker (qu_kwargs.reranker; None = RRF order as-is).
+    # Requires branch_trace_topk > 0 and per-call `session_meta` (raw
+    # conversations + profile/goal) for the session-history feature block.
+    reranker_cfg: dict[str, Any] | None = None
 
     # Per-call side channel: populated by `batch_compile_track_ids`, reset on
     # each call. Lets callers (e.g. `run_inference_devset.py`) save the
     # extractor state + resolver/compiler decisions alongside predictions
     # without changing the batch return shape.
     last_traces: list[dict[str, Any]] = field(default_factory=list, init=False, repr=False)
+    _reranker: Any = field(default=None, init=False, repr=False)
+
+    def _get_reranker(self):
+        if self.reranker_cfg and self._reranker is None:
+            from mcrs.qu_modules.lgbm_reranker import LgbmOnlineReranker
+            self._reranker = LgbmOnlineReranker(
+                self.reranker_cfg,
+                db_uri=self.reranker_cfg["db_uri"],
+                table_name=self.reranker_cfg.get("table_name", "music_track_catalog"),
+            )
+            logger.info("lgbm online reranker loaded: %s",
+                        self.reranker_cfg.get("model_path"))
+        return self._reranker
 
     # ------------------------------------------------------------------
     # CRS_BASELINE QU contract
@@ -609,6 +645,7 @@ class V0PlusCompilerQU:
         topk: int,
         sem: asyncio.Semaphore,
         user_id: str | None = None,
+        session_meta: dict[str, Any] | None = None,
     ) -> tuple[int, list[str], dict[str, Any]]:
         """Async per-session worker — extractor runs under the semaphore;
         the synchronous compiler runs off the event loop via
@@ -740,6 +777,21 @@ class V0PlusCompilerQU:
         # apart "candidate missing from pool" vs "RRF mis-ranked the pool".
         if compile_result.branch_pools:
             trace["branches"] = compile_result.to_trace_dict()
+            # Online LightGBM rerank: replaces the RRF order over the pool
+            # union, consuming the SAME trace payload the offline trainer
+            # reads (train/serve parity by construction). Falls back to the
+            # compiler order on any per-turn failure.
+            rr = self._get_reranker()
+            if rr is not None:
+                reranked = await asyncio.to_thread(
+                    rr.rerank, trace, session_meta, user_id,
+                    set(compile_result.hard_drop), track_ids)
+                track_ids = reranked[:topk]
+                trace["branches"]["final"] = {
+                    **trace["branches"]["final"],
+                    "track_ids": list(track_ids),
+                    "ranker": "lgbm_v9",
+                }
         return idx, track_ids, trace
 
     def batch_compile_track_ids(
@@ -747,6 +799,7 @@ class V0PlusCompilerQU:
         session_memories: list[list[dict[str, Any]]],
         topk: int = 1000,
         user_ids: list[str | None] | None = None,
+        session_meta: list[dict[str, Any] | None] | None = None,
     ) -> list[list[str]]:
         """Parallel batch fan-out via asyncio + semaphore. Each batch entry
         is independent (extractor is stateless re. prior turns), so we run
@@ -772,12 +825,20 @@ class V0PlusCompilerQU:
                 f"user_ids length {len(user_ids)} must match session_memories "
                 f"length {len(session_memories)}"
             )
+        if session_meta is None:
+            session_meta = [None] * len(session_memories)
+        elif len(session_meta) != len(session_memories):
+            raise ValueError(
+                f"session_meta length {len(session_meta)} must match "
+                f"session_memories length {len(session_memories)}"
+            )
 
         async def _run() -> list[tuple[int, list[str], dict[str, Any]]]:
             sem = asyncio.Semaphore(self.max_in_flight)
             tasks = [
-                self._acompile_one(i, sm, topk, sem, user_id=uid)
-                for i, (sm, uid) in enumerate(zip(session_memories, user_ids))
+                self._acompile_one(i, sm, topk, sem, user_id=uid, session_meta=meta)
+                for i, (sm, uid, meta) in enumerate(
+                    zip(session_memories, user_ids, session_meta))
             ]
             return await asyncio.gather(*tasks)
 
@@ -1013,6 +1074,33 @@ def build_v0plus_compiler_qu(
                 "enable_release_date_hard_filter",
                 "soft_adjust_skip_intents",
                 "scrub_negated_intent_tags",
+                "bm25_include_v1_attribute_facets",
+                "bm25_include_turn_intent_tag_clause",
+                "bm25_v1_attribute_tag_policy",
+                "attribute_query_source",
+                "attribute_query_allowed_facets",
+                "tag_resolver_embedding_index_path",
+                "tag_resolver_encoder_id",
+                "tag_resolver_embedding_min_score",
+                "tag_resolver_embedding_topk",
+                "tag_resolver_max_tags_per_phrase",
+                "tag_resolver_min_track_count",
+                "enable_branch_local_feature_rerank",
+                "branch_local_feature_rerank_mode",
+                "branch_local_feature_weight",
+                "branch_local_feature_score_weight",
+                "enable_state_feature_selector_branch",
+                "state_feature_selector_weight",
+                "state_feature_selector_score_weight",
+                "state_feature_selector_grouping",
+                "enable_state_feature_survivor_branch",
+                "state_feature_survivor_weight",
+                "state_feature_survivor_score_weight",
+                "state_feature_survivor_rank_weight",
+                "state_feature_survivor_support_weight",
+                "state_feature_survivor_min_rank",
+                "state_feature_survivor_max_rank",
+                "state_feature_survivor_min_feature_score",
                 "enable_similar_artist_anchors",
                 "similar_artist_anchor_topk",
                 "similar_artist_confidence_threshold",
@@ -1064,10 +1152,10 @@ def build_v0plus_compiler_qu(
             supported_vector_fields = set(retriever.supported_vector_fields)
             missing_vector_fields = sorted(configured_vector_fields - supported_vector_fields)
             if missing_vector_fields:
-                raise ValueError(
+                logger.warning(
                     "Configured v0+ vector field(s) are missing from the LanceDB index: "
-                    f"{missing_vector_fields}. Rebuild/re-upload the LanceDB catalog with "
-                    "matching embedding columns before running this config."
+                    "%s. Corresponding dense/centroid branches will be skipped.",
+                    missing_vector_fields,
                 )
 
         compiler = V0PlusCompiler(
@@ -1090,6 +1178,18 @@ def build_v0plus_compiler_qu(
     # higher in config if you see consistent throughput-bound runs.
     max_in_flight = int(qu_kwargs.get("max_in_flight", DEFAULT_MAX_IN_FLIGHT))
 
+    # Online LightGBM reranker (optional): inherit the lancedb target so the
+    # feature catalog is byte-identical to the retrieval catalog.
+    reranker_cfg = dict(qu_kwargs.get("reranker") or {})
+    if reranker_cfg.get("enabled"):
+        lance_cfg_rr = dict(qu_kwargs.get("lancedb") or {})
+        reranker_cfg.setdefault(
+            "db_uri", os.environ.get("MCRS_LANCEDB_URI") or lance_cfg_rr.get("db_uri"))
+        reranker_cfg.setdefault("table_name",
+                                lance_cfg_rr.get("table_name", "music_track_catalog"))
+    else:
+        reranker_cfg = None
+
     return V0PlusCompilerQU(
         extractor=extractor,
         catalog=catalog,
@@ -1099,4 +1199,5 @@ def build_v0plus_compiler_qu(
         resolver=resolver,
         compiler=compiler,
         max_in_flight=max_in_flight,
+        reranker_cfg=reranker_cfg,
     )

@@ -190,8 +190,47 @@ class LanceDbRetriever:
         connect_fn = connect or connect_lancedb
         self.db = connect_fn(self.db_uri)
         self.table = self.db.open_table(self.table_name)
+        self._supported_text_fields = self._detect_supported_text_fields(self.table)
+        self._supported_vector_fields = self._detect_supported_vector_fields(self.table)
         self.embedding_client = embedding_client
         self._catalog_track_ids: list[str] | None = None
+
+    @staticmethod
+    def _table_column_names(table: Any) -> frozenset[str] | None:
+        schema = getattr(table, "schema", None)
+        if callable(schema):
+            schema = schema()
+        if schema is None:
+            return None
+        names = getattr(schema, "names", None)
+        if names is not None:
+            return frozenset(str(name) for name in names)
+        try:
+            return frozenset(str(field.name) for field in schema)
+        except TypeError:
+            return None
+
+    @classmethod
+    def _detect_supported_text_fields(cls, table: Any) -> frozenset[str]:
+        column_names = cls._table_column_names(table)
+        if column_names is None:
+            return frozenset(BM25_EXPERIMENTAL_FIELDS)
+        return frozenset(
+            field
+            for field in BM25_EXPERIMENTAL_FIELDS
+            if bm25_text_field_name(field) in column_names
+        )
+
+    @classmethod
+    def _detect_supported_vector_fields(cls, table: Any) -> frozenset[str]:
+        column_names = cls._table_column_names(table)
+        if column_names is None:
+            return LANCEDB_VECTOR_FIELDS
+        return frozenset(
+            field
+            for field in LANCEDB_VECTOR_FIELDS
+            if field in column_names
+        )
 
     @staticmethod
     def _require_str(config: dict[str, Any], key: str) -> str:
@@ -475,11 +514,11 @@ class LanceDbRetriever:
 
     @property
     def supported_text_fields(self) -> frozenset[str]:
-        return frozenset(BM25_EXPERIMENTAL_FIELDS)
+        return self._supported_text_fields
 
     @property
     def supported_vector_fields(self) -> frozenset[str]:
-        return LANCEDB_VECTOR_FIELDS
+        return self._supported_vector_fields
 
     def search(
         self,
@@ -556,10 +595,10 @@ class LanceDbRetriever:
         backend converts native distances per `distance_type` so the caller
         never has to remember which conventions are flipped.
         """
-        if vector_field not in LANCEDB_VECTOR_FIELDS:
+        if vector_field not in self.supported_vector_fields:
             raise ValueError(
                 f"Unsupported LanceDB vector field: {vector_field!r}. "
-                f"Valid options: {sorted(LANCEDB_VECTOR_FIELDS)}"
+                f"Valid options: {sorted(self.supported_vector_fields)}"
             )
         distance_type = self._require_distance_type(distance_type)
         query_builder = self.table.search(

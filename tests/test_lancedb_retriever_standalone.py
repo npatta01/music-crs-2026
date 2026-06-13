@@ -60,6 +60,12 @@ class FakeTable:
         ])
 
 
+class FakeTableWithSchema(FakeTable):
+    def __init__(self, column_names):
+        super().__init__()
+        self.schema = type("FakeSchema", (), {"names": list(column_names)})()
+
+
 class FakeVectorTable:
     def __init__(self):
         self.search_calls = []
@@ -298,6 +304,52 @@ def test_supported_text_and_vector_fields_exposed(monkeypatch):
     assert "attributes_qwen3_embedding_4b" in retriever.supported_vector_fields
     assert "metadata_qwen3_embedding_8b" in retriever.supported_vector_fields
     assert "attributes_qwen3_embedding_8b" in retriever.supported_vector_fields
+
+
+def test_supported_text_fields_reflect_table_schema(monkeypatch):
+    from mcrs.lancedb.retriever import LanceDbRetriever
+
+    table = FakeTableWithSchema(
+        [
+            "track_id",
+            "track_name_text",
+            "artist_name_text",
+            "album_name_text",
+            "tag_list_text",
+        ]
+    )
+    fake_db = FakeDb(table)
+    monkeypatch.setattr("mcrs.lancedb.retriever.connect_lancedb", lambda _: fake_db)
+
+    retriever = LanceDbRetriever.from_retrieval_config(_retrieval_config())
+
+    assert "tag_list" in retriever.supported_text_fields
+    assert "release_year" not in retriever.supported_text_fields
+    assert "release_decade" not in retriever.supported_text_fields
+    assert retriever.supported_vector_fields == frozenset()
+
+
+def test_supported_vector_fields_reflect_table_schema(monkeypatch):
+    from mcrs.lancedb.retriever import LanceDbRetriever
+
+    table = FakeTableWithSchema(
+        [
+            "track_id",
+            "track_name_text",
+            "metadata_qwen3_embedding_0_6b",
+            "has_metadata_qwen3_embedding_0_6b",
+            "attributes_qwen3_embedding_0_6b",
+            "has_attributes_qwen3_embedding_0_6b",
+        ]
+    )
+    fake_db = FakeDb(table)
+    monkeypatch.setattr("mcrs.lancedb.retriever.connect_lancedb", lambda _: fake_db)
+
+    retriever = LanceDbRetriever.from_retrieval_config(_retrieval_config())
+
+    assert "metadata_qwen3_embedding_0_6b" in retriever.supported_vector_fields
+    assert "attributes_qwen3_embedding_0_6b" in retriever.supported_vector_fields
+    assert "metadata_qwen3_embedding_8b" not in retriever.supported_vector_fields
 
 
 def test_lancedb_retriever_satisfies_retriever_protocol(monkeypatch):

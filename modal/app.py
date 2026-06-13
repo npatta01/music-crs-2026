@@ -213,6 +213,12 @@ def _run_inference_command(cmd: list[str], *, lancedb_uri: str | None = None) ->
     # shared volume dir the encoder service commits to, so repeated query texts
     # are served without a Modal RPC and prior committed vectors are reused.
     env["MCRS_EMBEDDING_CACHE_DIR"] = EMBEDDING_CACHE_DIR
+    # Reranker artifacts directory (model_full.txt, meta.json, etc.) on the
+    # cache volume; configs reference it via ${oc.env:MCRS_RERANKER_DIR,...}.
+    env.setdefault("MCRS_RERANKER_DIR", f"{CACHE_DIR}/rerank")
+    # Cache root for volume-backed files referenced via ${oc.env:MCRS_CACHE_DIR,...}
+    # (e.g. tag_embedding_index). Defaults to ./cache for local runs.
+    env.setdefault("MCRS_CACHE_DIR", CACHE_DIR)
 
     result = subprocess.run(cmd, cwd="/app", env=env)
     if result.returncode != 0:
@@ -272,7 +278,7 @@ def _inference_devset(
 
 
 @app.function(
-    image=image,
+    image=rerank_image,  # lightgbm needed for online LambdaMART reranker configs
     volumes=_VOLUME_MOUNTS,
     secrets=[ENV_SECRET],
     cpu=LANCEDB_INFERENCE_CPU,
@@ -313,6 +319,10 @@ def _inference_devset_cpu(
     print(f"CPU results saved to volume: inference/devset/{tid}{output_suffix}.json")
 
 
+# LightGBM added here (before first use in _inference_blindset_cpu decorator).
+rerank_image = image.uv_pip_install("lightgbm==4.6.0", "pylance")
+
+
 @app.function(
     image=image,
     gpu=INFERENCE_GPU,
@@ -347,7 +357,7 @@ def _inference_blindset(
 
 
 @app.function(
-    image=image,
+    image=rerank_image,  # includes lightgbm for the online LambdaMART reranker
     volumes=_VOLUME_MOUNTS,
     secrets=[ENV_SECRET],
     cpu=LANCEDB_INFERENCE_CPU,
@@ -378,6 +388,136 @@ def _inference_blindset_cpu(
     _run_inference_command(cmd, lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI)
     results_vol.commit()
     print(f"CPU results saved to volume: inference/{eval_dataset}/{tid}{output_suffix}.json")
+
+
+@app.function(
+    image=rerank_image,
+    volumes=_VOLUME_MOUNTS,
+    secrets=[ENV_SECRET],
+    cpu=LANCEDB_INFERENCE_CPU,
+    memory=LANCEDB_INFERENCE_MEMORY,
+    timeout=10800,
+)
+def _inference_blindset_reranked(
+    retrieval_tid: str,
+    final_tid: str,
+    eval_dataset: str,
+    batch_size: int,
+):
+    """Retrieval -> features -> v7b 5-fold rerank -> state-conditioned responses,
+    one container run. Artifacts (model folds, cat_maps, branch_names) live on the
+    cache volume under rerank/; the staged driver shells the byte-identical
+    validated scripts (devset round-trip 338/338)."""
+    import sys
+
+    cmd = [
+        sys.executable, "/app/scripts/rerank/run_blindA_reranked_pipeline.py",
+        "--retrieval-tid", retrieval_tid,
+        "--final-tid", final_tid,
+        "--eval-dataset", eval_dataset,
+        "--exp-dir", EXP_DIR,
+        "--artifacts-dir", f"{CACHE_DIR}/rerank",
+        "--tag-index", f"{CACHE_DIR}/tag_embedding_index/qwen_0_6b.npz",
+        "--scratch-dir", f"{CACHE_DIR}/rerank/scratch",
+        "--batch-size", str(batch_size),
+    ]
+    _run_inference_command(cmd, lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI)
+    results_vol.commit()
+    cache_vol.commit()
+    print(f"Reranked results saved to volume: inference/{eval_dataset}/{final_tid}.json")
+
+
+@app.local_entrypoint()
+def run_blindset_reranked(
+    retrieval_tid: str = "v0plus_compiler_blindset_A_pruned",
+    final_tid: str = "v0plus_compiler_blindset_A_rr",
+    eval_dataset: str = "blindset_A",
+    batch_size: int = BLINDSET_BATCH_SIZE,
+):
+    _inference_blindset_reranked.remote(
+        retrieval_tid=retrieval_tid,
+        final_tid=final_tid,
+        eval_dataset=eval_dataset,
+        batch_size=batch_size,
+    )
+
+
+# ── GPU LightGBM training ──────────────────────────────────────────────────────
+# Parallel 5-fold runner. Prereq: X.npy + sidecars must already be on
+# cache_vol at rerank/train_v9/. Upload once with:
+#   python -m modal volume put music-crs-cache \
+#       exp/analysis/rerank/train_v9/ rerank/train_v9/
+# Then run all 5 folds in parallel (~5-6 min each on T4):
+#   python -m modal run modal/app.py::run_train_v9_gpu
+
+_TRAIN_GPU_IMAGE = (
+    modal.Image.from_registry(
+        "nvidia/cuda:12.4.1-runtime-ubuntu22.04", add_python="3.11"
+    )
+    .pip_install("lightgbm>=4.6.0", "numpy", "pandas", "pyarrow>=16.0")
+    .add_local_file(
+        "scripts/rerank/train_v9.py",
+        "/app/train_v9.py",
+        copy=True,
+    )
+)
+_TRAIN_V9_REMOTE_DIR = f"{CACHE_DIR}/rerank/train_v9"
+
+
+@app.function(
+    image=_TRAIN_GPU_IMAGE,
+    gpu="T4",
+    cpu=4,
+    memory=32768,
+    timeout=3600,
+    volumes={CACHE_DIR: cache_vol},
+)
+def _train_fold_gpu(fold: int):
+    """Run one LambdaMART fold on GPU. Reads/writes artifacts from cache_vol."""
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable, "/app/train_v9.py",
+            "--stage", "fold",
+            "--fold", str(fold),
+            "--out-dir", _TRAIN_V9_REMOTE_DIR,
+            "--device", "gpu",
+        ],
+        capture_output=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"fold {fold} failed (exit {result.returncode})")
+    cache_vol.commit()
+    print(f"fold {fold} complete", flush=True)
+
+
+@app.local_entrypoint()
+def run_train_v9_gpu():
+    """Spawn 5 GPU fold jobs in parallel, then download artifacts.
+
+    Prerequisites (run once):
+      python -m modal volume put music-crs-cache \\
+          exp/analysis/rerank/train_v9/ rerank/train_v9/
+
+    After this completes, model files are at:
+      exp/analysis/rerank/train_v9/model_fold{0..4}.txt  (downloaded locally)
+    and on the volume at:
+      {CACHE_DIR}/rerank/train_v9/model_fold{0..4}.txt
+    """
+    import subprocess
+    import sys
+    from pathlib import Path as _Path
+
+    print("Spawning 5 GPU fold jobs in parallel …")
+    jobs = list(_train_fold_gpu.starmap([(f,) for f in range(5)]))
+    print("All folds complete. Running finalize locally …")
+    result = subprocess.run(
+        [sys.executable, "scripts/rerank/train_v9.py", "--stage", "finalize"],
+        check=True,
+    )
+    print("Done. Artifacts in exp/analysis/rerank/train_v9/")
 
 
 @app.cls(
@@ -1304,6 +1444,96 @@ def run_evaluate(
 ):
     """Score predictions using the evaluator submodule (CPU)."""
     _evaluate.remote(tid=tid, split=split)
+
+
+@app.function(
+    image=image,
+    secrets=[ENV_SECRET],
+    volumes=_VOLUME_MOUNTS,
+    cpu=LANCEDB_QUERY_CPU,
+    memory=LANCEDB_QUERY_MEMORY,
+    timeout=14400,
+)
+def _state_v1_retriever_matrix(
+    variants_json: str,
+    limit: int,
+    output_prefix: str,
+    sample_id_file: str,
+    baseline_pools_json: str,
+) -> dict:
+    import json
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    variants = json.loads(variants_json)
+    analysis_dir = (
+        Path("/app")
+        / "experiments"
+        / "analysis"
+        / "devset_recall_gap_v0plus_all_retrievers_2026_06_06"
+    )
+    output_dir = Path(EXP_DIR) / "analysis" / "state_v1_retriever_matrix"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_json = output_dir / f"{output_prefix}.json"
+    output_md = output_dir / f"{output_prefix}.md"
+    output_csv = output_dir / f"{output_prefix}.csv"
+    cmd = [
+        sys.executable,
+        "scripts/state_v1_retriever_matrix.py",
+        "--analysis-dir",
+        str(analysis_dir),
+        "--lancedb-uri",
+        DEFAULT_REMOTE_LANCEDB_URI,
+        "--output-json",
+        str(output_json),
+        "--output-md",
+        str(output_md),
+        "--output-csv",
+        str(output_csv),
+    ]
+    for variant in variants:
+        cmd.extend(["--variant", str(variant)])
+    if sample_id_file:
+        sample_id_path = Path(sample_id_file)
+        if not sample_id_path.is_absolute():
+            sample_id_path = Path("/app") / sample_id_path
+        cmd.extend(["--sample-id-file", str(sample_id_path)])
+    if baseline_pools_json:
+        baseline_pools_path = Path(baseline_pools_json)
+        if not baseline_pools_path.is_absolute():
+            baseline_pools_path = Path("/app") / baseline_pools_path
+        cmd.extend(["--baseline-pools-json", str(baseline_pools_path)])
+    if limit > 0:
+        cmd.extend(["--limit", str(limit)])
+    print("Running state_v1_retriever_matrix:", " ".join(cmd), flush=True)
+    subprocess.run(cmd, cwd="/app", check=True)
+    results_vol.commit()
+    return {
+        "summary": json.loads(output_json.read_text())["summary"],
+        "json": str(output_json),
+        "md": str(output_md),
+        "csv": str(output_csv),
+    }
+
+
+@app.local_entrypoint()
+def run_state_v1_retriever_matrix(
+    variants_json: str = '["all_candidate_recall"]',
+    limit: int = 0,
+    output_prefix: str = "state_v1_retriever_matrix_modal",
+    sample_id_file: str = "",
+    baseline_pools_json: str = "",
+):
+    """Run the V1 retriever matrix inside Modal against remote LanceDB."""
+    result = _state_v1_retriever_matrix.remote(
+        variants_json=variants_json,
+        limit=limit,
+        output_prefix=output_prefix,
+        sample_id_file=sample_id_file,
+        baseline_pools_json=baseline_pools_json,
+    )
+    print(json.dumps(result, indent=2))
 
 
 @app.local_entrypoint()
