@@ -169,6 +169,7 @@ class StateRankerQU(V0PlusCompilerQU):
                         "extracted_state": extracted_state,
                         "compiled_state": compiled_state,
                         "state": extracted_state,
+                        "intent_mode": getattr(state.intent_mode, "value", str(state.intent_mode)),
                         "resolver": resolver_block,
                         "routing_tags": extracted_state.get("routing_tags") or {},
                         "retrieval": retrieval,

@@ -22,7 +22,11 @@ class _FakeExtractor:
 
 
 class _FakeRanker:
+    def __init__(self):
+        self.last_trace = None
+
     def rerank(self, trace, session_meta, user_id, hard_drop, fallback):
+        self.last_trace = trace
         return ["t-fugazi-1", "t-morphine-1"] + [
             track_id for track_id in fallback if track_id not in {"t-fugazi-1", "t-morphine-1"}
         ]
@@ -144,6 +148,14 @@ def test_state_ranker_lgbm_trace_keeps_candidate_and_served_stages_separate():
         "source_stage": "lgbm_v10",
         "ranking_mode": "lgbm",
     }
+
+
+def test_state_ranker_lgbm_serving_trace_keeps_intent_mode_for_reranker():
+    qu = _build_qu(mode="lgbm")
+
+    qu.batch_compile_track_ids([[{"role": "user", "content": "play Morphine"}]], topk=2)
+
+    assert qu._reranker.last_trace["intent_mode"] == "refinement"
 
 
 def test_state_ranker_requires_explicit_ranking_mode():

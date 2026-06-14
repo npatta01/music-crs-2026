@@ -853,11 +853,11 @@ def _run_train_lgbm_ranker(lineage: str) -> None:
     rel_train = paths["train_dir"].replace(f"{CACHE_DIR}/", "")
     print(f"  modal volume get music-crs-cache {rel_train}/model_full.txt   exp/analysis/rerank/{lineage}/train/")
     print(f"  modal volume get music-crs-cache {rel_train}/meta.json        exp/analysis/rerank/{lineage}/train/")
-    print(f"  modal volume get music-crs-cache {rel_train}/cat_maps_v9.json exp/analysis/rerank/{lineage}/train/")
+    print(f"  modal volume get music-crs-cache {rel_train}/cat_maps.json    exp/analysis/rerank/{lineage}/train/")
     print(f"Then publish into the committed bundle (models/reranker_{lineage}/):")
     print(f"  cp exp/analysis/rerank/{lineage}/train/model_full.txt   models/reranker_{lineage}/model.txt")
     print(f"  cp exp/analysis/rerank/{lineage}/train/meta.json        models/reranker_{lineage}/meta.json")
-    print(f"  cp exp/analysis/rerank/{lineage}/train/cat_maps_v9.json models/reranker_{lineage}/cat_maps.json")
+    print(f"  cp exp/analysis/rerank/{lineage}/train/cat_maps.json    models/reranker_{lineage}/cat_maps.json")
 
 
 @app.cls(
