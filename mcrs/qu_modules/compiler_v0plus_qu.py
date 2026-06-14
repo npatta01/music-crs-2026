@@ -297,6 +297,7 @@ class LiteLLMExtractor:
     temperature: float = 0.0
     max_tokens: int = 1500
     timeout_s: int = 90
+    extra_params: dict[str, Any] = field(default_factory=dict)
 
     # Which extraction prompt to use. "current" maps to the production prompt;
     # "previous" keeps the prior prompt as a comparison/rollback reference.
@@ -331,6 +332,8 @@ class LiteLLMExtractor:
             kwargs["api_base"] = self.api_base
         if self.api_key:
             kwargs["api_key"] = self.api_key
+        if self.extra_params:
+            kwargs.update(self.extra_params)
         schema = self._schema_fn()
         # Google's Gemini structured-output validator (OpenAPI-3.0 subset, which
         # OpenRouter routes `response_format` to for google/gemini-* models) is
@@ -476,6 +479,28 @@ class LiteLLMExtractor:
             await _async_store_litellm_cache_entry(litellm, response, call_kwargs)
             return state
         return None
+
+
+def _optional_api_key(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if text in {"", "EMPTY", "NONE", "None", "null"}:
+        return None
+    return text
+
+
+def _is_ollama_model(model_name: Any) -> bool:
+    text = str(model_name or "")
+    return text.startswith("ollama/") or text.startswith("ollama_chat/")
+
+
+def _extractor_api_key(ex_cfg: dict[str, Any]) -> str | None:
+    if "api_key" in ex_cfg:
+        return _optional_api_key(ex_cfg.get("api_key"))
+    if _is_ollama_model(ex_cfg.get("model_name")):
+        return None
+    return _optional_api_key(os.environ.get("LITELLM_PROXY_KEY"))
 
 
 # ----------------------------------------------------------------------
@@ -972,11 +997,13 @@ def build_v0plus_compiler_qu(
         extractor = LiteLLMExtractor(
             model_name=ex_cfg.get("model_name", "openrouter/google/gemma-3-12b-it"),
             api_base=ex_cfg.get("api_base") or os.environ.get("LITELLM_PROXY_BASE"),
-            api_key=ex_cfg.get("api_key") or os.environ.get("LITELLM_PROXY_KEY"),
+            api_key=_extractor_api_key(ex_cfg),
             temperature=float(ex_cfg.get("temperature", 0.0)),
             max_tokens=int(ex_cfg.get("max_tokens", 1500)),
             timeout_s=int(ex_cfg.get("timeout_s", 90)),
             prompt_version=str(ex_cfg.get("prompt_version", "current")),
+            retry_temperature=float(ex_cfg.get("retry_temperature", 0.3)),
+            extra_params=dict(ex_cfg.get("extra_params") or {}),
         )
 
     # ----- Resolver -----
