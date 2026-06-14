@@ -10,6 +10,9 @@ Usage:
 
 The sessions file may be either {"session_ids": ["..."]} or a JSON list of
 session ids. Model/provider/cache settings come from the config.
+
+For non-Ollama local LiteLLM providers, set qu_kwargs.extractor.api_key: "" to
+avoid falling back to LITELLM_PROXY_KEY.
 """
 
 import argparse
@@ -152,6 +155,8 @@ def extractor_config_from_config(config: dict[str, Any]) -> dict[str, Any]:
     elif _is_ollama_model(model_name):
         api_key = None
     else:
+        # Non-Ollama local providers can set `api_key: ""` in config to opt out
+        # of the proxy-key fallback while keeping cloud/proxy configs unchanged.
         api_key = _optional_text(os.environ.get("LITELLM_PROXY_KEY"))
 
     return {

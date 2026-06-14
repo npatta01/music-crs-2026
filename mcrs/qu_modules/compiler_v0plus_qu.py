@@ -297,6 +297,8 @@ class LiteLLMExtractor:
     temperature: float = 0.0
     max_tokens: int = 1500
     timeout_s: int = 90
+    # Provider-specific LiteLLM kwargs are merged last so configs can
+    # intentionally override core request keys when a provider requires it.
     extra_params: dict[str, Any] = field(default_factory=dict)
 
     # Which extraction prompt to use. "current" maps to the production prompt;
@@ -498,6 +500,8 @@ def _is_ollama_model(model_name: Any) -> bool:
 def _extractor_api_key(ex_cfg: dict[str, Any]) -> str | None:
     if "api_key" in ex_cfg:
         return _optional_api_key(ex_cfg.get("api_key"))
+    # Local Ollama does not need the proxy credential. Other no-auth local
+    # providers can set `api_key: ""` to suppress the env fallback explicitly.
     if _is_ollama_model(ex_cfg.get("model_name")):
         return None
     return _optional_api_key(os.environ.get("LITELLM_PROXY_KEY"))
