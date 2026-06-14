@@ -1,0 +1,19 @@
+# State extraction smoke test — Ollama qwen3.6:27b-mlx (local)
+lm_type: "dummy"
+retrieval_type: "bm25"
+qu_type: "v0plus_compiler"
+
+qu_kwargs:
+  extractor:
+    model_name: "ollama_chat/qwen3.6:27b-mlx"
+    api_base: "http://localhost:11434"
+    api_key: ""
+    prompt_version: "v1"
+    temperature: 0.0
+    max_tokens: 4000
+    timeout_s: 300
+
+state_extraction:
+  output_path: "exp/state_extraction/smoke_qwen27b.jsonl"
+  cache_dir: "cache/litellm-state-ollama"
+  cache_backend: "file"

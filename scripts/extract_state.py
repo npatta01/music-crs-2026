@@ -64,6 +64,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--output",
         help="Optional JSONL output path. Defaults to config state_extraction.output_path or exp/state_extraction/<name>.jsonl.",
     )
+    parser.add_argument(
+        "--turns",
+        type=int,
+        nargs="+",
+        metavar="N",
+        help="Only process these turn numbers (e.g. --turns 1 2). Useful for smoke tests.",
+    )
     return parser
 
 
@@ -269,6 +276,7 @@ def build_extraction_cases(
     *,
     session_ids: set[str],
     track_labels: dict[str, str],
+    turn_filter: set[int] | None = None,
 ) -> list[ExtractionCase]:
     cases: list[ExtractionCase] = []
     for session in dataset:
@@ -283,6 +291,8 @@ def build_extraction_cases(
                 if message.get("role") == "user" and message.get("turn_number") is not None
             }
         )
+        if turn_filter is not None:
+            turn_numbers = [t for t in turn_numbers if t in turn_filter]
         for turn_number in turn_numbers:
             conversation, played = _conversation_for_turn(
                 conversations,
@@ -367,10 +377,12 @@ def run(args: argparse.Namespace) -> list[dict[str, Any]]:
     session_ids = load_session_ids(args.sessions_file)
     dataset = load_dataset(_dataset_name(config), split=_dataset_split(config))
     track_labels = load_track_labels(config)
+    turn_filter = set(args.turns) if getattr(args, "turns", None) else None
     cases = build_extraction_cases(
         dataset,
         session_ids=session_ids,
         track_labels=track_labels,
+        turn_filter=turn_filter,
     )
     if not cases:
         raise ValueError("No extraction cases found for requested sessions")
