@@ -66,6 +66,7 @@ from mcrs.conversation_state.schema import (
     ConversationStateV0Plus,
     project_v1_to_v0plus,
 )
+from mcrs.response_context import response_state_dict
 
 
 def _resolve_prompt_fns(prompt_version: str | None):
@@ -743,7 +744,7 @@ class V0PlusCompilerQU:
             "trace_schema_version": TRACE_SCHEMA_VERSION,
             "idx": idx,
             "intent_mode": getattr(state.intent_mode, "value", str(state.intent_mode)),
-            "state": state.model_dump(mode="json"),
+            "state": response_state_dict(state),
             "resolver": {
                 "anchor_track_ids": anchor_track_ids,
                 "anchor_artist_ids": anchor_artist_ids,

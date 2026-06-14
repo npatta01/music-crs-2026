@@ -1058,3 +1058,33 @@ def test_openrouter_response_format_goes_in_extra_body_with_require_parameters()
     kw2 = ex2._build_kwargs(conversation=[{"role": "user", "turn": 1, "text": "hi"}], played_track_ids=[])
     assert kw2["response_format"]["type"] == "json_schema"  # top-level for non-OpenRouter
     assert "extra_body" not in kw2
+
+
+def test_last_traces_state_serializes_derived_property_fields():
+    """V0 regression with the REAL schema (the existing trace test uses a fake
+    _state() whose model_dump already includes these fields, so it cannot catch
+    the bug). With the real ConversationStateV0Plus, the trace state dict must
+    still carry the three derived @property fields the response path reads."""
+    from mcrs.conversation_state.schema import (
+        ConversationStateV0Plus, StateEntity, EntityRole,
+        TemporalConstraint, TemporalConstraintKind, ConstraintStrength,
+    )
+    real_state = ConversationStateV0Plus(
+        turn_intent="90s, not Coldplay",
+        entities=[
+            StateEntity(type="artist", value="Radiohead", role=EntityRole.seed,
+                        source_turn=1, mentioned_current_turn=True, use_as_retrieval_seed=True),
+            StateEntity(type="artist", value="Coldplay", role=EntityRole.rejected,
+                        source_turn=1, mentioned_current_turn=True, use_as_retrieval_seed=False),
+        ],
+        temporal_constraint=TemporalConstraint(
+            kind=TemporalConstraintKind.style_era, strength=ConstraintStrength.soft,
+            start_year=1990, end_year=1999),
+    )
+    qu = _build_qu(real_state)  # existing helper in this file; wraps a _FakeExtractor returning `state`
+    qu.batch_compile_track_ids([[{"role": "user", "content": "hi"}]], topk=10)
+    state_dump = qu.last_traces[0]["state"]
+    assert "mentioned_entities" in state_dump
+    assert "explicit_rejections" in state_dump
+    assert "release_year_range" in state_dump
+    assert state_dump["release_year_range"]["start"] == 1990
