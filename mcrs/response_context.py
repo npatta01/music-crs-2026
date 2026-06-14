@@ -113,6 +113,11 @@ def response_state_dict(state: Any) -> dict:
     ``explicit_rejections``, ``release_year_range`` — are dropped. This augments
     the dump with their evaluated values in the dict shape ``format_state_block``
     consumes. Duck-typed (no schema import) so this module stays dependency-free.
+
+    The result carries keys beyond the model's declared fields, so it is for the
+    response / trace path only — do NOT round-trip it back through
+    ``ConversationStateV0Plus.model_validate`` (``extra="forbid"`` would reject
+    the augmented keys).
     """
     d = state.model_dump(mode="json")
     d["mentioned_entities"] = [m.model_dump(mode="json") for m in state.mentioned_entities]
