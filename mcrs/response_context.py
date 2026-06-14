@@ -105,6 +105,23 @@ def format_state_block(state: dict | None, track_label: Callable[[str], str] | N
     return "\n".join(lines)
 
 
+def response_state_dict(state: Any) -> dict:
+    """Serialize a ConversationStateV0Plus for the response path.
+
+    pydantic's ``model_dump()`` only serializes declared fields, so the derived
+    ``@property`` fields the response prompt depends on — ``mentioned_entities``,
+    ``explicit_rejections``, ``release_year_range`` — are dropped. This augments
+    the dump with their evaluated values in the dict shape ``format_state_block``
+    consumes. Duck-typed (no schema import) so this module stays dependency-free.
+    """
+    d = state.model_dump(mode="json")
+    d["mentioned_entities"] = [m.model_dump(mode="json") for m in state.mentioned_entities]
+    d["explicit_rejections"] = [r.model_dump(mode="json") for r in state.explicit_rejections]
+    ryr = state.release_year_range
+    d["release_year_range"] = ryr.model_dump(mode="json") if ryr is not None else None
+    return d
+
+
 def is_metadata_echo(text: str) -> bool:
     """True when the model parroted the track metadata (or returned nothing) —
     used to trigger a regeneration."""

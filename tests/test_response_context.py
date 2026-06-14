@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from mcrs.response_context import format_state_block, is_metadata_echo, xml_track_item
+from mcrs.response_context import format_state_block, is_metadata_echo, xml_track_item, response_state_dict
+from mcrs.conversation_state.schema import (
+    ConversationStateV0Plus, StateEntity, EntityRole,
+    TemporalConstraint, TemporalConstraintKind, ConstraintStrength,
+)
 
 
 def test_xml_track_item_caps_tags_and_wraps():
@@ -46,3 +50,55 @@ def test_is_metadata_echo():
     assert is_metadata_echo("title: X | artist: Y | tags: a, b")
     assert is_metadata_echo("<recommended_track><title>X</title>")
     assert not is_metadata_echo("Great pick — this jazzy track fits your mood.")
+
+
+def _real_state_with_derived_fields() -> ConversationStateV0Plus:
+    """A REAL V0Plus (not the test fake) whose three derived @property fields
+    are all non-empty: a seed artist (+1), a rejected artist (-1 + rejection),
+    and a temporal range."""
+    return ConversationStateV0Plus(
+        turn_intent="something from the 90s, not Coldplay",
+        entities=[
+            StateEntity(type="artist", value="Radiohead", role=EntityRole.seed,
+                        source_turn=1, mentioned_current_turn=True, use_as_retrieval_seed=True),
+            StateEntity(type="artist", value="Coldplay", role=EntityRole.rejected,
+                        source_turn=1, mentioned_current_turn=True, use_as_retrieval_seed=False),
+        ],
+        temporal_constraint=TemporalConstraint(
+            kind=TemporalConstraintKind.style_era, strength=ConstraintStrength.soft,
+            start_year=1990, end_year=1999,
+        ),
+    )
+
+
+def test_model_dump_drops_derived_properties_documents_the_bug():
+    raw = _real_state_with_derived_fields().model_dump(mode="json")
+    assert "mentioned_entities" not in raw
+    assert "explicit_rejections" not in raw
+    assert "release_year_range" not in raw
+
+
+def test_response_state_dict_restores_derived_properties():
+    state = _real_state_with_derived_fields()
+    d = response_state_dict(state)
+    assert d["turn_intent"] == "something from the 90s, not Coldplay"
+    values = {m["value"] for m in d["mentioned_entities"]}
+    assert {"Radiohead", "Coldplay"} <= values
+    assert any(m["sentiment"] > 0 and m["value"] == "Radiohead" for m in d["mentioned_entities"])
+    assert any(r["kind"] == "artist" and r["value"] == "Coldplay" for r in d["explicit_rejections"])
+    assert d["release_year_range"]["start"] == 1990 and d["release_year_range"]["end"] == 1999
+
+
+def test_response_state_dict_release_year_range_none_when_absent():
+    d = response_state_dict(ConversationStateV0Plus(turn_intent="anything"))
+    assert d["release_year_range"] is None
+    assert d["mentioned_entities"] == []
+    assert d["explicit_rejections"] == []
+
+
+def test_format_state_block_renders_derived_fields_via_helper():
+    block = format_state_block(response_state_dict(_real_state_with_derived_fields()), None)
+    assert "Radiohead" in block
+    assert "Coldplay" in block
+    assert "Explicit rejections:" in block
+    assert "1990-1999" in block
