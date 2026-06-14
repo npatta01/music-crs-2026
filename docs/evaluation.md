@@ -62,22 +62,25 @@ Higher is better for all metrics.
 
 ## Branch diagnostics (per-retriever coverage)
 
-The v0+ devset trace sidecar (`exp/inference/devset/{tid}_trace.jsonl`) carries a
-per-turn `branches` key when `CompilerConfig.branch_trace_topk > 0`: each
-retriever branch's RAW top-`branch_trace_topk` `(track_id, score)` pool keyed by
-a stable name (`bm25`, `dense.<encoder_id>.<query_id>.<vector_field>`,
+The state-ranker v10 devset trace sidecar
+(`exp/inference/devset/{tid}_trace.jsonl`) carries per-turn `retrieval.branches`
+when `CompilerConfig.branch_trace_topk > 0`: each retriever branch's RAW
+top-`branch_trace_topk` `(track_id, score)` pool keyed by a stable name (`bm25`,
+`dense.<encoder_id>.<query_id>.<vector_field>`,
 `centroid.<source>.<vector_field>`, `lookup.resolved_artist_discography`,
-`lookup.era_popularity`), the RRF `fused` list, the `final` recommendation (with
-`n_from_fusion` / `n_from_backfill` provenance), and `recommended.top1_track_id`
-(the headline track an explanation would target). Devset trace rows also carry a
-`trace_schema_version` and `run` metadata (`tid`, `git_sha`, `config_hash`).
-Inside `branches`, ranker-first diagnostics include `branch_queries`,
-`branch_status`, and `candidate_filter_summary`: exact query/source descriptors,
-fired/skipped status with skip reasons, and compact candidate-filter counts. The
-candidate-filter counts are over the traced top-`branch_trace_topk` slice per
-branch, not the full candidate pools used by fusion. The trace never writes dense
-vectors or full per-candidate ranker feature rows. The knob is 0 by default, so
-submission/blindset runs pay nothing and write no `branches`.
+`lookup.era_popularity`). It also carries ordered `ranking.stages` such as
+`candidate_fusion` and `lgbm_v10`, plus one canonical `final_recommendation`
+object. Explanation generation targets `final_recommendation.primary_track_id`.
+
+Devset trace rows also carry `trace_schema_version` and `run` metadata (`tid`,
+`git_sha`, `config_hash`). Inside `retrieval`, ranker-first diagnostics include
+`branch_queries`, `branch_status`, and `candidate_filter_summary`: exact
+query/source descriptors, fired/skipped status with skip reasons, and compact
+candidate-filter counts. The candidate-filter counts are over the traced
+top-`branch_trace_topk` slice per branch, not the full candidate pools used by
+fusion. The trace never writes dense vectors or full per-candidate ranker feature
+rows. The knob is 0 by default, so submission/blindset runs pay nothing and
+write no branch pools.
 
 `scripts/branch_diagnostics.py` reads the trace + ground truth and reports:
 
@@ -107,8 +110,8 @@ rows were pruned from the working tree and remain available in Git history.
 Catalog size: 47,071 tracks.
 
 **Notes:**
-- `v0plus_compiler_image_devset` is the current top-20 score anchor.
-- `v0plus_compiler_all_retrievers_devset` is the latest deep-coverage run and
+- `state_ranker_v10_lgbm_devset` is the current learned-ranker devset surface.
+- `state_ranker_v10_rrf_devset` is the explicit candidate-fusion baseline and
   is useful for reranker/candidate-pool diagnostics.
 - Retrieval-only `lm_type: dummy` runs have lexical diversity of zero by
   construction; prose generation is currently downstream of retrieval work.

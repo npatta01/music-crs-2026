@@ -1,28 +1,36 @@
-# Blind-A submission: pruned-retrieval + LambdaMART v9 reranker + qwen3-30b response gen.
-# Based on v0plus_compiler_blindset_A_pruned.yaml, with:
-#   - qu_kwargs.reranker: LgbmOnlineReranker (models/reranker_v9/model.txt, 136 trees, 148 features)
-#   - branch_trace_topk: 1000 (required for reranker — pools only populated when tracing)
-#   - explanation_lm: qwen3-30b-a3b-instruct (state-conditioned, PR #114 settings)
+# Blind-A learned-ranker submission config for state-ranker v10.
 
-explanation_lm_type: "litellm"
+explanation_lm_type: litellm
 explanation_lm_kwargs:
-  model_name: "openrouter/qwen/qwen3-30b-a3b-instruct-2507"
+  model_name: openrouter/qwen/qwen3-30b-a3b-instruct-2507
   temperature: 0.7
   max_tokens: 2048
 explanation_kwargs:
-  conditioning: "state"
-  item_format: "xml"
+  conditioning: state
+  item_format: xml
   max_tags: 10
   echo_retries: 3
 
 lm_type: dummy
 retrieval_type: bm25
-qu_type: v0plus_compiler
+qu_type: state_ranker
 qu_kwargs:
-  max_in_flight: 8
+  max_in_flight: 4
+  ranking:
+    mode: lgbm
+    model_version: lgbm_v10
+    model_path: ${oc.env:MCRS_MODEL_DIR,models/reranker_v10}/model.txt
+    meta_path: ${oc.env:MCRS_MODEL_DIR,models/reranker_v10}/meta.json
+    cat_maps: ${oc.env:MCRS_MODEL_DIR,models/reranker_v10}/cat_maps.json
+    branch_names: ${oc.env:MCRS_MODEL_DIR,models/reranker_v10}/branch_names.json
+    tag_index: ${oc.env:MCRS_CACHE_DIR,./cache}/tag_embedding_index/qwen_0_6b.npz
+    embed_memo: ${oc.env:MCRS_RERANKER_DIR,./exp/analysis/rerank}/q06_memo_blindA.json
+    msg_store: ${oc.env:MCRS_RERANKER_DIR,./exp/analysis/rerank}/raw_msg_store
+    pool_k: 500
+    top_k_out: 1000
   extractor:
     model_name: openrouter/deepseek/deepseek-v4-flash
-    prompt_version: v1  # v0plus for old V0Plus extraction
+    prompt_version: v1
     temperature: 0.0
     max_tokens: 8000
     timeout_s: 120
@@ -60,6 +68,10 @@ qu_kwargs:
     artist_match_topk: 20
     track_match_topk: 5
   compiler:
+    rejection_drop_policy: track_only
+    enable_release_date_hard_filter: false
+    soft_adjust_skip_intents: [pivot]
+    scrub_negated_intent_tags: true
     bm25_v1_attribute_tag_policy: resolved
     tag_resolver_embedding_index_path: ${oc.env:MCRS_CACHE_DIR,./cache}/tag_embedding_index/qwen_0_6b.npz
     tag_resolver_encoder_id: qwen_0_6b
@@ -134,40 +146,17 @@ qu_kwargs:
     disco_weight: 1.0
     disco_cap: 150
     disco_confidence_threshold: 90.0
-    disco_gated_intents:
-    - pivot
+    disco_gated_intents: [pivot]
     enable_era_popularity: true
     era_pop_weight: 1.0
     era_pop_cap: 200
-  reranker:
-    enabled: true
-    # Model bundle is committed under models/reranker_v9/ (ships in the repo and
-    # the Modal image). MCRS_MODEL_DIR overrides the location if needed.
-    model_path: ${oc.env:MCRS_MODEL_DIR,models/reranker_v9}/model.txt
-    meta_path: ${oc.env:MCRS_MODEL_DIR,models/reranker_v9}/meta.json
-    cat_maps: ${oc.env:MCRS_MODEL_DIR,models/reranker_v9}/cat_maps.json
-    branch_names: ${oc.env:MCRS_MODEL_DIR,models/reranker_v9}/branch_names.json
-    # Large serving caches (not committed; MCRS_RERANKER_DIR is set by
-    # modal/app.py on Modal → /root/cache/rerank, defaults to ./exp/analysis/rerank
-    # locally — see docs/reproduce_reranker.md).
-    tag_index: ${oc.env:MCRS_CACHE_DIR,./cache}/tag_embedding_index/qwen_0_6b.npz
-    embed_memo: ${oc.env:MCRS_RERANKER_DIR,./exp/analysis/rerank}/q06_memo_blindA.json
-    msg_store: ${oc.env:MCRS_RERANKER_DIR,./exp/analysis/rerank}/raw_msg_store
-    pool_k: 500
-    top_k_out: 1000
 
 test_dataset_name: talkpl-ai/TalkPlayData-Challenge-Blind-A
 item_db_name: talkpl-ai/TalkPlayData-Challenge-Track-Metadata
 user_db_name: talkpl-ai/TalkPlayData-Challenge-User-Metadata
-track_split_types:
-- all_tracks
-user_split_types:
-- all_users
-corpus_types:
-- track_name
-- artist_name
-- album_name
-- tag_list
+track_split_types: [all_tracks]
+user_split_types: [all_users]
+corpus_types: [track_name, artist_name, album_name, tag_list]
 cache_dir: ./cache
 device: cpu
 attn_implementation: eager

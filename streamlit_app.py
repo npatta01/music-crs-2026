@@ -320,8 +320,8 @@ with st.sidebar:
     if not pred_files:
         st.warning(
             f"No prediction files found in `{search_dir}/`.\n\n"
-            + ("Run `python run_inference_devset.py --tid v0plus_compiler_all_retrievers_devset`" if is_devset
-               else "Run `python run_inference_blindset.py --tid v0plus_compiler_blindset_A`")
+            + ("Run `python run_inference_devset.py --tid state_ranker_v10_lgbm_devset` or `python run_inference_devset.py --tid state_ranker_v10_rrf_devset`" if is_devset
+               else "Run `python run_inference_blindset.py --tid state_ranker_v10_lgbm_blindset_A`")
         )
         st.stop()
 

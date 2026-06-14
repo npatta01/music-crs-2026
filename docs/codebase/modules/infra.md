@@ -135,7 +135,7 @@ KIND_ALIASES = {
 | `volumes.cache` | `"music-crs-cache"` — unified Volumes v2 cache mounted at `container.cache_dir` (`/root/cache`); holds the file-per-key LiteLLM cache (`/root/cache/litellm`, shared between `ModalLiteLLMService` and `_inference_*`) and the GPU-encoder DiskVectorCache (`/root/cache/embedding`) |
 | `container.exp_dir` | `"/root/exp"` — maps to `results_vol`; inference scripts write here |
 | `inference.gpu` | `["H200","H100","L40S","A100-80GB","A100-40GB"]` — fallback list for GPU jobs |
-| `inference.devset_batch_size` | `64` |
+| `inference.devset_batch_size` | `8` |
 | `lancedb.inference_cpu/memory` | `2.0 CPU / 16 GiB` — sized for `max_in_flight=8` async LLM calls |
 | `qwen3_encoder.gpu` | `"T4"` — cheapest GPU that fits 0.6B model |
 | `qwen3_encoder.torch_dtype` | `"bfloat16"` |

@@ -7,6 +7,13 @@ Repo: https://github.com/npatta01/music-conversational-music-recomender-2026
 
 ## 2026-06
 
+- `Changed` **State-ranker v10 cleanup**. Active configs now use
+  `state_ranker_v10_*` instead of `v0plus_compiler_*`; traces expose
+  `extracted_state`, `compiled_state`, `retrieval.branches`, ordered
+  `ranking.stages`, and canonical `final_recommendation`. Fresh devset runs:
+  RRF baseline NDCG@20 0.1492 / Hit@20 0.3183; LambdaMART v10 NDCG@20 0.4520 /
+  Hit@20 0.6105 / MRR 0.4055. Blind-A CodaBench submission `797598` scored
+  nDCG@20 0.4380 and composite 0.5389. [leaderboard](leaderboard.md)
 - `Docs` **Pruned experiment workspace**. Removed archived configs, stale
   per-run reports, and checked-in raw analysis artifacts so agents use the
   current configs and concise status files instead of old experiment notes.
@@ -22,8 +29,8 @@ Repo: https://github.com/npatta01/music-conversational-music-recomender-2026
 
 - `Fixed` **Issue #70 code-audit bugs** -
   [#71](https://github.com/npatta01/music-conversational-music-recomender-2026/pull/71).
-  Canonical `image` config re-run post-fix: NDCG@20 0.1452. This remains the
-  current score anchor. [report](experiments/v0plus_compiler_image_devset.md)
+  Canonical `image` config re-run post-fix: NDCG@20 0.1452. This was the
+  score anchor for that wave. [report](experiments/v0plus_compiler_image_devset.md)
 - `Added` v0+ compiler `blindset_A` config -
   [#63](https://github.com/npatta01/music-conversational-music-recomender-2026/pull/63).
 - `Changed` LanceDB is the v0+ catalog source of truth -

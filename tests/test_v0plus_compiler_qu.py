@@ -483,6 +483,77 @@ def test_litellm_extractor_does_not_apply_post_extraction_text_repair(monkeypatc
     assert state.turn_intent == "more like Fugazi"
 
 
+def test_litellm_extractor_build_kwargs_accepts_ollama_extra_params():
+    extractor = LiteLLMExtractor(
+        model_name="ollama_chat/qwen3:8b",
+        api_base="http://localhost:11434",
+        extra_params={"keep_alive": "30m", "format": "json"},
+    )
+
+    kwargs = extractor._build_kwargs(
+        [{"turn": 1, "role": "user", "text": "play smoky jazz"}],
+        [],
+    )
+
+    assert kwargs["model"] == "ollama_chat/qwen3:8b"
+    assert kwargs["api_base"] == "http://localhost:11434"
+    assert kwargs["keep_alive"] == "30m"
+    assert kwargs["format"] == "json"
+    assert "api_key" not in kwargs
+    assert kwargs["response_format"]["type"] == "json_schema"
+
+
+def test_build_v0plus_compiler_qu_passes_extractor_extra_params_and_empty_api_key(monkeypatch):
+    monkeypatch.setenv("LITELLM_PROXY_KEY", "proxy-key-from-env")
+
+    catalog = _catalog()
+    qu = build_v0plus_compiler_qu(
+        qu_kwargs={
+            "extractor": {
+                "model_name": "ollama_chat/qwen3:8b",
+                "api_base": "http://localhost:11434",
+                "api_key": "",
+                "extra_params": {"keep_alive": "30m"},
+                "retry_temperature": 0.0,
+            }
+        },
+        _overrides={
+            "catalog": catalog,
+            "matcher": RapidfuzzCatalogMatcher(catalog),
+            "encoder": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5]),
+            "retriever": FakeRetriever(),
+        },
+    )
+
+    assert qu.extractor.model_name == "ollama_chat/qwen3:8b"
+    assert qu.extractor.api_base == "http://localhost:11434"
+    assert qu.extractor.api_key is None
+    assert qu.extractor.extra_params == {"keep_alive": "30m"}
+    assert qu.extractor.retry_temperature == 0.0
+
+
+def test_build_v0plus_compiler_qu_omits_proxy_key_for_ollama_without_api_key(monkeypatch):
+    monkeypatch.setenv("LITELLM_PROXY_KEY", "proxy-key-from-env")
+
+    catalog = _catalog()
+    qu = build_v0plus_compiler_qu(
+        qu_kwargs={
+            "extractor": {
+                "model_name": "ollama_chat/qwen3:8b",
+                "api_base": "http://localhost:11434",
+            }
+        },
+        _overrides={
+            "catalog": catalog,
+            "matcher": RapidfuzzCatalogMatcher(catalog),
+            "encoder": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5]),
+            "retriever": FakeRetriever(),
+        },
+    )
+
+    assert qu.extractor.api_key is None
+
+
 def test_litellm_extractor_decodes_v1_and_projects_to_v0plus():
     extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
 
@@ -830,14 +901,12 @@ def test_trace_contains_branches_key():
         "pools",
         "fused",
         "final",
-        "recommended",
         "branch_queries",
         "branch_status",
         "candidate_filter_summary",
     }
     names = [p["name"] for p in branches["pools"]]
     assert "bm25" in names
-    assert branches["final"]["track_ids"][:1] == [branches["recommended"]["top1_track_id"]]
     assert branches["branch_queries"]["bm25"]["clauses"]
     assert branches["branch_status"]["bm25"]["fired"] is True
     assert "raw_union_size" in branches["candidate_filter_summary"]

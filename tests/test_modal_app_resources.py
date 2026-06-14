@@ -160,6 +160,26 @@ def test_modal_litellm_smoke_methods_accept_model_overrides():
     assert chat_args == ["self", "prompt", "model_name", "api_base"]
 
 
+def test_ranker_v10_modal_paths_are_lineage_scoped():
+    module = _load_modal_app_module()
+
+    paths = module._ranker_remote_paths("v10")
+
+    assert paths == {
+        "train_dir": f"{module.CACHE_DIR}/rerank/v10/train",
+        "features_dir": f"{module.CACHE_DIR}/rerank/v10/features",
+        "sidecar": f"{module.CACHE_DIR}/rerank/v10/constraint_features.parquet",
+        "weights": f"{module.CACHE_DIR}/rerank/v10/label_weights.parquet",
+    }
+
+
+def test_modal_has_v10_ranker_entrypoints():
+    source = (PROJECT_ROOT / "modal" / "app.py").read_text(encoding="utf-8")
+
+    assert "def run_build_features_for_ranker(" in source
+    assert "def run_train_lgbm_ranker(" in source
+
+
 def test_modal_retrieval_methods_accept_request_retrieval_config():
     retrieve_args = _modal_class_method_arguments("ModalRetrievalService", "retrieve")
     batch_args = _modal_class_method_arguments("ModalRetrievalService", "retrieve_batch")

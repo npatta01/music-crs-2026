@@ -14,8 +14,8 @@ Weight rules (multiplicative, floor 0.2):
 Output: parquet (session_id, turn_number, weight). Never used as a feature.
 
   python scripts/rerank/build_label_weights.py \
-      --trace-glob "exp/inference/devset/v0plus_compiler_pruned_resolved_tags_devset.*shard_*_trace.jsonl" \
-      --out exp/analysis/rerank/label_weights_v9.parquet
+      --trace-glob "exp/inference/devset/state_ranker_v10_rrf_devset.*shard_*_trace.jsonl" \
+      --out exp/analysis/rerank/label_weights_v10.parquet
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ def main():
     ap.add_argument("--ground-truth", default="exp/ground_truth/devset.json")
     ap.add_argument("--db-uri",
                     default="/Users/npatta01/data/projects/music-conversational-music-recomender-2026/cache/lancedb")
-    ap.add_argument("--out", default="exp/analysis/rerank/label_weights_v9.parquet")
+    ap.add_argument("--out", default="exp/analysis/rerank/v10/label_weights.parquet")
     args = ap.parse_args()
 
     gt_map = {(str(r["session_id"]), int(r["turn_number"])): str(r["ground_truth_track_id"])

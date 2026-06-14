@@ -311,8 +311,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Evaluate music recommendation system predictions"
     )
-    parser.add_argument("--tid", type=str, default="v0plus_compiler_all_retrievers_devset",
-                        help="Experiment id (matches prediction file stem).")
+    parser.add_argument("--tid", type=str, default="state_ranker_v10_lgbm_devset",
+                        help="Experiment id (matches prediction file stem; use state_ranker_v10_rrf_devset for the explicit RRF baseline).")
     parser.add_argument("--eval_dataset", type=str, default="devset")
     parser.add_argument("--session_ids_file", type=str, default=None,
                         help="Optional JSON with {session_ids: [...]} to score a subset.")

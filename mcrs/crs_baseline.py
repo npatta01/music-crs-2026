@@ -179,6 +179,11 @@ class CRS_BASELINE:
             retrieval_items = self.retrieval.text_to_item_retrieval(
                 retrieval_input, topk=self.retrieval_topk
             )
+        traces = list(getattr(self.qu, "last_traces", []) or [])
+        trace = traces[0] if traces else None
+        final = trace.get("final_recommendation") if isinstance(trace, dict) else None
+        if isinstance(final, dict) and final.get("track_ids"):
+            retrieval_items = list(final["track_ids"][: self.retrieval_topk])
         # When retrieval comes back empty (e.g. v0+ extractor failed and the
         # compiler had no anchors), pass `recommend_item=None` to the LM
         # instead of crashing on `retrieval_items[0]`. Eval treats the empty
@@ -275,6 +280,16 @@ class CRS_BASELINE:
                 # Fallback to sequential retrieval if batch method not available
                 batch_retrieval_items = [self.retrieval.text_to_item_retrieval(inp, topk=self.retrieval_topk) for inp in retrieval_inputs]
 
+        # Pad traces to match batch length so non-v0+ QUs (which don't produce
+        # traces) get `None` rather than IndexError.
+        if len(batch_traces) < len(batch_data):
+            batch_traces = batch_traces + [None] * (len(batch_data) - len(batch_traces))
+
+        for i, trace in enumerate(batch_traces[: len(batch_retrieval_items)]):
+            final = trace.get("final_recommendation") if isinstance(trace, dict) else None
+            if isinstance(final, dict) and final.get("track_ids"):
+                batch_retrieval_items[i] = list(final["track_ids"][: self.retrieval_topk])
+
         # Recommend-item formatting: plain metadata string (default) or a
         # delimited XML block with capped tags (echo-resistant; response_kwargs).
         def _safe_label(track_id):
@@ -302,7 +317,9 @@ class CRS_BASELINE:
             response_contexts = []
             for i in range(len(session_memories)):
                 trace = batch_traces[i] if i < len(batch_traces) else None
-                state = trace.get("state") if isinstance(trace, dict) else None
+                state = None
+                if isinstance(trace, dict):
+                    state = trace.get("extracted_state") or trace.get("state")
                 block = format_state_block(state, _safe_label)
                 response_contexts.append([{"role": "user", "content": block}])
         else:
@@ -326,11 +343,6 @@ class CRS_BASELINE:
                     )
                     attempts += 1
                 responses[i] = resp
-
-        # Pad traces to match batch length so non-v0+ QUs (which don't produce
-        # traces) get `None` rather than IndexError.
-        if len(batch_traces) < len(batch_data):
-            batch_traces = batch_traces + [None] * (len(batch_data) - len(batch_traces))
 
         # Prepare results
         results = []
