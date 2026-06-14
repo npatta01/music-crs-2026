@@ -19,9 +19,9 @@ from typing import Any
 
 
 DEFAULT_SOURCE_ROOT = Path("/Users/npatta01/data/projects/music-conversational-music-recomender-2026")
-DEFAULT_REPORT_ROOT = Path("experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06")
+DEFAULT_REPORT_ROOT = Path("experiments/analysis/devset_recall_gap_state_ranker_v10_2026_06_14")
 DEFAULT_OUT_DIR = DEFAULT_REPORT_ROOT / "ranker_decision"
-DEFAULT_TID = "v0plus_compiler_all_retrievers_devset"
+DEFAULT_TID = "state_ranker_v10_rrf_devset"
 HF_CONVERSATION_DATASET = "talkpl-ai/TalkPlayData-Challenge-Dataset"
 HF_USER_METADATA_DATASET = "talkpl-ai/TalkPlayData-Challenge-User-Metadata"
 
@@ -1298,15 +1298,15 @@ def load_task_mode_state_addendum(source_root: Path) -> dict[str, Any]:
 
 
 def build_prompt() -> str:
-    return """Build a decision-ready Music CRS devset recall-gap report for v0plus_compiler_all_retrievers_devset.
+    return """Build a decision-ready Music CRS devset recall-gap report for state_ranker_v10_rrf_devset.
 
 Sources to inspect:
-- exp/inference/devset/v0plus_compiler_all_retrievers_devset_trace.jsonl
-- exp/inference/devset/v0plus_compiler_all_retrievers_devset.json
+- exp/inference/devset/state_ranker_v10_rrf_devset_trace.jsonl
+- exp/inference/devset/state_ranker_v10_rrf_devset.json
 - evaluator/exp/ground_truth/devset.json
-- experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/recall_gap_data.json
-- experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/branch_diagnostics.json
-- configs/v0plus_compiler_all_retrievers_devset.yaml
+- experiments/analysis/devset_recall_gap_state_ranker_v10_2026_06_14/recall_gap_data.json
+- experiments/analysis/devset_recall_gap_state_ranker_v10_2026_06_14/branch_diagnostics.json
+- configs/state_ranker_v10_rrf_devset.yaml
 - docs/data.md, docs/architectures/session_state.md, docs/architectures/v0plus_retrieval.md
 - Hugging Face TalkPlayData-Challenge-Dataset test split for raw conversation turns
 - Hugging Face organizer metadata: conversation_goal.category/specificity/listener_goal, goal_progress_assessments, user_profile.preferred_musical_culture

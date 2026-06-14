@@ -55,5 +55,8 @@ def load_qu_module(
     elif qu_type == "v0plus_compiler":
         from .compiler_v0plus_qu import build_v0plus_compiler_qu
         return build_v0plus_compiler_qu(qu_kwargs=qu_kwargs)
+    elif qu_type == "state_ranker":
+        from .state_ranker_qu import build_state_ranker_qu
+        return build_state_ranker_qu(qu_kwargs=qu_kwargs)
     else:
         raise ValueError(f"Unsupported QU type: {qu_type}")

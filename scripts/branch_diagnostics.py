@@ -6,6 +6,7 @@ evaluator ground truth (evaluator/exp/ground_truth/devset.json) and reports:
   - hit@{1,20,50,100,200,1000}     over the FINAL recommendation
   - unionhit@{20,50,100,200}       over the union of every branch's top-k
   - recall@{100,200,1000} per branch (denominator = turns the branch fired)
+  - hit@{1,20,50,100,200,1000} per ranking stage (denominator = turns stage fired)
   - union_size@{20,50,100,200}     mean distinct candidates in the union
   - fusion_efficiency@{20,50,100,200}  hit@k(final) / unionhit@k
 
@@ -27,19 +28,51 @@ BRANCH_KS = [100, 200, 1000]
 
 
 def final_hit_at_k(branches: dict, gt: str, k: int) -> bool:
-    if k == 1:
-        return branches.get("recommended", {}).get("top1_track_id") == gt
-    final_ids = branches.get("final", {}).get("track_ids", [])
+    final_ids = _final_track_ids(branches)
     return gt in set(final_ids[:k])
+
+
+def _final_track_ids(payload: dict) -> list[str]:
+    final = payload.get("final_recommendation")
+    if isinstance(final, dict):
+        return [str(t) for t in (final.get("track_ids") or [])]
+    ranking = payload.get("ranking")
+    if isinstance(ranking, dict):
+        final_stage = ranking.get("final_stage")
+        for stage in ranking.get("stages") or []:
+            if isinstance(stage, dict) and stage.get("name") == final_stage:
+                return [str(t) for t in (stage.get("track_ids") or [])]
+    served = payload.get("served")
+    if isinstance(served, dict):
+        return [str(t) for t in (served.get("track_ids") or [])]
+    return [str(t) for t in (payload.get("final", {}).get("track_ids", []) or [])]
+
+
+def _branch_pools(payload: dict) -> list[dict]:
+    retrieval = payload.get("retrieval")
+    if isinstance(retrieval, dict):
+        return list(retrieval.get("branches") or [])
+    return list(payload.get("pools", []) or [])
+
+
+def _ranking_stages(payload: dict) -> list[dict]:
+    ranking = payload.get("ranking")
+    if not isinstance(ranking, dict):
+        return []
+    return [stage for stage in ranking.get("stages") or [] if isinstance(stage, dict)]
 
 
 def _branch_topk_ids(pool: dict, k: int) -> set[str]:
     return {t for t, _ in (h[:2] for h in pool.get("hits", [])[:k])}
 
 
+def _stage_topk_ids(stage: dict, k: int) -> set[str]:
+    return {str(t) for t in (stage.get("track_ids") or [])[:k]}
+
+
 def union_at_k(branches: dict, k: int) -> set[str]:
     out: set[str] = set()
-    for pool in branches.get("pools", []):
+    for pool in _branch_pools(branches):
         out |= _branch_topk_ids(pool, k)
     return out
 
@@ -56,7 +89,7 @@ def per_branch_recall(turns: list[tuple[dict, str]], ks: list[int]) -> dict:
     for branches, gt in turns:
         if gt is None:
             continue
-        for pool in branches.get("pools", []):
+        for pool in _branch_pools(branches):
             name = pool["name"]
             fired[name] += 1
             for k in ks:
@@ -67,6 +100,30 @@ def per_branch_recall(turns: list[tuple[dict, str]], ks: list[int]) -> dict:
         row = {"fired": n}
         for k in ks:
             row[f"recall@{k}"] = (hits[name][k] / n) if n else 0.0
+        out[name] = row
+    return out
+
+
+def per_stage_recall(turns: list[tuple[dict, str]], ks: list[int]) -> dict:
+    """Ranking-stage hit rates. Denominator per stage is turns the stage fired."""
+    fired: dict[str, int] = defaultdict(int)
+    hits: dict[str, dict[int, int]] = defaultdict(lambda: {k: 0 for k in ks})
+    for branches, gt in turns:
+        if gt is None:
+            continue
+        for stage in _ranking_stages(branches):
+            name = stage.get("name")
+            if not name:
+                continue
+            fired[name] += 1
+            for k in ks:
+                if gt in _stage_topk_ids(stage, k):
+                    hits[name][k] += 1
+    out: dict[str, dict] = {}
+    for name, n in fired.items():
+        row = {"fired": n}
+        for k in ks:
+            row[f"hit@{k}"] = (hits[name][k] / n) if n else 0.0
         out[name] = row
     return out
 
@@ -93,6 +150,7 @@ def compute_metrics(turns: list[tuple[dict, str]]) -> dict:
         m[f"fusion_efficiency@{k}"] = (m[f"hit@{k}"] / uh) if uh > 0 else None
 
     m["per_branch"] = per_branch_recall(scored, BRANCH_KS)
+    m["per_stage"] = per_stage_recall(scored, FINAL_KS)
     return m
 
 
@@ -126,6 +184,8 @@ def compute_metrics_streaming(trace_path: str, gt: dict[tuple[str, int], str]) -
     usize = {k: 0 for k in UNION_KS}
     fired: dict[str, int] = defaultdict(int)
     bhits: dict[str, dict[int, int]] = defaultdict(lambda: {k: 0 for k in BRANCH_KS})
+    stage_fired: dict[str, int] = defaultdict(int)
+    stage_hits: dict[str, dict[int, int]] = defaultdict(lambda: {k: 0 for k in FINAL_KS})
 
     for r in iter_trace(trace_path):
         key = (r["session_id"], int(r["turn_number"]))
@@ -134,7 +194,7 @@ def compute_metrics_streaming(trace_path: str, gt: dict[tuple[str, int], str]) -
             n_skipped += 1
             continue
         tr = r.get("trace")
-        branches = tr.get("branches") if isinstance(tr, dict) else None
+        branches = _metric_payload(tr)
         if branches:
             saw_branches = True
         branches = branches or {}
@@ -149,12 +209,20 @@ def compute_metrics_streaming(trace_path: str, gt: dict[tuple[str, int], str]) -
             if g in u:
                 uhit[k] += 1
             usize[k] += len(u)
-        for pool in branches.get("pools", []):
+        for pool in _branch_pools(branches):
             name = pool["name"]
             fired[name] += 1
             for k in BRANCH_KS:
                 if g in _branch_topk_ids(pool, k):
                     bhits[name][k] += 1
+        for stage in _ranking_stages(branches):
+            name = stage.get("name")
+            if not name:
+                continue
+            stage_fired[name] += 1
+            for k in FINAL_KS:
+                if g in _stage_topk_ids(stage, k):
+                    stage_hits[name][k] += 1
 
     m: dict = {"n_turns": n, "n_failed_no_branches": n_failed, "n_skipped_no_gt": n_skipped,
                "saw_branches": saw_branches}
@@ -174,6 +242,13 @@ def compute_metrics_streaming(trace_path: str, gt: dict[tuple[str, int], str]) -
             row[f"recall@{k}"] = (bhits[name][k] / nf) if nf else 0.0
         per[name] = row
     m["per_branch"] = per
+    stages: dict[str, dict] = {}
+    for name, nf in stage_fired.items():
+        row = {"fired": nf}
+        for k in FINAL_KS:
+            row[f"hit@{k}"] = (stage_hits[name][k] / nf) if nf else 0.0
+        stages[name] = row
+    m["per_stage"] = stages
     return m
 
 
@@ -182,7 +257,8 @@ def load_trace(path: str, require_branches: bool = True) -> list[dict]:
         records = [json.loads(line) for line in f if line.strip()]
     if require_branches:
         has_any = any(
-            isinstance(r.get("trace"), dict) and "branches" in r["trace"]
+            isinstance(r.get("trace"), dict)
+            and ("branches" in r["trace"] or "retrieval" in r["trace"])
             for r in records
         )
         if not has_any:
@@ -224,9 +300,17 @@ def align_turns(
         if key not in gt or gt[key] is None:
             continue
         tr = r.get("trace")
-        branches = tr.get("branches") if isinstance(tr, dict) else None
+        branches = _metric_payload(tr)
         out.append((branches or {}, gt[key]))
     return out
+
+
+def _metric_payload(trace: dict | None) -> dict | None:
+    if not isinstance(trace, dict):
+        return None
+    if "final_recommendation" in trace or "retrieval" in trace:
+        return trace
+    return trace.get("branches") if isinstance(trace.get("branches"), dict) else None
 
 
 def _format_report(metrics: dict) -> str:
@@ -249,6 +333,13 @@ def _format_report(metrics: dict) -> str:
     for name, row in sorted(metrics.get("per_branch", {}).items()):
         cells = "  ".join(f"r@{k}={row.get(f'recall@{k}', 0.0):.4f}" for k in BRANCH_KS)
         lines.append(f"  {name:<32} fired={row['fired']:<5} {cells}")
+    per_stage = metrics.get("per_stage") or {}
+    if per_stage:
+        lines.append("")
+        lines.append("PER-STAGE recall (denominator = turns stage fired):")
+        for name, row in per_stage.items():
+            cells = "  ".join(f"h@{k}={row.get(f'hit@{k}', 0.0):.4f}" for k in FINAL_KS)
+            lines.append(f"  {name:<32} fired={row['fired']:<5} {cells}")
     return "\n".join(lines)
 
 

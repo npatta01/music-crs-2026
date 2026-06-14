@@ -380,12 +380,59 @@ def load_user_cf():
     return out
 
 
+def feature_trace_view(trace: dict) -> dict:
+    """Return the feature-builder view for legacy and state-ranker v10 traces."""
+    if not isinstance(trace, dict):
+        return {"branches": {"pools": [], "branch_queries": {}, "fused": []}, "state": {}}
+    branches = trace.get("branches")
+    if isinstance(branches, dict) and branches.get("pools") is not None:
+        return trace
+
+    retrieval = trace.get("retrieval") or {}
+    ranking = trace.get("ranking") or {}
+    stages = ranking.get("stages") or []
+    candidate_stage = next(
+        (s for s in stages if isinstance(s, dict) and s.get("name") == "candidate_fusion"),
+        stages[0] if stages else {},
+    )
+    fused = candidate_stage.get("scores")
+    if fused is None:
+        fused = [
+            [track_id, 1.0 / rank]
+            for rank, track_id in enumerate(candidate_stage.get("track_ids") or [], 1)
+        ]
+
+    state = trace.get("state") or trace.get("extracted_state") or {}
+    compiled_state = trace.get("compiled_state") or {}
+    out = dict(trace)
+    out["branches"] = {
+        "pools": retrieval.get("branches") or [],
+        "branch_queries": retrieval.get("branch_queries") or {},
+        "fused": fused,
+    }
+    out["state"] = state
+    out["routing_tags"] = (
+        trace.get("routing_tags")
+        or state.get("routing_tags")
+        or compiled_state.get("routing_tags")
+        or {}
+    )
+    out["intent_mode"] = (
+        trace.get("intent_mode")
+        or state.get("intent_mode")
+        or compiled_state.get("intent_mode")
+        or ""
+    )
+    return out
+
+
 def grounded_tags(row: dict, resolver: TieredTagResolver) -> tuple[set[str], int, float]:
     keys: set[str] = set()
     n_exact = 0
     max_score = 0.0
-    sources = list((row["trace"].get("resolver") or {}).get("positive_tags") or [])
-    for fact in (row["trace"].get("state") or {}).get("facts") or []:
+    trace = feature_trace_view(row.get("trace") or {})
+    sources = list((trace.get("resolver") or {}).get("positive_tags") or [])
+    for fact in (trace.get("state") or {}).get("facts") or []:
         if fact.get("type") == "attribute" and fact.get("value"):
             sources.append(str(fact["value"]))
     for phrase in sources:
@@ -437,7 +484,8 @@ def main():
                     row = json.loads(line)
                 except json.JSONDecodeError:
                     continue
-                for q in (row["trace"]["branches"].get("branch_queries") or {}).values():
+                trace = feature_trace_view(row.get("trace") or {})
+                for q in (trace["branches"].get("branch_queries") or {}).values():
                     if isinstance(q, dict) and q.get("kind") == "dense" and q.get("query_text"):
                         texts.add(str(q["query_text"]))
         ordered = sorted(texts)

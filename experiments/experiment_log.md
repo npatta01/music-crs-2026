@@ -44,3 +44,28 @@ Next step:
 
 - Use the included state experiment packs for small before/after tests, then
   update or replace this snapshot if the new system changes the conclusions.
+
+## 2026-06-14 - State-Ranker v10 Cleanup
+
+Decision:
+
+- Replace the active v0plus compiler surface with `state_ranker_v10_*` configs.
+- Make the trace contract explicit: `extracted_state`, `compiled_state`,
+  `retrieval.branches`, ordered `ranking.stages`, and canonical
+  `final_recommendation`.
+- Keep response generation and evaluator output tied to
+  `final_recommendation.primary_track_id` / `track_ids`.
+
+Current read:
+
+- `state_ranker_v10_rrf_devset`: NDCG@20 0.1492, Hit@20 0.3183, branch
+  union@1000 0.8919.
+- `state_ranker_v10_lgbm_devset`: NDCG@20 0.4520, Hit@20 0.6105, MRR 0.4055.
+- The learned-ranker stage improves over previous `v0plus_compiler_devset_rr2`
+  by +0.1070 NDCG@20, +0.0800 Hit@20, and +0.1147 MRR.
+
+Next step:
+
+- Submit `submission/submission_state_ranker_v10_lgbm_blindset_A_20260614.zip`
+  to CodaBench and compare against the previous `rr2` Blind-A score before
+  merging or deleting additional source artifacts.

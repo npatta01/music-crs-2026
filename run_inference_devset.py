@@ -293,8 +293,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tid",
         type=str,
-        default="v0plus_compiler_all_retrievers_devset",
-        help="Task identifier matching a config file (e.g., 'v0plus_compiler_all_retrievers_devset' loads configs/v0plus_compiler_all_retrievers_devset.yaml)"
+        default="state_ranker_v10_lgbm_devset",
+        help=(
+            "Task identifier matching a config file. Defaults to the v10 LGBM "
+            "devset config; use 'state_ranker_v10_rrf_devset' for the explicit "
+            "RRF/candidate-fusion baseline."
+        )
     )
     parser.add_argument(
         "--batch_size",

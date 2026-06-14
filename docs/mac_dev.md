@@ -15,10 +15,11 @@ uv run python scripts/create_local_split.py --n_per_tier 3 --seed 42
 ```bash
 uv run python run_experiment.py \
   --backend local \
-  --tid v0plus_compiler_all_retrievers_devset \
+  --tid state_ranker_v10_rrf_devset \
   --batch_size 2 \
   --exp_dir exp \
   --session_ids_file data/local_eval_split.json
 ```
 
 The wrapper will run inference, generate ground truth in `exp/ground_truth/` if needed, and write scores to `exp/scores/devset/{tid}.json`.
+Use `--tid state_ranker_v10_lgbm_devset` for the learned-ranker path after the v10 model bundle and feature sidecars are available locally.

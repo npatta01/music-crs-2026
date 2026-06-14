@@ -16,6 +16,25 @@ class FakeQU:
         return [["t1"], ["t2"]]
 
 
+class FinalRecommendationQU:
+    def __init__(self):
+        self.last_traces = []
+
+    def batch_compile_track_ids(self, session_memories, topk, user_ids=None):
+        self.last_traces = [
+            {
+                "extracted_state": {"turn_intent": "play jazz"},
+                "final_recommendation": {
+                    "track_ids": ["t2", "t1"],
+                    "primary_track_id": "t2",
+                    "source_stage": "l3_mock",
+                    "ranking_mode": "lgbm",
+                },
+            }
+        ]
+        return [["t1", "t2"]]
+
+
 class FakeItemDB:
     metadata_dict = {
         "t1": {"track_name": ["Olvidarte"], "artist_name": ["Arjona"], "album_name": ["A"],
@@ -92,3 +111,16 @@ def test_echo_retry_regenerates_metadata_echo():
     out = crs.batch_chat(_batch())
     assert out[0]["response"] == "recovered natural reply"  # echo regenerated
     assert out[1]["response"] == "ok reply"  # non-echo left alone
+
+
+def test_response_generation_uses_final_recommendation_primary_track():
+    crs = _make_crs(conditioning="state", item_format="plain")
+    crs.retrieval_topk = 1
+    crs.qu = FinalRecommendationQU()
+
+    out = crs.batch_chat([{"user_query": "play jazz", "user_id": None, "session_memory": []}])
+
+    assert out[0]["retrieval_items"] == ["t2"]
+    assert out[0]["retrieval_items"] == out[0]["trace"]["final_recommendation"]["track_ids"][:1]
+    assert "title: Rock" in out[0]["response"]
+    assert "title: Olvidarte" not in out[0]["response"]

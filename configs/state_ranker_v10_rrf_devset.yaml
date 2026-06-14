@@ -1,17 +1,17 @@
-# Devset eval: pruned-retrieval + LambdaMART v9 reranker (no response gen).
-# Mirror of v0plus_compiler_blindset_A_rr2.yaml for devset nDCG comparison:
-#   - embed_memo → q06_memo.json (devset queries, 25k cached entries)
-#   - test_dataset_name → TalkPlayData-Challenge-Dataset
-#   - No explanation_lm (dummy responses, only retrieval matters here)
+# Devset candidate baseline for the state-ranker v10 lineage.
+# Explicit RRF baseline: weighted RRF is the served ranking only because
+# ranking.mode is set to rrf.
 
 lm_type: dummy
 retrieval_type: bm25
-qu_type: v0plus_compiler
+qu_type: state_ranker
 qu_kwargs:
   max_in_flight: 8
+  ranking:
+    mode: rrf
   extractor:
     model_name: openrouter/deepseek/deepseek-v4-flash
-    prompt_version: v1  # v0plus for old V0Plus extraction
+    prompt_version: v1
     temperature: 0.0
     max_tokens: 8000
     timeout_s: 120
@@ -49,6 +49,10 @@ qu_kwargs:
     artist_match_topk: 20
     track_match_topk: 5
   compiler:
+    rejection_drop_policy: track_only
+    enable_release_date_hard_filter: false
+    soft_adjust_skip_intents: [pivot]
+    scrub_negated_intent_tags: true
     bm25_v1_attribute_tag_policy: resolved
     tag_resolver_embedding_index_path: ${oc.env:MCRS_CACHE_DIR,./cache}/tag_embedding_index/qwen_0_6b.npz
     tag_resolver_encoder_id: qwen_0_6b
@@ -123,39 +127,17 @@ qu_kwargs:
     disco_weight: 1.0
     disco_cap: 150
     disco_confidence_threshold: 90.0
-    disco_gated_intents:
-    - pivot
+    disco_gated_intents: [pivot]
     enable_era_popularity: true
     era_pop_weight: 1.0
     era_pop_cap: 200
-  reranker:
-    enabled: true
-    # Model bundle is committed under models/reranker_v9/ (ships in the repo and
-    # the Modal image). MCRS_MODEL_DIR overrides the location if needed.
-    model_path: ${oc.env:MCRS_MODEL_DIR,models/reranker_v9}/model.txt
-    meta_path: ${oc.env:MCRS_MODEL_DIR,models/reranker_v9}/meta.json
-    cat_maps: ${oc.env:MCRS_MODEL_DIR,models/reranker_v9}/cat_maps.json
-    branch_names: ${oc.env:MCRS_MODEL_DIR,models/reranker_v9}/branch_names.json
-    # Large serving caches (not committed; on the Modal cache volume locally
-    # regenerated — see docs/reproduce_reranker.md).
-    tag_index: ${oc.env:MCRS_CACHE_DIR,./cache}/tag_embedding_index/qwen_0_6b.npz
-    embed_memo: ${oc.env:MCRS_RERANKER_DIR,./exp/analysis/rerank}/q06_memo.json
-    msg_store: ${oc.env:MCRS_RERANKER_DIR,./exp/analysis/rerank}/raw_msg_store
-    pool_k: 500
-    top_k_out: 1000
 
 test_dataset_name: talkpl-ai/TalkPlayData-Challenge-Dataset
 item_db_name: talkpl-ai/TalkPlayData-Challenge-Track-Metadata
 user_db_name: talkpl-ai/TalkPlayData-Challenge-User-Metadata
-track_split_types:
-- all_tracks
-user_split_types:
-- all_users
-corpus_types:
-- track_name
-- artist_name
-- album_name
-- tag_list
+track_split_types: [all_tracks]
+user_split_types: [all_users]
+corpus_types: [track_name, artist_name, album_name, tag_list]
 cache_dir: ./cache
 device: cpu
 attn_implementation: eager

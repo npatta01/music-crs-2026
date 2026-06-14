@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json as _json
+import inspect
 
 import pytest
 
+import scripts.branch_diagnostics as branch_diagnostics
 from scripts.branch_diagnostics import (
     align_turns,
     compute_metrics,
@@ -16,6 +18,10 @@ from scripts.branch_diagnostics import (
     per_branch_recall,
     union_hit_at_k,
 )
+
+
+def test_diagnostics_do_not_read_stale_recommended_top1_field():
+    assert "top1_track_id" not in inspect.getsource(branch_diagnostics)
 
 
 def _turn(final_ids, pools, top1=None):
@@ -35,6 +41,12 @@ def test_final_hit_at_k():
     assert final_hit_at_k(b, "c", 1) is False
     assert final_hit_at_k(b, "c", 3) is True
     assert final_hit_at_k(b, "z", 3) is False
+
+
+def test_final_hit_at_1_uses_served_or_final_track_ids_not_stale_recommended():
+    b = _turn(["served", "other"], {}, top1="stale")
+    assert final_hit_at_k(b, "served", 1) is True
+    assert final_hit_at_k(b, "stale", 1) is False
 
 
 def test_union_hit_at_k():
@@ -161,6 +173,47 @@ def test_streaming_matches_in_memory(tmp_path):
     assert streamed["n_turns"] == 3            # 2 real + 1 failure; s9 (no GT) excluded
     assert streamed["n_skipped_no_gt"] == 1    # s9
     assert streamed["per_branch"] == reference["per_branch"]
+
+
+def test_v10_trace_shape_scores_retrieval_branches_and_final_recommendation(tmp_path):
+    row = {
+        "session_id": "s1",
+        "turn_number": 1,
+        "trace": {
+            "trace_schema_version": "state-ranker-v10",
+            "retrieval": {
+                "branches": [
+                    {"name": "bm25", "hits": [["branch-gt", 1.0]]},
+                    {"name": "dense", "hits": [["other", 1.0]]},
+                ]
+            },
+            "ranking": {
+                "stages": [
+                    {"name": "candidate_fusion", "track_ids": ["branch-gt", "other"]},
+                    {"name": "lgbm_v10", "track_ids": ["served-gt", "branch-gt"]},
+                ],
+                "final_stage": "lgbm_v10",
+            },
+            "final_recommendation": {
+                "track_ids": ["served-gt", "branch-gt"],
+                "primary_track_id": "served-gt",
+                "source_stage": "lgbm_v10",
+                "ranking_mode": "lgbm",
+            },
+        },
+    }
+    trace_path = tmp_path / "v10_trace.jsonl"
+    trace_path.write_text(_json.dumps(row) + "\n")
+    gt = {("s1", 1): "served-gt"}
+
+    metrics = compute_metrics_streaming(str(trace_path), gt)
+
+    assert metrics["hit@1"] == 1.0
+    assert metrics["unionhit@100"] == 0.0
+    assert metrics["per_branch"]["bm25"]["fired"] == 1
+    assert metrics["per_branch"]["bm25"]["recall@100"] == 0.0
+    assert metrics["per_stage"]["candidate_fusion"]["hit@20"] == 0.0
+    assert metrics["per_stage"]["lgbm_v10"]["hit@1"] == 1.0
 
 
 def test_align_turns_keeps_branchless_row_as_miss():

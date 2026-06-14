@@ -136,9 +136,6 @@ class CompileResult:
                 "n_from_fusion": self.n_from_fusion,
                 "n_from_backfill": self.n_from_backfill,
             },
-            "recommended": {
-                "top1_track_id": self.ranked[0] if self.ranked else None,
-            },
             "branch_queries": self.branch_queries,
             "branch_status": self.branch_status,
             "candidate_filter_summary": self.candidate_filter_summary,

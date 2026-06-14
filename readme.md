@@ -97,14 +97,14 @@ uv run modal run other/modal_get_started.py
 The preferred operator command is the unified experiment wrapper:
 
 ```bash
-# Current all-retrievers devset run + local evaluation
-python run_experiment.py --backend local --tid v0plus_compiler_all_retrievers_devset --batch_size 16
+# Explicit RRF/candidate-fusion devset baseline + local evaluation
+python run_experiment.py --backend local --tid state_ranker_v10_rrf_devset --batch_size 16
 
-# Latest all-retrievers coverage run + download into local exp/ + local evaluation
-python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --batch_size 64
+# LambdaMART v10 devset run + download into local exp/ + local evaluation
+python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset --batch_size 8
 
 # Blind A submission path
-python run_experiment.py --backend modal --tid v0plus_compiler_blindset_A --eval_dataset blindset_A --batch_size 64
+python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_A --eval_dataset blindset_A --batch_size 8
 ```
 
 Devset runs write predictions to `exp/inference/devset/{tid}.json` and scores to `exp/scores/devset/{tid}.json`.
@@ -113,10 +113,10 @@ The low-level inference scripts remain available when you want to run only one s
 
 ```bash
 # Dev set inference only
-python run_inference_devset.py --tid v0plus_compiler_all_retrievers_devset --batch_size 16
+python run_inference_devset.py --tid state_ranker_v10_rrf_devset --batch_size 16
 
 # Blind set inference
-python run_inference_blindset.py --tid v0plus_compiler_blindset_A --eval_dataset blindset_A --batch_size 16
+python run_inference_blindset.py --tid state_ranker_v10_lgbm_blindset_A --eval_dataset blindset_A --batch_size 16
 ```
 
 ### Run Inference on the Development Set
@@ -137,11 +137,11 @@ If you do not use `all_tracks`, your evaluation may be considered invalid.
 
 
 ```bash
-# Current all-retrievers devset run
-python run_experiment.py --backend local --tid v0plus_compiler_all_retrievers_devset --batch_size 16
+# Explicit RRF/candidate-fusion devset baseline
+python run_experiment.py --backend local --tid state_ranker_v10_rrf_devset --batch_size 16
 
-# Latest coverage experiment
-python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --batch_size 64
+# LambdaMART v10 devset experiment
+python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset --batch_size 8
 ```
 
 Results are saved under `exp/`.
@@ -156,7 +156,7 @@ To pull Modal-run artifacts back to your machine, use the bulk downloader:
 
 ```bash
 # Download one run (predictions, traces, and scores if present)
-python modal/download_results.py --tid v0plus_compiler_all_retrievers_devset
+python modal/download_results.py --tid state_ranker_v10_lgbm_devset
 
 # Sync all missing artifacts from the Modal volume into evaluator/exp/
 python modal/download_results.py
@@ -179,24 +179,26 @@ The downloader defaults to `evaluator/exp/` and mirrors any available remote:
 ### Run Inference on Blind Sets (for submission)
 
 ```bash
-python run_experiment.py --backend modal --tid v0plus_compiler_blindset_A --eval_dataset blindset_A --batch_size 64
+python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_A --eval_dataset blindset_A --batch_size 8
 ```
 
 ---
 
 ## Custom Configuration
 
-Create a config file in `configs/` or copy one of the current v0+ configs:
+Create a config file in `configs/` or copy one of the current v10 state-ranker configs:
 
 ```yaml
 # configs/my_model.yaml
 lm_type: "dummy"
 retrieval_type: "bm25"
-qu_type: "v0plus_compiler"
+qu_type: "state_ranker"
 qu_kwargs:
+  ranking:
+    mode: "rrf"
   extractor:
     model_name: "openrouter/deepseek/deepseek-v4-flash"
-    prompt_version: "current"
+    prompt_version: "v1"
     temperature: 0.0
   lancedb:
     db_uri: "./cache/lancedb"
@@ -224,10 +226,10 @@ Then run with your config:
 python run_experiment.py --backend local --tid my_model --eval_dataset devset
 ```
 
-The current v0+ configs use `lm_type: "dummy"` because retrieval quality is the
+The current v10 configs use `lm_type: "dummy"` because retrieval quality is the
 experiment scope; natural-language response generation is documented separately.
-For a new v0+ config, keep `track_split_types: ["all_tracks"]` and start from one
-of the existing `v0plus_compiler_*` YAML files.
+For a new state-ranker config, keep `track_split_types: ["all_tracks"]` and start
+from one of the existing `state_ranker_v10_*` YAML files.
 
 ---
 

@@ -29,8 +29,8 @@ inference:
     - "L40S"
     - "A100-80GB"
     - "A100-40GB"
-  devset_batch_size: 64
-  blindset_batch_size: 64
+  devset_batch_size: 8
+  blindset_batch_size: 8
 
 lancedb:
   # v0+ inference is async I/O bound (OpenRouter LLM extractor) ONLY on a cold

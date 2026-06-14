@@ -830,14 +830,12 @@ def test_trace_contains_branches_key():
         "pools",
         "fused",
         "final",
-        "recommended",
         "branch_queries",
         "branch_status",
         "candidate_filter_summary",
     }
     names = [p["name"] for p in branches["pools"]]
     assert "bm25" in names
-    assert branches["final"]["track_ids"][:1] == [branches["recommended"]["top1_track_id"]]
     assert branches["branch_queries"]["bm25"]["clauses"]
     assert branches["branch_status"]["bm25"]["fired"] is True
     assert "raw_union_size" in branches["candidate_filter_summary"]

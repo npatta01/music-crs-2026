@@ -2127,8 +2127,8 @@ def test_current_configs_reference_supported_dense_query_ids():
     branch_signatures_by_config = {}
 
     for config_name in (
-        "v0plus_compiler_all_retrievers_devset.yaml",
-        "v0plus_compiler_blindset_A.yaml",
+        "state_ranker_v10_rrf_devset.yaml",
+        "state_ranker_v10_lgbm_blindset_A.yaml",
     ):
         config = yaml.safe_load((repo_root / "configs" / config_name).read_text())
         branches = config["qu_kwargs"]["compiler"]["dense_branches"]
@@ -2143,8 +2143,8 @@ def test_current_configs_reference_supported_dense_query_ids():
         assert unknown_query_ids == []
 
     assert (
-        branch_signatures_by_config["v0plus_compiler_all_retrievers_devset.yaml"]
-        == branch_signatures_by_config["v0plus_compiler_blindset_A.yaml"]
+        branch_signatures_by_config["state_ranker_v10_rrf_devset.yaml"]
+        == branch_signatures_by_config["state_ranker_v10_lgbm_blindset_A.yaml"]
     )
 
 

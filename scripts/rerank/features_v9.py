@@ -40,6 +40,7 @@ from build_features import (  # noqa: E402  (sibling module)
     Catalog,
     EmbedMemo,
     NpzEmbedStore,
+    feature_trace_view,
     _norm_rows,
     grounded_tags,
 )
@@ -123,7 +124,8 @@ def compute_turn_features(row: dict, ctx: TurnContext, gt: str | None = None):
     """One trace row -> (rows_out, playable). rows carry label iff gt given."""
     cat = ctx.cat
     sid, tn = str(row["session_id"]), int(row["turn_number"])
-    br = row["trace"]["branches"]
+    trace = feature_trace_view(row.get("trace") or {})
+    br = trace["branches"]
     pools = br["pools"]
 
     cand_rank: dict[str, dict[str, tuple[int, float]]] = defaultdict(dict)
@@ -169,16 +171,16 @@ def compute_turn_features(row: dict, ctx: TurnContext, gt: str | None = None):
     artist_play_counts = Counter(a for p in played for a in cat.meta.get(p, {}).get("artists", ()))
     album_played_counts = Counter(al for p in played for al in cat.meta.get(p, {}).get("albums", ()))
 
-    state = row["trace"].get("state") or {}
-    resolver_block = row["trace"].get("resolver") or {}
-    q_keys, n_exact_tier, max_match = grounded_tags(row, ctx.resolver)
+    state = trace.get("state") or {}
+    resolver_block = trace.get("resolver") or {}
+    q_keys, n_exact_tier, max_match = grounded_tags({**row, "trace": trace}, ctx.resolver)
     q_tagv = None
     kk = [k for k in q_keys if k in ctx.tag_vec]
     if kk:
         q_tagv = _norm_rows(np.vstack([ctx.tag_vec[k] for k in kk])
                             .mean(axis=0, keepdims=True))[0]
     tc = state.get("temporal_constraint") or {}
-    routing = row["trace"].get("routing_tags") or {}
+    routing = trace.get("routing_tags") or {}
     tam = str(state.get("target_artist_mode") or "")
     wants_new = float("new" in tam or "different" in tam)
     abandoned_artist_keys, abandoned_tag_keys = _abandoned_sets(state, resolver_block, cat)
@@ -314,7 +316,7 @@ def compute_turn_features(row: dict, ctx: TurnContext, gt: str | None = None):
             "title_request_overlap": title_overlap,
             "has_constraint": has_constraint,
             "request_type": str((state.get("current_request") or {}).get("request_type") or ""),
-            "intent_mode": str(row["trace"].get("intent_mode") or ""),
+            "intent_mode": str(trace.get("intent_mode") or ""),
             "target_artist_mode": tam,
             "routing_lyric": float(bool(routing.get("lyric_search"))),
             "routing_visual": float(bool(routing.get("image_or_visual_search"))),
