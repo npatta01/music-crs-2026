@@ -61,11 +61,13 @@ Current read:
 - `state_ranker_v10_rrf_devset`: NDCG@20 0.1492, Hit@20 0.3183, branch
   union@1000 0.8919.
 - `state_ranker_v10_lgbm_devset`: NDCG@20 0.4520, Hit@20 0.6105, MRR 0.4055.
+- `state_ranker_v10_lgbm_blindset_A`: CodaBench submission `797598`, nDCG@20
+  0.4380, catalog diversity 0.0313, lexical diversity 0.7670, LLM judge 4.2000,
+  composite 0.5389.
 - The learned-ranker stage improves over previous `v0plus_compiler_devset_rr2`
   by +0.1070 NDCG@20, +0.0800 Hit@20, and +0.1147 MRR.
 
 Next step:
 
-- Submit `submission/submission_state_ranker_v10_lgbm_blindset_A_20260614.zip`
-  to CodaBench and compare against the previous `rr2` Blind-A score before
-  merging or deleting additional source artifacts.
+- Merge the v10 cleanup PR, then remove any remaining stale local/source
+  references in a follow-up only if they are not needed for audit history.

@@ -36,12 +36,11 @@ The v10 public trace uses `extracted_state`, `compiled_state`,
 
 | Submission | File | nDCG@20 | catalog_diversity | lexical_diversity | llm_judge | composite |
 |---|---|---:|---:|---:|---:|---:|
-| `795544` | `rr2-0622986.zip` | **0.4261** | 0.0311 | 0.7755 | 4.2500 | **0.5375** |
+| `797598` | `v10_lgbm_A.zip` | **0.4380** | 0.0313 | 0.7670 | 4.2000 | **0.5389** |
+| `795544` | `rr2-0622986.zip` | 0.4261 | 0.0311 | 0.7755 | 4.2500 | 0.5375 |
 
-This is still the latest measured Blind-A CodaBench row. The v10 Blind-A
-prediction package has been generated as
-`submission/submission_state_ranker_v10_lgbm_blindset_A_20260614.zip`, but no
-CodaBench score is available yet.
+The v10 submission improves Blind-A nDCG@20 by +0.0119 and composite by +0.0014
+over the previous `rr2` submission, despite a small LLM-judge decrease.
 
 ## Interpretation
 

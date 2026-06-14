@@ -10,7 +10,7 @@ misleading agents about the current system. Use Git history for older waves.
 |---|---|---|
 | `configs/state_ranker_v10_rrf_devset.yaml` | Devset candidate-fusion baseline | Explicit `ranking.mode: rrf`; useful for retrieval and candidate-pool recall. |
 | `configs/state_ranker_v10_lgbm_devset.yaml` | Current devset score anchor | Fresh v10 LambdaMART run: NDCG@20 0.4520, Hit@20 0.6105. |
-| `configs/state_ranker_v10_lgbm_blindset_A.yaml` | Blind A submission path | Uses the same v10 state-ranker + `lgbm_v10` final stage; package generated, CodaBench score pending. |
+| `configs/state_ranker_v10_lgbm_blindset_A.yaml` | Blind A submission path | CodaBench submission `797598`: nDCG@20 0.4380, composite 0.5389. |
 
 ## Current Reports
 
