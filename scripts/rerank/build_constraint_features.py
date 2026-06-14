@@ -38,9 +38,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--trace-glob", required=True,
                     help="e.g. 'exp/inference/devset/*shard_*_trace.jsonl'")
-    ap.add_argument("--features", default="exp/analysis/rerank/features_v9")
+    ap.add_argument("--features", default="exp/analysis/rerank/v10/features")
     ap.add_argument("--db-uri", required=True)
-    ap.add_argument("--out", default="exp/analysis/rerank/constraint_features.parquet")
+    ap.add_argument("--out", default="exp/analysis/rerank/v10/constraint_features.parquet")
     args = ap.parse_args()
 
     print("loading candidate triples ...", flush=True)

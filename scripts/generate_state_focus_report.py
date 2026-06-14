@@ -22,9 +22,9 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 DEFAULT_SOURCE_ROOT = Path("/Users/npatta01/data/projects/music-conversational-music-recomender-2026")
-DEFAULT_REPORT_ROOT = Path("experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06")
+DEFAULT_REPORT_ROOT = Path("experiments/analysis/devset_recall_gap_state_ranker_v10_2026_06_14")
 DEFAULT_OUT_DIR = DEFAULT_REPORT_ROOT / "state_focus"
-DEFAULT_TID = "v0plus_compiler_all_retrievers_devset"
+DEFAULT_TID = "state_ranker_v10_rrf_devset"
 
 HF_TRACK_METADATA_DATASET = "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
 HF_CONVERSATION_DATASET = "talkpl-ai/TalkPlayData-Challenge-Dataset"

@@ -3,7 +3,7 @@ set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
     echo "Usage: $0 <tid>"
-    echo "Example: $0 v0plus_compiler_blindset_A"
+    echo "Example: $0 state_ranker_v10_lgbm_blindset_A"
     exit 1
 fi
 

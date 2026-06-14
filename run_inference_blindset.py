@@ -197,8 +197,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tid",
         type=str,
-        default="v0plus_compiler_blindset_A",
-        help="Task identifier matching a config file (e.g., 'v0plus_compiler_blindset_A' loads configs/v0plus_compiler_blindset_A.yaml)"
+        default="state_ranker_v10_lgbm_blindset_A",
+        help="Task identifier matching a config file (e.g., 'state_ranker_v10_lgbm_blindset_A' loads configs/state_ranker_v10_lgbm_blindset_A.yaml)"
     )
     parser.add_argument(
         "--eval_dataset",

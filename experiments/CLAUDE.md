@@ -18,8 +18,8 @@ system. Git history is the archive.
 - Do not recreate `configs/archive/`.
 - If a config is superseded, delete it from the working tree after preserving
   the rationale in Git history or in a concise current-state note.
-- Prefer `v0plus_compiler_all_retrievers_devset` for the latest coverage
-  experiment and `v0plus_compiler_image_devset` for the current score anchor.
+- Prefer `state_ranker_v10_rrf_devset` for explicit candidate-fusion coverage
+  checks and `state_ranker_v10_lgbm_devset` for the current score anchor.
 
 ## Report Policy
 

@@ -18,7 +18,7 @@ from typing import Any
 
 
 DEFAULT_SOURCE_ROOT = Path("/Users/npatta01/data/projects/music-conversational-music-recomender-2026")
-DEFAULT_TID = "v0plus_compiler_all_retrievers_devset"
+DEFAULT_TID = "state_ranker_v10_rrf_devset"
 
 FINAL_KS = (1, 5, 10, 20, 50, 100, 200, 500, 1000)
 UNION_KS = (20, 50, 100, 200, 500, 1000)

@@ -10,13 +10,13 @@ Secret (.env in project root):
 
 Usage:
     # Smoke test (5 sessions, with matching local evaluation subset)
-    python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --num_sessions 5
+    python run_experiment.py --backend modal --tid state_ranker_v10_rrf_devset --num_sessions 5
 
-    # Latest full devset coverage experiment
-    python run_experiment.py --backend modal --tid v0plus_compiler_all_retrievers_devset --batch_size 64
+    # Latest full devset learned-ranker experiment
+    python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset --batch_size 8
 
     # Blindset
-    python run_experiment.py --backend modal --tid v0plus_compiler_blindset_A --eval_dataset blindset_A
+    python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_A --eval_dataset blindset_A
 """
 
 import json
@@ -396,7 +396,7 @@ def _inference_blindset_cpu(
 # run_blindset_reranked, which shelled scripts/rerank/run_blindA_reranked_pipeline.py)
 # was removed. The reranker is now served ONLINE in-pipeline via the config-driven
 # LgbmOnlineReranker — run the rr2 configs through run_inference_blindset /
-# run_inference_sharded instead (e.g. tid=v0plus_compiler_blindset_A_rr2).
+# run_inference_sharded instead (e.g. tid=state_ranker_v10_lgbm_blindset_A).
 
 
 # ── Feature engineering on Modal ──────────────────────────────────────────────
@@ -519,7 +519,7 @@ def _build_label_weights(trace_glob: str, out_path: str):
 
 @app.local_entrypoint()
 def run_build_features_modal(
-    tid: str = "v0plus_compiler_pruned_resolved_tags_devset",
+    tid: str = "state_ranker_v10_rrf_devset",
     run_id: str = "20260611T035130Z-2e6dfc",
     n_shards: int = 5,
     out_name: str = "features_v9",
@@ -537,7 +537,7 @@ def run_build_features_modal(
 
     Example:
       modal run modal/app.py::run_build_features_modal \\
-          --tid v0plus_compiler_devset_rr2 --run-id 20260613T095225Z-8aec6e --n-shards 50
+          --tid state_ranker_v10_rrf_devset --run-id 20260613T095225Z-8aec6e --n-shards 50
 
     Download after:
       modal volume get music-crs-cache rerank/<out_name>/ exp/analysis/rerank/<out_name>/
@@ -583,6 +583,58 @@ def run_build_features_modal(
     print(f"  modal volume get music-crs-cache rerank/{weights_file} exp/analysis/rerank/")
 
 
+@app.local_entrypoint()
+def run_build_features_for_ranker(
+    lineage: str = "v10",
+    tid: str = "state_ranker_v10_rrf_devset",
+    run_id: str = "",
+    n_shards: int = 50,
+    pool_k: int = 500,
+):
+    """Build ranker features under a lineage-scoped cache namespace.
+
+    For v10 this writes:
+      /root/cache/rerank/v10/features/
+      /root/cache/rerank/v10/constraint_features.parquet
+      /root/cache/rerank/v10/label_weights.parquet
+    """
+    if not run_id:
+        raise ValueError("--run-id is required so feature builds never mix runs")
+    paths = _ranker_remote_paths(lineage)
+    out_dir = paths["features_dir"]
+    trace_paths = [
+        f"{EXP_DIR}/inference/devset/{tid}.run_{run_id}.shard_{i}_trace.jsonl"
+        for i in range(n_shards)
+    ]
+    trace_glob = f"{EXP_DIR}/inference/devset/{tid}.run_{run_id}.shard_*_trace.jsonl"
+
+    print(f"Building {lineage} features from {n_shards} trace shards → {out_dir} (pool_k={pool_k})")
+    list(_build_features_shard.starmap(
+        [(i, path, out_dir, pool_k) for i, path in enumerate(trace_paths)]
+    ))
+    print("All feature shards done. Building lineage-scoped constraint sidecar + label weights …")
+    handles = [
+        _build_constraint_features.spawn(
+            trace_glob=trace_glob,
+            features_dir=out_dir,
+            out_path=paths["sidecar"],
+        ),
+        _build_label_weights.spawn(
+            trace_glob=trace_glob,
+            out_path=paths["weights"],
+        ),
+    ]
+    for h in handles:
+        h.get()
+    rel_features = out_dir.replace(f"{CACHE_DIR}/", "")
+    rel_sidecar = paths["sidecar"].replace(f"{CACHE_DIR}/", "")
+    rel_weights = paths["weights"].replace(f"{CACHE_DIR}/", "")
+    print("Done. Download with:")
+    print(f"  modal volume get music-crs-cache {rel_features}/ exp/analysis/rerank/{lineage}/features/")
+    print(f"  modal volume get music-crs-cache {rel_sidecar} exp/analysis/rerank/{lineage}/")
+    print(f"  modal volume get music-crs-cache {rel_weights} exp/analysis/rerank/{lineage}/")
+
+
 # ── LightGBM CV training (CPU) ──────────────────────────────────────────────────
 # build → 5 parallel CV folds → finalize → full_model. Training is CPU-only: the
 # PyPI lightgbm wheel has no GPU/CUDA build (device_type='gpu' raises "GPU Tree
@@ -626,17 +678,38 @@ _TRAIN_LOCKBOX         = f"{CACHE_DIR}/rerank/lockbox_users.json"
 _TRAIN_GT              = f"{CACHE_DIR}/rerank/ground_truth_devset.json"
 
 
-def _train_cmd(stage: str, fold: int | None = None) -> list:
+def _ranker_remote_paths(lineage: str = "v9") -> dict[str, str]:
+    if lineage == "v9":
+        return {
+            "train_dir": _TRAIN_V9_REMOTE_DIR,
+            "features_dir": _TRAIN_FEATURES_DIR,
+            "sidecar": _TRAIN_SIDECAR,
+            "weights": _TRAIN_WEIGHTS,
+        }
+    safe = str(lineage).strip().strip("/")
+    if not safe or "/" in safe or ".." in safe:
+        raise ValueError(f"Invalid ranker lineage: {lineage!r}")
+    base = f"{CACHE_DIR}/rerank/{safe}"
+    return {
+        "train_dir": f"{base}/train",
+        "features_dir": f"{base}/features",
+        "sidecar": f"{base}/constraint_features.parquet",
+        "weights": f"{base}/label_weights.parquet",
+    }
+
+
+def _train_cmd(stage: str, fold: int | None = None, lineage: str = "v9") -> list:
     import sys
+    paths = _ranker_remote_paths(lineage)
     cmd = [
         # sys.executable, not a hardcoded path — the interpreter location varies
         # by base image.
         sys.executable, "/app/train_v9.py",
         "--stage", stage,
-        "--out-dir", _TRAIN_V9_REMOTE_DIR,
-        "--features-dir", _TRAIN_FEATURES_DIR,
-        "--sidecar", _TRAIN_SIDECAR,
-        "--weights", _TRAIN_WEIGHTS,
+        "--out-dir", paths["train_dir"],
+        "--features-dir", paths["features_dir"],
+        "--sidecar", paths["sidecar"],
+        "--weights", paths["weights"],
         "--lockbox", _TRAIN_LOCKBOX,
         "--gt", _TRAIN_GT,
     ]
@@ -652,10 +725,10 @@ def _train_cmd(stage: str, fold: int | None = None) -> list:
     timeout=3600,
     volumes={CACHE_DIR: cache_vol},
 )
-def _train_build_cpu():
+def _train_build_cpu(lineage: str = "v9"):
     """Build the feature matrix (X.npy + id arrays) from parquet on the volume."""
     import subprocess
-    result = subprocess.run(_train_cmd("build"), capture_output=False)
+    result = subprocess.run(_train_cmd("build", lineage=lineage), capture_output=False)
     if result.returncode != 0:
         raise RuntimeError(f"build stage failed (exit {result.returncode})")
     cache_vol.commit()
@@ -669,7 +742,7 @@ def _train_build_cpu():
     timeout=3600,
     volumes={CACHE_DIR: cache_vol},
 )
-def _train_fold(fold: int):
+def _train_fold(fold: int, lineage: str = "v9"):
     """Run one LambdaMART CV fold. Reads/writes artifacts from cache_vol.
 
     CPU, not GPU: the PyPI lightgbm wheel is built without GPU/CUDA support
@@ -677,7 +750,7 @@ def _train_fold(fold: int):
     At this data scale (~1.2M rows × 148 cols) CPU lambdarank is fast enough.
     """
     import subprocess
-    result = subprocess.run(_train_cmd("fold", fold=fold), capture_output=False)
+    result = subprocess.run(_train_cmd("fold", fold=fold, lineage=lineage), capture_output=False)
     if result.returncode != 0:
         raise RuntimeError(f"fold {fold} failed (exit {result.returncode})")
     cache_vol.commit()
@@ -691,10 +764,10 @@ def _train_fold(fold: int):
     timeout=1800,
     volumes={CACHE_DIR: cache_vol},
 )
-def _train_finalize_cpu():
+def _train_finalize_cpu(lineage: str = "v9"):
     """Aggregate fold scores, train full model, report OOF metrics."""
     import subprocess
-    result = subprocess.run(_train_cmd("finalize"), capture_output=False)
+    result = subprocess.run(_train_cmd("finalize", lineage=lineage), capture_output=False)
     if result.returncode != 0:
         raise RuntimeError(f"finalize failed (exit {result.returncode})")
     cache_vol.commit()
@@ -708,14 +781,14 @@ def _train_finalize_cpu():
     timeout=1800,
     volumes={CACHE_DIR: cache_vol},
 )
-def _train_full_model_cpu():
+def _train_full_model_cpu(lineage: str = "v9"):
     """Train the single full-data model at the CV-median round count.
 
     This is the stage that writes model_full.txt — the artifact published into
     the committed models/reranker_v9/ bundle. finalize only reports OOF metrics.
     """
     import subprocess
-    result = subprocess.run(_train_cmd("full_model"), capture_output=False)
+    result = subprocess.run(_train_cmd("full_model", lineage=lineage), capture_output=False)
     if result.returncode != 0:
         raise RuntimeError(f"full_model failed (exit {result.returncode})")
     cache_vol.commit()
@@ -745,28 +818,46 @@ def run_train_v9():
       modal volume put music-crs-cache exp/analysis/rerank/lockbox_users.json       rerank/lockbox_users.json
       modal volume put music-crs-cache exp/ground_truth/devset.json                 rerank/ground_truth_devset.json
     """
+    _run_train_lgbm_ranker(lineage="v9")
+
+
+@app.local_entrypoint()
+def run_train_lgbm_ranker(lineage: str = "v10"):
+    """Train a LightGBM ranker for the requested lineage.
+
+    v10 reads/writes under /root/cache/rerank/v10 so old v9 scratch cannot be
+    accidentally reused.
+    """
+    _run_train_lgbm_ranker(lineage=lineage)
+
+
+def _run_train_lgbm_ranker(lineage: str) -> None:
     import time
     t0 = time.time()
+    paths = _ranker_remote_paths(lineage)
+
     def _lap(label, since):
         print(f"  [{label}] {time.time() - since:.0f}s (total {time.time() - t0:.0f}s)", flush=True)
 
+    print(f"Training lineage={lineage} using features {paths['features_dir']}")
     print("Step 1/4: building feature matrix on Modal …")
-    s = time.time(); _train_build_cpu.remote(); _lap("build", s)
+    s = time.time(); _train_build_cpu.remote(lineage); _lap("build", s)
     print("Step 2/4: training 5 CV folds in parallel …")
-    s = time.time(); list(_train_fold.starmap([(f,) for f in range(5)])); _lap("folds", s)
+    s = time.time(); list(_train_fold.starmap([(f, lineage) for f in range(5)])); _lap("folds", s)
     print("Step 3/4: finalize + OOF metrics …")
-    s = time.time(); _train_finalize_cpu.remote(); _lap("finalize", s)
+    s = time.time(); _train_finalize_cpu.remote(lineage); _lap("finalize", s)
     print("Step 4/4: training full-data model → model_full.txt …")
-    s = time.time(); _train_full_model_cpu.remote(); _lap("full_model", s)
+    s = time.time(); _train_full_model_cpu.remote(lineage); _lap("full_model", s)
     print(f"Training complete in {time.time() - t0:.0f}s total.")
     print("Fetch the served-bundle artifacts:")
-    print("  modal volume get music-crs-cache rerank/train_v9/model_full.txt   exp/analysis/rerank/train_v9/")
-    print("  modal volume get music-crs-cache rerank/train_v9/meta.json        exp/analysis/rerank/train_v9/")
-    print("  modal volume get music-crs-cache rerank/train_v9/cat_maps_v9.json exp/analysis/rerank/train_v9/")
-    print("Then publish into the committed bundle (models/reranker_v9/):")
-    print("  cp exp/analysis/rerank/train_v9/model_full.txt   models/reranker_v9/model.txt")
-    print("  cp exp/analysis/rerank/train_v9/meta.json        models/reranker_v9/meta.json")
-    print("  cp exp/analysis/rerank/train_v9/cat_maps_v9.json models/reranker_v9/cat_maps.json")
+    rel_train = paths["train_dir"].replace(f"{CACHE_DIR}/", "")
+    print(f"  modal volume get music-crs-cache {rel_train}/model_full.txt   exp/analysis/rerank/{lineage}/train/")
+    print(f"  modal volume get music-crs-cache {rel_train}/meta.json        exp/analysis/rerank/{lineage}/train/")
+    print(f"  modal volume get music-crs-cache {rel_train}/cat_maps.json    exp/analysis/rerank/{lineage}/train/")
+    print(f"Then publish into the committed bundle (models/reranker_{lineage}/):")
+    print(f"  cp exp/analysis/rerank/{lineage}/train/model_full.txt   models/reranker_{lineage}/model.txt")
+    print(f"  cp exp/analysis/rerank/{lineage}/train/meta.json        models/reranker_{lineage}/meta.json")
+    print(f"  cp exp/analysis/rerank/{lineage}/train/cat_maps.json    models/reranker_{lineage}/cat_maps.json")
 
 
 @app.cls(
@@ -1561,7 +1652,7 @@ def _build_lancedb_with_vllm_qwen_embeddings(
 
 @app.local_entrypoint()
 def run_inference(
-    tid: str = "v0plus_compiler_all_retrievers_devset",
+    tid: str = "state_ranker_v10_lgbm_devset",
     batch_size: int = DEVSET_BATCH_SIZE,
     num_sessions: int = 0,
     clear_cache: bool = False,
@@ -1580,7 +1671,7 @@ def run_inference(
 
 @app.local_entrypoint()
 def run_inference_sharded(
-    tid: str = "v0plus_compiler_all_retrievers_devset",
+    tid: str = "state_ranker_v10_lgbm_devset",
     eval_dataset: str = "devset",
     num_shards: int = 4,
     run_id: str = "",
@@ -1677,7 +1768,7 @@ def run_inference_sharded(
 
 @app.local_entrypoint()
 def run_inference_blindset(
-    tid: str = "v0plus_compiler_blindset_A",
+    tid: str = "state_ranker_v10_lgbm_blindset_A",
     batch_size: int = BLINDSET_BATCH_SIZE,
     eval_dataset: str = "blindset_A",
 ):
@@ -1688,7 +1779,7 @@ def run_inference_blindset(
 
 @app.local_entrypoint()
 def run_evaluate(
-    tid: str = "v0plus_compiler_all_retrievers_devset",
+    tid: str = "state_ranker_v10_lgbm_devset",
     split: str = "devset",
 ):
     """Score predictions using the evaluator submodule (CPU)."""

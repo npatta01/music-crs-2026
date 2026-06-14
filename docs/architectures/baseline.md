@@ -266,16 +266,16 @@ Git history.
 
 | Config | Retrieval | Dataset |
 |--------|-----------|---------|
-| `v0plus_compiler_image_devset` | v0+ image-anchor compiler | dev set |
-| `v0plus_compiler_all_retrievers_devset` | v0+ all-retrievers compiler | dev set |
-| `v0plus_compiler_blindset_A` | v0+ compiler | blind set A |
+| `state_ranker_v10_rrf_devset` | v10 state-ranker, explicit candidate fusion/RRF | dev set |
+| `state_ranker_v10_lgbm_devset` | v10 state-ranker, LambdaMART final stage | dev set |
+| `state_ranker_v10_lgbm_blindset_A` | v10 state-ranker, LambdaMART final stage | blind set A |
 
 Key YAML fields:
 
 ```yaml
 lm_type: "meta-llama/Llama-3.2-1B-Instruct"
 retrieval_type: "bm25"            # bm25 | bert
-qu_type: "passthrough"            # passthrough | deterministic QU | llm_rewrite
+qu_type: "state_ranker"           # state_ranker | passthrough | deterministic QU | llm_rewrite
 corpus_types:                     # fields used for retrieval index
   - "track_name"
   - "artist_name"

@@ -8,16 +8,16 @@ misleading agents about the current system. Use Git history for older waves.
 
 | Config | Role | Notes |
 |---|---|---|
-| `configs/v0plus_compiler_all_retrievers_devset.yaml` | Latest devset experiment | Current-prompt all-retrievers candidate-pool config. Best tracked Hit@1000, but weaker top-20 ranking than the image anchor. |
-| `configs/v0plus_compiler_image_devset.yaml` | Score anchor | Current v0+ top-20 retrieval baseline after bugfixes. |
-| `configs/v0plus_compiler_blindset_A.yaml` | Submission path | Blind A config; keep split-specific behavior separate from devset experiments. |
+| `configs/state_ranker_v10_rrf_devset.yaml` | Devset candidate-fusion baseline | Explicit `ranking.mode: rrf`; useful for retrieval and candidate-pool recall. |
+| `configs/state_ranker_v10_lgbm_devset.yaml` | Current devset score anchor | Fresh v10 LambdaMART run: NDCG@20 0.4520, Hit@20 0.6105. |
+| `configs/state_ranker_v10_lgbm_blindset_A.yaml` | Blind A submission path | CodaBench submission `797598`: nDCG@20 0.4380, composite 0.5389. |
 
 ## Current Reports
 
 | Report | Why it remains |
 |---|---|
-| [v0plus_compiler_all_retrievers_devset.md](v0plus_compiler_all_retrievers_devset.md) | Latest full devset run: NDCG@20 0.1219, Hit@1000 0.6967. Treat as coverage/reranker evidence, not as the score anchor. |
-| [v0plus_compiler_image_devset.md](v0plus_compiler_image_devset.md) | Current score anchor: NDCG@20 0.1452 after retrieval bugfixes. |
+| [state_ranker_v10_lgbm_devset.md](state_ranker_v10_lgbm_devset.md) | Current devset score anchor and stage-by-stage recall handoff. |
+| [state_ranker_v10_rrf_devset.md](state_ranker_v10_rrf_devset.md) | Explicit candidate-fusion baseline used to build fresh v10 reranker features. |
 | [analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/index.html](analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/index.html) | Durable baseline recall-gap snapshot for the all-retrievers devset run. Treat as an experiment analysis and replay contract; rerun after extractor, retriever, ranker, catalog, or split changes. |
 | [experiment_log.md](experiment_log.md) | Short current-state note only. Historical wave logs were pruned. |
 | [analysis/README.md](analysis/README.md) | Notes that runtime prompt/schema modules have moved out of `experiments/analysis/`. |

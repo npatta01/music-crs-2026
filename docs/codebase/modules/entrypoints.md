@@ -165,7 +165,7 @@ Written only by `run_inference_devset.py` (`run_inference_devset.py:209`). JSONL
 ### Submission packaging
 
 ```bash
-bash prepare_submission.sh v0plus_compiler_blindset_A
+bash prepare_submission.sh state_ranker_v10_lgbm_blindset_A
 ```
 
 1. Reads `exp/inference/blindset_A/{tid}.json`.

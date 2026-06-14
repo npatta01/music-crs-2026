@@ -3,7 +3,7 @@ Bulk-download artifacts from the music-crs-results Modal volume.
 
 Examples:
     # Download one current run
-    python modal/download_results.py --tid v0plus_compiler_all_retrievers_devset
+    python modal/download_results.py --tid state_ranker_v10_lgbm_devset
 
     # Download all missing remote artifacts into evaluator/exp
     python modal/download_results.py
