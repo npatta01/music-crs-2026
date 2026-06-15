@@ -2761,9 +2761,11 @@ class V0PlusCompiler:
             ]
             if not years:
                 return None, None
-            med = int(statistics.median(years))
+            med = round(statistics.median(years))  # round, not truncate (even-count medians)
             w = self.cfg.genre_scene_era_window
             return med - w, med + w
+        # Unknown policy string: degrade permissively to no era filter (matches
+        # the era/disco branches, which never raise mid-inference on a config typo).
         return None, None
 
     def _genre_scene_neighbor_pool(

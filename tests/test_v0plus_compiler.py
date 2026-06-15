@@ -3039,6 +3039,8 @@ def test_genre_scene_anchor_empty_when_intent_not_gated():
 
 def test_genre_scene_pool_recalls_other_artist_same_genre():
     catalog = _gs_catalog()
+    # era_policy=ignore isolates genre matching from era filtering (so the 2010
+    # neighbor isn't dropped for being off-era — that's covered by the era tests).
     cfg = CompilerConfig(enable_genre_scene_neighbors=True, genre_scene_era_policy="ignore")
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)
     pool = compiler._genre_scene_neighbor_pool(_gs_rs(catalog))
