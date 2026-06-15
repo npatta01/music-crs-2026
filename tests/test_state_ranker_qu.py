@@ -158,6 +158,37 @@ def test_state_ranker_lgbm_serving_trace_keeps_intent_mode_for_reranker():
     assert qu._reranker.last_trace["intent_mode"] == "refinement"
 
 
+def test_state_ranker_exposes_batch_and_trace_timings():
+    qu = _build_qu(mode="lgbm")
+
+    qu.batch_compile_track_ids([[{"role": "user", "content": "play Morphine"}]], topk=2)
+
+    assert set(qu.last_batch_timings) >= {
+        "total",
+        "session_memory",
+        "extractor",
+        "resolver",
+        "compile",
+        "compile.total",
+        "compile.bm25_search",
+        "compile.dense_search",
+        "reranker_load",
+        "rerank",
+        "trace",
+    }
+    assert all(value >= 0.0 for value in qu.last_batch_timings.values())
+    assert set(qu.last_traces[0]["timings"]) >= {
+        "session_memory",
+        "extractor",
+        "resolver",
+        "compile",
+        "reranker_load",
+        "rerank",
+        "trace",
+        "total",
+    }
+
+
 def test_state_ranker_requires_explicit_ranking_mode():
     with pytest.raises(ValueError, match="ranking.mode"):
         build_state_ranker_qu(qu_kwargs={"compiler": {"branch_trace_topk": 50}})

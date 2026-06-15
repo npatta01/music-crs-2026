@@ -1121,6 +1121,40 @@ def test_candidate_filter_summary_counts_traced_topk_slice():
     assert summary["release_date_mask_dropped"] == 0
 
 
+def test_compile_result_exposes_stage_timings():
+    catalog = _catalog()
+    retriever = FakeRetriever(
+        text_hits_by_field={
+            "track_name": [("t-morphine-1", 3.0)],
+        },
+        embedding_hits=[("t-fugazi-1", 0.8)],
+    )
+    cfg = CompilerConfig(
+        enable_dense=True,
+        branch_trace_topk=10,
+        dense_branches=[
+            DenseBranch(vector_field="metadata_qwen3_embedding_0_6b", query_id="intent"),
+        ],
+    )
+
+    res = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg)._compile(
+        _resolve(_state(turn_intent="smoky lounge"), catalog)
+    )
+
+    assert set(res.timings) >= {
+        "total",
+        "release_date_mask",
+        "build_queries",
+        "bm25_search",
+        "dense_encode",
+        "dense_search",
+        "fuse",
+        "backfill",
+    }
+    assert "dense_search.dense.default.intent.metadata_qwen3_embedding_0_6b" in res.timings
+    assert all(value >= 0.0 for value in res.timings.values())
+
+
 # ---------------------------------------------------------------------
 # Query template content (sonic / visual / sonic_nl / lyric)
 # ---------------------------------------------------------------------

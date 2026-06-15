@@ -126,7 +126,7 @@ class LanceDbCatalog:
         wanted = [
             "track_id", "release_date", "popularity",
             "track_name", "artist_name", "artist_id", "album_name", "album_id",
-            "tag_list",
+            "tag_list", "duration",
         ]
         wanted = [c for c in wanted if c in existing]
 

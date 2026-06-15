@@ -4,6 +4,7 @@ Batch inference script for Music CRS.
 
 import os
 import json
+import time
 import torch
 import argparse
 from mcrs import load_crs_baseline
@@ -11,7 +12,15 @@ from datasets import load_dataset
 from tqdm import tqdm
 from omegaconf import OmegaConf
 from mcrs.inference_utils import chat_history_parser, resolve_qu_kwargs_placeholders
-from run_inference_devset import _setup_logging, _setup_litellm_cache
+from run_inference_devset import (
+    _add_elapsed,
+    _add_timing_snapshot,
+    _config_qu_kwargs,
+    _print_timings,
+    _resolve_vllm_endpoints_if_needed,
+    _setup_litellm_cache,
+    _setup_logging,
+)
 
 
 def _to_plain_dict(value):
@@ -33,61 +42,26 @@ def _qu_kwargs_has_vllm_endpoint(qu_kwargs: dict) -> bool:
     return any(_encoder_has_vllm_endpoint(value) for value in encoders.values())
 
 
-def main(args):
-    """
-    Run batch inference on a blindset split of TalkPlayData-2.
-
-    Args:
-        args: Namespace object containing:
-            - tid (str): Task/configuration identifier
-            - eval_dataset (str): Evaluation dataset name (e.g. 'blindset_A')
-            - batch_size (int): Batch size for inference
-            - exp_dir (str): Base directory for saving results
-            - clear_cache (bool): Wipe cache before running
-            - num_shards (int): Total shards (1 = no sharding)
-            - shard_id (int): 0-based shard index
-            - output_suffix (str): Optional suffix appended to output filename
-
-    Returns:
-        None. Results are saved to {exp_dir}/inference/{eval_dataset}/{tid}{output_suffix}.json
-
-    Processing:
-        - Loads model configuration from configs/{tid}.yaml
-        - Processes each session's final turn in batches
-        - Tracks progress with tqdm progress bar
-        - Saves comprehensive results for evaluation
-    """
+def _load_runtime(args) -> dict:
     _setup_logging()
     _setup_litellm_cache()
+    timings: dict[str, float] = {}
+    start = time.perf_counter()
     config = OmegaConf.load(f"configs/{args.tid}.yaml")
+    _add_elapsed(timings, "load_config", start)
     if args.clear_cache:
         cache_dir = config.get("cache_dir", "./cache")
         if os.path.exists(cache_dir):
             print(f"Clearing cache directory: {cache_dir}")
             import shutil
             shutil.rmtree(cache_dir)
-    raw_qu_kwargs = config.get("qu_kwargs")
-    if raw_qu_kwargs is None:
-        qu_kwargs = {}
-    elif OmegaConf.is_config(raw_qu_kwargs):
-        qu_kwargs = OmegaConf.to_container(raw_qu_kwargs, resolve=True) or {}
-    else:
-        qu_kwargs = dict(raw_qu_kwargs)
-    # Resolve logical vLLM endpoints into live Modal web URLs. No-op when absent;
-    # only loads modal/vllm_serve.py (and Modal SDK) when a vllm_endpoint is
-    # declared on either the legacy top-level encoder or a named encoder.
-    if _qu_kwargs_has_vllm_endpoint(qu_kwargs):
-        import importlib.util
-        from pathlib import Path as _Path
 
-        _vs_path = _Path(__file__).resolve().parent / "modal" / "vllm_serve.py"
-        _vs_spec = importlib.util.spec_from_file_location("mcrs_vllm_serve", _vs_path)
-        _vs_mod = importlib.util.module_from_spec(_vs_spec)
-        _vs_spec.loader.exec_module(_vs_mod)
-        _vs_mod.resolve_vllm_endpoints_in_qu_kwargs(qu_kwargs)
+    start = time.perf_counter()
+    qu_kwargs = _config_qu_kwargs(config)
+    _resolve_vllm_endpoints_if_needed(qu_kwargs)
     music_crs = load_crs_baseline(
         lm_type=config.get("explanation_lm_type", "dummy"),
-        retrieval_type=config.retrieval_type,
+        retrieval_type=config.get("retrieval_type", "unused"),
         qu_type=config.get("qu_type", "passthrough"),
         qu_kwargs=resolve_qu_kwargs_placeholders(
             qu_kwargs,
@@ -108,11 +82,22 @@ def main(args):
         lm_kwargs=_to_plain_dict(config.get("explanation_lm_kwargs")),
         response_kwargs=_to_plain_dict(config.get("explanation_kwargs")),
     )
+    _add_elapsed(timings, "load_crs", start)
+
+    start = time.perf_counter()
     db = load_dataset(config.test_dataset_name, split="test")
+    _add_elapsed(timings, "load_dataset", start)
+    _print_timings(f"blindset startup tid={args.tid} split={args.eval_dataset}", timings)
+    return {
+        "config": config,
+        "music_crs": music_crs,
+        "db": db,
+    }
+
+
+def _select_shard(db, shard_id: int, num_shards: int):
     # Sharding kwargs were added later; programmatic callers (tests, Modal) may
     # not set them. Read defensively so the script stays backward-compatible.
-    num_shards = getattr(args, "num_shards", 1)
-    shard_id = getattr(args, "shard_id", 0)
     if num_shards > 1:
         if not (0 <= shard_id < num_shards):
             raise ValueError(
@@ -127,7 +112,10 @@ def main(args):
         db = db.select(range(start, end))
         print(f"Shard {shard_id}/{num_shards}: {len(db)} sessions "
               f"(indices [{start}, {end}))")
-    # Prepare all batch data at once
+    return db
+
+
+def _build_batch_data(db, music_crs):
     batch_data, metadata = [], []
     for item in db:
         user_id = item['user_id']
@@ -155,40 +143,115 @@ def main(args):
             'user_id': user_id,
             'turn_number': turn_number
         })
-    inference_results = []
-    trace_results = []
-    for i in tqdm(range(0, len(batch_data), args.batch_size), desc="Batch inference"):
-        batch = batch_data[i:i+args.batch_size]
-        batch_metadata = metadata[i:i+args.batch_size]
-        results = music_crs.batch_chat(batch)
-        for j, result in enumerate(results):
-            inference_results.append({
-                "session_id": batch_metadata[j]['session_id'],
-                "user_id": batch_metadata[j]['user_id'],
-                "turn_number": batch_metadata[j]['turn_number'],
-                "predicted_track_ids": result['retrieval_items'],
-                "predicted_response": result["response"]
-            })
-            # V0PlusCompilerQU populates result["trace"] (per-branch pools, state,
-            # resolver). Needed for the offline reranker; mirrors the devset path.
-            trace_results.append({
-                "session_id": batch_metadata[j]['session_id'],
-                "user_id": batch_metadata[j]['user_id'],
-                "turn_number": batch_metadata[j]['turn_number'],
-                "trace": result.get("trace"),
-            })
-    output_suffix = getattr(args, "output_suffix", "")
+    return batch_data, metadata
+
+
+def _run_shard(args, runtime: dict, shard_id: int, num_shards: int, output_suffix: str) -> None:
+    timings: dict[str, float] = {}
+    start = time.perf_counter()
+    db = _select_shard(runtime["db"], shard_id, num_shards)
+    _add_elapsed(timings, "select_shard", start)
+
+    start = time.perf_counter()
+    music_crs = runtime["music_crs"]
+    batch_data, metadata = _build_batch_data(db, music_crs)
+    _add_elapsed(timings, "prepare_batches", start)
+
     os.makedirs(f"{args.exp_dir}/inference/{args.eval_dataset}", exist_ok=True)
     out_path = f"{args.exp_dir}/inference/{args.eval_dataset}/{args.tid}{output_suffix}.json"
+    trace_path = (
+        f"{args.exp_dir}/inference/{args.eval_dataset}/"
+        f"{args.tid}{output_suffix}_trace.jsonl")
+    inference_results = []
+    saw_trace = False
+
+    desc = f"Shard {shard_id}/{num_shards} inference" if num_shards > 1 else "Batch inference"
+    with open(trace_path, "w", encoding="utf-8") as trace_file:
+        for i in tqdm(range(0, len(batch_data), args.batch_size), desc=desc):
+            batch = batch_data[i:i+args.batch_size]
+            batch_metadata = metadata[i:i+args.batch_size]
+            start = time.perf_counter()
+            results = music_crs.batch_chat(batch)
+            _add_elapsed(timings, "batch_chat", start)
+            _add_timing_snapshot(
+                timings,
+                "batch_chat.",
+                getattr(music_crs, "last_batch_timings", None),
+            )
+
+            start = time.perf_counter()
+            for j, result in enumerate(results):
+                inference_results.append({
+                    "session_id": batch_metadata[j]['session_id'],
+                    "user_id": batch_metadata[j]['user_id'],
+                    "turn_number": batch_metadata[j]['turn_number'],
+                    "predicted_track_ids": result['retrieval_items'],
+                    "predicted_response": result["response"]
+                })
+                trace = result.get("trace")
+                saw_trace = saw_trace or bool(trace)
+                # V0PlusCompilerQU populates result["trace"] (per-branch pools,
+                # state, resolver). Needed for reranker/debug runs.
+                trace_file.write(json.dumps({
+                    "session_id": batch_metadata[j]['session_id'],
+                    "user_id": batch_metadata[j]['user_id'],
+                    "turn_number": batch_metadata[j]['turn_number'],
+                    "trace": trace,
+                }, ensure_ascii=False, default=str) + "\n")
+            trace_file.flush()
+            _add_elapsed(timings, "trace_write", start)
+
+    start = time.perf_counter()
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(inference_results, f, ensure_ascii=False)
-    if any(r["trace"] for r in trace_results):
-        trace_path = (
-            f"{args.exp_dir}/inference/{args.eval_dataset}/"
-            f"{args.tid}{output_suffix}_trace.jsonl")
-        with open(trace_path, "w", encoding="utf-8") as f:
-            for record in trace_results:
-                f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+    _add_elapsed(timings, "write_predictions", start)
+    if not saw_trace and os.path.exists(trace_path):
+        os.remove(trace_path)
+    _print_timings(
+        f"blindset shard={shard_id}/{num_shards} sessions={len(db)} turns={len(batch_data)}",
+        timings,
+    )
+
+
+def run_grouped(args, shard_ids, output_suffixes: dict[int, str] | None = None) -> None:
+    """Run multiple logical shards after loading the CRS/runtime once."""
+    runtime = _load_runtime(args)
+    num_shards = getattr(args, "num_shards", 1)
+    output_suffixes = output_suffixes or {}
+    for shard_id in shard_ids:
+        output_suffix = output_suffixes.get(shard_id, getattr(args, "output_suffix", ""))
+        _run_shard(args, runtime, int(shard_id), num_shards, output_suffix)
+
+
+def main(args):
+    """
+    Run batch inference on a blindset split of TalkPlayData-2.
+
+    Args:
+        args: Namespace object containing:
+            - tid (str): Task/configuration identifier
+            - eval_dataset (str): Evaluation dataset name (e.g. 'blindset_A')
+            - batch_size (int): Batch size for inference
+            - exp_dir (str): Base directory for saving results
+            - clear_cache (bool): Wipe cache before running
+            - num_shards (int): Total shards (1 = no sharding)
+            - shard_id (int): 0-based shard index
+            - output_suffix (str): Optional suffix appended to output filename
+
+    Returns:
+        None. Results are saved to {exp_dir}/inference/{eval_dataset}/{tid}{output_suffix}.json
+
+    Processing:
+        - Loads model configuration from configs/{tid}.yaml
+        - Processes each session's final turn in batches
+        - Tracks progress with tqdm progress bar
+        - Saves comprehensive results for evaluation
+    """
+    runtime = _load_runtime(args)
+    num_shards = getattr(args, "num_shards", 1)
+    shard_id = getattr(args, "shard_id", 0)
+    output_suffix = getattr(args, "output_suffix", "")
+    _run_shard(args, runtime, shard_id, num_shards, output_suffix)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
