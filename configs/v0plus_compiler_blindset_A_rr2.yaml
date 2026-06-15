@@ -139,11 +139,13 @@ qu_kwargs:
     enable_era_popularity: true
     era_pop_weight: 1.0
     era_pop_cap: 200
-    # Genre/scene similar-artist recall branch (over-anchor recall fix). See
+    # Genre/scene recall branch: OFF. Phase-1 validation (2026-06-15) showed no
+    # recall lift — the GT sits at ~8.5k median rank in the popularity-ordered
+    # genre list, so popularity-over-broad-genre can't reach it (net -4 pool
+    # recall, flat nDCG@20). The code stays (off-by-default) for a future
+    # artist-CF-similarity redesign. See
     # docs/superpowers/specs/2026-06-15-genre-scene-recall-branch-design.md
-    enable_genre_scene_neighbors: true
-    # genre_scene_intents / genre_scene_era_policy left at defaults
-    # ("pivot",) / explicit_only — A/B alternatives in the spec.
+    enable_genre_scene_neighbors: false
   reranker:
     enabled: true
     # Model bundle is committed under models/reranker_v9/ (ships in the repo and

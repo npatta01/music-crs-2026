@@ -31,6 +31,31 @@ Measured on the 1020 devset pivot turns (`intent_mode==pivot`, ≥1 resolved art
 artist and reasonable qualities. The gap is that retrieval has no path that says
 "other artists in this artist's genre/scene."
 
+## OUTCOME (2026-06-15): Phase-1 FAILED — branch disabled
+
+Implemented (commits `6241fce`..`e65a858`, all TDD + reviewed) and validated on
+Modal devset_rr2 (run `…efd46c` ON vs `…10c126` OFF, same retrained model):
+
+- **Overall flat / no regression:** nDCG@20 0.3895→0.3893, hit@20 0.5508→0.5516.
+- **No recall lift (the Phase-1 success criterion):** on the 672 new-artist pivot
+  turns, GT-in-fused-pool went 335→331 (**rescued 11, lost 15, net −4**). The
+  branch's own recall is r@1000 = 0.0356.
+- **Root cause (confirmed offline, $0):** the GT sits at **median rank ~8,577** in
+  the popularity-ordered genre-neighbor list. Genres are broad; popularity-ranking
+  them surfaces big hits, not the mid-pop GT. No cap helps (cap=200→3%,
+  1k→10%, 5k→32% with catastrophic pool crowding); era/intents/tag knobs are all
+  bounded by the same mechanism (they narrow the pool or apply it to more turns —
+  none change that the GT ranks ~8.5k by popularity).
+
+**Decision:** branch DISABLED in the rr2 configs (`enable_genre_scene_neighbors:
+false`); the off-by-default code + this spec are kept. Phase 2 (reranker retrain)
+is NOT pursued — there is no recall lift to surface.
+
+**Real next direction:** artist-level similarity, not genre-tag popularity — use
+`cf_bpr` co-listen to find the anchor's nearest *artists* and pull their tracks
+regardless of popularity (a few hundred candidates centered on the right artists),
+instead of popularity-ranking a whole genre.
+
 ## Goal & success criteria
 
 Add a retrieval branch that, on a pivot, recalls **top-popularity tracks by *other*
