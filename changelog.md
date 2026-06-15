@@ -11,8 +11,8 @@ Repo: https://github.com/npatta01/music-conversational-music-recomender-2026
   `state_ranker_v10_*` instead of `v0plus_compiler_*`; traces expose
   `extracted_state`, `compiled_state`, `retrieval.branches`, ordered
   `ranking.stages`, and canonical `final_recommendation`. Fresh devset runs:
-  RRF baseline NDCG@20 0.1492 / Hit@20 0.3183; LambdaMART v10 NDCG@20 0.4520 /
-  Hit@20 0.6105 / MRR 0.4055. Blind-A CodaBench submission `797598` scored
+  RRF baseline NDCG@20 0.1492 / Hit@20 0.3183; LambdaMART v10 NDCG@20 0.4562 /
+  Hit@20 0.6138 / MRR 0.4102. Blind-A CodaBench submission `797598` scored
   nDCG@20 0.4380 and composite 0.5389. [leaderboard](leaderboard.md)
 - `Docs` **Pruned experiment workspace**. Removed archived configs, stale
   per-run reports, and checked-in raw analysis artifacts so agents use the
