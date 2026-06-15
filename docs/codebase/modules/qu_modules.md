@@ -10,8 +10,8 @@ It sits between `CRS_BASELINE` (the orchestration harness that calls QU modules)
 
 There are two distinct families:
 
-1. **Simple QU modules** (`base.py`, `llm_rewrite.py`) — return a rewritten query *string*, which `CRS_BASELINE` then passes to a separate retriever configured via `retrieval_type`. These predate the v0+ work.
-2. **v0+ Compiler pipeline** — extracts a structured `ConversationStateV0Plus` from the conversation via an LLM, resolves surface-form entity names to catalog IDs, and produces ranked `track_ids` directly. `CRS_BASELINE` detects the `compile_track_ids` method and bypasses the `retrieval_type` step entirely.
+1. **Simple QU modules** (`base.py`, `llm_rewrite.py`) — return a rewritten query *string*. These predate the v0+ work and are retained for tests/tooling; `CRS_BASELINE` no longer wires them to a separate retriever.
+2. **v0+ Compiler pipeline** — extracts a structured `ConversationStateV0Plus` from the conversation via an LLM, resolves surface-form entity names to catalog IDs, and produces ranked `track_ids` directly. `CRS_BASELINE` requires this full-pipeline interface via `compile_track_ids` or `batch_compile_track_ids`.
 
 The v0+ pipeline is the active/canonical path for all current experiment configs. The simple QU modules remain for ablation and legacy runs.
 
@@ -44,9 +44,9 @@ Functions and classes called by code outside this module group.
 **`load_qu_module(qu_type, cache_dir, device, attn_implementation, dtype, **qu_kwargs) -> QU`** (`__init__.py:11`)
 
 Factory called by `CRS_BASELINE` at pipeline construction time. Dispatches on `qu_type`:
-- `"passthrough"`, `"last_user_turn"`, `"user_turns_only"`, `"last_2_user_turns"`, `"last_3_user_turns"`, `"no_music_history"` → simple QU classes from `base.py`
-- `"llm_rewrite"` → `LLMRewriteQU` with an appropriate model adapter
-- `"v0plus_compiler"` → calls `build_v0plus_compiler_qu(qu_kwargs=qu_kwargs)` from `compiler_v0plus_qu.py`
+- `"passthrough"`, `"last_user_turn"`, `"user_turns_only"`, `"last_2_user_turns"`, `"last_3_user_turns"`, `"no_music_history"` → simple QU classes from `base.py`; these do not satisfy the active `CRS_BASELINE` full-pipeline requirement by themselves.
+- `"llm_rewrite"` → `LLMRewriteQU` with an appropriate model adapter; also returns query text rather than track IDs.
+- `"v0plus_compiler"` / `"state_ranker"` → calls `build_v0plus_compiler_qu(qu_kwargs=qu_kwargs)` from `compiler_v0plus_qu.py` and satisfies the active inference contract.
 
 ### `base.py` — Simple QU classes
 

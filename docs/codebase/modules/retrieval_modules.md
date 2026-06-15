@@ -2,14 +2,14 @@
 
 ## Purpose
 
-`mcrs/retrieval_modules/` contains the pluggable retrieval backends that turn a text query into a ranked list of track IDs from the 47k-track catalog. The module group sits at the boundary between the query-understanding (QU) layer and the catalog: the QU compiler or the CRS baseline calls `text_to_item_retrieval` / `batch_text_to_item_retrieval` on a concrete model instance, which in turn queries a BM25 index, an in-memory dense index, or an external vector store.
+`mcrs/retrieval_modules/` contains pluggable retrieval backends that turn a text query into a ranked list of track IDs from the 47k-track catalog. These are retained for tests, historical baselines, and alternative tooling. Current competition inference goes through the v10 full-pipeline QU, which uses the v0+ Retriever Protocol directly instead of having `CRS_BASELINE` instantiate one of these standalone modules.
 
 There are two distinct generations of interface in this group:
 
-- **Legacy CRS interface** (`text_to_item_retrieval` / `batch_text_to_item_retrieval`): used by `mcrs/crs_baseline.py`. Every concrete class exposes this pair.
+- **Legacy standalone interface** (`text_to_item_retrieval` / `batch_text_to_item_retrieval`): exposed by each concrete class for historical baselines and tools.
 - **v0+ Retriever Protocol** (`search` / `search_embedding` with `FieldQuery` clauses): defined in `base.py`, implemented by `mcrs/lancedb/retriever.py::LanceDbRetriever`. The v0+ compiler (`mcrs/qu_modules/compiler_v0plus.py`) uses only this protocol.
 
-The factory function `load_retrieval_module` (in `__init__.py`) selects and instantiates a backend by string key at startup. New backends are added by extending this factory.
+The factory function `load_retrieval_module` (in `__init__.py`) still selects and instantiates a backend by string key for tests/tooling. It is no longer called by `CRS_BASELINE`.
 
 ---
 
@@ -18,8 +18,7 @@ The factory function `load_retrieval_module` (in `__init__.py`) selects and inst
 | File | Responsibility |
 |---|---|
 | `base.py` | Defines the `Retriever` Protocol and `FieldQuery` dataclass — the shared v0+ interface that compiler-facing backends must satisfy. |
-| `__init__.py` | `load_retrieval_module` factory: maps string keys (`"bm25"`, `"bert"`, `"dense_transformer"`, `"litellm_embedding"`, `"milvus"`, `"lancedb"`, `"modal_lancedb"`) to concrete backend constructors. |
-| `bm25.py` | `BM25_MODEL`: builds / caches a `bm25s`-backed BM25 index over HF dataset track metadata; supports single-query and batch retrieval. |
+| `__init__.py` | `load_retrieval_module` factory: maps string keys (`"bert"`, `"dense_transformer"`, `"litellm_embedding"`, `"milvus"`, `"lancedb"`, `"modal_lancedb"`) to concrete backend constructors. The old standalone `"bm25"` backend was removed. |
 | `bert.py` | `DENSE_TRANSFORMER_MODEL` + `BERT_MODEL` alias: on-device dense retrieval; encodes all tracks once and persists a `.pt` embedding matrix; cosine-searches at query time. Configurable pooling (mean / cls / last_token), query template, dtype. |
 | `litellm_embedding.py` | `LITELLM_EMBEDDING_MODEL`: same index-and-search pattern as `DENSE_TRANSFORMER_MODEL` but uses a LiteLLM proxy (OpenAI-compatible endpoint) for embedding instead of a local transformer. Uses async concurrency for corpus indexing. |
 | `milvus.py` | `MILVUS_MODEL`: delegates to a running Milvus instance; supports `bm25_compat`, `bm25_fields`, and `dense` search kinds; multi-search paths combine results via Milvus `WeightedRanker` (server-side fusion). |
@@ -79,16 +78,7 @@ def load_retrieval_module(
     retrieval_config: dict | None = None,
 ) -> Any:   # __init__.py:4
 ```
-Factory used by `mcrs/crs_baseline.py`. Returns a concrete model object exposing `text_to_item_retrieval` and `batch_text_to_item_retrieval`. Deferred imports are used for `milvus`, `lancedb`, and `modal_lancedb` so their heavy dependencies are only loaded when the corresponding key is requested.
-
-### `bm25.py`
-
-```python
-class BM25_MODEL:          # bm25.py:13
-    def text_to_item_retrieval(self, query: str, topk: int) -> list[str]:         # bm25.py:84
-    def batch_text_to_item_retrieval(self, queries: list[str], topk: int) -> list[list[str]]:  # bm25.py:97
-```
-Builds/loads a `bm25s` index on first construction; subsequent runs load from cache at `{cache_dir}/bm25/{corpus_name}/`. Returns ordered track ID lists.
+Factory for historical standalone retriever paths. Returns a concrete model object exposing `text_to_item_retrieval` and `batch_text_to_item_retrieval`. Deferred imports are used for `milvus`, `lancedb`, and `modal_lancedb` so their heavy dependencies are only loaded when the corresponding key is requested.
 
 ### `bert.py`
 
@@ -162,15 +152,14 @@ Both backends use private frozen dataclasses (`_Bm25CompatSearch`, `_DenseSearch
 
 ## Internal Flow
 
-### Legacy CRS path (`crs_baseline.py` → `load_retrieval_module`)
+### Standalone retriever path (`load_retrieval_module`)
 
-1. `crs_baseline.CRSBaseline.__init__` calls `load_retrieval_module(retrieval_type, ...)` with the string key from the experiment config (`__init__.py:87`).
+1. A test or tooling caller invokes `load_retrieval_module(retrieval_type, ...)`.
 2. The factory matches the key and constructs the concrete class, forwarding `dataset_name`, `track_split_types`, `corpus_types`, `cache_dir`, `formatter`, and `retrieval_config`.
-3. At inference time, `CRSBaseline._run_single` calls `self.retrieval.text_to_item_retrieval(query, topk)` or `batch_text_to_item_retrieval` for batched runs.
-4. `BM25_MODEL`: tokenizes the query with `bm25s.tokenize`, calls `bm25_model.retrieve`, maps positional ids back to track IDs via `track_ids[item['id']]`.
-5. `DENSE_TRANSFORMER_MODEL`/`LITELLM_EMBEDDING_MODEL`: encodes the query, computes `torch.matmul(embeddings, query_emb)`, returns `topk` indices.
-6. `LANCEDB_MODEL`/`MODAL_LANCEDB_MODEL`: delegate immediately to `LanceDbRetriever.retrieve` or `LanceDbModalClient.query`.
-7. `MILVUS_MODEL`: builds `_SearchRequestSpec` list, calls `client.search` (single spec) or `client.hybrid_search` with `WeightedRanker` (multi-spec).
+3. The caller invokes `text_to_item_retrieval(query, topk)` or `batch_text_to_item_retrieval(queries, topk)` on the returned model.
+4. `DENSE_TRANSFORMER_MODEL`/`LITELLM_EMBEDDING_MODEL`: encodes the query, computes `torch.matmul(embeddings, query_emb)`, returns `topk` indices.
+5. `LANCEDB_MODEL`/`MODAL_LANCEDB_MODEL`: delegate immediately to `LanceDbRetriever.retrieve` or `LanceDbModalClient.query`.
+6. `MILVUS_MODEL`: builds `_SearchRequestSpec` list, calls `client.search` (single spec) or `client.hybrid_search` with `WeightedRanker` (multi-spec).
 
 ### v0+ Compiler path (`compiler_v0plus.py` → `Retriever` Protocol)
 
@@ -186,7 +175,7 @@ Both backends use private frozen dataclasses (`_Bm25CompatSearch`, `_DenseSearch
 ## Dependencies
 
 ### Within `mcrs`
-- `mcrs.corpus_formatters.load_corpus_formatter` — used by `BM25_MODEL`, `DENSE_TRANSFORMER_MODEL`, `LITELLM_EMBEDDING_MODEL` to format track metadata into corpus strings.
+- `mcrs.corpus_formatters.load_corpus_formatter` — used by `DENSE_TRANSFORMER_MODEL` and `LITELLM_EMBEDDING_MODEL` to format track metadata into corpus strings.
 - `mcrs.lancedb.retriever.LanceDbRetriever` — the actual implementation behind `LANCEDB_MODEL`.
 - `mcrs.lancedb.modal_client.LanceDbModalClient` — the Modal RPC client behind `MODAL_LANCEDB_MODEL`.
 - `mcrs.lancedb.indexing` — `connect_lancedb`, field-name constants, used inside `LanceDbRetriever`.
@@ -196,8 +185,8 @@ Both backends use private frozen dataclasses (`_Bm25CompatSearch`, `_DenseSearch
 ### External libraries
 | Library | Used by |
 |---|---|
-| `bm25s` | `bm25.py`, `lancedb/retriever.py` (bm25s tokenization for `fts_bm25s_compat` kind) |
-| `datasets` (HuggingFace) | `bm25.py`, `bert.py`, `litellm_embedding.py` for catalog loading |
+| `bm25s` | `lancedb/retriever.py` (bm25s tokenization for `fts_bm25s_compat` kind) |
+| `datasets` (HuggingFace) | `bert.py`, `litellm_embedding.py` for catalog loading |
 | `torch`, `transformers` | `bert.py`, `milvus.py` (`_DenseQueryEncoder`) |
 | `litellm` | `litellm_embedding.py` |
 | `pymilvus` | `milvus.py` (imported lazily inside `text_to_item_retrieval` for `AnnSearchRequest`, `WeightedRanker`) |
@@ -207,7 +196,7 @@ Both backends use private frozen dataclasses (`_Bm25CompatSearch`, `_DenseSearch
 
 ## Gotchas
 
-1. **Two separate interfaces coexist.** The legacy `text_to_item_retrieval` / `batch_text_to_item_retrieval` interface is what `load_retrieval_module` and `crs_baseline.py` expect. The v0+ `Retriever` Protocol (`search` / `search_embedding`) is only used by the v0+ compiler and is only implemented by `LanceDbRetriever` — none of `BM25_MODEL`, `DENSE_TRANSFORMER_MODEL`, `MILVUS_MODEL`, etc. satisfy it.
+1. **Two separate interfaces coexist.** The standalone `text_to_item_retrieval` / `batch_text_to_item_retrieval` interface is what `load_retrieval_module` returns. The v0+ `Retriever` Protocol (`search` / `search_embedding`) is used by the v0+ compiler and is implemented by `LanceDbRetriever` — none of `DENSE_TRANSFORMER_MODEL`, `MILVUS_MODEL`, etc. satisfy it.
 
 2. **`LANCEDB_MODEL` and `MODAL_LANCEDB_MODEL` silently discard constructor arguments.** Both classes open with `del dataset_name, split_types, corpus_types, cache_dir, formatter` (`lancedb.py:22`, `modal_lancedb.py:21`). Passing non-default values for these parameters has no effect. All meaningful configuration comes through `retrieval_config`.
 

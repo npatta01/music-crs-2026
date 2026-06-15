@@ -42,6 +42,7 @@ import json
 import logging
 import os
 import re
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -98,6 +99,24 @@ from mcrs.retrieval_modules.base import Retriever
 
 logger = logging.getLogger(__name__)
 TRACE_SCHEMA_VERSION = "v0plus-ranker-trace-v1"
+
+
+def _add_elapsed(timings: dict[str, float], key: str, start: float) -> None:
+    timings[key] = timings.get(key, 0.0) + (time.perf_counter() - start)
+
+
+def _aggregate_trace_timings(traces: list[dict[str, Any]]) -> dict[str, float]:
+    aggregate: dict[str, float] = {}
+    for trace in traces:
+        if not isinstance(trace, dict):
+            continue
+        timing = trace.get("timings")
+        if not isinstance(timing, dict):
+            continue
+        for key, value in timing.items():
+            if isinstance(value, (int, float)):
+                aggregate[key] = aggregate.get(key, 0.0) + float(value)
+    return aggregate
 
 
 def _with_no_store_cache(call_kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -596,6 +615,7 @@ class V0PlusCompilerQU:
     # extractor state + resolver/compiler decisions alongside predictions
     # without changing the batch return shape.
     last_traces: list[dict[str, Any]] = field(default_factory=list, init=False, repr=False)
+    last_batch_timings: dict[str, float] = field(default_factory=dict, init=False, repr=False)
     _reranker: Any = field(default=None, init=False, repr=False)
 
     def _get_reranker(self):
@@ -605,6 +625,7 @@ class V0PlusCompilerQU:
                 self.reranker_cfg,
                 db_uri=self.reranker_cfg["db_uri"],
                 table_name=self.reranker_cfg.get("table_name", "music_track_catalog"),
+                catalog_source=self.catalog,
             )
             logger.info("lgbm online reranker loaded: %s",
                         self.reranker_cfg.get("model_path"))
@@ -687,10 +708,21 @@ class V0PlusCompilerQU:
         the caller stashes in `last_traces`. `user_id` is forwarded to the
         compiler for user-source centroid branches.
         """
+        timings: dict[str, float] = {}
+        total_start = time.perf_counter()
+        start = time.perf_counter()
         conv, played = session_memory_to_conversation(session_memory, self.catalog)
+        _add_elapsed(timings, "session_memory", start)
+        start = time.perf_counter()
         async with sem:
             state = await self.extractor.aextract(conv, played)
+        _add_elapsed(timings, "extractor", start)
         if state is None:
+            timings.setdefault("resolver", 0.0)
+            timings.setdefault("compile", 0.0)
+            timings.setdefault("rerank", 0.0)
+            timings.setdefault("trace", 0.0)
+            _add_elapsed(timings, "total", total_start)
             logger.warning(
                 "v0+ empty result: extractor returned None (async) | turns=%d played=%d last_user=%r",
                 len(conv), len(played),
@@ -708,13 +740,16 @@ class V0PlusCompilerQU:
                     "n_explicit_rejections": 0,
                     "extractor_returned_none": True,
                 },
+                "timings": timings,
             }
             return idx, [], trace
 
         # Resolver is fast pure-Python work — run inline. Only the compiler
         # (BM25 + dense + reranking) is heavy enough to be worth pushing off
         # the event loop. Inlining the resolver gives us `rs` for the trace.
+        start = time.perf_counter()
         rs = self.resolver.resolve(state, played_track_ids=played)
+        _add_elapsed(timings, "resolver", start)
 
         # Use _compile() (not compile()) to get the full CompileResult, which
         # carries the per-branch pools + fused/final funnel for the trace when
@@ -723,7 +758,11 @@ class V0PlusCompilerQU:
         def _run_compile() -> CompileResult:
             return self.compiler._compile(rs, user_id=user_id)
 
+        start = time.perf_counter()
         compile_result = await asyncio.to_thread(_run_compile)
+        _add_elapsed(timings, "compile", start)
+        for key, value in compile_result.timings.items():
+            timings[f"compile.{key}"] = timings.get(f"compile.{key}", 0.0) + float(value)
         track_ids = compile_result.ranked[:topk]
         if not track_ids:
             logger.warning(
@@ -760,6 +799,7 @@ class V0PlusCompilerQU:
         ]
         # Anchor tracks/artists for centroid + tag expansion (mirrors what
         # the compiler considers a "positive" reference).
+        start = time.perf_counter()
         anchor_track_ids: list[str] = []
         for tf in state.track_feedback:
             if tf.role in ("accepted", "seed") and tf.overall_sentiment > 0:
@@ -807,21 +847,42 @@ class V0PlusCompilerQU:
         # apart "candidate missing from pool" vs "RRF mis-ranked the pool".
         if compile_result.branch_pools:
             trace["branches"] = compile_result.to_trace_dict()
+            _add_elapsed(timings, "trace", start)
             # Online LightGBM rerank: replaces the RRF order over the pool
             # union, consuming the SAME trace payload the offline trainer
             # reads (train/serve parity by construction). Falls back to the
             # compiler order on any per-turn failure.
+            had_reranker = self._reranker is not None
+            start = time.perf_counter()
             rr = self._get_reranker()
+            _add_elapsed(timings, "reranker_load", start)
+            if rr is not None and not had_reranker:
+                for key, value in getattr(rr, "load_timings", {}).items():
+                    if isinstance(value, (int, float)):
+                        timings[f"reranker_load.{key}"] = (
+                            timings.get(f"reranker_load.{key}", 0.0) + float(value)
+                        )
             if rr is not None:
+                start = time.perf_counter()
                 reranked = await asyncio.to_thread(
                     rr.rerank, trace, session_meta, user_id,
                     set(compile_result.hard_drop), track_ids)
+                _add_elapsed(timings, "rerank", start)
                 track_ids = reranked[:topk]
+                start = time.perf_counter()
                 trace["branches"]["final"] = {
                     **trace["branches"]["final"],
                     "track_ids": list(track_ids),
                     "ranker": "lgbm_v9",
                 }
+                _add_elapsed(timings, "trace", start)
+            else:
+                timings.setdefault("rerank", 0.0)
+        else:
+            _add_elapsed(timings, "trace", start)
+            timings.setdefault("rerank", 0.0)
+        _add_elapsed(timings, "total", total_start)
+        trace["timings"] = timings
         return idx, track_ids, trace
 
     def batch_compile_track_ids(
@@ -846,6 +907,7 @@ class V0PlusCompilerQU:
         """
         if not session_memories:
             self.last_traces = []
+            self.last_batch_timings = {}
             return []
 
         if user_ids is None:
@@ -876,11 +938,15 @@ class V0PlusCompilerQU:
         # batch_chat is called from a sync context (run_inference_devset.py),
         # so this is safe. If a future caller already has a running loop,
         # they should call `_run` directly.
+        batch_start = time.perf_counter()
         results = asyncio.run(_run())
+        batch_wall = time.perf_counter() - batch_start
         # `asyncio.gather` preserves task order, but sort by idx defensively
         # so this stays correct if the run helper ever swaps in `as_completed`.
         results.sort(key=lambda x: x[0])
         self.last_traces = [trace for _, _, trace in results]
+        self.last_batch_timings = _aggregate_trace_timings(self.last_traces)
+        self.last_batch_timings["batch_wall"] = batch_wall
         return [track_ids for _, track_ids, _ in results]
 
 
@@ -922,11 +988,17 @@ def build_v0plus_compiler_qu(
             # Match the default dense/centroid branches — the
             # compiler queries these per-call during centroid mixing, so eager-load
             # them at startup to avoid per-call LanceDB queries.
-            eager_fields = (
+            eager_fields = [
                 "metadata_qwen3_embedding_0_6b",
                 "attributes_qwen3_embedding_0_6b",
                 "lyrics_qwen3_embedding_0_6b",
-            )
+            ]
+            if (qu_kwargs.get("reranker") or {}).get("enabled"):
+                eager_fields.extend([
+                    "cf_bpr",
+                    "audio_laion_clap",
+                    "image_siglip2",
+                ])
         catalog = LanceDbCatalog(
             db_uri=db_uri,
             table_name=lance_cfg.get("table_name", "music_track_catalog"),

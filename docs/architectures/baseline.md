@@ -1,8 +1,10 @@
-# Baseline Architecture: BM25 / BERT + Llama-3.2-1B
+# Legacy Baseline Architecture: BM25 / BERT + Llama-3.2-1B
 
 For a separate Milvus retrieval extension, see [Milvus Architecture](./milvus.md).
 
-Two-stage pipeline: retrieve candidate tracks, then generate a natural language response.
+Historical two-stage pipeline: retrieve candidate tracks, then generate a
+natural language response. Current competition configs use the v10 state-ranker
+full-pipeline QU instead; see [v10 State-Ranker Pipeline](./v0plus_retrieval.md).
 
 ---
 
@@ -26,7 +28,7 @@ User Query + Chat History
 ┌───────────────────────────────────────────┐
 │  Stage 1: Retrieval                        │
 │                                            │
-│  BM25  (mcrs/retrieval_modules/bm25.py)   │  ← sparse keyword matching
+│  BM25  (removed standalone backend)       │  ← historical sparse baseline
 │    or                                      │
 │  BERT  (mcrs/retrieval_modules/bert.py)   │  ← dense cosine similarity
 │                                            │
@@ -66,30 +68,11 @@ User Query + Chat History
 
 **`CRS_BASELINE`** — `mcrs/crs_baseline.py`
 
-```python
-crs = CRS_BASELINE(
-    lm_type="meta-llama/Llama-3.2-1B-Instruct",
-    retrieval_type="bm25",          # or "bert"
-    qu_type="passthrough",          # or "llm_rewrite", etc.
-    qu_kwargs={},                   # optional QU backend settings
-    item_db_name="talkpl-ai/TalkPlayData-Challenge-Track-Metadata",
-    user_db_name="talkpl-ai/TalkPlayData-Challenge-User-Metadata",
-    track_split_types=["all_tracks"],
-    corpus_types=["track_name", "artist_name", "album_name", "release_date"],
-    cache_dir="./cache",
-    device="cuda",
-    attn_implementation="sdpa",     # or "eager" / "flash_attention_2"
-)
-
-# Single turn
-result = crs.chat(user_query="I want something chill", user_id="...")
-
-# Batch (preferred for inference scripts)
-results = crs.batch_chat([
-    {"user_query": "...", "user_id": "...", "session_memory": [...]},
-    ...
-])
-```
+Active runs normally construct `CRS_BASELINE` through `run_inference_devset.py`,
+`run_inference_blindset.py`, or `run_experiment.py` using the YAML configs under
+`configs/`. Direct construction is possible, but the QU must be a full-pipeline
+QU with valid `qu_kwargs`; for examples, use `state_ranker_v10_rrf_devset` or
+`state_ranker_v10_lgbm_devset`.
 
 Return dict keys: `user_id`, `user_query`, `retrieval_items` (list[str], 20 ids), `recommend_item` (str), `response` (str).
 
@@ -97,7 +80,7 @@ Return dict keys: `user_id`, `user_query`, `retrieval_items` (list[str], 20 ids)
 
 ## Retrieval Modules
 
-### Corpus document format (shared by BM25 and BERT)
+### Corpus document format (shared by historical BM25 and BERT)
 
 Both modules call `_stringify_metadata()` to convert each track into a text document for indexing:
 
@@ -120,11 +103,16 @@ assistant: Here are some ambient tracks...
 user: maybe something with piano?
 ```
 
-Each turn is `role: content`, joined by `\n`. This is built in `CRS_BASELINE.chat()` / `batch_chat()` before calling the retrieval module.
+Each turn is `role: content`, joined by `\n`. This format is still produced by
+`CRS_BASELINE.chat()` / `batch_chat()`, but active configs pass it to a
+full-pipeline QU rather than to a standalone retrieval module.
 
 ### Query-understanding modules (`mcrs/qu_modules/`)
 
-QU runs between the conversation state and retrieval. The default backend is `passthrough`, which returns the formatted conversation text unchanged. Existing deterministic variants (`last_user_turn`, `user_turns_only`, `last_2_user_turns`, `last_3_user_turns`, `no_music_history`) still return plain text queries.
+These older QU modules predate the full-pipeline state ranker and return plain
+text queries. They are retained for tests and historical ablations, but
+`CRS_BASELINE` now requires a QU that returns track IDs directly via
+`compile_track_ids` or `batch_compile_track_ids`.
 
 `llm_rewrite` is a retrieval-facing backend for query-rewrite experiments. It:
 
@@ -149,7 +137,12 @@ qu_kwargs:
 
 ---
 
-### BM25 (`mcrs/retrieval_modules/bm25.py`)
+### BM25 (removed standalone backend)
+
+The old CRS-level `retrieval_type: bm25` backend was removed from the current
+tree. Use Git history for the historical standalone implementation. Active v10
+configs still use BM25-style text search inside LanceDB through the
+full-pipeline state-ranker compiler; that is a separate path.
 
 **Indexing:**
 - Tokenizes each track's corpus document with `bm25s.tokenize(corpus)`
@@ -205,14 +198,16 @@ line so downstream adapters can recover played-track IDs from music turns.
 
 ### Interface
 
-Both retrievers expose the same API:
+The legacy standalone retrievers expose the same API:
 
 ```python
 retrieval.text_to_item_retrieval(query: str, topk: int = 20) -> list[str]
 retrieval.batch_text_to_item_retrieval(queries: list[str], topk: int = 20) -> list[list[str]]
 ```
 
-New retrieval backends: add a class with these two methods and register in `mcrs/retrieval_modules/__init__.py`.
+For standalone retriever tooling, add a class with these two methods and
+register it in `mcrs/retrieval_modules/__init__.py`. Current inference configs
+do not route through this factory.
 
 ---
 
@@ -274,8 +269,8 @@ Key YAML fields:
 
 ```yaml
 lm_type: "meta-llama/Llama-3.2-1B-Instruct"
-retrieval_type: "bm25"            # bm25 | bert
-qu_type: "state_ranker"           # state_ranker | passthrough | deterministic QU | llm_rewrite
+qu_type: "state_ranker"           # active configs require a full-pipeline QU
+qu_kwargs: {}                     # full-pipeline retrieval/ranking settings
 corpus_types:                     # fields used for retrieval index
   - "track_name"
   - "artist_name"
