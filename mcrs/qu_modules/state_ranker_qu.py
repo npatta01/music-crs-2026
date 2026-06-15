@@ -44,6 +44,21 @@ _LGBM_REQUIRED_KEYS = {
 }
 
 
+def _dedupe_preserving_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
+    return out
+
+
+def _surface_key(value: str) -> str:
+    return value.casefold().strip()
+
+
 @dataclass
 class StateRankerQU(V0PlusCompilerQU):
     """State-ranker v10 QU, backed by the existing branch retrieval engine."""
@@ -109,18 +124,50 @@ class StateRankerQU(V0PlusCompilerQU):
                 aid = rs.track_feedback_artist_ids.get(tf.track_id)
                 if aid is not None:
                     rejected_artist_ids.append(aid)
+        anchor_track_ids = [
+            tf.track_id
+            for tf in state.track_feedback
+            if tf.role in ("accepted", "seed") and tf.overall_sentiment > 0
+        ] + list(state.referenced_track_ids)
+        anchor_track_values = [
+            me.value
+            for me in state.mentioned_entities
+            if me.sentiment > 0 and me.type == "track" and me.value
+        ]
+        anchor_artist_values = [
+            me.value
+            for me in state.mentioned_entities
+            if me.sentiment > 0 and me.type == "artist" and me.value
+        ]
+        resolved_track_ids_by_surface = {
+            _surface_key(t.source_text): t.entity_id
+            for t in rs.resolved_targets
+            if t.kind == "track"
+            and t.entity_id
+            and getattr(t, "resolution_role", "exact_target") == "exact_target"
+        }
+        resolved_artist_ids_by_surface = {
+            _surface_key(t.source_text): t.entity_id
+            for t in rs.resolved_targets
+            if t.kind == "artist"
+            and t.entity_id
+            and getattr(t, "resolution_role", "exact_target") == "exact_target"
+        }
+        anchor_track_ids.extend(
+            track_id
+            for value in anchor_track_values
+            if (track_id := resolved_track_ids_by_surface.get(_surface_key(value)))
+        )
+        anchor_artist_ids = [
+            artist_id
+            for value in anchor_artist_values
+            if (artist_id := resolved_artist_ids_by_surface.get(_surface_key(value)))
+        ]
         resolver_block = {
-            "anchor_track_ids": [
-                tf.track_id
-                for tf in state.track_feedback
-                if tf.role in ("accepted", "seed") and tf.overall_sentiment > 0
-            ]
-            + list(state.referenced_track_ids),
-            "anchor_artist_ids": [
-                me.value
-                for me in state.mentioned_entities
-                if me.sentiment > 0 and me.type == "artist" and me.value
-            ],
+            "anchor_track_ids": _dedupe_preserving_order(anchor_track_ids),
+            "anchor_track_values": _dedupe_preserving_order(anchor_track_values),
+            "anchor_artist_ids": _dedupe_preserving_order(anchor_artist_ids),
+            "anchor_artist_values": _dedupe_preserving_order(anchor_artist_values),
             "rejected_track_ids": rejected_track_ids,
             "rejected_artist_ids": rejected_artist_ids,
             "rejected_tags": [
@@ -133,6 +180,8 @@ class StateRankerQU(V0PlusCompilerQU):
             ],
             "played_track_ids": list(rs.played_track_ids),
         }
+        intent_mode = getattr(state.intent_mode, "value", str(state.intent_mode))
+        routing_tags = state.routing_tags.model_dump(mode="json")
 
         compiler_summary = {
             "n_candidates": min(len(candidate_track_ids), topk),
@@ -169,9 +218,9 @@ class StateRankerQU(V0PlusCompilerQU):
                         "extracted_state": extracted_state,
                         "compiled_state": compiled_state,
                         "state": extracted_state,
-                        "intent_mode": getattr(state.intent_mode, "value", str(state.intent_mode)),
+                        "intent_mode": intent_mode,
                         "resolver": resolver_block,
-                        "routing_tags": extracted_state.get("routing_tags") or {},
+                        "routing_tags": routing_tags,
                         "retrieval": retrieval,
                         "branches": {
                             "pools": retrieval["branches"],
@@ -192,7 +241,8 @@ class StateRankerQU(V0PlusCompilerQU):
         trace = {
             "trace_schema_version": TRACE_SCHEMA_VERSION,
             "idx": idx,
-            "intent_mode": getattr(state.intent_mode, "value", str(state.intent_mode)),
+            "intent_mode": intent_mode,
+            "routing_tags": routing_tags,
             "extracted_state": extracted_state,
             "compiled_state": compiled_state,
             "resolver": resolver_block,

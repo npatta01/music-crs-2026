@@ -108,11 +108,12 @@ def format_state_block(state: dict | None, track_label: Callable[[str], str] | N
 def response_state_dict(state: Any) -> dict:
     """Serialize a ConversationStateV0Plus for the response path.
 
-    pydantic's ``model_dump()`` only serializes declared fields, so the derived
-    ``@property`` fields the response prompt depends on — ``mentioned_entities``,
-    ``explicit_rejections``, ``release_year_range`` — are dropped. This augments
-    the dump with their evaluated values in the dict shape ``format_state_block``
-    consumes. Duck-typed (no schema import) so this module stays dependency-free.
+    pydantic's ``model_dump()`` only serializes declared fields, so derived
+    ``@property`` fields are dropped. This augments the dump with fields the
+    response prompt consumes (for example ``mentioned_entities``) plus compiler
+    policy fields used by trace/compiled-state diagnostics and reranker
+    feature extraction. Duck-typed (no schema import) so this module stays
+    dependency-free.
 
     The result carries keys beyond the model's declared fields, so it is for the
     response / trace path only — do NOT round-trip it back through
@@ -124,6 +125,10 @@ def response_state_dict(state: Any) -> dict:
     d["explicit_rejections"] = [r.model_dump(mode="json") for r in state.explicit_rejections]
     ryr = state.release_year_range
     d["release_year_range"] = ryr.model_dump(mode="json") if ryr is not None else None
+    d["intent_mode"] = getattr(state.intent_mode, "value", str(state.intent_mode))
+    d["process_constraints"] = state.process_constraints.model_dump(mode="json")
+    d["routing_tags"] = state.routing_tags.model_dump(mode="json")
+    d["hard_filters"] = [f.model_dump(mode="json") for f in state.hard_filters]
     return d
 
 
