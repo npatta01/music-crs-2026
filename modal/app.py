@@ -762,6 +762,7 @@ def _train_cmd(stage: str, fold: int | None = None, lineage: str = "v9") -> list
 def _train_build_cpu(lineage: str = "v9"):
     """Build the feature matrix (X.npy + id arrays) from parquet on the volume."""
     import subprocess
+    cache_vol.reload()
     result = subprocess.run(_train_cmd("build", lineage=lineage), capture_output=False)
     if result.returncode != 0:
         raise RuntimeError(f"build stage failed (exit {result.returncode})")
