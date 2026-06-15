@@ -3109,3 +3109,27 @@ def test_genre_scene_pool_infer_anchor_era_filters_off_era_neighbor():
     # t-neighbor-1 (1994) kept.
     ids = [t for t, _ in compiler._genre_scene_neighbor_pool(_gs_rs(catalog))]
     assert "t-neighbor-1" in ids and "t-neighbor-2" not in ids
+
+
+# ---------------------------------------------------------------------------
+# lookup.genre_scene branch wiring in _compile
+# ---------------------------------------------------------------------------
+
+
+def test_genre_scene_branch_injects_neighbors_into_results_on_pivot():
+    catalog = _gs_catalog()
+    # BM25 returns only the off-genre track; genre_scene must add the neighbor.
+    retriever = FakeRetriever(text_hits_by_field={"tag_list": [("t-jazz-1", 5.0)]})
+    cfg = CompilerConfig(enable_dense=False, enable_genre_scene_neighbors=True,
+                         genre_scene_era_policy="ignore")
+    result = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_gs_rs(catalog))
+    assert "t-neighbor-1" in result          # recalled via genre_scene branch
+    assert "t-anchor-1" not in result        # anchor still excluded
+
+
+def test_genre_scene_branch_off_by_default_is_noop():
+    catalog = _gs_catalog()
+    retriever = FakeRetriever(text_hits_by_field={"tag_list": [("t-jazz-1", 5.0)]})
+    cfg = CompilerConfig(enable_dense=False)  # genre_scene disabled
+    result = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_gs_rs(catalog))
+    assert result[0] == "t-jazz-1"           # BM25 hit leads; branch didn't fire

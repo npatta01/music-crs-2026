@@ -881,6 +881,28 @@ class V0PlusCompiler:
                     self.cfg.era_pop_weight * self._routing_multiplier("lookup.era_popularity", rs),
                 )
             )
+        gs_hits = self._genre_scene_neighbor_pool(rs)
+        gs_branch_name = "lookup.genre_scene"
+        if trace_enabled and self.cfg.enable_genre_scene_neighbors:
+            branch_queries[gs_branch_name] = self._genre_scene_query_trace(rs)
+            branch_status[gs_branch_name] = (
+                {"configured": True, "fired": True, "n_raw_hits": len(gs_hits)}
+                if gs_hits
+                else {"configured": True, "fired": False, "skip_reason": "no_anchor_or_tags"}
+            )
+        if trace_enabled and gs_hits:
+            named_pools.append((gs_branch_name, list(gs_hits[:_trace_k])))
+        if self.cfg.enable_genre_scene_neighbors:
+            gs_anchor_ids, _ = self._genre_scene_anchor(rs)
+            for aid in gs_anchor_ids:
+                hard_drop.update(self.catalog.tracks_by_artist_id(aid))
+        gs_hits = [
+            (t, s) for t, s in gs_hits if t in candidate_mask and t not in hard_drop
+        ]
+        if gs_hits:
+            gs_w = self.cfg.genre_scene_weight * self._routing_multiplier("lookup.genre_scene", rs)
+            weighted_pools.append((gs_hits, gs_w))
+            feature_branch_inputs.append((gs_branch_name, gs_hits, gs_w))
 
         feature_context = (
             self._branch_local_feature_context(rs)
@@ -1119,6 +1141,16 @@ class V0PlusCompiler:
                 if ryr is None
                 else {"start": ryr.start, "end": ryr.end}
             ),
+        }
+
+    def _genre_scene_query_trace(self, rs: ResolvedConversationState) -> dict:
+        anchor_ids, genre_tags = self._genre_scene_anchor(rs)
+        return {
+            "kind": "lookup",
+            "lookup_type": "genre_scene",
+            "anchor_artist_ids": sorted(anchor_ids),
+            "genre_tags": sorted(genre_tags),
+            "era_policy": self.cfg.genre_scene_era_policy,
         }
 
     def _resolved_rejection_drop_set(
