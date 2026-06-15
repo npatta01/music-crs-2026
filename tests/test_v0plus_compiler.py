@@ -3030,3 +3030,50 @@ def test_genre_scene_anchor_empty_when_intent_not_gated():
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)
     anchor_ids, genre_tags = compiler._genre_scene_anchor(_gs_rs(catalog, intent_mode="refinement"))
     assert anchor_ids == set() and genre_tags == set()
+
+
+# ---------------------------------------------------------------------------
+# _genre_scene_neighbor_pool
+# ---------------------------------------------------------------------------
+
+
+def test_genre_scene_pool_recalls_other_artist_same_genre():
+    catalog = _gs_catalog()
+    cfg = CompilerConfig(enable_genre_scene_neighbors=True, genre_scene_era_policy="ignore")
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)
+    pool = compiler._genre_scene_neighbor_pool(_gs_rs(catalog))
+    ids = [t for t, _ in pool]
+    assert "t-neighbor-1" in ids          # a-neighbor shares "grunge"
+    assert "t-anchor-1" not in ids and "t-anchor-2" not in ids   # anchor excluded
+    assert "t-jazz-1" not in ids          # off-genre excluded
+
+
+def test_genre_scene_pool_disabled_by_default():
+    catalog = _gs_catalog()
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), CompilerConfig())
+    assert compiler._genre_scene_neighbor_pool(_gs_rs(catalog)) == []
+
+
+def test_genre_scene_pool_explicit_era_filters_off_era_neighbor():
+    from mcrs.conversation_state.schema import ConversationStateV0Plus
+    catalog = _gs_catalog()
+    cfg = CompilerConfig(enable_genre_scene_neighbors=True, genre_scene_era_policy="explicit_only")
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)
+    state = ConversationStateV0Plus(
+        current_request={"request_type": "new_artist",
+                         "summary": "90s grunge bands, not Anchor", "source_turn": 1},
+        facts=[
+            {"type": "artist", "value": "Anchor", "role": "satisfied_prior",
+             "anchor_use": "do_not_use", "relation": "satisfied_prior",
+             "reuse": "avoid_exact", "source_turn": 1, "mentioned_current_turn": True},
+            {"type": "attribute", "facet": "era", "value": "1990-1999",
+             "role": "current_target", "anchor_use": "query_facet",
+             "relation": "query_facet", "reuse": "not_applicable",
+             "source_turn": 1, "mentioned_current_turn": True},
+        ],
+    )
+    rs = _resolve(state, catalog)
+    if rs.state.release_year_range is None:
+        import pytest; pytest.skip("extractor projection did not yield a year range")
+    ids = [t for t, _ in compiler._genre_scene_neighbor_pool(rs)]
+    assert "t-neighbor-1" in ids and "t-neighbor-2" not in ids

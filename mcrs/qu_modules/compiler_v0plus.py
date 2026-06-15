@@ -35,6 +35,7 @@ See: docs/architectures/v0plus_retrieval.md
 from __future__ import annotations
 
 import re
+import statistics
 from collections import Counter
 from dataclasses import dataclass, field
 
@@ -2741,6 +2742,63 @@ class V0PlusCompiler:
                     tag_freq[key] += 1
         genre_tags = {k for k, _ in tag_freq.most_common(self.cfg.genre_scene_max_tags)}
         return anchor_ids, genre_tags
+
+    def _genre_scene_era_bounds(
+        self, rs: ResolvedConversationState, anchor_ids: set[str]
+    ) -> tuple[int | None, int | None]:
+        policy = self.cfg.genre_scene_era_policy
+        if policy == "ignore":
+            return None, None
+        if policy == "explicit_only":
+            ryr = rs.state.release_year_range
+            return (None, None) if ryr is None else (ryr.start, ryr.end)
+        if policy == "infer_anchor":
+            years = [
+                y
+                for aid in anchor_ids
+                for tid in self.catalog.tracks_by_artist_id(aid)
+                if (y := self.catalog.release_year_of(tid)) is not None
+            ]
+            if not years:
+                return None, None
+            med = int(statistics.median(years))
+            w = self.cfg.genre_scene_era_window
+            return med - w, med + w
+        return None, None
+
+    def _genre_scene_neighbor_pool(
+        self, rs: ResolvedConversationState
+    ) -> list[tuple[str, float]]:
+        """Popularity-ranked tracks by OTHER artists sharing the pivoted-away
+        artist's genre/scene tags (± era policy). Returns a ranked (id, score)
+        pool for RRF, or [] when disabled / no anchor / no genre tags."""
+        cfg = self.cfg
+        if not cfg.enable_genre_scene_neighbors:
+            return []
+        anchor_ids, genre_tags = self._genre_scene_anchor(rs)
+        if not anchor_ids or not genre_tags:
+            return []
+        anchor_tracks: set[str] = set()
+        for aid in anchor_ids:
+            anchor_tracks.update(self.catalog.tracks_by_artist_id(aid))
+        lo, hi = self._genre_scene_era_bounds(rs, anchor_ids)
+        era_active = lo is not None or hi is not None
+        track_ids: list[str] = []
+        for tid in self.catalog.popularity_sorted_track_ids():
+            if tid in anchor_tracks:
+                continue
+            tkeys = {self._catalog_tag_key(t) for t in self.catalog.tag_list(tid)}
+            if not (tkeys & genre_tags):
+                continue
+            if era_active:
+                yr = self.catalog.release_year_of(tid)
+                if yr is None or (lo is not None and yr < lo) or (hi is not None and yr > hi):
+                    continue
+            track_ids.append(tid)
+            if len(track_ids) >= cfg.genre_scene_cap:
+                break
+        n = len(track_ids)
+        return [(t, float(n - i)) for i, t in enumerate(track_ids)]
 
     def _similar_artist_anchor_track_ids(self, rs) -> list[str]:
         """Representative tracks of each RESOLVED reference artist, used as
