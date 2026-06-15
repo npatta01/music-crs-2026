@@ -98,7 +98,9 @@ def _abandoned_sets(state: dict, resolver_block: dict, cat: Catalog):
     """Pivot-away targets from CURRENT state only (serving-safe).
 
     abandoned artists = artist name-keys of negatively-rated feedback tracks +
-    resolver rejected artist names; abandoned tags = resolver rejected_tags
+    resolver rejected artist names + satisfied_prior artist facts (the
+    over-anchor case: 'other bands, not just X' keeps X as a style reference but
+    the user is pivoting away from it); abandoned tags = resolver rejected_tags
     (resolved to catalog tag keys)."""
     artists: set[str] = set()
     for fb in (state.get("track_feedback") or []):
@@ -109,6 +111,17 @@ def _abandoned_sets(state: dict, resolver_block: dict, cat: Catalog):
                 artists.update(cat.meta[tid]["artist_name_keys"])
     for a in (resolver_block.get("rejected_artist_ids") or []):
         k = catalog_tag_key(str(a))
+        if k:
+            artists.add(k)
+    # satisfied_prior artist facts: the artist the user just heard and is now
+    # pivoting away from ("other artists, not just X"). Keyed by catalog name
+    # so it matches m["artist_name_keys"] (catalog_tag_key of the artist name).
+    for fc in (state.get("facts") or []):
+        if str(fc.get("type")) != "artist":
+            continue
+        if str(fc.get("role") or "") != "satisfied_prior":
+            continue
+        k = catalog_tag_key(str(fc.get("value") or ""))
         if k:
             artists.add(k)
     tags: set[str] = set()

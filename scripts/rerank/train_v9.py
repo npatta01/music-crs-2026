@@ -43,6 +43,16 @@ LOCKBOX = ROOT / "exp/analysis/rerank/lockbox_users.json"
 
 ID_COLS = ["session_id", "turn_number", "track_id", "label"]
 EVAL_ONLY = ["rrf_rank", "rrf_score"]
+# Monotone-decreasing features: higher value can only LOWER the score. Replay
+# prevention (is_played_track) plus the pivot-away demote signals — a candidate
+# that IS the artist the user pivoted away from must not be promoted over a
+# fresh artist (over-anchor fix, knowledge/overanchor_report.html).
+MONOTONE_DECREASING = (
+    "is_played_track",
+    "same_artist_as_abandoned",
+    "x_same_artist_wants_new",
+    "violates_new_artist",
+)
 CATEGORICALS = ["age_group", "gender", "goal_category", "goal_specificity",
                 "request_type", "intent_mode", "target_artist_mode",
                 "temporal_strength"]
@@ -218,7 +228,7 @@ def stage_fold(fold: int):
     es_idx, es_groups = _grouped(es_idx, sid_codes, turn_arr)
     print(f"fold {fold}: train {len(tr_idx):,} rows / es {len(es_idx):,}", flush=True)
 
-    mono = [(-1 if c == "is_played_track" else 0) for c in all_cols]
+    mono = [(-1 if c in MONOTONE_DECREASING else 0) for c in all_cols]
     params = dict(LGB_PARAMS, monotone_constraints=mono)
 
     Xtr = np.ascontiguousarray(X[tr_idx])
@@ -375,7 +385,7 @@ def stage_full_model():
 
     all_idx, all_groups = _grouped(np.arange(len(sid_codes)), sid_codes, turn_arr)
     Xall = np.ascontiguousarray(X[all_idx])
-    mono = [(-1 if c == "is_played_track" else 0) for c in all_cols]
+    mono = [(-1 if c in MONOTONE_DECREASING else 0) for c in all_cols]
     params = dict(LGB_PARAMS, monotone_constraints=mono)
     dtrain = lgb.Dataset(Xall, label=y[all_idx], group=all_groups,
                          weight=row_w[all_idx], feature_name=all_cols,
