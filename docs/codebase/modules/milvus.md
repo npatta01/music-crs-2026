@@ -7,7 +7,9 @@ This module group implements an **alternative vector store path** for the Music-
 1. **Offline indexing** (`mcrs/milvus/indexing.py`): builds the 47k-track Milvus collection from HuggingFace datasets, infers the schema, constructs BM25 sparse fields and dense embedding fields, inserts rows in batches, and waits for indexes to become ready.
 2. **Online retrieval** (`mcrs/retrieval_modules/milvus.py`): implements the `MILVUS_MODEL` retrieval class, which accepts a config-driven mix of BM25-sparse and dense ANN searches, fuses results with a `WeightedRanker`, and returns ranked `track_id` lists for each query.
 
-In the pipeline, `MILVUS_MODEL` is instantiated by `mcrs/retrieval_modules/__init__.py:load_retrieval_module` when `retrieval_type == "milvus"`. It satisfies the same interface as `BM25_MODEL`, `BERT_MODEL`, and `LANCEDB_MODEL`.
+`MILVUS_MODEL` remains an alternative retrieval module/tooling path, but active
+competition inference no longer instantiates standalone retrieval modules from
+`CRS_BASELINE`; v10 state-ranker configs use LanceDB inside the full-pipeline QU.
 
 ---
 

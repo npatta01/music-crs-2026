@@ -126,6 +126,9 @@ class DictCatalog:
     def metadata_vector(self, track_id: str) -> list[float] | None:
         return self.vector(track_id, "metadata_qwen3_embedding_0_6b")
 
+    def feature_rows(self) -> dict[str, dict]:
+        return dict(self.tracks)
+
     # ----- Catalog-wide -----
 
     def release_date_filter_mask(self, hf) -> set[str]:

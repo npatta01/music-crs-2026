@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -21,6 +22,7 @@ from mcrs.qu_modules.compiled_state import (
 from mcrs.qu_modules.compiler_v0plus import CompileResult
 from mcrs.qu_modules.compiler_v0plus_qu import (
     V0PlusCompilerQU,
+    _add_elapsed,
     build_v0plus_compiler_qu,
     session_memory_to_conversation,
 )
@@ -42,6 +44,21 @@ _LGBM_REQUIRED_KEYS = {
     "embed_memo",
     "msg_store",
 }
+
+
+def _dedupe_preserving_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
+    return out
+
+
+def _surface_key(value: str) -> str:
+    return value.casefold().strip()
 
 
 @dataclass
@@ -73,10 +90,21 @@ class StateRankerQU(V0PlusCompilerQU):
         user_id: str | None = None,
         session_meta: dict[str, Any] | None = None,
     ) -> tuple[int, list[str], dict[str, Any]]:
+        timings: dict[str, float] = {}
+        total_start = time.perf_counter()
+        start = time.perf_counter()
         conv, played = session_memory_to_conversation(session_memory, self.catalog)
+        _add_elapsed(timings, "session_memory", start)
+        start = time.perf_counter()
         async with sem:
             state = await self.extractor.aextract(conv, played)
+        _add_elapsed(timings, "extractor", start)
         if state is None:
+            timings.setdefault("resolver", 0.0)
+            timings.setdefault("compile", 0.0)
+            timings.setdefault("rerank", 0.0)
+            timings.setdefault("trace", 0.0)
+            _add_elapsed(timings, "total", total_start)
             trace = {
                 "trace_schema_version": TRACE_SCHEMA_VERSION,
                 "idx": idx,
@@ -88,17 +116,25 @@ class StateRankerQU(V0PlusCompilerQU):
                     [], source_stage="", ranking_mode=self.ranking_mode
                 ),
                 "compiler": {"extractor_returned_none": True},
+                "timings": timings,
             }
             return idx, [], trace
 
+        start = time.perf_counter()
         rs = self.resolver.resolve(state, played_track_ids=played)
+        _add_elapsed(timings, "resolver", start)
 
         def _run_compile() -> CompileResult:
             return self.compiler._compile(rs, user_id=user_id)
 
+        start = time.perf_counter()
         compile_result = await asyncio.to_thread(_run_compile)
+        _add_elapsed(timings, "compile", start)
+        for key, value in compile_result.timings.items():
+            timings[f"compile.{key}"] = timings.get(f"compile.{key}", 0.0) + float(value)
         candidate_track_ids = candidate_fusion_track_ids(compile_result)
 
+        start = time.perf_counter()
         rejected_track_ids: list[str] = []
         rejected_artist_ids: list[str] = []
         for rej in rs.resolved_rejections.values():
@@ -109,18 +145,50 @@ class StateRankerQU(V0PlusCompilerQU):
                 aid = rs.track_feedback_artist_ids.get(tf.track_id)
                 if aid is not None:
                     rejected_artist_ids.append(aid)
+        anchor_track_ids = [
+            tf.track_id
+            for tf in state.track_feedback
+            if tf.role in ("accepted", "seed") and tf.overall_sentiment > 0
+        ] + list(state.referenced_track_ids)
+        anchor_track_values = [
+            me.value
+            for me in state.mentioned_entities
+            if me.sentiment > 0 and me.type == "track" and me.value
+        ]
+        anchor_artist_values = [
+            me.value
+            for me in state.mentioned_entities
+            if me.sentiment > 0 and me.type == "artist" and me.value
+        ]
+        resolved_track_ids_by_surface = {
+            _surface_key(t.source_text): t.entity_id
+            for t in rs.resolved_targets
+            if t.kind == "track"
+            and t.entity_id
+            and getattr(t, "resolution_role", "exact_target") == "exact_target"
+        }
+        resolved_artist_ids_by_surface = {
+            _surface_key(t.source_text): t.entity_id
+            for t in rs.resolved_targets
+            if t.kind == "artist"
+            and t.entity_id
+            and getattr(t, "resolution_role", "exact_target") == "exact_target"
+        }
+        anchor_track_ids.extend(
+            track_id
+            for value in anchor_track_values
+            if (track_id := resolved_track_ids_by_surface.get(_surface_key(value)))
+        )
+        anchor_artist_ids = [
+            artist_id
+            for value in anchor_artist_values
+            if (artist_id := resolved_artist_ids_by_surface.get(_surface_key(value)))
+        ]
         resolver_block = {
-            "anchor_track_ids": [
-                tf.track_id
-                for tf in state.track_feedback
-                if tf.role in ("accepted", "seed") and tf.overall_sentiment > 0
-            ]
-            + list(state.referenced_track_ids),
-            "anchor_artist_ids": [
-                me.value
-                for me in state.mentioned_entities
-                if me.sentiment > 0 and me.type == "artist" and me.value
-            ],
+            "anchor_track_ids": _dedupe_preserving_order(anchor_track_ids),
+            "anchor_track_values": _dedupe_preserving_order(anchor_track_values),
+            "anchor_artist_ids": _dedupe_preserving_order(anchor_artist_ids),
+            "anchor_artist_values": _dedupe_preserving_order(anchor_artist_values),
             "rejected_track_ids": rejected_track_ids,
             "rejected_artist_ids": rejected_artist_ids,
             "rejected_tags": [
@@ -133,6 +201,8 @@ class StateRankerQU(V0PlusCompilerQU):
             ],
             "played_track_ids": list(rs.played_track_ids),
         }
+        intent_mode = getattr(state.intent_mode, "value", str(state.intent_mode))
+        routing_tags = state.routing_tags.model_dump(mode="json")
 
         compiler_summary = {
             "n_candidates": min(len(candidate_track_ids), topk),
@@ -148,6 +218,7 @@ class StateRankerQU(V0PlusCompilerQU):
             final_stage=self.final_stage,
         )
         retrieval = retrieval_trace_from_compile_result(compile_result)
+        _add_elapsed(timings, "trace", start)
 
         stages = [
             ranking_stage(
@@ -160,8 +231,18 @@ class StateRankerQU(V0PlusCompilerQU):
         served_track_ids = list(candidate_track_ids)
 
         if self.ranking_mode == "lgbm":
+            had_reranker = self._reranker is not None
+            start = time.perf_counter()
             rr = self._get_reranker()
+            _add_elapsed(timings, "reranker_load", start)
+            if rr is not None and not had_reranker:
+                for key, value in getattr(rr, "load_timings", {}).items():
+                    if isinstance(value, (int, float)):
+                        timings[f"reranker_load.{key}"] = (
+                            timings.get(f"reranker_load.{key}", 0.0) + float(value)
+                        )
             if rr is not None:
+                start = time.perf_counter()
                 served_track_ids = await asyncio.to_thread(
                     rr.rerank,
                     {
@@ -169,9 +250,9 @@ class StateRankerQU(V0PlusCompilerQU):
                         "extracted_state": extracted_state,
                         "compiled_state": compiled_state,
                         "state": extracted_state,
-                        "intent_mode": getattr(state.intent_mode, "value", str(state.intent_mode)),
+                        "intent_mode": intent_mode,
                         "resolver": resolver_block,
-                        "routing_tags": extracted_state.get("routing_tags") or {},
+                        "routing_tags": routing_tags,
                         "retrieval": retrieval,
                         "branches": {
                             "pools": retrieval["branches"],
@@ -184,15 +265,22 @@ class StateRankerQU(V0PlusCompilerQU):
                     set(compile_result.hard_drop),
                     candidate_track_ids,
                 )
+                _add_elapsed(timings, "rerank", start)
+            else:
+                timings.setdefault("rerank", 0.0)
             stages.append(
                 ranking_stage(self.model_version, served_track_ids, method="lightgbm_lambdamart")
             )
+        else:
+            timings.setdefault("rerank", 0.0)
 
         final_ids = list(served_track_ids[:topk])
+        start = time.perf_counter()
         trace = {
             "trace_schema_version": TRACE_SCHEMA_VERSION,
             "idx": idx,
-            "intent_mode": getattr(state.intent_mode, "value", str(state.intent_mode)),
+            "intent_mode": intent_mode,
+            "routing_tags": routing_tags,
             "extracted_state": extracted_state,
             "compiled_state": compiled_state,
             "resolver": resolver_block,
@@ -220,6 +308,9 @@ class StateRankerQU(V0PlusCompilerQU):
                 "n_candidates": len(final_ids),
             },
         }
+        _add_elapsed(timings, "trace", start)
+        _add_elapsed(timings, "total", total_start)
+        trace["timings"] = timings
         return idx, final_ids, trace
 
 

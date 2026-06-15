@@ -36,6 +36,14 @@ def _modal_function_decorator_keywords(function_name: str) -> dict[str, ast.AST]
     raise AssertionError(f"Could not find @app.function decorator for {function_name}")
 
 
+def _modal_function_arguments(function_name: str) -> list[str]:
+    tree = ast.parse((PROJECT_ROOT / "modal" / "app.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == function_name:
+            return [argument.arg for argument in node.args.args]
+    raise AssertionError(f"Could not find function {function_name}")
+
+
 def _modal_class_decorator_keywords(class_name: str) -> dict[str, ast.AST]:
     tree = ast.parse((PROJECT_ROOT / "modal" / "app.py").read_text(encoding="utf-8"))
     for node in tree.body:
@@ -60,6 +68,14 @@ def _modal_class_method_arguments(class_name: str, method_name: str) -> list[str
     raise AssertionError(f"Could not find {class_name}.{method_name}")
 
 
+def _module_function(function_name: str) -> ast.FunctionDef:
+    tree = ast.parse((PROJECT_ROOT / "modal" / "app.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == function_name:
+            return node
+    raise AssertionError(f"Could not find function {function_name}")
+
+
 def _name(node: ast.AST) -> str:
     assert isinstance(node, ast.Name)
     return node.id
@@ -82,12 +98,18 @@ def test_lancedb_modal_cpu_resource_config_is_explicit():
 def test_lancedb_cpu_functions_request_configured_cpu_and_memory():
     devset_keywords = _modal_function_decorator_keywords("_inference_devset_cpu")
     blindset_keywords = _modal_function_decorator_keywords("_inference_blindset_cpu")
+    devset_grouped_keywords = _modal_function_decorator_keywords("_inference_devset_cpu_grouped")
+    blindset_grouped_keywords = _modal_function_decorator_keywords("_inference_blindset_cpu_grouped")
     query_keywords = _modal_function_decorator_keywords("query_lancedb")
 
     assert _name(devset_keywords["cpu"]) == "LANCEDB_INFERENCE_CPU"
     assert _name(devset_keywords["memory"]) == "LANCEDB_INFERENCE_MEMORY"
     assert _name(blindset_keywords["cpu"]) == "LANCEDB_INFERENCE_CPU"
     assert _name(blindset_keywords["memory"]) == "LANCEDB_INFERENCE_MEMORY"
+    assert _name(devset_grouped_keywords["cpu"]) == "LANCEDB_INFERENCE_CPU"
+    assert _name(devset_grouped_keywords["memory"]) == "LANCEDB_INFERENCE_MEMORY"
+    assert _name(blindset_grouped_keywords["cpu"]) == "LANCEDB_INFERENCE_CPU"
+    assert _name(blindset_grouped_keywords["memory"]) == "LANCEDB_INFERENCE_MEMORY"
 
     assert _name(query_keywords["cpu"]) == "LANCEDB_QUERY_CPU"
     assert _name(query_keywords["memory"]) == "LANCEDB_QUERY_MEMORY"
@@ -144,6 +166,24 @@ def test_modal_litellm_cache_dependency_is_installed():
     assert any(dependency.startswith("litellm[caching]") for dependency in dependencies)
 
 
+def test_modal_grouped_worker_assignments_are_contiguous_and_complete():
+    module = _load_modal_app_module()
+
+    assignments = [
+        module._shards_for_worker(worker_id, num_workers=3, num_shards=10)
+        for worker_id in range(3)
+    ]
+
+    assert assignments == [[0, 1, 2], [3, 4, 5], [6, 7, 8, 9]]
+    assert sorted(shard_id for group in assignments for shard_id in group) == list(range(10))
+
+
+def test_modal_devset_grouped_entrypoints_accept_fixed_session_subset():
+    assert "session_ids_json" in _modal_function_arguments("_inference_devset_grouped")
+    assert "session_ids_json" in _modal_function_arguments("_inference_devset_cpu_grouped")
+    assert "session_ids_json" in _modal_function_arguments("run_inference_sharded")
+
+
 def test_modal_litellm_defaults_use_openrouter_models():
     config = OmegaConf.load(PROJECT_ROOT / "modal" / "config.yaml")
 
@@ -178,6 +218,20 @@ def test_modal_has_v10_ranker_entrypoints():
 
     assert "def run_build_features_for_ranker(" in source
     assert "def run_train_lgbm_ranker(" in source
+
+
+def test_train_build_reloads_cache_volume_before_reading_sidecars():
+    function = _module_function("_train_build_cpu")
+    calls = []
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Call):
+            continue
+        if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+            calls.append((node.lineno, f"{node.func.value.id}.{node.func.attr}"))
+    ordered_call_names = [name for _, name in sorted(calls)]
+
+    assert "cache_vol.reload" in ordered_call_names
+    assert ordered_call_names.index("cache_vol.reload") < ordered_call_names.index("subprocess.run")
 
 
 def test_modal_retrieval_methods_accept_request_retrieval_config():

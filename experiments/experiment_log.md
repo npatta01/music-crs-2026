@@ -60,12 +60,12 @@ Current read:
 
 - `state_ranker_v10_rrf_devset`: NDCG@20 0.1492, Hit@20 0.3183, branch
   union@1000 0.8919.
-- `state_ranker_v10_lgbm_devset`: NDCG@20 0.4520, Hit@20 0.6105, MRR 0.4055.
+- `state_ranker_v10_lgbm_devset`: NDCG@20 0.4562, Hit@20 0.6138, MRR 0.4102.
 - `state_ranker_v10_lgbm_blindset_A`: CodaBench submission `797598`, nDCG@20
   0.4380, catalog diversity 0.0313, lexical diversity 0.7670, LLM judge 4.2000,
   composite 0.5389.
 - The learned-ranker stage improves over previous `v0plus_compiler_devset_rr2`
-  by +0.1070 NDCG@20, +0.0800 Hit@20, and +0.1147 MRR.
+  by +0.1112 NDCG@20, +0.0833 Hit@20, and +0.1194 MRR.
 
 Next step:
 

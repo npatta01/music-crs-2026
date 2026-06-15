@@ -111,6 +111,12 @@ def _build_qu(*, mode: str = "rrf"):
     return qu
 
 
+def _build_qu_with_state(state: ConversationStateV0Plus, *, mode: str = "rrf"):
+    qu = _build_qu(mode=mode)
+    qu.extractor = _FakeExtractor(state=state)
+    return qu
+
+
 def test_state_ranker_rrf_trace_has_canonical_final_recommendation():
     qu = _build_qu(mode="rrf")
 
@@ -156,6 +162,80 @@ def test_state_ranker_lgbm_serving_trace_keeps_intent_mode_for_reranker():
     qu.batch_compile_track_ids([[{"role": "user", "content": "play Morphine"}]], topk=2)
 
     assert qu._reranker.last_trace["intent_mode"] == "refinement"
+
+
+def test_state_ranker_lgbm_serving_trace_keeps_routing_tags_for_reranker():
+    qu = _build_qu_with_state(_state(retrieval_profile="exact_probe"), mode="lgbm")
+
+    qu.batch_compile_track_ids([[{"role": "user", "content": "play Morphine"}]], topk=2)
+
+    assert qu._reranker.last_trace["routing_tags"] == {
+        "exact_entity_probe": True,
+        "lyric_search": False,
+        "feature_articulation": False,
+        "image_or_visual_search": False,
+        "hidden_target_search": False,
+    }
+    assert qu._reranker.last_trace["compiled_state"]["routing_tags"]["exact_entity_probe"] is True
+
+
+def test_state_ranker_resolver_trace_uses_artist_ids_and_keeps_surface_values():
+    qu = _build_qu_with_state(
+        _state(mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=1)]),
+        mode="rrf",
+    )
+
+    qu.batch_compile_track_ids([[{"role": "user", "content": "play Morphine"}]], topk=2)
+
+    resolver = qu.last_traces[0]["resolver"]
+    assert resolver["anchor_artist_ids"] == ["a-morphine"]
+    assert resolver["anchor_artist_values"] == ["Morphine"]
+    assert qu.last_traces[0]["compiled_state"]["anchor_policy"]["anchor_artist_ids"] == ["a-morphine"]
+
+
+def test_state_ranker_resolver_trace_uses_resolved_exact_track_anchors():
+    qu = _build_qu_with_state(
+        _state(mentioned_entities=[MentionedEntity(type="track", value="Cure for Pain", sentiment=1)]),
+        mode="rrf",
+    )
+
+    qu.batch_compile_track_ids([[{"role": "user", "content": "play Cure for Pain"}]], topk=2)
+
+    resolver = qu.last_traces[0]["resolver"]
+    assert resolver["anchor_track_ids"] == ["t-morphine-1"]
+    assert resolver["anchor_track_values"] == ["Cure for Pain"]
+    assert qu.last_traces[0]["compiled_state"]["anchor_policy"]["anchor_track_ids"] == ["t-morphine-1"]
+
+
+def test_state_ranker_exposes_batch_and_trace_timings():
+    qu = _build_qu(mode="lgbm")
+
+    qu.batch_compile_track_ids([[{"role": "user", "content": "play Morphine"}]], topk=2)
+
+    assert set(qu.last_batch_timings) >= {
+        "total",
+        "session_memory",
+        "extractor",
+        "resolver",
+        "compile",
+        "compile.total",
+        "compile.bm25_search",
+        "compile.dense_search",
+        "reranker_load",
+        "rerank",
+        "trace",
+    }
+    assert all(value >= 0.0 for value in qu.last_batch_timings.values())
+    assert set(qu.last_traces[0]["timings"]) >= {
+        "session_memory",
+        "extractor",
+        "resolver",
+        "compile",
+        "reranker_load",
+        "rerank",
+        "trace",
+        "total",
+    }
 
 
 def test_state_ranker_requires_explicit_ranking_mode():

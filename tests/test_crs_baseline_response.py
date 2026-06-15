@@ -124,3 +124,20 @@ def test_response_generation_uses_final_recommendation_primary_track():
     assert out[0]["retrieval_items"] == out[0]["trace"]["final_recommendation"]["track_ids"][:1]
     assert "title: Rock" in out[0]["response"]
     assert "title: Olvidarte" not in out[0]["response"]
+
+
+def test_batch_chat_exposes_stage_timings():
+    crs = _make_crs(conditioning="state", item_format="plain")
+
+    out = crs.batch_chat(_batch())
+
+    assert out
+    assert set(crs.last_batch_timings) >= {
+        "prepare_inputs",
+        "retrieval",
+        "recommend_items",
+        "response_context",
+        "response_generation",
+        "assemble_results",
+    }
+    assert all(value >= 0.0 for value in crs.last_batch_timings.values())

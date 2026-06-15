@@ -89,6 +89,41 @@ def test_response_state_dict_restores_derived_properties():
     assert d["release_year_range"]["start"] == 1990 and d["release_year_range"]["end"] == 1999
 
 
+def test_response_state_dict_restores_compiler_policy_properties():
+    state = ConversationStateV0Plus(
+        turn_intent="play this exact 1995 track",
+        retrieval_profile="exact_probe",
+        target_artist_mode="new_artist",
+        temporal_constraint=TemporalConstraint(
+            kind=TemporalConstraintKind.release_date,
+            strength=ConstraintStrength.hard,
+            start_year=1995,
+            end_year=1995,
+            apply_as_filter=True,
+        ),
+    )
+
+    d = response_state_dict(state)
+
+    assert d["intent_mode"] == "refinement"
+    assert d["process_constraints"] == {"exploration_policy": "diversify_artists"}
+    assert d["routing_tags"] == {
+        "exact_entity_probe": True,
+        "lyric_search": False,
+        "feature_articulation": False,
+        "image_or_visual_search": False,
+        "hidden_target_search": False,
+    }
+    assert d["hard_filters"] == [
+        {
+            "field": "release_date",
+            "op": "between",
+            "start": "1995-01-01",
+            "end": "1995-12-31",
+        }
+    ]
+
+
 def test_response_state_dict_release_year_range_none_when_absent():
     d = response_state_dict(ConversationStateV0Plus(turn_intent="anything"))
     assert d["release_year_range"] is None
