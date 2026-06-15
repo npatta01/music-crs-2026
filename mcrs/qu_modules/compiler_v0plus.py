@@ -2698,6 +2698,50 @@ class V0PlusCompiler:
         n = len(track_ids)
         return [(t, float(n - i)) for i, t in enumerate(track_ids)]
 
+    @classmethod
+    def _is_genre_noise_tag(cls, key: str) -> bool:
+        return bool(_GENRE_NOISE_TAG_RE.match(key)) or "stars" in key or "of 10" in key
+
+    def _genre_scene_anchor(
+        self, rs: ResolvedConversationState
+    ) -> tuple[set[str], set[str]]:
+        """(anchor_artist_ids, genre_tag_keys) for the genre/scene branch.
+
+        Anchors = resolved style_reference artists (the satisfied/pivoted-away
+        artists). Genre tags = catalog_tag_keys collected across each anchor's
+        top-`genre_scene_anchor_topk` popular tracks, ranked by frequency, top
+        `genre_scene_max_tags` kept, with pure year/decade + rating tags dropped.
+        Empty unless the turn's intent is in `genre_scene_intents`.
+        """
+        state = rs.state
+        if state.intent_mode.value not in self.cfg.genre_scene_intents:
+            return set(), set()
+        anchor_ids = {
+            t.entity_id
+            for t in rs.resolved_targets
+            if t.kind == "artist"
+            and getattr(t, "resolution_role", "exact_target") == "style_reference"
+            and t.entity_id is not None
+        }
+        if not anchor_ids:
+            return set(), set()
+        pop_rank = self._popularity_rank()
+        sentinel = len(pop_rank)
+        tag_freq: Counter = Counter()
+        for aid in anchor_ids:
+            ranked = sorted(
+                self.catalog.tracks_by_artist_id(aid),
+                key=lambda t: pop_rank.get(t, sentinel),
+            )[: self.cfg.genre_scene_anchor_topk]
+            for tid in ranked:
+                for raw in self.catalog.tag_list(tid):
+                    key = self._catalog_tag_key(raw)
+                    if not key or self._is_genre_noise_tag(key):
+                        continue
+                    tag_freq[key] += 1
+        genre_tags = {k for k, _ in tag_freq.most_common(self.cfg.genre_scene_max_tags)}
+        return anchor_ids, genre_tags
+
     def _similar_artist_anchor_track_ids(self, rs) -> list[str]:
         """Representative tracks of each RESOLVED reference artist, used as
         ADDITIONAL vector-centroid anchors (issue #74 Fix 1).

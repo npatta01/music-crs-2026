@@ -2973,3 +2973,60 @@ def test_strip_negated_spans():
     assert "upbeat" in f("something upbeat but not experimental")
     assert f("no slow ballads please") == ""or f("no slow ballads please").strip() != "slow ballads please"
     assert f("rock music") == "rock music"
+
+
+# ---------------------------------------------------------------------------
+# _genre_scene_anchor
+# ---------------------------------------------------------------------------
+
+def _gs_catalog() -> DictCatalog:
+    """Anchor artist (a-anchor) + a same-genre neighbor (a-neighbor) + an
+    off-genre artist (a-jazz), for genre/scene recall tests."""
+    return DictCatalog(
+        tracks={
+            "t-anchor-1": {"artist_id": "a-anchor", "artist_name": "Anchor",
+                           "track_name": "A1", "tag_list": ["grunge", "90s rock", "1992"],
+                           "popularity": 90.0, "release_date": "1992-01-01"},
+            "t-anchor-2": {"artist_id": "a-anchor", "artist_name": "Anchor",
+                           "track_name": "A2", "tag_list": ["grunge", "alternative"],
+                           "popularity": 80.0, "release_date": "1993-01-01"},
+            "t-neighbor-1": {"artist_id": "a-neighbor", "artist_name": "Neighbor",
+                             "track_name": "N1", "tag_list": ["grunge", "loud"],
+                             "popularity": 70.0, "release_date": "1994-01-01"},
+            "t-neighbor-2": {"artist_id": "a-neighbor", "artist_name": "Neighbor",
+                             "track_name": "N2", "tag_list": ["alternative", "indie"],
+                             "popularity": 60.0, "release_date": "2010-01-01"},
+            "t-jazz-1": {"artist_id": "a-jazz", "artist_name": "Jazzer",
+                         "track_name": "J1", "tag_list": ["jazz", "smooth"],
+                         "popularity": 100.0, "release_date": "2000-01-01"},
+        }
+    )
+
+
+def _gs_rs(catalog, intent_mode="pivot"):
+    return ResolvedConversationState(
+        state=_state(turn_intent="other bands, not Anchor", intent_mode=intent_mode),
+        resolved_targets=(
+            ResolvedTarget(kind="artist", source_text="Anchor", entity_id="a-anchor",
+                           confidence=100.0, resolution_role="style_reference"),
+        ),
+    )
+
+
+def test_genre_scene_anchor_extracts_genre_tags_on_pivot():
+    catalog = _gs_catalog()
+    cfg = CompilerConfig(enable_genre_scene_neighbors=True, genre_scene_max_tags=8)
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)
+    anchor_ids, genre_tags = compiler._genre_scene_anchor(_gs_rs(catalog))
+    assert anchor_ids == {"a-anchor"}
+    assert "grunge" in genre_tags
+    assert "1992" not in genre_tags and "90s" not in genre_tags
+    assert "90s rock" in genre_tags
+
+
+def test_genre_scene_anchor_empty_when_intent_not_gated():
+    catalog = _gs_catalog()
+    cfg = CompilerConfig(enable_genre_scene_neighbors=True)  # genre_scene_intents=("pivot",)
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)
+    anchor_ids, genre_tags = compiler._genre_scene_anchor(_gs_rs(catalog, intent_mode="refinement"))
+    assert anchor_ids == set() and genre_tags == set()
