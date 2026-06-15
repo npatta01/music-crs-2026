@@ -15,6 +15,11 @@ def test_current_config_surface_has_no_deleted_devset_references():
     assert configs == [
         "state_ranker_v10_lgbm_blindset_A.yaml",
         "state_ranker_v10_lgbm_devset.yaml",
+        # Visual-route experiment config (issue #127, Lever B). Adds a
+        # visual-gated SigLIP-2 text->cover-art dense branch on top of the
+        # canonical lgbm devset baseline; lives here so run_experiment can
+        # resolve it by tid.
+        "state_ranker_v10_lgbm_devset_visual.yaml",
         "state_ranker_v10_rrf_devset.yaml",
     ]
 
@@ -54,6 +59,9 @@ def test_state_ranker_v10_configs_are_active_and_do_not_use_v0plus_qu_type():
         "state_ranker_v10_rrf_devset.yaml",
         "state_ranker_v10_lgbm_devset.yaml",
         "state_ranker_v10_lgbm_blindset_A.yaml",
+        # Visual-route experiment config (issue #127, Lever B) — a valid active
+        # lgbm config; the loop below enforces the same invariants on it.
+        "state_ranker_v10_lgbm_devset_visual.yaml",
     }
     config_dir = PROJECT_ROOT / "configs"
     existing = {path.name for path in config_dir.glob("state_ranker_v10_*.yaml")}

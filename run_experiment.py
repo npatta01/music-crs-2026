@@ -55,7 +55,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--session_ids_file",
         default=None,
-        help="Optional devset subset file with {session_ids:[...]} for local runs.",
+        help="Optional devset subset file with {session_ids:[...]}. Works on the "
+             "local backend and the Modal single-run backend (--num_shards 1).",
     )
     parser.add_argument(
         "--exp_dir",
@@ -244,10 +245,6 @@ def validate_args(args: argparse.Namespace, split: str) -> None:
         raise ValueError("--session_ids_file is only supported for devset runs.")
     if args.num_sessions and args.session_ids_file:
         raise ValueError("Use either --num_sessions or --session_ids_file, not both.")
-    if args.backend == "modal" and args.session_ids_file:
-        raise ValueError(
-            "--session_ids_file is only supported for the local backend."
-        )
     if args.backend == "modal" and split != "devset" and args.clear_cache:
         raise ValueError(
             "--clear_cache is not supported for Modal blindset runs."
@@ -342,6 +339,16 @@ def run_modal_sharded(args: argparse.Namespace, split: str, exp_dir: Path) -> No
         "--batch-size",
         str(args.batch_size),
     ]
+    # A curated session subset is filtered first, then split across shards by
+    # the workers (run_inference_devset.py). This keeps per-shard wall time
+    # short for sparse capability slices (e.g. visual turns) instead of one
+    # long single-container run.
+    session_ids_file = args.session_ids_file
+    if session_ids_file:
+        session_ids_json = json.dumps(
+            json.loads(Path(session_ids_file).read_text(encoding="utf-8"))["session_ids"]
+        )
+        sharded_cmd.extend(["--session-ids-json", session_ids_json])
     if args.clear_cache:
         sharded_cmd.append("--clear-cache")
     run_command(sharded_cmd, cwd=PROJECT_ROOT)
@@ -385,15 +392,20 @@ def run_modal_sharded(args: argparse.Namespace, split: str, exp_dir: Path) -> No
 
     if split == "devset":
         ensure_ground_truth(exp_dir)
-        run_evaluation(args.tid, exp_dir, split)
+        run_evaluation(args.tid, exp_dir, split, session_ids_file=session_ids_file)
 
 
 def run_modal(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
     if split == "devset":
-        session_ids_file = None
-        session_ids_json = None
+        # Accept either a user-provided curated subset (--session_ids_file) or a
+        # random smoke subset (--num_sessions); both reach the remote run as
+        # --session-ids-json and are forwarded to evaluation. num_shards is
+        # guaranteed 1 here (validate_args rejects session subsets with shards>1).
+        session_ids_file = args.session_ids_file
         if args.num_sessions > 0:
             session_ids_file = materialize_num_sessions_file(args.tid, exp_dir, args.num_sessions)
+        session_ids_json = None
+        if session_ids_file:
             session_ids_json = json.dumps(
                 json.loads(Path(session_ids_file).read_text(encoding="utf-8"))["session_ids"]
             )

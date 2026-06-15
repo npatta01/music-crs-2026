@@ -955,6 +955,37 @@ def test_routing_boost_survives_yaml_allowlist():
     assert qu.compiler.cfg.routing_boost == {"lyric_search": 4.0}
 
 
+def test_dense_branch_gated_on_survives_config():
+    """A `gated_on` on a dense branch entry must reach the DenseBranch, not be
+    silently dropped by the config parser — otherwise a visual-gated branch
+    would fire on every turn instead of only on image_or_visual_search turns."""
+    catalog = _catalog()
+    qu = build_v0plus_compiler_qu(
+        qu_kwargs={
+            "compiler": {
+                "dense_branches": [
+                    {
+                        "vector_field": "metadata_qwen3_embedding_0_6b",
+                        "encoder_id": "default",
+                        "query_id": "metadata",
+                        "gated_on": "image_or_visual_search",
+                    }
+                ]
+            }
+        },
+        _overrides={
+            "catalog": catalog,
+            "matcher": RapidfuzzCatalogMatcher(catalog),
+            "encoder": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5]),
+            "retriever": FakeRetriever(),
+            "extractor": _FakeExtractor(state=_state()),
+        },
+    )
+    branches = qu.compiler.cfg.dense_branches
+    assert len(branches) == 1
+    assert branches[0].gated_on == "image_or_visual_search"
+
+
 def test_v1_attribute_routing_flags_survive_yaml_allowlist():
     catalog = _catalog()
     qu = build_v0plus_compiler_qu(

@@ -273,6 +273,106 @@ def test_modal_num_sessions_sends_same_subset_to_remote_and_eval(tmp_path, monke
     assert commands[-1][0][-2:] == ["--session_ids_file", str(subset_file)]
 
 
+def test_modal_session_ids_file_sends_subset_to_remote_and_eval(tmp_path, monkeypatch):
+    """A curated --session_ids_file on the Modal (single-run) backend must reach
+    the remote entrypoint as --session-ids-json AND be forwarded to evaluation —
+    so a sparse capability slice (e.g. visual turns) can be A/B'd on Modal
+    without a full devset run (#127)."""
+    module = _load_module("run_experiment_module_modal_session_file", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+    session_ids_file = project_root / "visual_sessions.json"
+    session_ids_file.write_text('{"session_ids":["s1","s2"]}', encoding="utf-8")
+
+    commands: list[tuple[list[str], Path]] = []
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append(([str(part) for part in cmd], Path(cwd))),
+    )
+
+    exit_code = module.main(
+        [
+            "--backend",
+            "modal",
+            "--tid",
+            "foo_devset",
+            "--session_ids_file",
+            str(session_ids_file),
+            "--exp_dir",
+            str(project_root / "artifacts"),
+        ]
+    )
+
+    assert exit_code == 0
+    assert commands[0][0] == [
+        "/usr/bin/python3",
+        "-m",
+        "modal",
+        "run",
+        "modal/app.py::run_inference",
+        "--tid",
+        "foo_devset",
+        "--batch-size",
+        "16",
+        "--session-ids-json",
+        '["s1", "s2"]',
+    ]
+    assert commands[-1][0][-2:] == ["--session_ids_file", str(session_ids_file)]
+
+
+def test_modal_sharded_with_session_ids_file_forwards_json_and_scopes_eval(tmp_path, monkeypatch):
+    """A curated --session_ids_file with --num_shards > 1 must reach the sharded
+    entrypoint as --session-ids-json (the workers filter to the subset, then
+    split it across shards) AND scope the final evaluation to that subset. This
+    is how a sparse capability slice (e.g. visual turns) runs FAST on Modal —
+    short per-shard wall time — instead of one long single-container run."""
+    module = _load_module(
+        "run_experiment_module_modal_sharded_session_file", "run_experiment.py"
+    )
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+    session_ids_file = project_root / "visual_sessions.json"
+    session_ids_file.write_text('{"session_ids":["s1","s2"]}', encoding="utf-8")
+
+    commands: list[tuple[list[str], Path]] = []
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(module, "make_run_id", lambda: _FIXED_RUN_ID)
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append(([str(part) for part in cmd], Path(cwd))),
+    )
+
+    exit_code = module.main(
+        [
+            "--backend",
+            "modal",
+            "--tid",
+            "foo_devset",
+            "--num_shards",
+            "5",
+            "--session_ids_file",
+            str(session_ids_file),
+            "--exp_dir",
+            str(project_root / "artifacts"),
+        ]
+    )
+
+    assert exit_code == 0
+    # Sharded entrypoint command carries the curated session list.
+    sharded_cmd = commands[0][0]
+    assert "modal/app.py::run_inference_sharded" in sharded_cmd
+    assert "--session-ids-json" in sharded_cmd
+    assert sharded_cmd[sharded_cmd.index("--session-ids-json") + 1] == '["s1", "s2"]'
+    # Final evaluation is scoped to the same subset.
+    assert commands[-1][0][:2] == ["/usr/bin/python3", "evaluator/evaluate_devset.py"]
+    assert commands[-1][0][-2:] == ["--session_ids_file", str(session_ids_file)]
+
+
 def test_num_sessions_and_session_ids_file_are_mutually_exclusive(tmp_path):
     module = _load_module("run_experiment_module_subset_validation", "run_experiment.py")
     project_root = tmp_path / "repo"

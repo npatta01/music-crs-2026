@@ -170,6 +170,10 @@ class DenseBranch:
     distance_type: str = "cosine"
     encoder_id: str = "default"
     query_id: str = "intent"
+    # When set, names a `RoutingTags` boolean field; the branch fires ONLY on
+    # turns where that flag is True (e.g. "image_or_visual_search"). None (the
+    # default) means always-on — the branch fires on every turn as before.
+    gated_on: str | None = None
 
 
 @dataclass
@@ -532,6 +536,18 @@ class V0PlusCompiler:
                         f"Available templates: {sorted(builders)}"
                     )
                 query_strings[qid] = builders[qid](rs)
+            # Validate gated_on references a real RoutingTags field. A typo would
+            # otherwise silently disable the branch on every turn (getattr
+            # default False) — fail loudly at compile time instead, matching how
+            # unknown encoder_id / query_id raise.
+            routing_fields = set(type(rs.state.routing_tags).model_fields)
+            for b in self.cfg.dense_branches:
+                if b.gated_on is not None and b.gated_on not in routing_fields:
+                    raise KeyError(
+                        f"DenseBranch(vector_field={b.vector_field!r}) "
+                        f"gated_on={b.gated_on!r} is not a RoutingTags field. "
+                        f"Available: {sorted(routing_fields)}"
+                    )
         add_elapsed("build_queries", start)
 
         # 3. Retrieval — 1 BM25 call + 1 search_embedding per enabled dense branch
@@ -572,6 +588,22 @@ class V0PlusCompiler:
                     if q_text is not None:
                         query_trace["query_text"] = q_text
                     branch_queries[branch_name] = query_trace
+                if branch.gated_on is not None and not getattr(
+                    rs.state.routing_tags, branch.gated_on, False
+                ):
+                    # Branch is gated on a routing flag that is off this turn.
+                    # Skip BEFORE encoding: no wasted encode RPC and no
+                    # candidates injected into the pool on non-matching turns.
+                    # Append empty hits to keep dense_branch_results aligned
+                    # with self.cfg.dense_branches for the RRF fusion zip().
+                    dense_branch_results.append([])
+                    if trace_enabled:
+                        branch_status[branch_name] = {
+                            "configured": True,
+                            "fired": False,
+                            "skip_reason": "gated_off",
+                        }
+                    continue
                 if branch.vector_field not in supported_vector_fields:
                     dense_branch_results.append([])
                     if trace_enabled:

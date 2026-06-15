@@ -1270,6 +1270,106 @@ def test_lyric_query_skipped_branch_does_not_emit_encode_call():
 
 
 # ---------------------------------------------------------------------
+# Visual-gated dense branches (gated_on)
+# ---------------------------------------------------------------------
+
+
+def _visual_fact():
+    """A current-target visual attribute fact — the only thing that makes the
+    computed `routing_tags.image_or_visual_search` flag True (mirrors how the
+    extractor flags a cover-art / visual request in production)."""
+    from mcrs.conversation_state.schema import (
+        StateFact, FactType, AttributeFacet, FactRole, AnchorUse,
+    )
+    return StateFact(
+        type=FactType.attribute,
+        facet=AttributeFacet.visual,
+        value="striking cover art",
+        role=FactRole.current_target,
+        anchor_use=AnchorUse.query_facet,
+        source_turn=1,
+        mentioned_current_turn=True,
+    )
+
+
+def test_gated_branch_skipped_when_routing_flag_off():
+    """A dense branch with `gated_on` set must NOT fire when the named routing
+    flag is False — no encode call, no embedding search. The turn still has a
+    real visual query available (built from turn_intent), so the ONLY reason
+    the branch is skipped is the gate: non-visual turns stay byte-for-byte
+    identical, and we pay no SigLIP-2 encode RPC on them."""
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    encoder = FakeEmbeddingClient()
+    state = _state()  # no visual fact => image_or_visual_search is False
+    cfg = CompilerConfig(
+        dense_branches=[
+            _branch(vector_field="image_siglip2", query_id="visual",
+                    encoder_id="default", gated_on="image_or_visual_search"),
+        ],
+    )
+    rs = _resolve(state, catalog)
+    assert rs.state.routing_tags.image_or_visual_search is False
+    V0PlusCompiler(catalog, retriever, encoder, cfg).compile(rs)
+    assert encoder.calls == []
+    assert retriever.embedding_calls == []
+
+
+def test_gated_branch_fires_when_routing_flag_on():
+    """The same gated branch fires normally on a visual turn (a current-target
+    visual fact is present): the visual query is encoded and the SigLIP-2 image
+    embedding search runs."""
+    catalog = _catalog()
+    retriever = FakeRetriever(embedding_hits=[("t-morphine-1", 0.9)])
+    encoder = FakeEmbeddingClient()
+    state = _state(facts=[_visual_fact()])
+    cfg = CompilerConfig(
+        dense_branches=[
+            _branch(vector_field="image_siglip2", query_id="visual",
+                    encoder_id="default", gated_on="image_or_visual_search"),
+        ],
+    )
+    rs = _resolve(state, catalog)
+    assert rs.state.routing_tags.image_or_visual_search is True
+    V0PlusCompiler(catalog, retriever, encoder, cfg).compile(rs)
+    assert len(encoder.calls) == 1
+    assert encoder.calls[0][0].startswith("album cover, ")
+    assert len(retriever.embedding_calls) == 1
+    assert retriever.embedding_calls[0]["vector_field"] == "image_siglip2"
+
+
+def test_ungated_branch_fires_regardless_of_routing_flag():
+    """Branches with no `gated_on` (the default) are unaffected by routing
+    flags — they fire even on a non-visual turn. Guards back-compat for every
+    existing branch."""
+    catalog = _catalog()
+    retriever = FakeRetriever(embedding_hits=[("t-morphine-1", 0.9)])
+    encoder = FakeEmbeddingClient()
+    state = _state()  # image_or_visual_search is False
+    cfg = CompilerConfig(
+        dense_branches=[_branch(query_id="metadata")],  # no gated_on
+    )
+    V0PlusCompiler(catalog, retriever, encoder, cfg).compile(_resolve(state, catalog))
+    assert len(encoder.calls) == 1
+
+
+def test_unknown_gated_on_field_raises():
+    """A `gated_on` that doesn't name a real RoutingTags field must fail fast,
+    not silently disable the branch on every turn (matches how unknown
+    encoder_id / query_id raise)."""
+    import pytest
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state()
+    cfg = CompilerConfig(
+        dense_branches=[_branch(query_id="metadata", gated_on="not_a_routing_tag")],
+    )
+    compiler = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg)
+    with pytest.raises(KeyError, match="not_a_routing_tag"):
+        compiler.compile(_resolve(state, catalog))
+
+
+# ---------------------------------------------------------------------
 # Resolver: ground positive mentioned_entities into resolved_targets
 # ---------------------------------------------------------------------
 

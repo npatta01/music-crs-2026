@@ -11,6 +11,7 @@ misleading agents about the current system. Use Git history for older waves.
 | `configs/state_ranker_v10_rrf_devset.yaml` | Devset candidate-fusion baseline | Explicit `ranking.mode: rrf`; useful for retrieval and candidate-pool recall. |
 | `configs/state_ranker_v10_lgbm_devset.yaml` | Current devset score anchor | Fresh v10 LambdaMART run: NDCG@20 0.4562, Hit@20 0.6138. |
 | `configs/state_ranker_v10_lgbm_blindset_A.yaml` | Blind A submission path | CodaBench submission `797598`: nDCG@20 0.4380, composite 0.5389. |
+| `configs/state_ranker_v10_lgbm_devset_visual.yaml` | Issue #127 experiment (Lever B) | Adds a visual-gated SigLIP-2 text->cover-art dense branch. Lifts visual union but NOT top-20; **necessary-not-sufficient, not a current reference.** See `visual_route_lever_b.md`. |
 
 ## Current Reports
 
@@ -18,6 +19,7 @@ misleading agents about the current system. Use Git history for older waves.
 |---|---|
 | [state_ranker_v10_lgbm_devset.md](state_ranker_v10_lgbm_devset.md) | Current devset score anchor and stage-by-stage recall handoff. |
 | [state_ranker_v10_rrf_devset.md](state_ranker_v10_rrf_devset.md) | Explicit candidate-fusion baseline used to build fresh v10 reranker features. |
+| [visual_route_lever_b.md](visual_route_lever_b.md) | Issue #127 visual-route finding: SigLIP-2 cover-art branch lifts visual union (+4.4pt@1000) but not top-20; pool-position diagnosis points to pool-depth/reranker, not branch wiring. |
 | [analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/index.html](analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/index.html) | Durable baseline recall-gap snapshot for the all-retrievers devset run. Treat as an experiment analysis and replay contract; rerun after extractor, retriever, ranker, catalog, or split changes. |
 | [experiment_log.md](experiment_log.md) | Short current-state note only. Historical wave logs were pruned. |
 | [analysis/README.md](analysis/README.md) | Notes that runtime prompt/schema modules have moved out of `experiments/analysis/`. |
