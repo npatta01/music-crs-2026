@@ -1,4 +1,3 @@
-from .bm25 import BM25_MODEL
 from .bert import BERT_MODEL, DENSE_TRANSFORMER_MODEL
 
 def load_retrieval_module(
@@ -11,9 +10,7 @@ def load_retrieval_module(
         retrieval_config: dict | None = None,
     ):
     retrieval_config = retrieval_config or {}
-    if retrieval_type == "bm25":
-        return BM25_MODEL(dataset_name, track_split_types, corpus_types, cache_dir, formatter=formatter)
-    elif retrieval_type == "bert":
+    if retrieval_type == "bert":
         return BERT_MODEL(
             dataset_name=dataset_name,
             split_types=track_split_types,

@@ -313,6 +313,9 @@ class HFTalkPlayCatalog:
         # Convenience wrapper; back-compat with single-branch v0+ design.
         return self.vector(track_id, "metadata_qwen3_embedding_0_6b")
 
+    def feature_rows(self) -> dict[str, dict[str, Any]]:
+        return dict(self.metadata)
+
     # Assumes meta["release_date"] is a zero-padded "YYYY-MM-DD" string.
     # Year-only or year-month catalog values would be silently dropped (date.fromisoformat raises).
     def release_date_filter_mask(self, hf) -> set[str]:

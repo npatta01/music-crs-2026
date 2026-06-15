@@ -198,11 +198,7 @@ def _tid_uses_cpu(tid: str) -> bool:
     return str(config.get("device", "")).lower() == "cpu"
 
 
-def _run_inference_command(cmd: list[str], *, lancedb_uri: str | None = None) -> None:
-    import os
-    import subprocess
-
-    env = os.environ.copy()
+def _populate_inference_env(env: dict[str, str], *, lancedb_uri: str | None = None) -> None:
     if lancedb_uri:
         env["MCRS_LANCEDB_URI"] = lancedb_uri
     # Tell run_inference_devset.py where to find the shared LiteLLM file cache so
@@ -220,20 +216,124 @@ def _run_inference_command(cmd: list[str], *, lancedb_uri: str | None = None) ->
     # (e.g. tag_embedding_index). Defaults to ./cache for local runs.
     env.setdefault("MCRS_CACHE_DIR", CACHE_DIR)
 
+
+def _apply_inference_env(*, lancedb_uri: str | None = None) -> None:
+    import os
+
+    _populate_inference_env(os.environ, lancedb_uri=lancedb_uri)
+
+
+def _run_inference_command(cmd: list[str], *, lancedb_uri: str | None = None) -> None:
+    import os
+    import subprocess
+
+    env = os.environ.copy()
+    _populate_inference_env(env, lancedb_uri=lancedb_uri)
+
     result = subprocess.run(cmd, cwd="/app", env=env)
     if result.returncode != 0:
         raise RuntimeError(f"Inference failed (exit {result.returncode})")
 
 
-def _session_ids_file_arg(session_ids_json: str | None) -> list[str]:
-    if not session_ids_json:
-        return []
-    import json
-
+def _session_ids_file_path(session_ids_json: str) -> str:
     path = Path("/tmp/session_ids.json")
     session_ids = json.loads(session_ids_json)
     path.write_text(json.dumps({"session_ids": session_ids}), encoding="utf-8")
-    return ["--session_ids_file", str(path)]
+    return str(path)
+
+
+def _session_ids_file_arg(session_ids_json: str | None) -> list[str]:
+    if not session_ids_json:
+        return []
+    return ["--session_ids_file", _session_ids_file_path(session_ids_json)]
+
+
+def _shards_for_worker(worker_id: int, num_workers: int, num_shards: int) -> list[int]:
+    if num_workers < 1:
+        raise ValueError("num_workers must be >= 1")
+    if num_shards < 1:
+        raise ValueError("num_shards must be >= 1")
+    if not (0 <= worker_id < num_workers):
+        raise ValueError(f"worker_id={worker_id} out of range for num_workers={num_workers}")
+    start = (worker_id * num_shards) // num_workers
+    end = ((worker_id + 1) * num_shards) // num_workers
+    return list(range(start, end))
+
+
+def _run_devset_grouped_in_process(
+    *,
+    tid: str,
+    batch_size: int,
+    clear_cache: bool,
+    num_shards: int,
+    shard_ids_json: str,
+    run_id: str,
+    session_ids_json: str | None = None,
+    lancedb_uri: str | None = None,
+) -> list[int]:
+    import os
+    from types import SimpleNamespace
+
+    import run_inference_devset
+
+    if not run_id:
+        raise ValueError("Grouped inference requires a non-empty run_id.")
+    os.chdir("/app")
+    _apply_inference_env(lancedb_uri=lancedb_uri)
+    shard_ids = [int(shard_id) for shard_id in json.loads(shard_ids_json)]
+    output_suffixes = {
+        shard_id: f".run_{run_id}.shard_{shard_id}"
+        for shard_id in shard_ids
+    }
+    args = SimpleNamespace(
+        tid=tid,
+        batch_size=batch_size,
+        session_ids_file=_session_ids_file_path(session_ids_json) if session_ids_json else None,
+        num_sessions=0,
+        exp_dir=EXP_DIR,
+        clear_cache=clear_cache,
+        num_shards=num_shards,
+        output_suffix="",
+    )
+    run_inference_devset.run_grouped(args, shard_ids=shard_ids, output_suffixes=output_suffixes)
+    return shard_ids
+
+
+def _run_blindset_grouped_in_process(
+    *,
+    tid: str,
+    batch_size: int,
+    eval_dataset: str,
+    num_shards: int,
+    shard_ids_json: str,
+    run_id: str,
+    lancedb_uri: str | None = None,
+) -> list[int]:
+    import os
+    from types import SimpleNamespace
+
+    import run_inference_blindset
+
+    if not run_id:
+        raise ValueError("Grouped inference requires a non-empty run_id.")
+    os.chdir("/app")
+    _apply_inference_env(lancedb_uri=lancedb_uri)
+    shard_ids = [int(shard_id) for shard_id in json.loads(shard_ids_json)]
+    output_suffixes = {
+        shard_id: f".run_{run_id}.shard_{shard_id}"
+        for shard_id in shard_ids
+    }
+    args = SimpleNamespace(
+        tid=tid,
+        eval_dataset=eval_dataset,
+        batch_size=batch_size,
+        exp_dir=EXP_DIR,
+        clear_cache=False,
+        num_shards=num_shards,
+        output_suffix="",
+    )
+    run_inference_blindset.run_grouped(args, shard_ids=shard_ids, output_suffixes=output_suffixes)
+    return shard_ids
 
 
 @app.function(
@@ -332,6 +432,66 @@ def _inference_devset_cpu(
     secrets=[ENV_SECRET],
     timeout=7200,
 )
+def _inference_devset_grouped(
+    tid: str,
+    batch_size: int,
+    clear_cache: bool,
+    num_shards: int,
+    shard_ids_json: str,
+    run_id: str,
+    session_ids_json: str | None = None,
+):
+    shard_ids = _run_devset_grouped_in_process(
+        tid=tid,
+        batch_size=batch_size,
+        clear_cache=clear_cache,
+        num_shards=num_shards,
+        shard_ids_json=shard_ids_json,
+        run_id=run_id,
+        session_ids_json=session_ids_json,
+    )
+    results_vol.commit()
+    print(f"Grouped results saved for devset shards {shard_ids}.")
+
+
+@app.function(
+    image=rerank_image,
+    volumes=_VOLUME_MOUNTS,
+    secrets=[ENV_SECRET],
+    cpu=LANCEDB_INFERENCE_CPU,
+    memory=LANCEDB_INFERENCE_MEMORY,
+    timeout=7200,
+)
+def _inference_devset_cpu_grouped(
+    tid: str,
+    batch_size: int,
+    clear_cache: bool,
+    num_shards: int,
+    shard_ids_json: str,
+    run_id: str,
+    session_ids_json: str | None = None,
+):
+    shard_ids = _run_devset_grouped_in_process(
+        tid=tid,
+        batch_size=batch_size,
+        clear_cache=clear_cache,
+        num_shards=num_shards,
+        shard_ids_json=shard_ids_json,
+        run_id=run_id,
+        session_ids_json=session_ids_json,
+        lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI,
+    )
+    results_vol.commit()
+    print(f"CPU grouped results saved for devset shards {shard_ids}.")
+
+
+@app.function(
+    image=image,
+    gpu=INFERENCE_GPU,
+    volumes=_VOLUME_MOUNTS,
+    secrets=[ENV_SECRET],
+    timeout=7200,
+)
 def _inference_blindset(
     tid: str,
     batch_size: int,
@@ -390,6 +550,62 @@ def _inference_blindset_cpu(
     _run_inference_command(cmd, lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI)
     results_vol.commit()
     print(f"CPU results saved to volume: inference/{eval_dataset}/{tid}{output_suffix}.json")
+
+
+@app.function(
+    image=image,
+    gpu=INFERENCE_GPU,
+    volumes=_VOLUME_MOUNTS,
+    secrets=[ENV_SECRET],
+    timeout=7200,
+)
+def _inference_blindset_grouped(
+    tid: str,
+    batch_size: int,
+    eval_dataset: str,
+    num_shards: int,
+    shard_ids_json: str,
+    run_id: str,
+):
+    shard_ids = _run_blindset_grouped_in_process(
+        tid=tid,
+        batch_size=batch_size,
+        eval_dataset=eval_dataset,
+        num_shards=num_shards,
+        shard_ids_json=shard_ids_json,
+        run_id=run_id,
+    )
+    results_vol.commit()
+    print(f"Grouped results saved for {eval_dataset} shards {shard_ids}.")
+
+
+@app.function(
+    image=rerank_image,
+    volumes=_VOLUME_MOUNTS,
+    secrets=[ENV_SECRET],
+    cpu=LANCEDB_INFERENCE_CPU,
+    memory=LANCEDB_INFERENCE_MEMORY,
+    timeout=7200,
+)
+def _inference_blindset_cpu_grouped(
+    tid: str,
+    batch_size: int,
+    eval_dataset: str,
+    num_shards: int,
+    shard_ids_json: str,
+    run_id: str,
+):
+    shard_ids = _run_blindset_grouped_in_process(
+        tid=tid,
+        batch_size=batch_size,
+        eval_dataset=eval_dataset,
+        num_shards=num_shards,
+        shard_ids_json=shard_ids_json,
+        run_id=run_id,
+        lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI,
+    )
+    results_vol.commit()
+    print(f"CPU grouped results saved for {eval_dataset} shards {shard_ids}.")
 
 
 # NOTE: the deprecated offline staged-rerank path (_inference_blindset_reranked /
@@ -1709,16 +1925,20 @@ def run_inference_sharded(
     tid: str = "state_ranker_v10_lgbm_devset",
     eval_dataset: str = "devset",
     num_shards: int = 4,
+    num_workers: int = 0,
     run_id: str = "",
     batch_size: int = DEVSET_BATCH_SIZE,
     clear_cache: bool = False,
+    session_ids_json: str | None = None,
 ):
-    """Run split-oriented, session-sharded inference across `num_shards` containers.
+    """Run split-oriented, session-sharded inference across grouped workers.
 
     Generic over split: `eval_dataset == "devset"` runs the devset worker,
     anything else runs the blindset worker. GPU vs CPU is chosen internally
-    from the tid's config (`_tid_uses_cpu`) — callers never pick a resource
-    flavor. Each shard writes run-scoped artifacts:
+    from the tid's config (`_tid_uses_cpu`) — callers never pick a resource flavor.
+    `num_shards` controls the logical output/checkpoint partition count, while
+    `num_workers` controls how many Modal containers load the CRS and process
+    groups of those shards. Each logical shard still writes run-scoped artifacts:
         inference/{split}/{tid}.run_{run_id}.shard_{i}.json
         inference/{split}/{tid}.run_{run_id}.shard_{i}_trace.jsonl   (devset only)
     Merge them with scripts/merge_shard_results.py --run_id {run_id}.
@@ -1731,34 +1951,41 @@ def run_inference_sharded(
             "run_inference_sharded requires a non-empty --run-id "
             "(run_experiment.py generates one automatically)."
         )
+    if num_shards < 1:
+        raise ValueError("num_shards must be >= 1.")
+    if num_workers <= 0:
+        num_workers = num_shards
+    if not (1 <= num_workers <= num_shards):
+        raise ValueError("num_workers must be between 1 and num_shards.")
 
     is_devset = eval_dataset == "devset"
+    if session_ids_json and not is_devset:
+        raise ValueError("--session-ids-json is only supported for devset sharded runs.")
     uses_cpu = _tid_uses_cpu(tid)
     if is_devset:
-        inference_fn = _inference_devset_cpu if uses_cpu else _inference_devset
+        inference_fn = _inference_devset_cpu_grouped if uses_cpu else _inference_devset_grouped
     else:
-        inference_fn = _inference_blindset_cpu if uses_cpu else _inference_blindset
+        inference_fn = _inference_blindset_cpu_grouped if uses_cpu else _inference_blindset_grouped
 
-    def _spawn(shard_id):
-        output_suffix = f".run_{run_id}.shard_{shard_id}"
+    def _spawn_worker(worker_id: int, shard_ids: list[int]):
+        shard_ids_json = json.dumps(shard_ids)
         if is_devset:
             return inference_fn.spawn(
                 tid=tid,
                 batch_size=batch_size,
-                num_sessions=0,
                 clear_cache=clear_cache,
-                session_ids_json=None,
                 num_shards=num_shards,
-                shard_id=shard_id,
-                output_suffix=output_suffix,
+                shard_ids_json=shard_ids_json,
+                run_id=run_id,
+                session_ids_json=session_ids_json,
             )
         return inference_fn.spawn(
             tid=tid,
             batch_size=batch_size,
             eval_dataset=eval_dataset,
             num_shards=num_shards,
-            shard_id=shard_id,
-            output_suffix=output_suffix,
+            shard_ids_json=shard_ids_json,
+            run_id=run_id,
         )
 
     # Resilient join: a single shard failure must NOT raise out of this local
@@ -1767,31 +1994,50 @@ def run_inference_sharded(
     # Catch per shard, retry the failures once, then fail loudly if any remain.
     def _join(pairs):
         ok, bad = [], []
-        for shard_id, call in pairs:
+        for worker_id, shard_ids, call in pairs:
             try:
                 call.get()
-                ok.append(shard_id)
-                print(f"Shard {shard_id} complete.")
+                ok.extend(shard_ids)
+                print(f"Worker {worker_id} complete (shards {shard_ids}).")
             except Exception as e:  # noqa: BLE001 — report and continue, never abort the run
-                bad.append(shard_id)
-                print(f"Shard {shard_id} FAILED: {type(e).__name__}: {e}")
+                bad.append((worker_id, shard_ids))
+                print(f"Worker {worker_id} FAILED for shards {shard_ids}: {type(e).__name__}: {e}")
         return ok, bad
 
-    calls = [(shard_id, _spawn(shard_id)) for shard_id in range(num_shards)]
-    print(f"Spawned {num_shards} shards for {tid} (split={eval_dataset}, run_id={run_id}).")
+    assignments = [
+        (worker_id, _shards_for_worker(worker_id, num_workers, num_shards))
+        for worker_id in range(num_workers)
+    ]
+    calls = [
+        (worker_id, shard_ids, _spawn_worker(worker_id, shard_ids))
+        for worker_id, shard_ids in assignments
+    ]
+    print(
+        f"Spawned {num_workers} worker(s) for {num_shards} shard(s) "
+        f"for {tid} (split={eval_dataset}, run_id={run_id}). "
+        f"Assignments: {assignments}"
+    )
     ok, failed = _join(calls)
 
     if failed:
-        print(f"Retrying {len(failed)} failed shard(s): {failed}")
-        ok2, failed = _join([(shard_id, _spawn(shard_id)) for shard_id in failed])
+        print(f"Retrying {len(failed)} failed worker group(s): {failed}")
+        ok2, failed = _join([
+            (worker_id, shard_ids, _spawn_worker(worker_id, shard_ids))
+            for worker_id, shard_ids in failed
+        ])
         ok += ok2
 
     if failed:
+        failed_shards = [
+            shard_id
+            for _, shard_ids in failed
+            for shard_id in shard_ids
+        ]
         # All spawns joined — no healthy shard is still in flight, so raising
         # here does not trigger the SIGINT cascade. Fail loudly: an incomplete
         # run must not exit 0, or a later merge silently picks up a partial set.
         raise RuntimeError(
-            f"{len(failed)}/{num_shards} shard(s) failed after retry: {failed}. "
+            f"{len(failed_shards)}/{num_shards} shard(s) failed after retry: {failed_shards}. "
             f"Sharded run is INCOMPLETE — re-run with the same --num-shards and "
             f"--run-id {run_id} before merging."
         )

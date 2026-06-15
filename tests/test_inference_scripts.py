@@ -65,6 +65,26 @@ def _passthrough_config():
     )
 
 
+def _full_pipeline_config_without_retrieval_type():
+    return OmegaConf.create(
+        {
+            "lm_type": "dummy",
+            "qu_type": "state_ranker",
+            "test_dataset_name": "ignored",
+            "item_db_name": "ignored",
+            "user_db_name": "ignored",
+            "track_split_types": ["all_tracks"],
+            "user_split_types": ["all_users"],
+            "corpus_types": ["track_name", "artist_name", "album_name", "tag_list"],
+            "cache_dir": "./cache",
+            "device": "cpu",
+            "attn_implementation": "eager",
+            "retrieval_topk": 20,
+            "qu_kwargs": {"ranking": {"mode": "rrf"}},
+        }
+    )
+
+
 def _milvus_config():
     return OmegaConf.create(
         {
@@ -203,6 +223,100 @@ def test_run_inference_devset_passes_qu_kwargs(monkeypatch, tmp_path):
     assert captured["qu_kwargs"]["stats_path"] == str(
         tmp_path / "exp" / "inference" / "devset" / "wave3_devset_rewrite_stats.json"
     )
+
+
+def test_run_inference_devset_does_not_require_legacy_retrieval_type(monkeypatch, tmp_path):
+    captured = {}
+
+    def fake_load_crs_baseline(**kwargs):
+        captured.update(kwargs)
+        return _FakeCRS()
+
+    monkeypatch.setattr(
+        run_inference_devset.OmegaConf,
+        "load",
+        lambda _: _full_pipeline_config_without_retrieval_type(),
+    )
+    monkeypatch.setattr(run_inference_devset, "load_crs_baseline", fake_load_crs_baseline)
+    monkeypatch.setattr(run_inference_devset, "load_dataset", lambda *args, **kwargs: [])
+
+    args = SimpleNamespace(
+        tid="state_ranker_v10_rrf_devset",
+        batch_size=1,
+        session_ids_file=None,
+        num_sessions=0,
+        exp_dir=str(tmp_path / "exp"),
+        clear_cache=False,
+    )
+
+    run_inference_devset.main(args)
+
+    assert captured["retrieval_type"] == "unused"
+    assert captured["qu_type"] == "state_ranker"
+
+
+def test_run_inference_devset_grouped_reuses_loaded_crs(monkeypatch, tmp_path):
+    rows = [
+        {"user_id": f"u{i}", "session_id": f"s{i}", "conversations": []}
+        for i in range(4)
+    ]
+
+    class _FakeDB(list):
+        def select(self, idx):
+            return _FakeDB(self[i] for i in idx)
+
+    load_calls = 0
+
+    class _FakeGroupedCRS:
+        def batch_chat(self, batch):
+            return [
+                {
+                    "retrieval_items": [f"track-{item['user_id']}"],
+                    "response": "ok",
+                    "trace": {"batch_user_id": item["user_id"]},
+                }
+                for item in batch
+            ]
+
+    def fake_load_crs_baseline(**kwargs):
+        nonlocal load_calls
+        load_calls += 1
+        return _FakeGroupedCRS()
+
+    monkeypatch.setattr(run_inference_devset.OmegaConf, "load", lambda _: _passthrough_config())
+    monkeypatch.setattr(run_inference_devset, "load_crs_baseline", fake_load_crs_baseline)
+    monkeypatch.setattr(run_inference_devset, "load_dataset", lambda *args, **kwargs: _FakeDB(rows))
+    monkeypatch.setattr(
+        run_inference_devset,
+        "chat_history_parser",
+        lambda conversations, crs, target_turn_number: ([], f"turn {target_turn_number}"),
+    )
+    monkeypatch.setattr(run_inference_devset, "_git_sha", lambda: "abc123")
+
+    args = SimpleNamespace(
+        tid="foo_devset",
+        batch_size=32,
+        session_ids_file=None,
+        num_sessions=0,
+        exp_dir=str(tmp_path / "exp"),
+        clear_cache=False,
+        num_shards=2,
+        output_suffix="",
+    )
+
+    run_inference_devset.run_grouped(
+        args,
+        shard_ids=[0, 1],
+        output_suffixes={0: ".run_RID.shard_0", 1: ".run_RID.shard_1"},
+    )
+
+    assert load_calls == 1
+    shard0 = tmp_path / "exp" / "inference" / "devset" / "foo_devset.run_RID.shard_0.json"
+    shard1 = tmp_path / "exp" / "inference" / "devset" / "foo_devset.run_RID.shard_1.json"
+    assert {row["session_id"] for row in json.loads(shard0.read_text())} == {"s0", "s1"}
+    assert {row["session_id"] for row in json.loads(shard1.read_text())} == {"s2", "s3"}
+    trace0 = shard0.with_name("foo_devset.run_RID.shard_0_trace.jsonl")
+    assert len(trace0.read_text().splitlines()) == 16
 
 
 def test_run_inference_blindset_passes_qu_kwargs(monkeypatch, tmp_path):

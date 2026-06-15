@@ -678,6 +678,29 @@ def test_run_id_requires_sharding(tmp_path):
         ])
 
 
+def test_num_workers_requires_sharding(tmp_path):
+    module = _load_module("run_experiment_module_workers_reject", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+    module.PROJECT_ROOT = project_root
+    with pytest.raises(ValueError, match="--num_workers only applies"):
+        module.main([
+            "--backend", "modal", "--tid", "foo_devset", "--num_workers", "2",
+        ])
+
+
+def test_num_workers_cannot_exceed_num_shards(tmp_path):
+    module = _load_module("run_experiment_module_workers_overflow", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+    module.PROJECT_ROOT = project_root
+    with pytest.raises(ValueError, match="must be between 1 and --num_shards"):
+        module.main([
+            "--backend", "modal", "--tid", "foo_devset",
+            "--num_shards", "3", "--num_workers", "4",
+        ])
+
+
 _FIXED_RUN_ID = "20260603T074512Z-a3f91c"
 
 
@@ -708,6 +731,7 @@ def test_modal_sharded_devset_builds_command_then_download_merge_eval(tmp_path, 
         "--tid", "foo_devset",
         "--eval-dataset", "devset",
         "--num-shards", "5",
+        "--num-workers", "5",
         "--run-id", _FIXED_RUN_ID,
         "--batch-size", "64",
     ]
@@ -760,6 +784,7 @@ def test_modal_sharded_blindset_merges_without_eval(tmp_path, monkeypatch):
         "--tid", "foo_blindset_A",
         "--eval-dataset", "blindset_A",
         "--num-shards", "5",
+        "--num-workers", "5",
         "--run-id", _FIXED_RUN_ID,
         "--batch-size", "64",
     ]
@@ -795,6 +820,54 @@ def test_modal_sharded_run_id_override_threaded(tmp_path, monkeypatch):
     assert commands[0][0][commands[0][0].index("--run-id") + 1] == "CUSTOMID"
     assert commands[1][0][commands[1][0].index("--run-id") + 1] == "CUSTOMID"
     assert commands[2][0][commands[2][0].index("--run_id") + 1] == "CUSTOMID"
+
+
+def test_modal_sharded_num_workers_override_threaded(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_workers_override", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_blindset_A")
+
+    commands: list[tuple[list[str], Path]] = []
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(module, "make_run_id", lambda: _FIXED_RUN_ID)
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append(([str(p) for p in cmd], Path(cwd))),
+    )
+
+    module.main([
+        "--backend", "modal", "--tid", "foo_blindset_A",
+        "--eval_dataset", "blindset_A", "--num_shards", "12",
+        "--num_workers", "3", "--exp_dir", str(project_root / "artifacts"),
+    ])
+
+    assert "--num-workers" in commands[0][0]
+    assert commands[0][0][commands[0][0].index("--num-workers") + 1] == "3"
+
+
+def test_modal_sharded_default_workers_match_shards_for_wall_time(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_workers_default", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+
+    commands: list[tuple[list[str], Path]] = []
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(module, "make_run_id", lambda: _FIXED_RUN_ID)
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append(([str(p) for p in cmd], Path(cwd))),
+    )
+
+    module.main([
+        "--backend", "modal", "--tid", "foo_devset",
+        "--num_shards", "12", "--exp_dir", str(project_root / "artifacts"),
+    ])
+
+    assert commands[0][0][commands[0][0].index("--num-workers") + 1] == "12"
 
 
 def test_modal_default_num_shards_uses_single_run_entrypoint(tmp_path, monkeypatch):

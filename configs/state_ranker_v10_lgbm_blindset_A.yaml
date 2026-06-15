@@ -12,7 +12,6 @@ explanation_kwargs:
   echo_retries: 3
 
 lm_type: dummy
-retrieval_type: bm25
 qu_type: state_ranker
 qu_kwargs:
   max_in_flight: 4

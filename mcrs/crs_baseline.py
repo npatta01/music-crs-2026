@@ -1,20 +1,22 @@
 import os
+import time
 import torch
 from typing import Optional, Any, List, Dict
 from mcrs.db_item import MusicCatalogDB
 from mcrs.db_user import UserProfileDB
 from mcrs.lm_modules import load_lm_module
 from mcrs.response_context import format_state_block, is_metadata_echo, xml_track_item
-from mcrs.retrieval_modules import load_retrieval_module
 from mcrs.qu_modules import load_qu_module
 
 class CRS_BASELINE:
     """
-    Conversational Recommender System (CRS) baseline that wires together an LLM module and an item retrieval module over a music catalog and user profiles.
+    Conversational Recommender System (CRS) baseline that wires together an
+    LLM module and a full-pipeline QU over a music catalog and user profiles.
     Attributes:
         cache_dir: Local path for caching artifacts and indices.
         lm_type: Identifier/name for the LLM backend to load.
-        retrieval_type: Retrieval backend to use (e.g., "bm25").
+        retrieval_type: Retained for config compatibility; CRS no longer
+            loads a legacy standalone retrieval backend.
         item_db_name: Hugging Face dataset or DB name for item metadata.
         user_db_name: Hugging Face dataset or DB name for user metadata.
         split_types: Dataset split names to load (e.g., ["test_warm", "test_cold"]).
@@ -22,16 +24,19 @@ class CRS_BASELINE:
         device: Compute device for the LLM (e.g., "cuda", "cpu").
         dtype: Torch dtype used by the LLM.
         lm: Loaded LLM module used for response generation.
-        retrieval: Retrieval module used to fetch candidate items.
         item_db: Item metadata database accessor.
         user_db: User profile database accessor.
         prompts_dir: Directory containing prompt templates.
         role_prompt: Loaded prompt templates keyed by role.
         session_memory: In-memory list of message dicts for the current session.
     """
+    @staticmethod
+    def _qu_owns_retrieval(qu) -> bool:
+        return hasattr(qu, "compile_track_ids") or hasattr(qu, "batch_compile_track_ids")
+
     def __init__(self,
         lm_type="meta-llama/Llama-3.2-1B-Instruct",
-        retrieval_type="bm25",
+        retrieval_type="unused",
         qu_type="passthrough",
         item_db_name: str = "talkpl-ai/TalkPlayData-Challenge-Track-Metadata",
         user_db_name: str = "talkpl-ai/TalkPlayData-Challenge-User-Metadata",
@@ -52,7 +57,8 @@ class CRS_BASELINE:
 
         Args:
             lm_type: LLM model identifier to load for response generation.
-            retrieval_type: Retrieval backend name (e.g., "bm25").
+            retrieval_type: Retained for config compatibility; ignored by the
+                active full-pipeline QU path.
             item_db_name: Dataset/DB name for item metadata.
             user_db_name: Dataset/DB name for user metadata.
             split_types: Dataset split names to load.
@@ -92,16 +98,6 @@ class CRS_BASELINE:
             self.dtype,
             lm_kwargs=self.lm_kwargs,
         )
-        retrieval_config = dict(self.retrieval_config)
-        retrieval_config.setdefault("device", self.device)
-        self.retrieval = load_retrieval_module(
-            self.retrieval_type,
-            self.item_db_name,
-            self.track_split_types,
-            self.corpus_types,
-            self.cache_dir,
-            retrieval_config=retrieval_config,
-        )
         self.qu = load_qu_module(
             self.qu_type,
             cache_dir=self.cache_dir,
@@ -110,6 +106,13 @@ class CRS_BASELINE:
             dtype=self.dtype,
             **self.qu_kwargs,
         )
+        if not self._qu_owns_retrieval(self.qu):
+            raise ValueError(
+                "CRS_BASELINE no longer loads legacy retrieval modules; "
+                f"qu_type={self.qu_type!r} must provide compile_track_ids "
+                "or batch_compile_track_ids."
+            )
+        self.retrieval = None
         self.item_db = MusicCatalogDB(self.item_db_name, self.track_split_types, self.corpus_types)
         self.user_db = UserProfileDB(self.user_db_name, self.user_split_types)
         self.prompts_dir = os.path.join(os.path.dirname(__file__), "system_prompts")
@@ -119,6 +122,7 @@ class CRS_BASELINE:
             "response_generation": open(f"{self.prompts_dir}/response_generation.txt", "r", encoding="utf-8").read(),
         }
         self.session_memory = []
+        self.last_batch_timings: dict[str, float] = {}
 
     def _reset_session_memory(self):
         """Clear all messages stored in the current session memory.
@@ -175,10 +179,7 @@ class CRS_BASELINE:
                     self.session_memory, topk=self.retrieval_topk
                 )
         else:
-            retrieval_input = self.qu.transform_query(self.session_memory)
-            retrieval_items = self.retrieval.text_to_item_retrieval(
-                retrieval_input, topk=self.retrieval_topk
-            )
+            raise RuntimeError("QU must provide compile_track_ids for CRS inference")
         traces = list(getattr(self.qu, "last_traces", []) or [])
         trace = traces[0] if traces else None
         final = trace.get("final_recommendation") if isinstance(trace, dict) else None
@@ -215,7 +216,13 @@ class CRS_BASELINE:
                 - recommend_item: Metadata for the top recommended item.
                 - response: The generated assistant response string.
         """
+        timings: dict[str, float] = {}
+
+        def add_elapsed(key: str, start: float) -> None:
+            timings[key] = timings.get(key, 0.0) + (time.perf_counter() - start)
+
         # Prepare batch inputs
+        start = time.perf_counter()
         sys_prompts = []
         session_memories = []
         user_ids: list[Any] = []
@@ -234,6 +241,7 @@ class CRS_BASELINE:
             # profile, goal) for QUs whose online reranker needs the
             # session-history feature block. Optional; None is fine.
             session_meta.append(data.get('session_meta'))
+        add_elapsed("prepare_inputs", start)
 
         # QUs that own the full pipeline (V0PlusCompilerQU) provide
         # `batch_compile_track_ids` and bypass `self.retrieval`. Forward
@@ -241,6 +249,7 @@ class CRS_BASELINE:
         # branches can look up the user's vector. Keep back-compat for
         # QUs that don't (signature inspection avoids a hard requirement).
         batch_traces: list[Any] = []
+        start = time.perf_counter()
         if hasattr(self.qu, "batch_compile_track_ids"):
             import inspect
             sig = inspect.signature(self.qu.batch_compile_track_ids)
@@ -268,17 +277,13 @@ class CRS_BASELINE:
                     for sm in session_memories
                 ]
         else:
-            if hasattr(self.qu, "batch_transform_queries"):
-                retrieval_inputs = self.qu.batch_transform_queries(session_memories)
-            else:
-                retrieval_inputs = [self.qu.transform_query(session_memory) for session_memory in session_memories]
-
-            # Stage 1: Batch retrieval
-            if hasattr(self.retrieval, 'batch_text_to_item_retrieval'):
-                batch_retrieval_items = self.retrieval.batch_text_to_item_retrieval(retrieval_inputs, topk=self.retrieval_topk)
-            else:
-                # Fallback to sequential retrieval if batch method not available
-                batch_retrieval_items = [self.retrieval.text_to_item_retrieval(inp, topk=self.retrieval_topk) for inp in retrieval_inputs]
+            raise RuntimeError("QU must provide batch_compile_track_ids or compile_track_ids")
+        add_elapsed("retrieval", start)
+        qu_timings = getattr(self.qu, "last_batch_timings", None)
+        if isinstance(qu_timings, dict):
+            for key, value in qu_timings.items():
+                if isinstance(value, (int, float)):
+                    timings[f"qu.{key}"] = timings.get(f"qu.{key}", 0.0) + float(value)
 
         # Pad traces to match batch length so non-v0+ QUs (which don't produce
         # traces) get `None` rather than IndexError.
@@ -292,6 +297,7 @@ class CRS_BASELINE:
 
         # Recommend-item formatting: plain metadata string (default) or a
         # delimited XML block with capped tags (echo-resistant; response_kwargs).
+        start = time.perf_counter()
         def _safe_label(track_id):
             try:
                 return self.item_db.id_to_metadata(track_id)
@@ -309,10 +315,12 @@ class CRS_BASELINE:
             return self.item_db.id_to_metadata(track_id)
 
         recommend_items = [_recommend_item(items) for items in batch_retrieval_items]
+        add_elapsed("recommend_items", start)
 
         # Response context: raw transcript (default) or the compact structured
         # state block (state-conditioned — uses the per-session extracted state
         # the v0+ QU stashed in `last_traces`/`batch_traces`).
+        start = time.perf_counter()
         if self.response_conditioning == "state":
             response_contexts = []
             for i in range(len(session_memories)):
@@ -324,16 +332,20 @@ class CRS_BASELINE:
                 response_contexts.append([{"role": "user", "content": block}])
         else:
             response_contexts = session_memories
+        add_elapsed("response_context", start)
 
         # Stage 2: Batch response generation
+        start = time.perf_counter()
         if hasattr(self.lm, 'batch_response_generation'):
             responses = self.lm.batch_response_generation(sys_prompts, response_contexts, recommend_items)
         else:
             # Fallback to sequential generation if batch method not available
             responses = [self.lm.response_generation(sys_prompts[i], response_contexts[i], recommend_items[i])
                         for i in range(len(batch_data))]
+        add_elapsed("response_generation", start)
 
         # Regenerate any reply that echoed the track metadata or came back empty.
+        start = time.perf_counter()
         if self.response_echo_retries > 0:
             for i, resp in enumerate(responses):
                 attempts = 0
@@ -343,8 +355,10 @@ class CRS_BASELINE:
                     )
                     attempts += 1
                 responses[i] = resp
+        add_elapsed("echo_retry", start)
 
         # Prepare results
+        start = time.perf_counter()
         results = []
         for i, data in enumerate(batch_data):
             results.append({
@@ -355,5 +369,7 @@ class CRS_BASELINE:
                 "response": responses[i],
                 "trace": batch_traces[i],
             })
+        add_elapsed("assemble_results", start)
+        self.last_batch_timings = timings
 
         return results

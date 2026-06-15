@@ -75,6 +75,14 @@ def build_parser() -> argparse.ArgumentParser:
              "(Modal backend only). Default 1 = single run.",
     )
     parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=0,
+        help="Number of Modal workers for a sharded run. Defaults to --num_shards "
+             "for fastest wall time. Set lower to amortize per-worker startup "
+             "cost at the expense of less parallelism.",
+    )
+    parser.add_argument(
         "--run_id",
         default=None,
         help="Optional run id override for a sharded run (retry/resume). "
@@ -246,6 +254,10 @@ def validate_args(args: argparse.Namespace, split: str) -> None:
         )
     if args.num_shards < 1:
         raise ValueError("--num_shards must be >= 1.")
+    if args.num_workers < 0:
+        raise ValueError("--num_workers must be >= 0.")
+    if args.num_workers and args.num_shards == 1:
+        raise ValueError("--num_workers only applies to sharded runs (--num_shards > 1).")
     if args.num_shards > 1 and args.backend != "modal":
         raise ValueError("--num_shards > 1 requires --backend modal.")
     if args.num_shards > 1 and args.num_sessions:
@@ -257,6 +269,13 @@ def validate_args(args: argparse.Namespace, split: str) -> None:
         raise ValueError(
             "--run_id only applies to sharded runs (--num_shards > 1)."
         )
+    if args.num_shards > 1:
+        if args.num_workers == 0:
+            args.num_workers = args.num_shards
+        if not (1 <= args.num_workers <= args.num_shards):
+            raise ValueError("--num_workers must be between 1 and --num_shards.")
+    else:
+        args.num_workers = 1
 
 
 def run_local(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
@@ -316,6 +335,8 @@ def run_modal_sharded(args: argparse.Namespace, split: str, exp_dir: Path) -> No
         split,
         "--num-shards",
         str(args.num_shards),
+        "--num-workers",
+        str(args.num_workers),
         "--run-id",
         run_id,
         "--batch-size",

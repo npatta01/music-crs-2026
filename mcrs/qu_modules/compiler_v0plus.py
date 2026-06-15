@@ -35,6 +35,7 @@ See: docs/architectures/v0plus_retrieval.md
 from __future__ import annotations
 
 import re
+import time
 from collections import Counter
 from dataclasses import dataclass, field
 
@@ -121,6 +122,7 @@ class CompileResult:
     # exclude these from its reordered pool union (branch pools are
     # release-date-masked but NOT hard-drop-filtered)
     hard_drop: list[str] = field(default_factory=list)
+    timings: dict[str, float] = field(default_factory=dict)
 
     def to_trace_dict(self) -> dict:
         """Serialize to the `branches` trace schema (JSON-friendly)."""
@@ -484,6 +486,11 @@ class V0PlusCompiler:
         trace_enabled = _trace_k > 0
         branch_queries: dict[str, dict] = {}
         branch_status: dict[str, dict] = {}
+        timings: dict[str, float] = {}
+        total_start = time.perf_counter()
+
+        def add_elapsed(key: str, start: float) -> None:
+            timings[key] = timings.get(key, 0.0) + (time.perf_counter() - start)
 
         def replace_named_pool(
             name: str,
@@ -499,9 +506,12 @@ class V0PlusCompiler:
             named_pools.append((name, traced))
 
         # 1. Pre-fusion catalog mask from hard_filters.release_date
+        start = time.perf_counter()
         candidate_mask = self._release_date_mask(state)
+        add_elapsed("release_date_mask", start)
 
         # 2. Build queries
+        start = time.perf_counter()
         bm25_clauses = self._build_bm25_clauses(rs)
         if trace_enabled:
             branch_queries["bm25"] = {
@@ -522,9 +532,12 @@ class V0PlusCompiler:
                         f"Available templates: {sorted(builders)}"
                     )
                 query_strings[qid] = builders[qid](rs)
+        add_elapsed("build_queries", start)
 
         # 3. Retrieval — 1 BM25 call + 1 search_embedding per enabled dense branch
+        start = time.perf_counter()
         bm25_hits = self.retriever.search(bm25_clauses, topk=self.cfg.bm25_k)
+        add_elapsed("bm25_search", start)
         if trace_enabled:
             branch_status["bm25"] = {
                 "configured": True,
@@ -589,15 +602,21 @@ class V0PlusCompiler:
                             f"references unknown encoder_id={branch.encoder_id!r}. "
                             f"Available encoders: {sorted(self.encoders)}"
                         )
+                    start = time.perf_counter()
                     raw = enc.embed_batch([q_text])[0]
+                    add_elapsed("dense_encode", start)
+                    add_elapsed(f"dense_encode.{branch.encoder_id}.{branch.query_id}", start)
                     encoded_cache[cache_key] = _normalize(raw)
                 vec = self._mix_for_branch(rs, encoded_cache[cache_key], branch)
+                start = time.perf_counter()
                 hits = self.retriever.search_embedding(
                     query_vector=vec,
                     vector_field=branch.vector_field,
                     topk=self.cfg.dense_k,
                     distance_type=branch.distance_type,
                 )
+                add_elapsed("dense_search", start)
+                add_elapsed(f"dense_search.{branch_name}", start)
                 dense_branch_results.append(hits)
                 if trace_enabled:
                     branch_status[branch_name] = {
@@ -621,7 +640,9 @@ class V0PlusCompiler:
         #    so long as a user_id is supplied AND the user has a vector in
         #    this field. Used for user_cf_bpr (only user-side modality in
         #    TalkPlayData).
+        start = time.perf_counter()
         centroid_branches = self._resolve_centroid_only_branches()
+        add_elapsed("centroid_resolve_branches", start)
         centroid_branch_results: list[tuple[list[tuple[str, float]], float, str]] = []
         supported_vector_fields = getattr(
             self.retriever,
@@ -674,7 +695,10 @@ class V0PlusCompiler:
                         "skip_reason": "pivot_skip",
                     }
                 continue
+            start = time.perf_counter()
             centroid = self._centroid_for_branch(rs, user_id, cb)
+            add_elapsed("centroid_build", start)
+            add_elapsed(f"centroid_build.{branch_name}", start)
             if centroid is None:
                 if trace_enabled:
                     if cb.centroid_source == "anchor_tracks":
@@ -697,12 +721,15 @@ class V0PlusCompiler:
                         "skip_reason": skip_reason,
                     }
                 continue
+            start = time.perf_counter()
             hits = self.retriever.search_embedding(
                 query_vector=centroid,
                 vector_field=cb.vector_field,
                 topk=cb.topk,
                 distance_type=cb.distance_type,
             )
+            add_elapsed("centroid_search", start)
+            add_elapsed(f"centroid_search.{branch_name}", start)
             kind = ("centroid.image" if "image" in cb.vector_field
                     else "centroid.audio" if "audio" in cb.vector_field
                     else "centroid.other")
@@ -721,6 +748,7 @@ class V0PlusCompiler:
                 ))
 
         # 4. Apply pre-fusion mask (post-hoc until the retriever supports masks)
+        start = time.perf_counter()
         bm25_hits = [(t, s) for t, s in bm25_hits if t in candidate_mask]
         dense_branch_results = [
             [(t, s) for t, s in hits if t in candidate_mask]
@@ -742,6 +770,7 @@ class V0PlusCompiler:
             ([(t, s) for t, s in hits if t not in hard_drop], w, n)
             for hits, w, n in centroid_branch_results
         ]
+        add_elapsed("apply_filters", start)
 
         # 5b. Resolved-artist discography pool. Trace the RAW pool (pre-mask/
         # hard-drop) to match bm25/dense/centroid trace semantics, then filter
@@ -749,7 +778,9 @@ class V0PlusCompiler:
         disco_branch_name = "lookup.resolved_artist_discography"
         if trace_enabled and self.cfg.enable_resolved_artist_discography:
             branch_queries[disco_branch_name] = self._discography_query_trace(rs)
+        start = time.perf_counter()
         disco_hits = self._resolved_artist_discography_pool(rs)
+        add_elapsed("discography_pool", start)
         if trace_enabled and self.cfg.enable_resolved_artist_discography:
             if disco_hits:
                 branch_status[disco_branch_name] = {
@@ -825,7 +856,9 @@ class V0PlusCompiler:
                     self.cfg.disco_weight * self._routing_multiplier("lookup.discography", rs),
                 )
             )
+        start = time.perf_counter()
         era_hits = self._era_popularity_pool(rs)
+        add_elapsed("era_pool", start)
         era_branch_name = "lookup.era_popularity"
         if trace_enabled and self.cfg.enable_era_popularity:
             branch_queries[era_branch_name] = self._era_popularity_query_trace(rs)
@@ -858,6 +891,7 @@ class V0PlusCompiler:
                 )
             )
 
+        start = time.perf_counter()
         feature_context = (
             self._branch_local_feature_context(rs)
             if (
@@ -867,13 +901,16 @@ class V0PlusCompiler:
             )
             else None
         )
+        add_elapsed("feature_context", start)
         if self.cfg.enable_state_feature_survivor_branch:
             survivor_name = "state_feature_survivor"
+            start = time.perf_counter()
             survivor_hits = self._state_feature_survivor_hits(
                 rs,
                 feature_branch_inputs,
                 context=feature_context,
             )
+            add_elapsed("feature_survivor", start)
             if trace_enabled:
                 branch_queries[survivor_name] = self._state_feature_survivor_query_trace(
                     rs,
@@ -902,11 +939,14 @@ class V0PlusCompiler:
             for selector_name, source_group, selector_inputs in (
                 self._state_feature_selector_branch_inputs(feature_branch_inputs)
             ):
+                start = time.perf_counter()
                 selector_hits = self._state_feature_selector_hits(
                     rs,
                     selector_inputs,
                     context=feature_context,
                 )
+                add_elapsed("feature_selector", start)
+                add_elapsed(f"feature_selector.{selector_name}", start)
                 if trace_enabled:
                     branch_queries[selector_name] = self._state_feature_selector_query_trace(
                         rs,
@@ -935,11 +975,14 @@ class V0PlusCompiler:
         if self.cfg.enable_branch_local_feature_rerank:
             in_place_inputs: list[tuple[str, list[tuple[str, float]], float]] = []
             for source_name, hits, source_weight in feature_branch_inputs:
+                start = time.perf_counter()
                 reranked = self._branch_local_feature_rerank_hits(
                     rs,
                     hits,
                     context=feature_context,
                 )
+                add_elapsed("feature_rerank", start)
+                add_elapsed(f"feature_rerank.{source_name}", start)
                 feature_name = f"{source_name}.state_features"
                 if trace_enabled:
                     branch_queries[feature_name] = self._branch_local_feature_query_trace(
@@ -985,26 +1028,35 @@ class V0PlusCompiler:
                     if hits
                 ]
 
+        start = time.perf_counter()
         candidate_filter_summary = (
             self._candidate_filter_summary(named_pools, candidate_mask, hard_drop, rs)
             if trace_enabled
             else {}
         )
+        add_elapsed("filter_summary", start)
+        start = time.perf_counter()
         fused = self._rrf_fuse_weighted(weighted_pools, k=self.cfg.rrf_k)
+        add_elapsed("fuse", start)
 
         # 7. Soft (de)promotes (gated: destroys GT hits on pivot turns)
+        start = time.perf_counter()
         if rs.state.intent_mode.value in self.cfg.soft_adjust_skip_intents:
             adjusted = fused
         else:
             adjusted = self._apply_soft_adjustments(fused, rs)
+        add_elapsed("soft_adjust", start)
 
         # 8. Backfill to topk (popularity-sorted, mask + hard-drop-respecting)
+        start = time.perf_counter()
         ranked = [tid for tid, _ in adjusted]
         n_from_fusion = min(len(ranked), self.cfg.final_topk)
         if len(ranked) < self.cfg.final_topk:
             ranked = self._backfill(ranked, candidate_mask, hard_drop)
         ranked = ranked[: self.cfg.final_topk]
         n_from_backfill = len(ranked) - n_from_fusion
+        add_elapsed("backfill", start)
+        add_elapsed("total", total_start)
 
         return CompileResult(
             ranked=ranked,
@@ -1017,6 +1069,7 @@ class V0PlusCompiler:
             branch_status=branch_status,
             candidate_filter_summary=candidate_filter_summary,
             hard_drop=sorted(hard_drop) if _trace_k else [],
+            timings=timings,
         )
 
     # ------------------------------------------------------------------

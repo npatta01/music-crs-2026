@@ -8,6 +8,7 @@ import hashlib
 import logging
 import shutil
 import subprocess
+import time
 import torch
 import argparse
 from mcrs import load_crs_baseline
@@ -106,56 +107,72 @@ def _setup_litellm_cache() -> None:
         print(f"LiteLLM {backend} cache enabled at: {cache_dir}")
 
 
-def main(args):
-    """
-    Run batch inference on TalkPlayData-2 test dataset.
+def _add_elapsed(timings: dict[str, float], key: str, start: float) -> None:
+    timings[key] = timings.get(key, 0.0) + (time.perf_counter() - start)
 
-    Args:
-        args: Namespace object containing:
-            - tid (str): Task/configuration identifier
-            - batch_size (int): Batch size for inference
-            - save_path (str): Output directory (currently unused)
 
-    Returns:
-        None. Results are saved to exp/inference/{tid}.json
+def _print_timings(label: str, timings: dict[str, float]) -> None:
+    body = " ".join(f"{key}={value:.2f}s" for key, value in timings.items())
+    print(f"[timing] {label} {body}", flush=True)
 
-    Processing:
-        - Loads model configuration from configs/{tid}.yaml
-        - Processes all sessions × 8 turns in batches
-        - Tracks progress with tqdm progress bar
-        - Saves comprehensive results for evaluation
-    """
+
+def _add_timing_snapshot(
+    timings: dict[str, float],
+    prefix: str,
+    snapshot: dict | None,
+) -> None:
+    if not isinstance(snapshot, dict):
+        return
+    for key, value in snapshot.items():
+        if isinstance(value, (int, float)):
+            timings[f"{prefix}{key}"] = timings.get(f"{prefix}{key}", 0.0) + float(value)
+
+
+def _config_qu_kwargs(config) -> dict:
+    raw_qu_kwargs = config.get("qu_kwargs")
+    if raw_qu_kwargs is None:
+        return {}
+    if OmegaConf.is_config(raw_qu_kwargs):
+        return OmegaConf.to_container(raw_qu_kwargs, resolve=True) or {}
+    return dict(raw_qu_kwargs)
+
+
+def _resolve_vllm_endpoints_if_needed(qu_kwargs: dict) -> None:
+    # Resolve logical vLLM endpoints into live Modal web URLs. No-op when absent;
+    # only loads modal/vllm_serve.py (and Modal SDK) when a vllm_endpoint is
+    # declared on either the legacy top-level encoder or a named encoder.
+    if not _qu_kwargs_has_vllm_endpoint(qu_kwargs):
+        return
+    import importlib.util
+    from pathlib import Path as _Path
+
+    _vs_path = _Path(__file__).resolve().parent / "modal" / "vllm_serve.py"
+    _vs_spec = importlib.util.spec_from_file_location("mcrs_vllm_serve", _vs_path)
+    _vs_mod = importlib.util.module_from_spec(_vs_spec)
+    _vs_spec.loader.exec_module(_vs_mod)
+    _vs_mod.resolve_vllm_endpoints_in_qu_kwargs(qu_kwargs)
+
+
+def _load_runtime(args) -> dict:
     _setup_logging()
     _setup_litellm_cache()
+    timings: dict[str, float] = {}
+    start = time.perf_counter()
     config = OmegaConf.load(f"configs/{args.tid}.yaml")
     trace_run_metadata = _build_trace_run_metadata(args.tid, config)
+    _add_elapsed(timings, "load_config", start)
     if args.clear_cache:
         cache_dir = config.get("cache_dir", "./cache")
         if os.path.exists(cache_dir):
             print(f"Clearing cache directory: {cache_dir}")
             shutil.rmtree(cache_dir)
-    raw_qu_kwargs = config.get("qu_kwargs")
-    if raw_qu_kwargs is None:
-        qu_kwargs = {}
-    elif OmegaConf.is_config(raw_qu_kwargs):
-        qu_kwargs = OmegaConf.to_container(raw_qu_kwargs, resolve=True) or {}
-    else:
-        qu_kwargs = dict(raw_qu_kwargs)
-    # Resolve logical vLLM endpoints into live Modal web URLs. No-op when absent;
-    # only loads modal/vllm_serve.py (and Modal SDK) when a vllm_endpoint is
-    # declared on either the legacy top-level encoder or a named encoder.
-    if _qu_kwargs_has_vllm_endpoint(qu_kwargs):
-        import importlib.util
-        from pathlib import Path as _Path
 
-        _vs_path = _Path(__file__).resolve().parent / "modal" / "vllm_serve.py"
-        _vs_spec = importlib.util.spec_from_file_location("mcrs_vllm_serve", _vs_path)
-        _vs_mod = importlib.util.module_from_spec(_vs_spec)
-        _vs_spec.loader.exec_module(_vs_mod)
-        _vs_mod.resolve_vllm_endpoints_in_qu_kwargs(qu_kwargs)
+    start = time.perf_counter()
+    qu_kwargs = _config_qu_kwargs(config)
+    _resolve_vllm_endpoints_if_needed(qu_kwargs)
     music_crs = load_crs_baseline(
         lm_type=config.get("explanation_lm_type", "dummy"),
-        retrieval_type=config.retrieval_type,
+        retrieval_type=config.get("retrieval_type", "unused"),
         qu_type=config.get("qu_type", "passthrough"),
         qu_kwargs=resolve_qu_kwargs_placeholders(
             qu_kwargs,
@@ -176,23 +193,35 @@ def main(args):
         lm_kwargs=_to_plain_dict(config.get("explanation_lm_kwargs")),
         response_kwargs=_to_plain_dict(config.get("explanation_kwargs")),
     )
+    _add_elapsed(timings, "load_crs", start)
+
+    start = time.perf_counter()
     db = load_dataset(config.test_dataset_name, split="test")
-    if args.session_ids_file is not None:
+    if getattr(args, "session_ids_file", None) is not None:
         with open(args.session_ids_file) as f:
             keep = set(json.load(f)["session_ids"])
         db = db.filter(lambda x: x["session_id"] in keep)
-    if args.num_sessions > 0:
+    if getattr(args, "num_sessions", 0) > 0:
         import random
         n = min(args.num_sessions, len(db))
         db = db.select(random.sample(range(len(db)), n))
         print(f"Running on {n} randomly sampled sessions.")
+    _add_elapsed(timings, "load_dataset", start)
+    _print_timings(f"devset startup tid={args.tid}", timings)
+    return {
+        "config": config,
+        "music_crs": music_crs,
+        "db": db,
+        "trace_run_metadata": trace_run_metadata,
+    }
+
+
+def _select_shard(db, args, shard_id: int, num_shards: int):
     # Sharding kwargs were added later; programmatic callers (e.g. tests using
     # SimpleNamespace) may not set them. Read defensively so the script stays
     # backward-compatible with the pre-sharding arg surface.
-    num_shards = getattr(args, "num_shards", 1)
-    shard_id = getattr(args, "shard_id", 0)
     if num_shards > 1:
-        if args.num_sessions > 0:
+        if getattr(args, "num_sessions", 0) > 0:
             # Both knobs together would silently overlap: each shard process
             # independently random-samples N sessions (no seed), then slices
             # its window out of THAT random pool — so shards work on different
@@ -218,7 +247,10 @@ def main(args):
         db = db.select(range(start, end))
         print(f"Shard {shard_id}/{num_shards}: {len(db)} sessions "
               f"(indices [{start}, {end}))")
-    # Prepare all batch data at once
+    return db
+
+
+def _build_batch_data(db, music_crs):
     batch_data, metadata = [], []
     for item in db:
         user_id = item['user_id']
@@ -245,46 +277,112 @@ def main(args):
                 'user_id': user_id,
                 'turn_number': target_turn_number
             })
-    inference_results = []
-    trace_results = []
-    for i in tqdm(range(0, len(batch_data), args.batch_size), desc="Batch inference"):
-        batch = batch_data[i:i+args.batch_size]
-        batch_metadata = metadata[i:i+args.batch_size]
-        results = music_crs.batch_chat(batch)
-        for j, result in enumerate(results):
-            inference_results.append({
-                "session_id": batch_metadata[j]['session_id'],
-                "user_id": batch_metadata[j]['user_id'],
-                "turn_number": batch_metadata[j]['turn_number'],
-                "predicted_track_ids": result['retrieval_items'],
-                "predicted_response": result["response"]
-            })
-            # V0PlusCompilerQU populates `result["trace"]`; other QUs leave it
-            # as None. Save in a sibling file so the main predictions JSON
-            # stays small and easy to diff between runs.
-            trace_results.append({
-                "session_id": batch_metadata[j]['session_id'],
-                "user_id": batch_metadata[j]['user_id'],
-                "turn_number": batch_metadata[j]['turn_number'],
-                "trace": _with_trace_run_metadata(
-                    result.get("trace"),
-                    trace_run_metadata,
-                ),
-            })
+    return batch_data, metadata
+
+
+def _run_shard(args, runtime: dict, shard_id: int, num_shards: int, output_suffix: str) -> None:
+    timings: dict[str, float] = {}
+    start = time.perf_counter()
+    db = _select_shard(runtime["db"], args, shard_id, num_shards)
+    _add_elapsed(timings, "select_shard", start)
+
+    start = time.perf_counter()
+    music_crs = runtime["music_crs"]
+    batch_data, metadata = _build_batch_data(db, music_crs)
+    _add_elapsed(timings, "prepare_batches", start)
+
     os.makedirs(f"{args.exp_dir}/inference/devset", exist_ok=True)
-    # `output_suffix` is sharding-time metadata; programmatic callers may not set it.
-    output_suffix = getattr(args, "output_suffix", "")
     out_path = f"{args.exp_dir}/inference/devset/{args.tid}{output_suffix}.json"
     # Trace sidecar — JSONL (one record per line) so it streams/diffs cheaply
     # and shards concatenate by appending lines. `default=str` handles
     # datetime.date fields inside the extracted v0+ state's hard_filters.start/end
     # without a custom encoder.
     trace_path = f"{args.exp_dir}/inference/devset/{args.tid}{output_suffix}_trace.jsonl"
+    inference_results = []
+
+    desc = f"Shard {shard_id}/{num_shards} inference" if num_shards > 1 else "Batch inference"
+    with open(trace_path, "w", encoding="utf-8") as trace_file:
+        for i in tqdm(range(0, len(batch_data), args.batch_size), desc=desc):
+            batch = batch_data[i:i+args.batch_size]
+            batch_metadata = metadata[i:i+args.batch_size]
+            start = time.perf_counter()
+            results = music_crs.batch_chat(batch)
+            _add_elapsed(timings, "batch_chat", start)
+            _add_timing_snapshot(
+                timings,
+                "batch_chat.",
+                getattr(music_crs, "last_batch_timings", None),
+            )
+
+            start = time.perf_counter()
+            for j, result in enumerate(results):
+                inference_results.append({
+                    "session_id": batch_metadata[j]['session_id'],
+                    "user_id": batch_metadata[j]['user_id'],
+                    "turn_number": batch_metadata[j]['turn_number'],
+                    "predicted_track_ids": result['retrieval_items'],
+                    "predicted_response": result["response"]
+                })
+                # V0PlusCompilerQU populates `result["trace"]`; other QUs leave
+                # it as None. Save in a sibling file so the main predictions JSON
+                # stays small and easy to diff between runs.
+                trace_record = {
+                    "session_id": batch_metadata[j]['session_id'],
+                    "user_id": batch_metadata[j]['user_id'],
+                    "turn_number": batch_metadata[j]['turn_number'],
+                    "trace": _with_trace_run_metadata(
+                        result.get("trace"),
+                        runtime["trace_run_metadata"],
+                    ),
+                }
+                trace_file.write(json.dumps(trace_record, ensure_ascii=False, default=str) + "\n")
+            trace_file.flush()
+            _add_elapsed(timings, "trace_write", start)
+
+    start = time.perf_counter()
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(inference_results, f, ensure_ascii=False)
-    with open(trace_path, "w", encoding="utf-8") as f:
-        for record in trace_results:
-            f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+    _add_elapsed(timings, "write_predictions", start)
+    _print_timings(
+        f"devset shard={shard_id}/{num_shards} sessions={len(db)} turns={len(batch_data)}",
+        timings,
+    )
+
+
+def run_grouped(args, shard_ids, output_suffixes: dict[int, str] | None = None) -> None:
+    """Run multiple logical shards after loading the CRS/runtime once."""
+    runtime = _load_runtime(args)
+    num_shards = getattr(args, "num_shards", 1)
+    output_suffixes = output_suffixes or {}
+    for shard_id in shard_ids:
+        output_suffix = output_suffixes.get(shard_id, getattr(args, "output_suffix", ""))
+        _run_shard(args, runtime, int(shard_id), num_shards, output_suffix)
+
+
+def main(args):
+    """
+    Run batch inference on TalkPlayData-2 test dataset.
+
+    Args:
+        args: Namespace object containing:
+            - tid (str): Task/configuration identifier
+            - batch_size (int): Batch size for inference
+            - save_path (str): Output directory (currently unused)
+
+    Returns:
+        None. Results are saved to exp/inference/{tid}.json
+
+    Processing:
+        - Loads model configuration from configs/{tid}.yaml
+        - Processes all sessions × 8 turns in batches
+        - Tracks progress with tqdm progress bar
+        - Saves comprehensive results for evaluation
+    """
+    runtime = _load_runtime(args)
+    num_shards = getattr(args, "num_shards", 1)
+    shard_id = getattr(args, "shard_id", 0)
+    output_suffix = getattr(args, "output_suffix", "")
+    _run_shard(args, runtime, shard_id, num_shards, output_suffix)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
