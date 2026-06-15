@@ -155,6 +155,16 @@ visual gap is a *ranking* problem among same-genre plausible tracks, not a
 cross-genre-noise problem. Branch boosting (`routing_boost`) likewise can't help
 — up-weighting a weak, deep SigLIP signal only injects noise.
 
+**Other constraints don't help either.** Of the 32 buried-GT turns: only 3 also
+state an era, 0 a popularity word, 3 an explicit rejection (and rejections /
+played tracks are *already* hard-dropped by the compiler). Visual turns carry
+artist context ~1% of the time (covers are described, not attributed), so
+"not-this-artist" exclusions aren't a visual lever (they belong to pivot #125).
+Stacking genre+era surfaced **0/32** into top-20. Root reason: the user's
+*discriminating* signal is the cover itself, which is not a metadata field — no
+genre/era/popularity/exclusion filter can pick GT by its cover from same-genre
+peers. Only the (weak) SigLIP embedding carries that signal.
+
 ## Where the real lever is (cross-lane)
 
 - **Candidate-surface / pool-depth (#129):** the cheap inference `pool_k` bump is
