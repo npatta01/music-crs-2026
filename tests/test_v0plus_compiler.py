@@ -1205,6 +1205,57 @@ def test_visual_query_uses_album_cover_prefix():
     assert "indie" in q and "dreamy" in q
 
 
+def test_visual_nl_query_strips_container_filler_and_uses_caption_framing():
+    """`visual_nl` (SigLIP-2 caption): natural-language framing, with redundant
+    container words (cover/art/album/artwork/image) dropped — the caption frame
+    already implies them. Mirrors the sonic_nl->CLAP query-framing win."""
+    state = _state(
+        turn_intent="something visual",
+        mentioned_entities=[
+            MentionedEntity(type="tag", value="dark abstract cover art", sentiment=1),
+            MentionedEntity(type="tag", value="electronic", sentiment=1),
+        ],
+    )
+    q = _capture_query_text(state, "visual_nl")
+    assert q is not None
+    assert q.lower().startswith("an album cover")   # caption framing, not comma list
+    assert "cover art" not in q.lower()              # redundant container filler dropped
+    assert "dark abstract" in q                      # concrete descriptor kept
+    assert "electronic" in q
+
+
+def test_visual_nl_query_skips_when_no_signal():
+    """No tags and no intent => `visual_nl` returns None (branch no-ops)."""
+    state = _state(turn_intent="", mentioned_entities=[])
+    assert _capture_query_text(state, "visual_nl") is None
+
+
+def test_visual_concrete_query_strips_frame_and_filler():
+    """`visual_concrete` (SigLIP-2, probe-winning): bare visual descriptors only,
+    NO "album cover" frame and redundant container words dropped. The 6-example
+    probe showed the frame is non-discriminative (every catalog item is a cover)
+    and dilutes the query — stripping it ranked GT covers 3-28x higher."""
+    state = _state(
+        turn_intent="something visual",
+        mentioned_entities=[
+            MentionedEntity(type="tag", value="dark abstract cover art", sentiment=1),
+            MentionedEntity(type="tag", value="electronic", sentiment=1),
+        ],
+    )
+    q = _capture_query_text(state, "visual_concrete")
+    assert q is not None
+    assert "album cover" not in q.lower()   # frame dropped
+    assert "cover art" not in q.lower()      # redundant container filler dropped
+    assert "dark abstract" in q              # concrete descriptor kept
+    assert "electronic" in q
+
+
+def test_visual_concrete_query_skips_when_no_signal():
+    """No tags and no intent => `visual_concrete` returns None (branch no-ops)."""
+    state = _state(turn_intent="", mentioned_entities=[])
+    assert _capture_query_text(state, "visual_concrete") is None
+
+
 def test_sonic_nl_query_uses_natural_language_phrasing():
     """`sonic_nl` template: "A song with {tags} sound, similar to {artists}"."""
     state = _state(

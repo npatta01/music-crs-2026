@@ -107,6 +107,35 @@ decoys highly and displaces good top-20 picks. So the cheap config-only
 pool-depth lever is **negative**; a fair test needs a `pool_k=1000` **retrain**
 (#129 **and** #128 together), not a config bump.
 
+## Query-formulation probe (retriever play): wording is a small lever
+
+Is the SigLIP query phrased right? A 6-example probe (`modal/app.py::probe_visual`,
+ranking each GT cover in the full 46,485-cover space) suggested **bare visual
+descriptors** (no `"album cover,"` frame, filler stripped) ranked GT 3–28×
+higher than the current comma query. But **slice-scale validation (253 turns)
+did not confirm it** — the probe was cherry-picked. Three query builders were
+run on the full visual slice (`query_id` = `visual` / `visual_nl` / `visual_concrete`):
+
+| query | SigLIP r@100 | SigLIP r@1000 | union@100 Δ | union@1000 Δ | hit@20 Δ |
+|---|---:|---:|---:|---:|---:|
+| `visual` (comma, current) | 0.063 | 0.213 | +0.016 | +0.044 | +0.000 |
+| `visual_nl` (caption) | **0.083** | **0.257** | **+0.036** | +0.040 | +0.000 |
+| `visual_concrete` (bare) | 0.075 | 0.198 | +0.020 | +0.028 | −0.000 |
+
+- The **caption** query (`visual_nl`, NL framing + filler strip) is marginally
+  the best *retriever* query — best branch r@100 and ~2× the comma query's
+  union@100 lift. Bare descriptors (`visual_concrete`) were middling, **not** the
+  probe-suggested winner.
+- **Every wording is flat on top-20.** SigLIP branch recall is low across the
+  board (r@100 ~0.06–0.08) — the cover-art text→image alignment for music is
+  fundamentally weak, and no phrasing changes that.
+
+Lesson: query wording is a small candidate-surface lever (caption best), not a
+fix; aggregate-validate before trusting a few cherry-picked examples. The
+embedding mechanics are correct (model matches catalog, `get_text_features`,
+`padding=max_length` is the SigLIP convention, raw+cosine) — so this is content,
+not a bug.
+
 ## Where the real lever is (cross-lane)
 
 - **Candidate-surface / pool-depth (#129):** the cheap inference `pool_k` bump is

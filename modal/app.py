@@ -2458,6 +2458,103 @@ def verify_clap_textside(
     )
 
 
+# Few-example retriever probe (#127): rank each GT cover in the full
+# image-siglip2 space for several query-string variants. Diagnostic only.
+@app.function(
+    image=image,
+    gpu="T4",
+    volumes={HF_CACHE_DIR: hf_cache_vol},
+    secrets=[ENV_SECRET],
+    cpu=2.0,
+    memory=16384,
+    timeout=1800,
+)
+def probe_visual_queries(examples_json: str, top_neighbors: int = 3) -> list:
+    """For each example {gt, variants:{name:query}}, embed every variant with the
+    SigLIP-2 text encoder and rank the GT album cover against ALL catalog
+    image-siglip2 vectors. Answers: which query wording ranks GT highest?"""
+    import json as _json
+    from pathlib import Path
+
+    import numpy as np
+    import pyarrow.parquet as pq
+    from huggingface_hub import snapshot_download
+
+    examples = _json.loads(examples_json)
+
+    meta_dir = snapshot_download(
+        repo_id="talkpl-ai/TalkPlayData-Challenge-Track-Metadata",
+        repo_type="dataset", allow_patterns=["data/all_tracks-*.parquet"],
+    )
+    emb_dir = snapshot_download(
+        repo_id="talkpl-ai/TalkPlayData-Challenge-Track-Embeddings",
+        repo_type="dataset", allow_patterns=["data/all_tracks-*.parquet"],
+    )
+    meta = []
+    for mp in sorted(Path(meta_dir).glob("data/all_tracks-*.parquet")):
+        meta.extend(
+            pq.read_table(str(mp), columns=["track_id", "track_name", "artist_name"]).to_pylist()
+        )
+    name_by_id = {
+        r["track_id"]: (r.get("track_name") or "?", ", ".join(r.get("artist_name") or []))
+        for r in meta
+    }
+    # Load ALL embedding shards; keep only rows with a valid 768-dim image vector
+    # (some tracks have missing/empty cover-art embeddings -> ragged otherwise).
+    ids: list = []
+    vecs: list = []
+    for ep in sorted(Path(emb_dir).glob("data/all_tracks-*.parquet")):
+        t = pq.read_table(str(ep), columns=["track_id", "image-siglip2"])
+        for tid, v in zip(t["track_id"].to_pylist(), t["image-siglip2"].to_pylist()):
+            if v is not None and len(v) == 768:
+                ids.append(tid)
+                vecs.append(v)
+    mat = np.asarray(vecs, dtype=np.float32)
+    mat = mat / (np.linalg.norm(mat, axis=1, keepdims=True) + 1e-12)
+    idx_by_id = {tid: i for i, tid in enumerate(ids)}
+    print(f"[probe] catalog image matrix {mat.shape} ({len(ids)} valid vectors)")
+
+    from mcrs.embeddings.siglip2_text_embedding import SigLIP2TextEmbeddingClient
+
+    client = SigLIP2TextEmbeddingClient(device="cuda", l2_normalize=False)
+
+    results = []
+    for ex in examples:
+        gt = ex["gt"]
+        gi = idx_by_id.get(gt)
+        names = list(ex["variants"].keys())
+        tvecs = np.asarray(client.embed_batch([ex["variants"][k] for k in names]), dtype=np.float32)
+        tvecs = tvecs / (np.linalg.norm(tvecs, axis=1, keepdims=True) + 1e-12)
+        per = {}
+        for name, tv in zip(names, tvecs):
+            sims = mat @ tv
+            order = np.argsort(-sims)
+            gt_rank = (int(np.where(order == gi)[0][0]) + 1) if gi is not None else None
+            per[name] = {
+                "gt_rank": gt_rank,
+                "gt_cos": float(sims[gi]) if gi is not None else None,
+                "top1_name": name_by_id.get(ids[int(order[0])], ("?", ""))[0],
+            }
+        results.append({"gt": gt, "gt_in_catalog": gi is not None, "variants": per})
+    return results
+
+
+@app.local_entrypoint()
+def probe_visual(examples_path: str = "/tmp/visual_probe_variants.json"):
+    """modal run modal/app.py::probe_visual --examples-path /tmp/visual_probe_variants.json"""
+    res = probe_visual_queries.remote(open(examples_path).read())
+    print("\n===== VISUAL QUERY PROBE: GT rank in full image-siglip2 catalog (47k) =====")
+    for r in res:
+        print(f"\ngt={r['gt'][:8]}  in_catalog={r['gt_in_catalog']}")
+        rows = sorted(
+            r["variants"].items(),
+            key=lambda kv: (kv[1]["gt_rank"] is None, kv[1]["gt_rank"] or 10**9),
+        )
+        for name, d in rows:
+            cos = f"{d['gt_cos']:.4f}" if d["gt_cos"] is not None else "NA"
+            print(f"  {name:20s} gt_rank={str(d['gt_rank']):>7}  gt_cos={cos}")
+
+
 @app.local_entrypoint()
 def verify_textside(
     modality: str = "siglip2",

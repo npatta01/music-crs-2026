@@ -1739,6 +1739,85 @@ class V0PlusCompiler:
             return f"album cover, {intent}"
         return None
 
+    def _build_visual_nl_query_string(self, rs: ResolvedConversationState) -> str | None:
+        """`query_id="visual_nl"` — natural-language caption for SigLIP-2's text
+        branch.
+
+        SigLIP-2's text encoder was trained on (image, web-caption) pairs, so a
+        caption sentence aligns better than the Round-1 `"album cover, {comma
+        tags}"` list — mirroring the `sonic_nl`->CLAP query-framing win. Redundant
+        container words (cover / art / album / artwork / image) are stripped
+        because the caption frame already implies them; what's left is the
+        concrete visual content, which the visual-slice pool diagnostic showed is
+        what ranks GT shallow in the cover-art space (vague filler like
+        "distinctive cover art" misses).
+
+        Template:
+          - "an album cover with {cleaned tags} artwork"
+          - Falls back to "album cover artwork, {turn_intent}" when no usable
+            tags survive, or None when there is no signal at all.
+        """
+        import re
+
+        state = rs.state
+        tags = self._positive_mention_values(state, "tag")
+        filler = re.compile(
+            r"\b(?:album covers?|cover art|album art|artworks?|covers?|art|imagery|images?)\b",
+            re.IGNORECASE,
+        )
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for tag in tags:
+            c = re.sub(r"\s+", " ", filler.sub("", tag)).strip(" ,").strip()
+            key = c.casefold()
+            if c and key not in seen:
+                seen.add(key)
+                cleaned.append(c)
+        if cleaned:
+            return "an album cover with " + ", ".join(cleaned) + " artwork"
+        intent = state.turn_intent.strip()
+        return f"album cover artwork, {intent}" if intent else None
+
+    def _build_visual_concrete_query_string(self, rs: ResolvedConversationState) -> str | None:
+        """`query_id="visual_concrete"` — bare visual descriptors for SigLIP-2.
+
+        The 6-example probe (`modal/app.py::probe_visual`) showed the
+        `"album cover,"` frame is non-discriminative — every catalog item IS a
+        cover, so the frame pulls the query toward a generic centroid and buries
+        the concrete description. Stripping the frame + redundant container words
+        ("cover art" / "imagery" / ...) ranked the GT cover 3-28x higher in the
+        image-siglip2 space. Emits ONLY the concrete visual descriptors — no
+        frame, no caption boilerplate.
+
+        Template:
+          - "{cleaned tags}" (comma-joined visual descriptors)
+          - Falls back to the filler-stripped turn_intent, or None when there is
+            no signal at all.
+        """
+        import re
+
+        filler = re.compile(
+            r"\b(?:album covers?|cover art|album art|artworks?|covers?|art|imagery|images?)\b",
+            re.IGNORECASE,
+        )
+
+        def _clean(value: str) -> str:
+            return re.sub(r"\s+", " ", filler.sub("", value)).strip(" ,").strip()
+
+        state = rs.state
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for tag in self._positive_mention_values(state, "tag"):
+            c = _clean(tag)
+            key = c.casefold()
+            if c and key not in seen:
+                seen.add(key)
+                cleaned.append(c)
+        if cleaned:
+            return ", ".join(cleaned)
+        intent = _clean(state.turn_intent)
+        return intent or None
+
     def _build_sonic_nl_query_string(self, rs: ResolvedConversationState) -> str | None:
         """`query_id="sonic_nl"` — natural-language sonic description for CLAP.
 
@@ -1891,6 +1970,8 @@ class V0PlusCompiler:
             "metadata": self._build_metadata_query_string,
             "sonic": self._build_sonic_query_string,
             "visual": self._build_visual_query_string,
+            "visual_nl": self._build_visual_nl_query_string,
+            "visual_concrete": self._build_visual_concrete_query_string,
             "sonic_nl": self._build_sonic_nl_query_string,
             "sonic_nl_enriched": self._build_sonic_nl_enriched_query_string,
             "lyric": self._build_lyric_query_string,
