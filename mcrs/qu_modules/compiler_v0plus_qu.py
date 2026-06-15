@@ -1138,6 +1138,14 @@ def build_v0plus_compiler_qu(
                 "similar_artist_max_artists",
                 "similar_artist_anchor_intents",
                 "similar_artist_anchor_on_exact_entity",
+                "enable_genre_scene_neighbors",
+                "genre_scene_intents",
+                "genre_scene_era_policy",
+                "genre_scene_era_window",
+                "genre_scene_anchor_topk",
+                "genre_scene_max_tags",
+                "genre_scene_cap",
+                "genre_scene_weight",
             }
         }
         if dense_branches is not None:

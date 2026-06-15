@@ -957,6 +957,30 @@ def test_routing_boost_survives_yaml_allowlist():
     assert qu.compiler.cfg.routing_boost == {"lyric_search": 4.0}
 
 
+def test_genre_scene_knobs_survive_yaml_allowlist():
+    """The genre_scene recall-branch knobs in qu_kwargs.compiler must reach
+    CompilerConfig, not be silently dropped by the allowlist filter."""
+    catalog = _catalog()
+    qu = build_v0plus_compiler_qu(
+        qu_kwargs={"compiler": {
+            "enable_genre_scene_neighbors": True,
+            "genre_scene_intents": ["pivot", "open_explore"],
+            "genre_scene_era_policy": "infer_anchor",
+            "genre_scene_cap": 150,
+        }},
+        _overrides={
+            "catalog": catalog,
+            "matcher": RapidfuzzCatalogMatcher(catalog),
+            "encoder": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5]),
+            "retriever": FakeRetriever(),
+            "extractor": _FakeExtractor(state=_state()),
+        },
+    )
+    assert qu.compiler.cfg.enable_genre_scene_neighbors is True
+    assert qu.compiler.cfg.genre_scene_era_policy == "infer_anchor"
+    assert qu.compiler.cfg.genre_scene_cap == 150
+
+
 def test_v1_attribute_routing_flags_survive_yaml_allowlist():
     catalog = _catalog()
     qu = build_v0plus_compiler_qu(
