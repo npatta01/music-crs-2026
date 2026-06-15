@@ -11,7 +11,6 @@ misleading agents about the current system. Use Git history for older waves.
 | `configs/state_ranker_v10_rrf_devset.yaml` | Devset candidate-fusion baseline | Explicit `ranking.mode: rrf`; useful for retrieval and candidate-pool recall. |
 | `configs/state_ranker_v10_lgbm_devset.yaml` | Current devset score anchor | Fresh v10 LambdaMART run: NDCG@20 0.4562, Hit@20 0.6138. |
 | `configs/state_ranker_v10_lgbm_blindset_A.yaml` | Blind A submission path | CodaBench submission `797598`: nDCG@20 0.4380, composite 0.5389. |
-| `configs/state_ranker_v10_lgbm_devset_visual.yaml` | Issue #127 experiment (Lever B) | Adds a visual-gated SigLIP-2 text->cover-art dense branch. Lifts visual union but NOT top-20; **necessary-not-sufficient, not a current reference.** See `visual_route_lever_b.md`. |
 
 ## Current Reports
 

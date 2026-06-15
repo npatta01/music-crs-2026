@@ -76,8 +76,9 @@ Next step:
 
 Decision:
 
-- Added a visual-gated SigLIP-2 text->cover-art dense branch
-  (`configs/state_ranker_v10_lgbm_devset_visual.yaml`, `DenseBranch.gated_on`).
+- Added a visual-gated SigLIP-2 text->cover-art dense branch (`DenseBranch.gated_on`;
+  experiment config kept OUT of `configs/` to preserve the canonical 3-config
+  surface — recreate from the snippet in `experiments/visual_route_lever_b.md`).
   Paired sharded A/B on all 253 visual turns: **union@1000 0.759 -> 0.802
   (+0.044)** but **hit@20/ndcg@20 flat** (frozen v10 reranker does not promote the
   new candidates). Verdict: validated coverage lever, **necessary-not-sufficient,

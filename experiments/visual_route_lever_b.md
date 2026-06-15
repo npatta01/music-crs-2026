@@ -25,9 +25,11 @@ to do that. **The visual gap is retrieval-quality-limited, not reranker-limited.
   only when a named `RoutingTags` flag is true; gate-skips **before** the encode
   (no wasted RPC, no candidate injection on non-matching turns); fail-fast
   validation for typo'd gate names. Config parser forwards `gated_on`.
-- `configs/state_ranker_v10_lgbm_devset_visual.yaml`: baseline + the `siglip2_text`
-  encoder + a `query_id=visual` dense branch on `image_siglip2`,
-  `gated_on: image_or_visual_search`. Baseline config untouched.
+- **Experiment config (not committed to `configs/`** — kept off the canonical
+  3-config surface per the prune-first posture). It is the lgbm devset baseline
+  plus the `siglip2_text` encoder and a `query_id=visual` dense branch on
+  `image_siglip2`, `gated_on: image_or_visual_search`. Recreate it from the
+  snippet at the end of this report to reproduce or extend (#129).
 - `run_experiment.py`: `--session_ids_file` now works on the **Modal** backend,
   including **sharded** runs (workers filter to the subset, then split it across
   shards). This made the 65-session run ~7.5 min (10 shards) vs ~16 min in a
@@ -110,6 +112,10 @@ the frozen reranker. Up-weighting SigLIP in fusion (Lever A) would help only its
 
 ## Reproduce
 
+First recreate the experiment config (see snippet below) at
+`configs/state_ranker_v10_lgbm_devset_visual.yaml` (it is intentionally not
+committed — kept off the canonical 3-config surface). Then:
+
 ```bash
 # 65 visual sessions, sharded, from claude/visual-route:
 python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset \
@@ -122,3 +128,26 @@ python scripts/compare_visual_slice.py --baseline-preds ... --treatment-preds ..
 python scripts/visual_pool_position.py --baseline-trace ... --treatment-trace ... \
   --ground-truth exp/ground_truth/devset.json --sessions-file exp/subsets/visual_sessions.json
 ```
+
+## Experiment config (delta vs `configs/state_ranker_v10_lgbm_devset.yaml`)
+
+Copy the lgbm devset config to `configs/state_ranker_v10_lgbm_devset_visual.yaml`
+and apply these two additions:
+
+```yaml
+# under qu_kwargs.encoders: (alongside qwen_0_6b / qwen_8b / clap_text)
+    siglip2_text:
+      backend: modal_multimodal
+      modal_app_name: music-crs
+      modal_cls_name: MultimodalTextEncoder
+      method: embed_siglip_text
+
+# under qu_kwargs.compiler.dense_branches: (append after the sonic_nl branch)
+    - vector_field: image_siglip2
+      encoder_id: siglip2_text
+      query_id: visual
+      weight: 1.0
+      distance_type: cosine
+      gated_on: image_or_visual_search    # fires only on image_or_visual_search turns
+```
+
