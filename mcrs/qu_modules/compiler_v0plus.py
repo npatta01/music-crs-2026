@@ -43,6 +43,10 @@ from dataclasses import dataclass, field
 # `"deep" in "deepfake"` don't accidentally fire the lyric branch.
 _LYRIC_TOKEN_RE = re.compile(r"\w+")
 
+# Pure year/decade tags (1991, 90s, 00s, 2000s) — era is handled separately, so
+# they are dropped from the genre/scene tag set.
+_GENRE_NOISE_TAG_RE = re.compile(r"^\d+s?$")
+
 from mcrs.conversation_state.schema import (
     AnchorUse,
     AttributeFacet,
@@ -316,6 +320,22 @@ class CompilerConfig:
     enable_era_popularity: bool = False
     era_pop_weight: float = 1.0
     era_pop_cap: int = 200
+    # Genre/scene similar-artist recall branch (over-anchor recall fix). On a
+    # pivot, recall top-popularity tracks by OTHER artists sharing the
+    # pivoted-away artist's genre/scene tags. Off by default => baseline
+    # byte-identical. See docs/superpowers/specs/2026-06-15-genre-scene-recall-branch-design.md
+    enable_genre_scene_neighbors: bool = False
+    genre_scene_intents: tuple[str, ...] = ("pivot",)
+    # A/B options:
+    #   ("pivot",)                                                  -> default, pivot only
+    #   ("pivot", "open_explore")                                   -> + "artists like X"
+    #   ("pivot", "open_explore", "refinement", "playlist_build")   -> any style_reference anchor
+    genre_scene_era_policy: str = "explicit_only"  # | "ignore" | "infer_anchor"
+    genre_scene_era_window: int = 5                # years, for infer_anchor
+    genre_scene_anchor_topk: int = 25              # anchor tracks sampled for tags
+    genre_scene_max_tags: int = 8                  # genre tags kept (by frequency)
+    genre_scene_cap: int = 200                     # neighbor pool size
+    genre_scene_weight: float = 1.0                # RRF weight
     # Deprecated release-year pre-filter config. v1 hard release-date asks are
     # represented as hard_filters via temporal_constraint.apply_as_filter=true;
     # soft release_year_range/style-era hints do not gate candidates here. Keep
