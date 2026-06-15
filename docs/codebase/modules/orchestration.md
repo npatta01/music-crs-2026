@@ -4,9 +4,9 @@
 
 This module group wires together and drives the end-to-end CRS pipeline.
 `CRS_BASELINE` is the central integration point: it instantiates the QU module,
-the retrieval module, the LM module, and both catalog databases, then drives a
-single turn or a batch of turns through the full QU → retrieval → generation
-chain.  `inference_utils` provides stateless helpers used by the top-level
+the LM module, and both catalog databases, then drives a single turn or a batch
+of turns through QU-owned retrieval/ranking and response generation.
+`inference_utils` provides stateless helpers used by the top-level
 inference scripts (`run_inference_devset.py`, `run_inference_blindset.py`) to
 parse raw conversation data and resolve per-run config placeholders before
 constructing `CRS_BASELINE`.  `RetrievalService` is a thin composable wrapper
@@ -26,7 +26,7 @@ app.
 
 | File | Responsibility |
 |------|---------------|
-| `mcrs/crs_baseline.py` | `CRS_BASELINE` class — single-turn and batch orchestrator for QU + retrieval + LM. |
+| `mcrs/crs_baseline.py` | `CRS_BASELINE` class — single-turn and batch orchestrator for full-pipeline QU + LM. |
 | `mcrs/inference_utils.py` | Stateless helpers: conversation history parsing and QU config placeholder resolution. |
 | `mcrs/retrieval_services/service.py` | `RetrievalService` dataclass — provider-neutral facade over a retriever and optional embedding client. |
 | `mcrs/analysis/retrieval_analysis.py` | Offline evaluation library: load runs, score against ground truth, RRF fusion, failure views. |
@@ -41,8 +41,8 @@ app.
 ```python
 load_crs_baseline(
     lm_type="meta-llama/Llama-3.2-1B-Instruct",
-    retrieval_type="bm25",
-    qu_type="passthrough",
+    retrieval_type="unused",
+    qu_type="state_ranker",
     item_db_name: str = "talkpl-ai/TalkPlayData-Challenge-Track-Metadata",
     user_db_name: str = "talkpl-ai/TalkPlayData-Challenge-User-Metadata",
     track_split_types: list[str] = ["all_tracks"],
@@ -66,22 +66,24 @@ Called by both inference scripts.
 
 ### `mcrs/crs_baseline.py` — `CRS_BASELINE`
 
-**`__init__`** (`crs_baseline.py:31`) — Loads all four subsystems: LM
-(`load_lm_module`), retrieval (`load_retrieval_module`), QU (`load_qu_module`),
-item catalog (`MusicCatalogDB`), and user profiles (`UserProfileDB`). Also
-reads the three system-prompt templates from `mcrs/system_prompts/`.
+**`__init__`** (`crs_baseline.py:31`) — Loads the LM (`load_lm_module`), QU
+(`load_qu_module`), item catalog (`MusicCatalogDB`), and user profiles
+(`UserProfileDB`). The QU must provide `compile_track_ids` or
+`batch_compile_track_ids`; `CRS_BASELINE` no longer instantiates a standalone
+retrieval module. Also reads the three system-prompt templates from
+`mcrs/system_prompts/`.
 
 **`chat(user_query, user_id=None) -> dict`** (`crs_baseline.py:136`) — Single-turn CRS step.
-Appends the user query to `session_memory`, builds the system prompt, runs
-retrieval (or delegates to `qu.compile_track_ids` for v0+ QUs), resolves the
+Appends the user query to `session_memory`, builds the system prompt, delegates
+retrieval/ranking to `qu.compile_track_ids`, resolves the
 top-1 item metadata, and calls `lm.response_generation`. Returns a dict with
 keys `user_id`, `user_query`, `retrieval_items`, `recommend_item`, `response`.
 
 **`batch_chat(batch_data) -> list[dict]`** (`crs_baseline.py:188`) — Batch variant
 of `chat`. Accepts a list of dicts each containing `user_query`, optional
 `user_id`, and `session_memory`. Uses `batch_compile_track_ids` /
-`batch_text_to_item_retrieval` / `batch_response_generation` when available,
-falling back to sequential loops otherwise. Output dicts include an extra
+`batch_response_generation` when available, falling back to sequential
+`compile_track_ids` / `response_generation` loops otherwise. Output dicts include an extra
 `trace` key populated from `qu.last_traces` when the QU is `V0PlusCompilerQU`.
 
 **`_get_system_prompt(user_id=None) -> str`** (`crs_baseline.py:123`) — Concatenates
@@ -176,8 +178,9 @@ via `streamlit run`.
 stored as instance attributes. The most consequential:
 - `qu_type` / `qu_kwargs`: selects and configures the QU module; v0+
   compiler configs embed nested dicts with `<tid>` placeholder paths.
-- `retrieval_type` / `retrieval_config`: selects BM25, LanceDB, or Modal-backed
-  retrieval. `retrieval_config` is merged with a `device` default.
+- `retrieval_type` / `retrieval_config`: retained for older config surfaces,
+  but active inference no longer loads a standalone retrieval module from
+  `CRS_BASELINE`. Full-pipeline QUs own retrieval/ranking directly.
 - `retrieval_topk` (default 20): how many track IDs to return per turn.
 
 **`batch_chat` input schema** — Each dict in `batch_data` must have:
@@ -229,12 +232,10 @@ All prediction and ground-truth path helpers default to this directory.
    Internally it:
    - Builds per-item system prompts via `_get_system_prompt` (which may call
      `user_db.id_to_profile_str`).
-   - Dispatches retrieval through one of three paths (in priority order):
+   - Dispatches retrieval/ranking through one of two QU-owned paths:
      a. `qu.batch_compile_track_ids` — v0+ full-pipeline QU (bypasses
         `self.retrieval` entirely).
      b. `qu.compile_track_ids` called sequentially — single-session v0+ QU.
-     c. `qu.batch_transform_queries` → `retrieval.batch_text_to_item_retrieval`
-        — classic two-step QU + retriever.
    - Looks up metadata for the top-1 retrieved track via `item_db.id_to_metadata`.
    - Calls `lm.batch_response_generation` (or falls back to sequential
      `lm.response_generation`).
@@ -262,7 +263,6 @@ All prediction and ground-truth path helpers default to this directory.
 | Dependency | Used by |
 |-----------|---------|
 | `mcrs.lm_modules.load_lm_module` | `crs_baseline.py` |
-| `mcrs.retrieval_modules.load_retrieval_module` | `crs_baseline.py` |
 | `mcrs.qu_modules.load_qu_module` | `crs_baseline.py` |
 | `mcrs.db_item.MusicCatalogDB` | `crs_baseline.py` |
 | `mcrs.db_user.UserProfileDB` | `crs_baseline.py` |

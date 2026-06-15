@@ -84,7 +84,7 @@ Every inference run is governed by a YAML file. Required and commonly used keys 
 | Key | Type | Used by |
 |---|---|---|
 | `lm_type` | `str` | `load_crs_baseline` — LM model name/path |
-| `retrieval_type` | `str` | `load_crs_baseline` — retrieval backend identifier |
+| `retrieval_type` | `str` | `load_crs_baseline` — compatibility field; active configs default to `"unused"` |
 | `qu_type` | `str` (default `"passthrough"`) | `load_crs_baseline` — query understanding module |
 | `qu_kwargs` | `dict` | passed through `resolve_qu_kwargs_placeholders` |
 | `item_db_name` | `str` | HF dataset name for track metadata |

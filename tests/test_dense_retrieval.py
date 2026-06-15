@@ -1,4 +1,3 @@
-import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,11 +7,6 @@ try:
     import torch
 except ModuleNotFoundError:  # pragma: no cover
     torch = None
-
-try:
-    import bm25s  # noqa: F401
-except ModuleNotFoundError:  # pragma: no cover
-    sys.modules.setdefault("bm25s", MagicMock())
 
 import mcrs
 
@@ -32,6 +26,18 @@ class ListLikeConfig:
 
 
 class RetrievalFactoryTests(unittest.TestCase):
+    def test_bm25_selector_is_removed(self):
+        from mcrs.retrieval_modules import load_retrieval_module
+
+        with self.assertRaisesRegex(ValueError, "Unsupported retrieval type: bm25"):
+            load_retrieval_module(
+                retrieval_type="bm25",
+                dataset_name="tracks",
+                track_split_types=["all_tracks"],
+                corpus_types=["track_name"],
+                cache_dir="./cache",
+            )
+
     def test_bert_alias_preserves_legacy_defaults(self):
         try:
             from mcrs.retrieval_modules import load_retrieval_module

@@ -191,7 +191,6 @@ Create a config file in `configs/` or copy one of the current v10 state-ranker c
 ```yaml
 # configs/my_model.yaml
 lm_type: "dummy"
-retrieval_type: "bm25"
 qu_type: "state_ranker"
 qu_kwargs:
   ranking:
@@ -219,6 +218,9 @@ cache_dir: "./cache"
 device: "cpu"
 attn_implementation: "eager"
 ```
+
+`retrieval_type` is intentionally omitted for v10 configs: retrieval/ranking is
+owned by `qu_kwargs` and the full-pipeline state-ranker QU.
 
 Then run with your config:
 

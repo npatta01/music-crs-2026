@@ -5,7 +5,7 @@ except ModuleNotFoundError:  # pragma: no cover
 
 def load_crs_baseline(
     lm_type="meta-llama/Llama-3.2-1B-Instruct",
-    retrieval_type="bm25",
+    retrieval_type="unused",
     qu_type="passthrough",
     item_db_name: str = "talkpl-ai/TalkPlayData-Challenge-Track-Metadata",
     user_db_name: str = "talkpl-ai/TalkPlayData-Challenge-User-Metadata",

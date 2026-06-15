@@ -102,7 +102,7 @@ Registry entry point. Currently only `"default"` is supported; any other value r
 | `MusicCatalogDB.corpus_types` | `music_catalog.py:14` | `list[str]` — controls which fields `id_to_metadata` renders. Set from `CRS_BASELINE.corpus_types`, default `["track_name", "artist_name", "album_name"]`. |
 | `UserProfileDB.user_profiles` | `user_profile.py:14` | `dict[str, dict]` — `user_id` → raw HF row. |
 | `UserProfileDB.default_columns` | `user_profile.py:13` | Hard-coded to `['user_id', 'age_group', 'gender', 'country_name']`. No config path. |
-| `DefaultFormatter.name` | `corpus_formatters/base.py:4` | `"default"` — used by `BM25_MODEL` and `DENSE_TRANSFORMER_MODEL` to build a stable `corpus_name` for the on-disk cache key. |
+| `DefaultFormatter.name` | `corpus_formatters/base.py:4` | `"default"` — used by `DENSE_TRANSFORMER_MODEL` to build a stable `corpus_name` for the on-disk cache key. |
 
 There are no dataclasses or pydantic models in this group; all structures are plain Python dicts backed by HuggingFace `datasets.Dataset` rows.
 
@@ -112,9 +112,9 @@ There are no dataclasses or pydantic models in this group; all structures are pl
 
 The three sub-packages do not call each other. Each is used independently by the orchestration layer (`CRS_BASELINE`) and by retrieval modules. The only indirect coupling is:
 
-1. **`CRS_BASELINE.__init__`** (`crs_baseline.py:103-104`) constructs both `MusicCatalogDB` and `UserProfileDB`, passing the same `item_db_name` / `track_split_types` / `corpus_types` that it also passes to the retrieval module. This keeps the catalog loaded twice (once in the retrieval module, once in `item_db`) for the non-LanceDB paths.
+1. **`CRS_BASELINE.__init__`** constructs both `MusicCatalogDB` and `UserProfileDB`, passing `item_db_name` / `track_split_types` / `corpus_types` to the item DB for response-context formatting. Active inference no longer constructs a separate CRS-level retrieval module.
 
-2. **Retrieval modules** (`bm25.py:32-36`, `bert.py:62-77`, `litellm_embedding.py:45-59`) each call `load_corpus_formatter("default")` at construction time unless a custom formatter is injected. They then call `formatter.format(metadata, corpus_types)` for every track when building the index corpus (`bm25.py:74`).
+2. **Retrieval modules** (`bert.py:62-77`, `litellm_embedding.py:45-59`) each call `load_corpus_formatter("default")` at construction time unless a custom formatter is injected. They then call `formatter.format(metadata, corpus_types)` for every track when building the index corpus.
 
 3. **`CRS_BASELINE.chat` and `batch_chat`** call `item_db.id_to_metadata(retrieval_items[0])` (`crs_baseline.py:177, 265`) on the top-1 retrieved track ID, feeding the result as `recommend_item` into the LLM response-generation call.
 
@@ -145,7 +145,6 @@ Callers of the data layer:
 |---|---|
 | `mcrs.crs_baseline.CRS_BASELINE` | `MusicCatalogDB`, `UserProfileDB` |
 | `mcrs.inference_utils.chat_history_parser` | `MusicCatalogDB.id_to_metadata` (via `music_crs.item_db`) |
-| `mcrs.retrieval_modules.bm25.BM25_MODEL` | `load_corpus_formatter` |
 | `mcrs.retrieval_modules.bert.DENSE_TRANSFORMER_MODEL` | `load_corpus_formatter` |
 | `mcrs.retrieval_modules.litellm_embedding` | `load_corpus_formatter` |
 | `mcrs.milvus.indexing` | `load_corpus_formatter` |
@@ -158,7 +157,7 @@ Callers of the data layer:
 
 2. **Dead parameter `use_semantic_id`** (`music_catalog.py:17`): `id_to_metadata` accepts `use_semantic_id: bool = False` but the parameter is never read — both branches produce the same output. Callers pass `False` (or omit it) and the flag has no effect.
 
-3. **Duplicate HF dataset load for non-LanceDB paths**: `BM25_MODEL`, `DENSE_TRANSFORMER_MODEL`, and `MusicCatalogDB` each independently call `load_dataset(dataset_name)` and build their own `metadata_dict`. In v0+ production runs the catalog is served from LanceDB (`v0plus_catalog_lance.py`) and `MusicCatalogDB` is only used for the `recommend_item` string passed to the LLM, so this duplication is acceptable but worth noting in refactors.
+3. **Duplicate HF dataset load for non-LanceDB paths**: `DENSE_TRANSFORMER_MODEL` and `MusicCatalogDB` each independently call `load_dataset(dataset_name)` and build their own `metadata_dict`. In v0+ production runs the catalog is served from LanceDB (`v0plus_catalog_lance.py`) and `MusicCatalogDB` is only used for the `recommend_item` string passed to the LLM, so this duplication is acceptable but worth noting in refactors.
 
 4. **Hard-coded user profile columns**: `UserProfileDB.default_columns` (`user_profile.py:13`) is a hard-coded list. There is no config path to render additional fields (e.g. `listening_history`) without editing the source.
 

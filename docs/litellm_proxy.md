@@ -2,8 +2,8 @@
 
 Optional path that runs query rewrite, response generation, and dense retrieval
 embeddings against a LiteLLM proxy backed by OpenRouter. The local Hugging Face
-GPU path (`bm25`/`bert`/`dense_transformer` retrieval, `LLAMA_MODEL`,
-`TextCausalAdapter`) is unchanged — pick whichever path the experiment needs.
+GPU path for model adapters (`LLAMA_MODEL`, `TextCausalAdapter`) is unchanged.
+Active competition configs no longer use CRS-level standalone retrieval modules.
 
 ## 1. Set up `.env`
 
@@ -73,9 +73,9 @@ runs re-use that index plus the LiteLLM disk cache.
 
 | Component | Local HF (default) | LiteLLM (opt-in) |
 | --- | --- | --- |
-| Retrieval | `retrieval_type: bm25` / `bert` / `dense_transformer` | `retrieval_type: litellm_embedding` |
+| Retrieval | full-pipeline QU retrieval/ranking | full-pipeline QU retrieval/ranking |
 | Rewrite | `qu_kwargs.backend: local` (default) | `qu_kwargs.backend: litellm` |
 | Generation | `lm_type: meta-llama/Llama-3.2-1B-Instruct` | `lm_type: litellm` + `lm_kwargs` |
 
-Mix freely — for example, BM25 retrieval + LiteLLM rewrite + local Llama
-response generation is a valid combination.
+Mix generation/rewrite backends freely. Active inference configs no longer use
+the legacy CRS-level retrieval backend; retrieval/ranking is owned by the QU.
