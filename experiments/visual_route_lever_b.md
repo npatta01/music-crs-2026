@@ -86,17 +86,39 @@ regression, but the competition scores top-20, where the gain is **zero** with
 the frozen reranker. Up-weighting SigLIP in fusion (Lever A) would help only its
 ~16 shallow hits, most already covered by other branches — so it is not pursued.
 
+## Pool-depth probe (#129 bridge): raising `pool_k` at inference BACKFIRES
+
+Tested the natural hypothesis — "the deep visual candidates just need a bigger
+scorable pool" — as a 2×2 over the 253 visual turns (baseline/visual × `pool_k`
+500/1000, inference-only on the frozen v10 model):
+
+| visual slice | pool_k=500 | pool_k=1000 | Δ |
+|---|---:|---:|---:|
+| baseline hit@20 | 0.4704 | 0.4387 | **−0.032** |
+| baseline ndcg@20 | 0.3152 | 0.2767 | **−0.039** |
+| visual hit@20 | 0.4704 | 0.4427 | −0.028 |
+| visual ndcg@20 | 0.3152 | 0.2777 | −0.038 |
+
+Raising `pool_k` 500→1000 **hurts** the visual slice (and overall LGBM h@20
+0.552→0.535), consistently across both configs; union is unchanged. Most likely
+the v10 LGBM was trained on a `pool_k=500` candidate distribution, so scoring
+candidates 501–1000 at inference is **out-of-distribution** — it ranks deep
+decoys highly and displaces good top-20 picks. So the cheap config-only
+pool-depth lever is **negative**; a fair test needs a `pool_k=1000` **retrain**
+(#129 **and** #128 together), not a config bump.
+
 ## Where the real lever is (cross-lane)
 
-- **Candidate-surface / pool-depth (#129):** ~76 turns have GT in a branch@1000
-  but below fusion-rank 500. Raising `pool_k` 500→1000 (config-only, ~2× LGBM
-  cost) lets the LGBM — which is 94% effective in-pool — score them. Highest-
-  leverage cheap next test, but it belongs to #129.
+- **Candidate-surface / pool-depth (#129):** the cheap inference `pool_k` bump is
+  negative (above). A higher-pool gain, if any, requires retraining the reranker
+  at that depth — combine with #128, not a standalone config change.
 - **Reranker (#128):** a visual-branch feature only helps candidates already in
-  the scorable pool; it cannot rescue the sub-500 / unreachable ones.
-- **Stronger visual representation:** SigLIP-2 text→cover-art alignment for music
-  is weak (r@1000=0.21). The ~20% any-branch ceiling needs a better visual
-  retriever, not more wiring.
+  the scorable pool; it cannot rescue the sub-500 / unreachable ones, and the
+  pool-depth probe shows the frozen model degrades when simply shown more.
+- **Stronger visual representation (most likely real lever):** SigLIP-2
+  text→cover-art alignment for music is weak (r@1000=0.21) and its hits land
+  deep. The fix is GT landing *shallow* (a better visual retriever), not more
+  candidates or deeper scoring. The ~20% any-branch ceiling also needs this.
 
 ## Methodology notes
 
