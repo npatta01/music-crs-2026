@@ -29,6 +29,7 @@ session context. Without it the session-history block would silently zero
 from __future__ import annotations
 
 import json
+import logging
 import math
 import sys
 import time
@@ -47,6 +48,7 @@ for p in (_PROJECT_ROOT, _PROJECT_ROOT / "scripts" / "rerank"):
 CATEGORICALS = ["age_group", "gender", "goal_category", "goal_specificity",
                 "request_type", "intent_mode", "target_artist_mode",
                 "temporal_strength"]
+logger = logging.getLogger(__name__)
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -97,9 +99,7 @@ class _FeatureCatalogFromCompilerCatalog:
     def __init__(self, source_catalog: Any):
         from mcrs.qu_modules.tag_resolver import catalog_tag_key
 
-        per_track = getattr(source_catalog, "_per_track", None)
-        if not isinstance(per_track, dict):
-            raise TypeError("source catalog does not expose LanceDbCatalog-style _per_track")
+        per_track = _feature_rows_from_catalog(source_catalog)
 
         self._source_catalog = source_catalog
         self._vector_cache: dict[str, dict[str, np.ndarray | None]] = {}
@@ -223,6 +223,41 @@ class _FeatureCatalogFromCompilerCatalog:
         return vec
 
 
+def _catalog_source_has_feature_rows(source_catalog: Any | None) -> bool:
+    if source_catalog is None:
+        return False
+    return callable(getattr(source_catalog, "feature_rows", None))
+
+
+def _feature_rows_from_catalog(source_catalog: Any) -> dict[str, dict[str, Any]]:
+    feature_rows = getattr(source_catalog, "feature_rows", None)
+    if not callable(feature_rows):
+        raise TypeError("source catalog does not expose feature rows")
+    rows = feature_rows()
+    if not isinstance(rows, dict):
+        raise TypeError("source catalog feature_rows() must return a dict")
+    return rows
+
+
+def _load_feature_catalog(
+    *,
+    catalog_source: Any | None,
+    offline_catalog_cls: type,
+    db_uri: str,
+    table_name: str,
+):
+    if catalog_source is None:
+        return offline_catalog_cls(db_uri, table_name)
+    if not _catalog_source_has_feature_rows(catalog_source):
+        logger.warning(
+            "reranker catalog_source=%s does not expose feature rows; "
+            "falling back to offline Catalog scan",
+            type(catalog_source).__name__,
+        )
+        return offline_catalog_cls(db_uri, table_name)
+    return _FeatureCatalogFromCompilerCatalog(catalog_source)
+
+
 def session_entry_from_meta(meta: dict) -> dict:
     """Build the load_sessions()-shaped entry from a raw dataset row (parity
     with scripts/rerank/build_features.load_sessions)."""
@@ -299,14 +334,12 @@ class LgbmOnlineReranker:
             f"model expects {n_model} features, meta has {len(self.cols)}")
 
         start = time.perf_counter()
-        try:
-            cat = (
-                _FeatureCatalogFromCompilerCatalog(catalog_source)
-                if catalog_source is not None
-                else Catalog(db_uri, table_name)
-            )
-        except TypeError:
-            cat = Catalog(db_uri, table_name)
+        cat = _load_feature_catalog(
+            catalog_source=catalog_source,
+            offline_catalog_cls=Catalog,
+            db_uri=db_uri,
+            table_name=table_name,
+        )
         add_elapsed("catalog", start)
         start = time.perf_counter()
         tag_index = TagEmbeddingIndex.load(str(cfg["tag_index"]))

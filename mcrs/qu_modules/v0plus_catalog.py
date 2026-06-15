@@ -98,6 +98,14 @@ class CompilerCatalog(Protocol):
         backwards-compat with the single-branch v0+ design."""
         ...
 
+    def feature_rows(self) -> dict[str, dict]:
+        """Track metadata rows for train/serve parity adapters.
+
+        Returned rows are read-only from the caller's perspective. This avoids
+        feature-serving code depending on private catalog internals.
+        """
+        ...
+
     # ----- catalog-wide ops (Compiler filters / backfill) -----
 
     def release_date_filter_mask(self, hf: "HardFilter") -> set[str]:

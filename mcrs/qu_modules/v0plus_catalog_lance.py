@@ -331,6 +331,14 @@ class LanceDbCatalog:
     def metadata_vector(self, track_id: str) -> list[float] | None:
         return self.vector(track_id, "metadata_qwen3_embedding_0_6b")
 
+    def feature_rows(self) -> dict[str, dict[str, Any]]:
+        """Metadata rows used by online feature adapters.
+
+        Return a shallow copy so callers can iterate without depending on the
+        private `_per_track` attribute or mutating catalog state.
+        """
+        return dict(self._per_track)
+
     def release_date_filter_mask(self, hf: "HardFilter") -> set[str]:
         # Defensive: a malformed HardFilter (e.g., constructed by bypassing Pydantic
         # validation) could have None bounds. Skip rather than crash.
