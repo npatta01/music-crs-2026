@@ -2985,7 +2985,7 @@ def _gs_catalog() -> DictCatalog:
     return DictCatalog(
         tracks={
             "t-anchor-1": {"artist_id": "a-anchor", "artist_name": "Anchor",
-                           "track_name": "A1", "tag_list": ["grunge", "90s rock", "1992"],
+                           "track_name": "A1", "tag_list": ["grunge", "90s rock", "1992", "90s"],
                            "popularity": 90.0, "release_date": "1992-01-01"},
             "t-anchor-2": {"artist_id": "a-anchor", "artist_name": "Anchor",
                            "track_name": "A2", "tag_list": ["grunge", "alternative"],
