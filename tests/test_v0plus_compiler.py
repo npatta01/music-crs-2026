@@ -3054,26 +3054,56 @@ def test_genre_scene_pool_disabled_by_default():
     assert compiler._genre_scene_neighbor_pool(_gs_rs(catalog)) == []
 
 
+def _gs_rs_with_range(catalog, start, end):
+    """Pivot rs with a style_reference anchor AND an explicit release_year_range,
+    built directly (no resolver projection) so era filtering is exercised."""
+    return ResolvedConversationState(
+        state=_state(turn_intent="90s grunge, not Anchor", intent_mode="pivot",
+                     release_year_range={"start": start, "end": end}),
+        resolved_targets=(
+            ResolvedTarget(kind="artist", source_text="Anchor", entity_id="a-anchor",
+                           confidence=100.0, resolution_role="style_reference"),
+        ),
+    )
+
+
+def test_genre_scene_era_bounds_policies():
+    catalog = _gs_catalog()
+
+    def compiler(policy):
+        return V0PlusCompiler(
+            catalog, FakeRetriever(), _fake_encoder(),
+            CompilerConfig(genre_scene_era_policy=policy, genre_scene_era_window=5),
+        )
+
+    rs_range = _gs_rs_with_range(catalog, 1990, 1999)
+    rs_none = _gs_rs(catalog)  # no release_year_range
+    # explicit_only: returns the explicit range, or (None, None) when absent
+    assert compiler("explicit_only")._genre_scene_era_bounds(rs_range, {"a-anchor"}) == (1990, 1999)
+    assert compiler("explicit_only")._genre_scene_era_bounds(rs_none, {"a-anchor"}) == (None, None)
+    # ignore: always unbounded
+    assert compiler("ignore")._genre_scene_era_bounds(rs_range, {"a-anchor"}) == (None, None)
+    # infer_anchor: anchor median year (tracks 1992, 1993) +/- window(5)
+    lo, hi = compiler("infer_anchor")._genre_scene_era_bounds(rs_none, {"a-anchor"})
+    assert hi - lo == 10 and lo <= 1992 <= hi
+
+
 def test_genre_scene_pool_explicit_era_filters_off_era_neighbor():
-    from mcrs.conversation_state.schema import ConversationStateV0Plus
     catalog = _gs_catalog()
     cfg = CompilerConfig(enable_genre_scene_neighbors=True, genre_scene_era_policy="explicit_only")
     compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)
-    state = ConversationStateV0Plus(
-        current_request={"request_type": "new_artist",
-                         "summary": "90s grunge bands, not Anchor", "source_turn": 1},
-        facts=[
-            {"type": "artist", "value": "Anchor", "role": "satisfied_prior",
-             "anchor_use": "do_not_use", "relation": "satisfied_prior",
-             "reuse": "avoid_exact", "source_turn": 1, "mentioned_current_turn": True},
-            {"type": "attribute", "facet": "era", "value": "1990-1999",
-             "role": "current_target", "anchor_use": "query_facet",
-             "relation": "query_facet", "reuse": "not_applicable",
-             "source_turn": 1, "mentioned_current_turn": True},
-        ],
-    )
-    rs = _resolve(state, catalog)
-    if rs.state.release_year_range is None:
-        import pytest; pytest.skip("extractor projection did not yield a year range")
-    ids = [t for t, _ in compiler._genre_scene_neighbor_pool(rs)]
+    # t-neighbor-2 (2010) matches genre via "alternative" but is out of the 90s
+    # range and must be filtered; t-neighbor-1 (1994, grunge) stays.
+    ids = [t for t, _ in compiler._genre_scene_neighbor_pool(_gs_rs_with_range(catalog, 1990, 1999))]
+    assert "t-neighbor-1" in ids and "t-neighbor-2" not in ids
+
+
+def test_genre_scene_pool_infer_anchor_era_filters_off_era_neighbor():
+    catalog = _gs_catalog()
+    cfg = CompilerConfig(enable_genre_scene_neighbors=True,
+                         genre_scene_era_policy="infer_anchor", genre_scene_era_window=5)
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder(), cfg)
+    # anchor tracks 1992-1993 -> window ~1987-1997; t-neighbor-2 (2010) filtered,
+    # t-neighbor-1 (1994) kept.
+    ids = [t for t, _ in compiler._genre_scene_neighbor_pool(_gs_rs(catalog))]
     assert "t-neighbor-1" in ids and "t-neighbor-2" not in ids
