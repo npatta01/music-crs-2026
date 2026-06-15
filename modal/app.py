@@ -472,6 +472,10 @@ def _build_constraint_features(trace_glob: str, features_dir: str, out_path: str
     import subprocess
     import sys
 
+    # The 50 shard writers commit asynchronously; a freshly-spawned reader can
+    # otherwise see a pre-commit snapshot of a shard parquet (truncated footer →
+    # ArrowInvalid "magic bytes not found"). reload() forces the latest commits.
+    cache_vol.reload()
     result = subprocess.run(
         [
             sys.executable, "/app/scripts/rerank/build_constraint_features.py",
@@ -501,6 +505,7 @@ def _build_label_weights(trace_glob: str, out_path: str):
     import subprocess
     import sys
 
+    cache_vol.reload()  # see all shard commits (avoid pre-commit truncated read)
     result = subprocess.run(
         [
             sys.executable, "/app/scripts/rerank/build_label_weights.py",
@@ -635,6 +640,35 @@ def run_build_features_for_ranker(
     print(f"  modal volume get music-crs-cache {rel_weights} exp/analysis/rerank/{lineage}/")
 
 
+@app.local_entrypoint()
+def run_sidecars_then_train(
+    lineage: str,
+    tid: str = "state_ranker_v10_rrf_devset",
+    run_id: str = "",
+):
+    """Recovery path: rebuild only the constraint + label sidecars from feature
+    shards that already exist on the volume, then train — skips the (expensive)
+    50-shard feature rebuild. Use when shard build succeeded but the sidecar
+    stage hit the volume-commit read race."""
+    if not run_id:
+        raise ValueError("--run-id is required so sidecars never mix runs")
+    paths = _ranker_remote_paths(lineage)
+    trace_glob = f"{EXP_DIR}/inference/devset/{tid}.run_{run_id}.shard_*_trace.jsonl"
+    print(f"[{lineage}] rebuilding sidecars from existing shards in {paths['features_dir']} …")
+    handles = [
+        _build_constraint_features.spawn(
+            trace_glob=trace_glob,
+            features_dir=paths["features_dir"],
+            out_path=paths["sidecar"],
+        ),
+        _build_label_weights.spawn(trace_glob=trace_glob, out_path=paths["weights"]),
+    ]
+    for h in handles:
+        h.get()
+    print(f"[{lineage}] sidecars done → training …")
+    _run_train_lgbm_ranker(lineage=lineage)
+
+
 # ── LightGBM CV training (CPU) ──────────────────────────────────────────────────
 # build → 5 parallel CV folds → finalize → full_model. Training is CPU-only: the
 # PyPI lightgbm wheel has no GPU/CUDA build (device_type='gpu' raises "GPU Tree
@@ -728,6 +762,7 @@ def _train_cmd(stage: str, fold: int | None = None, lineage: str = "v9") -> list
 def _train_build_cpu(lineage: str = "v9"):
     """Build the feature matrix (X.npy + id arrays) from parquet on the volume."""
     import subprocess
+    cache_vol.reload()
     result = subprocess.run(_train_cmd("build", lineage=lineage), capture_output=False)
     if result.returncode != 0:
         raise RuntimeError(f"build stage failed (exit {result.returncode})")

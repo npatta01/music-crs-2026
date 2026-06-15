@@ -60,6 +60,14 @@ def _modal_class_method_arguments(class_name: str, method_name: str) -> list[str
     raise AssertionError(f"Could not find {class_name}.{method_name}")
 
 
+def _module_function(function_name: str) -> ast.FunctionDef:
+    tree = ast.parse((PROJECT_ROOT / "modal" / "app.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == function_name:
+            return node
+    raise AssertionError(f"Could not find function {function_name}")
+
+
 def _name(node: ast.AST) -> str:
     assert isinstance(node, ast.Name)
     return node.id
@@ -178,6 +186,20 @@ def test_modal_has_v10_ranker_entrypoints():
 
     assert "def run_build_features_for_ranker(" in source
     assert "def run_train_lgbm_ranker(" in source
+
+
+def test_train_build_reloads_cache_volume_before_reading_sidecars():
+    function = _module_function("_train_build_cpu")
+    calls = []
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Call):
+            continue
+        if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+            calls.append((node.lineno, f"{node.func.value.id}.{node.func.attr}"))
+    ordered_call_names = [name for _, name in sorted(calls)]
+
+    assert "cache_vol.reload" in ordered_call_names
+    assert ordered_call_names.index("cache_vol.reload") < ordered_call_names.index("subprocess.run")
 
 
 def test_modal_retrieval_methods_accept_request_retrieval_config():
