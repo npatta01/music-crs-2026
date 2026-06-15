@@ -3123,8 +3123,13 @@ def test_genre_scene_branch_injects_neighbors_into_results_on_pivot():
     cfg = CompilerConfig(enable_dense=False, enable_genre_scene_neighbors=True,
                          genre_scene_era_policy="ignore")
     result = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg).compile(_gs_rs(catalog))
-    assert "t-neighbor-1" in result          # recalled via genre_scene branch
-    assert "t-anchor-1" not in result        # anchor still excluded
+    # The branch FUSES the genre neighbor into the top-2; without it the neighbor
+    # only appears via popularity backfill (lower — see the off-by-default test).
+    assert result.index("t-neighbor-1") <= 1
+    # Purely additive: the branch must NOT hard-drop the anchor. A hard drop of
+    # the pivoted-away artist backfires (its tracks are often the ground truth),
+    # so the anchor stays in the pool — anchor handling is the reranker's job.
+    assert "t-anchor-1" in result
 
 
 def test_genre_scene_branch_off_by_default_is_noop():

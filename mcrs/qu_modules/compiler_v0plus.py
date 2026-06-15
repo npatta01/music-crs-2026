@@ -892,10 +892,10 @@ class V0PlusCompiler:
             )
         if trace_enabled and gs_hits:
             named_pools.append((gs_branch_name, list(gs_hits[:_trace_k])))
-        if self.cfg.enable_genre_scene_neighbors:
-            gs_anchor_ids, _ = self._genre_scene_anchor(rs)
-            for aid in gs_anchor_ids:
-                hard_drop.update(self.catalog.tracks_by_artist_id(aid))
+        # Purely additive recall: the branch contributes neighbor candidates and
+        # must NOT hard-drop the anchor artist. A hard drop of the pivoted-away
+        # artist backfires (its tracks are frequently the ground truth on these
+        # turns); anchor handling is the reranker's job, not this branch's.
         gs_hits = [
             (t, s) for t, s in gs_hits if t in candidate_mask and t not in hard_drop
         ]
