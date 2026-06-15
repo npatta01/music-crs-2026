@@ -136,6 +136,25 @@ embedding mechanics are correct (model matches catalog, `get_text_features`,
 `padding=max_length` is the SigLIP convention, raw+cosine) — so this is content,
 not a bug.
 
+## Conversation-constraint cleaning (genre filter): does NOT help top-20
+
+Tested whether stated conversational constraints can prune the noisy cover-art
+pool before the reranker. Offline simulation over the 253 visual turns (genre
+lexicon from the query, catalog `tag_list` filter on the LGBM pool):
+
+- 54% of visual turns state a genre; 10% an era; 1% an artist.
+- **32 addressable** (genre stated, GT in LGBM pool, GT currently rank >20).
+- 29/32 — GT's tags match the stated genre (filter rarely drops GT).
+- **0/32 move into top-20 after genre filtering** (3 false prunes).
+
+Why: the decoys ranked above GT are **same-genre**, not cross-genre — for "heavy
+metal, dark cover" the catalog has hundreds of metal tracks and GT is buried
+among genre-matching ones. Filtering removes off-genre covers (which the reranker
+— with genre soft-boost — already wasn't fooled by), so GT doesn't rise. The
+visual gap is a *ranking* problem among same-genre plausible tracks, not a
+cross-genre-noise problem. Branch boosting (`routing_boost`) likewise can't help
+— up-weighting a weak, deep SigLIP signal only injects noise.
+
 ## Where the real lever is (cross-lane)
 
 - **Candidate-surface / pool-depth (#129):** the cheap inference `pool_k` bump is
