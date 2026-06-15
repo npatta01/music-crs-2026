@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.14' and platform_machine != 'aarch64' and sys_platform == 'linux'",
@@ -813,8 +813,8 @@ name = "flash-attn"
 version = "2.8.3"
 source = { url = "https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.9cxx11abiTRUE-cp312-cp312-linux_x86_64.whl" }
 dependencies = [
-    { name = "einops", marker = "sys_platform == 'linux'" },
-    { name = "torch", version = "2.9.1+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux'" },
+    { name = "einops", marker = "python_full_version < '3.14' and platform_machine != 'aarch64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.9.1+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "python_full_version < '3.14' and platform_machine != 'aarch64' and sys_platform == 'linux'" },
 ]
 wheels = [
     { url = "https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.9cxx11abiTRUE-cp312-cp312-linux_x86_64.whl", hash = "sha256:4e2f9e39313266b1544b68138b15b91ee6221eccf14f7902b7c6620351340810" },
@@ -1937,7 +1937,7 @@ dependencies = [
     { name = "accelerate" },
     { name = "bm25s" },
     { name = "datasets" },
-    { name = "flash-attn", marker = "sys_platform == 'linux'" },
+    { name = "flash-attn", marker = "python_full_version < '3.14' and platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "lancedb" },
     { name = "lightgbm" },
     { name = "litellm", extra = ["caching"] },
@@ -1976,7 +1976,7 @@ requires-dist = [
     { name = "accelerate", specifier = ">=1.0.1" },
     { name = "bm25s", specifier = ">=0.2.13" },
     { name = "datasets", specifier = ">=3.1.0" },
-    { name = "flash-attn", marker = "sys_platform == 'linux'", url = "https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.9cxx11abiTRUE-cp312-cp312-linux_x86_64.whl" },
+    { name = "flash-attn", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'", url = "https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.9cxx11abiTRUE-cp312-cp312-linux_x86_64.whl" },
     { name = "ipywidgets", marker = "extra == 'notebooks'", specifier = ">=8.0" },
     { name = "jupyterlab", marker = "extra == 'notebooks'", specifier = ">=4.0" },
     { name = "lancedb", specifier = ">=0.30.2" },
