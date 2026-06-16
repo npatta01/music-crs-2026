@@ -39,6 +39,10 @@ def _trace(session_id: str, turn: int) -> dict:
     return {"session_id": session_id, "turn_number": turn, "trace": {"x": 1}}
 
 
+def _trace_with_value(session_id: str, turn: int, value: int) -> dict:
+    return {"session_id": session_id, "turn_number": turn, "trace": {"x": value}}
+
+
 def test_merge_run_scoped_devset_predictions_and_traces(tmp_path):
     module = _load_module()
     base = tmp_path / "inference" / "devset"
@@ -58,6 +62,69 @@ def test_merge_run_scoped_devset_predictions_and_traces(tmp_path):
     traces = [json.loads(line) for line in trace_lines if line.strip()]
     assert {r["session_id"] for r in preds} == {"s0", "s1"}
     assert {r["session_id"] for r in traces} == {"s0", "s1"}
+
+
+def test_trace_merge_streams_jsonl_without_loading_all_rows(tmp_path, monkeypatch):
+    module = _load_module()
+    base = tmp_path / "inference" / "devset"
+    rid = "20260603T074512Z-a3f91c"
+    _write(base, f"foo_devset.run_{rid}.shard_0.json", [_pred("s0", 1)])
+    _write(base, f"foo_devset.run_{rid}.shard_1.json", [_pred("s1", 1)])
+    _write_jsonl(base, f"foo_devset.run_{rid}.shard_0_trace.jsonl", [_trace("s0", 1)])
+    _write_jsonl(base, f"foo_devset.run_{rid}.shard_1_trace.jsonl", [_trace("s1", 1)])
+
+    original_load_shards = module._load_shards
+
+    def fail_if_trace_materialized(*args, **kwargs):
+        if kwargs.get("jsonl") or args[-1] is True:
+            raise AssertionError("trace merge must stream JSONL shards")
+        return original_load_shards(*args, **kwargs)
+
+    monkeypatch.setattr(module, "_load_shards", fail_if_trace_materialized)
+
+    module.main([
+        "--tid", "foo_devset", "--num_shards", "2", "--run_id", rid,
+        "--split", "devset", "--exp-dir", str(tmp_path),
+    ])
+
+    traces = [
+        json.loads(line)
+        for line in (base / "foo_devset_trace.jsonl").read_text().splitlines()
+        if line.strip()
+    ]
+    assert {r["session_id"] for r in traces} == {"s0", "s1"}
+
+
+def test_trace_merge_streaming_keeps_highest_shard_on_overlap(tmp_path, capsys):
+    module = _load_module()
+    base = tmp_path / "inference" / "devset"
+    rid = "20260603T074512Z-a3f91c"
+    _write(base, f"foo_devset.run_{rid}.shard_0.json", [_pred("s0", 1)])
+    _write(base, f"foo_devset.run_{rid}.shard_1.json", [_pred("s1", 1)])
+    _write_jsonl(base, f"foo_devset.run_{rid}.shard_0_trace.jsonl", [
+        _trace_with_value("s0", 1, 0),
+        _trace_with_value("s1", 1, 1),
+    ])
+    _write_jsonl(base, f"foo_devset.run_{rid}.shard_1_trace.jsonl", [
+        _trace_with_value("s0", 1, 2),
+        _trace_with_value("s0", 1, 3),
+    ])
+
+    module.main([
+        "--tid", "foo_devset", "--num_shards", "2", "--run_id", rid,
+        "--split", "devset", "--exp-dir", str(tmp_path),
+    ])
+
+    captured = capsys.readouterr()
+    traces = [
+        json.loads(line)
+        for line in (base / "foo_devset_trace.jsonl").read_text().splitlines()
+        if line.strip()
+    ]
+    by_key = {(r["session_id"], r["turn_number"]): r for r in traces}
+    assert by_key[("s0", 1)]["trace"]["x"] == 3
+    assert by_key[("s1", 1)]["trace"]["x"] == 1
+    assert "Overlapping rows: 1" in captured.err
 
 
 def test_merge_requires_all_shards_for_run_id(tmp_path):

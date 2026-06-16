@@ -4,7 +4,9 @@ Usage:
     python scripts/merge_shard_results.py --tid v0plus_compiler_all_retrievers_devset --num_shards 5 --run_id 20260603T074512Z-a3f91c --exp-dir exp
 
 Behavior:
-  - Reads shards 0..num_shards-1 for both predictions and traces.
+  - Reads prediction shards 0..num_shards-1 into memory.
+  - Streams trace JSONL shards in two passes so full-devset traces do not need
+    to fit in memory.
   - Each row is keyed by (session_id, turn_number); output is always unique
     by that key.
   - If shards have overlapping keys (e.g. a leftover shard from a prior run
@@ -45,7 +47,7 @@ def _load_shards(
 def _traces_present(base: Path, tid: str, run_scope: str, num_shards: int) -> bool:
     """True if every shard has a trace sidecar; False if none do.
 
-    Devset writes a `_trace.json` per shard; blindset writes none. A partial
+    Devset writes a `_trace.jsonl` per shard; blindset writes none. A partial
     set (some shards have traces, some don't) means a corrupt/incomplete run,
     so fail loudly rather than silently merging a subset.
     """
@@ -59,6 +61,47 @@ def _traces_present(base: Path, tid: str, run_scope: str, num_shards: int) -> bo
             "Partial trace shards (some present, some missing): " + ", ".join(missing)
         )
     return True
+
+
+def _trace_shard_paths(base: Path, tid: str, run_scope: str, num_shards: int) -> list[Path]:
+    return [base / f"{tid}{run_scope}.shard_{i}_trace.jsonl" for i in range(num_shards)]
+
+
+def _iter_jsonl(path: Path):
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                yield json.loads(line)
+
+
+def _print_conflict_warning(
+    *,
+    label: str,
+    tid: str,
+    raw_total: int,
+    unique_count: int,
+    conflicts: list[tuple[tuple, int, int]],
+    raw_counts: dict[int, int],
+    owner_by_key: dict[tuple, int],
+) -> None:
+    contrib: dict[int, int] = {sid: 0 for sid in raw_counts}
+    for owner_sid in owner_by_key.values():
+        contrib[owner_sid] += 1
+
+    lines = [
+        f"[{label}] WARNING: shards for tid={tid!r} have overlapping (session_id, turn_number) keys.",
+        f"  Raw total rows:   {raw_total}",
+        f"  Unique keys:      {unique_count}",
+        f"  Overlapping rows: {len(conflicts)}  (dedup: kept the row from the highest shard index)",
+        "  Per-shard contribution after dedup:",
+    ]
+    for sid, raw_count in raw_counts.items():
+        lines.append(f"    shard_{sid}: {raw_count:5d} raw rows -> {contrib[sid]:5d} kept")
+    lines.append("  First 3 conflicting keys (key, earlier_shard -> later_shard):")
+    for k, prev_sid, new_sid in conflicts[:3]:
+        lines.append(f"    {k}  shard_{prev_sid} -> shard_{new_sid}")
+    print("\n".join(lines), file=sys.stderr)
 
 
 def _merge(
@@ -81,26 +124,74 @@ def _merge(
             merged[k] = row  # last shard index wins on conflict
 
     if conflicts:
-        n_conflicts = len(conflicts)
-        contrib: dict[int, int] = {sid: 0 for sid, _, _ in shards}
-        for _k, owner_sid in seen.items():
-            contrib[owner_sid] += 1
-
-        lines = [
-            f"[{label}] WARNING: shards for tid={tid!r} have overlapping (session_id, turn_number) keys.",
-            f"  Raw total rows:   {raw_total}",
-            f"  Unique keys:      {len(merged)}",
-            f"  Overlapping rows: {n_conflicts}  (dedup: kept the row from the highest shard index)",
-            "  Per-shard contribution after dedup:",
-        ]
-        for sid, _path, rows in shards:
-            lines.append(f"    shard_{sid}: {len(rows):5d} raw rows -> {contrib[sid]:5d} kept")
-        lines.append("  First 3 conflicting keys (key, earlier_shard -> later_shard):")
-        for k, prev_sid, new_sid in conflicts[:3]:
-            lines.append(f"    {k}  shard_{prev_sid} -> shard_{new_sid}")
-        print("\n".join(lines), file=sys.stderr)
+        _print_conflict_warning(
+            label=label,
+            tid=tid,
+            raw_total=raw_total,
+            unique_count=len(merged),
+            conflicts=conflicts,
+            raw_counts={sid: len(rows) for sid, _path, rows in shards},
+            owner_by_key=seen,
+        )
 
     return list(merged.values())
+
+
+def _merge_trace_shards_streaming(
+    paths: list[Path],
+    *,
+    label: str,
+    tid: str,
+    out_path: Path,
+) -> int:
+    """Merge trace JSONL shards without materializing trace rows.
+
+    Full devset traces can be several GB. This keeps only per-turn ownership
+    metadata in memory, then streams rows from the owning shard into the output.
+    """
+    owner_by_key: dict[tuple, int] = {}
+    owner_row_index_by_key: dict[tuple, int] = {}
+    raw_counts: dict[int, int] = {}
+    conflicts: list[tuple[tuple, int, int]] = []
+
+    for shard_id, path in enumerate(paths):
+        raw_counts[shard_id] = 0
+        for row in _iter_jsonl(path):
+            raw_counts[shard_id] += 1
+            row_index = raw_counts[shard_id]
+            k = _key(row)
+            if k in owner_by_key and owner_by_key[k] != shard_id:
+                conflicts.append((k, owner_by_key[k], shard_id))
+            owner_by_key[k] = shard_id
+            owner_row_index_by_key[k] = row_index
+
+    if conflicts:
+        _print_conflict_warning(
+            label=label,
+            tid=tid,
+            raw_total=sum(raw_counts.values()),
+            unique_count=len(owner_by_key),
+            conflicts=conflicts,
+            raw_counts=raw_counts,
+            owner_by_key=owner_by_key,
+        )
+
+    written_keys: set[tuple] = set()
+    with open(out_path, "w", encoding="utf-8") as f:
+        for shard_id, path in enumerate(paths):
+            row_index = 0
+            for row in _iter_jsonl(path):
+                row_index += 1
+                k = _key(row)
+                if (
+                    owner_by_key.get(k) != shard_id
+                    or owner_row_index_by_key.get(k) != row_index
+                    or k in written_keys
+                ):
+                    continue
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+                written_keys.add(k)
+    return len(written_keys)
 
 
 def main(argv: list[str] | None = None):
@@ -131,13 +222,14 @@ def main(argv: list[str] | None = None):
     # Traces are optional: devset writes a JSONL sidecar per shard; blindset
     # writes none. Merge them as JSONL when present.
     if _traces_present(base, args.tid, run_scope, args.num_shards):
-        trace_shards = _load_shards(base, args.tid, run_scope, args.num_shards, "_trace.jsonl", True)
-        trace_rows = _merge(trace_shards, label="traces", tid=args.tid)
         trace_out = base / f"{args.tid}_trace.jsonl"
-        with open(trace_out, "w", encoding="utf-8") as f:
-            for row in trace_rows:
-                f.write(json.dumps(row, ensure_ascii=False) + "\n")
-        print(f"Wrote {trace_out}  ({len(trace_rows)} unique rows from {args.num_shards} shards)")
+        trace_rows = _merge_trace_shards_streaming(
+            _trace_shard_paths(base, args.tid, run_scope, args.num_shards),
+            label="traces",
+            tid=args.tid,
+            out_path=trace_out,
+        )
+        print(f"Wrote {trace_out}  ({trace_rows} unique rows from {args.num_shards} shards)")
     else:
         print(f"No trace shards for {args.tid} — skipping trace merge.")
 
