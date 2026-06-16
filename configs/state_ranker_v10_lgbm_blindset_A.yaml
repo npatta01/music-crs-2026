@@ -59,6 +59,11 @@ qu_kwargs:
       modal_app_name: music-crs
       modal_cls_name: MultimodalTextEncoder
       method: embed_clap_text
+    siglip2_text:
+      backend: modal_multimodal
+      modal_app_name: music-crs
+      modal_cls_name: MultimodalTextEncoder
+      method: embed_siglip_text
   lancedb:
     db_uri: ./cache/lancedb
     table_name: music_track_catalog
@@ -121,6 +126,15 @@ qu_kwargs:
       query_id: sonic_nl
       weight: 1.0
       distance_type: cosine
+    # Visual route (issue #127): SigLIP-2 text->cover-art search, fires ONLY on
+    # image_or_visual_search turns (gated). Improves visual-slice candidate
+    # coverage; top-20 impact is ~flat with the frozen v10 reranker.
+    - vector_field: image_siglip2
+      encoder_id: siglip2_text
+      query_id: visual_nl
+      weight: 1.0
+      distance_type: cosine
+      gated_on: image_or_visual_search
     centroid_only_branches:
     - vector_field: image_siglip2
       weight: 1.0
