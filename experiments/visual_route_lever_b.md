@@ -10,8 +10,10 @@
 
 Lever B — a **visual-gated SigLIP-2 text→cover-art dense branch** — improves
 visual-slice retrieval **coverage** (+4.4pt union@1000) but delivers **zero
-top-20 benefit** with the frozen v10 reranker, and is **not worth shipping
-alone**. Pool-position analysis shows why: the SigLIP branch's incremental
+top-20 benefit** with the frozen v10 reranker. It is **shipped in the canonical
+configs for the retrieval capability** (visual-gated, score-neutral on top-20);
+converting that coverage into top-20 is a **reranker** change (#128), not a
+retrieval one. Pool-position analysis shows why: the SigLIP branch's incremental
 candidates land **too deep** (70% of its hits are beyond rank 100; ~37% beyond
 rank 500), below the LGBM's `pool_k=500` scoring cutoff. The reranker is *not*
 the weak link — **94% of visual GT that reaches the scorable pool makes top-20**.
@@ -25,11 +27,14 @@ to do that. **The visual gap is retrieval-quality-limited, not reranker-limited.
   only when a named `RoutingTags` flag is true; gate-skips **before** the encode
   (no wasted RPC, no candidate injection on non-matching turns); fail-fast
   validation for typo'd gate names. Config parser forwards `gated_on`.
-- **Experiment config (not committed to `configs/`** — kept off the canonical
-  3-config surface per the prune-first posture). It is the lgbm devset baseline
-  plus the `siglip2_text` encoder and a `query_id=visual` dense branch on
-  `image_siglip2`, `gated_on: image_or_visual_search`. Recreate it from the
-  snippet at the end of this report to reproduce or extend (#129).
+- **Enabled in all three canonical configs** (`state_ranker_v10_lgbm_devset`,
+  `_blindset_A`, `_rrf_devset`): the `siglip2_text` encoder + a `query_id=visual_nl`
+  dense branch on `image_siglip2`, `gated_on: image_or_visual_search`. Visual-gated
+  — non-visual turns are unchanged. **Shipped as a retrieval capability** (see the
+  Verdict below): it improves visual candidate coverage; top-20 is flat with the
+  frozen reranker. (Note: the slice numbers below were measured with the
+  original `query_id=visual` comma query; the shipped config uses `visual_nl`, the
+  best-recall query from the query-formulation probe.)
 - `run_experiment.py`: `--session_ids_file` now works on the **Modal** backend,
   including **sharded** runs (workers filter to the subset, then split it across
   shards). This made the 65-session run ~7.5 min (10 shards) vs ~16 min in a
@@ -80,12 +85,21 @@ Two compounding gates kill visual candidates:
 2. Of the reachable, **half fall below fusion-rank 500** → never scored by the
    LGBM (`pool_k=500`). SigLIP adds coverage but mostly stacks below this cutoff.
 
-## Verdict: necessary-not-sufficient — do **not** ship alone
+## Verdict: shipped as a retrieval capability; top-20 needs the reranker
 
-By the issue's success rule Lever B improves visual-slice union without
+The experiment finding stands: Lever B improves visual-slice union without
 regression, but the competition scores top-20, where the gain is **zero** with
-the frozen reranker. Up-weighting SigLIP in fusion (Lever A) would help only its
-~16 shallow hits, most already covered by other branches — so it is not pursued.
+the frozen reranker.
+
+**Decision (post-experiment): the branch was nonetheless enabled in the three
+canonical configs.** Rationale: it is the architecturally-correct capability
+(visual queries should hit the cover-art search), it is visual-gated (no
+non-visual regression), and it stages the top-20 conversion — which is a reranker
+change, not a retrieval one (add a `siglip_query_cos` feature so the reranker can
+reward description→cover matches, then retrain; staged for #128). So it ships
+**for coverage, score-neutral on top-20** until the reranker learns the signal.
+Up-weighting SigLIP in fusion (Lever A) was not pursued — it would help only its
+~16 shallow hits, most already covered by other branches.
 
 ## Pool-depth probe (#129 bridge): raising `pool_k` at inference BACKFIRES
 
@@ -225,24 +239,24 @@ the weak, fixed SigLIP space. So no state signal can clean the recall to surface
 
 ## Reproduce
 
-First recreate the experiment config (see snippet below) at
-`configs/state_ranker_v10_lgbm_devset_visual.yaml` (it is intentionally not
-committed — kept off the canonical 3-config surface). Then:
+The visual branch is now enabled in the canonical configs (`query_id=visual_nl`,
+`gated_on: image_or_visual_search`). To re-measure the visual-slice A/B, compare
+the shipped config (branch ON) against a branch-disabled baseline over the visual
+sessions:
 
 ```bash
-# 65 visual sessions, sharded, from claude/visual-route:
+# branch ON (the shipped devset config), 65 visual sessions, sharded:
 python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset \
   --session_ids_file exp/subsets/visual_sessions.json --num_shards 10 --batch_size 8
-python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset_visual \
-  --session_ids_file exp/subsets/visual_sessions.json --num_shards 10 --batch_size 8
-# then compare the two runs' visual-slice metrics from the predictions/traces
+# baseline (branch OFF): run the same on a config copy with the image_siglip2
+# dense branch removed, then compare the two runs' visual-slice metrics
 # (the diagnostic scripts used for this were exploratory and are not committed).
 ```
 
-## Experiment config (delta vs `configs/state_ranker_v10_lgbm_devset.yaml`)
+## Shipped config delta (added to each of the three canonical configs)
 
-Copy the lgbm devset config to `configs/state_ranker_v10_lgbm_devset_visual.yaml`
-and apply these two additions:
+The `siglip2_text` encoder + visual branch added to
+`state_ranker_v10_lgbm_devset.yaml`, `_blindset_A.yaml`, and `_rrf_devset.yaml`:
 
 ```yaml
 # under qu_kwargs.encoders: (alongside qwen_0_6b / qwen_8b / clap_text)
@@ -252,12 +266,11 @@ and apply these two additions:
       modal_cls_name: MultimodalTextEncoder
       method: embed_siglip_text
 
-# under qu_kwargs.compiler.dense_branches: (append after the sonic_nl branch)
+# under qu_kwargs.compiler.dense_branches: (after the sonic_nl branch)
     - vector_field: image_siglip2
       encoder_id: siglip2_text
-      query_id: visual
+      query_id: visual_nl
       weight: 1.0
       distance_type: cosine
-      gated_on: image_or_visual_search    # fires only on image_or_visual_search turns
+      gated_on: image_or_visual_search   # fires only on visual turns
 ```
-

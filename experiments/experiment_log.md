@@ -76,13 +76,15 @@ Next step:
 
 Decision:
 
-- Added a visual-gated SigLIP-2 text->cover-art dense branch (`DenseBranch.gated_on`;
-  experiment config kept OUT of `configs/` to preserve the canonical 3-config
-  surface — recreate from the snippet in `experiments/visual_route_lever_b.md`).
+- Added a visual-gated SigLIP-2 text->cover-art dense branch (`DenseBranch.gated_on`),
+  now **enabled in all three canonical configs** (`query_id=visual_nl`,
+  `gated_on: image_or_visual_search`; visual-gated, non-visual turns unchanged).
   Paired sharded A/B on all 253 visual turns: **union@1000 0.759 -> 0.802
   (+0.044)** but **hit@20/ndcg@20 flat** (frozen v10 reranker does not promote the
-  new candidates). Verdict: validated coverage lever, **necessary-not-sufficient,
-  do not ship alone.** Full writeup: `experiments/visual_route_lever_b.md`.
+  new candidates). **Shipped for the retrieval capability (coverage gain),
+  score-neutral on top-20** — converting it is a reranker change (`siglip_query_cos`
+  feature + retrain, staged for #128), not a retrieval one. Full writeup:
+  `experiments/visual_route_lever_b.md`.
 
 Current read:
 
