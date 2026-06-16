@@ -165,6 +165,38 @@ Stacking genre+era surfaced **0/32** into top-20. Root reason: the user's
 genre/era/popularity/exclusion filter can pick GT by its cover from same-genre
 peers. Only the (weak) SigLIP embedding carries that signal.
 
+## Pre-rerank candidate re-ordering (the one small positive — and its limits)
+
+The reranker is 94% effective on GT that reaches its `pool_k=500` window, so the
+question became: can we push GT into that window by re-weighting fusion?
+
+- **Boost the played-covers branch** (`routing_boost: {image_or_visual_search: 2–3}`,
+  visual-gated): hit@20 0.4704 → **0.4783 (+0.0079)** at 2× and 3×; ndcg/mrr rise
+  with dose (3×: ndcg +0.0042, mrr +0.0036). Controlling for run drift (non-visual
+  control fell ndcg −0.0044 / hit@20 −0.0112), the diff-in-differences is ~+0.019
+  hit@20. **Small (~2–5 turns) and near the noise floor, but the only lever that
+  moved top-20 the right way.** union unchanged → pure re-ordering, not recall.
+- **Boost the cover-description (text) branch** (weight 2×): **flat** — promoting a
+  weak branch just promotes its decoys.
+
+## State signal audit — can anything clean/filter the recall? (no)
+
+The compiled state is rich, but none of it surfaces GT:
+
+- **artist references: 66% of visual turns** name artists (mostly `satisfied_prior`,
+  `anchor_use=do_not_use`). But for the 30 buried-GT-with-artist turns, GT is in the
+  co-listening (`cf_bpr`) top-100 only **10%** of the time and the played-cover
+  top-100 **3%** — GT usually isn't *behaviorally* similar to the referenced
+  artists (similar only in the user's eye, via the cover). Anchoring on them can't
+  reach GT. (This is really pivot lane #125's signal anyway.)
+- genre 54% / era 10% / popularity 0% / exclusion 1% — don't discriminate
+  (same-category decoys) or are already applied.
+
+**Root cause, final:** the user's only GT-distinguishing detail is the *cover*.
+Every metadata signal names a *category with many members*; only the cover points
+at GT, and the cover is (a) not in metadata (can't filter) and (b) encoded only by
+the weak, fixed SigLIP space. So no state signal can clean the recall to surface GT.
+
 ## Where the real lever is (cross-lane)
 
 - **Candidate-surface / pool-depth (#129):** the cheap inference `pool_k` bump is
