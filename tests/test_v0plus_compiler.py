@@ -1205,6 +1205,66 @@ def test_visual_query_uses_album_cover_prefix():
     assert "indie" in q and "dreamy" in q
 
 
+def test_visual_nl_query_strips_container_filler_and_uses_caption_framing():
+    """`visual_nl` (SigLIP-2 caption): natural-language framing, with redundant
+    container words (cover/art/album/artwork/image) dropped — the caption frame
+    already implies them. Mirrors the sonic_nl->CLAP query-framing win."""
+    state = _state(
+        turn_intent="something visual",
+        mentioned_entities=[
+            MentionedEntity(type="tag", value="dark abstract cover art", sentiment=1),
+            MentionedEntity(type="tag", value="electronic", sentiment=1),
+        ],
+    )
+    q = _capture_query_text(state, "visual_nl")
+    assert q is not None
+    assert q.lower().startswith("an album cover")   # caption framing, not comma list
+    assert "cover art" not in q.lower()              # redundant container filler dropped
+    assert "dark abstract" in q                      # concrete descriptor kept
+    assert "electronic" in q
+
+
+def test_visual_nl_query_skips_when_no_signal():
+    """No tags and no intent => `visual_nl` returns None (branch no-ops)."""
+    state = _state(turn_intent="", mentioned_entities=[])
+    assert _capture_query_text(state, "visual_nl") is None
+
+
+def test_visual_nl_query_falls_back_to_intent_when_no_tags():
+    """No tags but a turn_intent => `visual_nl` falls back to a caption built
+    from the intent."""
+    state = _state(turn_intent="moody atmospheric record", mentioned_entities=[])
+    q = _capture_query_text(state, "visual_nl")
+    assert q is not None and q.startswith("album cover artwork, ")
+    assert "moody atmospheric" in q
+
+
+def test_visual_concrete_query_strips_frame_and_filler():
+    """`visual_concrete` (SigLIP-2, probe-winning): bare visual descriptors only,
+    NO "album cover" frame and redundant container words dropped. The 6-example
+    probe showed the frame is non-discriminative (every catalog item is a cover)
+    and dilutes the query — stripping it ranked GT covers 3-28x higher."""
+    state = _state(
+        turn_intent="something visual",
+        mentioned_entities=[
+            MentionedEntity(type="tag", value="dark abstract cover art", sentiment=1),
+            MentionedEntity(type="tag", value="electronic", sentiment=1),
+        ],
+    )
+    q = _capture_query_text(state, "visual_concrete")
+    assert q is not None
+    assert "album cover" not in q.lower()   # frame dropped
+    assert "cover art" not in q.lower()      # redundant container filler dropped
+    assert "dark abstract" in q              # concrete descriptor kept
+    assert "electronic" in q
+
+
+def test_visual_concrete_query_skips_when_no_signal():
+    """No tags and no intent => `visual_concrete` returns None (branch no-ops)."""
+    state = _state(turn_intent="", mentioned_entities=[])
+    assert _capture_query_text(state, "visual_concrete") is None
+
+
 def test_sonic_nl_query_uses_natural_language_phrasing():
     """`sonic_nl` template: "A song with {tags} sound, similar to {artists}"."""
     state = _state(
@@ -1267,6 +1327,133 @@ def test_lyric_query_skipped_branch_does_not_emit_encode_call():
     # No query string => no encode call AND no search_embedding call.
     assert encoder.calls == []
     assert retriever.embedding_calls == []
+
+
+# ---------------------------------------------------------------------
+# Visual-gated dense branches (gated_on)
+# ---------------------------------------------------------------------
+
+
+def _visual_fact():
+    """A current-target visual attribute fact — the only thing that makes the
+    computed `routing_tags.image_or_visual_search` flag True (mirrors how the
+    extractor flags a cover-art / visual request in production)."""
+    from mcrs.conversation_state.schema import (
+        StateFact, FactType, AttributeFacet, FactRole, AnchorUse,
+    )
+    return StateFact(
+        type=FactType.attribute,
+        facet=AttributeFacet.visual,
+        value="striking cover art",
+        role=FactRole.current_target,
+        anchor_use=AnchorUse.query_facet,
+        source_turn=1,
+        mentioned_current_turn=True,
+    )
+
+
+def test_gated_branch_skipped_when_routing_flag_off():
+    """A dense branch with `gated_on` set must NOT fire when the named routing
+    flag is False — no encode call, no embedding search. The turn still has a
+    real visual query available (built from turn_intent), so the ONLY reason
+    the branch is skipped is the gate: non-visual turns stay byte-for-byte
+    identical, and we pay no SigLIP-2 encode RPC on them."""
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    encoder = FakeEmbeddingClient()
+    state = _state()  # no visual fact => image_or_visual_search is False
+    cfg = CompilerConfig(
+        dense_branches=[
+            _branch(vector_field="image_siglip2", query_id="visual",
+                    encoder_id="default", gated_on="image_or_visual_search"),
+        ],
+    )
+    rs = _resolve(state, catalog)
+    assert rs.state.routing_tags.image_or_visual_search is False
+    V0PlusCompiler(catalog, retriever, encoder, cfg).compile(rs)
+    assert encoder.calls == []
+    assert retriever.embedding_calls == []
+
+
+def test_gated_branch_fires_when_routing_flag_on():
+    """The same gated branch fires normally on a visual turn (a current-target
+    visual fact is present): the visual query is encoded and the SigLIP-2 image
+    embedding search runs."""
+    catalog = _catalog()
+    retriever = FakeRetriever(embedding_hits=[("t-morphine-1", 0.9)])
+    encoder = FakeEmbeddingClient()
+    state = _state(facts=[_visual_fact()])
+    cfg = CompilerConfig(
+        dense_branches=[
+            _branch(vector_field="image_siglip2", query_id="visual",
+                    encoder_id="default", gated_on="image_or_visual_search"),
+        ],
+    )
+    rs = _resolve(state, catalog)
+    assert rs.state.routing_tags.image_or_visual_search is True
+    V0PlusCompiler(catalog, retriever, encoder, cfg).compile(rs)
+    assert len(encoder.calls) == 1
+    assert encoder.calls[0][0].startswith("album cover, ")
+    assert len(retriever.embedding_calls) == 1
+    assert retriever.embedding_calls[0]["vector_field"] == "image_siglip2"
+
+
+def test_ungated_branch_fires_regardless_of_routing_flag():
+    """Branches with no `gated_on` (the default) are unaffected by routing
+    flags — they fire even on a non-visual turn. Guards back-compat for every
+    existing branch."""
+    catalog = _catalog()
+    retriever = FakeRetriever(embedding_hits=[("t-morphine-1", 0.9)])
+    encoder = FakeEmbeddingClient()
+    state = _state()  # image_or_visual_search is False
+    cfg = CompilerConfig(
+        dense_branches=[_branch(query_id="metadata")],  # no gated_on
+    )
+    V0PlusCompiler(catalog, retriever, encoder, cfg).compile(_resolve(state, catalog))
+    assert len(encoder.calls) == 1
+
+
+def test_unknown_gated_on_field_raises():
+    """A `gated_on` that doesn't name a real RoutingTags field must fail fast,
+    not silently disable the branch on every turn (matches how unknown
+    encoder_id / query_id raise)."""
+    import pytest
+    catalog = _catalog()
+    retriever = FakeRetriever()
+    state = _state()
+    cfg = CompilerConfig(
+        dense_branches=[_branch(query_id="metadata", gated_on="not_a_routing_tag")],
+    )
+    compiler = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg)
+    with pytest.raises(KeyError, match="not_a_routing_tag"):
+        compiler.compile(_resolve(state, catalog))
+
+
+def test_gated_off_branch_preserves_alignment_for_following_branch():
+    """A gated-off branch (skipped → appends []) must keep the RRF fusion zip
+    aligned with cfg.dense_branches, so a LATER active branch still fuses
+    correctly. Gated branch is FIRST so any misalignment would mis-pair the
+    active branch's hits."""
+    catalog = _catalog()
+    retriever = FakeRetriever(embedding_hits=[("t-morphine-1", 0.9)])
+    qwen = FakeEmbeddingClient(vector=[1.0, 0.0, 0.0])
+    siglip = FakeEmbeddingClient(vector=[0.0, 1.0, 0.0])
+    state = _state()  # non-visual => the gated branch is skipped
+    cfg = CompilerConfig(
+        dense_branches=[
+            _branch(vector_field="image_siglip2", query_id="visual",
+                    encoder_id="siglip2_text", gated_on="image_or_visual_search"),
+            _branch(vector_field="metadata_qwen3_embedding_0_6b",
+                    encoder_id="default", query_id="metadata"),
+        ],
+    )
+    result = V0PlusCompiler(
+        catalog, retriever,
+        encoders={"default": qwen, "siglip2_text": siglip}, config=cfg,
+    ).compile(_resolve(state, catalog))
+    assert siglip.calls == []          # gated-off: skipped before the encode
+    assert len(qwen.calls) == 1        # the following active branch still fired
+    assert "t-morphine-1" in result    # and its hits survived fusion (alignment ok)
 
 
 # ---------------------------------------------------------------------

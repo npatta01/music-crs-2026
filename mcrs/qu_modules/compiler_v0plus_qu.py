@@ -1112,6 +1112,7 @@ def build_v0plus_compiler_qu(
                 if isinstance(entry, str):
                     dense_branches.append(DenseBranch(vector_field=entry))
                 else:
+                    gated_on = entry.get("gated_on")
                     dense_branches.append(
                         DenseBranch(
                             vector_field=str(entry["vector_field"]),
@@ -1119,6 +1120,7 @@ def build_v0plus_compiler_qu(
                             distance_type=str(entry.get("distance_type", "cosine")),
                             encoder_id=str(entry.get("encoder_id", "default")),
                             query_id=str(entry.get("query_id", "intent")),
+                            gated_on=str(gated_on) if gated_on is not None else None,
                         )
                     )
 

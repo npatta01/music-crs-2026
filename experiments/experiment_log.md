@@ -71,3 +71,28 @@ Next step:
 
 - Merge the v10 cleanup PR, then remove any remaining stale local/source
   references in a follow-up only if they are not needed for audit history.
+
+## 2026-06-15 - Issue #127 visual route (Lever B): coverage up, top-20 flat
+
+Decision:
+
+- Added a visual-gated SigLIP-2 text->cover-art dense branch (`DenseBranch.gated_on`),
+  now **enabled in all three canonical configs** (`query_id=visual_nl`,
+  `gated_on: image_or_visual_search`; visual-gated, non-visual turns unchanged).
+  Paired sharded A/B on all 253 visual turns: **union@1000 0.759 -> 0.802
+  (+0.044)** but **hit@20/ndcg@20 flat** (frozen v10 reranker does not promote the
+  new candidates). **Shipped for the retrieval capability (coverage gain),
+  score-neutral on top-20** — converting it is a reranker change (`siglip_query_cos`
+  feature + retrain, staged for #128), not a retrieval one. Full writeup:
+  `experiments/visual_route_lever_b.md`.
+
+Current read:
+
+- Pool-position diagnostic: SigLIP's incremental candidates land deep (70% beyond
+  rank 100); ~half of visual GT never reaches the LGBM `pool_k=500` scorable pool.
+  LGBM is 94% effective on in-pool GT, so the bottleneck is retrieval depth, not
+  the reranker. Real levers live in pool-depth (#129) / reranker (#128) / a
+  stronger visual retriever, not in branch wiring.
+- Reusable infra on `claude/visual-route`: `gated_on` dense branches and
+  `--session_ids_file` support on Modal incl. sharding (curated subset filtered
+  then sharded -> ~7.5 min vs ~16 min single-container).

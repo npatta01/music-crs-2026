@@ -18,6 +18,7 @@ misleading agents about the current system. Use Git history for older waves.
 |---|---|
 | [state_ranker_v10_lgbm_devset.md](state_ranker_v10_lgbm_devset.md) | Current devset score anchor and stage-by-stage recall handoff. |
 | [state_ranker_v10_rrf_devset.md](state_ranker_v10_rrf_devset.md) | Explicit candidate-fusion baseline used to build fresh v10 reranker features. |
+| [visual_route_lever_b.md](visual_route_lever_b.md) | Issue #127 visual-route finding: SigLIP-2 cover-art branch lifts visual union (+4.4pt@1000) but not top-20; pool-position diagnosis points to pool-depth/reranker, not branch wiring. |
 | [analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/index.html](analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/index.html) | Durable baseline recall-gap snapshot for the all-retrievers devset run. Treat as an experiment analysis and replay contract; rerun after extractor, retriever, ranker, catalog, or split changes. |
 | [experiment_log.md](experiment_log.md) | Short current-state note only. Historical wave logs were pruned. |
 | [analysis/README.md](analysis/README.md) | Notes that runtime prompt/schema modules have moved out of `experiments/analysis/`. |

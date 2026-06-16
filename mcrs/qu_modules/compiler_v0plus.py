@@ -170,6 +170,10 @@ class DenseBranch:
     distance_type: str = "cosine"
     encoder_id: str = "default"
     query_id: str = "intent"
+    # When set, names a `RoutingTags` boolean field; the branch fires ONLY on
+    # turns where that flag is True (e.g. "image_or_visual_search"). None (the
+    # default) means always-on — the branch fires on every turn as before.
+    gated_on: str | None = None
 
 
 @dataclass
@@ -532,6 +536,18 @@ class V0PlusCompiler:
                         f"Available templates: {sorted(builders)}"
                     )
                 query_strings[qid] = builders[qid](rs)
+            # Validate gated_on references a real RoutingTags field. A typo would
+            # otherwise silently disable the branch on every turn (getattr
+            # default False) — fail loudly at compile time instead, matching how
+            # unknown encoder_id / query_id raise.
+            routing_fields = set(type(rs.state.routing_tags).model_fields)
+            for b in self.cfg.dense_branches:
+                if b.gated_on is not None and b.gated_on not in routing_fields:
+                    raise KeyError(
+                        f"DenseBranch(vector_field={b.vector_field!r}) "
+                        f"gated_on={b.gated_on!r} is not a RoutingTags field. "
+                        f"Available: {sorted(routing_fields)}"
+                    )
         add_elapsed("build_queries", start)
 
         # 3. Retrieval — 1 BM25 call + 1 search_embedding per enabled dense branch
@@ -572,6 +588,22 @@ class V0PlusCompiler:
                     if q_text is not None:
                         query_trace["query_text"] = q_text
                     branch_queries[branch_name] = query_trace
+                if branch.gated_on is not None and not getattr(
+                    rs.state.routing_tags, branch.gated_on, False
+                ):
+                    # Branch is gated on a routing flag that is off this turn.
+                    # Skip BEFORE encoding: no wasted encode RPC and no
+                    # candidates injected into the pool on non-matching turns.
+                    # Append empty hits to keep dense_branch_results aligned
+                    # with self.cfg.dense_branches for the RRF fusion zip().
+                    dense_branch_results.append([])
+                    if trace_enabled:
+                        branch_status[branch_name] = {
+                            "configured": True,
+                            "fired": False,
+                            "skip_reason": "gated_off",
+                        }
+                    continue
                 if branch.vector_field not in supported_vector_fields:
                     dense_branch_results.append([])
                     if trace_enabled:
@@ -1707,6 +1739,85 @@ class V0PlusCompiler:
             return f"album cover, {intent}"
         return None
 
+    def _build_visual_nl_query_string(self, rs: ResolvedConversationState) -> str | None:
+        """`query_id="visual_nl"` — natural-language caption for SigLIP-2's text
+        branch.
+
+        SigLIP-2's text encoder was trained on (image, web-caption) pairs, so a
+        caption sentence aligns better than the Round-1 `"album cover, {comma
+        tags}"` list — mirroring the `sonic_nl`->CLAP query-framing win. Redundant
+        container words (cover / art / album / artwork / image) are stripped
+        because the caption frame already implies them; what's left is the
+        concrete visual content, which the visual-slice pool diagnostic showed is
+        what ranks GT shallow in the cover-art space (vague filler like
+        "distinctive cover art" misses).
+
+        Template:
+          - "an album cover with {cleaned tags} artwork"
+          - Falls back to "album cover artwork, {turn_intent}" when no usable
+            tags survive, or None when there is no signal at all.
+        """
+        import re
+
+        state = rs.state
+        tags = self._positive_mention_values(state, "tag")
+        filler = re.compile(
+            r"\b(?:album covers?|cover art|album art|artworks?|covers?|art|imagery|images?)\b",
+            re.IGNORECASE,
+        )
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for tag in tags:
+            c = re.sub(r"\s+", " ", filler.sub("", tag)).strip(" ,").strip()
+            key = c.casefold()
+            if c and key not in seen:
+                seen.add(key)
+                cleaned.append(c)
+        if cleaned:
+            return "an album cover with " + ", ".join(cleaned) + " artwork"
+        intent = state.turn_intent.strip()
+        return f"album cover artwork, {intent}" if intent else None
+
+    def _build_visual_concrete_query_string(self, rs: ResolvedConversationState) -> str | None:
+        """`query_id="visual_concrete"` — bare visual descriptors for SigLIP-2.
+
+        The 6-example probe (`modal/app.py::probe_visual`) showed the
+        `"album cover,"` frame is non-discriminative — every catalog item IS a
+        cover, so the frame pulls the query toward a generic centroid and buries
+        the concrete description. Stripping the frame + redundant container words
+        ("cover art" / "imagery" / ...) ranked the GT cover 3-28x higher in the
+        image-siglip2 space. Emits ONLY the concrete visual descriptors — no
+        frame, no caption boilerplate.
+
+        Template:
+          - "{cleaned tags}" (comma-joined visual descriptors)
+          - Falls back to the filler-stripped turn_intent, or None when there is
+            no signal at all.
+        """
+        import re
+
+        filler = re.compile(
+            r"\b(?:album covers?|cover art|album art|artworks?|covers?|art|imagery|images?)\b",
+            re.IGNORECASE,
+        )
+
+        def _clean(value: str) -> str:
+            return re.sub(r"\s+", " ", filler.sub("", value)).strip(" ,").strip()
+
+        state = rs.state
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for tag in self._positive_mention_values(state, "tag"):
+            c = _clean(tag)
+            key = c.casefold()
+            if c and key not in seen:
+                seen.add(key)
+                cleaned.append(c)
+        if cleaned:
+            return ", ".join(cleaned)
+        intent = _clean(state.turn_intent)
+        return intent or None
+
     def _build_sonic_nl_query_string(self, rs: ResolvedConversationState) -> str | None:
         """`query_id="sonic_nl"` — natural-language sonic description for CLAP.
 
@@ -1859,6 +1970,8 @@ class V0PlusCompiler:
             "metadata": self._build_metadata_query_string,
             "sonic": self._build_sonic_query_string,
             "visual": self._build_visual_query_string,
+            "visual_nl": self._build_visual_nl_query_string,
+            "visual_concrete": self._build_visual_concrete_query_string,
             "sonic_nl": self._build_sonic_nl_query_string,
             "sonic_nl_enriched": self._build_sonic_nl_enriched_query_string,
             "lyric": self._build_lyric_query_string,
