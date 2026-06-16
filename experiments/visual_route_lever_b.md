@@ -34,9 +34,10 @@ to do that. **The visual gap is retrieval-quality-limited, not reranker-limited.
   including **sharded** runs (workers filter to the subset, then split it across
   shards). This made the 65-session run ~7.5 min (10 shards) vs ~16 min in a
   single container.
-- Tooling: `scripts/compare_visual_slice.py` (paired visual-slice A/B +
-  non-visual regression guard), `scripts/visual_pool_position.py` (GT
-  rank across branches / fusion / LGBM).
+- Diagnostic tooling used for the analysis below — a paired visual-slice A/B (+
+  non-visual regression guard), a GT-rank-by-stage pool tracer, and a Modal
+  SigLIP query-variant probe — was exploratory and is **not committed** with the
+  feature (the numbers here are the durable record).
 
 ## Result — paired sharded A/B, all 65 visual sessions / 253 visual turns
 
@@ -109,7 +110,7 @@ pool-depth lever is **negative**; a fair test needs a `pool_k=1000` **retrain**
 
 ## Query-formulation probe (retriever play): wording is a small lever
 
-Is the SigLIP query phrased right? A 6-example probe (`modal/app.py::probe_visual`,
+Is the SigLIP query phrased right? A 6-example probe (a one-off Modal diagnostic,
 ranking each GT cover in the full 46,485-cover space) suggested **bare visual
 descriptors** (no `"album cover,"` frame, filler stripped) ranked GT 3–28×
 higher than the current comma query. But **slice-scale validation (253 turns)
@@ -234,11 +235,8 @@ python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset \
   --session_ids_file exp/subsets/visual_sessions.json --num_shards 10 --batch_size 8
 python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset_visual \
   --session_ids_file exp/subsets/visual_sessions.json --num_shards 10 --batch_size 8
-python scripts/compare_visual_slice.py --baseline-preds ... --treatment-preds ... \
-  --baseline-trace ... --treatment-trace ... --ground-truth exp/ground_truth/devset.json \
-  --sessions-file exp/subsets/visual_sessions.json
-python scripts/visual_pool_position.py --baseline-trace ... --treatment-trace ... \
-  --ground-truth exp/ground_truth/devset.json --sessions-file exp/subsets/visual_sessions.json
+# then compare the two runs' visual-slice metrics from the predictions/traces
+# (the diagnostic scripts used for this were exploratory and are not committed).
 ```
 
 ## Experiment config (delta vs `configs/state_ranker_v10_lgbm_devset.yaml`)
