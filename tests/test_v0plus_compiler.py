@@ -1230,6 +1230,15 @@ def test_visual_nl_query_skips_when_no_signal():
     assert _capture_query_text(state, "visual_nl") is None
 
 
+def test_visual_nl_query_falls_back_to_intent_when_no_tags():
+    """No tags but a turn_intent => `visual_nl` falls back to a caption built
+    from the intent."""
+    state = _state(turn_intent="moody atmospheric record", mentioned_entities=[])
+    q = _capture_query_text(state, "visual_nl")
+    assert q is not None and q.startswith("album cover artwork, ")
+    assert "moody atmospheric" in q
+
+
 def test_visual_concrete_query_strips_frame_and_filler():
     """`visual_concrete` (SigLIP-2, probe-winning): bare visual descriptors only,
     NO "album cover" frame and redundant container words dropped. The 6-example
@@ -1418,6 +1427,33 @@ def test_unknown_gated_on_field_raises():
     compiler = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg)
     with pytest.raises(KeyError, match="not_a_routing_tag"):
         compiler.compile(_resolve(state, catalog))
+
+
+def test_gated_off_branch_preserves_alignment_for_following_branch():
+    """A gated-off branch (skipped → appends []) must keep the RRF fusion zip
+    aligned with cfg.dense_branches, so a LATER active branch still fuses
+    correctly. Gated branch is FIRST so any misalignment would mis-pair the
+    active branch's hits."""
+    catalog = _catalog()
+    retriever = FakeRetriever(embedding_hits=[("t-morphine-1", 0.9)])
+    qwen = FakeEmbeddingClient(vector=[1.0, 0.0, 0.0])
+    siglip = FakeEmbeddingClient(vector=[0.0, 1.0, 0.0])
+    state = _state()  # non-visual => the gated branch is skipped
+    cfg = CompilerConfig(
+        dense_branches=[
+            _branch(vector_field="image_siglip2", query_id="visual",
+                    encoder_id="siglip2_text", gated_on="image_or_visual_search"),
+            _branch(vector_field="metadata_qwen3_embedding_0_6b",
+                    encoder_id="default", query_id="metadata"),
+        ],
+    )
+    result = V0PlusCompiler(
+        catalog, retriever,
+        encoders={"default": qwen, "siglip2_text": siglip}, config=cfg,
+    ).compile(_resolve(state, catalog))
+    assert siglip.calls == []          # gated-off: skipped before the encode
+    assert len(qwen.calls) == 1        # the following active branch still fired
+    assert "t-morphine-1" in result    # and its hits survived fusion (alignment ok)
 
 
 # ---------------------------------------------------------------------

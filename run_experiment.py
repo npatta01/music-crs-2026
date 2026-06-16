@@ -56,7 +56,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--session_ids_file",
         default=None,
         help="Optional devset subset file with {session_ids:[...]}. Works on the "
-             "local backend and the Modal single-run backend (--num_shards 1).",
+             "local and Modal backends, single-run or sharded (the workers filter "
+             "to the subset, then split it across --num_shards).",
     )
     parser.add_argument(
         "--exp_dir",
