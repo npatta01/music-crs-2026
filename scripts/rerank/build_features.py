@@ -25,6 +25,7 @@ import math
 import os
 import sys
 import threading
+import uuid
 from collections import Counter, defaultdict
 from datetime import date
 from pathlib import Path
@@ -244,7 +245,14 @@ class EmbedMemo:
         with self._lock:
             if self._dirty:
                 self.path.parent.mkdir(parents=True, exist_ok=True)
-                self.path.write_text(json.dumps(self.memo))
+                # Atomic write (per-process temp + os.replace) so a concurrent
+                # reader — or another sharded worker on the shared cache volume —
+                # never sees a half-written memo. Across processes this is still
+                # last-writer-wins for the whole file, but a lost update only
+                # costs a re-embed, not corruption.
+                tmp = self.path.with_name(f"{self.path.name}.{os.getpid()}.tmp")
+                tmp.write_text(json.dumps(self.memo))
+                os.replace(tmp, self.path)
                 self._dirty = 0
 
 
@@ -269,10 +277,17 @@ class NpzEmbedStore:
         self._pend_vecs: list[np.ndarray] = []
         self._client = None
         # See EmbedMemo: one store is shared across the threaded rerank() calls,
-        # so the pending-buffer/index/flush mutations must be serialized. Without
-        # this two concurrent flush()es can pick the same chunk filename (glob
-        # count) and clobber each other, or a stale `pend_idx` can IndexError.
+        # so the pending-buffer/index/flush mutations must be serialized —
+        # otherwise concurrent flush()es corrupt the pending buffer/index or a
+        # stale `pend_idx` can IndexError.
         self._lock = threading.RLock()
+        # Cross-process safety (sharded Modal runs share one cache dir): name new
+        # chunks with a per-process run token + monotonic counter rather than a
+        # glob count, so concurrent worker processes can never pick the same
+        # chunk filename and clobber each other's vectors. The RLock above only
+        # covers threads within a single process.
+        self._run_token = f"{os.getpid()}_{uuid.uuid4().hex[:8]}"
+        self._chunk_seq = 0
 
     def _matrix(self, cid: str) -> np.ndarray:
         if cid not in self._chunks:
@@ -341,7 +356,8 @@ class NpzEmbedStore:
         with self._lock:
             if not self._pend_keys:
                 return
-            cid = f"chunk_{len(list(self.dir.glob('chunk_*.npz'))):05d}"
+            cid = f"chunk_{self._run_token}_{self._chunk_seq:05d}"
+            self._chunk_seq += 1
             np.savez_compressed(
                 self.dir / f"{cid}.npz",
                 keys=np.asarray(self._pend_keys),
