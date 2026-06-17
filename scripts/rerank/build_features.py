@@ -63,6 +63,27 @@ def _norm_rows(mat: np.ndarray) -> np.ndarray:
     return mat / np.maximum(np.linalg.norm(mat, axis=1, keepdims=True), 1e-9)
 
 
+def constraint_feature_row(track_id, artists, *, played, rejected_tracks,
+                           rejected_artists, target_artist_mode,
+                           same_artist_session):
+    """The four sidecar constraint features for ONE candidate.
+
+    Single source of truth for the online reranker (mcrs/qu_modules/lgbm_reranker)
+    and the offline sidecar builder (build_constraint_features) so they cannot
+    silently drift. `played`/`rejected_*` are membership sets of track/artist ids;
+    `artists` is the candidate's artist-id tuple."""
+    mode = str(target_artist_mode or "")
+    return {
+        "is_played_track": float(track_id in played),
+        "rejected_track_exact": float(track_id in rejected_tracks),
+        "rejected_artist_exact": float(
+            bool(rejected_artists) and any(a in rejected_artists for a in artists)),
+        "violates_new_artist": float(
+            ("new" in mode or "different" in mode)
+            and float(same_artist_session or 0.0) > 0),
+    }
+
+
 class Catalog:
     def __init__(self, db_uri: str, table_name: str):
         import lancedb

@@ -32,8 +32,6 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from mcrs.qu_modules.tag_resolver import catalog_tag_key  # noqa: E402
-
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
@@ -47,16 +45,20 @@ def main():
     gt_map = {(str(r["session_id"]), int(r["turn_number"])): str(r["ground_truth_track_id"])
               for r in json.load(open(args.ground_truth))}
 
-    # GT artist name-keys from the catalog
+    # GT artist UUIDs from the catalog. GT artist_ids and next-turn
+    # resolver.rejected_artist_ids are both catalog UUIDs, so match on ids directly
+    # (the catalog's artist_id/artist_name arrays are not reliably pair-aligned, so
+    # a UUID->name map would mis-resolve and the downweight would never fire).
     import lancedb
-    cat = lancedb.connect(args.db_uri).open_table("music_track_catalog").to_pandas()
-    artist_keys_of = {
-        r.track_id: frozenset(catalog_tag_key(str(a)) for a in (r.artist_name if r.artist_name is not None else [])) - {""}
-        for r in cat.itertuples()}
+    _cat = (lancedb.connect(args.db_uri).open_table("music_track_catalog").to_lance()
+            .to_table(columns=["track_id", "artist_id"]).to_pydict())
+    artist_ids_of: dict[str, frozenset] = {   # track_id -> {artist UUIDs}
+        str(tid): frozenset(str(a) for a in (aids or []))
+        for tid, aids in zip(_cat["track_id"], _cat["artist_id"])}
 
     # next-turn rejections from the trace (resolver block per turn)
     rej_tracks: dict[tuple, set] = {}
-    rej_artist_keys: dict[tuple, set] = {}
+    rej_artist_ids: dict[tuple, set] = {}
     files = sorted(glob.glob(args.trace_glob))
     assert files, f"no trace files match {args.trace_glob}"
     for p in files:
@@ -66,8 +68,7 @@ def main():
                 k = (str(r["session_id"]), int(r["turn_number"]))
                 res = (r.get("trace") or {}).get("resolver") or {}
                 rej_tracks[k] = {str(t) for t in (res.get("rejected_track_ids") or [])}
-                rej_artist_keys[k] = {catalog_tag_key(str(a))
-                                      for a in (res.get("rejected_artist_ids") or [])} - {""}
+                rej_artist_ids[k] = {str(a) for a in (res.get("rejected_artist_ids") or [])}
 
     # next-turn goal assessments from the conversations dataset
     from datasets import load_dataset
@@ -92,7 +93,7 @@ def main():
         if gt in rej_tracks.get(nxt, ()):  # explicit next-turn rejection of the GT
             w *= 0.3
             n_rt += 1
-        elif artist_keys_of.get(gt) and (artist_keys_of[gt] & rej_artist_keys.get(nxt, set())):
+        elif artist_ids_of.get(gt) and (artist_ids_of[gt] & rej_artist_ids.get(nxt, set())):
             w *= 0.6
             n_ra += 1
         rows.append({"session_id": sid, "turn_number": tn, "weight": max(w, 0.2)})

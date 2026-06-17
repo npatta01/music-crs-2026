@@ -401,8 +401,10 @@ class LgbmOnlineReranker:
             rows, _ = compute_turn_features(row, self.ctx, gt=None)
             if not rows:
                 return fallback
-            # sidecar constraint features — exact replica of
-            # scripts/rerank/build_constraint_features.py (resolver-based)
+            # sidecar constraint features — shared helper with the offline builder
+            # (build_features.constraint_feature_row) so train/serve cannot drift
+            from build_features import constraint_feature_row
+
             res = trace.get("resolver") or {}
             played = frozenset(str(x) for x in res.get("played_track_ids") or [])
             rej_tracks = frozenset(str(x) for x in res.get("rejected_track_ids") or [])
@@ -410,14 +412,11 @@ class LgbmOnlineReranker:
             for r in rows:
                 tid = r["track_id"]
                 arts = self.ctx.cat.meta.get(tid, {}).get("artists", ())
-                r["is_played_track"] = float(tid in played)
-                r["rejected_track_exact"] = float(tid in rej_tracks)
-                r["rejected_artist_exact"] = float(
-                    bool(rej_artists) and any(a in rej_artists for a in arts))
-                mode = str(r.get("target_artist_mode") or "")
-                r["violates_new_artist"] = float(
-                    ("new" in mode or "different" in mode)
-                    and float(r.get("same_artist_session") or 0.0) > 0)
+                r.update(constraint_feature_row(
+                    tid, arts, played=played, rejected_tracks=rej_tracks,
+                    rejected_artists=rej_artists,
+                    target_artist_mode=r.get("target_artist_mode"),
+                    same_artist_session=r.get("same_artist_session")))
             X = self._assemble(rows)
             scores = self.booster.predict(X)
             order = np.argsort(-scores)

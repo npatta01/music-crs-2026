@@ -98,26 +98,49 @@ class TurnContext:
 def _abandoned_sets(state: dict, resolver_block: dict, cat: Catalog):
     """Pivot-away targets from CURRENT state only (serving-safe).
 
-    abandoned artists = artist name-keys of negatively-rated feedback tracks +
-    resolver rejected artist names; abandoned tags = resolver rejected_tags
-    (resolved to catalog tag keys)."""
-    artists: set[str] = set()
+    Returns (abandoned_artist_ids, abandoned_tag_keys). Matching is by catalog
+    artist_id (UUID), NOT name-key: the catalog's artist_id/artist_name arrays are
+    not reliably pair-aligned (collaboration rows; ~3.3k length-mismatch rows; ~12%
+    of UUIDs map to >1 name), so a UUID->name map mis-resolves. Both
+    resolver.rejected_artist_ids and cat.meta[*]["artists"] are artist UUIDs, so we
+    compare those directly.
+
+    abandoned artist ids:
+      - resolver.rejected_artist_ids (explicit artist rejections);
+      - artists of negatively-rated feedback tracks (role 'rejected' or
+        overall_sentiment < 0);
+      - on a pivot (target_artist_mode wants a new/different artist) the artists of
+        previously *satisfied* tracks — schema: role 'satisfied' = "met a prior
+        request, should not automatically carry forward", the leave-behind role.
+        'accepted' ("default for any liked track") is deliberately NOT treated as
+        leaving — demoting a still-liked artist on a pivot is too aggressive.
+    abandoned tags = resolver.rejected_tags (resolved to catalog tag keys).
+
+    track_feedback schema (mcrs.conversation_state.schema.TrackFeedback):
+      {track_id, overall_sentiment: int, role: 'accepted'|'rejected'|'seed'|
+       'neutral'|'satisfied'|'contrast'}."""
+    mode = str(state.get("target_artist_mode") or "")
+    pivot = "new" in mode or "different" in mode
+
+    artist_ids: set[str] = {str(a) for a in (resolver_block.get("rejected_artist_ids") or [])}
     for fb in (state.get("track_feedback") or []):
-        sent = str(fb.get("sentiment") or fb.get("feedback") or "").lower()
-        if any(w in sent for w in ("negative", "reject", "dislike", "bad")):
-            tid = str(fb.get("track_id") or "")
-            if tid in cat.meta:
-                artists.update(cat.meta[tid]["artist_name_keys"])
-    for a in (resolver_block.get("rejected_artist_ids") or []):
-        k = catalog_tag_key(str(a))
-        if k:
-            artists.add(k)
+        role = str(fb.get("role") or "").lower()
+        try:
+            sentiment = float(fb.get("overall_sentiment"))
+        except (TypeError, ValueError):
+            sentiment = 0.0
+        negative = role == "rejected" or sentiment < 0
+        leaving = pivot and role == "satisfied"
+        if negative or leaving:
+            m = cat.meta.get(str(fb.get("track_id") or ""))
+            if m:
+                artist_ids.update(str(a) for a in m["artists"])
     tags: set[str] = set()
     for t in (resolver_block.get("rejected_tags") or []):
         k = catalog_tag_key(str(t))
         if k:
             tags.add(k)
-    return artists, tags
+    return artist_ids, tags
 
 
 def compute_turn_features(row: dict, ctx: TurnContext, gt: str | None = None):
@@ -183,7 +206,7 @@ def compute_turn_features(row: dict, ctx: TurnContext, gt: str | None = None):
     routing = trace.get("routing_tags") or {}
     tam = str(state.get("target_artist_mode") or "")
     wants_new = float("new" in tam or "different" in tam)
-    abandoned_artist_keys, abandoned_tag_keys = _abandoned_sets(state, resolver_block, cat)
+    abandoned_artist_ids, abandoned_tag_keys = _abandoned_sets(state, resolver_block, cat)
 
     queries = br.get("branch_queries") or {}
     q_texts = {}
@@ -350,7 +373,7 @@ def compute_turn_features(row: dict, ctx: TurnContext, gt: str | None = None):
             "artist_best_rank_in_union": float(min((artist_union_best.get(a, float("inf")) for a in m["artists"]),
                                                    default=float("inf"))),
             # pivot-away resemblance (semih P, current-state-only)
-            "same_artist_as_abandoned": float(bool(set(m["artist_name_keys"]) & abandoned_artist_keys)),
+            "same_artist_as_abandoned": float(bool(set(m["artists"]) & abandoned_artist_ids)),
             "tag_overlap_abandoned": float(len(m["tag_keys"] & abandoned_tag_keys)),
         }
         if math.isinf(rec["artist_best_rank_in_union"]):
