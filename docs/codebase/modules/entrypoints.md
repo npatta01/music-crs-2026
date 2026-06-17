@@ -4,8 +4,9 @@
 
 The CLI entrypoints are the outermost shell of the Music-CRS pipeline. They sit above every `mcrs.*` module: they parse user arguments, load YAML configs, instantiate the pipeline via `mcrs.load_crs_baseline`, drive batch inference over the HuggingFace test dataset, and persist results to `exp/inference/{split}/{tid}.json`.
 
-Two levels of abstraction exist:
+Three runnable layers exist:
 
+- **Staged experiment runner** (`run_pipeline.py`) — experiment-level orchestrator. Runs retrieval, local LGBM replay, dummy explanation, and evaluation as separately replayable stages under `exp/pipeline/runs/<run_id>/`.
 - **Unified wrapper** (`run_experiment.py`) — preferred entry point. Knows whether to call a local or Modal inference command, wires optional smoke-test subset generation, downloads Modal artifacts, and triggers the evaluator. Callers only need to know the task ID and backend.
 - **Low-level inference scripts** (`run_inference_devset.py`, `run_inference_blindset.py`) — invoked directly or as sub-processes by the wrapper. They own the actual model load → dataset load → batch loop → JSON write sequence.
 - **Streamlit explorer** (`streamlit_app.py`) — read-only browser UI for exploring saved prediction JSON files alongside ground truth. Does not run inference.
@@ -17,6 +18,7 @@ Two levels of abstraction exist:
 
 | File | Responsibility |
 |---|---|
+| `run_pipeline.py` | Config-driven staged experiment orchestrator: delegates retrieval to `run_experiment.py`, replays LGBM reranking over saved traces, applies dummy explanation, and evaluates. |
 | `run_experiment.py` | Unified local/Modal orchestrator: resolves split, validates args, calls the right low-level script or Modal function, downloads results, and invokes the evaluator. |
 | `run_inference_devset.py` | Low-level devset batch inference: loads config + model + all 8 turns per session, writes `exp/inference/devset/{tid}[{suffix}].json` and a `_trace.jsonl` sidecar. |
 | `run_inference_blindset.py` | Low-level blindset batch inference: identical pipeline but uses only the last turn per session (no ground truth) and writes to `exp/inference/{eval_dataset}/{tid}.json`. |
@@ -28,6 +30,18 @@ Two levels of abstraction exist:
 ## Public API
 
 These are the symbols called directly from the command line or imported by other modules (e.g. Modal app, tests).
+
+### `run_pipeline.py`
+
+| Symbol | Signature | Description |
+|---|---|---|
+| `build_parser` | `() -> argparse.ArgumentParser` | Constructs the staged-pipeline CLI parser. |
+| `selected_stages` | `(args: argparse.Namespace) -> list[str]` | Resolves `--only` / `--from` into the stage list to execute. |
+| `run_retrieval` | `(cfg, args, run_root) -> tuple[Path, str | None]` | Calls `run_experiment.py` for the configured retrieval task and returns the retrieval artifact root plus any subset file. |
+| `run_rerank` | `(cfg, args, run_root, retrieval_root) -> Path` | Calls `scripts/rerank/replay_lgbm.py` over the retrieval trace and writes reranked predictions. |
+| `apply_explanation` | `(cfg, run_root) -> None` | Applies staged explanation behavior; currently supports `lm_type=dummy` only. |
+| `run_evaluation` | `(cfg, run_root, args, session_ids_file) -> None` | Runs devset evaluation and branch diagnostics for staged rerank outputs. |
+| `main` | `(argv: list[str] | None) -> int` | Top-level staged pipeline entry point. |
 
 ### `run_experiment.py`
 
@@ -148,6 +162,14 @@ Written only by `run_inference_devset.py` (`run_inference_devset.py:209`). JSONL
 4. Inside `run_inference_devset.main` (`run_inference_devset.py:65`): config is loaded, `load_crs_baseline` constructs the CRS pipeline, the HF dataset is loaded and optionally filtered, all sessions × 8 turns are materialized into flat `batch_data` + `metadata` lists, then processed in `batch_size` chunks via `music_crs.batch_chat`.
 5. Results are written to `exp/inference/devset/{tid}.json`; trace sidecar to `exp/inference/devset/{tid}_trace.jsonl`.
 6. Back in `run_local`: `ensure_ground_truth` runs `evaluator/make_ground_truth.py` if needed, then `run_evaluation` invokes `evaluator/evaluate_devset.py`.
+
+### Staged devset run (`python run_pipeline.py --config configs/pipelines/state_ranker_v10_lgbm_devset.yaml`)
+
+1. `run_pipeline.py` loads the pipeline config, creates `exp/pipeline/runs/<run_id>/`, and writes `manifest.json`.
+2. The `retrieval` stage calls `run_experiment.py` with the configured retrieval task, backend, shard count, workers, and `exp_dir=<run_root>/retrieval`.
+3. The `rerank` stage reads `<retrieval>/inference/devset/{retrieval_tid}_trace.jsonl` and calls `scripts/rerank/replay_lgbm.py` to score candidates with the configured model bundle.
+4. The `explanation` stage preserves dummy responses for ranking-only experiments. Non-dummy explanation replay is rejected.
+5. The `evaluation` stage runs `evaluator/make_ground_truth.py` if needed, `evaluator/evaluate_devset.py`, and branch diagnostics when a trace is present.
 
 ### Unified Modal devset run (`python run_experiment.py --backend modal --tid ...`)
 

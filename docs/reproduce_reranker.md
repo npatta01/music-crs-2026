@@ -16,6 +16,8 @@ traces). Do not treat v9/v0plus artifacts as current training inputs.
 | `models/reranker_v10/cat_maps.json` | categorical value→code maps (8 categoricals) | <1 KB |
 | `models/reranker_v10/branch_names.json` | canonical 11 retrieval branches | <1 KB |
 | `mcrs/qu_modules/lgbm_reranker.py` | online in-pipeline reranker (config-driven) | — |
+| `scripts/rerank/replay_lgbm.py` | offline replay runner for applying a model bundle to saved retrieval traces | — |
+| `run_pipeline.py` | staged experiment runner for retrieval → rerank replay → explanation → evaluation | — |
 | `scripts/rerank/features_v9.py` | `compute_turn_features` — the single per-turn feature function called by **both** the offline builder and the online server (anti-drift) | — |
 | `scripts/rerank/build_features.py` | offline builder — loads the catalog/caches and writes the training parquet by calling `compute_turn_features` (same schema as serving) | — |
 | `scripts/rerank/build_constraint_features.py` | constraint sidecar (is_played, rejection flags) | — |
@@ -25,6 +27,7 @@ traces). Do not treat v9/v0plus artifacts as current training inputs.
 | `configs/state_ranker_v10_rrf_devset.yaml` | devset candidate-fusion/RRF baseline | — |
 | `configs/state_ranker_v10_lgbm_devset.yaml` | devset `lgbm_v10` reranker | — |
 | `configs/state_ranker_v10_lgbm_blindset_A.yaml` | blind-A `lgbm_v10` reranker + response gen | — |
+| `configs/pipelines/state_ranker_v10_lgbm_devset.yaml` | staged devset pipeline config for local iteration | — |
 
 The model bundle is referenced via `${oc.env:MCRS_MODEL_DIR,models/reranker_v10}`,
 so it resolves to the committed path locally **and** inside the Modal image
@@ -69,6 +72,37 @@ python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_A 
   --eval_dataset blindset_A --batch_size 8
 bash prepare_submission.sh state_ranker_v10_lgbm_blindset_A
 ```
+
+### Staged FAST path — reuse retrieval traces
+
+For reranker iteration, run retrieval once and replay the committed model bundle
+locally over the saved trace. This keeps extraction/retrieval variability out of
+small reranker experiments.
+
+```bash
+# Full staged local devset run
+python run_pipeline.py --config configs/pipelines/state_ranker_v10_lgbm_devset.yaml
+
+# Later: replay rerank/eval from the same retrieval trace
+python run_pipeline.py \
+  --config configs/pipelines/state_ranker_v10_lgbm_devset.yaml \
+  --from rerank \
+  --retrieval-run exp/pipeline/runs/<retrieval_run_id> \
+  --run-id <rerank_run_id>
+
+# Swap model bundles without rerunning retrieval
+python run_pipeline.py \
+  --config configs/pipelines/state_ranker_v10_lgbm_devset.yaml \
+  --only rerank \
+  --retrieval-run exp/pipeline/runs/<retrieval_run_id> \
+  --model-ref models/reranker_v10_candidate \
+  --run-id <rerank_run_id>
+```
+
+`run_pipeline.py` writes per-run artifacts under `exp/pipeline/runs/<run_id>/`.
+The retrieval stage delegates to `run_experiment.py`; the rerank stage calls
+`scripts/rerank/replay_lgbm.py` and uses the same `features_v9.compute_turn_features`
+function as training/serving. Training remains in the FULL path below.
 
 On Modal the catalog (`music-crs-models`) and the tag index / warm caches
 (`music-crs-cache`) are read from the persistent volumes. For a brand-new Modal
@@ -145,8 +179,9 @@ cp exp/analysis/rerank/v10/train/cat_maps_v9.json models/reranker_v10/cat_maps.j
 
 ## Train/serve parity
 
-The server (`lgbm_reranker.py`) and the offline builder (`build_features.py`)
-both produce features through the SAME `features_v9.compute_turn_features`, so
+The server (`lgbm_reranker.py`), the offline builder (`build_features.py`),
+and staged replay (`scripts/rerank/replay_lgbm.py`) all produce features through
+the SAME `features_v9.compute_turn_features`, so
 the feature **schema** is identical by construction — there is no parallel
 offline schema that can drift, and the regenerated parquet's columns match the
 served `meta.json` exactly.
