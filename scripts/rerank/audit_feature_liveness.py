@@ -8,13 +8,13 @@ _abandoned_sets fix (features_v9.py) and the label-weight artist fix
 Checks:
   A. Format of resolver.rejected_artist_ids / anchor_artist_ids (UUID vs name).
   B. track_feedback role + sentiment distribution.
-  C. abandoned-artist set: CURRENT logic (broken: UUID->catalog_tag_key, and
-     fb.get("sentiment")) vs FIXED logic (resolve UUID->artist name-key + treat
-     prior satisfied/accepted artists as abandoned on a pivot). Reports how many
-     turns each produces a non-empty set, and the pivot subset.
-  D. label-weight artist downweight: CURRENT intersection (GT name-keys vs
-     catalog_tag_key(next-turn rejected UUID) -> ~0 hits) vs FIXED (resolve the
-     UUID first).
+  C. abandoned-artist set: CURRENT (original broken prod: UUID->catalog_tag_key,
+     and fb.get("sentiment")) vs FIXED (the production _abandoned_sets, reused
+     verbatim — matches by artist UUID, adds rejected/negative-feedback/pivot-
+     satisfied artists). Reports non-empty turns + the pivot subset.
+  D. label-weight artist downweight: CURRENT (GT name-keys vs
+     catalog_tag_key(next-turn rejected UUID) -> ~0 hits) vs FIXED (GT artist
+     UUIDs vs rejected artist UUIDs, directly).
 
 Usage:
   python scripts/rerank/audit_feature_liveness.py \
@@ -44,12 +44,12 @@ def _is_pivot(mode: str) -> bool:
 
 
 class _ShimCat:
-    """Minimal catalog exposing exactly what _abandoned_sets reads, so the audit
-    can call the REAL production function (no divergent re-implementation)."""
+    """Minimal catalog exposing exactly what _abandoned_sets reads
+    (cat.meta[tid]["artists"] = artist UUIDs), so the audit can call the REAL
+    production function (no divergent re-implementation)."""
 
-    def __init__(self, meta: dict, artist_id_to_name_key: dict):
+    def __init__(self, meta: dict):
         self.meta = meta
-        self.artist_id_to_name_key = artist_id_to_name_key
 
 
 def main():
@@ -69,17 +69,13 @@ def main():
     import lancedb
     t = (lancedb.connect(args.db_uri).open_table(args.table).to_lance()
          .to_table(columns=["track_id", "artist_id", "artist_name"]).to_pydict())
-    aid_to_key: dict[str, str] = {}       # artist UUID -> artist name-key
-    trk_artist_keys: dict[str, frozenset] = {}  # track_id -> {artist name-keys}
+    trk_artist_ids: dict[str, frozenset] = {}   # track_id -> {artist UUIDs} (production)
+    trk_artist_keys: dict[str, frozenset] = {}  # track_id -> {artist name-keys} (broken-demo)
     for tid, aids, anames in zip(t["track_id"], t["artist_id"], t["artist_name"]):
-        aids = [str(a) for a in (aids or [])]
-        anames = [str(a) for a in (anames or [])]
-        trk_artist_keys[str(tid)] = frozenset(catalog_tag_key(a) for a in anames) - {""}
-        for a, nm in zip(aids, anames):
-            k = catalog_tag_key(nm)
-            if k:
-                aid_to_key[a] = k
-    print(f"  {len(trk_artist_keys):,} tracks, {len(aid_to_key):,} artist ids", flush=True)
+        trk_artist_ids[str(tid)] = frozenset(str(a) for a in (aids or []))
+        trk_artist_keys[str(tid)] = frozenset(catalog_tag_key(str(a)) for a in (anames or [])) - {""}
+    all_name_keys = set().union(*trk_artist_keys.values()) if trk_artist_keys else set()
+    print(f"  {len(trk_artist_ids):,} tracks", flush=True)
 
     gt_map = {(str(r["session_id"]), int(r["turn_number"])): str(r["ground_truth_track_id"])
               for r in json.load(open(args.ground_truth))}
@@ -125,28 +121,23 @@ def main():
         if args.limit and n >= args.limit:
             break
 
-    # C. abandoned-artist set, current (broken) vs fixed
-    # FIXED column calls the REAL production _abandoned_sets so it can never drift
-    # from features_v9 (covers rejected-artist resolution, negative feedback, AND
-    # the pivot satisfied branch).
-    shim = _ShimCat(
-        {tid: {"artist_name_keys": ks} for tid, ks in trk_artist_keys.items()},
-        aid_to_key,
-    )
-    real_name_keys = set(aid_to_key.values())
+    # C. abandoned-artist set, current (original broken prod) vs fixed (production)
+    # FIXED calls the REAL production _abandoned_sets (now id-based) so it can never
+    # drift from features_v9.
+    shim = _ShimCat({tid: {"artists": ids} for tid, ids in trk_artist_ids.items()})
     cur_nonempty = fix_nonempty = fix_pivot_nonempty = pivot_turns = 0
     for (sid, tn), info in turns.items():
         es, res = info["es"], info["res"]
         pivot = _is_pivot(info["mode"])
         pivot_turns += pivot
-        # CURRENT (historical broken logic): catalog_tag_key on UUID rejected ids +
-        # negative feedback read via the OLD wrong keys (sentiment/feedback).
+        # CURRENT (original broken prod): catalog_tag_key on UUID rejected ids (never a
+        # name-key) + negative feedback read via the OLD wrong keys (sentiment/feedback).
         cur = {catalog_tag_key(str(a)) for a in (res.get("rejected_artist_ids") or [])} - {""}
         for fb in (es.get("track_feedback") or []):
             sent = str(fb.get("sentiment") or fb.get("feedback") or "").lower()
             if any(w in sent for w in _NEG):
                 cur |= trk_artist_keys.get(str(fb.get("track_id") or ""), frozenset())
-        if cur & real_name_keys:  # any key that could actually match a candidate artist
+        if cur & all_name_keys:  # any key that could actually match a candidate artist
             cur_nonempty += 1
         # FIXED: production logic, reused verbatim
         fix_artists, _fix_tags = _abandoned_sets(es, res, shim)
@@ -162,14 +153,15 @@ def main():
         if not nxt or not nxt["rejected_artist_ids"]:
             continue
         eligible += 1
-        gt_keys = trk_artist_keys.get(gt, frozenset())
-        if not gt_keys:
+        gt_ids = trk_artist_ids.get(gt, frozenset())
+        if not gt_ids:
             continue
-        cur_rej = {catalog_tag_key(a) for a in nxt["rejected_artist_ids"]} - {""}  # UUID-keys
-        fix_rej = {aid_to_key[a] for a in nxt["rejected_artist_ids"] if a in aid_to_key}
-        if gt_keys & cur_rej:
+        # CURRENT (broken): GT name-keys vs catalog_tag_key(rejected UUID) -> never matches
+        cur_rej = {catalog_tag_key(a) for a in nxt["rejected_artist_ids"]} - {""}
+        if trk_artist_keys.get(gt, frozenset()) & cur_rej:
             cur_hits += 1
-        if gt_keys & fix_rej:
+        # FIXED: GT artist UUIDs vs rejected artist UUIDs, directly
+        if gt_ids & set(nxt["rejected_artist_ids"]):
             fix_hits += 1
 
     print("\n================ PIVOT-SIGNAL LIVENESS AUDIT ================")

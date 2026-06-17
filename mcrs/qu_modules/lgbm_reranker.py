@@ -106,7 +106,6 @@ class _FeatureCatalogFromCompilerCatalog:
         self.vec: dict[str, np.ndarray] = {}
         self.vec_idx: dict[str, dict[str, int]] = {}
         self.meta: dict[str, dict] = {}
-        self.artist_id_to_name_key: dict[str, str] = {}
         pops: dict[str, float] = {}
         years: dict[str, int] = {}
         artist_track_counter: Counter = Counter()
@@ -124,13 +123,6 @@ class _FeatureCatalogFromCompilerCatalog:
             artist_name_keys = tuple(
                 k for k in (catalog_tag_key(str(a or "")) for a in artist_names) if k
             )
-            # zip assumes artist_id[i] <-> artist_name[i] are aligned (same row); a
-            # length mismatch silently drops the tail. Built identically to the
-            # offline Catalog (build_features), so any such loss is symmetric.
-            for aid, nm in zip(artists, artist_names):
-                k = catalog_tag_key(str(nm or ""))
-                if aid and k:
-                    self.artist_id_to_name_key.setdefault(str(aid), k)
             duration = _float_or_nan(row.get("duration"))
             has_duration_column = has_duration_column or not math.isnan(duration)
             pop = _float_or_nan(row.get("popularity"))

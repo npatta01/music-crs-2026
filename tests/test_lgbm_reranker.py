@@ -228,7 +228,7 @@ def _make_synthetic_lgbm_reranker(cat):
 
 
 def test_feature_catalog_adapter_matches_offline_catalog_rerank_outputs(tmp_path):
-    pytest.importorskip("lance")
+    pytest.importorskip("lancedb")
     import lancedb
     from build_features import Catalog
 
@@ -367,20 +367,11 @@ def test_feature_catalog_adapter_matches_offline_catalog_rerank_outputs(tmp_path
         )
 
 
-def test_artist_id_to_name_key_map_is_built():
-    """The catalog must expose an artist_id (UUID) -> artist name-key map so the
-    pivot-away features can resolve resolver.rejected_artist_ids (which are UUIDs)."""
-    from mcrs.qu_modules.tag_resolver import catalog_tag_key
-
-    catalog = _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
-
-    assert catalog.artist_id_to_name_key["a-example"] == catalog_tag_key("The Example")
-    assert catalog.artist_id_to_name_key["a-other"] == catalog_tag_key("Other Band")
-
-
 def test_abandoned_sets_fires_on_pivot_satisfied_and_rejected_artist():
-    """On a pivot, prior *satisfied* artists are abandoned (they are what the user
-    is leaving), and explicitly rejected artist UUIDs resolve to name-keys."""
+    """On a pivot, prior *satisfied* artists are abandoned (what the user is
+    leaving), and explicitly rejected artist UUIDs are added directly. Matching is
+    by artist_id (UUID), not name-key — the catalog id<->name arrays aren't
+    reliably pair-aligned."""
     from features_v9 import _abandoned_sets
     from mcrs.qu_modules.tag_resolver import catalog_tag_key
 
@@ -393,10 +384,10 @@ def test_abandoned_sets_fires_on_pivot_satisfied_and_rejected_artist():
     }
     resolver_block = {"rejected_artist_ids": ["a-other"], "rejected_tags": ["punk"]}
 
-    artists, tags = _abandoned_sets(state, resolver_block, catalog)
+    artist_ids, tags = _abandoned_sets(state, resolver_block, catalog)
 
-    assert catalog_tag_key("The Example") in artists  # prior satisfied artist, left on pivot
-    assert catalog_tag_key("Other Band") in artists   # explicitly rejected artist (UUID resolved)
+    assert "a-example" in artist_ids  # prior satisfied artist, left on pivot
+    assert "a-other" in artist_ids    # explicitly rejected artist (id added directly)
     assert catalog_tag_key("punk") in tags
 
 
@@ -404,7 +395,6 @@ def test_abandoned_sets_keeps_satisfied_artist_when_not_pivot():
     """Continuation turn: a satisfied artist is what the user wants MORE of — it
     must NOT be added to the abandoned set."""
     from features_v9 import _abandoned_sets
-    from mcrs.qu_modules.tag_resolver import catalog_tag_key
 
     catalog = _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
     state = {
@@ -414,15 +404,14 @@ def test_abandoned_sets_keeps_satisfied_artist_when_not_pivot():
         ],
     }
 
-    artists, _ = _abandoned_sets(state, {}, catalog)
+    artist_ids, _ = _abandoned_sets(state, {}, catalog)
 
-    assert catalog_tag_key("The Example") not in artists
+    assert "a-example" not in artist_ids
 
 
 def test_abandoned_sets_fires_on_negative_feedback_regardless_of_pivot():
     """A negatively-rated track's artist is abandoned even on a non-pivot turn."""
     from features_v9 import _abandoned_sets
-    from mcrs.qu_modules.tag_resolver import catalog_tag_key
 
     catalog = _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
     state = {
@@ -432,9 +421,9 @@ def test_abandoned_sets_fires_on_negative_feedback_regardless_of_pivot():
         ],
     }
 
-    artists, _ = _abandoned_sets(state, {}, catalog)
+    artist_ids, _ = _abandoned_sets(state, {}, catalog)
 
-    assert catalog_tag_key("Other Band") in artists
+    assert "a-other" in artist_ids
 
 
 def test_pivot_abandoned_features_parity_and_liveness(tmp_path):
@@ -448,7 +437,7 @@ def test_pivot_abandoned_features_parity_and_liveness(tmp_path):
     import math
     import numbers
 
-    pytest.importorskip("lance")
+    pytest.importorskip("lancedb")
     import lancedb
     from build_features import Catalog
     from features_v9 import compute_turn_features
