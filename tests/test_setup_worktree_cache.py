@@ -84,3 +84,14 @@ def test_resolve_source_prefers_env_then_git_config(tmp_path, monkeypatch):
 
     assert module.resolve_source(None) == env_source.resolve()
 
+
+def test_main_returns_clear_error_when_shared_root_is_not_configured(monkeypatch, capsys):
+    module = _load_module()
+    monkeypatch.delenv("MCRS_SHARED_ROOT", raising=False)
+    monkeypatch.setattr(module, "git_config_shared_root", lambda: None)
+
+    assert module.main([]) == 2
+
+    captured = capsys.readouterr()
+    assert "Shared cache root is not configured" in captured.err
+    assert "git config --global mcrs.sharedRoot" in captured.err

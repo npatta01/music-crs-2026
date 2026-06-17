@@ -14,6 +14,7 @@ import argparse
 import os
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -171,7 +172,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    source = resolve_source(args.source)
+    try:
+        source = resolve_source(args.source)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     result = setup_worktree_cache(args.target, source, force=args.force)
     print(
         f"worktree cache links: changed={result.changed} "
