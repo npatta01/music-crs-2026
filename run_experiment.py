@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import random
 import re
@@ -73,14 +74,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--num_shards",
         type=int,
         default=1,
-        help="Number of parallel Modal shards. >1 runs session-sharded inference "
-             "(Modal backend only). Default 1 = single run.",
+        help="Number of local and Modal shards. >1 runs session-sharded inference. "
+             "Default 1 = single run.",
     )
     parser.add_argument(
         "--num_workers",
         type=int,
         default=0,
-        help="Number of Modal workers for a sharded run. Defaults to --num_shards "
+        help="Number of workers for a sharded run. Defaults to --num_shards "
              "for fastest wall time. Set lower to amortize per-worker startup "
              "cost at the expense of less parallelism.",
     )
@@ -149,6 +150,42 @@ def materialize_num_sessions_file(tid: str, exp_dir: Path, num_sessions: int) ->
 
 def run_command(cmd: list[str], cwd: Path | None = None) -> None:
     subprocess.run(cmd, cwd=cwd or PROJECT_ROOT, check=True)
+
+
+def run_command_logged(cmd: list[str], cwd: Path, log_path: Path) -> None:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("w", encoding="utf-8") as log_file:
+        log_file.write("$ " + " ".join(str(part) for part in cmd) + "\n")
+        log_file.flush()
+        subprocess.run(
+            cmd,
+            cwd=cwd,
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            check=True,
+        )
+
+
+def run_commands_parallel(
+    commands: list[list[str]],
+    cwd: Path,
+    max_workers: int,
+    log_dir: Path,
+) -> None:
+    log_dir.mkdir(parents=True, exist_ok=True)
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {}
+        for index, cmd in enumerate(commands):
+            log_path = log_dir / f"shard_{index}.log"
+            futures[executor.submit(run_command_logged, cmd, cwd, log_path)] = log_path
+
+        for future in as_completed(futures):
+            log_path = futures[future]
+            try:
+                future.result()
+            except subprocess.CalledProcessError:
+                print(f"[local-shards] shard failed; see log: {log_path}", file=sys.stderr)
+                raise
 
 
 def ensure_ground_truth(exp_dir: Path) -> None:
@@ -256,8 +293,10 @@ def validate_args(args: argparse.Namespace, split: str) -> None:
         raise ValueError("--num_workers must be >= 0.")
     if args.num_workers and args.num_shards == 1:
         raise ValueError("--num_workers only applies to sharded runs (--num_shards > 1).")
-    if args.num_shards > 1 and args.backend != "modal":
-        raise ValueError("--num_shards > 1 requires --backend modal.")
+    if args.num_shards > 1 and args.backend == "local" and split != "devset":
+        raise ValueError("--num_shards > 1 with --backend local is only supported for devset runs.")
+    if args.num_shards > 1 and args.backend == "local" and args.clear_cache:
+        raise ValueError("--clear_cache is not supported with local sharded runs.")
     if args.num_shards > 1 and args.num_sessions:
         raise ValueError(
             "--num_sessions cannot be combined with --num_shards > 1: "
@@ -281,6 +320,9 @@ def run_local(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
         session_ids_file = args.session_ids_file
         if args.num_sessions > 0:
             session_ids_file = materialize_num_sessions_file(args.tid, exp_dir, args.num_sessions)
+        if args.num_shards > 1:
+            run_local_sharded_devset(args, exp_dir, split, session_ids_file=session_ids_file)
+            return
         cmd = [
             sys.executable,
             "run_inference_devset.py",
@@ -315,6 +357,70 @@ def run_local(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
     if args.clear_cache:
         cmd.append("--clear_cache")
     run_command(cmd, cwd=PROJECT_ROOT)
+
+
+def run_local_sharded_devset(
+    args: argparse.Namespace,
+    exp_dir: Path,
+    split: str,
+    session_ids_file: str | None = None,
+) -> None:
+    run_id = args.run_id or make_run_id()
+    print(f"Local sharded run_id: {run_id} (re-run with --run_id {run_id} to retry)")
+
+    shard_commands: list[list[str]] = []
+    for shard_id in range(args.num_shards):
+        cmd = [
+            sys.executable,
+            "run_inference_devset.py",
+            "--tid",
+            args.tid,
+            "--batch_size",
+            str(args.batch_size),
+            "--exp_dir",
+            str(exp_dir),
+            "--num_shards",
+            str(args.num_shards),
+            "--shard_id",
+            str(shard_id),
+            "--output_suffix",
+            f".run_{run_id}.shard_{shard_id}",
+        ]
+        if session_ids_file:
+            cmd.extend(["--session_ids_file", session_ids_file])
+        shard_commands.append(cmd)
+
+    log_dir = PROJECT_ROOT / "logs" / "local_shards" / run_id
+    print(
+        f"Launching {args.num_shards} local shards with {args.num_workers} workers; "
+        f"logs: {log_dir}"
+    )
+    run_commands_parallel(
+        shard_commands,
+        cwd=PROJECT_ROOT,
+        max_workers=args.num_workers,
+        log_dir=log_dir,
+    )
+
+    run_command(
+        [
+            sys.executable,
+            "scripts/merge_shard_results.py",
+            "--tid",
+            args.tid,
+            "--num_shards",
+            str(args.num_shards),
+            "--run_id",
+            run_id,
+            "--split",
+            split,
+            "--exp-dir",
+            str(exp_dir),
+        ],
+        cwd=PROJECT_ROOT,
+    )
+    ensure_ground_truth(exp_dir)
+    run_evaluation(args.tid, exp_dir, split, session_ids_file=session_ids_file)
 
 
 def run_modal_sharded(args: argparse.Namespace, split: str, exp_dir: Path) -> None:

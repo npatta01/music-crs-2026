@@ -66,6 +66,14 @@ def test_resolve_split_rejects_unknown_non_devset_tid():
         module.resolve_split("custom_run", None)
 
 
+def test_sharding_help_mentions_local_and_modal_backends():
+    module = _load_module("run_experiment_help", "run_experiment.py")
+
+    help_text = module.build_parser().format_help()
+
+    assert "local and Modal" in help_text
+
+
 def test_local_devset_runs_inference_then_ground_truth_then_eval(tmp_path, monkeypatch):
     module = _load_module("run_experiment_module_local", "run_experiment.py")
     project_root = tmp_path / "repo"
@@ -220,6 +228,123 @@ def test_local_num_sessions_materializes_shared_subset_file(tmp_path, monkeypatc
     assert commands[0][0][-2:] == ["--session_ids_file", str(subset_file)]
     assert "--num_sessions" not in commands[0][0]
     assert commands[-1][0][-2:] == ["--session_ids_file", str(subset_file)]
+
+
+def test_local_sharded_devset_runs_shards_then_merge_and_eval(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_local_sharded", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+
+    parallel_calls: list[tuple[list[list[str]], Path, int, Path]] = []
+    commands: list[tuple[list[str], Path]] = []
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(module, "make_run_id", lambda: "rid123")
+    monkeypatch.setattr(
+        module,
+        "run_commands_parallel",
+        lambda shard_cmds, cwd, max_workers, log_dir: parallel_calls.append(
+            (
+                [[str(part) for part in cmd] for cmd in shard_cmds],
+                Path(cwd),
+                max_workers,
+                Path(log_dir),
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append(([str(part) for part in cmd], Path(cwd))),
+    )
+
+    exit_code = module.main(
+        [
+            "--backend",
+            "local",
+            "--tid",
+            "foo_devset",
+            "--batch_size",
+            "8",
+            "--num_shards",
+            "3",
+            "--num_workers",
+            "2",
+            "--exp_dir",
+            str(project_root / "artifacts"),
+        ]
+    )
+
+    assert exit_code == 0
+    assert len(parallel_calls) == 1
+    shard_cmds, cwd, max_workers, log_dir = parallel_calls[0]
+    assert cwd == project_root
+    assert max_workers == 2
+    assert log_dir == project_root / "logs" / "local_shards" / "rid123"
+    assert shard_cmds[0] == [
+        "/usr/bin/python3",
+        "run_inference_devset.py",
+        "--tid",
+        "foo_devset",
+        "--batch_size",
+        "8",
+        "--exp_dir",
+        str(project_root / "artifacts"),
+        "--num_shards",
+        "3",
+        "--shard_id",
+        "0",
+        "--output_suffix",
+        ".run_rid123.shard_0",
+    ]
+    assert shard_cmds[2][-4:] == [
+        "--shard_id",
+        "2",
+        "--output_suffix",
+        ".run_rid123.shard_2",
+    ]
+    assert commands == [
+        (
+            [
+                "/usr/bin/python3",
+                "scripts/merge_shard_results.py",
+                "--tid",
+                "foo_devset",
+                "--num_shards",
+                "3",
+                "--run_id",
+                "rid123",
+                "--split",
+                "devset",
+                "--exp-dir",
+                str(project_root / "artifacts"),
+            ],
+            project_root,
+        ),
+        (
+            [
+                "/usr/bin/python3",
+                "evaluator/make_ground_truth.py",
+                "--exp_dir",
+                str(project_root / "artifacts"),
+            ],
+            project_root,
+        ),
+        (
+            [
+                "/usr/bin/python3",
+                "evaluator/evaluate_devset.py",
+                "--tid",
+                "foo_devset",
+                "--eval_dataset",
+                "devset",
+                "--exp_dir",
+                str(project_root / "artifacts"),
+            ],
+            project_root,
+        ),
+    ]
 
 
 def test_modal_num_sessions_sends_same_subset_to_remote_and_eval(tmp_path, monkeypatch):
@@ -744,14 +869,14 @@ def test_make_run_id_format():
     assert _re.fullmatch(r"\d{8}T\d{6}Z-[0-9a-f]{6}", run_id), run_id
 
 
-def test_local_sharding_rejected(tmp_path):
-    module = _load_module("run_experiment_module_local_shard_reject", "run_experiment.py")
+def test_local_blindset_sharding_rejected(tmp_path):
+    module = _load_module("run_experiment_module_local_blindset_shard_reject", "run_experiment.py")
     project_root = tmp_path / "repo"
-    _write_config(project_root, "foo_devset")
+    _write_config(project_root, "foo_blindset_A")
     module.PROJECT_ROOT = project_root
-    with pytest.raises(ValueError, match="requires --backend modal"):
+    with pytest.raises(ValueError, match="only supported for devset"):
         module.main([
-            "--backend", "local", "--tid", "foo_devset", "--num_shards", "5",
+            "--backend", "local", "--tid", "foo_blindset_A", "--num_shards", "5",
         ])
 
 

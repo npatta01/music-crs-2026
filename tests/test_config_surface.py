@@ -5,6 +5,7 @@ import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CANONICAL_DEVSET_TID = "state_ranker_v10_lgbm_devset"
+CANONICAL_FASTLOCAL_DEVSET_TID = "state_ranker_v10_lgbm_devset_fastlocal"
 CANONICAL_RRF_DEVSET_TID = "state_ranker_v10_rrf_devset"
 CANONICAL_BLINDSET_TID = "state_ranker_v10_lgbm_blindset_A"
 DELETED_DEVSET_TID = "v0plus_compiler_image_devset"
@@ -15,6 +16,7 @@ def test_current_config_surface_has_no_deleted_devset_references():
     assert configs == [
         "state_ranker_v10_lgbm_blindset_A.yaml",
         "state_ranker_v10_lgbm_devset.yaml",
+        "state_ranker_v10_lgbm_devset_fastlocal.yaml",
         "state_ranker_v10_rrf_devset.yaml",
     ]
 
@@ -31,10 +33,10 @@ def test_current_config_surface_has_no_deleted_devset_references():
         "streamlit_app.py",
     ]
     expected_mentions = {
-        "AGENTS.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_BLINDSET_TID},
-        "CLAUDE.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_BLINDSET_TID},
+        "AGENTS.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_FASTLOCAL_DEVSET_TID, CANONICAL_BLINDSET_TID},
+        "CLAUDE.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_FASTLOCAL_DEVSET_TID, CANONICAL_BLINDSET_TID},
         "readme.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_BLINDSET_TID},
-        "docs/mac_dev.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID},
+        "docs/mac_dev.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_FASTLOCAL_DEVSET_TID},
         "docs/modal_setup.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_BLINDSET_TID},
         "run_inference_devset.py": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID},
         "evaluator/evaluate_devset.py": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID},
@@ -53,6 +55,7 @@ def test_state_ranker_v10_configs_are_active_and_do_not_use_v0plus_qu_type():
     expected = {
         "state_ranker_v10_rrf_devset.yaml",
         "state_ranker_v10_lgbm_devset.yaml",
+        "state_ranker_v10_lgbm_devset_fastlocal.yaml",
         "state_ranker_v10_lgbm_blindset_A.yaml",
     }
     config_dir = PROJECT_ROOT / "configs"
