@@ -98,18 +98,39 @@ class TurnContext:
 def _abandoned_sets(state: dict, resolver_block: dict, cat: Catalog):
     """Pivot-away targets from CURRENT state only (serving-safe).
 
-    abandoned artists = artist name-keys of negatively-rated feedback tracks +
-    resolver rejected artist names; abandoned tags = resolver rejected_tags
-    (resolved to catalog tag keys)."""
+    abandoned artists (catalog name-keys):
+      - explicitly rejected artists: resolver.rejected_artist_ids are catalog
+        artist UUIDs -> resolved via cat.artist_id_to_name_key (NOT catalog_tag_key
+        on the raw id, which never matches a name-key);
+      - artists of negatively-rated feedback tracks (role 'rejected' or
+        overall_sentiment < 0);
+      - on a pivot (target_artist_mode wants a new/different artist) the artists the
+        user was previously *satisfied* with — these are precisely what's being left,
+        so they should be demoted in favour of fresh artists.
+    abandoned tags = resolver.rejected_tags (resolved to catalog tag keys).
+
+    track_feedback schema (mcrs.conversation_state.schema.TrackFeedback):
+      {track_id, overall_sentiment: int, role: 'accepted'|'rejected'|'seed'|
+       'neutral'|'satisfied'|'contrast'}."""
+    aid_to_key = getattr(cat, "artist_id_to_name_key", {})
+    mode = str(state.get("target_artist_mode") or "")
+    pivot = "new" in mode or "different" in mode
+
     artists: set[str] = set()
     for fb in (state.get("track_feedback") or []):
-        sent = str(fb.get("sentiment") or fb.get("feedback") or "").lower()
-        if any(w in sent for w in ("negative", "reject", "dislike", "bad")):
+        role = str(fb.get("role") or "").lower()
+        try:
+            sentiment = float(fb.get("overall_sentiment"))
+        except (TypeError, ValueError):
+            sentiment = 0.0
+        negative = role == "rejected" or sentiment < 0
+        leaving = pivot and role in ("satisfied", "accepted")
+        if negative or leaving:
             tid = str(fb.get("track_id") or "")
             if tid in cat.meta:
                 artists.update(cat.meta[tid]["artist_name_keys"])
     for a in (resolver_block.get("rejected_artist_ids") or []):
-        k = catalog_tag_key(str(a))
+        k = aid_to_key.get(str(a))
         if k:
             artists.add(k)
     tags: set[str] = set()

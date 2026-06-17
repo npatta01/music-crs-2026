@@ -47,12 +47,21 @@ def main():
     gt_map = {(str(r["session_id"]), int(r["turn_number"])): str(r["ground_truth_track_id"])
               for r in json.load(open(args.ground_truth))}
 
-    # GT artist name-keys from the catalog
+    # GT artist name-keys + artist-UUID -> name-key map from the catalog
+    # (resolver.rejected_artist_ids are catalog UUIDs, NOT names — they must be
+    # resolved to name-keys, otherwise the artist-rejection downweight never fires)
     import lancedb
-    cat = lancedb.connect(args.db_uri).open_table("music_track_catalog").to_pandas()
-    artist_keys_of = {
-        r.track_id: frozenset(catalog_tag_key(str(a)) for a in (r.artist_name if r.artist_name is not None else [])) - {""}
-        for r in cat.itertuples()}
+    _cat = (lancedb.connect(args.db_uri).open_table("music_track_catalog").to_lance()
+            .to_table(columns=["track_id", "artist_id", "artist_name"]).to_pydict())
+    artist_keys_of: dict[str, frozenset] = {}   # track_id -> {artist name-keys}
+    aid_to_key: dict[str, str] = {}             # artist UUID -> artist name-key
+    for tid, aids, anames in zip(_cat["track_id"], _cat["artist_id"], _cat["artist_name"]):
+        anames = anames or []
+        artist_keys_of[str(tid)] = frozenset(catalog_tag_key(str(a)) for a in anames) - {""}
+        for aid, nm in zip(aids or [], anames):
+            key = catalog_tag_key(str(nm or ""))
+            if aid and key:
+                aid_to_key.setdefault(str(aid), key)
 
     # next-turn rejections from the trace (resolver block per turn)
     rej_tracks: dict[tuple, set] = {}
@@ -66,8 +75,9 @@ def main():
                 k = (str(r["session_id"]), int(r["turn_number"]))
                 res = (r.get("trace") or {}).get("resolver") or {}
                 rej_tracks[k] = {str(t) for t in (res.get("rejected_track_ids") or [])}
-                rej_artist_keys[k] = {catalog_tag_key(str(a))
-                                      for a in (res.get("rejected_artist_ids") or [])} - {""}
+                rej_artist_keys[k] = {aid_to_key[str(a)]
+                                      for a in (res.get("rejected_artist_ids") or [])
+                                      if str(a) in aid_to_key}
 
     # next-turn goal assessments from the conversations dataset
     from datasets import load_dataset

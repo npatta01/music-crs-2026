@@ -31,7 +31,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from build_features import Catalog  # noqa: E402
+from build_features import Catalog, constraint_feature_row  # noqa: E402
 
 
 def main():
@@ -96,16 +96,15 @@ def main():
             continue
         for i in idxs:
             tid = str(tids[i])
-            if tid in info["played"]:
-                is_played[i] = 1.0
-            if tid in info["rej_tracks"]:
-                rej_track[i] = 1.0
-            arts = artists_of.get(tid, ())
-            if info["rej_artists"] and any(a in info["rej_artists"] for a in arts):
-                rej_artist[i] = 1.0
-            mode = str(tam[i] or "")
-            if ("new" in mode or "different" in mode) and float(same_art[i] or 0.0) > 0:
-                viol_new[i] = 1.0
+            feats = constraint_feature_row(
+                tid, artists_of.get(tid, ()),
+                played=info["played"], rejected_tracks=info["rej_tracks"],
+                rejected_artists=info["rej_artists"],
+                target_artist_mode=tam[i], same_artist_session=same_art[i])
+            is_played[i] = feats["is_played_track"]
+            rej_track[i] = feats["rejected_track_exact"]
+            rej_artist[i] = feats["rejected_artist_exact"]
+            viol_new[i] = feats["violates_new_artist"]
 
     out = pd.DataFrame({
         "session_id": [str(x) for x in tbl["session_id"]],

@@ -1082,6 +1082,33 @@ def run_train_lgbm_ranker(lineage: str = "v10"):
     _run_train_lgbm_ranker(lineage=lineage)
 
 
+@app.function(
+    image=_TRAIN_IMAGE,
+    cpu=2,
+    memory=4096,
+    timeout=21600,  # 6h ceiling; only coordinates the stage functions
+    volumes={CACHE_DIR: cache_vol},
+)
+def _train_orchestrate_remote(lineage: str = "v10"):
+    """Run the full build -> fold x5 -> finalize -> full_model pipeline
+    server-side. The heavy work runs in the stage functions' own containers; this
+    just coordinates them, so the pipeline survives local-driver disconnects."""
+    _run_train_lgbm_ranker(lineage=lineage)
+
+
+@app.local_entrypoint()
+def run_train_lgbm_ranker_detached(lineage: str = "v10"):
+    """Fire the full training pipeline server-side and return immediately.
+
+    Unlike run_train_lgbm_ranker (orchestrated from the local driver, which dies
+    if the client disconnects mid-build), this spawns one remote orchestrator
+    that runs every stage on Modal. Poll rerank/<lineage>/train/metrics.json on
+    the cache volume to detect completion.
+    """
+    call = _train_orchestrate_remote.spawn(lineage)
+    print(f"SPAWNED remote training orchestrator: call_id={call.object_id} lineage={lineage}")
+
+
 def _run_train_lgbm_ranker(lineage: str) -> None:
     import time
     t0 = time.time()

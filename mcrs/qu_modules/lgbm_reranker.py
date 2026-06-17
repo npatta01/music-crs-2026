@@ -106,6 +106,7 @@ class _FeatureCatalogFromCompilerCatalog:
         self.vec: dict[str, np.ndarray] = {}
         self.vec_idx: dict[str, dict[str, int]] = {}
         self.meta: dict[str, dict] = {}
+        self.artist_id_to_name_key: dict[str, str] = {}
         pops: dict[str, float] = {}
         years: dict[str, int] = {}
         artist_track_counter: Counter = Counter()
@@ -123,6 +124,10 @@ class _FeatureCatalogFromCompilerCatalog:
             artist_name_keys = tuple(
                 k for k in (catalog_tag_key(str(a or "")) for a in artist_names) if k
             )
+            for aid, nm in zip(artists, artist_names):
+                k = catalog_tag_key(str(nm or ""))
+                if aid and k:
+                    self.artist_id_to_name_key.setdefault(str(aid), k)
             duration = _float_or_nan(row.get("duration"))
             has_duration_column = has_duration_column or not math.isnan(duration)
             pop = _float_or_nan(row.get("popularity"))
@@ -401,8 +406,10 @@ class LgbmOnlineReranker:
             rows, _ = compute_turn_features(row, self.ctx, gt=None)
             if not rows:
                 return fallback
-            # sidecar constraint features — exact replica of
-            # scripts/rerank/build_constraint_features.py (resolver-based)
+            # sidecar constraint features — shared helper with the offline builder
+            # (build_features.constraint_feature_row) so train/serve cannot drift
+            from build_features import constraint_feature_row
+
             res = trace.get("resolver") or {}
             played = frozenset(str(x) for x in res.get("played_track_ids") or [])
             rej_tracks = frozenset(str(x) for x in res.get("rejected_track_ids") or [])
@@ -410,14 +417,11 @@ class LgbmOnlineReranker:
             for r in rows:
                 tid = r["track_id"]
                 arts = self.ctx.cat.meta.get(tid, {}).get("artists", ())
-                r["is_played_track"] = float(tid in played)
-                r["rejected_track_exact"] = float(tid in rej_tracks)
-                r["rejected_artist_exact"] = float(
-                    bool(rej_artists) and any(a in rej_artists for a in arts))
-                mode = str(r.get("target_artist_mode") or "")
-                r["violates_new_artist"] = float(
-                    ("new" in mode or "different" in mode)
-                    and float(r.get("same_artist_session") or 0.0) > 0)
+                r.update(constraint_feature_row(
+                    tid, arts, played=played, rejected_tracks=rej_tracks,
+                    rejected_artists=rej_artists,
+                    target_artist_mode=r.get("target_artist_mode"),
+                    same_artist_session=r.get("same_artist_session")))
             X = self._assemble(rows)
             scores = self.booster.predict(X)
             order = np.argsort(-scores)
