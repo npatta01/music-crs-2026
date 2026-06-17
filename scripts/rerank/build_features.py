@@ -24,6 +24,7 @@ import json
 import math
 import os
 import sys
+from contextlib import contextmanager
 from collections import Counter, defaultdict
 from datetime import date
 from pathlib import Path
@@ -59,6 +60,25 @@ VECTOR_FIELDS = {
 }
 
 
+@contextmanager
+def _exclusive_file_lock(path: Path):
+    """Best-effort cross-process lock for local cache writers."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lock_file = path.open("a+b")
+    try:
+        try:
+            import fcntl
+        except ImportError:  # pragma: no cover - non-POSIX fallback.
+            fcntl = None
+        if fcntl is not None:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        yield
+    finally:
+        if fcntl is not None:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        lock_file.close()
+
+
 def _norm_rows(mat: np.ndarray) -> np.ndarray:
     return mat / np.maximum(np.linalg.norm(mat, axis=1, keepdims=True), 1e-9)
 
@@ -89,12 +109,22 @@ class Catalog:
         import lancedb
 
         db = lancedb.connect(db_uri)
-        self.ds = db.open_table(table_name).to_lance()
+        table = db.open_table(table_name)
+        self._arrow_table = None
+        try:
+            self.ds = table.to_lance()
+            names = set(self.ds.schema.names)
+        except ImportError:
+            # Local replay does not require the optional pylance package.
+            # LanceDB can still materialize the 47k-row catalog as Arrow; use
+            # that as a fallback and project columns from the in-memory table.
+            self.ds = None
+            self._arrow_table = table.to_arrow()
+            names = set(self._arrow_table.schema.names)
         scalars = ["track_id", "track_name", "artist_name", "popularity",
                    "release_date", "artist_id", "album_id", "tag_list", "duration"]
-        names = set(self.ds.schema.names)
         cols = [c for c in scalars if c in names]
-        tbl = self.ds.to_table(columns=cols).to_pydict()
+        tbl = self._to_pydict(cols)
         n = len(tbl["track_id"])
         self.meta: dict[str, dict] = {}
         self.has_duration = "duration" in tbl
@@ -176,7 +206,7 @@ class Catalog:
         for field in VECTOR_FIELDS:
             if field not in names:
                 continue
-            t = self.ds.to_table(columns=["track_id", field]).to_pydict()
+            t = self._to_pydict(["track_id", field])
             ids, rows = [], []
             for tid, v in zip(t["track_id"], t[field]):
                 if v is not None and len(v):
@@ -184,6 +214,12 @@ class Catalog:
                     rows.append(np.asarray(v, dtype=np.float32))
             self.vec[field] = _norm_rows(np.vstack(rows))
             self.vec_idx[field] = {t_: i for i, t_ in enumerate(ids)}
+
+
+    def _to_pydict(self, columns: list[str]) -> dict:
+        if self.ds is not None:
+            return self.ds.to_table(columns=columns).to_pydict()
+        return self._arrow_table.select(columns).to_pydict()
 
     def v(self, field: str, tid: str) -> np.ndarray | None:
         i = self.vec_idx.get(field, {}).get(tid)
@@ -235,7 +271,15 @@ class EmbedMemo:
     def flush(self):
         if self._dirty:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            self.path.write_text(json.dumps(self.memo))
+            with _exclusive_file_lock(self.path.with_suffix(self.path.suffix + ".lock")):
+                latest = {}
+                if self.path.exists():
+                    latest = json.loads(self.path.read_text(encoding="utf-8") or "{}")
+                latest.update(self.memo)
+                tmp = self.path.with_name(f".{self.path.name}.{os.getpid()}.tmp")
+                tmp.write_text(json.dumps(latest), encoding="utf-8")
+                os.replace(tmp, self.path)
+                self.memo = latest
             self._dirty = 0
 
 
@@ -251,14 +295,27 @@ class NpzEmbedStore:
         self.dir.mkdir(parents=True, exist_ok=True)
         self.index: dict[str, tuple[str, int]] = {}
         self._chunks: dict[str, np.ndarray] = {}
+        self._load_index_from_disk()
+        self._pend_keys: list[str] = []
+        self._pend_vecs: list[np.ndarray] = []
+        self._client = None
+
+    def _load_index_from_disk(self) -> None:
+        self.index = {}
         for f in sorted(self.dir.glob("chunk_*.npz")):
             keys = np.load(f, allow_pickle=False)["keys"]
             cid = f.stem
             for i, k in enumerate(keys):
                 self.index[str(k)] = (cid, i)
-        self._pend_keys: list[str] = []
-        self._pend_vecs: list[np.ndarray] = []
-        self._client = None
+
+    def _next_chunk_id(self) -> str:
+        max_id = -1
+        for f in self.dir.glob("chunk_*.npz"):
+            try:
+                max_id = max(max_id, int(f.stem.rsplit("_", 1)[1]))
+            except (IndexError, ValueError):
+                continue
+        return f"chunk_{max_id + 1:05d}"
 
     def _matrix(self, cid: str) -> np.ndarray:
         if cid not in self._chunks:
@@ -323,13 +380,32 @@ class NpzEmbedStore:
     def flush(self) -> None:
         if not self._pend_keys:
             return
-        cid = f"chunk_{len(list(self.dir.glob('chunk_*.npz'))):05d}"
-        np.savez_compressed(
-            self.dir / f"{cid}.npz",
-            keys=np.asarray(self._pend_keys),
-            vectors=np.vstack(self._pend_vecs).astype(np.float16))
-        for i, k in enumerate(self._pend_keys):
-            self.index[k] = (cid, i)
+        with _exclusive_file_lock(self.dir / ".npz_embed_store.lock"):
+            self._load_index_from_disk()
+            fresh_keys = []
+            fresh_vecs = []
+            pending_seen = set()
+            for key, vec in zip(self._pend_keys, self._pend_vecs):
+                if key in self.index or key in pending_seen:
+                    continue
+                pending_seen.add(key)
+                fresh_keys.append(key)
+                fresh_vecs.append(vec)
+            if not fresh_keys:
+                self._pend_keys, self._pend_vecs = [], []
+                return
+
+            cid = self._next_chunk_id()
+            final_path = self.dir / f"{cid}.npz"
+            tmp_path = self.dir / f".{cid}.{os.getpid()}.tmp.npz"
+            with tmp_path.open("wb") as handle:
+                np.savez_compressed(
+                    handle,
+                    keys=np.asarray(fresh_keys),
+                    vectors=np.vstack(fresh_vecs).astype(np.float16))
+            os.replace(tmp_path, final_path)
+            for i, k in enumerate(fresh_keys):
+                self.index[k] = (cid, i)
         self._pend_keys, self._pend_vecs = [], []
 from mcrs.qu_modules.tag_resolver import (  # noqa: E402
     TagEmbeddingIndex,
