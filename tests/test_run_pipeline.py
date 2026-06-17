@@ -178,6 +178,101 @@ def test_only_rerank_uses_existing_retrieval_run(tmp_path, monkeypatch):
         ]
     ]
 
+
+def test_rerank_can_run_parallel_shards_and_merge_without_traces(tmp_path, monkeypatch):
+    module = _load_module("run_pipeline_rerank_parallel", "run_pipeline.py")
+    config_path = tmp_path / "configs" / "pipelines" / "pipe.yaml"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(
+        """
+id: pipe_devset
+split: devset
+backend: local
+artifacts_root: artifacts/runs
+retrieval:
+  tid: retr_devset
+rerank:
+  enabled: true
+  model_ref: models/reranker_v10
+  pool_k: 500
+  num_shards: 3
+  num_workers: 2
+  write_trace: false
+explanation:
+  enabled: false
+evaluation:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    retrieval_run = tmp_path / "prior"
+    commands: list[list[str]] = []
+    parallel_calls: list[tuple[list[list[str]], Path, int, Path]] = []
+
+    def fake_parallel(cmds, cwd, max_workers, log_dir):
+        parallel_calls.append(
+            (
+                [[str(part) for part in cmd] for cmd in cmds],
+                Path(cwd),
+                max_workers,
+                Path(log_dir),
+            )
+        )
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append([str(part) for part in cmd]),
+    )
+    monkeypatch.setattr(module, "run_commands_parallel", fake_parallel, raising=False)
+
+    assert module.main(
+        [
+            "--config",
+            str(config_path),
+            "--only",
+            "rerank",
+            "--retrieval-run",
+            str(retrieval_run),
+            "--run-id",
+            "rerankA",
+        ]
+    ) == 0
+
+    assert len(parallel_calls) == 1
+    shard_cmds, cwd, max_workers, log_dir = parallel_calls[0]
+    assert cwd == tmp_path
+    assert max_workers == 2
+    assert log_dir == tmp_path / "logs" / "pipeline_rerank" / "rerankA"
+    assert len(shard_cmds) == 3
+    for shard_id, cmd in enumerate(shard_cmds):
+        assert "--num-shards" in cmd
+        assert cmd[cmd.index("--num-shards") + 1] == "3"
+        assert "--shard-id" in cmd
+        assert cmd[cmd.index("--shard-id") + 1] == str(shard_id)
+        assert "--output-suffix" in cmd
+        assert cmd[cmd.index("--output-suffix") + 1] == f".run_rerankA.shard_{shard_id}"
+        assert "--no-trace-output" in cmd
+
+    assert commands == [
+        [
+            "/usr/bin/python3",
+            "scripts/merge_shard_results.py",
+            "--tid",
+            "pipe_devset",
+            "--num_shards",
+            "3",
+            "--run_id",
+            "rerankA",
+            "--split",
+            "devset",
+            "--exp-dir",
+            str(tmp_path / "artifacts" / "runs" / "rerankA" / "rerank"),
+        ]
+    ]
+
 def test_rerank_only_requires_retrieval_run(tmp_path, monkeypatch):
     module = _load_module("run_pipeline_rerank_requires_source", "run_pipeline.py")
     config_path = tmp_path / "configs" / "pipelines" / "pipe.yaml"

@@ -19,6 +19,9 @@ rerank:
   pool_k: 500
   top_k_out: 1000
   output_topk: 20
+  num_shards: 4
+  num_workers: 4
+  write_trace: false
   db_uri: cache/lancedb
   tag_index: cache/tag_embedding_index/qwen_0_6b.npz
   embed_memo: exp/analysis/rerank/q06_memo.json

@@ -102,7 +102,9 @@ python run_pipeline.py \
 `run_pipeline.py` writes per-run artifacts under `exp/pipeline/runs/<run_id>/`.
 The retrieval stage delegates to `run_experiment.py`; the rerank stage calls
 `scripts/rerank/replay_lgbm.py` and uses the same `features_v9.compute_turn_features`
-function as training/serving. Training remains in the FULL path below.
+function as training/serving. Rerank replay can shard local workers and, for
+fast ranking/eval loops, can skip rerank trace output with `rerank.write_trace: false`.
+Training remains in the FULL path below.
 
 On Modal the catalog (`music-crs-models`) and the tag index / warm caches
 (`music-crs-cache`) are read from the persistent volumes. For a brand-new Modal

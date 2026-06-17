@@ -48,7 +48,9 @@ prediction file.
 
 Use the staged pipeline when you want faster reranker iteration. Retrieval and
 state extraction write a trace once; later runs can replay rerank/evaluation over
-that trace without rerunning extraction.
+that trace without rerunning extraction. The default staged devset config uses
+four rerank workers and `write_trace: false` so evaluation loops do not spend
+time rebuilding the large rerank trace sidecar.
 
 ```bash
 # Full staged run: retrieval -> rerank replay -> dummy explanation -> eval
@@ -63,5 +65,6 @@ uv run python run_pipeline.py \
   --run-id <rerank_run_id>
 ```
 
-See [Staged Experiment Pipeline](architectures/staged_pipeline.md) for stage
-outputs, config keys, Modal-anchor comparisons, and current limitations.
+Set `rerank.write_trace: true` in the pipeline config when you need branch
+diagnostics or trace inspection. See [Staged Experiment Pipeline](architectures/staged_pipeline.md)
+for stage outputs, config keys, Modal-anchor comparisons, and current limitations.

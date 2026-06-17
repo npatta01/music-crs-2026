@@ -6,6 +6,7 @@ import json
 import secrets
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -70,6 +71,42 @@ def load_config(path: str | Path) -> dict[str, Any]:
 
 def run_command(cmd: list[str], cwd: Path | None = None) -> None:
     subprocess.run(cmd, cwd=cwd or PROJECT_ROOT, check=True)
+
+
+def run_command_logged(cmd: list[str], cwd: Path, log_path: Path) -> None:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("w", encoding="utf-8") as log_file:
+        log_file.write("$ " + " ".join(str(part) for part in cmd) + "\n")
+        log_file.flush()
+        subprocess.run(
+            cmd,
+            cwd=cwd,
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            check=True,
+        )
+
+
+def run_commands_parallel(
+    commands: list[list[str]],
+    cwd: Path,
+    max_workers: int,
+    log_dir: Path,
+) -> None:
+    log_dir.mkdir(parents=True, exist_ok=True)
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {}
+        for index, cmd in enumerate(commands):
+            log_path = log_dir / f"shard_{index}.log"
+            futures[executor.submit(run_command_logged, cmd, cwd, log_path)] = log_path
+
+        for future in as_completed(futures):
+            log_path = futures[future]
+            try:
+                future.result()
+            except subprocess.CalledProcessError:
+                print(f"[pipeline-rerank] shard failed; see log: {log_path}", file=sys.stderr)
+                raise
 
 
 def selected_stages(args: argparse.Namespace) -> list[str]:
@@ -209,6 +246,7 @@ def run_rerank(
     args: argparse.Namespace,
     run_root: Path,
     retrieval_root: Path,
+    run_id: str,
 ) -> Path:
     rerank_cfg = dict(cfg.get("rerank") or {})
     if not rerank_cfg.get("enabled", True):
@@ -258,7 +296,59 @@ def run_rerank(
     ]
     if args.offline_rerank or rerank_cfg.get("offline", False):
         cmd.append("--offline")
-    run_command(cmd, cwd=PROJECT_ROOT)
+
+    num_shards = int(rerank_cfg.get("num_shards", 1))
+    if num_shards < 1:
+        raise ValueError("rerank.num_shards must be >= 1")
+    num_workers = int(rerank_cfg.get("num_workers", num_shards))
+    if num_workers < 1:
+        raise ValueError("rerank.num_workers must be >= 1")
+    num_workers = min(num_workers, num_shards)
+    if not rerank_cfg.get("write_trace", True):
+        cmd.append("--no-trace-output")
+
+    if num_shards == 1:
+        run_command(cmd, cwd=PROJECT_ROOT)
+        return exp_dir
+
+    shard_cmds = []
+    for shard_id in range(num_shards):
+        shard_cmd = list(cmd)
+        shard_cmd.extend(
+            [
+                "--num-shards",
+                str(num_shards),
+                "--shard-id",
+                str(shard_id),
+                "--output-suffix",
+                f".run_{run_id}.shard_{shard_id}",
+            ]
+        )
+        shard_cmds.append(shard_cmd)
+
+    run_commands_parallel(
+        shard_cmds,
+        PROJECT_ROOT,
+        max_workers=num_workers,
+        log_dir=PROJECT_ROOT / "logs" / "pipeline_rerank" / run_id,
+    )
+    run_command(
+        [
+            sys.executable,
+            "scripts/merge_shard_results.py",
+            "--tid",
+            out_tid,
+            "--num_shards",
+            str(num_shards),
+            "--run_id",
+            run_id,
+            "--split",
+            split,
+            "--exp-dir",
+            str(exp_dir),
+        ],
+        cwd=PROJECT_ROOT,
+    )
     return exp_dir
 
 
@@ -383,7 +473,7 @@ def main(argv: list[str] | None = None) -> int:
             retrieval_stage["session_ids_file"] = str(session_ids_file)
         write_manifest(run_root, {"stages": {"retrieval": retrieval_stage}})
     if "rerank" in stages:
-        exp_dir = run_rerank(cfg, args, run_root, retrieval_root)
+        exp_dir = run_rerank(cfg, args, run_root, retrieval_root, run_id)
         write_manifest(run_root, {"stages": {"rerank": {"exp_dir": str(exp_dir)}}})
     if "explanation" in stages:
         apply_explanation(cfg, run_root)

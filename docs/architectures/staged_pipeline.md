@@ -15,7 +15,7 @@ full LambdaMART training path.
 | Stage | Input | Output | Notes |
 |---|---|---|---|
 | `retrieval` | `configs/{retrieval.tid}.yaml` | `retrieval/inference/{split}/{tid}.json` and `_trace.jsonl` | Delegates to `run_experiment.py`; can use local or Modal retrieval. |
-| `rerank` | retrieval trace JSONL | `rerank/inference/{split}/{out_tid}.json` and `_trace.jsonl` | Local LambdaMART replay via `scripts/rerank/replay_lgbm.py`. |
+| `rerank` | retrieval trace JSONL | `rerank/inference/{split}/{out_tid}.json` and optional `_trace.jsonl` | Local LambdaMART replay via `scripts/rerank/replay_lgbm.py`; can shard workers and skip trace rewrites for faster iteration. |
 | `explanation` | rerank prediction JSON | same prediction JSON | Currently supports `lm_type: dummy` only, which preserves blank responses for ranking experiments. |
 | `evaluation` | rerank prediction JSON + ground truth | `rerank/scores/{split}/{out_tid}.json` and sample CSV | Devset only; also runs branch diagnostics when a trace is present. |
 
@@ -40,7 +40,8 @@ configs/pipelines/state_ranker_v10_lgbm_devset.yaml
 ```
 
 It runs local RRF/candidate-fusion retrieval with four local shards, then replays
-the committed `models/reranker_v10` LambdaMART bundle over the saved trace.
+the committed `models/reranker_v10` LambdaMART bundle with four local rerank
+shards. Trace rewrites are disabled by default for faster ranking/evaluation loops.
 
 Important knobs:
 
@@ -51,6 +52,8 @@ Important knobs:
 | `retrieval.num_shards` / `num_workers` | Session shards and local worker processes for devset retrieval. |
 | `rerank.model_ref` | Model bundle directory containing `model.txt`, `meta.json`, `cat_maps.json`, and `branch_names.json`. |
 | `rerank.pool_k` | Candidate pool depth used to compute pool-normalized rerank features. Keep aligned with training/serving. |
+| `rerank.num_shards` / `num_workers` | Parallel replay workers. Each worker writes a run-scoped prediction shard, then `scripts/merge_shard_results.py` merges the final JSON. |
+| `rerank.write_trace` | `false` writes predictions only and skips expensive rerank trace reconstruction; set `true` when branch diagnostics or replay trace inspection are needed. |
 | `rerank.output_topk` | Number of recommendations written to the final prediction JSON. |
 
 ## Common Commands
@@ -120,6 +123,21 @@ logs under `logs/local_shards/<run_id>/`, merges the shard outputs with
 
 Local sharding is intentionally devset-only. It cannot be combined with
 `--num_sessions` or `--clear_cache`; use `--session_ids_file` for fixed subsets.
+
+
+## Rerank Replay Sharding
+
+The staged rerank stage can run multiple local replay workers over the saved
+retrieval trace. Shards write run-scoped files such as
+`{out_tid}.run_<run_id>.shard_0.json`; the pipeline merges them into the normal
+`{out_tid}.json` prediction file before explanation/evaluation.
+
+For fast ranking experiments, keep `rerank.write_trace: false`. This avoids
+rebuilding and serializing a large rerank trace for every turn. Evaluation still
+runs from the prediction JSON, but branch diagnostics are skipped because there
+is no merged `_trace.jsonl`. Set `write_trace: true` when you need trace
+inspection or branch diagnostics. Per-shard logs are written under
+`logs/pipeline_rerank/<run_id>/`.
 
 ## Modal Retrieval, Local Rerank
 

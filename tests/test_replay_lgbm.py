@@ -17,6 +17,31 @@ def _load_module(name: str, relative_path: str):
     spec.loader.exec_module(module)
     return module
 
+def test_output_paths_include_suffix_and_can_disable_trace(tmp_path):
+    module = _load_module("replay_lgbm_output_paths", "scripts/rerank/replay_lgbm.py")
+
+    pred_path, trace_path = module.output_paths(
+        tmp_path,
+        "devset",
+        "tid",
+        ".run_abc.shard_2",
+        write_trace=False,
+    )
+
+    assert pred_path == tmp_path / "inference" / "devset" / "tid.run_abc.shard_2.json"
+    assert trace_path is None
+
+
+def test_should_process_row_uses_modulo_shards():
+    module = _load_module("replay_lgbm_shard_filter", "scripts/rerank/replay_lgbm.py")
+
+    assert [
+        index
+        for index in range(10)
+        if module.should_process_row(index, num_shards=3, shard_id=1)
+    ] == [1, 4, 7]
+
+
 def test_fallback_track_ids_prefers_final_recommendation():
     module = _load_module("replay_lgbm_fallback", "scripts/rerank/replay_lgbm.py")
 

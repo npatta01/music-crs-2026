@@ -135,7 +135,38 @@ def update_trace_for_rerank(
     return trace
 
 
+def output_paths(
+    out_exp_dir: str | Path,
+    split: str,
+    out_tid: str,
+    output_suffix: str = "",
+    *,
+    write_trace: bool = True,
+) -> tuple[Path, Path | None]:
+    out_dir = Path(out_exp_dir) / "inference" / split
+    pred_path = out_dir / f"{out_tid}{output_suffix}.json"
+    trace_path = (
+        out_dir / f"{out_tid}{output_suffix}_trace.jsonl"
+        if write_trace
+        else None
+    )
+    return pred_path, trace_path
+
+
+def should_process_row(row_index: int, *, num_shards: int, shard_id: int) -> bool:
+    return row_index % num_shards == shard_id
+
+
+def validate_args(args: argparse.Namespace) -> None:
+    if args.num_shards < 1:
+        raise ValueError("--num-shards must be >= 1")
+    if args.shard_id < 0 or args.shard_id >= args.num_shards:
+        raise ValueError("--shard-id must satisfy 0 <= shard_id < num_shards")
+
+
 def run(args: argparse.Namespace) -> None:
+    validate_args(args)
+
     import lightgbm as lgb
 
     from build_features import (  # noqa: WPS433
@@ -182,81 +213,110 @@ def run(args: argparse.Namespace) -> None:
         offline=args.offline,
     )
 
-    out_dir = Path(args.out_exp_dir) / "inference" / args.split
-    out_dir.mkdir(parents=True, exist_ok=True)
-    pred_path = out_dir / f"{args.out_tid}.json"
-    trace_path = out_dir / f"{args.out_tid}_trace.jsonl"
+    write_trace = not args.no_trace_output
+    pred_path, trace_path = output_paths(
+        args.out_exp_dir,
+        args.split,
+        args.out_tid,
+        args.output_suffix,
+        write_trace=write_trace,
+    )
+    pred_path.parent.mkdir(parents=True, exist_ok=True)
 
     predictions: list[dict[str, Any]] = []
+    source_rows = 0
     n_rows = 0
     n_fallback = 0
-    with open(args.trace, encoding="utf-8") as source, trace_path.open("w", encoding="utf-8") as sink:
-        for line in source:
-            if not line.strip():
-                continue
-            row = json.loads(line)
-            trace = row.get("trace") or {}
-            fallback = fallback_track_ids(trace)
-            rows, _playable = compute_turn_features(row, ctx, gt=None)
-            for feature_row in rows:
-                track_meta = ctx.cat.meta.get(str(feature_row["track_id"]), {})
-                feature_row["_artists"] = track_meta.get("artists", ())
-            add_constraint_features(rows, trace)
-            if rows:
-                x = assemble_matrix(rows, cols, cat_maps)
-                scores = booster.predict(x)
-                order = np.argsort(-scores)
-                dropped = hard_drop_ids(trace)
-                ranked = [
-                    str(rows[i]["track_id"])
-                    for i in order
-                    if str(rows[i]["track_id"]) not in dropped
-                ]
-                seen = set(ranked)
-                for track_id in fallback:
-                    if track_id not in seen and track_id not in dropped:
-                        ranked.append(track_id)
-                        seen.add(track_id)
-                ranked = ranked[: args.top_k_out]
-            else:
-                ranked = fallback[: args.top_k_out]
-                n_fallback += 1
+    sink = trace_path.open("w", encoding="utf-8") if trace_path is not None else None
+    try:
+        with open(args.trace, encoding="utf-8") as source:
+            for line in source:
+                if not line.strip():
+                    continue
+                row_index = source_rows
+                source_rows += 1
+                if not should_process_row(
+                    row_index,
+                    num_shards=args.num_shards,
+                    shard_id=args.shard_id,
+                ):
+                    continue
 
-            updated_trace = update_trace_for_rerank(
-                trace,
-                ranked,
-                model_version=args.model_version,
-            )
-            predictions.append(
-                {
-                    "session_id": row["session_id"],
-                    "user_id": row.get("user_id"),
-                    "turn_number": row["turn_number"],
-                    "predicted_track_ids": ranked[: args.output_topk],
-                    "predicted_response": "",
-                }
-            )
-            sink.write(
-                json.dumps(
+                row = json.loads(line)
+                trace = row.get("trace") or {}
+                fallback = fallback_track_ids(trace)
+                rows, _playable = compute_turn_features(row, ctx, gt=None)
+                for feature_row in rows:
+                    track_meta = ctx.cat.meta.get(str(feature_row["track_id"]), {})
+                    feature_row["_artists"] = track_meta.get("artists", ())
+                add_constraint_features(rows, trace)
+                if rows:
+                    x = assemble_matrix(rows, cols, cat_maps)
+                    scores = booster.predict(x)
+                    order = np.argsort(-scores)
+                    dropped = hard_drop_ids(trace)
+                    ranked = [
+                        str(rows[i]["track_id"])
+                        for i in order
+                        if str(rows[i]["track_id"]) not in dropped
+                    ]
+                    seen = set(ranked)
+                    for track_id in fallback:
+                        if track_id not in seen and track_id not in dropped:
+                            ranked.append(track_id)
+                            seen.add(track_id)
+                    ranked = ranked[: args.top_k_out]
+                else:
+                    ranked = fallback[: args.top_k_out]
+                    n_fallback += 1
+
+                predictions.append(
                     {
                         "session_id": row["session_id"],
                         "user_id": row.get("user_id"),
                         "turn_number": row["turn_number"],
-                        "trace": updated_trace,
-                    },
-                    ensure_ascii=False,
+                        "predicted_track_ids": ranked[: args.output_topk],
+                        "predicted_response": "",
+                    }
                 )
-                + "\n"
-            )
-            n_rows += 1
-            if n_rows % 250 == 0:
-                print(f"  reranked {n_rows} turns", flush=True)
+                if sink is not None:
+                    updated_trace = update_trace_for_rerank(
+                        trace,
+                        ranked,
+                        model_version=args.model_version,
+                    )
+                    sink.write(
+                        json.dumps(
+                            {
+                                "session_id": row["session_id"],
+                                "user_id": row.get("user_id"),
+                                "turn_number": row["turn_number"],
+                                "trace": updated_trace,
+                            },
+                            ensure_ascii=False,
+                        )
+                        + "\n"
+                    )
+                n_rows += 1
+                if n_rows % 250 == 0:
+                    print(f"  reranked {n_rows} turns", flush=True)
+    finally:
+        if sink is not None:
+            sink.close()
 
+    memo.flush()
     pred_path.write_text(json.dumps(predictions, ensure_ascii=False), encoding="utf-8")
-    print(
-        f"wrote {pred_path} and {trace_path} ({n_rows} turns, fallback={n_fallback})",
-        flush=True,
-    )
+    if trace_path is not None:
+        print(
+            f"wrote {pred_path} and {trace_path} "
+            f"({n_rows} turns, fallback={n_fallback})",
+            flush=True,
+        )
+    else:
+        print(
+            f"wrote {pred_path} ({n_rows} turns, fallback={n_fallback}, trace disabled)",
+            flush=True,
+        )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -277,6 +337,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pool-k", type=int, default=500)
     parser.add_argument("--top-k-out", type=int, default=1000)
     parser.add_argument("--output-topk", type=int, default=20)
+    parser.add_argument("--num-shards", type=int, default=1)
+    parser.add_argument("--shard-id", type=int, default=0)
+    parser.add_argument("--output-suffix", default="")
+    parser.add_argument(
+        "--no-trace-output",
+        action="store_true",
+        help="Write predictions only; skips rerank trace reconstruction for faster replay.",
+    )
     parser.add_argument(
         "--offline",
         action="store_true",
@@ -287,6 +355,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    validate_args(args)
     run(args)
     return 0
 
