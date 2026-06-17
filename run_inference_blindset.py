@@ -57,8 +57,12 @@ def _assert_eval_dataset_matches_config(eval_dataset: str, test_dataset_name: st
     (``...Blind-X`` and ``blindset_Y``); otherwise it stays silent so unusual
     naming or future splits are not blocked.
     """
-    ds_match = re.search(r"Blind[-_]?([A-Za-z0-9]+)$", test_dataset_name or "")
-    ev_match = re.fullmatch(r"blindset_([A-Za-z0-9]+)", eval_dataset or "")
+    ds_match = re.search(
+        r"Blind[-_]?([A-Za-z0-9]+)$", test_dataset_name or "", flags=re.IGNORECASE
+    )
+    ev_match = re.fullmatch(
+        r"blindset_([A-Za-z0-9]+)", eval_dataset or "", flags=re.IGNORECASE
+    )
     if ds_match and ev_match and ds_match.group(1).lower() != ev_match.group(1).lower():
         raise ValueError(
             f"--eval_dataset='{eval_dataset}' does not match the config's "

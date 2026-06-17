@@ -1007,9 +1007,13 @@ def build_v0plus_compiler_qu(
             comp_cfg_for_eager = dict(qu_kwargs.get("compiler") or {})
             for branch_key in ("dense_branches", "centroid_only_branches"):
                 for entry in comp_cfg_for_eager.get(branch_key) or []:
+                    # Mirror the branch parser below: a str is a bare field name;
+                    # otherwise a mapping with a vector_field key. Duck-type the
+                    # mapping (.get) so this also works if a raw OmegaConf
+                    # DictConfig is ever passed instead of a plain dict.
                     if isinstance(entry, str):
                         field = entry
-                    elif isinstance(entry, dict):
+                    elif hasattr(entry, "get"):
                         field = entry.get("vector_field")
                     else:
                         field = None
