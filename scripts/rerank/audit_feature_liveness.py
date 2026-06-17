@@ -33,16 +33,29 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 _UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
+# the OLD (broken) _abandoned_sets read these feedback keys, which never exist
+# on TrackFeedback (it has overall_sentiment/role) — kept only to reproduce the
+# pre-fix "0 firings" state in column C.
 _NEG = ("negative", "reject", "dislike", "bad")
-_SATISFIED_ROLES = {"satisfied", "accepted"}
 
 
 def _is_pivot(mode: str) -> bool:
     return "new" in mode or "different" in mode
 
 
+class _ShimCat:
+    """Minimal catalog exposing exactly what _abandoned_sets reads, so the audit
+    can call the REAL production function (no divergent re-implementation)."""
+
+    def __init__(self, meta: dict, artist_id_to_name_key: dict):
+        self.meta = meta
+        self.artist_id_to_name_key = artist_id_to_name_key
+
+
 def main():
     from mcrs.qu_modules.tag_resolver import catalog_tag_key
+
+    from features_v9 import _abandoned_sets  # the production logic, reused verbatim
 
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--trace-glob", required=True)
@@ -102,11 +115,9 @@ def main():
                 role_hist[str(f.get("role"))] += 1
                 sent_hist[f.get("overall_sentiment")] += 1
             turns[(sid, tn)] = {
+                "es": es, "res": res,
                 "mode": str(es.get("target_artist_mode") or ""),
                 "rejected_artist_ids": ra,
-                "feedback": [(str(f.get("track_id")), str(f.get("role") or ""),
-                              str(f.get("sentiment") or f.get("feedback") or "").lower())
-                             for f in fb],
             }
             n += 1
             if args.limit and n >= args.limit:
@@ -115,26 +126,31 @@ def main():
             break
 
     # C. abandoned-artist set, current (broken) vs fixed
+    # FIXED column calls the REAL production _abandoned_sets so it can never drift
+    # from features_v9 (covers rejected-artist resolution, negative feedback, AND
+    # the pivot satisfied branch).
+    shim = _ShimCat(
+        {tid: {"artist_name_keys": ks} for tid, ks in trk_artist_keys.items()},
+        aid_to_key,
+    )
+    real_name_keys = set(aid_to_key.values())
     cur_nonempty = fix_nonempty = fix_pivot_nonempty = pivot_turns = 0
     for (sid, tn), info in turns.items():
-        mode, ra, fb = info["mode"], info["rejected_artist_ids"], info["feedback"]
-        pivot = _is_pivot(mode)
+        es, res = info["es"], info["res"]
+        pivot = _is_pivot(info["mode"])
         pivot_turns += pivot
-        # CURRENT: catalog_tag_key on UUIDs (never a name-key) + fb negative via wrong key
-        cur = {catalog_tag_key(a) for a in ra} - {""}
-        cur |= {k for tid, role, sent in fb if any(w in sent for w in _NEG)
-                for k in trk_artist_keys.get(tid, ())}
-        # whether any of those keys could match a real artist name-key
-        cur_match = cur & set(aid_to_key.values())
-        if cur_match:
+        # CURRENT (historical broken logic): catalog_tag_key on UUID rejected ids +
+        # negative feedback read via the OLD wrong keys (sentiment/feedback).
+        cur = {catalog_tag_key(str(a)) for a in (res.get("rejected_artist_ids") or [])} - {""}
+        for fb in (es.get("track_feedback") or []):
+            sent = str(fb.get("sentiment") or fb.get("feedback") or "").lower()
+            if any(w in sent for w in _NEG):
+                cur |= trk_artist_keys.get(str(fb.get("track_id") or ""), frozenset())
+        if cur & real_name_keys:  # any key that could actually match a candidate artist
             cur_nonempty += 1
-        # FIXED: resolve UUID->name-key; on pivot, add prior satisfied/accepted artists
-        fix = {aid_to_key[a] for a in ra if a in aid_to_key}
-        if pivot:
-            for tid, role, sent in fb:
-                if role in _SATISFIED_ROLES:
-                    fix |= trk_artist_keys.get(tid, frozenset())
-        if fix:
+        # FIXED: production logic, reused verbatim
+        fix_artists, _fix_tags = _abandoned_sets(es, res, shim)
+        if fix_artists:
             fix_nonempty += 1
             if pivot:
                 fix_pivot_nonempty += 1

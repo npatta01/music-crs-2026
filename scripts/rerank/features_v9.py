@@ -105,8 +105,11 @@ def _abandoned_sets(state: dict, resolver_block: dict, cat: Catalog):
       - artists of negatively-rated feedback tracks (role 'rejected' or
         overall_sentiment < 0);
       - on a pivot (target_artist_mode wants a new/different artist) the artists the
-        user was previously *satisfied* with — these are precisely what's being left,
-        so they should be demoted in favour of fresh artists.
+        user was previously *satisfied* with — schema defines role 'satisfied' as
+        "met a prior request, should not automatically carry forward", which is
+        exactly the leave-behind signal. We intentionally do NOT include 'accepted'
+        here ('accepted' = "default for any liked track"); demoting a still-liked
+        artist on a pivot is more aggressive than the role implies.
     abandoned tags = resolver.rejected_tags (resolved to catalog tag keys).
 
     track_feedback schema (mcrs.conversation_state.schema.TrackFeedback):
@@ -124,7 +127,7 @@ def _abandoned_sets(state: dict, resolver_block: dict, cat: Catalog):
         except (TypeError, ValueError):
             sentiment = 0.0
         negative = role == "rejected" or sentiment < 0
-        leaving = pivot and role in ("satisfied", "accepted")
+        leaving = pivot and role == "satisfied"
         if negative or leaving:
             tid = str(fb.get("track_id") or "")
             if tid in cat.meta:

@@ -124,6 +124,9 @@ class _FeatureCatalogFromCompilerCatalog:
             artist_name_keys = tuple(
                 k for k in (catalog_tag_key(str(a or "")) for a in artist_names) if k
             )
+            # zip assumes artist_id[i] <-> artist_name[i] are aligned (same row); a
+            # length mismatch silently drops the tail. Built identically to the
+            # offline Catalog (build_features), so any such loss is symmetric.
             for aid, nm in zip(artists, artist_names):
                 k = catalog_tag_key(str(nm or ""))
                 if aid and k:

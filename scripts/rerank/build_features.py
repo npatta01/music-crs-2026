@@ -121,6 +121,9 @@ class Catalog:
                 a_raw = [a_raw]
             artist_name_keys = tuple(
                 k for k in (catalog_tag_key(str(a or "")) for a in a_raw) if k)
+            # zip assumes artist_id[i] <-> artist_name[i] are aligned (same row); a
+            # length mismatch silently drops the tail. Built identically here and in
+            # the online adapter (lgbm_reranker), so any such loss is symmetric.
             for aid, nm in zip(artists, a_raw):
                 k = catalog_tag_key(str(nm or ""))
                 if aid and k:
