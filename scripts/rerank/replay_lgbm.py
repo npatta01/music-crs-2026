@@ -22,6 +22,7 @@ for path in (PROJECT_ROOT, RERANK_DIR):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
+from build_features import constraint_feature_row  # noqa: E402
 from mcrs.qu_modules.compiled_state import final_recommendation, ranking_stage  # noqa: E402
 from mcrs.qu_modules.lgbm_reranker import CATEGORICALS  # noqa: E402
 
@@ -65,28 +66,47 @@ def hard_drop_ids(trace: dict[str, Any]) -> set[str]:
     retrieval = trace.get("retrieval") or {}
     resolver = trace.get("resolver") or {}
     ids = set(retrieval.get("hard_drop") or [])
+    ids.update(resolver.get("played_track_ids") or [])
     ids.update(resolver.get("rejected_track_ids") or [])
     return {str(track_id) for track_id in ids}
 
 
+def validate_replay_trace_contract(rows: list[dict[str, Any]], trace: dict[str, Any]) -> None:
+    if not rows:
+        return
+    retrieval = trace.get("retrieval") or {}
+    if "hard_drop" not in retrieval:
+        raise ValueError(
+            "Replay trace is missing retrieval.hard_drop; rerun retrieval with "
+            "branch trace depth enabled before LGBM replay."
+        )
+    trace_depth = int(retrieval.get("trace_depth") or 0)
+    if trace_depth <= 0:
+        raise ValueError(
+            "Replay trace has retrieval.trace_depth <= 0; rerun retrieval with "
+            "branch trace depth enabled before LGBM replay."
+        )
+
+
 def add_constraint_features(rows: list[dict[str, Any]], trace: dict[str, Any]) -> None:
     resolver = trace.get("resolver") or {}
-    played = {str(track_id) for track_id in resolver.get("played_track_ids") or []}
-    rejected_tracks = {str(track_id) for track_id in resolver.get("rejected_track_ids") or []}
-    rejected_artists = {str(artist_id) for artist_id in resolver.get("rejected_artist_ids") or []}
+    played = frozenset(str(track_id) for track_id in resolver.get("played_track_ids") or [])
+    rejected_tracks = frozenset(str(track_id) for track_id in resolver.get("rejected_track_ids") or [])
+    rejected_artists = frozenset(str(artist_id) for artist_id in resolver.get("rejected_artist_ids") or [])
 
     for row in rows:
         track_id = str(row["track_id"])
-        artists = row.get("_artists") or ()
-        row["is_played_track"] = float(track_id in played)
-        row["rejected_track_exact"] = float(track_id in rejected_tracks)
-        row["rejected_artist_exact"] = float(
-            bool(rejected_artists) and any(str(artist) in rejected_artists for artist in artists)
-        )
-        mode = str(row.get("target_artist_mode") or "")
-        row["violates_new_artist"] = float(
-            ("new" in mode or "different" in mode)
-            and float(row.get("same_artist_session") or 0.0) > 0
+        artists = tuple(str(artist) for artist in (row.get("_artists") or ()))
+        row.update(
+            constraint_feature_row(
+                track_id,
+                artists,
+                played=played,
+                rejected_tracks=rejected_tracks,
+                rejected_artists=rejected_artists,
+                target_artist_mode=row.get("target_artist_mode"),
+                same_artist_session=row.get("same_artist_session"),
+            )
         )
 
 
@@ -249,6 +269,7 @@ def run(args: argparse.Namespace) -> None:
                 for feature_row in rows:
                     track_meta = ctx.cat.meta.get(str(feature_row["track_id"]), {})
                     feature_row["_artists"] = track_meta.get("artists", ())
+                validate_replay_trace_contract(rows, trace)
                 add_constraint_features(rows, trace)
                 if rows:
                     x = assemble_matrix(rows, cols, cat_maps)

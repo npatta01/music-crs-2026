@@ -220,7 +220,6 @@ def run_retrieval(
     args: argparse.Namespace,
     run_root: Path,
 ) -> tuple[Path, str | None]:
-    split = str(cfg.get("split", "devset"))
     retrieval_cfg = dict(cfg.get("retrieval") or {})
     tid = str(retrieval_cfg["tid"])
     backend = stage_backend(cfg, retrieval_cfg, args)

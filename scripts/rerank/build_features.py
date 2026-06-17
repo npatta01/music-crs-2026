@@ -74,7 +74,7 @@ def _exclusive_file_lock(path: Path):
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
         yield
     finally:
-        if "fcntl" in locals() and fcntl is not None:
+        if fcntl is not None:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
         lock_file.close()
 

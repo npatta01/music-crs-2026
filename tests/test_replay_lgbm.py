@@ -76,10 +76,47 @@ def test_hard_drop_ids_prefers_serialized_retrieval_hard_drop_and_unions_rejecti
 
     assert module.hard_drop_ids(
         {
-            "retrieval": {"hard_drop": ["played-track", "resolved-rejection"]},
-            "resolver": {"rejected_track_ids": ["explicit-rejection"]},
+            "retrieval": {"hard_drop": ["resolved-rejection"]},
+            "resolver": {
+                "played_track_ids": ["played-track"],
+                "rejected_track_ids": ["explicit-rejection"],
+            },
         }
     ) == {"played-track", "resolved-rejection", "explicit-rejection"}
+
+
+def test_validate_replay_trace_requires_hard_drop_for_candidate_rows():
+    module = _load_module("replay_lgbm_validate_depth", "scripts/rerank/replay_lgbm.py")
+
+    try:
+        module.validate_replay_trace_contract(
+            [{"track_id": "t1"}],
+            {"retrieval": {"trace_depth": 0, "hard_drop": []}},
+        )
+    except ValueError as exc:
+        assert "retrieval.trace_depth" in str(exc)
+    else:
+        raise AssertionError("expected depth-off replay traces to be rejected")
+
+    try:
+        module.validate_replay_trace_contract(
+            [{"track_id": "t1"}],
+            {"retrieval": {"trace_depth": 1000}},
+        )
+    except ValueError as exc:
+        assert "retrieval.hard_drop" in str(exc)
+    else:
+        raise AssertionError("expected traces without retrieval.hard_drop to be rejected")
+
+
+def test_validate_replay_trace_allows_empty_hard_drop_at_positive_depth():
+    module = _load_module("replay_lgbm_validate_empty_drop", "scripts/rerank/replay_lgbm.py")
+
+    module.validate_replay_trace_contract(
+        [{"track_id": "t1"}],
+        {"retrieval": {"trace_depth": 1000, "hard_drop": []}},
+    )
+
 
 def test_add_constraint_features_marks_rejections_and_new_artist_violation():
     module = _load_module("replay_lgbm_constraints", "scripts/rerank/replay_lgbm.py")
@@ -107,6 +144,41 @@ def test_add_constraint_features_marks_rejections_and_new_artist_violation():
     assert rows[0]["rejected_track_exact"] == 0.0
     assert rows[0]["rejected_artist_exact"] == 1.0
     assert rows[0]["violates_new_artist"] == 1.0
+
+
+def test_add_constraint_features_uses_shared_constraint_helper(monkeypatch):
+    module = _load_module("replay_lgbm_constraints_shared", "scripts/rerank/replay_lgbm.py")
+    rows = [
+        {
+            "track_id": "t1",
+            "_artists": ("a1",),
+            "target_artist_mode": "new_artist",
+            "same_artist_session": 1.0,
+        }
+    ]
+
+    def fake_constraint_feature_row(*args, **kwargs):
+        return {
+            "is_played_track": 9.0,
+            "rejected_track_exact": 8.0,
+            "rejected_artist_exact": 7.0,
+            "violates_new_artist": 6.0,
+        }
+
+    monkeypatch.setattr(
+        module,
+        "constraint_feature_row",
+        fake_constraint_feature_row,
+        raising=False,
+    )
+
+    module.add_constraint_features(rows, {"resolver": {}})
+
+    assert rows[0]["is_played_track"] == 9.0
+    assert rows[0]["rejected_track_exact"] == 8.0
+    assert rows[0]["rejected_artist_exact"] == 7.0
+    assert rows[0]["violates_new_artist"] == 6.0
+
 
 def test_assemble_matrix_maps_categoricals_and_missing_numeric_to_nan():
     module = _load_module("replay_lgbm_assemble", "scripts/rerank/replay_lgbm.py")
@@ -151,7 +223,10 @@ def test_run_flushes_msg_store_at_shutdown(tmp_path, monkeypatch):
                 "session_id": "s1",
                 "user_id": "u1",
                 "turn_number": 1,
-                "trace": {"final_recommendation": {"track_ids": ["t1"]}},
+                "trace": {
+                    "retrieval": {"trace_depth": 1000, "hard_drop": []},
+                    "final_recommendation": {"track_ids": ["t1"]},
+                },
             }
         )
         + "\n",
