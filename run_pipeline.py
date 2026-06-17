@@ -16,6 +16,7 @@ from omegaconf import OmegaConf
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 STAGES = ("retrieval", "rerank", "explanation", "evaluation")
+DEFAULT_TEST_DATASET = "talkpl-ai/TalkPlayData-Challenge-Dataset"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -67,6 +68,31 @@ def config_hash(config: dict[str, Any]) -> str:
 def load_config(path: str | Path) -> dict[str, Any]:
     cfg = OmegaConf.load(resolve_path(path))
     return OmegaConf.to_container(cfg, resolve=True) or {}
+
+
+def config_for_tid(tid: str) -> dict[str, Any]:
+    path = PROJECT_ROOT / "configs" / f"{tid}.yaml"
+    if not path.exists():
+        return {}
+    cfg = OmegaConf.load(path)
+    return OmegaConf.to_container(cfg, resolve=True) or {}
+
+
+def rerank_dataset_name(cfg: dict[str, Any], rerank_cfg: dict[str, Any]) -> str:
+    retrieval_cfg = dict(cfg.get("retrieval") or {})
+    if rerank_cfg.get("dataset_name"):
+        return str(rerank_cfg["dataset_name"])
+    if cfg.get("dataset_name"):
+        return str(cfg["dataset_name"])
+    if retrieval_cfg.get("dataset_name"):
+        return str(retrieval_cfg["dataset_name"])
+
+    retrieval_tid = retrieval_cfg.get("tid")
+    if retrieval_tid:
+        retrieval_source_cfg = config_for_tid(str(retrieval_tid))
+        if retrieval_source_cfg.get("test_dataset_name"):
+            return str(retrieval_source_cfg["test_dataset_name"])
+    return DEFAULT_TEST_DATASET
 
 
 def run_command(cmd: list[str], cwd: Path | None = None) -> None:
@@ -220,8 +246,9 @@ def run_retrieval(
     session_ids_file = args.session_ids_file or retrieval_cfg.get("session_ids_file")
     if session_ids_file:
         cmd.extend(["--session_ids_file", str(session_ids_file)])
+    subset_run = bool(num_sessions or session_ids_file)
     num_shards = int(retrieval_cfg.get("num_shards", 1))
-    if num_shards > 1:
+    if num_shards > 1 and not subset_run:
         cmd.extend(["--num_shards", str(num_shards)])
         num_workers = int(retrieval_cfg.get("num_workers", 0))
         if num_workers:
@@ -284,6 +311,8 @@ def run_rerank(
         str(rerank_cfg.get("embed_memo", "exp/analysis/rerank/q06_memo.json")),
         "--msg-store",
         str(rerank_cfg.get("msg_store", "exp/analysis/rerank/raw_msg_store")),
+        "--dataset-name",
+        rerank_dataset_name(cfg, rerank_cfg),
         # Matches build_features.py: TalkPlay devset rows live in the HF "test" split.
         "--dataset-split",
         str(rerank_cfg.get("dataset_split", "test")),

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -132,3 +134,126 @@ def test_update_trace_for_rerank_sets_final_stage():
     assert trace["ranking"]["stages"][-1]["name"] == "lgbm_test"
     assert trace["final_recommendation"]["track_ids"] == ["b", "a"]
     assert trace["final_recommendation"]["ranking_mode"] == "lgbm"
+
+
+def test_run_flushes_msg_store_at_shutdown(tmp_path, monkeypatch):
+    module = _load_module("replay_lgbm_flush_msg_store", "scripts/rerank/replay_lgbm.py")
+    model_dir = tmp_path / "model"
+    model_dir.mkdir()
+    (model_dir / "model.txt").write_text("fake", encoding="utf-8")
+    (model_dir / "meta.json").write_text(json.dumps({"cols": ["score"]}), encoding="utf-8")
+    (model_dir / "cat_maps.json").write_text("{}", encoding="utf-8")
+    (model_dir / "branch_names.json").write_text("[]", encoding="utf-8")
+    trace_path = tmp_path / "trace.jsonl"
+    trace_path.write_text(
+        json.dumps(
+            {
+                "session_id": "s1",
+                "user_id": "u1",
+                "turn_number": 1,
+                "trace": {"final_recommendation": {"track_ids": ["t1"]}},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    class FakeBooster:
+        def __init__(self, model_file):
+            self.model_file = model_file
+
+        def num_feature(self):
+            return 1
+
+        def predict(self, x):
+            return np.ones(x.shape[0], dtype=np.float32)
+
+    class FakeCatalog:
+        def __init__(self, db_uri, table_name):
+            self.meta = {"t1": {"artists": ()}}
+
+    class FakeMemo:
+        instances = []
+
+        def __init__(self, path):
+            self.flushed = False
+            self.__class__.instances.append(self)
+
+        def flush(self):
+            self.flushed = True
+
+    class FakeMsgStore:
+        instances = []
+
+        def __init__(self, path):
+            self.flushed = False
+            self.__class__.instances.append(self)
+
+        def flush(self):
+            self.flushed = True
+
+    class FakeTagEmbeddingIndex:
+        tags = []
+        matrix = np.empty((0, 1), dtype=np.float32)
+
+        @classmethod
+        def load(cls, path):
+            return cls()
+
+    monkeypatch.setitem(sys.modules, "lightgbm", SimpleNamespace(Booster=FakeBooster))
+    monkeypatch.setitem(
+        sys.modules,
+        "build_features",
+        SimpleNamespace(
+            Catalog=FakeCatalog,
+            EmbedMemo=FakeMemo,
+            NpzEmbedStore=FakeMsgStore,
+            load_sessions=lambda dataset_name, split: {},
+            load_user_cf=lambda: {},
+        ),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "features_v9",
+        SimpleNamespace(
+            TurnContext=lambda *args, **kwargs: SimpleNamespace(cat=args[0]),
+            compute_turn_features=lambda row, ctx, gt=None: ([{"track_id": "t1", "score": 1.0}], True),
+        ),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "mcrs.qu_modules.tag_resolver",
+        SimpleNamespace(
+            TagEmbeddingIndex=FakeTagEmbeddingIndex,
+            TieredTagResolver=lambda **kwargs: object(),
+        ),
+    )
+
+    module.run(
+        SimpleNamespace(
+            trace=trace_path,
+            out_exp_dir=tmp_path / "out",
+            out_tid="tid",
+            split="devset",
+            model_ref=model_dir,
+            model_version="lgbm_test",
+            db_uri="db",
+            table_name="table",
+            tag_index="tag.npz",
+            embed_memo=tmp_path / "memo.json",
+            msg_store=tmp_path / "msg_store",
+            dataset_name="talkpl-ai/Test",
+            dataset_split="test",
+            pool_k=500,
+            top_k_out=1000,
+            output_topk=20,
+            num_shards=1,
+            shard_id=0,
+            output_suffix="",
+            no_trace_output=True,
+            offline=True,
+        )
+    )
+
+    assert FakeMemo.instances[0].flushed
+    assert FakeMsgStore.instances[0].flushed

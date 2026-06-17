@@ -305,6 +305,7 @@ def run(args: argparse.Namespace) -> None:
             sink.close()
 
     memo.flush()
+    msg_store.flush()
     pred_path.write_text(json.dumps(predictions, ensure_ascii=False), encoding="utf-8")
     if trace_path is not None:
         print(

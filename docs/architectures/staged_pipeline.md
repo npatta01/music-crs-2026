@@ -103,6 +103,10 @@ python run_pipeline.py \
   --run-id smoke-staged
 ```
 
+Subset smoke runs are forced through a single retrieval process even when the
+pipeline config has `retrieval.num_shards > 1`; `run_experiment.py` intentionally
+rejects `--num_sessions` plus sharding.
+
 ## Local Sharding
 
 `run_experiment.py --backend local` now supports devset sharding:

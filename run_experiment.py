@@ -74,14 +74,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--num_shards",
         type=int,
         default=1,
-        help="Number of parallel Modal shards. >1 runs session-sharded inference "
-             "(Modal backend only). Default 1 = single run.",
+        help="Number of local and Modal shards. >1 runs session-sharded inference. "
+             "Default 1 = single run.",
     )
     parser.add_argument(
         "--num_workers",
         type=int,
         default=0,
-        help="Number of Modal workers for a sharded run. Defaults to --num_shards "
+        help="Number of workers for a sharded run. Defaults to --num_shards "
              "for fastest wall time. Set lower to amortize per-worker startup "
              "cost at the expense of less parallelism.",
     )

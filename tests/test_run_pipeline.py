@@ -112,6 +112,33 @@ def test_modal_retrieval_forwards_backend_and_num_sessions(tmp_path, monkeypatch
     ]
     assert "--num_sessions" in commands[0]
     assert commands[0][commands[0].index("--num_sessions") + 1] == "1"
+    assert "--num_shards" not in commands[0]
+    assert "--num_workers" not in commands[0]
+
+
+def test_subset_retrieval_omits_configured_shards(tmp_path, monkeypatch):
+    module = _load_module("run_pipeline_subset_unsharded", "run_pipeline.py")
+    config_path = tmp_path / "configs" / "pipelines" / "pipe.yaml"
+    _write_pipeline_config(config_path)
+    commands: list[list[str]] = []
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(module, "make_run_id", lambda pipeline_id: "run123")
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append([str(part) for part in cmd]),
+    )
+
+    assert module.main(
+        ["--config", str(config_path), "--only", "retrieval", "--num-sessions", "2"]
+    ) == 0
+
+    assert "--num_sessions" in commands[0]
+    assert commands[0][commands[0].index("--num_sessions") + 1] == "2"
+    assert "--num_shards" not in commands[0]
+    assert "--num_workers" not in commands[0]
 
 def test_only_rerank_uses_existing_retrieval_run(tmp_path, monkeypatch):
     module = _load_module("run_pipeline_rerank", "run_pipeline.py")
@@ -167,6 +194,8 @@ def test_only_rerank_uses_existing_retrieval_run(tmp_path, monkeypatch):
             "exp/analysis/rerank/q06_memo.json",
             "--msg-store",
             "exp/analysis/rerank/raw_msg_store",
+            "--dataset-name",
+            "talkpl-ai/TalkPlayData-Challenge-Dataset",
             "--dataset-split",
             "test",
             "--pool-k",
@@ -177,6 +206,42 @@ def test_only_rerank_uses_existing_retrieval_run(tmp_path, monkeypatch):
             "20",
         ]
     ]
+
+
+def test_rerank_forwards_dataset_name_from_retrieval_config(tmp_path, monkeypatch):
+    module = _load_module("run_pipeline_rerank_dataset_name", "run_pipeline.py")
+    config_path = tmp_path / "configs" / "pipelines" / "pipe.yaml"
+    _write_pipeline_config(config_path)
+    (tmp_path / "configs" / "retr_devset.yaml").write_text(
+        "test_dataset_name: talkpl-ai/Custom-Sessions\n",
+        encoding="utf-8",
+    )
+    retrieval_run = tmp_path / "prior"
+    commands: list[list[str]] = []
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append([str(part) for part in cmd]),
+    )
+
+    assert module.main(
+        [
+            "--config",
+            str(config_path),
+            "--only",
+            "rerank",
+            "--retrieval-run",
+            str(retrieval_run),
+            "--run-id",
+            "rerankA",
+        ]
+    ) == 0
+
+    assert "--dataset-name" in commands[0]
+    assert commands[0][commands[0].index("--dataset-name") + 1] == "talkpl-ai/Custom-Sessions"
 
 
 def test_rerank_can_run_parallel_shards_and_merge_without_traces(tmp_path, monkeypatch):

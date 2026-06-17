@@ -66,6 +66,14 @@ def test_resolve_split_rejects_unknown_non_devset_tid():
         module.resolve_split("custom_run", None)
 
 
+def test_sharding_help_mentions_local_and_modal_backends():
+    module = _load_module("run_experiment_help", "run_experiment.py")
+
+    help_text = module.build_parser().format_help()
+
+    assert "local and Modal" in help_text
+
+
 def test_local_devset_runs_inference_then_ground_truth_then_eval(tmp_path, monkeypatch):
     module = _load_module("run_experiment_module_local", "run_experiment.py")
     project_root = tmp_path / "repo"
