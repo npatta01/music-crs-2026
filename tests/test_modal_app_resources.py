@@ -220,6 +220,18 @@ def test_modal_has_v10_ranker_entrypoints():
     assert "def run_train_lgbm_ranker(" in source
 
 
+def test_modal_feature_shard_forces_single_build_features_shard():
+    function = _module_function("_build_features_shard")
+    constants = [
+        node.value
+        for node in ast.walk(function)
+        if isinstance(node, ast.Constant)
+    ]
+
+    assert "--num-shards" in constants
+    assert "1" in constants[constants.index("--num-shards") + 1:]
+
+
 def test_train_build_reloads_cache_volume_before_reading_sidecars():
     function = _module_function("_train_build_cpu")
     calls = []

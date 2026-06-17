@@ -142,6 +142,36 @@ def test_local_devset_runs_inference_then_ground_truth_then_eval(tmp_path, monke
     ]
 
 
+def test_local_devset_forwards_allow_uncached_litellm(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_allow_uncached", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+
+    commands: list[list[str]] = []
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append([str(part) for part in cmd]),
+    )
+
+    module.main(
+        [
+            "--backend",
+            "local",
+            "--tid",
+            "foo_devset",
+            "--allow_uncached_litellm",
+            "--exp_dir",
+            str(project_root / "artifacts"),
+        ]
+    )
+
+    assert "--allow_uncached_litellm" in commands[0]
+
+
 def test_local_devset_forwards_session_ids_file_to_evaluation(tmp_path, monkeypatch):
     module = _load_module("run_experiment_module_local_subset", "run_experiment.py")
     project_root = tmp_path / "repo"
@@ -282,6 +312,7 @@ def test_local_sharded_devset_runs_shards_then_merge_and_eval(tmp_path, monkeypa
     assert cwd == project_root
     assert max_workers == 2
     assert log_dir == project_root / "logs" / "local_shards" / "rid123"
+    assert len(shard_cmds) == 2
     assert shard_cmds[0] == [
         "/usr/bin/python3",
         "run_inference_devset.py",
@@ -293,16 +324,16 @@ def test_local_sharded_devset_runs_shards_then_merge_and_eval(tmp_path, monkeypa
         str(project_root / "artifacts"),
         "--num_shards",
         "3",
-        "--shard_id",
-        "0",
-        "--output_suffix",
-        ".run_rid123.shard_0",
+        "--shard_ids",
+        "0,2",
+        "--output_suffixes_json",
+        '{"0": ".run_rid123.shard_0", "2": ".run_rid123.shard_2"}',
     ]
-    assert shard_cmds[2][-4:] == [
-        "--shard_id",
-        "2",
-        "--output_suffix",
-        ".run_rid123.shard_2",
+    assert shard_cmds[1][-4:] == [
+        "--shard_ids",
+        "1",
+        "--output_suffixes_json",
+        '{"1": ".run_rid123.shard_1"}',
     ]
     assert commands == [
         (
@@ -344,6 +375,223 @@ def test_local_sharded_devset_runs_shards_then_merge_and_eval(tmp_path, monkeypa
             ],
             project_root,
         ),
+    ]
+
+
+def test_local_sharded_devset_forwards_allow_uncached_litellm(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_sharded_allow_uncached", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+
+    parallel_calls: list[list[list[str]]] = []
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(module, "make_run_id", lambda: "rid123")
+    monkeypatch.setattr(
+        module,
+        "run_commands_parallel",
+        lambda shard_cmds, **kwargs: parallel_calls.append(
+            [[str(part) for part in cmd] for cmd in shard_cmds]
+        ),
+    )
+    monkeypatch.setattr(module, "run_command", lambda *args, **kwargs: None)
+
+    module.main(
+        [
+            "--backend",
+            "local",
+            "--tid",
+            "foo_devset",
+            "--num_shards",
+            "2",
+            "--allow_uncached_litellm",
+            "--exp_dir",
+            str(project_root / "artifacts"),
+        ]
+    )
+
+    assert "--allow_uncached_litellm" in parallel_calls[0][0]
+
+
+def test_local_sharded_devset_skips_complete_shards_on_retry(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_local_sharded_resume", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+    exp_dir = project_root / "artifacts"
+    inference_dir = exp_dir / "inference" / "devset"
+    inference_dir.mkdir(parents=True)
+    (inference_dir / "foo_devset.run_rid123.shard_0.json").write_text(
+        json.dumps(
+            [
+                {"session_id": "s1", "turn_number": 1, "predicted_track_ids": ["t1"]},
+                {"session_id": "s1", "turn_number": 2, "predicted_track_ids": ["t2"]},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (inference_dir / "foo_devset.run_rid123.shard_0_trace.jsonl").write_text(
+        json.dumps({"session_id": "s1", "turn_number": 1, "trace": {}}) + "\n"
+        + json.dumps({"session_id": "s1", "turn_number": 2, "trace": {}}) + "\n",
+        encoding="utf-8",
+    )
+
+    parallel_calls: list[tuple[list[list[str]], Path, int, Path]] = []
+    commands: list[tuple[list[str], Path]] = []
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(
+        module,
+        "run_commands_parallel",
+        lambda shard_cmds, cwd, max_workers, log_dir: parallel_calls.append(
+            (
+                [[str(part) for part in cmd] for cmd in shard_cmds],
+                Path(cwd),
+                max_workers,
+                Path(log_dir),
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append(([str(part) for part in cmd], Path(cwd))),
+    )
+
+    exit_code = module.main(
+        [
+            "--backend",
+            "local",
+            "--tid",
+            "foo_devset",
+            "--batch_size",
+            "8",
+            "--num_shards",
+            "3",
+            "--num_workers",
+            "2",
+            "--run_id",
+            "rid123",
+            "--exp_dir",
+            str(exp_dir),
+        ]
+    )
+
+    assert exit_code == 0
+    shard_cmds, _, _, _ = parallel_calls[0]
+    assert len(shard_cmds) == 2
+    assert shard_cmds[0][-4:] == [
+        "--shard_ids",
+        "1",
+        "--output_suffixes_json",
+        '{"1": ".run_rid123.shard_1"}',
+    ]
+    assert shard_cmds[1][-4:] == [
+        "--shard_ids",
+        "2",
+        "--output_suffixes_json",
+        '{"2": ".run_rid123.shard_2"}',
+    ]
+    assert commands[0][0][:2] == ["/usr/bin/python3", "scripts/merge_shard_results.py"]
+
+
+def test_local_sharded_devset_defaults_to_two_persistent_workers(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_local_workers_default", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+
+    parallel_calls: list[tuple[list[list[str]], int]] = []
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(module, "make_run_id", lambda: "rid123")
+    monkeypatch.setattr(
+        module,
+        "run_commands_parallel",
+        lambda shard_cmds, cwd, max_workers, log_dir: parallel_calls.append(
+            ([[str(part) for part in cmd] for cmd in shard_cmds], max_workers)
+        ),
+    )
+    monkeypatch.setattr(module, "run_command", lambda *args, **kwargs: None)
+
+    exit_code = module.main(
+        [
+            "--backend",
+            "local",
+            "--tid",
+            "foo_devset",
+            "--num_shards",
+            "5",
+            "--exp_dir",
+            str(project_root / "artifacts"),
+        ]
+    )
+
+    assert exit_code == 0
+    shard_cmds, max_workers = parallel_calls[0]
+    assert max_workers == 2
+    assert len(shard_cmds) == 2
+    assert shard_cmds[0][shard_cmds[0].index("--shard_ids") + 1] == "0,2,4"
+    assert shard_cmds[1][shard_cmds[1].index("--shard_ids") + 1] == "1,3"
+
+
+def test_local_sharded_devset_reruns_shard_when_trace_incomplete(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_local_sharded_incomplete", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_devset")
+    exp_dir = project_root / "artifacts"
+    inference_dir = exp_dir / "inference" / "devset"
+    inference_dir.mkdir(parents=True)
+    (inference_dir / "foo_devset.run_rid123.shard_0.json").write_text(
+        json.dumps(
+            [
+                {"session_id": "s1", "turn_number": 1, "predicted_track_ids": ["t1"]},
+                {"session_id": "s1", "turn_number": 2, "predicted_track_ids": ["t2"]},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (inference_dir / "foo_devset.run_rid123.shard_0_trace.jsonl").write_text(
+        json.dumps({"session_id": "s1", "turn_number": 1, "trace": {}}) + "\n",
+        encoding="utf-8",
+    )
+
+    parallel_calls: list[list[list[str]]] = []
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(
+        module,
+        "run_commands_parallel",
+        lambda shard_cmds, **kwargs: parallel_calls.append(
+            [[str(part) for part in cmd] for cmd in shard_cmds]
+        ),
+    )
+    monkeypatch.setattr(module, "run_command", lambda *args, **kwargs: None)
+
+    exit_code = module.main(
+        [
+            "--backend",
+            "local",
+            "--tid",
+            "foo_devset",
+            "--num_shards",
+            "2",
+            "--num_workers",
+            "1",
+            "--run_id",
+            "rid123",
+            "--exp_dir",
+            str(exp_dir),
+        ]
+    )
+
+    assert exit_code == 0
+    assert parallel_calls[0][0][-4:] == [
+        "--shard_ids",
+        "0,1",
+        "--output_suffixes_json",
+        '{"0": ".run_rid123.shard_0", "1": ".run_rid123.shard_1"}',
     ]
 
 
@@ -519,6 +767,39 @@ def test_num_sessions_and_session_ids_file_are_mutually_exclusive(tmp_path):
                 str(session_ids_file),
             ]
         )
+
+
+def test_local_blindset_forwards_allow_uncached_litellm(tmp_path, monkeypatch):
+    module = _load_module("run_experiment_module_blind_allow_uncached", "run_experiment.py")
+    project_root = tmp_path / "repo"
+    _write_config(project_root, "foo_blindset_A")
+
+    commands: list[list[str]] = []
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append([str(part) for part in cmd]),
+    )
+
+    module.main(
+        [
+            "--backend",
+            "local",
+            "--tid",
+            "foo_blindset_A",
+            "--eval_dataset",
+            "blindset_A",
+            "--allow_uncached_litellm",
+            "--exp_dir",
+            str(project_root / "artifacts"),
+        ]
+    )
+
+    assert commands[0][:2] == ["/usr/bin/python3", "run_inference_blindset.py"]
+    assert "--allow_uncached_litellm" in commands[0]
 
 
 def test_modal_blindset_downloads_into_requested_exp_dir(tmp_path, monkeypatch):

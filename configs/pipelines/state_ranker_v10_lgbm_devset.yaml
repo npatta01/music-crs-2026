@@ -6,8 +6,8 @@ artifacts_root: exp/pipeline/runs
 retrieval:
   tid: state_ranker_v10_rrf_devset
   backend: local
-  batch_size: 64
-  num_shards: 4
+  batch_size: 16
+  num_shards: 12
   num_workers: 4
 
 rerank:
@@ -19,7 +19,7 @@ rerank:
   pool_k: 500
   top_k_out: 1000
   output_topk: 20
-  num_shards: 4
+  num_shards: 12
   num_workers: 4
   write_trace: false
   db_uri: cache/lancedb

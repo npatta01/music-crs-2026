@@ -135,6 +135,71 @@ def _response_for_cache(response: Any) -> Any:
     return response
 
 
+def _content_from_litellm_response(response: Any) -> str | None:
+    """Return first choice message content from live or cached LiteLLM output."""
+    if response is None:
+        return None
+    if isinstance(response, str):
+        try:
+            response = json.loads(response)
+        except json.JSONDecodeError:
+            return None
+
+    if isinstance(response, dict):
+        choices = response.get("choices") or []
+        if not choices:
+            return None
+        first = choices[0]
+        if not isinstance(first, dict):
+            message = getattr(first, "message", None)
+        else:
+            message = first.get("message")
+        if isinstance(message, dict):
+            content = message.get("content")
+        else:
+            content = getattr(message, "content", None)
+        return content if content else None
+
+    choices = getattr(response, "choices", None) or []
+    if not choices:
+        return None
+    message = getattr(choices[0], "message", None)
+    if isinstance(message, dict):
+        return message.get("content") or ""
+    return getattr(message, "content", None) or ""
+
+
+def _get_litellm_cache_entry(litellm_module, call_kwargs: dict[str, Any]) -> Any | None:
+    cache = getattr(litellm_module, "cache", None)
+    get_cache = getattr(cache, "get_cache", None)
+    if get_cache is None:
+        return None
+    try:
+        return get_cache(**call_kwargs)
+    except Exception as exc:
+        logger.warning("v0+ extractor cache lookup failed: %s: %s", type(exc).__name__, exc)
+        return None
+
+
+async def _async_get_litellm_cache_entry(
+    litellm_module,
+    call_kwargs: dict[str, Any],
+) -> Any | None:
+    cache = getattr(litellm_module, "cache", None)
+    async_get_cache = getattr(cache, "async_get_cache", None)
+    if async_get_cache is not None:
+        try:
+            return await async_get_cache(**call_kwargs)
+        except Exception as exc:
+            logger.warning(
+                "v0+ extractor async cache lookup failed: %s: %s",
+                type(exc).__name__,
+                exc,
+            )
+            return None
+    return await asyncio.to_thread(_get_litellm_cache_entry, litellm_module, call_kwargs)
+
+
 def _store_litellm_cache_entry(
     litellm_module,
     response: Any,
@@ -230,10 +295,10 @@ def _build_encoder(enc_cfg: dict) -> EmbeddingClient:
         )
 
     if backend == "litellm":
-        from mcrs.embeddings.litellm_client import LiteLLMEmbeddingClient
+        from mcrs.embeddings.litellm_client import LiteLLMEmbeddingClient, cache_wrap
 
         api_key = enc_cfg.get("api_key") or os.environ.get("DEEPINFRA_API_KEY")
-        return LiteLLMEmbeddingClient(
+        client = LiteLLMEmbeddingClient(
             model_name=enc_cfg.get("model_name", "openai/Qwen/Qwen3-Embedding-0.6B"),
             api_base=enc_cfg.get("api_base", "https://api.deepinfra.com/v1/openai"),
             api_key=api_key,
@@ -243,6 +308,15 @@ def _build_encoder(enc_cfg: dict) -> EmbeddingClient:
             query_instruct=enc_cfg.get("query_instruct", ""),
             extra_params=dict(enc_cfg.get("extra_params") or {}),
         )
+        cache_enabled = enc_cfg.get("disk_cache")
+        cache_dir = enc_cfg.get("cache_dir")
+        if cache_dir or cache_enabled is not None:
+            return cache_wrap(
+                client,
+                cache_dir=cache_dir,
+                enabled=None if cache_enabled is None else bool(cache_enabled),
+            )
+        return client
 
     if backend == "local":
         return Qwen3EmbeddingClient(
@@ -430,11 +504,30 @@ class LiteLLMExtractor:
         temps = [self.temperature]
         if self.retry_temperature != self.temperature:
             temps.append(self.retry_temperature)
+        primary_call_kwargs = self._build_kwargs(
+            conversation,
+            played_track_ids,
+            temperature=self.temperature,
+        )
         for attempt, temp in enumerate(temps, start=1):
             call_kwargs = self._build_kwargs(conversation, played_track_ids, temperature=temp)
+            cached_response = _get_litellm_cache_entry(litellm, call_kwargs)
+            cached_raw = _content_from_litellm_response(cached_response)
+            if cached_raw is not None:
+                try:
+                    state = self._decode(cached_raw)
+                    if attempt > 1:
+                        _store_litellm_cache_entry(litellm, cached_response, primary_call_kwargs)
+                    return state
+                except Exception as exc:
+                    logger.warning(
+                        "v0+ extractor cached response decode failed "
+                        "(attempt %d, temp=%.2f): %s: %s | raw=%r",
+                        attempt, temp, type(exc).__name__, exc, cached_raw[:6000],
+                    )
             try:
                 response = litellm.completion(**_with_no_store_cache(call_kwargs))
-                raw = response.choices[0].message.content or ""
+                raw = _content_from_litellm_response(response) or ""
             except Exception as exc:
                 logger.warning(
                     "v0+ extractor LLM call failed (attempt %d, temp=%.2f): %s: %s",
@@ -457,6 +550,8 @@ class LiteLLMExtractor:
                 )
                 return None
             _store_litellm_cache_entry(litellm, response, call_kwargs)
+            if attempt > 1:
+                _store_litellm_cache_entry(litellm, response, primary_call_kwargs)
             return state
         return None
 
@@ -473,11 +568,34 @@ class LiteLLMExtractor:
         temps = [self.temperature]
         if self.retry_temperature != self.temperature:
             temps.append(self.retry_temperature)
+        primary_call_kwargs = self._build_kwargs(
+            conversation,
+            played_track_ids,
+            temperature=self.temperature,
+        )
         for attempt, temp in enumerate(temps, start=1):
             call_kwargs = self._build_kwargs(conversation, played_track_ids, temperature=temp)
+            cached_response = await _async_get_litellm_cache_entry(litellm, call_kwargs)
+            cached_raw = _content_from_litellm_response(cached_response)
+            if cached_raw is not None:
+                try:
+                    state = self._decode(cached_raw)
+                    if attempt > 1:
+                        await _async_store_litellm_cache_entry(
+                            litellm,
+                            cached_response,
+                            primary_call_kwargs,
+                        )
+                    return state
+                except Exception as exc:
+                    logger.warning(
+                        "v0+ extractor cached response decode failed "
+                        "(async, attempt %d, temp=%.2f): %s: %s | raw=%r",
+                        attempt, temp, type(exc).__name__, exc, cached_raw[:6000],
+                    )
             try:
                 response = await litellm.acompletion(**_with_no_store_cache(call_kwargs))
-                raw = response.choices[0].message.content or ""
+                raw = _content_from_litellm_response(response) or ""
             except Exception as exc:
                 logger.warning(
                     "v0+ extractor LLM call failed (async, attempt %d, temp=%.2f): %s: %s",
@@ -499,6 +617,8 @@ class LiteLLMExtractor:
                 )
                 return None
             await _async_store_litellm_cache_entry(litellm, response, call_kwargs)
+            if attempt > 1:
+                await _async_store_litellm_cache_entry(litellm, response, primary_call_kwargs)
             return state
         return None
 
@@ -605,6 +725,7 @@ class V0PlusCompilerQU:
     resolver: V0PlusResolver
     compiler: V0PlusCompiler
     max_in_flight: int = DEFAULT_MAX_IN_FLIGHT
+    compile_max_in_flight: int | None = None
     # Online LightGBM reranker (qu_kwargs.reranker; None = RRF order as-is).
     # Requires branch_trace_topk > 0 and per-call `session_meta` (raw
     # conversations + profile/goal) for the session-history feature block.
@@ -617,6 +738,14 @@ class V0PlusCompilerQU:
     last_traces: list[dict[str, Any]] = field(default_factory=list, init=False, repr=False)
     last_batch_timings: dict[str, float] = field(default_factory=dict, init=False, repr=False)
     _reranker: Any = field(default=None, init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        if self.max_in_flight < 1:
+            raise ValueError("max_in_flight must be >= 1")
+        if self.compile_max_in_flight is None:
+            self.compile_max_in_flight = self.max_in_flight
+        if self.compile_max_in_flight < 1:
+            raise ValueError("compile_max_in_flight must be >= 1")
 
     def _get_reranker(self):
         if self.reranker_cfg and self._reranker is None:
@@ -694,7 +823,8 @@ class V0PlusCompilerQU:
         idx: int,
         session_memory: list[dict[str, Any]],
         topk: int,
-        sem: asyncio.Semaphore,
+        extract_sem: asyncio.Semaphore,
+        compile_sem: asyncio.Semaphore,
         user_id: str | None = None,
         session_meta: dict[str, Any] | None = None,
     ) -> tuple[int, list[str], dict[str, Any]]:
@@ -714,7 +844,7 @@ class V0PlusCompilerQU:
         conv, played = session_memory_to_conversation(session_memory, self.catalog)
         _add_elapsed(timings, "session_memory", start)
         start = time.perf_counter()
-        async with sem:
+        async with extract_sem:
             state = await self.extractor.aextract(conv, played)
         _add_elapsed(timings, "extractor", start)
         if state is None:
@@ -759,7 +889,8 @@ class V0PlusCompilerQU:
             return self.compiler._compile(rs, user_id=user_id)
 
         start = time.perf_counter()
-        compile_result = await asyncio.to_thread(_run_compile)
+        async with compile_sem:
+            compile_result = await asyncio.to_thread(_run_compile)
         _add_elapsed(timings, "compile", start)
         for key, value in compile_result.timings.items():
             timings[f"compile.{key}"] = timings.get(f"compile.{key}", 0.0) + float(value)
@@ -892,9 +1023,10 @@ class V0PlusCompilerQU:
         user_ids: list[str | None] | None = None,
         session_meta: list[dict[str, Any] | None] | None = None,
     ) -> list[list[str]]:
-        """Parallel batch fan-out via asyncio + semaphore. Each batch entry
-        is independent (extractor is stateless re. prior turns), so we run
-        them concurrently capped at `self.max_in_flight` in-flight calls.
+        """Parallel batch fan-out via asyncio + semaphores. Each batch entry
+        is independent, so extractor calls run concurrently capped at
+        `self.max_in_flight`, while local compile/retrieval work is capped at
+        `self.compile_max_in_flight`.
 
         Side effect: populates `self.last_traces` with one trace dict per
         input session, ordered to match the returned list. Callers that want
@@ -926,9 +1058,18 @@ class V0PlusCompilerQU:
             )
 
         async def _run() -> list[tuple[int, list[str], dict[str, Any]]]:
-            sem = asyncio.Semaphore(self.max_in_flight)
+            extract_sem = asyncio.Semaphore(self.max_in_flight)
+            compile_sem = asyncio.Semaphore(int(self.compile_max_in_flight))
             tasks = [
-                self._acompile_one(i, sm, topk, sem, user_id=uid, session_meta=meta)
+                self._acompile_one(
+                    i,
+                    sm,
+                    topk,
+                    extract_sem,
+                    compile_sem,
+                    user_id=uid,
+                    session_meta=meta,
+                )
                 for i, (sm, uid, meta) in enumerate(
                     zip(session_memories, user_ids, session_meta))
             ]
@@ -1311,6 +1452,9 @@ def build_v0plus_compiler_qu(
     # to stay well under OpenRouter / HF rate limits on paid tiers; dial
     # higher in config if you see consistent throughput-bound runs.
     max_in_flight = int(qu_kwargs.get("max_in_flight", DEFAULT_MAX_IN_FLIGHT))
+    compile_max_in_flight = int(
+        qu_kwargs.get("compile_max_in_flight", max_in_flight)
+    )
 
     # Online LightGBM reranker (optional): inherit the lancedb target so the
     # feature catalog is byte-identical to the retrieval catalog.
@@ -1333,5 +1477,6 @@ def build_v0plus_compiler_qu(
         resolver=resolver,
         compiler=compiler,
         max_in_flight=max_in_flight,
+        compile_max_in_flight=compile_max_in_flight,
         reranker_cfg=reranker_cfg,
     )

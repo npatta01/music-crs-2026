@@ -136,6 +136,48 @@ def test_litellm_embedding_client_applies_query_instruct_to_cached_request(monke
     ]
 
 
+def test_litellm_embedding_cache_wrap_persists_across_clients(tmp_path, monkeypatch):
+    calls = []
+
+    def fake_embedding(**kwargs):
+        calls.append(kwargs)
+        return SimpleNamespace(
+            data=[{"embedding": [float(len(text)), 7.0]} for text in kwargs["input"]]
+        )
+
+    monkeypatch.setitem(sys.modules, "litellm", SimpleNamespace(embedding=fake_embedding))
+
+    from mcrs.embeddings.litellm_client import LiteLLMEmbeddingClient, cache_wrap
+
+    first = cache_wrap(
+        LiteLLMEmbeddingClient(
+            model_name="openai/Qwen/Qwen3-Embedding-8B",
+            api_base="https://fake/v1",
+            api_key="secret",
+            encoding_format="float",
+            query_instruct="Query: ",
+        ),
+        cache_dir=str(tmp_path),
+        enabled=True,
+    )
+    assert first.embed_batch(["same text", "same text"]) == [[16.0, 7.0], [16.0, 7.0]]
+    assert [call["input"] for call in calls] == [["Query: same text"]]
+
+    second = cache_wrap(
+        LiteLLMEmbeddingClient(
+            model_name="openai/Qwen/Qwen3-Embedding-8B",
+            api_base="https://fake/v1",
+            api_key="rotated-secret",
+            encoding_format="float",
+            query_instruct="Query: ",
+        ),
+        cache_dir=str(tmp_path),
+        enabled=True,
+    )
+    assert second.embed_batch(["same text"]) == [[16.0, 7.0]]
+    assert [call["input"] for call in calls] == [["Query: same text"]]
+
+
 def test_litellm_embedding_client_rejects_empty_batch_size():
     import pytest
 

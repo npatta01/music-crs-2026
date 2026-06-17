@@ -9,6 +9,12 @@ CANONICAL_FASTLOCAL_DEVSET_TID = "state_ranker_v10_lgbm_devset_fastlocal"
 CANONICAL_RRF_DEVSET_TID = "state_ranker_v10_rrf_devset"
 CANONICAL_BLINDSET_TID = "state_ranker_v10_lgbm_blindset_A"
 DELETED_DEVSET_TID = "v0plus_compiler_image_devset"
+ACTIVE_STATE_RANKER_CONFIGS = [
+    "state_ranker_v10_rrf_devset.yaml",
+    "state_ranker_v10_lgbm_devset.yaml",
+    "state_ranker_v10_lgbm_devset_fastlocal.yaml",
+    "state_ranker_v10_lgbm_blindset_A.yaml",
+]
 
 
 def test_current_config_surface_has_no_deleted_devset_references():
@@ -71,3 +77,50 @@ def test_state_ranker_v10_configs_are_active_and_do_not_use_v0plus_qu_type():
             assert "model_path" not in config["qu_kwargs"]["ranking"]
         else:
             assert "models/reranker_v10" in config["qu_kwargs"]["ranking"]["model_path"]
+
+
+def test_active_configs_enable_litellm_embedding_disk_cache():
+    config_dir = PROJECT_ROOT / "configs"
+    for config_name in ACTIVE_STATE_RANKER_CONFIGS:
+        config = yaml.safe_load((config_dir / config_name).read_text(encoding="utf-8"))
+        encoders = config["qu_kwargs"]["encoders"]
+        for encoder_name in ("qwen_0_6b", "qwen_8b"):
+            encoder = encoders[encoder_name]
+            assert encoder["backend"] == "litellm"
+            assert encoder["disk_cache"] is True
+            assert encoder["cache_dir"] == "${oc.env:MCRS_EMBEDDING_CACHE_DIR,./cache/embeddings}"
+
+
+def test_siglip_text_search_is_gated_but_anchor_centroid_is_always_on():
+    config_dir = PROJECT_ROOT / "configs"
+    for config_name in ACTIVE_STATE_RANKER_CONFIGS:
+        config = yaml.safe_load((config_dir / config_name).read_text(encoding="utf-8"))
+        compiler = config["qu_kwargs"]["compiler"]
+
+        dense_siglip = [
+            branch for branch in compiler["dense_branches"]
+            if branch["vector_field"] == "image_siglip2"
+        ]
+        assert dense_siglip == [
+            {
+                "vector_field": "image_siglip2",
+                "encoder_id": "siglip2_text",
+                "query_id": "visual_nl",
+                "weight": 1.0,
+                "distance_type": "cosine",
+                "gated_on": "image_or_visual_search",
+            }
+        ], config_name
+
+        centroid_siglip = [
+            branch for branch in compiler["centroid_only_branches"]
+            if branch["vector_field"] == "image_siglip2"
+        ]
+        assert centroid_siglip == [
+            {
+                "vector_field": "image_siglip2",
+                "weight": 1.0,
+                "topk": 1000,
+                "distance_type": "cosine",
+            }
+        ], config_name

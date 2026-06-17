@@ -86,7 +86,8 @@ class StateRankerQU(V0PlusCompilerQU):
         idx: int,
         session_memory: list[dict[str, Any]],
         topk: int,
-        sem: asyncio.Semaphore,
+        extract_sem: asyncio.Semaphore,
+        compile_sem: asyncio.Semaphore,
         user_id: str | None = None,
         session_meta: dict[str, Any] | None = None,
     ) -> tuple[int, list[str], dict[str, Any]]:
@@ -96,7 +97,7 @@ class StateRankerQU(V0PlusCompilerQU):
         conv, played = session_memory_to_conversation(session_memory, self.catalog)
         _add_elapsed(timings, "session_memory", start)
         start = time.perf_counter()
-        async with sem:
+        async with extract_sem:
             state = await self.extractor.aextract(conv, played)
         _add_elapsed(timings, "extractor", start)
         if state is None:
@@ -128,7 +129,8 @@ class StateRankerQU(V0PlusCompilerQU):
             return self.compiler._compile(rs, user_id=user_id)
 
         start = time.perf_counter()
-        compile_result = await asyncio.to_thread(_run_compile)
+        async with compile_sem:
+            compile_result = await asyncio.to_thread(_run_compile)
         _add_elapsed(timings, "compile", start)
         for key, value in compile_result.timings.items():
             timings[f"compile.{key}"] = timings.get(f"compile.{key}", 0.0) + float(value)
@@ -364,6 +366,7 @@ def build_state_ranker_qu(
         resolver=base.resolver,
         compiler=base.compiler,
         max_in_flight=base.max_in_flight,
+        compile_max_in_flight=base.compile_max_in_flight,
         reranker_cfg=base.reranker_cfg,
         ranking_mode=ranking_mode,
         model_version=model_version,

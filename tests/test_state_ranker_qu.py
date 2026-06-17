@@ -238,6 +238,39 @@ def test_state_ranker_exposes_batch_and_trace_timings():
     }
 
 
+def test_state_ranker_accepts_compile_max_in_flight():
+    catalog = _catalog()
+    qu = build_state_ranker_qu(
+        qu_kwargs={
+            "max_in_flight": 2,
+            "compile_max_in_flight": 1,
+            "ranking": {"mode": "rrf"},
+            "compiler": {"branch_trace_topk": 50},
+        },
+        _overrides={
+            "catalog": catalog,
+            "matcher": RapidfuzzCatalogMatcher(catalog),
+            "encoder": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5]),
+            "retriever": FakeRetriever(
+                text_hits_by_field={
+                    "artist_name": [("t-morphine-1", 5.0), ("t-fugazi-1", 3.0)],
+                },
+                embedding_hits=[("t-morphine-1", 0.9), ("t-fugazi-1", 0.7)],
+            ),
+            "extractor": _FakeExtractor(state=_state()),
+        },
+    )
+
+    rows = qu.batch_compile_track_ids(
+        [[{"role": "user", "content": "play Morphine"}] for _ in range(2)],
+        topk=2,
+    )
+
+    assert qu.compile_max_in_flight == 1
+    assert len(rows) == 2
+    assert all(row for row in rows)
+
+
 def test_state_ranker_requires_explicit_ranking_mode():
     with pytest.raises(ValueError, match="ranking.mode"):
         build_state_ranker_qu(qu_kwargs={"compiler": {"branch_trace_topk": 50}})

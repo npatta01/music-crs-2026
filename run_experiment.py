@@ -71,6 +71,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Clear cached retrieval artifacts before inference when supported.",
     )
     parser.add_argument(
+        "--allow_uncached_litellm",
+        action="store_true",
+        help=(
+            "Forward to local inference to permit LiteLLM extraction without a "
+            "configured cache. Intended only for tiny debug runs."
+        ),
+    )
+    parser.add_argument(
         "--num_shards",
         type=int,
         default=1,
@@ -81,9 +89,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--num_workers",
         type=int,
         default=0,
-        help="Number of workers for a sharded run. Defaults to --num_shards "
-             "for fastest wall time. Set lower to amortize per-worker startup "
-             "cost at the expense of less parallelism.",
+        help="Number of workers for a sharded run. Local default is min(2, "
+             "--num_shards); Modal default is --num_shards.",
     )
     parser.add_argument(
         "--run_id",
@@ -166,6 +173,22 @@ def run_command_logged(cmd: list[str], cwd: Path, log_path: Path) -> None:
         )
 
 
+def _log_path_for_command(log_dir: Path, index: int, cmd: list[str]) -> Path:
+    if "--shard_ids" in cmd:
+        try:
+            shard_ids = cmd[cmd.index("--shard_ids") + 1].replace(",", "-")
+            return log_dir / f"shards_{shard_ids}.log"
+        except IndexError:
+            pass
+    if "--shard_id" in cmd:
+        try:
+            shard_id = cmd[cmd.index("--shard_id") + 1]
+            return log_dir / f"shard_{shard_id}.log"
+        except IndexError:
+            pass
+    return log_dir / f"shard_{index}.log"
+
+
 def run_commands_parallel(
     commands: list[list[str]],
     cwd: Path,
@@ -176,7 +199,7 @@ def run_commands_parallel(
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {}
         for index, cmd in enumerate(commands):
-            log_path = log_dir / f"shard_{index}.log"
+            log_path = _log_path_for_command(log_dir, index, cmd)
             futures[executor.submit(run_command_logged, cmd, cwd, log_path)] = log_path
 
         for future in as_completed(futures):
@@ -186,6 +209,82 @@ def run_commands_parallel(
             except subprocess.CalledProcessError:
                 print(f"[local-shards] shard failed; see log: {log_path}", file=sys.stderr)
                 raise
+
+
+def local_shard_paths(
+    exp_dir: Path,
+    split: str,
+    tid: str,
+    run_id: str,
+    shard_id: int,
+) -> tuple[Path, Path, Path]:
+    stem = f"{tid}.run_{run_id}.shard_{shard_id}"
+    inference_dir = exp_dir / "inference" / split
+    return (
+        inference_dir / f"{stem}.json",
+        inference_dir / f"{stem}_trace.jsonl",
+        inference_dir / f"{stem}_complete.json",
+    )
+
+
+def _count_jsonl_records(path: Path) -> int:
+    with path.open("r", encoding="utf-8") as handle:
+        return sum(1 for line in handle if line.strip())
+
+
+def _prediction_count(path: Path) -> int | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, list):
+        return None
+    return len(payload)
+
+
+def _completion_marker_valid(marker_path: Path, prediction_count: int) -> bool:
+    try:
+        marker = json.loads(marker_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return (
+        marker.get("predictions") == prediction_count
+        and marker.get("trace_records") == prediction_count
+    )
+
+
+def local_shard_complete(
+    exp_dir: Path,
+    split: str,
+    tid: str,
+    run_id: str,
+    shard_id: int,
+) -> bool:
+    pred_path, trace_path, marker_path = local_shard_paths(
+        exp_dir, split, tid, run_id, shard_id
+    )
+    if not (pred_path.exists() and trace_path.exists()):
+        return False
+    prediction_count = _prediction_count(pred_path)
+    if prediction_count is None:
+        return False
+    if marker_path.exists() and _completion_marker_valid(marker_path, prediction_count):
+        return True
+    try:
+        return _count_jsonl_records(trace_path) == prediction_count
+    except OSError:
+        return False
+
+
+def group_shard_ids(shard_ids: list[int], num_workers: int) -> list[list[int]]:
+    worker_count = min(num_workers, len(shard_ids))
+    if worker_count <= 0:
+        return []
+    return [shard_ids[index::worker_count] for index in range(worker_count)]
+
+
+def local_shard_suffix(run_id: str, shard_id: int) -> str:
+    return f".run_{run_id}.shard_{shard_id}"
 
 
 def ensure_ground_truth(exp_dir: Path) -> None:
@@ -308,7 +407,10 @@ def validate_args(args: argparse.Namespace, split: str) -> None:
         )
     if args.num_shards > 1:
         if args.num_workers == 0:
-            args.num_workers = args.num_shards
+            if args.backend == "local":
+                args.num_workers = min(2, args.num_shards)
+            else:
+                args.num_workers = args.num_shards
         if not (1 <= args.num_workers <= args.num_shards):
             raise ValueError("--num_workers must be between 1 and --num_shards.")
     else:
@@ -337,6 +439,8 @@ def run_local(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
             cmd.extend(["--session_ids_file", session_ids_file])
         if args.clear_cache:
             cmd.append("--clear_cache")
+        if args.allow_uncached_litellm:
+            cmd.append("--allow_uncached_litellm")
         run_command(cmd, cwd=PROJECT_ROOT)
         ensure_ground_truth(exp_dir)
         run_evaluation(args.tid, exp_dir, split, session_ids_file=session_ids_file)
@@ -356,6 +460,8 @@ def run_local(args: argparse.Namespace, split: str, exp_dir: Path) -> None:
     ]
     if args.clear_cache:
         cmd.append("--clear_cache")
+    if args.allow_uncached_litellm:
+        cmd.append("--allow_uncached_litellm")
     run_command(cmd, cwd=PROJECT_ROOT)
 
 
@@ -368,8 +474,19 @@ def run_local_sharded_devset(
     run_id = args.run_id or make_run_id()
     print(f"Local sharded run_id: {run_id} (re-run with --run_id {run_id} to retry)")
 
-    shard_commands: list[list[str]] = []
+    pending_shard_ids: list[int] = []
     for shard_id in range(args.num_shards):
+        if local_shard_complete(exp_dir, split, args.tid, run_id, shard_id):
+            print(f"[local-shards] skip complete shard {shard_id}/{args.num_shards}")
+            continue
+        pending_shard_ids.append(shard_id)
+
+    shard_commands: list[list[str]] = []
+    for shard_group in group_shard_ids(pending_shard_ids, args.num_workers):
+        output_suffixes = {
+            str(shard_id): local_shard_suffix(run_id, shard_id)
+            for shard_id in shard_group
+        }
         cmd = [
             sys.executable,
             "run_inference_devset.py",
@@ -381,26 +498,36 @@ def run_local_sharded_devset(
             str(exp_dir),
             "--num_shards",
             str(args.num_shards),
-            "--shard_id",
-            str(shard_id),
-            "--output_suffix",
-            f".run_{run_id}.shard_{shard_id}",
         ]
         if session_ids_file:
             cmd.extend(["--session_ids_file", session_ids_file])
+        if args.allow_uncached_litellm:
+            cmd.append("--allow_uncached_litellm")
+        cmd.extend(
+            [
+                "--shard_ids",
+                ",".join(str(shard_id) for shard_id in shard_group),
+                "--output_suffixes_json",
+                json.dumps(output_suffixes),
+            ]
+        )
         shard_commands.append(cmd)
 
     log_dir = PROJECT_ROOT / "logs" / "local_shards" / run_id
-    print(
-        f"Launching {args.num_shards} local shards with {args.num_workers} workers; "
-        f"logs: {log_dir}"
-    )
-    run_commands_parallel(
-        shard_commands,
-        cwd=PROJECT_ROOT,
-        max_workers=args.num_workers,
-        log_dir=log_dir,
-    )
+    if shard_commands:
+        print(
+            f"Launching {len(shard_commands)} local workers for "
+            f"{len(pending_shard_ids)}/{args.num_shards} pending shards "
+            f"with {args.num_workers} workers; logs: {log_dir}"
+        )
+        run_commands_parallel(
+            shard_commands,
+            cwd=PROJECT_ROOT,
+            max_workers=min(args.num_workers, len(shard_commands)),
+            log_dir=log_dir,
+        )
+    else:
+        print(f"[local-shards] all {args.num_shards} shards complete; merging existing outputs")
 
     run_command(
         [

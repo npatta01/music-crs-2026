@@ -136,17 +136,19 @@ modal run modal/app.py::run_build_features_for_ranker \
   --lineage v10 --tid state_ranker_v10_rrf_devset --run-id <RUN_ID> --n-shards 50
 # writes rerank/v10/features/ + rerank/v10/constraint_features.parquet + rerank/v10/label_weights.parquet.
 #
-#  (b) Local alternative — needs the catalog + warm caches on disk:
+#  (b) Local alternative — needs the catalog on disk; warm caches make it local-only:
 python scripts/rerank/build_features.py \
-  --trace exp/inference/devset/<TID>.run_<RUN_ID>.shard_<i>_trace.jsonl \
+  --trace exp/inference/devset/<TID>_trace.jsonl \
   --ground-truth exp/ground_truth/devset.json \
   --db-uri cache/lancedb \
   --tag-index cache/tag_embedding_index/qwen_0_6b.npz \
   --embed-memo exp/analysis/rerank/q06_memo.json \
   --branch-names models/reranker_v10/branch_names.json \
   --msg-store exp/analysis/rerank/raw_msg_store \
-  --out exp/analysis/rerank/v10/features/shard_<i>.parquet --offline
-# (run once with --prefetch-only, dropping --offline, to fill q06_memo from DeepInfra first)
+  --out exp/analysis/rerank/v10/features
+# By default this fans out to 12 checkpointed shards with 4 local workers and
+# fills any missing feature embeddings into the cache. Use --offline only for
+# strict cache-only replay; override with --num-shards N --num-workers M when needed.
 
 # 4. Constraint sidecar + label weights — SKIP if you used the Modal builder in
 #    step 3a: run_build_features_for_ranker already wrote BOTH sidecars to the cache volume. Only needed for the local

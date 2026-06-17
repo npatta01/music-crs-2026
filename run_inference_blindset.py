@@ -17,6 +17,8 @@ from run_inference_devset import (
     _add_elapsed,
     _add_timing_snapshot,
     _config_qu_kwargs,
+    _litellm_cache_required,
+    _load_dotenv,
     _print_timings,
     _resolve_vllm_endpoints_if_needed,
     _setup_litellm_cache,
@@ -75,8 +77,8 @@ def _assert_eval_dataset_matches_config(eval_dataset: str, test_dataset_name: st
 
 
 def _load_runtime(args) -> dict:
+    _load_dotenv()
     _setup_logging()
-    _setup_litellm_cache()
     timings: dict[str, float] = {}
     start = time.perf_counter()
     config = OmegaConf.load(f"configs/{args.tid}.yaml")
@@ -84,6 +86,15 @@ def _load_runtime(args) -> dict:
     _assert_eval_dataset_matches_config(
         args.eval_dataset, config.get("test_dataset_name", "")
     )
+    qu_kwargs = _config_qu_kwargs(config)
+    litellm_cache_required = _litellm_cache_required(args, config, qu_kwargs)
+    litellm_cache_enabled = _setup_litellm_cache(require=litellm_cache_required)
+    if litellm_cache_required and not litellm_cache_enabled:
+        raise RuntimeError(
+            "MCRS_LITELLM_CACHE_DIR must be set for configs with a LiteLLM "
+            "state extractor. Source .env or export MCRS_LITELLM_CACHE_DIR="
+            "cache/litellm-state before running."
+        )
     if args.clear_cache:
         cache_dir = config.get("cache_dir", "./cache")
         if os.path.exists(cache_dir):
@@ -92,7 +103,6 @@ def _load_runtime(args) -> dict:
             shutil.rmtree(cache_dir)
 
     start = time.perf_counter()
-    qu_kwargs = _config_qu_kwargs(config)
     _resolve_vllm_endpoints_if_needed(qu_kwargs)
     music_crs = load_crs_baseline(
         lm_type=config.get("explanation_lm_type", "dummy"),
@@ -253,8 +263,14 @@ def run_grouped(args, shard_ids, output_suffixes: dict[int, str] | None = None) 
     runtime = _load_runtime(args)
     num_shards = getattr(args, "num_shards", 1)
     output_suffixes = output_suffixes or {}
+    base_output_suffix = getattr(args, "output_suffix", "")
+    if len(shard_ids) > 1 and num_shards <= 1 and not base_output_suffix and not output_suffixes:
+        raise ValueError(
+            "Grouped local inference with multiple --shard_ids requires --num_shards > 1 "
+            "or explicit output suffixes to avoid overwriting outputs."
+        )
     for shard_id in shard_ids:
-        output_suffix = output_suffixes.get(shard_id, getattr(args, "output_suffix", ""))
+        output_suffix = output_suffixes.get(shard_id, base_output_suffix)
         _run_shard(args, runtime, int(shard_id), num_shards, output_suffix)
 
 
@@ -321,6 +337,24 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Wipe the cache directory before running (forces re-indexing)"
+    )
+    parser.add_argument(
+        "--allow_uncached_litellm",
+        action="store_true",
+        default=False,
+        help=(
+            "Allow state-ranker LiteLLM extraction without a configured cache. "
+            "Intended only for tiny debug runs."
+        ),
+    )
+    parser.add_argument(
+        "--require_litellm_cache",
+        action="store_true",
+        default=False,
+        help=(
+            "Fail unless LiteLLM cache setup succeeds, even for configs that "
+            "do not require it automatically."
+        ),
     )
     parser.add_argument(
         "--num_shards",
