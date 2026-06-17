@@ -17,7 +17,6 @@ def _load_module(name: str, relative_path: str):
     spec.loader.exec_module(module)
     return module
 
-
 def test_fallback_track_ids_prefers_final_recommendation():
     module = _load_module("replay_lgbm_fallback", "scripts/rerank/replay_lgbm.py")
 
@@ -32,7 +31,6 @@ def test_fallback_track_ids_prefers_final_recommendation():
         }
     ) == ["final-1"]
 
-
 def test_fallback_track_ids_uses_candidate_stage_without_final():
     module = _load_module("replay_lgbm_candidate", "scripts/rerank/replay_lgbm.py")
 
@@ -46,6 +44,15 @@ def test_fallback_track_ids_uses_candidate_stage_without_final():
         }
     ) == ["cand-1", "cand-2"]
 
+def test_hard_drop_ids_prefers_serialized_retrieval_hard_drop_and_unions_rejections():
+    module = _load_module("replay_lgbm_hard_drop", "scripts/rerank/replay_lgbm.py")
+
+    assert module.hard_drop_ids(
+        {
+            "retrieval": {"hard_drop": ["played-track", "resolved-rejection"]},
+            "resolver": {"rejected_track_ids": ["explicit-rejection"]},
+        }
+    ) == {"played-track", "resolved-rejection", "explicit-rejection"}
 
 def test_add_constraint_features_marks_rejections_and_new_artist_violation():
     module = _load_module("replay_lgbm_constraints", "scripts/rerank/replay_lgbm.py")
@@ -74,7 +81,6 @@ def test_add_constraint_features_marks_rejections_and_new_artist_violation():
     assert rows[0]["rejected_artist_exact"] == 1.0
     assert rows[0]["violates_new_artist"] == 1.0
 
-
 def test_assemble_matrix_maps_categoricals_and_missing_numeric_to_nan():
     module = _load_module("replay_lgbm_assemble", "scripts/rerank/replay_lgbm.py")
 
@@ -87,7 +93,6 @@ def test_assemble_matrix_maps_categoricals_and_missing_numeric_to_nan():
     assert x.shape == (1, 2)
     assert x[0, 0] == 3.0
     assert np.isnan(x[0, 1])
-
 
 def test_update_trace_for_rerank_sets_final_stage():
     module = _load_module("replay_lgbm_trace", "scripts/rerank/replay_lgbm.py")

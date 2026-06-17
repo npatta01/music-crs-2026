@@ -246,6 +246,9 @@ def run_rerank(
         str(rerank_cfg.get("embed_memo", "exp/analysis/rerank/q06_memo.json")),
         "--msg-store",
         str(rerank_cfg.get("msg_store", "exp/analysis/rerank/raw_msg_store")),
+        # Matches build_features.py: TalkPlay devset rows live in the HF "test" split.
+        "--dataset-split",
+        str(rerank_cfg.get("dataset_split", "test")),
         "--pool-k",
         str(rerank_cfg.get("pool_k", 500)),
         "--top-k-out",
@@ -273,9 +276,13 @@ def apply_explanation(cfg: dict[str, Any], run_root: Path) -> None:
     out_tid = str((cfg.get("rerank") or {}).get("out_tid") or cfg["id"])
     pred_path = run_root / "rerank" / "inference" / split / f"{out_tid}.json"
     rows = json.loads(pred_path.read_text(encoding="utf-8"))
+    changed = False
     for row in rows:
-        row.setdefault("predicted_response", "")
-    pred_path.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
+        if row.get("predicted_response") is None:
+            row["predicted_response"] = ""
+            changed = True
+    if changed:
+        pred_path.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
 
 
 def run_evaluation(
@@ -346,6 +353,8 @@ def main(argv: list[str] | None = None) -> int:
         raise ValueError("Pipeline config must include rerank.model_ref or pass --model-ref")
 
     stages = selected_stages(args)
+    if "rerank" in stages and "retrieval" not in stages and not args.retrieval_run:
+        raise ValueError("--only rerank or --from rerank requires --retrieval-run")
     run_id, run_root, retrieval_root = pipeline_roots(cfg, args)
     retrieval_exp_dir = retrieval_root / "retrieval"
     session_ids_file = (

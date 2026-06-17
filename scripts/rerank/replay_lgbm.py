@@ -62,8 +62,11 @@ def fallback_track_ids(trace: dict[str, Any]) -> list[str]:
 
 
 def hard_drop_ids(trace: dict[str, Any]) -> set[str]:
+    retrieval = trace.get("retrieval") or {}
     resolver = trace.get("resolver") or {}
-    return {str(track_id) for track_id in resolver.get("rejected_track_ids") or []}
+    ids = set(retrieval.get("hard_drop") or [])
+    ids.update(resolver.get("rejected_track_ids") or [])
+    return {str(track_id) for track_id in ids}
 
 
 def add_constraint_features(rows: list[dict[str, Any]], trace: dict[str, Any]) -> None:

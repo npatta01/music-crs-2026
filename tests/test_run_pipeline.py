@@ -42,7 +42,6 @@ evaluation:
         encoding="utf-8",
     )
 
-
 def test_only_retrieval_builds_local_run_experiment_command(tmp_path, monkeypatch):
     module = _load_module("run_pipeline_local", "run_pipeline.py")
     config_path = tmp_path / "configs" / "pipelines" / "pipe.yaml"
@@ -82,7 +81,6 @@ def test_only_retrieval_builds_local_run_experiment_command(tmp_path, monkeypatc
         )
     ]
 
-
 def test_modal_retrieval_forwards_backend_and_num_sessions(tmp_path, monkeypatch):
     module = _load_module("run_pipeline_modal", "run_pipeline.py")
     config_path = tmp_path / "configs" / "pipelines" / "pipe.yaml"
@@ -114,7 +112,6 @@ def test_modal_retrieval_forwards_backend_and_num_sessions(tmp_path, monkeypatch
     ]
     assert "--num_sessions" in commands[0]
     assert commands[0][commands[0].index("--num_sessions") + 1] == "1"
-
 
 def test_only_rerank_uses_existing_retrieval_run(tmp_path, monkeypatch):
     module = _load_module("run_pipeline_rerank", "run_pipeline.py")
@@ -170,6 +167,8 @@ def test_only_rerank_uses_existing_retrieval_run(tmp_path, monkeypatch):
             "exp/analysis/rerank/q06_memo.json",
             "--msg-store",
             "exp/analysis/rerank/raw_msg_store",
+            "--dataset-split",
+            "test",
             "--pool-k",
             "500",
             "--top-k-out",
@@ -179,6 +178,19 @@ def test_only_rerank_uses_existing_retrieval_run(tmp_path, monkeypatch):
         ]
     ]
 
+def test_rerank_only_requires_retrieval_run(tmp_path, monkeypatch):
+    module = _load_module("run_pipeline_rerank_requires_source", "run_pipeline.py")
+    config_path = tmp_path / "configs" / "pipelines" / "pipe.yaml"
+    _write_pipeline_config(config_path)
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", tmp_path)
+
+    try:
+        module.main(["--config", str(config_path), "--only", "rerank", "--run-id", "r1"])
+    except ValueError as exc:
+        assert "--retrieval-run" in str(exc)
+    else:
+        raise AssertionError("expected rerank-only run without --retrieval-run to be rejected")
 
 def test_non_dummy_explanation_replay_is_rejected(tmp_path, monkeypatch):
     module = _load_module("run_pipeline_explain", "run_pipeline.py")
@@ -208,7 +220,30 @@ explanation:
     else:
         raise AssertionError("expected non-dummy explanation replay to be rejected")
 
+def test_dummy_explanation_does_not_rewrite_predictions_that_already_have_responses(tmp_path):
+    module = _load_module("run_pipeline_explain_no_rewrite", "run_pipeline.py")
+    pred_path = (
+        tmp_path
+        / "rerank"
+        / "inference"
+        / "devset"
+        / "pipe_devset.json"
+    )
+    pred_path.parent.mkdir(parents=True)
+    original = '[{"predicted_response":""}]'
+    pred_path.write_text(original, encoding="utf-8")
 
+    module.apply_explanation(
+        {
+            "id": "pipe_devset",
+            "split": "devset",
+            "rerank": {},
+            "explanation": {"enabled": True, "lm_type": "dummy"},
+        },
+        tmp_path,
+    )
+
+    assert pred_path.read_text(encoding="utf-8") == original
 
 def test_evaluation_uses_num_sessions_subset_file(tmp_path, monkeypatch):
     module = _load_module("run_pipeline_eval_subset", "run_pipeline.py")
