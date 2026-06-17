@@ -10,6 +10,20 @@ uv run python scripts/create_local_split.py --n_per_tier 3 --seed 42
 # saves data/local_eval_split.json (gitignored)
 ```
 
+## Shared worktree caches
+
+Use one shared cache-owner checkout for large ignored local artifacts, then link
+those artifacts into each additional git worktree:
+
+```bash
+git config --global mcrs.sharedRoot /path/to/music-crs-cache-owner
+uv run python scripts/setup_worktree_cache.py
+```
+
+`scripts/setup_worktree_cache.py` links `cache`, `exp/analysis/rerank`, and
+`.env`. It never hardcodes a machine path; source lookup is `--source`, then
+`MCRS_SHARED_ROOT`, then `git config mcrs.sharedRoot`.
+
 ## Run the local split
 
 ```bash

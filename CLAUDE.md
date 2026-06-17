@@ -27,6 +27,26 @@ uv pip install -e .
 uvx hf auth login   # HF access required for datasets + Llama
 ```
 
+## Shared local caches
+
+Local worktrees should share the large ignored artifacts instead of rebuilding
+or redownloading them. Configure the shared cache-owner root once:
+
+```bash
+git config --global mcrs.sharedRoot /path/to/music-crs-cache-owner
+```
+
+Then, in any new worktree, run:
+
+```bash
+python scripts/setup_worktree_cache.py
+```
+
+The script links `cache`, `exp/analysis/rerank`, and `.env` from the shared
+root. It also accepts `--source /path/to/root` or `MCRS_SHARED_ROOT=/path/to/root`
+instead of git config. If a local run is requested and these paths are missing,
+run the setup script before trying to recompute artifacts.
+
 ## Run
 
 ```bash
