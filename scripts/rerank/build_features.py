@@ -24,6 +24,7 @@ import json
 import math
 import os
 import sys
+import threading
 from collections import Counter, defaultdict
 from datetime import date
 from pathlib import Path
@@ -200,6 +201,12 @@ class EmbedMemo:
             self.memo = json.loads(memo_path.read_text())
         self._client = None
         self._dirty = 0
+        # The online reranker shares one store across the rerank() calls that
+        # batch_compile_track_ids fans out via asyncio.to_thread (up to
+        # max_in_flight threads). Guard the read-modify-write fill/flush so
+        # concurrent turns can't corrupt `memo`/`_dirty` or double-flush.
+        # Reentrant: get_many() calls flush() while holding the lock.
+        self._lock = threading.RLock()
 
     def _embed_remote(self, texts: list[str]) -> list[list[float]]:
         if self._client is None:
@@ -212,31 +219,33 @@ class EmbedMemo:
         return self._client.embed_batch(texts)
 
     def get_many(self, texts: list[str], offline: bool = False) -> dict[str, np.ndarray]:
-        if not offline:
-            missing = [t for t in texts if t and hashlib.sha1(t.encode()).hexdigest() not in self.memo]
-            missing = list(dict.fromkeys(missing))
-            for start in range(0, len(missing), 64):
-                chunk = missing[start:start + 64]
-                for text, vec in zip(chunk, self._embed_remote(chunk)):
-                    self.memo[hashlib.sha1(text.encode()).hexdigest()] = vec
-                    self._dirty += 1
-            if self._dirty >= 500:
-                self.flush()
-        out = {}
-        for t in texts:
-            if not t:
-                continue
-            v = self.memo.get(hashlib.sha1(t.encode()).hexdigest())
-            if v:
-                a = np.asarray(v, dtype=np.float32)
-                out[t] = a / max(float(np.linalg.norm(a)), 1e-9)
-        return out
+        with self._lock:
+            if not offline:
+                missing = [t for t in texts if t and hashlib.sha1(t.encode()).hexdigest() not in self.memo]
+                missing = list(dict.fromkeys(missing))
+                for start in range(0, len(missing), 64):
+                    chunk = missing[start:start + 64]
+                    for text, vec in zip(chunk, self._embed_remote(chunk)):
+                        self.memo[hashlib.sha1(text.encode()).hexdigest()] = vec
+                        self._dirty += 1
+                if self._dirty >= 500:
+                    self.flush()
+            out = {}
+            for t in texts:
+                if not t:
+                    continue
+                v = self.memo.get(hashlib.sha1(t.encode()).hexdigest())
+                if v:
+                    a = np.asarray(v, dtype=np.float32)
+                    out[t] = a / max(float(np.linalg.norm(a)), 1e-9)
+            return out
 
     def flush(self):
-        if self._dirty:
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            self.path.write_text(json.dumps(self.memo))
-            self._dirty = 0
+        with self._lock:
+            if self._dirty:
+                self.path.parent.mkdir(parents=True, exist_ok=True)
+                self.path.write_text(json.dumps(self.memo))
+                self._dirty = 0
 
 
 class NpzEmbedStore:
@@ -259,6 +268,11 @@ class NpzEmbedStore:
         self._pend_keys: list[str] = []
         self._pend_vecs: list[np.ndarray] = []
         self._client = None
+        # See EmbedMemo: one store is shared across the threaded rerank() calls,
+        # so the pending-buffer/index/flush mutations must be serialized. Without
+        # this two concurrent flush()es can pick the same chunk filename (glob
+        # count) and clobber each other, or a stale `pend_idx` can IndexError.
+        self._lock = threading.RLock()
 
     def _matrix(self, cid: str) -> np.ndarray:
         if cid not in self._chunks:
@@ -278,59 +292,63 @@ class NpzEmbedStore:
         return self._client.embed_batch(texts)
 
     def add(self, text: str, vec) -> None:
-        h = self._sha(text)
-        if h in self.index or h in set(self._pend_keys):
-            return
-        self._pend_keys.append(h)
-        self._pend_vecs.append(np.asarray(vec, dtype=np.float16))
+        with self._lock:
+            h = self._sha(text)
+            if h in self.index or h in set(self._pend_keys):
+                return
+            self._pend_keys.append(h)
+            self._pend_vecs.append(np.asarray(vec, dtype=np.float16))
 
     def add_hashed(self, h: str, vec) -> None:
-        if h in self.index or h in set(self._pend_keys):
-            return
-        self._pend_keys.append(h)
-        self._pend_vecs.append(np.asarray(vec, dtype=np.float16))
+        with self._lock:
+            if h in self.index or h in set(self._pend_keys):
+                return
+            self._pend_keys.append(h)
+            self._pend_vecs.append(np.asarray(vec, dtype=np.float16))
 
     def get_many(self, texts: list[str], offline: bool = False) -> dict[str, np.ndarray]:
-        pend_idx = {k: i for i, k in enumerate(self._pend_keys)}
-        if not offline:
-            missing = list(dict.fromkeys(
-                t for t in texts
-                if t and self._sha(t) not in self.index and self._sha(t) not in pend_idx))
-            for start in range(0, len(missing), 64):
-                chunk = missing[start:start + 64]
-                for text, vec in zip(chunk, self._embed_remote(chunk)):
-                    self.add(text, vec)
+        with self._lock:
             pend_idx = {k: i for i, k in enumerate(self._pend_keys)}
-            if len(self._pend_keys) >= 8192:
-                self.flush()
-                pend_idx = {}
-        out: dict[str, np.ndarray] = {}
-        for t in texts:
-            if not t:
-                continue
-            h = self._sha(t)
-            v = None
-            if h in self.index:
-                cid, row = self.index[h]
-                v = self._matrix(cid)[row].astype(np.float32)
-            elif h in pend_idx:
-                v = self._pend_vecs[pend_idx[h]].astype(np.float32)
-            if v is not None:
-                n = float(np.linalg.norm(v))
-                out[t] = v / n if n > 0 else v
-        return out
+            if not offline:
+                missing = list(dict.fromkeys(
+                    t for t in texts
+                    if t and self._sha(t) not in self.index and self._sha(t) not in pend_idx))
+                for start in range(0, len(missing), 64):
+                    chunk = missing[start:start + 64]
+                    for text, vec in zip(chunk, self._embed_remote(chunk)):
+                        self.add(text, vec)
+                pend_idx = {k: i for i, k in enumerate(self._pend_keys)}
+                if len(self._pend_keys) >= 8192:
+                    self.flush()
+                    pend_idx = {}
+            out: dict[str, np.ndarray] = {}
+            for t in texts:
+                if not t:
+                    continue
+                h = self._sha(t)
+                v = None
+                if h in self.index:
+                    cid, row = self.index[h]
+                    v = self._matrix(cid)[row].astype(np.float32)
+                elif h in pend_idx:
+                    v = self._pend_vecs[pend_idx[h]].astype(np.float32)
+                if v is not None:
+                    n = float(np.linalg.norm(v))
+                    out[t] = v / n if n > 0 else v
+            return out
 
     def flush(self) -> None:
-        if not self._pend_keys:
-            return
-        cid = f"chunk_{len(list(self.dir.glob('chunk_*.npz'))):05d}"
-        np.savez_compressed(
-            self.dir / f"{cid}.npz",
-            keys=np.asarray(self._pend_keys),
-            vectors=np.vstack(self._pend_vecs).astype(np.float16))
-        for i, k in enumerate(self._pend_keys):
-            self.index[k] = (cid, i)
-        self._pend_keys, self._pend_vecs = [], []
+        with self._lock:
+            if not self._pend_keys:
+                return
+            cid = f"chunk_{len(list(self.dir.glob('chunk_*.npz'))):05d}"
+            np.savez_compressed(
+                self.dir / f"{cid}.npz",
+                keys=np.asarray(self._pend_keys),
+                vectors=np.vstack(self._pend_vecs).astype(np.float16))
+            for i, k in enumerate(self._pend_keys):
+                self.index[k] = (cid, i)
+            self._pend_keys, self._pend_vecs = [], []
 from mcrs.qu_modules.tag_resolver import (  # noqa: E402
     TagEmbeddingIndex,
     TieredTagResolver,

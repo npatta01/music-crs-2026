@@ -331,6 +331,53 @@ def test_compiler_skips_anchor_centroid_only_branches_on_pivot():
     assert retriever.embedding_calls == []
 
 
+def test_compiler_gated_centroid_branch_skipped_when_routing_flag_off():
+    """A centroid-only branch with `gated_on` set must NOT fire on a turn where
+    that RoutingTags flag is False (mirrors the dense-branch gate). An
+    otherwise-identical ungated branch DOES fire on the same turn (control), so
+    the skip is attributable to the gate and not to a missing anchor."""
+    catalog = _catalog()
+    # Refinement turn with a positive anchor (anchor_tracks centroid is
+    # non-empty) but no visual intent => image_or_visual_search is False.
+    state = _state(
+        turn_intent="more smoky lounge like that",
+        intent_mode="refinement",
+        track_feedback=[
+            TrackFeedback(track_id="t-morphine-1", overall_sentiment=1, role="accepted"),
+        ],
+    )
+    assert _resolve(state, catalog).state.routing_tags.image_or_visual_search is False
+
+    # Control: an ungated centroid branch fires (one embedding search).
+    ctrl_retriever = FakeRetriever(embedding_hits=[("t-morphine-2", 0.9)])
+    ctrl_cfg = CompilerConfig(
+        enable_dense=False,
+        centroid_only_branches=[
+            CentroidOnlyBranch(vector_field="metadata_qwen3_embedding_0_6b"),
+        ],
+    )
+    V0PlusCompiler(catalog, ctrl_retriever, _fake_encoder(), ctrl_cfg).compile(
+        _resolve(state, catalog)
+    )
+    assert len(ctrl_retriever.embedding_calls) == 1
+
+    # Gated on a flag that is off this turn => skipped before the search.
+    gated_retriever = FakeRetriever(embedding_hits=[("t-morphine-2", 0.9)])
+    gated_cfg = CompilerConfig(
+        enable_dense=False,
+        centroid_only_branches=[
+            CentroidOnlyBranch(
+                vector_field="metadata_qwen3_embedding_0_6b",
+                gated_on="image_or_visual_search",
+            ),
+        ],
+    )
+    V0PlusCompiler(catalog, gated_retriever, _fake_encoder(), gated_cfg).compile(
+        _resolve(state, catalog)
+    )
+    assert gated_retriever.embedding_calls == []
+
+
 def test_compiler_centroid_alpha_positive_on_refinement_actually_mixes():
     catalog = _catalog()
     retriever = FakeRetriever()

@@ -15,7 +15,7 @@ Challenge: https://nlp4musa.github.io/music-crs-challenge/
 - [Reproduce the reranker](docs/reproduce_reranker.md) — **LambdaMART v10**: committed model bundle, required vs optional artifacts, FAST (use model) + FULL (retrain) paths
 - [Mac / Local Dev](docs/mac_dev.md) — local testing on Apple Silicon
 - [Modal Setup](docs/modal_setup.md) — cloud GPU authentication and smoke test
-- [Codebase Map](docs/codebase/README.md) — **start here to understand the code**: per-module internals (`docs/codebase/modules/`), [end-to-end code paths](docs/codebase/code-paths.md), and the [verified-bugs audit](docs/codebase/bugs.md)
+- [Codebase Map](docs/codebase/README.md) — **start here to understand the code**: per-module internals (`docs/codebase/modules/`) and the [verified-bugs audit](docs/codebase/bugs.md)
 
 ## Setup
 
@@ -71,8 +71,8 @@ See `tips/` for directions: better item representations, reranker modules, gener
 ## Experiments Workspace
 
 - The experiment workspace is intentionally pruned. Do not treat deleted historical reports or `configs/archive/` as missing current context.
-- Use [`experiments/README.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/README.md) for the current config/report surface.
-- Use [`experiments/experiment_log.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/experiment_log.md) for the concise current-state decision log.
-- [`leaderboard.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/leaderboard.md) is the compact devset table; [`changelog.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/changelog.md) links current outcomes to PRs.
+- Use [`experiments/README.md`](experiments/README.md) for the current config/report surface.
+- Use [`experiments/experiment_log.md`](experiments/experiment_log.md) for the concise current-state decision log.
+- [`leaderboard.md`](leaderboard.md) is the compact devset table; [`changelog.md`](changelog.md) links current outcomes to PRs.
 - Active configs under `configs/`: `state_ranker_v10_rrf_devset` (devset explicit RRF/candidate-fusion baseline), `state_ranker_v10_lgbm_devset` (devset LambdaMART v10), `state_ranker_v10_lgbm_blindset_A` (blindset LambdaMART v10).
-- If working inside `experiments/`, read the local [`experiments/CLAUDE.md`](/Users/npatta01/data/projects/music-conversational-music-recomender-2026/experiments/CLAUDE.md) and follow its prune-first conventions.
+- If working inside `experiments/`, read the local [`experiments/CLAUDE.md`](experiments/CLAUDE.md) and follow its prune-first conventions.

@@ -1,18 +1,19 @@
-"""Online LightGBM (v9) reranker — serves the trained LambdaMART in-pipeline.
+"""Online LightGBM (v10) reranker — serves the trained LambdaMART in-pipeline.
 
 Consumes the SAME trace payload the offline feature builder reads and computes
-features via the SAME `compute_turn_features` (scripts/rerank/features_v9.py),
+features via the SAME `compute_turn_features` (scripts/rerank/features_v9.py —
+the feature builder kept its v9 module name across the v10 model bump),
 so train/serve drift is structurally impossible. Hooked by V0PlusCompilerQU
 right after trace assembly; replaces the RRF order over the branch-pool union.
 
 Config (qu_kwargs.reranker). The model bundle is committed under
-models/reranker_v9/ (ships in the repo + the Modal image); the large caches are
+models/reranker_v10/ (ships in the repo + the Modal image); the large caches are
 not committed (see docs/reproduce_reranker.md):
   enabled: true
-  model_path:    models/reranker_v9/model.txt        (LightGBM booster)
-  meta_path:     models/reranker_v9/meta.json        ({cols, cat_idx})
-  cat_maps:      models/reranker_v9/cat_maps.json    (categorical value->code)
-  branch_names:  models/reranker_v9/branch_names.json (canonical 11)
+  model_path:    models/reranker_v10/model.txt        (LightGBM booster)
+  meta_path:     models/reranker_v10/meta.json        ({cols, cat_idx})
+  cat_maps:      models/reranker_v10/cat_maps.json    (categorical value->code)
+  branch_names:  models/reranker_v10/branch_names.json (canonical 11)
   tag_index:     .../tag_embedding_index/qwen_0_6b.npz
   embed_memo:    .../q06_memo.json         (query-text embedding cache; live
                                             DeepInfra fill for unseen strings)

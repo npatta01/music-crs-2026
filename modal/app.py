@@ -1036,7 +1036,8 @@ def _train_full_model_cpu(lineage: str = "v9"):
     """Train the single full-data model at the CV-median round count.
 
     This is the stage that writes model_full.txt — the artifact published into
-    the committed models/reranker_v9/ bundle. finalize only reports OOF metrics.
+    the committed models/reranker_<lineage>/ bundle (the active config loads
+    models/reranker_v10/). finalize only reports OOF metrics.
     """
     import subprocess
     result = subprocess.run(_train_cmd("full_model", lineage=lineage), capture_output=False)
