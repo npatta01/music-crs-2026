@@ -46,7 +46,8 @@ Functions and classes called by code outside this module group.
 Factory called by `CRS_BASELINE` at pipeline construction time. Dispatches on `qu_type`:
 - `"passthrough"`, `"last_user_turn"`, `"user_turns_only"`, `"last_2_user_turns"`, `"last_3_user_turns"`, `"no_music_history"` → simple QU classes from `base.py`; these do not satisfy the active `CRS_BASELINE` full-pipeline requirement by themselves.
 - `"llm_rewrite"` → `LLMRewriteQU` with an appropriate model adapter; also returns query text rather than track IDs.
-- `"v0plus_compiler"` / `"state_ranker"` → calls `build_v0plus_compiler_qu(qu_kwargs=qu_kwargs)` from `compiler_v0plus_qu.py` and satisfies the active inference contract.
+- `"v0plus_compiler"` → calls `build_v0plus_compiler_qu(qu_kwargs=qu_kwargs)` from `compiler_v0plus_qu.py`.
+- `"state_ranker"` → calls `build_state_ranker_qu(qu_kwargs=qu_kwargs)` from `state_ranker_qu.py`; this is the path all active `state_ranker_v10_*` configs use, and it satisfies the active inference contract.
 
 ### `base.py` — Simple QU classes
 

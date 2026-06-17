@@ -200,6 +200,12 @@ class CentroidOnlyBranch:
     topk: int = 1000
     distance_type: str = "cosine"
     centroid_source: str = "anchor_tracks"  # or "user"
+    # When set, names a `RoutingTags` boolean field; the branch fires ONLY on
+    # turns where that flag is True (mirrors DenseBranch.gated_on). None (the
+    # default) means always-on. Used to keep the cover-art (image_siglip2)
+    # centroid consistent with its gated dense counterpart so it does not inject
+    # visual-space neighbors on non-visual turns.
+    gated_on: str | None = None
 
 
 @dataclass
@@ -698,6 +704,26 @@ class V0PlusCompiler:
                 elif cb.centroid_source == "user":
                     query_trace["user_id_present"] = user_id is not None
                 branch_queries[branch_name] = query_trace
+            # Routing gate (mirrors the dense-branch gate): when gated_on is set,
+            # fire only on turns where that RoutingTags flag is True. Validate the
+            # field name first so a typo fails loudly instead of silently
+            # disabling the branch on every turn (getattr default False).
+            if cb.gated_on is not None:
+                routing_fields = type(rs.state.routing_tags).model_fields
+                if cb.gated_on not in routing_fields:
+                    raise KeyError(
+                        f"CentroidOnlyBranch(vector_field={cb.vector_field!r}) "
+                        f"gated_on={cb.gated_on!r} is not a RoutingTags field. "
+                        f"Available: {sorted(routing_fields)}"
+                    )
+                if not getattr(rs.state.routing_tags, cb.gated_on, False):
+                    if trace_enabled:
+                        branch_status[branch_name] = {
+                            "configured": True,
+                            "fired": False,
+                            "skip_reason": "gated_off",
+                        }
+                    continue
             if cb.vector_field not in supported_vector_fields:
                 if trace_enabled:
                     branch_status[branch_name] = {

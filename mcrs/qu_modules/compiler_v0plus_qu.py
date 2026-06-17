@@ -985,20 +985,46 @@ def build_v0plus_compiler_qu(
         from mcrs.qu_modules.v0plus_catalog_lance import LanceDbCatalog
         eager_fields = lance_cfg.get("eager_vector_fields")
         if eager_fields is None:
-            # Match the default dense/centroid branches — the
-            # compiler queries these per-call during centroid mixing, so eager-load
-            # them at startup to avoid per-call LanceDB queries.
+            # Eager-load every vector field the compiler does per-anchor
+            # `catalog.vector()` lookups on (centroid mixing for dense branches +
+            # centroid-only branches), so those lookups are O(1) dict hits rather
+            # than a cold per-call LanceDB query on every refinement/playlist_build
+            # turn.
+            #
+            # Base set = the compiler's built-in default dense branches
+            # (compiler_v0plus.py, used when a config declares no explicit
+            # dense_branches) plus the 0.6B metadata field the fallback anchor
+            # centroid queries directly.
             eager_fields = [
                 "metadata_qwen3_embedding_0_6b",
                 "attributes_qwen3_embedding_0_6b",
                 "lyrics_qwen3_embedding_0_6b",
             ]
+            # Add the vector fields this run's dense / centroid-only branches are
+            # actually configured with (e.g. the 8B columns the active configs
+            # use). Without this the 8B centroid-mix fields silently fell to the
+            # cold per-call query path. Derived from qu_kwargs so it tracks config.
+            comp_cfg_for_eager = dict(qu_kwargs.get("compiler") or {})
+            for branch_key in ("dense_branches", "centroid_only_branches"):
+                for entry in comp_cfg_for_eager.get(branch_key) or []:
+                    # Mirror the branch parser below: a str is a bare field name;
+                    # otherwise a mapping with a vector_field key. Duck-type the
+                    # mapping (.get) so this also works if a raw OmegaConf
+                    # DictConfig is ever passed instead of a plain dict.
+                    if isinstance(entry, str):
+                        field = entry
+                    elif hasattr(entry, "get"):
+                        field = entry.get("vector_field")
+                    else:
+                        field = None
+                    if field and field not in eager_fields:
+                        eager_fields.append(str(field))
             if (qu_kwargs.get("reranker") or {}).get("enabled"):
-                eager_fields.extend([
-                    "cf_bpr",
-                    "audio_laion_clap",
-                    "image_siglip2",
-                ])
+                # The online reranker reads these CF/audio/image vectors for its
+                # own features regardless of branch config.
+                for field in ("cf_bpr", "audio_laion_clap", "image_siglip2"):
+                    if field not in eager_fields:
+                        eager_fields.append(field)
         catalog = LanceDbCatalog(
             db_uri=db_uri,
             table_name=lance_cfg.get("table_name", "music_track_catalog"),
@@ -1138,6 +1164,7 @@ def build_v0plus_compiler_qu(
                 if isinstance(entry, str):
                     centroid_only_branches.append(CentroidOnlyBranch(vector_field=entry))
                 else:
+                    gated_on = entry.get("gated_on")
                     centroid_only_branches.append(
                         CentroidOnlyBranch(
                             vector_field=str(entry["vector_field"]),
@@ -1145,6 +1172,7 @@ def build_v0plus_compiler_qu(
                             topk=int(entry.get("topk", 1000)),
                             distance_type=str(entry.get("distance_type", "cosine")),
                             centroid_source=str(entry.get("centroid_source", "anchor_tracks")),
+                            gated_on=str(gated_on) if gated_on is not None else None,
                         )
                     )
 

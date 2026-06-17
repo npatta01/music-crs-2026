@@ -3,6 +3,7 @@ Batch inference script for Music CRS.
 """
 
 import os
+import re
 import json
 import time
 import torch
@@ -42,6 +43,37 @@ def _qu_kwargs_has_vllm_endpoint(qu_kwargs: dict) -> bool:
     return any(_encoder_has_vllm_endpoint(value) for value in encoders.values())
 
 
+def _assert_eval_dataset_matches_config(eval_dataset: str, test_dataset_name: str) -> None:
+    """Guard against writing predictions under a split that doesn't match the
+    dataset the config actually loads.
+
+    The dataset is selected solely by ``config.test_dataset_name`` (e.g.
+    ``...-Blind-A``), while ``--eval_dataset`` only names the output directory and
+    the packaged submission. If they reference different blind splits, the run
+    would write Blind-A predictions into a ``blindset_B/`` folder and silently
+    mislabel the submission. Catch that early, before the expensive model load.
+
+    The check only fires when both names carry an unambiguous blind-split marker
+    (``...Blind-X`` and ``blindset_Y``); otherwise it stays silent so unusual
+    naming or future splits are not blocked.
+    """
+    ds_match = re.search(
+        r"Blind[-_]?([A-Za-z0-9]+)$", test_dataset_name or "", flags=re.IGNORECASE
+    )
+    ev_match = re.fullmatch(
+        r"blindset_([A-Za-z0-9]+)", eval_dataset or "", flags=re.IGNORECASE
+    )
+    if ds_match and ev_match and ds_match.group(1).lower() != ev_match.group(1).lower():
+        raise ValueError(
+            f"--eval_dataset='{eval_dataset}' does not match the config's "
+            f"test_dataset_name='{test_dataset_name}' (blind split "
+            f"'{ds_match.group(1)}' vs '{ev_match.group(1)}'). The dataset that "
+            f"actually loads is fixed by the config; --eval_dataset only names the "
+            f"output directory, so predictions would be written under the wrong "
+            f"split and mislabel the submission. Fix --eval_dataset or the config."
+        )
+
+
 def _load_runtime(args) -> dict:
     _setup_logging()
     _setup_litellm_cache()
@@ -49,6 +81,9 @@ def _load_runtime(args) -> dict:
     start = time.perf_counter()
     config = OmegaConf.load(f"configs/{args.tid}.yaml")
     _add_elapsed(timings, "load_config", start)
+    _assert_eval_dataset_matches_config(
+        args.eval_dataset, config.get("test_dataset_name", "")
+    )
     if args.clear_cache:
         cache_dir = config.get("cache_dir", "./cache")
         if os.path.exists(cache_dir):

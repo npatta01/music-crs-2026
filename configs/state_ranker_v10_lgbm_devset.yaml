@@ -125,10 +125,14 @@ qu_kwargs:
       distance_type: cosine
       gated_on: image_or_visual_search
     centroid_only_branches:
+    # Visual route (issue #127): gate the cover-art centroid the same way as the
+    # dense image_siglip2 branch above, so it only injects visual-space neighbors
+    # on image_or_visual_search turns instead of every anchored turn.
     - vector_field: image_siglip2
       weight: 1.0
       topk: 1000
       distance_type: cosine
+      gated_on: image_or_visual_search
     - vector_field: audio_laion_clap
       weight: 1.0
       topk: 1000

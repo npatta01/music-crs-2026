@@ -986,6 +986,36 @@ def test_dense_branch_gated_on_survives_config():
     assert branches[0].gated_on == "image_or_visual_search"
 
 
+def test_centroid_branch_gated_on_survives_config():
+    """A `gated_on` on a centroid-only branch entry must reach the
+    CentroidOnlyBranch (mirrors the dense-branch case) — otherwise the cover-art
+    centroid would inject visual-space neighbors on every anchored turn instead
+    of only on image_or_visual_search turns."""
+    catalog = _catalog()
+    qu = build_v0plus_compiler_qu(
+        qu_kwargs={
+            "compiler": {
+                "centroid_only_branches": [
+                    {
+                        "vector_field": "metadata_qwen3_embedding_0_6b",
+                        "gated_on": "image_or_visual_search",
+                    }
+                ]
+            }
+        },
+        _overrides={
+            "catalog": catalog,
+            "matcher": RapidfuzzCatalogMatcher(catalog),
+            "encoder": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5]),
+            "retriever": FakeRetriever(),
+            "extractor": _FakeExtractor(state=_state()),
+        },
+    )
+    branches = qu.compiler.cfg.centroid_only_branches
+    assert len(branches) == 1
+    assert branches[0].gated_on == "image_or_visual_search"
+
+
 def test_v1_attribute_routing_flags_survive_yaml_allowlist():
     catalog = _catalog()
     qu = build_v0plus_compiler_qu(
