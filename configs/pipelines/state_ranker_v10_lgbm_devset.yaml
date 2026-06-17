@@ -1,0 +1,32 @@
+id: state_ranker_v10_lgbm_devset
+split: devset
+backend: local
+artifacts_root: exp/pipeline/runs
+
+retrieval:
+  tid: state_ranker_v10_rrf_devset
+  backend: local
+  batch_size: 64
+  num_shards: 4
+  num_workers: 4
+
+rerank:
+  enabled: true
+  backend: local
+  mode: lgbm
+  model_ref: models/reranker_v10
+  model_version: lgbm_v10
+  pool_k: 500
+  top_k_out: 1000
+  output_topk: 20
+  db_uri: cache/lancedb
+  tag_index: cache/tag_embedding_index/qwen_0_6b.npz
+  embed_memo: exp/analysis/rerank/q06_memo.json
+  msg_store: exp/analysis/rerank/raw_msg_store
+
+explanation:
+  enabled: true
+  lm_type: dummy
+
+evaluation:
+  enabled: true

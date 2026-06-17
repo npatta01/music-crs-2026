@@ -89,12 +89,22 @@ class Catalog:
         import lancedb
 
         db = lancedb.connect(db_uri)
-        self.ds = db.open_table(table_name).to_lance()
+        table = db.open_table(table_name)
+        self._arrow_table = None
+        try:
+            self.ds = table.to_lance()
+            names = set(self.ds.schema.names)
+        except ImportError:
+            # Local replay does not require the optional pylance package.
+            # LanceDB can still materialize the 47k-row catalog as Arrow; use
+            # that as a fallback and project columns from the in-memory table.
+            self.ds = None
+            self._arrow_table = table.to_arrow()
+            names = set(self._arrow_table.schema.names)
         scalars = ["track_id", "track_name", "artist_name", "popularity",
                    "release_date", "artist_id", "album_id", "tag_list", "duration"]
-        names = set(self.ds.schema.names)
         cols = [c for c in scalars if c in names]
-        tbl = self.ds.to_table(columns=cols).to_pydict()
+        tbl = self._to_pydict(cols)
         n = len(tbl["track_id"])
         self.meta: dict[str, dict] = {}
         self.has_duration = "duration" in tbl
@@ -176,7 +186,7 @@ class Catalog:
         for field in VECTOR_FIELDS:
             if field not in names:
                 continue
-            t = self.ds.to_table(columns=["track_id", field]).to_pydict()
+            t = self._to_pydict(["track_id", field])
             ids, rows = [], []
             for tid, v in zip(t["track_id"], t[field]):
                 if v is not None and len(v):
@@ -184,6 +194,12 @@ class Catalog:
                     rows.append(np.asarray(v, dtype=np.float32))
             self.vec[field] = _norm_rows(np.vstack(rows))
             self.vec_idx[field] = {t_: i for i, t_ in enumerate(ids)}
+
+
+    def _to_pydict(self, columns: list[str]) -> dict:
+        if self.ds is not None:
+            return self.ds.to_table(columns=columns).to_pydict()
+        return self._arrow_table.select(columns).to_pydict()
 
     def v(self, field: str, tid: str) -> np.ndarray | None:
         i = self.vec_idx.get(field, {}).get(tid)
