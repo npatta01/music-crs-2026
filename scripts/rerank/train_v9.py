@@ -7,7 +7,12 @@ Protocol (locked):
 - user-grouped folds (seed 13), lockbox users (exp/analysis/rerank/
   lockbox_users.json) excluded from CV and scored by the 5-fold ensemble
 - nested early stopping: 10% of each fold's TRAIN users held out for ES
-- per-row sample weights from label_weights_v9 (turn-level label quality)
+- per-row sample weights from label_weights_v9 (turn-level label quality),
+  optionally multiplied by per-candidate hard-negative weights from --grades
+- LABELS: the LightGBM training label is `y_train` — graded relevance from
+  --grades (build_label_grades.py) when given, else the binary GT label.
+  `y_binary` (int(track==GT)) is ALWAYS kept for early-stopping + finalize, so
+  the reported/selection metric stays the official single-GT ndcg@20.
 - monotone constraint: is_played_track -1
 - selection metric: plain all-turns OOF ndcg@20 (by-turn reported as diagnostic)
 
@@ -38,6 +43,7 @@ OUT = ROOT / "exp/analysis/rerank/train_v9"
 FEATURES = ROOT / "exp/analysis/rerank/features_v9"
 SIDECAR = ROOT / "exp/analysis/rerank/constraint_features.parquet"
 WEIGHTS = ROOT / "exp/analysis/rerank/label_weights_v9.parquet"
+GRADES = None  # optional: build_label_grades.py parquet -> graded training label
 GT_PATH = ROOT / "exp/ground_truth/devset.json"
 LOCKBOX = ROOT / "exp/analysis/rerank/lockbox_users.json"
 
@@ -94,7 +100,7 @@ def stage_build():
     np.save(OUT / "sid_codes.npy", sid_codes)
     np.save(OUT / "turn_arr.npy", turn_arr)
     np.save(OUT / "trk_codes.npy", trk_codes)
-    np.save(OUT / "y.npy", y)
+    np.save(OUT / "y_binary.npy", y)  # int(track==GT): early-stopping + finalize metric
     np.save(OUT / "rrf_rank.npy", rrf_rank)
     json.dump(list(sid_uniq), open(OUT / "sid_uniq.json", "w"))
     json.dump(list(trk_uniq), open(OUT / "trk_uniq.json", "w"))
@@ -156,6 +162,36 @@ def stage_build():
     row_w = np.fromiter(
         (wmap.get((sid_uniq[s], int(t_)), 1.0) for s, t_ in zip(sid_codes, turn_arr)),
         dtype=np.float32, count=n)
+
+    # graded training label (optional). default: y_train = binary GT label.
+    # grades parquet is keyed by (session_id, turn_number, track_id) — joined with
+    # the same int-key scatter as the sidecar above; its neg_weight multiplies row_w.
+    y_train = y.copy()
+    if GRADES is not None:
+        g = pq.read_table(str(GRADES))
+        gs = pd.Index(sid_uniq).get_indexer(g.column("session_id").to_pandas()).astype(np.int64)
+        gt_ = pd.Index(trk_uniq).get_indexer(g.column("track_id").to_pandas()).astype(np.int64)
+        gturn = g.column("turn_number").to_numpy().astype(np.int64)
+        assert (gs >= 0).all() and (gt_ >= 0).all(), "grades keys outside features keyset"
+        key_left = (sid_codes.astype(np.int64) * 10 + turn_arr) * len(trk_uniq) + trk_codes
+        key_right = (gs * 10 + gturn) * len(trk_uniq) + gt_
+        glo = np.argsort(key_left, kind="stable")
+        gro = np.argsort(key_right, kind="stable")
+        assert len(key_right) == n and (key_left[glo] == key_right[gro]).all(), \
+            "grades keyset mismatch with features"
+        grade_vals = g.column("grade").to_numpy().astype(np.int8)
+        neg_vals = np.nan_to_num(g.column("neg_weight").to_numpy(
+            zero_copy_only=False).astype(np.float32), nan=1.0)
+        y_train = np.empty(n, dtype=np.int8)
+        y_train[glo] = grade_vals[gro]
+        neg = np.empty(n, dtype=np.float32)
+        neg[glo] = neg_vals[gro]
+        row_w = row_w * neg
+        gd = {int(k): int(v) for k, v in zip(*np.unique(y_train, return_counts=True))}
+        print(f"  graded labels from {GRADES.name}: dist {gd}, "
+              f"neg_weight>1 {(neg > 1).mean():.4f}", flush=True)
+
+    np.save(OUT / "y_train.npy", y_train)
     np.save(OUT / "row_weights.npy", row_w)
     print(f"  weights: mean {row_w.mean():.3f}, <1 share {(row_w < 1).mean():.3f}", flush=True)
 
@@ -193,7 +229,8 @@ def stage_fold(fold: int):
 
     sid_codes, turn_arr, sid_uniq, meta = _ids_and_folds()
     sid_fold = np.load(OUT / "sid_fold.npy")
-    y = np.load(OUT / "y.npy")
+    y_train = np.load(OUT / "y_train.npy")   # graded (==binary if no --grades)
+    y_binary = np.load(OUT / "y_binary.npy")  # int(track==GT): early-stopping metric
     row_w = np.load(OUT / "row_weights.npy")
     X = np.load(str(OUT / "X.npy"), mmap_mode="r")
     all_cols = meta["cols"]
@@ -222,13 +259,14 @@ def stage_fold(fold: int):
     params = dict(LGB_PARAMS, monotone_constraints=mono)
 
     Xtr = np.ascontiguousarray(X[tr_idx])
-    dtrain = lgb.Dataset(Xtr, label=y[tr_idx], group=tr_groups, weight=row_w[tr_idx],
+    dtrain = lgb.Dataset(Xtr, label=y_train[tr_idx], group=tr_groups, weight=row_w[tr_idx],
                          feature_name=all_cols, categorical_feature=cat_idx,
                          free_raw_data=True)
     dtrain.construct()
     del Xtr; gc.collect()
     Xes = np.ascontiguousarray(X[es_idx])
-    dvalid = lgb.Dataset(Xes, label=y[es_idx], group=es_groups, weight=row_w[es_idx],
+    # early stopping monitors the TRUE single-GT ndcg@20 (binary labels)
+    dvalid = lgb.Dataset(Xes, label=y_binary[es_idx], group=es_groups, weight=row_w[es_idx],
                          reference=dtrain, free_raw_data=False)
     dvalid.construct()
     del Xes; gc.collect()
@@ -275,7 +313,7 @@ def _per_turn_metrics(sub: pd.DataFrame, denom: int):
 def stage_finalize():
     sid_codes, turn_arr, sid_uniq, meta = _ids_and_folds()
     sid_fold = np.load(OUT / "sid_fold.npy")
-    y = np.load(OUT / "y.npy")
+    y = np.load(OUT / "y_binary.npy")  # official single-GT metric (y==1 -> GT)
     rrf_rank = np.load(OUT / "rrf_rank.npy")
     n = meta["n"]
 
@@ -359,7 +397,7 @@ def stage_full_model():
 
     sid_codes, turn_arr, sid_uniq, meta = _ids_and_folds()
     sid_fold = np.load(OUT / "sid_fold.npy")
-    y = np.load(OUT / "y.npy")
+    y = np.load(OUT / "y_train.npy")  # graded training label (==binary if no --grades)
     row_w = np.load(OUT / "row_weights.npy")
     X = np.load(str(OUT / "X.npy"), mmap_mode="r")
     all_cols = meta["cols"]
@@ -402,6 +440,9 @@ if __name__ == "__main__":
                     help="Override constraint_features.parquet path")
     ap.add_argument("--weights", type=str, default=None,
                     help="Override label_weights_v9.parquet path")
+    ap.add_argument("--grades", type=str, default=None,
+                    help="Optional build_label_grades.py parquet -> graded training "
+                         "label + per-candidate hard-negative weight. Omit for binary.")
     ap.add_argument("--lockbox", type=str, default=None,
                     help="Override lockbox_users.json path")
     ap.add_argument("--gt", type=str, default=None,
@@ -415,6 +456,8 @@ if __name__ == "__main__":
         SIDECAR = Path(a.sidecar)
     if a.weights:
         WEIGHTS = Path(a.weights)
+    if a.grades:
+        GRADES = Path(a.grades)
     if a.lockbox:
         LOCKBOX = Path(a.lockbox)
     if a.gt:
