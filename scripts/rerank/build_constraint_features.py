@@ -31,7 +31,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from build_features import Catalog, constraint_feature_row  # noqa: E402
+from build_features import constraint_feature_row  # noqa: E402
+from catalog_utils import catalog_artist_ids  # noqa: E402
 
 
 def main():
@@ -55,11 +56,7 @@ def main():
     print(f"  {n:,} rows, {len(by_turn):,} turns", flush=True)
 
     print("loading catalog scalars (artist ids only) ...", flush=True)
-    cat = Catalog.__new__(Catalog)  # scalar-only light init below
-    import lancedb
-    db = lancedb.connect(args.db_uri)
-    t = db.open_table("music_track_catalog").to_lance().to_table(
-        columns=["track_id", "artist_id"]).to_pydict()
+    t = catalog_artist_ids(args.db_uri)
     artists_of = {str(tid): tuple(str(a) for a in (aids or []))
                   for tid, aids in zip(t["track_id"], t["artist_id"])}
 

@@ -4,6 +4,7 @@ lm_type: dummy
 qu_type: state_ranker
 qu_kwargs:
   max_in_flight: 4
+  compile_max_in_flight: 4
   ranking:
     mode: lgbm
     model_version: lgbm_v10
@@ -34,6 +35,8 @@ qu_kwargs:
       api_base: https://api.deepinfra.com/v1/openai
       batch_size: 32
       encoding_format: float
+      disk_cache: true
+      cache_dir: ${oc.env:MCRS_EMBEDDING_CACHE_DIR,./cache/embeddings}
     qwen_8b:
       backend: litellm
       model_name: openai/Qwen/Qwen3-Embedding-8B
@@ -41,6 +44,8 @@ qu_kwargs:
       api_key: ${oc.env:VLLM_API_KEY,EMPTY}
       batch_size: 32
       encoding_format: float
+      disk_cache: true
+      cache_dir: ${oc.env:MCRS_EMBEDDING_CACHE_DIR,./cache/embeddings}
       extra_params:
         timeout: 600
     clap_text:
@@ -125,14 +130,12 @@ qu_kwargs:
       distance_type: cosine
       gated_on: image_or_visual_search
     centroid_only_branches:
-    # Visual route (issue #127): gate the cover-art centroid the same way as the
-    # dense image_siglip2 branch above, so it only injects visual-space neighbors
-    # on image_or_visual_search turns instead of every anchored turn.
+    # Anchor cover-art centroid: keep always-on for anchored turns. Gating this
+    # to visual-only turns collapses candidate coverage for the v10 ranker.
     - vector_field: image_siglip2
       weight: 1.0
       topk: 1000
       distance_type: cosine
-      gated_on: image_or_visual_search
     - vector_field: audio_laion_clap
       weight: 1.0
       topk: 1000

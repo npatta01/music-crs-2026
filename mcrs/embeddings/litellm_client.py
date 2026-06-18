@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import json
+import os
 from dataclasses import dataclass, field
 from typing import Any
+
+from mcrs.embeddings.embedding_cache import CachedTextEmbedder, DiskVectorCache
+
+DEFAULT_EMBEDDING_CACHE_DIR = "./cache/embeddings"
 
 
 def _batched(items: list[str], batch_size: int):
@@ -15,6 +21,42 @@ def _embedding_from_item(item: Any) -> list[float]:
     else:
         value = item.embedding
     return [float(number) for number in value]
+
+
+def _cache_enabled_default() -> bool:
+    return os.environ.get("EMBEDDING_CACHE_ENABLED", "1") != "0"
+
+
+def _resolve_cache_dir(cache_dir: str | None) -> str:
+    return cache_dir or os.environ.get("MCRS_EMBEDDING_CACHE_DIR") or DEFAULT_EMBEDDING_CACHE_DIR
+
+
+def cache_namespace_for_client(client: "LiteLLMEmbeddingClient") -> str:
+    payload = {
+        "backend": "litellm",
+        "model": client.model_name,
+        "api_base": client.api_base,
+        "dimensions": client.dimensions,
+        "encoding_format": client.encoding_format,
+        "query_instruct": client.query_instruct,
+        "extra_params": client.extra_params,
+    }
+    rendered = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return f"litellm:{rendered}"
+
+
+def cache_wrap(
+    inner: "LiteLLMEmbeddingClient",
+    *,
+    cache_dir: str | None = None,
+    enabled: bool | None = None,
+):
+    if enabled is None:
+        enabled = _cache_enabled_default()
+    if not enabled:
+        return inner
+    store = DiskVectorCache(_resolve_cache_dir(cache_dir))
+    return CachedTextEmbedder(inner, store, cache_namespace_for_client(inner), enabled=True)
 
 
 @dataclass

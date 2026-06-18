@@ -289,6 +289,18 @@ def compute_turn_features(row: dict, ctx: TurnContext, gt: str | None = None):
         name_tokens = m["name_tokens"]
         title_overlap = (len(name_tokens & request_tokens) / len(name_tokens)) if name_tokens else 0.0
         cf_last_c = cos(cf_lastv)
+        cf_centroid_c = cos(cf_cent)
+        cf_drift_c = cos(drift)
+        clap_last_c = cos(clap_lastv, "audio_laion_clap")
+        clap_centroid_c = cos(clap_cent, "audio_laion_clap")
+        siglip_centroid_c = cos(siglip_cent, "image_siglip2")
+        user_cf_c = cos(uvec)
+        listener_goal_c = cos(lg_vec, "metadata_qwen3_embedding_0_6b")
+        q06_lyric_c = qcos("lyric", "lyrics_qwen3_embedding_0_6b", tid_)
+        msg_meta_c = cos(msg_vec, "metadata_qwen3_embedding_0_6b")
+        msg_attr_c = cos(msg_vec, "attributes_qwen3_embedding_0_6b")
+        msg_lyr_c = cos(msg_vec, "lyrics_qwen3_embedding_0_6b")
+        ctx_meta_c = cos(ctx_vec, "metadata_qwen3_embedding_0_6b")
         rec = {
             "session_id": sid, "turn_number": tn, "track_id": tid_,
             "label": int(tid_ == gt) if gt is not None else 0,
@@ -305,11 +317,11 @@ def compute_turn_features(row: dict, ctx: TurnContext, gt: str | None = None):
             "artist_track_count": max((cat.artist_track_count.get(a, 0) for a in m["artists"]), default=0),
             "duration_ms": m["duration"] if not math.isnan(m["duration"]) else cat.median_duration,
             # session (NaN when no history)
-            "cf_last": cf_last_c, "cf_centroid": cos(cf_cent),
-            "cf_drift": cos(drift),
-            "clap_last": cos(clap_lastv, "audio_laion_clap"),
-            "clap_centroid": cos(clap_cent, "audio_laion_clap"),
-            "siglip_centroid": cos(siglip_cent, "image_siglip2"),
+            "cf_last": cf_last_c, "cf_centroid": cf_centroid_c,
+            "cf_drift": cf_drift_c,
+            "clap_last": clap_last_c,
+            "clap_centroid": clap_centroid_c,
+            "siglip_centroid": siglip_centroid_c,
             "same_artist_session": same_artist,
             "same_artist_last": float(bool(set(m["artists"]) & last_artists)),
             "same_album_last": float(bool(albums & last_albums)),
@@ -320,7 +332,7 @@ def compute_turn_features(row: dict, ctx: TurnContext, gt: str | None = None):
             "turn_number_f": tn, "n_played": len(played),
             "has_history": has_history,
             # user (NaN when cold; has_user_vec carries presence)
-            "user_cf": cos(uvec),
+            "user_cf": user_cf_c,
             "has_user_vec": has_user_vec,
             "age_era_affinity": 0.0,
             "culture_match": float(len(m["tag_keys"] & {catalog_tag_key(w) for w in sess.get("culture", "").split()} - {""})),
@@ -328,8 +340,7 @@ def compute_turn_features(row: dict, ctx: TurnContext, gt: str | None = None):
             # organizer
             "goal_category": sess.get("goal_category", ""),
             "goal_specificity": sess.get("goal_specificity", ""),
-            "listener_goal_cos": (float(lg_vec @ cat.v("metadata_qwen3_embedding_0_6b", tid_))
-                                  if lg_vec is not None and cat.v("metadata_qwen3_embedding_0_6b", tid_) is not None else NAN),
+            "listener_goal_cos": listener_goal_c,
             "session_minus_release_year": float((session_year - year) if (session_year and year) else 0.0),
             # state
             "tag_overlap": float(len(overlap)),
@@ -349,16 +360,12 @@ def compute_turn_features(row: dict, ctx: TurnContext, gt: str | None = None):
             "n_facts": len(state.get("facts") or []),
             "wants_new_artist": wants_new,
             # dense fill-in: lyric only (8B branch scores carry metadata/attrs)
-            "q06_lyric_cos": qcos("lyric", "lyrics_qwen3_embedding_0_6b", tid_),
+            "q06_lyric_cos": q06_lyric_c,
             # conversation proxies (NaN when no message embedding)
-            "msg_meta_cos": (float(msg_vec @ cat.v("metadata_qwen3_embedding_0_6b", tid_))
-                             if msg_vec is not None and cat.v("metadata_qwen3_embedding_0_6b", tid_) is not None else NAN),
-            "msg_attr_cos": (float(msg_vec @ cat.v("attributes_qwen3_embedding_0_6b", tid_))
-                             if msg_vec is not None and cat.v("attributes_qwen3_embedding_0_6b", tid_) is not None else NAN),
-            "msg_lyr_cos": (float(msg_vec @ cat.v("lyrics_qwen3_embedding_0_6b", tid_))
-                            if msg_vec is not None and cat.v("lyrics_qwen3_embedding_0_6b", tid_) is not None else NAN),
-            "ctx_meta_cos": (float(ctx_vec @ cat.v("metadata_qwen3_embedding_0_6b", tid_))
-                             if ctx_vec is not None and cat.v("metadata_qwen3_embedding_0_6b", tid_) is not None else NAN),
+            "msg_meta_cos": msg_meta_c,
+            "msg_attr_cos": msg_attr_c,
+            "msg_lyr_cos": msg_lyr_c,
+            "ctx_meta_cos": ctx_meta_c,
             "lex_overlap_idf": float(sum(ctx.tok_idf.get(t_, 0.0)
                                          for t_ in (ctx.name_tokens_all.get(tid_, frozenset()) & msg_tokens))),
             "title_in_msg": float(bool(m["name_tokens"]) and m["name_tokens"] <= msg_tokens),

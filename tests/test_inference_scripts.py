@@ -1,10 +1,12 @@
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 from types import SimpleNamespace
 
 from omegaconf import OmegaConf
+import pytest
 
 import run_inference_blindset
 import run_inference_devset
@@ -83,6 +85,15 @@ def _full_pipeline_config_without_retrieval_type():
             "qu_kwargs": {"ranking": {"mode": "rrf"}},
         }
     )
+
+
+def _state_ranker_config_with_litellm_extractor():
+    cfg = _full_pipeline_config_without_retrieval_type()
+    cfg.qu_kwargs.extractor = {
+        "model_name": "openrouter/deepseek/deepseek-v4-flash",
+        "prompt_version": "v1",
+    }
+    return cfg
 
 
 def _milvus_config():
@@ -225,6 +236,155 @@ def test_run_inference_devset_passes_qu_kwargs(monkeypatch, tmp_path):
     )
 
 
+def test_run_inference_devset_loads_litellm_cache_env_from_dotenv(monkeypatch, tmp_path):
+    captured_env = {}
+    (tmp_path / ".env").write_text(
+        "MCRS_LITELLM_CACHE_DIR=cache/litellm-state\n"
+        "MCRS_LITELLM_CACHE_BACKEND=file\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("MCRS_LITELLM_CACHE_DIR", raising=False)
+    monkeypatch.delenv("MCRS_LITELLM_CACHE_BACKEND", raising=False)
+
+    def fake_load_crs_baseline(**kwargs):
+        captured_env["cache_dir"] = os.environ.get("MCRS_LITELLM_CACHE_DIR")
+        captured_env["backend"] = os.environ.get("MCRS_LITELLM_CACHE_BACKEND")
+        return _FakeCRS()
+
+    monkeypatch.setattr(run_inference_devset.OmegaConf, "load", lambda _: _passthrough_config())
+    monkeypatch.setattr(run_inference_devset, "load_crs_baseline", fake_load_crs_baseline)
+    monkeypatch.setattr(run_inference_devset, "load_dataset", lambda *args, **kwargs: [])
+
+    args = SimpleNamespace(
+        tid="state_ranker_v10_rrf_devset",
+        batch_size=1,
+        session_ids_file=None,
+        num_sessions=0,
+        exp_dir=str(tmp_path / "exp"),
+        clear_cache=False,
+    )
+
+    run_inference_devset._load_runtime(args)
+
+    assert captured_env == {
+        "cache_dir": "cache/litellm-state",
+        "backend": "file",
+    }
+
+
+def test_run_inference_blindset_loads_litellm_cache_env_from_dotenv(monkeypatch, tmp_path):
+    captured_env = {}
+    (tmp_path / ".env").write_text(
+        "MCRS_LITELLM_CACHE_DIR=cache/litellm-state\n"
+        "MCRS_LITELLM_CACHE_BACKEND=file\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("MCRS_LITELLM_CACHE_DIR", raising=False)
+    monkeypatch.delenv("MCRS_LITELLM_CACHE_BACKEND", raising=False)
+
+    def fake_load_crs_baseline(**kwargs):
+        captured_env["cache_dir"] = os.environ.get("MCRS_LITELLM_CACHE_DIR")
+        captured_env["backend"] = os.environ.get("MCRS_LITELLM_CACHE_BACKEND")
+        return _FakeCRS()
+
+    monkeypatch.setattr(run_inference_blindset.OmegaConf, "load", lambda _: _passthrough_config())
+    monkeypatch.setattr(run_inference_blindset, "load_crs_baseline", fake_load_crs_baseline)
+    monkeypatch.setattr(run_inference_blindset, "load_dataset", lambda *args, **kwargs: [])
+
+    args = SimpleNamespace(
+        tid="state_ranker_v10_lgbm_blindset_A",
+        eval_dataset="blindset_A",
+        batch_size=1,
+        exp_dir=str(tmp_path / "exp"),
+        clear_cache=False,
+    )
+
+    run_inference_blindset._load_runtime(args)
+
+    assert captured_env == {
+        "cache_dir": "cache/litellm-state",
+        "backend": "file",
+    }
+
+
+def test_run_inference_devset_requires_cache_for_litellm_extractor(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("MCRS_LITELLM_CACHE_DIR", raising=False)
+    monkeypatch.delenv("MCRS_LITELLM_CACHE_BACKEND", raising=False)
+    monkeypatch.setattr(run_inference_devset, "_load_dotenv", lambda: None)
+    monkeypatch.setattr(run_inference_devset, "_setup_litellm_cache", lambda *args, **kwargs: False)
+    monkeypatch.setattr(run_inference_devset.OmegaConf, "load", lambda _: _state_ranker_config_with_litellm_extractor())
+
+    args = SimpleNamespace(
+        tid="state_ranker_v10_rrf_devset",
+        batch_size=1,
+        session_ids_file=None,
+        num_sessions=0,
+        exp_dir=str(tmp_path / "exp"),
+        clear_cache=False,
+    )
+
+    with pytest.raises(RuntimeError, match="MCRS_LITELLM_CACHE_DIR"):
+        run_inference_devset._load_runtime(args)
+
+
+def test_run_inference_blindset_requires_cache_for_litellm_extractor(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("MCRS_LITELLM_CACHE_DIR", raising=False)
+    monkeypatch.delenv("MCRS_LITELLM_CACHE_BACKEND", raising=False)
+    monkeypatch.setattr(run_inference_blindset, "_setup_litellm_cache", lambda *args, **kwargs: False)
+    monkeypatch.setattr(
+        run_inference_blindset.OmegaConf,
+        "load",
+        lambda _: _state_ranker_config_with_litellm_extractor(),
+    )
+    monkeypatch.setattr(run_inference_blindset, "load_crs_baseline", lambda **kwargs: _FakeCRS())
+    monkeypatch.setattr(run_inference_blindset, "load_dataset", lambda *args, **kwargs: [])
+
+    args = SimpleNamespace(
+        tid="state_ranker_v10_lgbm_blindset_A",
+        eval_dataset="blindset_A",
+        batch_size=1,
+        exp_dir=str(tmp_path / "exp"),
+        clear_cache=False,
+    )
+
+    with pytest.raises(RuntimeError, match="MCRS_LITELLM_CACHE_DIR"):
+        run_inference_blindset._load_runtime(args)
+
+
+def test_run_inference_devset_parser_exposes_require_litellm_cache_flag():
+    parser = run_inference_devset.build_parser()
+
+    default_args = parser.parse_args([])
+    required_args = parser.parse_args(["--require_litellm_cache"])
+
+    assert default_args.require_litellm_cache is False
+    assert required_args.require_litellm_cache is True
+
+
+def test_completion_marker_payload_uses_actual_trace_record_count():
+    args = SimpleNamespace(tid="foo_devset")
+
+    payload = run_inference_devset._completion_marker_payload(
+        args,
+        shard_id=1,
+        num_shards=4,
+        output_suffix=".run_RID.shard_1",
+        prediction_count=16,
+        trace_records=15,
+        out_path="/tmp/foo_devset.run_RID.shard_1.json",
+        trace_path="/tmp/foo_devset.run_RID.shard_1_trace.jsonl",
+    )
+
+    assert payload["predictions"] == 16
+    assert payload["trace_records"] == 15
+    assert payload["prediction_path"] == "foo_devset.run_RID.shard_1.json"
+    assert payload["trace_path"] == "foo_devset.run_RID.shard_1_trace.jsonl"
+
+
 def test_run_inference_devset_does_not_require_legacy_retrieval_type(monkeypatch, tmp_path):
     captured = {}
 
@@ -301,14 +461,12 @@ def test_run_inference_devset_grouped_reuses_loaded_crs(monkeypatch, tmp_path):
         exp_dir=str(tmp_path / "exp"),
         clear_cache=False,
         num_shards=2,
+        shard_ids="0,1",
+        output_suffixes_json='{"0": ".run_RID.shard_0", "1": ".run_RID.shard_1"}',
         output_suffix="",
     )
 
-    run_inference_devset.run_grouped(
-        args,
-        shard_ids=[0, 1],
-        output_suffixes={0: ".run_RID.shard_0", 1: ".run_RID.shard_1"},
-    )
+    run_inference_devset.main(args)
 
     assert load_calls == 1
     shard0 = tmp_path / "exp" / "inference" / "devset" / "foo_devset.run_RID.shard_0.json"
@@ -316,7 +474,52 @@ def test_run_inference_devset_grouped_reuses_loaded_crs(monkeypatch, tmp_path):
     assert {row["session_id"] for row in json.loads(shard0.read_text())} == {"s0", "s1"}
     assert {row["session_id"] for row in json.loads(shard1.read_text())} == {"s2", "s3"}
     trace0 = shard0.with_name("foo_devset.run_RID.shard_0_trace.jsonl")
-    assert len(trace0.read_text().splitlines()) == 16
+    trace_lines = trace0.read_text().splitlines()
+    assert len(trace_lines) == 16
+    complete0 = shard0.with_name("foo_devset.run_RID.shard_0_complete.json")
+    marker = json.loads(complete0.read_text())
+    assert marker["predictions"] == 16
+    assert marker["trace_records"] == len(trace_lines)
+
+
+def test_run_inference_devset_grouped_defaults_to_unique_shard_suffixes(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(run_inference_devset, "_load_runtime", lambda args: {})
+    monkeypatch.setattr(
+        run_inference_devset,
+        "_run_shard",
+        lambda args, runtime, shard_id, num_shards, output_suffix: calls.append(
+            (shard_id, num_shards, output_suffix)
+        ),
+    )
+
+    args = SimpleNamespace(num_shards=3, output_suffix="")
+
+    run_inference_devset.run_grouped(args, shard_ids=[0, 2], output_suffixes={})
+
+    assert calls == [
+        (0, 3, ".shard_0"),
+        (2, 3, ".shard_2"),
+    ]
+
+
+def test_run_inference_devset_grouped_rejects_ambiguous_single_shard_suffixes(monkeypatch):
+    monkeypatch.setattr(run_inference_devset, "_load_runtime", lambda args: {})
+
+    args = SimpleNamespace(num_shards=1, output_suffix="")
+
+    with pytest.raises(ValueError, match="requires --num_shards > 1"):
+        run_inference_devset.run_grouped(args, shard_ids=[0, 1], output_suffixes={})
+
+
+def test_run_inference_blindset_grouped_rejects_ambiguous_single_shard_suffixes(monkeypatch):
+    monkeypatch.setattr(run_inference_blindset, "_load_runtime", lambda args: {})
+
+    args = SimpleNamespace(num_shards=1, output_suffix="")
+
+    with pytest.raises(ValueError, match="requires --num_shards > 1"):
+        run_inference_blindset.run_grouped(args, shard_ids=[0, 1], output_suffixes={})
 
 
 def test_run_inference_blindset_passes_qu_kwargs(monkeypatch, tmp_path):

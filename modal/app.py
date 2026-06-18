@@ -665,6 +665,7 @@ def _build_features_shard(shard_idx: int, trace_path: str, out_dir: str, pool_k:
             "--msg-store", f"{CACHE_DIR}/rerank/raw_msg_store",
             "--out", f"{out_dir}/shard_{shard_idx}.parquet",
             "--pool-k", str(pool_k),
+            "--num-shards", "1",
             "--offline",
         ],
         capture_output=False,

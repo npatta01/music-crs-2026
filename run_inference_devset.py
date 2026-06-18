@@ -18,6 +18,15 @@ from omegaconf import OmegaConf
 from mcrs.inference_utils import chat_history_parser, resolve_qu_kwargs_placeholders
 
 
+def _load_dotenv() -> None:
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv()
+    except Exception:
+        pass
+
+
 def _setup_logging() -> None:
     """Surface logger.warning/info calls from mcrs.* in stderr.
 
@@ -91,7 +100,7 @@ def _with_trace_run_metadata(trace, run_metadata: dict):
     return trace
 
 
-def _setup_litellm_cache() -> None:
+def _setup_litellm_cache(*, require: bool = False) -> bool:
     """Configure LiteLLM cache when MCRS_LITELLM_CACHE_DIR is set.
 
     The Modal inference container sets this env var to the path of the shared
@@ -102,9 +111,40 @@ def _setup_litellm_cache() -> None:
     from mcrs.litellm_cache import setup_litellm_cache
 
     cache_dir = os.environ.get("MCRS_LITELLM_CACHE_DIR")
-    if setup_litellm_cache(cache_dir=cache_dir):
+    enabled = setup_litellm_cache(cache_dir=cache_dir)
+    if enabled:
         backend = os.environ.get("MCRS_LITELLM_CACHE_BACKEND", "file")
         print(f"LiteLLM {backend} cache enabled at: {cache_dir}")
+        return True
+    if require:
+        raise RuntimeError(
+            "MCRS_LITELLM_CACHE_DIR must be set for configs with a LiteLLM "
+            "state extractor. Source .env or export MCRS_LITELLM_CACHE_DIR="
+            "cache/litellm-state before running."
+        )
+    return False
+
+
+def _truthy_env(name: str) -> bool:
+    value = os.environ.get(name)
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _config_requires_litellm_cache(config, qu_kwargs: dict) -> bool:
+    if str(config.get("qu_type", "")) != "state_ranker":
+        return False
+    extractor = qu_kwargs.get("extractor")
+    return isinstance(extractor, dict) and bool(extractor.get("model_name"))
+
+
+def _litellm_cache_required(args, config, qu_kwargs: dict) -> bool:
+    if getattr(args, "allow_uncached_litellm", False):
+        return False
+    if getattr(args, "require_litellm_cache", False):
+        return True
+    if _truthy_env("MCRS_REQUIRE_LITELLM_CACHE"):
+        return True
+    return _config_requires_litellm_cache(config, qu_kwargs)
 
 
 def _add_elapsed(timings: dict[str, float], key: str, start: float) -> None:
@@ -154,21 +194,29 @@ def _resolve_vllm_endpoints_if_needed(qu_kwargs: dict) -> None:
 
 
 def _load_runtime(args) -> dict:
+    _load_dotenv()
     _setup_logging()
-    _setup_litellm_cache()
     timings: dict[str, float] = {}
     start = time.perf_counter()
     config = OmegaConf.load(f"configs/{args.tid}.yaml")
     trace_run_metadata = _build_trace_run_metadata(args.tid, config)
     _add_elapsed(timings, "load_config", start)
+    qu_kwargs = _config_qu_kwargs(config)
     if args.clear_cache:
         cache_dir = config.get("cache_dir", "./cache")
         if os.path.exists(cache_dir):
             print(f"Clearing cache directory: {cache_dir}")
             shutil.rmtree(cache_dir)
+    litellm_cache_required = _litellm_cache_required(args, config, qu_kwargs)
+    litellm_cache_enabled = _setup_litellm_cache(require=litellm_cache_required)
+    if litellm_cache_required and not litellm_cache_enabled:
+        raise RuntimeError(
+            "MCRS_LITELLM_CACHE_DIR must be set for configs with a LiteLLM "
+            "state extractor. Source .env or export MCRS_LITELLM_CACHE_DIR="
+            "cache/litellm-state before running."
+        )
 
     start = time.perf_counter()
-    qu_kwargs = _config_qu_kwargs(config)
     _resolve_vllm_endpoints_if_needed(qu_kwargs)
     music_crs = load_crs_baseline(
         lm_type=config.get("explanation_lm_type", "dummy"),
@@ -299,6 +347,7 @@ def _run_shard(args, runtime: dict, shard_id: int, num_shards: int, output_suffi
     # without a custom encoder.
     trace_path = f"{args.exp_dir}/inference/devset/{args.tid}{output_suffix}_trace.jsonl"
     inference_results = []
+    trace_records = 0
 
     desc = f"Shard {shard_id}/{num_shards} inference" if num_shards > 1 else "Batch inference"
     with open(trace_path, "w", encoding="utf-8") as trace_file:
@@ -336,6 +385,7 @@ def _run_shard(args, runtime: dict, shard_id: int, num_shards: int, output_suffi
                     ),
                 }
                 trace_file.write(json.dumps(trace_record, ensure_ascii=False, default=str) + "\n")
+                trace_records += 1
             trace_file.flush()
             _add_elapsed(timings, "trace_write", start)
 
@@ -343,6 +393,22 @@ def _run_shard(args, runtime: dict, shard_id: int, num_shards: int, output_suffi
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(inference_results, f, ensure_ascii=False)
     _add_elapsed(timings, "write_predictions", start)
+    complete_path = f"{args.exp_dir}/inference/devset/{args.tid}{output_suffix}_complete.json"
+    with open(complete_path, "w", encoding="utf-8") as f:
+        json.dump(
+            _completion_marker_payload(
+                args,
+                shard_id=shard_id,
+                num_shards=num_shards,
+                output_suffix=output_suffix,
+                prediction_count=len(inference_results),
+                trace_records=trace_records,
+                out_path=out_path,
+                trace_path=trace_path,
+            ),
+            f,
+            indent=2,
+        )
     _print_timings(
         f"devset shard={shard_id}/{num_shards} sessions={len(db)} turns={len(batch_data)}",
         timings,
@@ -354,9 +420,65 @@ def run_grouped(args, shard_ids, output_suffixes: dict[int, str] | None = None) 
     runtime = _load_runtime(args)
     num_shards = getattr(args, "num_shards", 1)
     output_suffixes = output_suffixes or {}
+    base_output_suffix = getattr(args, "output_suffix", "")
+    if len(shard_ids) > 1 and num_shards <= 1 and not base_output_suffix and not output_suffixes:
+        raise ValueError(
+            "Grouped local inference with multiple --shard_ids requires --num_shards > 1 "
+            "or explicit output suffixes to avoid overwriting outputs."
+        )
     for shard_id in shard_ids:
-        output_suffix = output_suffixes.get(shard_id, getattr(args, "output_suffix", ""))
+        output_suffix = output_suffixes.get(shard_id)
+        if output_suffix is None:
+            output_suffix = (
+                f"{base_output_suffix}.shard_{shard_id}"
+                if len(shard_ids) > 1 and base_output_suffix
+                else (f".shard_{shard_id}" if num_shards > 1 else base_output_suffix)
+            )
         _run_shard(args, runtime, int(shard_id), num_shards, output_suffix)
+
+
+def _parse_shard_ids(value) -> list[int]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        value = value.strip()
+        if not value:
+            return []
+        return [int(part.strip()) for part in value.split(",") if part.strip()]
+    return [int(part) for part in value]
+
+
+def _parse_output_suffixes_json(value) -> dict[int, str]:
+    if value is None or value == "":
+        return {}
+    if isinstance(value, str):
+        value = json.loads(value)
+    if not isinstance(value, dict):
+        raise ValueError("--output_suffixes_json must be a JSON object")
+    return {int(shard_id): str(suffix) for shard_id, suffix in value.items()}
+
+
+def _completion_marker_payload(
+    args,
+    *,
+    shard_id: int,
+    num_shards: int,
+    output_suffix: str,
+    prediction_count: int,
+    trace_records: int,
+    out_path: str,
+    trace_path: str,
+) -> dict:
+    return {
+        "tid": args.tid,
+        "shard_id": shard_id,
+        "num_shards": num_shards,
+        "output_suffix": output_suffix,
+        "predictions": prediction_count,
+        "trace_records": trace_records,
+        "prediction_path": os.path.basename(out_path),
+        "trace_path": os.path.basename(trace_path),
+    }
 
 
 def main(args):
@@ -378,13 +500,25 @@ def main(args):
         - Tracks progress with tqdm progress bar
         - Saves comprehensive results for evaluation
     """
+    shard_ids = _parse_shard_ids(getattr(args, "shard_ids", None))
+    if shard_ids:
+        run_grouped(
+            args,
+            shard_ids=shard_ids,
+            output_suffixes=_parse_output_suffixes_json(
+                getattr(args, "output_suffixes_json", None)
+            ),
+        )
+        return
+
     runtime = _load_runtime(args)
     num_shards = getattr(args, "num_shards", 1)
     shard_id = getattr(args, "shard_id", 0)
     output_suffix = getattr(args, "output_suffix", "")
     _run_shard(args, runtime, shard_id, num_shards, output_suffix)
 
-if __name__ == "__main__":
+
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run batch inference on TalkPlayData-2 test dataset for Music CRS evaluation."
     )
@@ -429,10 +563,28 @@ if __name__ == "__main__":
         help="Wipe the cache directory before running (forces re-indexing)"
     )
     parser.add_argument(
+        "--allow_uncached_litellm",
+        action="store_true",
+        default=False,
+        help=(
+            "Allow state-ranker LiteLLM extraction without a configured cache. "
+            "Intended only for tiny debug runs."
+        ),
+    )
+    parser.add_argument(
+        "--require_litellm_cache",
+        action="store_true",
+        default=False,
+        help=(
+            "Fail unless LiteLLM cache setup succeeds, even for configs that "
+            "do not require it automatically."
+        ),
+    )
+    parser.add_argument(
         "--num_shards",
         type=int,
         default=1,
-        help="Total number of shards. >1 enables sharded mode (must pair with --shard_id).",
+        help="Total number of shards. >1 enables sharded mode with --shard_id or --shard_ids.",
     )
     parser.add_argument(
         "--shard_id",
@@ -441,11 +593,27 @@ if __name__ == "__main__":
         help="0-based shard index. Only this shard's slice of sessions is processed.",
     )
     parser.add_argument(
+        "--shard_ids",
+        type=str,
+        default=None,
+        help="Comma-separated shard IDs for a grouped local worker, e.g. '0,2,4'.",
+    )
+    parser.add_argument(
         "--output_suffix",
         type=str,
         default="",
         help="Optional suffix appended to the output filenames "
              "(e.g. '.shard_3' -> '{tid}.shard_3.json'). Empty = '{tid}.json'.",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--output_suffixes_json",
+        type=str,
+        default=None,
+        help="JSON object mapping shard id to output suffix for --shard_ids.",
+    )
+    return parser
+
+
+if __name__ == "__main__":
+    args = build_parser().parse_args()
     main(args)

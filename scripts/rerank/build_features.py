@@ -13,7 +13,7 @@ Usage:
       --ground-truth exp/ground_truth/devset.json \
       --db-uri <repo>/cache/lancedb \
       --tag-index <repo>/cache/tag_embedding_index/qwen_0_6b.npz \
-      --out exp/analysis/rerank/features.parquet
+      --out exp/analysis/rerank/features
 """
 
 from __future__ import annotations
@@ -23,10 +23,12 @@ import hashlib
 import json
 import math
 import os
+import subprocess
 import sys
 import threading
-from contextlib import contextmanager
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
 
@@ -36,6 +38,11 @@ import pyarrow.parquet as pq
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
+
+DEFAULT_FEATURE_SHARDS = 12
+DEFAULT_FEATURE_WORKERS = 4
+LEGACY_DEFAULT_OUT = "exp/analysis/rerank/features.parquet"
+DEFAULT_PARALLEL_OUT = "exp/analysis/rerank/features"
 
 from mcrs.qu_modules.tag_resolver import (  # noqa: E402
     TagEmbeddingIndex,
@@ -561,6 +568,117 @@ def grounded_tags(row: dict, resolver: TieredTagResolver) -> tuple[set[str], int
     return keys - {""}, n_exact, max_score
 
 
+def _safe_log_name(path: Path) -> str:
+    digest = hashlib.sha1(str(path).encode("utf-8")).hexdigest()[:8]
+    stem = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in path.name)
+    return f"{stem or 'features'}-{digest}"
+
+
+def _resolve_default_out(args: argparse.Namespace) -> None:
+    if args.out is not None:
+        return
+    if args.shard_id is not None and args.num_shards > 1:
+        args.out = str(Path(DEFAULT_PARALLEL_OUT) / f"shard_{args.shard_id}.parquet")
+    elif args.num_shards > 1 and not args.prefetch_only:
+        args.out = DEFAULT_PARALLEL_OUT
+    else:
+        args.out = LEGACY_DEFAULT_OUT
+
+
+def _validate_sharding(args: argparse.Namespace) -> None:
+    if args.num_shards < 1:
+        raise ValueError("--num-shards must be >= 1")
+    if args.num_workers < 1:
+        raise ValueError("--num-workers must be >= 1")
+    args.num_workers = min(args.num_workers, args.num_shards)
+    if args.shard_id is not None and not (0 <= args.shard_id < args.num_shards):
+        raise ValueError("--shard-id must satisfy 0 <= shard_id < num_shards")
+
+
+def _worker_command(args: argparse.Namespace, shard_id: int, out_path: Path) -> list[str]:
+    cmd = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "--trace",
+        str(args.trace),
+        "--ground-truth",
+        str(args.ground_truth),
+        "--db-uri",
+        str(args.db_uri),
+        "--table-name",
+        str(args.table_name),
+        "--tag-index",
+        str(args.tag_index),
+        "--pool-k",
+        str(args.pool_k),
+        "--out",
+        str(out_path),
+        "--embed-memo",
+        str(args.embed_memo),
+        "--branch-names",
+        str(args.branch_names),
+        "--msg-store",
+        str(args.msg_store),
+        "--num-shards",
+        str(args.num_shards),
+        "--shard-id",
+        str(shard_id),
+    ]
+    if args.max_turns:
+        cmd.extend(["--max-turns", str(args.max_turns)])
+    if args.offline:
+        cmd.append("--offline")
+    return cmd
+
+
+def _run_command_logged(cmd: list[str], log_path: Path) -> None:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("w", encoding="utf-8") as log_file:
+        log_file.write("$ " + " ".join(str(part) for part in cmd) + "\n")
+        log_file.flush()
+        subprocess.run(cmd, stdout=log_file, stderr=subprocess.STDOUT, check=True)
+
+
+def run_sharded_build(args: argparse.Namespace) -> None:
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    log_dir = PROJECT_ROOT / "logs" / "build_features" / _safe_log_name(out_dir)
+    commands: list[tuple[int, list[str], Path]] = []
+    skipped = 0
+    for shard_id in range(args.num_shards):
+        shard_out = out_dir / f"shard_{shard_id}.parquet"
+        if shard_out.exists() and shard_out.stat().st_size > 0:
+            skipped += 1
+            continue
+        commands.append((shard_id, _worker_command(args, shard_id, shard_out), shard_out))
+
+    if skipped:
+        print(f"skipping {skipped}/{args.num_shards} completed feature shard(s)", flush=True)
+    if not commands:
+        print(f"all {args.num_shards} feature shards already exist -> {out_dir}", flush=True)
+        return
+
+    print(
+        f"building features in parallel: {args.num_shards} shards, "
+        f"{args.num_workers} workers -> {out_dir}",
+        flush=True,
+    )
+    with ThreadPoolExecutor(max_workers=args.num_workers) as executor:
+        futures = {}
+        for shard_id, cmd, _ in commands:
+            log_path = log_dir / f"shard_{shard_id}.log"
+            futures[executor.submit(_run_command_logged, cmd, log_path)] = log_path
+
+        for future in as_completed(futures):
+            log_path = futures[future]
+            try:
+                future.result()
+            except subprocess.CalledProcessError:
+                print(f"[build_features] shard failed; see log: {log_path}", file=sys.stderr)
+                raise
+    print(f"done: feature shards -> {out_dir}", flush=True)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--trace", required=True)
@@ -572,7 +690,7 @@ def main():
                     help="Branch-pool truncation before feature computation. "
                          "Must match the serving reranker pool_k (rr2 = 500) "
                          "for train/serve parity of per-pool features.")
-    ap.add_argument("--out", default="exp/analysis/rerank/features.parquet")
+    ap.add_argument("--out", default=None)
     ap.add_argument("--embed-memo", default="exp/analysis/rerank/q06_memo.json")
     ap.add_argument("--branch-names", default="exp/analysis/rerank/branch_names.json",
                     help="Canonical branch list (pre-pass over the full trace). "
@@ -584,8 +702,24 @@ def main():
                     help="Pass 1: collect every unique query/listener_goal string "
                          "from the trace, embed in large batches, save memo, exit.")
     ap.add_argument("--offline", action="store_true",
-                    help="Pass 2: never call the embedding API; use memo only.")
+                    help="Cache-only mode: never call the embedding API; use memo only. "
+                         "By default, missing feature embeddings are filled and cached.")
+    ap.add_argument("--num-shards", "--num_shards", dest="num_shards", type=int,
+                    default=DEFAULT_FEATURE_SHARDS,
+                    help="Number of feature shards to build. Defaults to 12 for "
+                         "checkpointed local parallelism. Use 1 for legacy inline output.")
+    ap.add_argument("--num-workers", "--num_workers", dest="num_workers", type=int,
+                    default=DEFAULT_FEATURE_WORKERS,
+                    help="Parallel feature worker processes for top-level sharded builds.")
+    ap.add_argument("--shard-id", "--shard_id", dest="shard_id", type=int, default=None,
+                    help="Internal worker mode: build only this shard id.")
     args = ap.parse_args()
+    _resolve_default_out(args)
+    _validate_sharding(args)
+
+    if not args.prefetch_only and args.shard_id is None and args.num_shards > 1:
+        run_sharded_build(args)
+        return
 
     if args.prefetch_only:
         memo = EmbedMemo(Path(args.embed_memo))
@@ -643,7 +777,7 @@ def main():
     from features_v9 import TurnContext, compute_turn_features
     ctx = TurnContext(
         cat, sessions, user_cf, resolver, tag_vec, memo, msg_store,
-        branch_names=branch_names, pool_k=args.pool_k, offline=True,
+        branch_names=branch_names, pool_k=args.pool_k, offline=args.offline,
     )
 
     writer: pq.ParquetWriter | None = None
@@ -665,6 +799,8 @@ def main():
 
     with open(args.trace) as f:
         for line_no, line in enumerate(f):
+            if args.shard_id is not None and line_no % args.num_shards != args.shard_id:
+                continue
             if args.max_turns and n_turns >= args.max_turns:
                 break
             try:
@@ -690,6 +826,7 @@ def main():
     if writer:
         writer.close()
     memo.flush()
+    msg_store.flush()
     print(f"done: turns={n_turns} playable={n_playable} -> {out_path}", flush=True)
 
 

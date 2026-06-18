@@ -4,6 +4,7 @@ lm_type: dummy
 qu_type: state_ranker
 qu_kwargs:
   max_in_flight: 24
+  compile_max_in_flight: 8
   ranking:
     mode: lgbm
     model_version: lgbm_v10
@@ -34,6 +35,8 @@ qu_kwargs:
       api_base: https://api.deepinfra.com/v1/openai
       batch_size: 32
       encoding_format: float
+      disk_cache: true
+      cache_dir: ${oc.env:MCRS_EMBEDDING_CACHE_DIR,./cache/embeddings}
     qwen_8b:
       backend: litellm
       model_name: openai/Qwen/Qwen3-Embedding-8B
@@ -41,6 +44,8 @@ qu_kwargs:
       api_key: ${oc.env:VLLM_API_KEY,EMPTY}
       batch_size: 32
       encoding_format: float
+      disk_cache: true
+      cache_dir: ${oc.env:MCRS_EMBEDDING_CACHE_DIR,./cache/embeddings}
       extra_params:
         timeout: 600
     clap_text:

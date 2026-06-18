@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+import threading
 import time
 from dataclasses import dataclass, field
 from types import SimpleNamespace
@@ -26,8 +27,10 @@ from mcrs.qu_modules.compiler_v0plus_qu import (
     LiteLLMExtractor,
     V0PlusCompilerQU,
     build_v0plus_compiler_qu,
+    _content_from_litellm_response,
     session_memory_to_conversation,
 )
+from mcrs.qu_modules.compiler_v0plus import CompileResult
 from mcrs.qu_modules.fuzzy_matcher import RapidfuzzCatalogMatcher
 from tests.v0plus_fakes import DictCatalog, FakeEmbeddingClient, FakeRetriever
 
@@ -107,6 +110,28 @@ class _ConcurrencyRecordingExtractor:
                 self.in_flight -= 1
 
 
+@dataclass
+class _ConcurrencyRecordingCompiler:
+    per_call_sleep_s: float = 0.05
+    in_flight: int = 0
+    max_in_flight_observed: int = 0
+    call_count: int = 0
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def _compile(self, resolved_state, user_id=None):
+        del resolved_state, user_id
+        with self._lock:
+            self.in_flight += 1
+            self.max_in_flight_observed = max(self.max_in_flight_observed, self.in_flight)
+            self.call_count += 1
+        try:
+            time.sleep(self.per_call_sleep_s)
+            return CompileResult(ranked=["t-morphine-1"])
+        finally:
+            with self._lock:
+                self.in_flight -= 1
+
+
 _SENTINEL = object()
 
 
@@ -146,6 +171,15 @@ def _build_qu(state=_SENTINEL) -> V0PlusCompilerQU:
             "extractor": _FakeExtractor(state=extracted),
         },
     )
+
+
+def test_content_from_litellm_response_treats_empty_content_as_missing():
+    assert _content_from_litellm_response(
+        {"choices": [{"message": {"content": ""}}]}
+    ) is None
+    assert _content_from_litellm_response(
+        {"choices": [{"message": {}}]}
+    ) is None
 
 
 # ---------------------------------------------------------------------
@@ -311,6 +345,32 @@ def _build_qu_with_extractor(extractor, max_in_flight: int) -> V0PlusCompilerQU:
     return qu
 
 
+def _build_qu_with_compiler_limits(
+    extractor,
+    compiler,
+    max_in_flight: int,
+    compile_max_in_flight: int,
+) -> V0PlusCompilerQU:
+    catalog = _catalog()
+    qu = build_v0plus_compiler_qu(
+        qu_kwargs={
+            "max_in_flight": max_in_flight,
+            "compile_max_in_flight": compile_max_in_flight,
+        },
+        _overrides={
+            "catalog": catalog,
+            "matcher": RapidfuzzCatalogMatcher(catalog),
+            "encoder": FakeEmbeddingClient(vector=[0.5, 0.5, 0.5]),
+            "retriever": FakeRetriever(),
+            "extractor": extractor,
+            "compiler": compiler,
+        },
+    )
+    assert qu.max_in_flight == max_in_flight
+    assert qu.compile_max_in_flight == compile_max_in_flight
+    return qu
+
+
 def test_batch_compile_track_ids_runs_extractor_calls_concurrently():
     """N entries with 50 ms simulated latency should complete in roughly one
     'wave' when max_in_flight ≥ N — not N × 50 ms (which would mean serial)."""
@@ -346,6 +406,27 @@ def test_batch_compile_track_ids_respects_max_in_flight_cap():
     assert len(results) == 6
     assert ext.max_in_flight_observed <= 2, (
         f"semaphore was supposed to cap at 2 but {ext.max_in_flight_observed} ran together"
+    )
+
+
+def test_batch_compile_track_ids_respects_compile_max_in_flight_cap():
+    ext = _ConcurrencyRecordingExtractor(state=_state(turn_intent="x"), per_call_sleep_s=0.0)
+    compiler = _ConcurrencyRecordingCompiler(per_call_sleep_s=0.05)
+    qu = _build_qu_with_compiler_limits(
+        ext,
+        compiler,
+        max_in_flight=8,
+        compile_max_in_flight=2,
+    )
+    memories = [[{"role": "user", "content": f"q{i}"}] for i in range(6)]
+
+    results = qu.batch_compile_track_ids(memories, topk=5)
+
+    assert len(results) == 6
+    assert compiler.call_count == 6
+    assert compiler.max_in_flight_observed <= 2, (
+        "compile/retrieval fan-out should be capped separately from batch size; "
+        f"observed {compiler.max_in_flight_observed} concurrent compiles"
     )
 
 
@@ -445,6 +526,100 @@ def test_litellm_extractor_manually_stores_only_valid_responses(monkeypatch):
             {key: value for key, value in completion_kwargs[0].items() if key != "cache"},
         )
     ]
+
+
+def test_litellm_extractor_uses_cached_valid_response(monkeypatch):
+    completion_called = False
+    cache_get_kwargs = []
+    stored = []
+
+    class FakeCache:
+        def get_cache(self, **kwargs):
+            cache_get_kwargs.append(kwargs)
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": (
+                                '{"turn_intent": "more like Fugazi", '
+                                '"intent_mode": "refinement"}'
+                            )
+                        }
+                    }
+                ]
+            }
+
+        def add_cache(self, result, **kwargs):
+            stored.append((result, kwargs))
+
+    def fake_completion(**kwargs):
+        nonlocal completion_called
+        completion_called = True
+        raise AssertionError("completion should not run on a cache hit")
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(completion=fake_completion, cache=FakeCache()),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    state = extractor.extract([{"turn": 1, "role": "user", "text": "x"}], [])
+
+    assert state is not None
+    assert state.turn_intent == "more like Fugazi"
+    assert completion_called is False
+    assert stored == []
+    assert cache_get_kwargs
+    assert "cache" not in cache_get_kwargs[0]
+
+
+def test_litellm_extractor_caches_retry_success_under_primary_key(monkeypatch):
+    completion_kwargs = []
+    stored = []
+
+    class FakeCache:
+        def get_cache(self, **kwargs):
+            return None
+
+        def add_cache(self, result, **kwargs):
+            stored.append((result, kwargs))
+
+    bad_response = SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content='{"bad": '))],
+        model_dump_json=lambda: '{"bad_cached": true}',
+    )
+    good_response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(
+                    content='{"turn_intent": "more like Fugazi", "intent_mode": "refinement"}'
+                )
+            )
+        ],
+        model_dump_json=lambda: '{"good_cached": true}',
+    )
+
+    def fake_completion(**kwargs):
+        completion_kwargs.append(kwargs)
+        return bad_response if len(completion_kwargs) == 1 else good_response
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(completion=fake_completion, cache=FakeCache()),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.3)
+
+    state = extractor.extract([{"turn": 1, "role": "user", "text": "x"}], [])
+
+    assert state is not None
+    assert state.turn_intent == "more like Fugazi"
+    stored_temperatures = [kwargs["temperature"] for _, kwargs in stored]
+    assert stored_temperatures == [0.3, 0.0]
+    assert all(result == '{"good_cached": true}' for result, _ in stored)
 
 
 def test_litellm_extractor_does_not_apply_post_extraction_text_repair(monkeypatch):
@@ -688,6 +863,100 @@ def test_litellm_extractor_manually_stores_only_valid_responses_async(monkeypatc
             {key: value for key, value in completion_kwargs[0].items() if key != "cache"},
         )
     ]
+
+
+def test_litellm_extractor_uses_cached_valid_response_async(monkeypatch):
+    completion_called = False
+    cache_get_kwargs = []
+    stored = []
+
+    class FakeCache:
+        async def async_get_cache(self, **kwargs):
+            cache_get_kwargs.append(kwargs)
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": (
+                                '{"turn_intent": "more like Fugazi", '
+                                '"intent_mode": "refinement"}'
+                            )
+                        }
+                    }
+                ]
+            }
+
+        async def async_add_cache(self, result, **kwargs):
+            stored.append((result, kwargs))
+
+    async def fake_acompletion(**kwargs):
+        nonlocal completion_called
+        completion_called = True
+        raise AssertionError("acompletion should not run on a cache hit")
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(acompletion=fake_acompletion, cache=FakeCache()),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    state = asyncio.run(extractor.aextract([{"turn": 1, "role": "user", "text": "x"}], []))
+
+    assert state is not None
+    assert state.turn_intent == "more like Fugazi"
+    assert completion_called is False
+    assert stored == []
+    assert cache_get_kwargs
+    assert "cache" not in cache_get_kwargs[0]
+
+
+def test_litellm_extractor_caches_retry_success_under_primary_key_async(monkeypatch):
+    completion_kwargs = []
+    stored = []
+
+    class FakeCache:
+        async def async_get_cache(self, **kwargs):
+            return None
+
+        async def async_add_cache(self, result, **kwargs):
+            stored.append((result, kwargs))
+
+    bad_response = SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content='{"bad": '))],
+        model_dump_json=lambda: '{"bad_cached": true}',
+    )
+    good_response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(
+                    content='{"turn_intent": "more like Fugazi", "intent_mode": "refinement"}'
+                )
+            )
+        ],
+        model_dump_json=lambda: '{"good_cached": true}',
+    )
+
+    async def fake_acompletion(**kwargs):
+        completion_kwargs.append(kwargs)
+        return bad_response if len(completion_kwargs) == 1 else good_response
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(acompletion=fake_acompletion, cache=FakeCache()),
+    )
+
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.3)
+
+    state = asyncio.run(extractor.aextract([{"turn": 1, "role": "user", "text": "x"}], []))
+
+    assert state is not None
+    assert state.turn_intent == "more like Fugazi"
+    stored_temperatures = [kwargs["temperature"] for _, kwargs in stored]
+    assert stored_temperatures == [0.3, 0.0]
+    assert all(result == '{"good_cached": true}' for result, _ in stored)
 
 
 def test_litellm_extractor_no_store_prevents_async_malformed_cache_write(monkeypatch):
@@ -1169,6 +1438,38 @@ def test_litellm_encoder_forwards_cache_and_query_instruct():
     assert enc.cache == {"ttl": 86400}
     assert enc.query_instruct == instruct
     assert enc.build_request_kwargs(["state query"])["input"] == [instruct + "state query"]
+
+
+def test_litellm_encoder_uses_disk_cache_when_cache_dir_set(tmp_path, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    from mcrs.qu_modules.compiler_v0plus_qu import _build_encoder
+
+    calls = []
+
+    def fake_embedding(**kwargs):
+        calls.append(kwargs)
+        return SimpleNamespace(
+            data=[{"embedding": [float(len(text)), 11.0]} for text in kwargs["input"]]
+        )
+
+    monkeypatch.setitem(sys.modules, "litellm", SimpleNamespace(embedding=fake_embedding))
+
+    base_cfg = {
+        "backend": "litellm",
+        "model_name": "openai/Qwen/Qwen3-Embedding-8B",
+        "api_base": "https://fake/v1",
+        "encoding_format": "float",
+        "query_instruct": "Query: ",
+        "cache_dir": str(tmp_path),
+    }
+    first = _build_encoder({**base_cfg, "api_key": "secret-a"})
+    second = _build_encoder({**base_cfg, "api_key": "secret-b"})
+
+    assert first.embed_batch(["same text"]) == [[16.0, 11.0]]
+    assert second.embed_batch(["same text"]) == [[16.0, 11.0]]
+    assert [call["input"] for call in calls] == [["Query: same text"]]
 
 
 def test_openrouter_response_format_goes_in_extra_body_with_require_parameters():

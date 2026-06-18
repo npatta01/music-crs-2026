@@ -31,6 +31,9 @@ import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from catalog_utils import catalog_artist_ids  # noqa: E402
 
 
 def main():
@@ -49,9 +52,7 @@ def main():
     # resolver.rejected_artist_ids are both catalog UUIDs, so match on ids directly
     # (the catalog's artist_id/artist_name arrays are not reliably pair-aligned, so
     # a UUID->name map would mis-resolve and the downweight would never fire).
-    import lancedb
-    _cat = (lancedb.connect(args.db_uri).open_table("music_track_catalog").to_lance()
-            .to_table(columns=["track_id", "artist_id"]).to_pydict())
+    _cat = catalog_artist_ids(args.db_uri)
     artist_ids_of: dict[str, frozenset] = {   # track_id -> {artist UUIDs}
         str(tid): frozenset(str(a) for a in (aids or []))
         for tid, aids in zip(_cat["track_id"], _cat["artist_id"])}
