@@ -467,9 +467,54 @@ def main():
     ap.add_argument("--prefetch-only", action="store_true",
                     help="Pass 1: collect every unique query/listener_goal string "
                          "from the trace, embed in large batches, save memo, exit.")
+    ap.add_argument("--prefetch-msg-store", action="store_true",
+                    help="Pass 1b: embed every per-turn message + 3-turn-context "
+                         "string into the --msg-store NpzEmbedStore, then exit. The "
+                         "offline counterpart to the online reranker's live fill — "
+                         "REQUIRED before an --offline build, else msg_*/ctx_* cosines "
+                         "are 100%% NaN. Needs DEEPINFRA_API_KEY.")
+    ap.add_argument("--sessions-dataset", default=None,
+                    help="HF dataset for --prefetch-msg-store (default: devset).")
+    ap.add_argument("--sessions-split", default="test",
+                    help="HF split for --prefetch-msg-store (default: test).")
     ap.add_argument("--offline", action="store_true",
                     help="Pass 2: never call the embedding API; use memo only.")
     args = ap.parse_args()
+
+    if args.prefetch_msg_store:
+        # Strings mirror features_v9.compute_turn_features exactly:
+        #   msg  = user_text at turn tn
+        #   ctx3 = user_text at turns tn-2, tn-1, tn (space-joined, stripped)
+        # Embedding a per-session/turn superset of the served turns is harmless
+        # (build --offline only looks the strings up by hash).
+        if not os.environ.get("DEEPINFRA_API_KEY"):
+            raise SystemExit("DEEPINFRA_API_KEY required to embed message/context strings")
+        if args.sessions_dataset:
+            sessions = load_sessions(args.sessions_dataset, args.sessions_split)
+        else:
+            sessions = load_sessions(split=args.sessions_split)
+        texts: set[str] = set()
+        for s in sessions.values():
+            utb = s.get("user_text_by_turn", {})
+            for tn in sorted(utb):
+                msg = utb.get(tn, "")
+                ctx3 = " ".join(utb.get(k, "") for k in (tn - 2, tn - 1, tn)).strip()
+                for t in (msg, ctx3):
+                    if t:
+                        texts.add(t)
+        ordered = sorted(texts)
+        store = NpzEmbedStore(args.msg_store)
+        present = sum(1 for t in ordered if store._sha(t) in store.index)
+        print(f"msg-store prefetch: {len(ordered)} unique strings; "
+              f"{present} already present, {len(ordered) - present} to embed -> "
+              f"{args.msg_store}", flush=True)
+        for start in range(0, len(ordered), 2048):
+            store.get_many(ordered[start:start + 2048], offline=False)
+            store.flush()
+            print(f"  {min(start + 2048, len(ordered))}/{len(ordered)}", flush=True)
+        store.flush()
+        print("msg-store prefetch done", flush=True)
+        return
 
     if args.prefetch_only:
         memo = EmbedMemo(Path(args.embed_memo))
