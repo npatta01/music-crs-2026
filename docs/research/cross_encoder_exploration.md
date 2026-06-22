@@ -307,6 +307,18 @@ required before trusting a quantized build (bf16 is already verified lossless).
 
 ## 9. How to reproduce
 
+**Committed artifacts (verify the findings *without* a GPU).** The small result files are checked in
+under [`cross_encoder_artifacts/`](cross_encoder_artifacts/) (see its README). The key one is
+`xenc_phase3_4b_v2_rawscores.jsonl` (per-turn cross-encoder scores) — it regenerates the entire §5
+net table in seconds:
+
+```bash
+python scripts/rerank/sweep_phase3_offline.py \
+    docs/research/cross_encoder_artifacts/xenc_phase3_4b_v2_rawscores.jsonl
+```
+
+To **regenerate the scores from scratch** (needs the 4B model + the inputs below):
+
 **Environment.** Run from the **main checkout** (the worktree lacks the data artifacts). Python
 3.10/3.12 venv with `torch` (cu130 build on the GB10 — see `docs/` GB10 notes), `transformers`,
 `lancedb`, `datasets`. `Qwen/Qwen3-Reranker-0.6B` is small; 4B/8B download ~8/16 GB. `.env` needs

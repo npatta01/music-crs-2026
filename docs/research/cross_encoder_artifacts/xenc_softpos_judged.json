@@ -1,0 +1,1914 @@
+{
+ "config": {
+  "inp": "exp/analysis/retrieval_exploration/xenc_softpos_candidates.jsonl",
+  "model": "openrouter/deepseek/deepseek-chat",
+  "limit": 120,
+  "max_per_turn": 3,
+  "controls": true,
+  "out": "exp/analysis/retrieval_exploration/xenc_softpos_judged.json"
+ },
+ "flagged_valid_pct": 33.50515463917526,
+ "flagged_dist": {
+  "BAD": 91,
+  "GOOD": 65,
+  "WEAK": 38
+ },
+ "gt_valid_pct": 44.44444444444444,
+ "gt_dist": {
+  "WEAK": 21,
+  "GOOD": 40,
+  "BAD": 29
+ },
+ "random_valid_pct": 2.2222222222222223,
+ "random_dist": {
+  "BAD": 87,
+  "GOOD": 2,
+  "WEAK": 1
+ },
+ "judged": [
+  {
+   "sid": "73fb03c4-f8e4-49ca-8ed4-002d9af8f786",
+   "tn": 5,
+   "flagged": [
+    {
+     "tid": "d5ac3437-af25-450c-aca6-d7dffb39f3cf",
+     "artist": "The Black Keys",
+     "ce_score": 0.0029125213623046875,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "e876c3ec-0aa6-43ee-bbc3-2bb4dbad654d",
+   "tn": 3,
+   "flagged": [
+    {
+     "tid": "3350ba48-0ffd-4c1d-b760-c50174e0c37f",
+     "artist": "Against The Current",
+     "ce_score": 0.006145477294921875,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "487a4836-82ca-4421-ba61-19ab1febee7d",
+   "tn": 3,
+   "flagged": [
+    {
+     "tid": "0f708ee5-1f72-4769-8a8e-02a5b0436dea",
+     "artist": "Beyonc\u00e9",
+     "ce_score": 0.978515625,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "540d5337-b3e5-4626-b664-c3c7003f3554",
+   "tn": 7,
+   "flagged": [
+    {
+     "tid": "ac517097-badf-4e56-836d-eea23ed53eb6",
+     "artist": "Solar Fields",
+     "ce_score": 0.0330810546875,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "544af9be-b322-4018-afcd-649d9079344f",
+     "artist": "Thrice",
+     "ce_score": 0.0007495880126953125,
+     "judge": "BAD"
+    },
+    {
+     "tid": "997643ff-147c-49ca-b52a-a393419e019c",
+     "artist": "Apparat",
+     "ce_score": 0.0011968612670898438,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "69484eb3-53f7-4835-b51f-e7f775137230",
+   "tn": 7,
+   "flagged": [
+    {
+     "tid": "feb9145f-c3d7-4f5c-803b-e3951715b68d",
+     "artist": "Nest",
+     "ce_score": 0.63720703125,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "92171d95-516b-4b8a-8be0-17b4d3ad8422",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "d86e9450-0d44-43df-afe9-9fbc399395d3",
+     "artist": "Good Shoes",
+     "ce_score": 0.00572967529296875,
+     "judge": "BAD"
+    },
+    {
+     "tid": "166b3ab5-99fc-41c4-887e-f7544e6cd1f4",
+     "artist": "Modest Mouse",
+     "ce_score": 0.08758544921875,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "35e5a98a-67d2-431e-9191-5d41b35566ab",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "c6f7ab79-f4e4-4732-b3bc-abf7f867632f",
+     "artist": "Meghan Trainor",
+     "ce_score": 0.0863037109375,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "69cfe485-73b8-4520-8d2c-aca6814b9cf0",
+     "artist": "P!nk",
+     "ce_score": 0.161376953125,
+     "judge": "BAD"
+    },
+    {
+     "tid": "dc7422ac-0bbc-457d-aba3-4880918e2cc2",
+     "artist": "Miley Cyrus",
+     "ce_score": 0.1339111328125,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "3e826d0d-5f2d-4c3a-a6a8-2f9d4a95ad4e",
+   "tn": 3,
+   "flagged": [
+    {
+     "tid": "80b664cf-c95c-4d6d-85e5-5812688575e8",
+     "artist": "Joni Mitchell",
+     "ce_score": 0.0011606216430664062,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "575701d6-e873-4dfc-94ae-3b32d1c541fc",
+     "artist": "Battleme",
+     "ce_score": 0.0007381439208984375,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "062e4d66-af8e-4c70-b790-60018360a319",
+     "artist": "Alesana",
+     "ce_score": 0.0021991729736328125,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "091fe4b5-6815-40dd-8abe-c1fe16f258b3",
+   "tn": 2,
+   "flagged": [
+    {
+     "tid": "d1d4f5c2-b750-489e-bc08-4ae6dab70f6d",
+     "artist": "Green Day",
+     "ce_score": 0.9365234375,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "91452b76-e040-45a3-9380-8c130887f296",
+     "artist": "Soundgarden",
+     "ce_score": 0.287841796875,
+     "judge": "BAD"
+    },
+    {
+     "tid": "ebe249c2-6e3c-4c8e-b84e-e66fa7add2a5",
+     "artist": "Harvey Danger",
+     "ce_score": 0.2393798828125,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "596f8cda-ee0f-4f6f-96a8-24b9b33058a3",
+   "tn": 6,
+   "flagged": [
+    {
+     "tid": "734fa9fd-317b-4c3f-8ca8-b4343ba7dfe7",
+     "artist": "CNCO",
+     "ce_score": 0.0029125213623046875,
+     "judge": "BAD"
+    },
+    {
+     "tid": "062bdba7-3515-4aad-80dc-aad5cb91a404",
+     "artist": "Anitta",
+     "ce_score": 0.958984375,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "aac9c10c-8a93-4ea3-b897-a4b947fba4eb",
+     "artist": "Jorge Drexler",
+     "ce_score": 0.0222930908203125,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "32517391-89de-4eaa-8658-3307d6e794cc",
+   "tn": 3,
+   "flagged": [
+    {
+     "tid": "34c582f1-44ca-44a0-be1e-ae8111047344",
+     "artist": "Cream",
+     "ce_score": 0.00017535686492919922,
+     "judge": "BAD"
+    },
+    {
+     "tid": "a86e6b11-7d00-48ca-997a-0dad29725af7",
+     "artist": "Jimi Hendrix",
+     "ce_score": 0.0029354095458984375,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "0dc1c2fc-5ebb-4299-bf11-670d4e02b785",
+     "artist": "Jimi Hendrix",
+     "ce_score": 0.010009765625,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "c28d90f8-5fb9-4b92-87ad-6596a9e923e4",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "f3f9eed0-2234-4e30-a2d3-c7ed174989fd",
+     "artist": "Destiny's Child",
+     "ce_score": 0.017181396484375,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "9449b88b-68f5-48e1-a059-aa6d7996e60b",
+     "artist": "Kelly Rowland",
+     "ce_score": 0.027801513671875,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "3daba6d8-8622-488e-aa1c-2e52a5cf9b85",
+   "tn": 5,
+   "flagged": [
+    {
+     "tid": "c6f23b27-dec9-44fb-953b-1109de52eb27",
+     "artist": "Avenged Sevenfold",
+     "ce_score": 0.004039764404296875,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "bdae114b-4d1c-43ca-98b2-557366769ceb",
+     "artist": "Deftones",
+     "ce_score": 0.0027141571044921875,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "0183702d-7293-4c56-8ce6-eb0d0fe543e9",
+   "tn": 3,
+   "flagged": [
+    {
+     "tid": "7345835f-3fb0-4eb1-bd58-35d5af200553",
+     "artist": "Nightmares On Wax",
+     "ce_score": 0.5390625,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "c8c3accd-2992-49b1-a52b-0ff76ad86c86",
+     "artist": "Blockhead",
+     "ce_score": 0.955078125,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "fdd2573f-4fd4-4dfe-8579-0693e85e7114",
+     "artist": "Blockhead",
+     "ce_score": 0.172119140625,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "1628dbb3-0f8b-44b1-8be9-1f5a5af13850",
+   "tn": 6,
+   "flagged": [
+    {
+     "tid": "c9f49a19-ec32-472f-ad91-0eb6d8d1bdfc",
+     "artist": "Chet Faker",
+     "ce_score": 0.0186920166015625,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "bafea83f-4b56-4f41-b297-245f1f349822",
+     "artist": "H-Town",
+     "ce_score": 0.006488800048828125,
+     "judge": "BAD"
+    },
+    {
+     "tid": "35379810-ad75-4f57-8c23-43efe8842564",
+     "artist": "Raphael Saadiq",
+     "ce_score": 0.00586700439453125,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "39fddf66-b268-4b61-b174-f523386b9003",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "63b4a973-cca0-46bc-bc4c-1808a341d452",
+     "artist": "Nico",
+     "ce_score": 0.1329345703125,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "f1b72cf8-e356-4844-b404-4cdcfdc09c3d",
+   "tn": 5,
+   "flagged": [
+    {
+     "tid": "e02283bd-d179-432e-a744-955b5e3268e1",
+     "artist": "Teddy Riley",
+     "ce_score": 7.486343383789062e-05,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "9b6865d9-875c-4ca1-9e2a-a6b94c98f31c",
+   "tn": 7,
+   "flagged": [
+    {
+     "tid": "74a018d8-8a96-469f-8f28-20022c09e3bb",
+     "artist": "Alesana",
+     "ce_score": 0.57763671875,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "dcb2effb-8a06-4979-b18e-ae9b8aec21cc",
+     "artist": "The Devil Wears Prada",
+     "ce_score": 0.30078125,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "14955d3a-d1d9-4257-b845-19f0073a1cd2",
+     "artist": "letlive.",
+     "ce_score": 0.043365478515625,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "4f738d05-4941-4502-8eb9-1221cf7a2be2",
+   "tn": 4,
+   "flagged": [
+    {
+     "tid": "bf167691-8d18-4aa6-8d45-dc2bb25c4e46",
+     "artist": "Glee Cast",
+     "ce_score": 0.0036792755126953125,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "3a9d18b2-d889-4e19-92bf-d58a50ad91a1",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "ed6e6f3b-5a96-4196-8f3b-49979d380fe3",
+     "artist": "Boyz II Men",
+     "ce_score": 0.01056671142578125,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "db6e08f9-769f-41b8-8461-0e4086a9c600",
+     "artist": "Mariah Carey",
+     "ce_score": 0.08331298828125,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "6e7de984-7354-4ae0-84a6-90bc41413721",
+   "tn": 2,
+   "flagged": [
+    {
+     "tid": "c77fa9ac-4db2-4d3c-8681-5fb09b9b49cb",
+     "artist": "Will Smith",
+     "ce_score": 0.92919921875,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "a052b5a7-8c64-4310-bebd-691b6494e758",
+     "artist": "OK Go",
+     "ce_score": 0.32080078125,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "0446e2c0-0db7-4951-a53e-a05336283f7c",
+     "artist": "Colbie Caillat",
+     "ce_score": 0.01450347900390625,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "520e24e2-7383-4f4e-ac70-a1225110c674",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "a7a8b4ef-3c5d-4e8e-98e1-5fb1f38f5b4c",
+     "artist": "Alice In Chains",
+     "ce_score": 0.5234375,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "e45e5ae1-9daf-4152-b87e-a61275a2fc28",
+     "artist": "Pearl Jam",
+     "ce_score": 0.0222930908203125,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "ae3a34d1-e8bb-4026-8dea-be05629d42cc",
+     "artist": "Soundgarden",
+     "ce_score": 0.002471923828125,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "4c30230f-a60c-466d-bf77-162bb23edb5a",
+   "tn": 2,
+   "flagged": [
+    {
+     "tid": "0720c5d8-e539-4156-906d-9a296523be99",
+     "artist": "Young the Giant",
+     "ce_score": 0.93359375,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "b166d2e8-01bf-4fb3-a593-1fbee540364c",
+   "tn": 2,
+   "flagged": [
+    {
+     "tid": "bed45292-5905-41d4-a03a-c1f81c07ce0b",
+     "artist": "Emerson, Lake & Palmer",
+     "ce_score": 0.0792236328125,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "bfe307b5-2416-43d2-889a-ae9e9c2356d3",
+     "artist": "The Rolling Stones",
+     "ce_score": 0.00582122802734375,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "3461a78c-973b-43d5-98a1-a13507b69156",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "84efba43-870e-450d-9799-04517230347d",
+     "artist": "The Cars",
+     "ce_score": 0.01024627685546875,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "fb5ea236-6655-44f6-b763-52e0f0bb5fc9",
+   "tn": 7,
+   "flagged": [
+    {
+     "tid": "64ba1ffd-664f-49b3-8010-ee4f8d15303e",
+     "artist": "Tyler Bates",
+     "ce_score": 0.0006265640258789062,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "61e23113-da9a-4147-910d-72e19f1b9620",
+   "tn": 5,
+   "flagged": [
+    {
+     "tid": "4cf9cfa1-ef4f-4d76-b436-0d0329e5933f",
+     "artist": "Timber Timbre",
+     "ce_score": 0.0027141571044921875,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "e344c7e9-535a-4b75-832f-3ba9e30c4b42",
+   "tn": 5,
+   "flagged": [
+    {
+     "tid": "d0ab6a2c-bcef-4cc3-8fca-e2ea87aa932a",
+     "artist": "Lacuna Coil",
+     "ce_score": 0.00787353515625,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "fbe43843-c65c-4a5d-938a-24c61d25a18e",
+   "tn": 4,
+   "flagged": [
+    {
+     "tid": "da1815c8-0214-41e0-98e6-75300482bf59",
+     "artist": "Avril Lavigne",
+     "ce_score": 0.044677734375,
+     "judge": "BAD"
+    },
+    {
+     "tid": "58aeb808-b423-4a2d-b7ee-2398c797af33",
+     "artist": "Carrie Underwood",
+     "ce_score": 0.307373046875,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "b76f4b5c-2a5d-4e05-ac37-a670e4ea7508",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "2ae6fb93-f7ca-4bbb-a829-da2c6effc88a",
+     "artist": "Lana Del Rey",
+     "ce_score": 0.037322998046875,
+     "judge": "BAD"
+    },
+    {
+     "tid": "842ec5ca-b430-4230-ac85-b4ab143f09ef",
+     "artist": "The Submarines",
+     "ce_score": 0.0038852691650390625,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "c08c2155-52a1-4f69-b5ff-1703cf7af45e",
+     "artist": "White Sea",
+     "ce_score": 0.0029811859130859375,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "fb7dd960-bc15-4bdc-96ba-8ec17209e855",
+   "tn": 2,
+   "flagged": [
+    {
+     "tid": "084346d0-d4bb-4c79-9522-b57d787d722a",
+     "artist": "Tropic of Cancer",
+     "ce_score": 0.484375,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "2ba29559-0a25-47f9-95d1-df67a7345af5",
+     "artist": "Amon Tobin",
+     "ce_score": 0.0235137939453125,
+     "judge": "BAD"
+    },
+    {
+     "tid": "27098259-88b0-49c9-aadb-a77e776eee0c",
+     "artist": "Enya",
+     "ce_score": 0.437744140625,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "GOOD"
+  },
+  {
+   "sid": "8a9bc838-955b-4a49-b084-4c12b95c9dc7",
+   "tn": 2,
+   "flagged": [
+    {
+     "tid": "789e68c7-5cb5-45c6-b5ad-fe3013693f05",
+     "artist": "Dave Matthews Band",
+     "ce_score": 0.00038909912109375,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "647be8a1-a3bf-4b78-b634-2e4ede371567",
+     "artist": "Tori Kelly",
+     "ce_score": 0.004230499267578125,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "6a3fde5b-a630-4536-b499-549c8b651287",
+   "tn": 2,
+   "flagged": [
+    {
+     "tid": "842ec5ca-b430-4230-ac85-b4ab143f09ef",
+     "artist": "The Submarines",
+     "ce_score": 0.82421875,
+     "judge": "BAD"
+    },
+    {
+     "tid": "a51919fb-08f5-4c1e-b2c8-ce1d9f28ba14",
+     "artist": "Janelle Mon\u00e1e",
+     "ce_score": 0.01507568359375,
+     "judge": "BAD"
+    },
+    {
+     "tid": "3c4c1edc-493c-4195-92d6-d4ac6cd27e30",
+     "artist": "Taylor Swift",
+     "ce_score": 0.010009765625,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "279c3ca2-2f6b-4bf1-8afd-c635c6d8bc0d",
+   "tn": 2,
+   "flagged": [
+    {
+     "tid": "554bd4b3-b5a9-43a2-bbbd-1f84b44d3a26",
+     "artist": "Tracy Byrd",
+     "ce_score": 0.015899658203125,
+     "judge": "BAD"
+    },
+    {
+     "tid": "43255bed-3320-44fe-91a7-a70a82fcddad",
+     "artist": "Lady Antebellum",
+     "ce_score": 0.055419921875,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "88689ad2-f514-48d6-b1dd-d86f5093df46",
+     "artist": "Tim McGraw",
+     "ce_score": 0.02386474609375,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "6a3fc949-83c0-48c2-8696-bc8a82bfceb6",
+   "tn": 4,
+   "flagged": [
+    {
+     "tid": "935aa0b2-0a3e-4367-bb8f-8a9411883bed",
+     "artist": "Hollywood Undead",
+     "ce_score": 0.00885009765625,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "3fcd8603-1365-4591-8674-0a64a2cdf80a",
+     "artist": "",
+     "ce_score": 0.004573822021484375,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "8c90ee54-6c42-4400-88fd-aafa57bba5b6",
+     "artist": "Gang Starr",
+     "ce_score": 0.80078125,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "8a955756-fa23-4211-a1e7-709befdec344",
+   "tn": 5,
+   "flagged": [
+    {
+     "tid": "c4c27ed9-9961-4329-9ee5-30b1f193b303",
+     "artist": "SZA",
+     "ce_score": 0.33447265625,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "5ca2b865-c42a-4dfb-92f6-23d8d7121062",
+   "tn": 5,
+   "flagged": [
+    {
+     "tid": "7c02fd53-52d8-4971-bf42-59a0035e3a89",
+     "artist": "Jerry Folk",
+     "ce_score": 0.0012159347534179688,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "3d3228b0-ba6f-4cfb-8e72-127869413b6d",
+     "artist": "dvsn",
+     "ce_score": 0.01116180419921875,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "ed6b3a71-2c5a-420b-b424-b1e72ed5a4cc",
+     "artist": "Wayman Tisdale",
+     "ce_score": 0.0010814666748046875,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "a7a9314c-ad28-45ec-aa4d-25a4137517fe",
+   "tn": 4,
+   "flagged": [
+    {
+     "tid": "94814396-f921-42ca-92e9-853b046b7eb0",
+     "artist": "Paramore",
+     "ce_score": 0.0025310516357421875,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "fc488e9b-5e52-47e0-94a9-bb5714702648",
+     "artist": "The Phantoms",
+     "ce_score": 0.0005359649658203125,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "a8745e6a-b46e-4944-9958-7dcc9b24f5bf",
+     "artist": "Aimee Mann",
+     "ce_score": 0.0062408447265625,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "WEAK"
+  },
+  {
+   "sid": "8c3b8732-f28e-40bb-ac12-36e91973ae8d",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "024efc99-ba8f-486d-8e5a-fcca663d2333",
+     "artist": "Memory Tapes",
+     "ce_score": 0.0115966796875,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "66f4703b-f95a-49e7-bf58-3fd759e6d7f7",
+     "artist": "Los Campesinos!",
+     "ce_score": 0.00034880638122558594,
+     "judge": "BAD"
+    },
+    {
+     "tid": "94f43c28-9c54-4174-9b3c-8aba702fd20c",
+     "artist": "Broken Bells",
+     "ce_score": 0.0020503997802734375,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "f81d3f3b-b360-44dc-9589-fadec5024095",
+   "tn": 7,
+   "flagged": [
+    {
+     "tid": "0e191dd5-23c7-4321-80fc-3164ccf834f1",
+     "artist": "ZAYN",
+     "ce_score": 0.0010080337524414062,
+     "judge": "BAD"
+    },
+    {
+     "tid": "ea768909-b3fd-4bc1-9f2c-fdf1a7ecd27e",
+     "artist": "Ed Sheeran",
+     "ce_score": 0.54296875,
+     "judge": "BAD"
+    },
+    {
+     "tid": "5802c3d3-598b-4ea9-96ba-3b2b77b1adff",
+     "artist": "Anne-Marie",
+     "ce_score": 0.0006613731384277344,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "558939e7-9cd4-450f-bc24-41e0129b31d5",
+   "tn": 2,
+   "flagged": [
+    {
+     "tid": "d33567ee-d46c-4211-babb-a62c142c9796",
+     "artist": "Todd Rundgren",
+     "ce_score": 0.036224365234375,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "6b39cd68-9d19-47fd-9953-1a364d9377be",
+     "artist": "Glee Cast",
+     "ce_score": 0.040252685546875,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "77d24e61-36a1-43e3-8c79-7f28de4be204",
+     "artist": "Nine Inch Nails",
+     "ce_score": 0.05792236328125,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "92ce4667-90a8-49b2-b555-e3ab0e0e03c1",
+   "tn": 3,
+   "flagged": [
+    {
+     "tid": "bd31ba7c-3d10-4d1b-b290-9b8d1f793a67",
+     "artist": "Raul Seixas",
+     "ce_score": 0.00359344482421875,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "066afbe8-538a-47cc-ad6a-19612a8849dc",
+     "artist": "Vanessa Da Mata",
+     "ce_score": 0.0003859996795654297,
+     "judge": "BAD"
+    },
+    {
+     "tid": "d3970060-84b8-49cc-98f4-9b8459091019",
+     "artist": "Chico Buarque",
+     "ce_score": 0.045684814453125,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "698e0f0c-401f-4b29-a1a8-cb1998732bd0",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "50e5dadf-706f-4fa0-85db-15c1c6040410",
+     "artist": "Edward Ross",
+     "ce_score": 0.10089111328125,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "9be2d61a-a33e-451b-9a88-9110c9b4df52",
+   "tn": 6,
+   "flagged": [
+    {
+     "tid": "9fffa605-fb29-4e63-8eb5-f70710da72cb",
+     "artist": "Boards of Canada",
+     "ce_score": 0.018829345703125,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "0860ffd0-9771-4684-b782-db12010711d9",
+     "artist": "Brian Eno",
+     "ce_score": 0.69921875,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "74644fcd-d384-4daf-b9f8-7da4e99e8b6b",
+     "artist": "Hot Chip",
+     "ce_score": 0.01142120361328125,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "7726620c-c7d6-4d7c-b4e0-25d4b8bd9e29",
+   "tn": 4,
+   "flagged": [
+    {
+     "tid": "5dfa5215-4579-4345-bbee-f5c6e5bd1901",
+     "artist": "Donell Jones",
+     "ce_score": 0.0007319450378417969,
+     "judge": "BAD"
+    },
+    {
+     "tid": "b0838106-4696-42cd-be87-76e55a868060",
+     "artist": "Cake",
+     "ce_score": 0.0009112358093261719,
+     "judge": "BAD"
+    },
+    {
+     "tid": "ce62c72f-a7ca-4f5c-83f1-b277fe057bbe",
+     "artist": "Lykke Li",
+     "ce_score": 0.0002982616424560547,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "4e35ec27-1378-4680-8e37-95981671ee29",
+   "tn": 4,
+   "flagged": [
+    {
+     "tid": "55439d10-0fd2-4366-86d8-4b502c2588b6",
+     "artist": "Buckethead",
+     "ce_score": 0.007404327392578125,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "fb99c5f4-cdbb-4369-9b50-883cf77609d7",
+   "tn": 7,
+   "flagged": [
+    {
+     "tid": "aab43e9b-1683-4842-98f6-1fe608c453eb",
+     "artist": "Blur",
+     "ce_score": 0.030670166015625,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "a2ffe132-c6d6-4a19-87ee-115140a6089d",
+   "tn": 6,
+   "flagged": [
+    {
+     "tid": "e6fe9f6c-c379-4c73-8be3-ef27a7e00e3e",
+     "artist": "Coldplay",
+     "ce_score": 0.0325927734375,
+     "judge": "BAD"
+    },
+    {
+     "tid": "503743e1-336a-43b8-8a36-feae96eb4ba7",
+     "artist": "Heart",
+     "ce_score": 0.0001360177993774414,
+     "judge": "BAD"
+    },
+    {
+     "tid": "bcc11dcf-a45e-47f9-97db-f2dbeb32a268",
+     "artist": "Stone Sour",
+     "ce_score": 0.0005235671997070312,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "ac197589-4d04-4a4a-bf36-76ba0eb24e27",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "3f497498-8783-42ff-ae9e-2adafdfc804c",
+     "artist": "Britney Spears",
+     "ce_score": 0.008514404296875,
+     "judge": "BAD"
+    },
+    {
+     "tid": "eae46469-483b-4219-bbde-1c159c165353",
+     "artist": "Britney Spears",
+     "ce_score": 0.00020825862884521484,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "834eca5b-1ee1-48ff-bf95-48960272be1f",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "3145a872-ab26-46bc-a879-1166ec1ad458",
+     "artist": "Tim Hecker",
+     "ce_score": 0.0004477500915527344,
+     "judge": "BAD"
+    },
+    {
+     "tid": "8c821a96-572f-4230-9fd0-1ed2f7741630",
+     "artist": "Electric Light Orchestra",
+     "ce_score": 0.0005359649658203125,
+     "judge": "BAD"
+    },
+    {
+     "tid": "d87c2143-620e-47ae-b462-69f456ca6d78",
+     "artist": "Tropic of Cancer",
+     "ce_score": 0.0012445449829101562,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "53929d5e-a0cc-4991-a9a6-00bb5558b092",
+   "tn": 2,
+   "flagged": [
+    {
+     "tid": "e071b62e-ac47-4024-86a4-01117082726a",
+     "artist": "Sam Cooke",
+     "ce_score": 0.035675048828125,
+     "judge": "BAD"
+    },
+    {
+     "tid": "bfe13149-7fff-4bc3-933c-797e94877972",
+     "artist": "The Drifters",
+     "ce_score": 0.0036220550537109375,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "1348ee59-ac0e-4a36-8804-fb809ef9c976",
+   "tn": 5,
+   "flagged": [
+    {
+     "tid": "0860ffd0-9771-4684-b782-db12010711d9",
+     "artist": "Brian Eno",
+     "ce_score": 0.0009546279907226562,
+     "judge": "BAD"
+    },
+    {
+     "tid": "183afa28-9fd1-4a3c-95dc-80fa9f4192dd",
+     "artist": "The Knife",
+     "ce_score": 0.810546875,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "418dbe10-719d-479c-acfc-ea203ef7b048",
+   "tn": 6,
+   "flagged": [
+    {
+     "tid": "7eefb2ac-276f-45ed-bb3f-ff7ecd5bcddd",
+     "artist": "Sly & The Family Stone",
+     "ce_score": 0.00070953369140625,
+     "judge": "BAD"
+    },
+    {
+     "tid": "a6986d17-5cbd-4b35-882e-47917b1260b7",
+     "artist": "50 Cent",
+     "ce_score": 0.0015249252319335938,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "66440953-b92c-475c-a419-5ed22807c7ef",
+   "tn": 4,
+   "flagged": [
+    {
+     "tid": "b92371d2-d390-46ad-8302-c5f8715be61f",
+     "artist": "Buckethead",
+     "ce_score": 0.027374267578125,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "999c9339-fd4e-4ef0-9620-e766e42ffe3f",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "70db19cd-4efe-44ec-8231-777be1822771",
+     "artist": "Jeremy Soule",
+     "ce_score": 0.9912109375,
+     "judge": "BAD"
+    },
+    {
+     "tid": "82e754f0-0f26-419f-a8cf-a927b9f05b52",
+     "artist": "Jeremy Soule",
+     "ce_score": 0.99267578125,
+     "judge": "BAD"
+    },
+    {
+     "tid": "ec1b421b-d76b-471e-8b28-2e200fefc3a3",
+     "artist": "Jeremy Soule",
+     "ce_score": 0.9697265625,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "b2082c9e-6159-4235-97f1-e9d51a0584b3",
+   "tn": 6,
+   "flagged": [
+    {
+     "tid": "506576d6-c330-451f-a214-0c6cae69a1e3",
+     "artist": "Elefant",
+     "ce_score": 0.0007734298706054688,
+     "judge": "BAD"
+    },
+    {
+     "tid": "bdc3df31-4ff0-448b-aa07-a2f6d284a6de",
+     "artist": "The Exciters",
+     "ce_score": 0.00070953369140625,
+     "judge": "BAD"
+    },
+    {
+     "tid": "e02283bd-d179-432e-a744-955b5e3268e1",
+     "artist": "Teddy Riley",
+     "ce_score": 0.0021820068359375,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "d30874b0-e9a6-42a6-b616-3babf9b47af3",
+   "tn": 7,
+   "flagged": [
+    {
+     "tid": "e49382e1-bd47-4788-b3d5-00ad968a526a",
+     "artist": "Jeff Buckley",
+     "ce_score": 0.005344390869140625,
+     "judge": "BAD"
+    },
+    {
+     "tid": "a22d9be3-0d12-450e-82e9-8607ea6cec89",
+     "artist": "Richard Cheese",
+     "ce_score": 0.005344390869140625,
+     "judge": "BAD"
+    },
+    {
+     "tid": "a15a1f52-dc28-47de-843e-208d36eca7f2",
+     "artist": "Jack White",
+     "ce_score": 0.006145477294921875,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "c5e5de97-c154-407d-bdd1-b48475757fe0",
+   "tn": 3,
+   "flagged": [
+    {
+     "tid": "9e9095f6-a32e-4180-84f3-8ce36a980153",
+     "artist": "Warren G",
+     "ce_score": 0.055816650390625,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "c307bc16-b01f-4388-bef7-97ff809ae4ea",
+   "tn": 6,
+   "flagged": [
+    {
+     "tid": "5b723c76-170a-4d43-86f3-4d219bde4d0b",
+     "artist": "OutKast",
+     "ce_score": 0.0006985664367675781,
+     "judge": "BAD"
+    },
+    {
+     "tid": "7a6511c6-3373-45ea-a82a-b11cc75cb567",
+     "artist": "Fred Astaire",
+     "ce_score": 0.0006461143493652344,
+     "judge": "BAD"
+    },
+    {
+     "tid": "14596105-eefc-4d4c-85e4-f5f326209efb",
+     "artist": "Bonobo",
+     "ce_score": 0.024993896484375,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "0a311b6a-178c-4ec8-b310-8eb4fa440674",
+   "tn": 6,
+   "flagged": [
+    {
+     "tid": "a9078462-f578-470d-ab1d-1579031a3578",
+     "artist": "Rancid",
+     "ce_score": 0.00206756591796875,
+     "judge": "BAD"
+    },
+    {
+     "tid": "9010d5a7-1cb9-434d-bcb5-9bf0cffdd326",
+     "artist": "Hillsong Worship",
+     "ce_score": 0.0006823539733886719,
+     "judge": "BAD"
+    },
+    {
+     "tid": "7c191790-9399-4eac-8c1b-7b2848bb4fe3",
+     "artist": "Arch Enemy",
+     "ce_score": 0.1519775390625,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "64fe44db-6633-4409-85ab-cb4a5aa4e0ce",
+   "tn": 2,
+   "flagged": [
+    {
+     "tid": "aab43e9b-1683-4842-98f6-1fe608c453eb",
+     "artist": "Blur",
+     "ce_score": 0.0526123046875,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "1ba6e51d-1808-4bbe-bfe9-56c7917bf9ae",
+     "artist": "Beck",
+     "ce_score": 0.0271759033203125,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "79fc5dd1-5109-4064-953b-f69fb4988e25",
+     "artist": "Blur",
+     "ce_score": 0.035400390625,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "35634882-e4cd-468b-a04b-da710492f14e",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "c9b07aef-b18a-476c-bb84-35773eb51f34",
+     "artist": "France Gall",
+     "ce_score": 0.00885009765625,
+     "judge": "BAD"
+    },
+    {
+     "tid": "640cbcfa-4537-4f4e-8a5d-1a030bf4405f",
+     "artist": "Duran Duran",
+     "ce_score": 0.0003769397735595703,
+     "judge": "BAD"
+    },
+    {
+     "tid": "e5b17f78-0d87-4827-a965-c5483abc069e",
+     "artist": "Rick J. Jordan",
+     "ce_score": 0.00127410888671875,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "5eda1f9a-625a-4b74-8739-51ad6513ba31",
+   "tn": 3,
+   "flagged": [
+    {
+     "tid": "bdfa8b31-b139-4dba-badf-a43b69ac0e86",
+     "artist": "Gang Starr",
+     "ce_score": 0.026763916015625,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "d51a0182-eb38-45f1-a65c-b22030ff0732",
+     "artist": "Cypress Hill",
+     "ce_score": 0.1766357421875,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "65a056fc-1b50-4df6-b797-b095ad77ac58",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "73f27ec5-efbf-4681-9b17-6da53a19ff1e",
+     "artist": "Sia",
+     "ce_score": 0.0226287841796875,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "7ced0aa6-40c6-433a-9d49-866abd19e4cc",
+     "artist": "LCD Soundsystem",
+     "ce_score": 0.0006461143493652344,
+     "judge": "BAD"
+    },
+    {
+     "tid": "454fff6a-2eca-422d-9ed1-9085ca07f85e",
+     "artist": "Sara Bareilles",
+     "ce_score": 0.0169219970703125,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "7193618f-269a-4782-ad84-cf5d6228ff85",
+   "tn": 3,
+   "flagged": [
+    {
+     "tid": "b880af20-3574-4dcd-a4f8-379eb3ff923b",
+     "artist": "Tim Hecker",
+     "ce_score": 0.1490478515625,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "5e0becae-182b-4921-97b6-821591d878c0",
+     "artist": "Ricky Eat Acid",
+     "ce_score": 0.8681640625,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "f5432c07-6ad0-4de2-84c2-73fb7c6cf409",
+     "artist": "John Foxx",
+     "ce_score": 0.0161590576171875,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "ed0eb542-bfa4-4f00-b150-01377a5eb5ab",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "d3970060-84b8-49cc-98f4-9b8459091019",
+     "artist": "Chico Buarque",
+     "ce_score": 0.0143890380859375,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "GOOD"
+  },
+  {
+   "sid": "4dd0f242-fbc2-4339-bb37-e469d20967a1",
+   "tn": 5,
+   "flagged": [
+    {
+     "tid": "93fb3d73-cf0e-44d4-9cff-bba25af4ea3e",
+     "artist": "Lynyrd Skynyrd",
+     "ce_score": 0.5546875,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "49cab63b-7b3f-41c6-b596-2bd4976e2a02",
+   "tn": 4,
+   "flagged": [
+    {
+     "tid": "55439d10-0fd2-4366-86d8-4b502c2588b6",
+     "artist": "Buckethead",
+     "ce_score": 0.06756591796875,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "911f6d3d-a5c3-4686-94fa-380bdf90bdfa",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "8e673dbd-9bda-490e-934c-41ed54c93540",
+     "artist": "Kajagoogoo",
+     "ce_score": 0.0263519287109375,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "ddfd41e5-2f48-4657-a0f5-fb7c556477a7",
+     "artist": "Culture Club",
+     "ce_score": 0.051849365234375,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "dc08410c-c349-4770-aa46-744b5cb62f24",
+     "artist": "Ambrosia",
+     "ce_score": 0.0015850067138671875,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "43ae15a6-3c66-4877-9f2c-e08f60b018f6",
+   "tn": 6,
+   "flagged": [
+    {
+     "tid": "d7dbbec4-64aa-4062-bdf7-f3a527651812",
+     "artist": "Sly & The Family Stone",
+     "ce_score": 0.0022525787353515625,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "11d41714-031c-49fa-93a1-7416740c02ba",
+     "artist": "Rick Braun",
+     "ce_score": 0.0017824172973632812,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "0361c5fb-8763-4bc2-98e3-556290548cc7",
+   "tn": 3,
+   "flagged": [
+    {
+     "tid": "b7c2063e-de79-4319-8e40-3d5c6e21aee6",
+     "artist": "The Dining Rooms",
+     "ce_score": 0.1357421875,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "33f7bc66-339d-4b6d-9960-d414a3ddd8f9",
+     "artist": "Afterlife",
+     "ce_score": 0.0082550048828125,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "db911a21-3d56-4dc9-82c3-3ccf70e91f3f",
+     "artist": "Gramatik",
+     "ce_score": 0.56982421875,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "6cb8a1b9-74bf-4b22-8ee2-2ad560acf2ea",
+   "tn": 3,
+   "flagged": [
+    {
+     "tid": "ad7ef137-5e02-4804-a053-370494fef4d5",
+     "artist": "Judas Priest",
+     "ce_score": 0.0050201416015625,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "cecd6e4c-ca09-49c0-9af5-d26b9204789d",
+     "artist": "AC/DC",
+     "ce_score": 0.011962890625,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "87b79a63-01ac-452e-99eb-b8bc54d347c4",
+   "tn": 7,
+   "flagged": [
+    {
+     "tid": "18811062-0234-4d06-921b-6bbc132e64b4",
+     "artist": "Kyle Dixon",
+     "ce_score": 0.7880859375,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "c97f7c9d-e00e-41b9-876c-752185a64fb8",
+   "tn": 7,
+   "flagged": [
+    {
+     "tid": "e03ff837-7770-4a5a-9961-97c2e1895475",
+     "artist": "No Doubt",
+     "ce_score": 3.0934810638427734e-05,
+     "judge": "BAD"
+    },
+    {
+     "tid": "a403b0dc-6bb6-4def-af9d-26445a15783f",
+     "artist": "Bebe Rexha",
+     "ce_score": 2.0444393157958984e-05,
+     "judge": "BAD"
+    },
+    {
+     "tid": "d0afc8c8-8ff9-4bd0-bc02-82f9d362189c",
+     "artist": "Streetlight Manifesto",
+     "ce_score": 1.5735626220703125e-05,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "a92ee53f-13fa-489b-918e-ded2f70aa6f6",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "4e3e8e3c-1de3-4282-8b85-7eca5bd1c182",
+     "artist": "Lycia",
+     "ce_score": 0.8818359375,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "39fddefa-09e2-42f5-9366-a07ca4a158db",
+   "tn": 6,
+   "flagged": [
+    {
+     "tid": "5a2b9ee1-421b-4587-83e4-2ab3a409da9b",
+     "artist": "Hank Snow",
+     "ce_score": 0.0003829002380371094,
+     "judge": "BAD"
+    },
+    {
+     "tid": "daa43b63-c5af-49bd-9ae5-084f357030c4",
+     "artist": "The Zombies",
+     "ce_score": 8.922815322875977e-05,
+     "judge": "BAD"
+    },
+    {
+     "tid": "c5457f18-4ff1-4cbb-bf3c-6e8aef20f3a9",
+     "artist": "Elvis Presley",
+     "ce_score": 0.0004477500915527344,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "0fe6e00b-44f2-48fb-8794-bfc64d0edabb",
+   "tn": 6,
+   "flagged": [
+    {
+     "tid": "d01980be-adbd-4401-ac72-1982d44b2229",
+     "artist": "Soda Stereo",
+     "ce_score": 0.00391387939453125,
+     "judge": "BAD"
+    },
+    {
+     "tid": "36edd0cd-b1c1-46ed-a213-5e295102ec9b",
+     "artist": "Natalia Lafourcade",
+     "ce_score": 0.0009775161743164062,
+     "judge": "BAD"
+    },
+    {
+     "tid": "effaaed7-f110-43e0-8268-4f94fea6c90c",
+     "artist": "Thal\u00eda",
+     "ce_score": 0.0204925537109375,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "1a8b012c-4ebd-457a-8b10-00232aea63af",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "482548ee-5b5e-434c-a067-a137fba77126",
+     "artist": "Evelyn Evelyn",
+     "ce_score": 0.32763671875,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "e6317870-e0e7-46ef-9945-25962aca0b64",
+   "tn": 6,
+   "flagged": [
+    {
+     "tid": "021ba0ca-2c64-411f-ba5f-cf5ee064fd65",
+     "artist": "Donald Lawrence",
+     "ce_score": 0.0384521484375,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "37487f6d-c852-4d5f-b194-c8a9aab78159",
+   "tn": 3,
+   "flagged": [
+    {
+     "tid": "57d2d041-6312-4543-bbbe-cef704e77de5",
+     "artist": "Jodeci",
+     "ce_score": 0.0284423828125,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "23876244-8533-4744-91da-5bfe1f4e6175",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "0a438804-6166-45c3-96d8-e4acc8a6436f",
+     "artist": "The Beach Boys",
+     "ce_score": 0.0293121337890625,
+     "judge": "BAD"
+    },
+    {
+     "tid": "d2216a69-8fd3-4381-afe9-65a94a6eeb13",
+     "artist": "The Beach Boys",
+     "ce_score": 0.00971221923828125,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "120ba81c-7619-4d4e-82c8-f0fe2d59a535",
+     "artist": "The Beach Boys",
+     "ce_score": 0.25244140625,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "f7fa4eb0-d7b1-416c-856d-d401c7d61b07",
+   "tn": 5,
+   "flagged": [
+    {
+     "tid": "c87205b9-a6a2-4c6b-bcf8-949322f1ab68",
+     "artist": "Moby",
+     "ce_score": 0.00763702392578125,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "63b4a973-cca0-46bc-bc4c-1808a341d452",
+     "artist": "Nico",
+     "ce_score": 0.01812744140625,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "145692bb-8af4-4fa5-a932-bca887737662",
+     "artist": "The Dresden Dolls",
+     "ce_score": 0.00547027587890625,
+     "judge": "WEAK"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "de5fcdfd-a2bb-4f56-a196-8cb42c4de289",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "0f84487a-a805-446f-ab93-42691b630c6e",
+     "artist": "Death",
+     "ce_score": 0.005428314208984375,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "01811922-7c3f-42d8-bedb-4a1a32c6070a",
+     "artist": "Death",
+     "ce_score": 0.0009183883666992188,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "3a4edf30-3132-4ed9-b7cb-d34952f8c04c",
+   "tn": 7,
+   "flagged": [
+    {
+     "tid": "062e4d66-af8e-4c70-b790-60018360a319",
+     "artist": "Alesana",
+     "ce_score": 0.07806396484375,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "120615f3-0155-4970-9550-53548b543f98",
+   "tn": 7,
+   "flagged": [
+    {
+     "tid": "b56685e7-e12c-47dd-8126-3a5e70282f8a",
+     "artist": "Sonata Arctica",
+     "ce_score": 0.00279998779296875,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "dbc487b8-d551-4e9e-be8f-139d94dbd602",
+     "artist": "ISIS",
+     "ce_score": 0.003376007080078125,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "378d29aa-32d8-4e62-946a-150ac5375930",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "ed6b3a71-2c5a-420b-b424-b1e72ed5a4cc",
+     "artist": "Wayman Tisdale",
+     "ce_score": 0.070068359375,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "898460a2-7610-467e-ba0f-d8223eed4297",
+   "tn": 4,
+   "flagged": [
+    {
+     "tid": "c9596391-e7a3-44c1-9165-f1a4686d58c4",
+     "artist": "Crosby, Stills, Nash & Young",
+     "ce_score": 0.04052734375,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "GOOD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "a573d977-c53a-4458-90c6-01894f7d799a",
+   "tn": 7,
+   "flagged": [
+    {
+     "tid": "6acc2add-b21d-415a-9e6b-3b03291904d0",
+     "artist": "Ms. Lauryn Hill",
+     "ce_score": 0.0013246536254882812,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "575701d6-e873-4dfc-94ae-3b32d1c541fc",
+     "artist": "Battleme",
+     "ce_score": 0.0004107952117919922,
+     "judge": "WEAK"
+    },
+    {
+     "tid": "764d78b0-12d5-4d31-b425-f70820f013f7",
+     "artist": "Manchester Orchestra",
+     "ce_score": 0.00014770030975341797,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "3d5f4490-04e9-4f54-ac9e-96672d3e2001",
+   "tn": 8,
+   "flagged": [
+    {
+     "tid": "b1427d0e-bd77-4a21-891f-14d28096b31a",
+     "artist": "Bob Dylan",
+     "ce_score": 0.0021991729736328125,
+     "judge": "GOOD"
+    }
+   ],
+   "gt_judge": "WEAK",
+   "rand_judge": "BAD"
+  },
+  {
+   "sid": "94c94569-58f0-4b60-9932-8f9947c59dc0",
+   "tn": 3,
+   "flagged": [
+    {
+     "tid": "ce4587eb-d7b3-4400-8de6-6fd0aa265337",
+     "artist": "Bob Welch",
+     "ce_score": 0.0026531219482421875,
+     "judge": "BAD"
+    },
+    {
+     "tid": "ab659c21-7432-48d5-8372-6ab31b4adb09",
+     "artist": "Mott The Hoople",
+     "ce_score": 0.0011425018310546875,
+     "judge": "GOOD"
+    },
+    {
+     "tid": "54e1b940-f87d-4e8b-9ce4-8eecf2b0c3f0",
+     "artist": "Bobby Bloom",
+     "ce_score": 0.0007615089416503906,
+     "judge": "BAD"
+    }
+   ],
+   "gt_judge": "BAD",
+   "rand_judge": "BAD"
+  }
+ ]
+}

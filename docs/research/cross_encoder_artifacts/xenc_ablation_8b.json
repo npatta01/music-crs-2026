@@ -1,0 +1,70 @@
+{
+ "config": {
+  "limit": 150,
+  "n_random": 10,
+  "variants": "base",
+  "local_model": "Qwen/Qwen3-Reranker-0.6B",
+  "big_model": "Qwen/Qwen3-Reranker-8B",
+  "big_variants": "base",
+  "batch_size": 16,
+  "in_flight": 8,
+  "out": "exp/analysis/retrieval_exploration/xenc_ablation_8b.json"
+ },
+ "n": 150,
+ "recognized": 73,
+ "thought_leak": 0,
+ "summary": {
+  "0.6B/base": {
+   "all": {
+    "n": 150,
+    "clean_neg_rate": 0.7475882594417078,
+    "auc_gt_rand": 0.8996933333333333,
+    "auc_gt_neg": 0.7135302698760029,
+    "auc_gt_dn": 0.5002242152466367,
+    "gt_top1_pct": 63.333333333333336
+   },
+   "recognized": {
+    "n": 73,
+    "clean_neg_rate": 0.9802058111380145,
+    "auc_gt_rand": 0.9970163257646838,
+    "auc_gt_neg": 0.9624830309761817,
+    "auc_gt_dn": 0.6282744532564287,
+    "gt_top1_pct": 91.78082191780823
+   },
+   "unrecognized": {
+    "n": 77,
+    "clean_neg_rate": 0.5068086883876358,
+    "auc_gt_rand": 0.8063079777365492,
+    "auc_gt_neg": 0.4788339320254214,
+    "auc_gt_dn": 0.41314190396759204,
+    "gt_top1_pct": 36.36363636363637
+   }
+  },
+  "4B/base": {
+   "all": {
+    "n": 150,
+    "clean_neg_rate": 0.8608374384236454,
+    "auc_gt_rand": 0.9570933333333334,
+    "auc_gt_neg": 0.7988913202042305,
+    "auc_gt_dn": 0.5683109118086697,
+    "gt_top1_pct": 70.0
+   },
+   "recognized": {
+    "n": 73,
+    "clean_neg_rate": 0.984866828087167,
+    "auc_gt_rand": 0.988759617188966,
+    "auc_gt_neg": 0.9397753918301863,
+    "auc_gt_dn": 0.6714732035568373,
+    "gt_top1_pct": 94.52054794520548
+   },
+   "unrecognized": {
+    "n": 77,
+    "clean_neg_rate": 0.7324561403508771,
+    "auc_gt_rand": 0.9152808230730308,
+    "auc_gt_neg": 0.6422216081790549,
+    "auc_gt_dn": 0.4867151197426427,
+    "gt_top1_pct": 46.753246753246756
+   }
+  }
+ }
+}
