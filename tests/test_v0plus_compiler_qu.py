@@ -800,6 +800,275 @@ def test_litellm_extractor_decodes_v1_and_projects_to_v0plus():
     ]
 
 
+def test_litellm_extractor_sanitizes_known_v1_enum_drift():
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+    long_evidence = "x" * 260
+
+    state = extractor._decode(
+        json.dumps(
+            {
+                "current_request": {
+                    "request_type": "attribute_search",
+                    "summary": "Spanish-language country, no more rock.",
+                    "source_turn": 3,
+                    "evidence_text": long_evidence,
+                },
+                "candidate_types": [
+                    {
+                        "request_type": "same_artist",
+                        "confidence": 0.6,
+                        "evidence_text": "maybe same artist",
+                    }
+                ],
+                "facts": [
+                    {
+                        "type": "genre",
+                        "value": "country",
+                        "role": "current_target",
+                        "anchor_use": "query_facet",
+                        "relation": "query_facet",
+                        "reuse": "not_applicable",
+                        "source_turn": 3,
+                        "mentioned_current_turn": True,
+                        "evidence_text": "country songs",
+                    },
+                    {
+                        "type": "attribute",
+                        "facet": "language",
+                        "value": "Spanish",
+                        "role": "current_target",
+                        "anchor_use": "query_facet",
+                        "relation": "query_facet",
+                        "reuse": "not_applicable",
+                        "source_turn": 3,
+                        "mentioned_current_turn": True,
+                        "evidence_text": "sung in Spanish",
+                    },
+                    {
+                        "type": "attribute",
+                        "facet": "region",
+                        "value": "Europe",
+                        "role": "current_target",
+                        "anchor_use": "query_facet",
+                        "relation": "query_facet",
+                        "reuse": "not_applicable",
+                        "source_turn": 3,
+                        "mentioned_current_turn": True,
+                        "evidence_text": "from Europe",
+                    },
+                    {
+                        "type": "attribute",
+                        "facet": "theme",
+                        "value": "road trip across America",
+                        "role": "current_target",
+                        "anchor_use": "query_facet",
+                        "relation": "query_facet",
+                        "reuse": "not_applicable",
+                        "source_turn": 3,
+                        "mentioned_current_turn": True,
+                        "evidence_text": "long road trip across America",
+                    },
+                    {
+                        "type": "attribute",
+                        "facet": "setting",
+                        "value": "party or club setting",
+                        "role": "current_target",
+                        "anchor_use": "query_facet",
+                        "relation": "query_facet",
+                        "reuse": "not_applicable",
+                        "source_turn": 3,
+                        "mentioned_current_turn": True,
+                        "evidence_text": "party or club setting",
+                    },
+                    {
+                        "type": "attribute",
+                        "facet": "album",
+                        "value": "Black Holes and Revelations",
+                        "role": "current_target",
+                        "anchor_use": "partial_anchor",
+                        "relation": "style_reference",
+                        "reuse": "may_reuse",
+                        "source_turn": 3,
+                        "mentioned_current_turn": True,
+                        "evidence_text": "Black Holes and Revelations",
+                    },
+                    {
+                        "type": "artist",
+                        "value": "Lorde",
+                        "role": "style_reference",
+                        "anchor_use": "partial_anchor",
+                        "relation": "style_reference",
+                        "reuse": "may_reuse",
+                        "source_turn": 3,
+                        "mentioned_current_turn": True,
+                        "evidence_text": "like Lorde",
+                    },
+                ],
+                "exclusions": [
+                    {
+                        "type": "genre",
+                        "value": "rock",
+                        "scope": "soft_preference",
+                        "source_turn": 3,
+                        "evidence_text": "no more rock",
+                    },
+                    {
+                        "type": "energy",
+                        "value": "high-energy",
+                        "scope": "soft_preference",
+                        "source_turn": 3,
+                        "evidence_text": "not high-energy",
+                    },
+                    {
+                        "type": "attribute",
+                        "facet": "sonic",
+                        "value": "industrial",
+                        "role": "rejected",
+                        "anchor_use": "do_not_use",
+                        "relation": "exclude",
+                        "reuse": "must_exclude",
+                        "source_turn": 3,
+                        "mentioned_current_turn": True,
+                        "evidence_text": "not heavy or industrial",
+                    },
+                ],
+                "track_feedback": [
+                    {
+                        "track_id": "d6716657-81c1-45ec-aa52-d2c1cd17cf39",
+                        "overall_sentiment": 1,
+                        "role": "satisfied",
+                    },
+                    {
+                        "track_id": "ebd9ed00-7f98-4b52-ba62-e0c7fd...",
+                        "overall_sentiment": 0,
+                        "role": "contrast",
+                    },
+                ],
+            }
+        )
+    )
+
+    assert isinstance(state, ConversationStateV0Plus)
+    assert state.current_request is not None
+    assert len(state.current_request.evidence_text) == 240
+    assert [candidate.request_type.value for candidate in state.current_request.candidate_types] == [
+        "same_artist"
+    ]
+    assert state.facts[0].type.value == "attribute"
+    assert state.facts[0].facet.value == "genre"
+    assert state.facts[1].type.value == "attribute"
+    assert state.facts[1].facet.value == "sonic"
+    assert state.facts[2].type.value == "attribute"
+    assert state.facts[2].facet.value == "sonic"
+    assert state.facts[3].type.value == "attribute"
+    assert state.facts[3].facet.value == "lyrical_theme"
+    assert state.facts[4].type.value == "attribute"
+    assert state.facts[4].facet.value == "lyrical_theme"
+    assert [fact.value for fact in state.facts] == [
+        "country",
+        "Spanish",
+        "Europe",
+        "road trip across America",
+        "party or club setting",
+        "Lorde",
+    ]
+    assert state.facts[5].role.value == "current_target"
+    assert state.facts[5].relation.value == "style_reference"
+    assert state.exclusions[0].type.value == "attribute"
+    assert state.exclusions[0].facet.value == "genre"
+    assert state.exclusions[1].type.value == "attribute"
+    assert state.exclusions[1].facet.value == "energy"
+    assert state.exclusions[2].scope.value == "next_turn_hard"
+    assert [feedback.track_id for feedback in state.track_feedback] == [
+        "d6716657-81c1-45ec-aa52-d2c1cd17cf39"
+    ]
+
+
+def test_litellm_extractor_strips_trailing_markdown_fence():
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    state = extractor._decode(
+        json.dumps(
+            {
+                "current_request": {
+                    "request_type": "exact_track",
+                    "summary": "Play Fallin by Alicia Keys.",
+                    "source_turn": 8,
+                },
+                "facts": [
+                    {
+                        "type": "track",
+                        "value": "Fallin",
+                        "role": "current_target",
+                        "anchor_use": "must_use",
+                        "relation": "exact_target",
+                        "reuse": "must_reuse",
+                        "source_turn": 8,
+                        "mentioned_current_turn": True,
+                    }
+                ],
+            }
+        )
+        + "\n```"
+    )
+
+    assert state.current_request is not None
+    assert state.current_request.summary == "Play Fallin by Alicia Keys."
+
+
+
+def test_litellm_extractor_accepts_trailing_non_json_text_after_object():
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    raw = json.dumps(
+        {
+            "current_request": {
+                "request_type": "attribute_search",
+                "summary": "Play 90s groove metal.",
+                "source_turn": 3,
+            },
+            "facts": [
+                {
+                    "type": "attribute",
+                    "facet": "genre",
+                    "value": "groove metal",
+                    "role": "current_target",
+                    "anchor_use": "query_facet",
+                    "relation": "query_facet",
+                    "reuse": "not_applicable",
+                    "source_turn": 3,
+                    "mentioned_current_turn": True,
+                }
+            ],
+        }
+    )
+
+    state = extractor._decode(raw + "\n\nExplanation: extracted the requested state.")
+
+    assert state.current_request is not None
+    assert state.current_request.summary == "Play 90s groove metal."
+    assert state.facts[0].facet.value == "genre"
+
+
+def test_litellm_extractor_repairs_extra_brace_before_top_level_field():
+    extractor = LiteLLMExtractor(model_name="openrouter/fake", retry_temperature=0.0)
+
+    raw = (
+        '{"current_request":{"request_type":"attribute_search",'
+        '"summary":"Play 90s groove metal.","source_turn":3}}'
+        ',"facts":[{"type":"attribute","facet":"genre","value":"groove metal",'
+        '"role":"current_target","anchor_use":"query_facet",'
+        '"relation":"query_facet","reuse":"not_applicable",'
+        '"source_turn":3,"mentioned_current_turn":true}]}'
+    )
+
+    state = extractor._decode(raw)
+
+    assert state.current_request is not None
+    assert state.current_request.summary == "Play 90s groove metal."
+    assert state.facts[0].value == "groove metal"
+
+
 def test_litellm_extractor_does_not_store_malformed_json(monkeypatch):
     stored = []
     completion_kwargs = []

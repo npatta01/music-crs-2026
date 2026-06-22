@@ -295,6 +295,16 @@ class CompilerConfig:
     disco_cap: int = 150
     disco_confidence_threshold: float = 90.0
     disco_gated_intents: tuple[str, ...] = ("pivot",)
+    # a2 (recall recovery): also seed the discography pool from the artists of
+    # tracks PLAYED earlier in the session, not just current-turn resolved
+    # artists. On continuation turns the user often says "another by them"
+    # without naming the artist, so it never gets resolved and its catalog is
+    # never fetched — the played GT (a top track of an already-liked artist) is
+    # dropped from recall. Folded into the SAME discography branch so the
+    # reranker feature schema is unchanged (no retrain). Still subject to
+    # disco_gated_intents, so it stays OFF on pivot turns (correct: don't fetch
+    # the just-played artist when the user is pivoting away). Default off.
+    disco_include_session_artists: bool = False
 
     # Similar-artist anchoring (issue #74 Fix 1). Off by default => baseline is
     # byte-identical. When on, a few representative tracks of each RESOLVED
@@ -2909,6 +2919,13 @@ class V0PlusCompiler:
             ):
                 seen_artists.add(tgt.entity_id)
                 artist_ids.append(tgt.entity_id)
+        # a2: also seed from artists of tracks played earlier in the session.
+        if cfg.disco_include_session_artists:
+            for tid in rs.played_track_ids:
+                aid = self.catalog.artist_id_of(tid)
+                if aid is not None and aid not in seen_artists:
+                    seen_artists.add(aid)
+                    artist_ids.append(aid)
         if not artist_ids:
             return []
         pop_rank = self._popularity_rank()
