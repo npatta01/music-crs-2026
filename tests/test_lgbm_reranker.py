@@ -72,6 +72,29 @@ def test_feature_catalog_adapter_reuses_compiler_metadata_and_vectors():
     assert catalog.v("metadata_qwen3_embedding_0_6b", "missing") is None
 
 
+def test_online_reranker_flushes_live_embedding_stores():
+    calls: list[str] = []
+
+    class Store:
+        def __init__(self, name: str):
+            self.name = name
+
+        def flush(self):
+            calls.append(self.name)
+
+    reranker = lgbm_reranker.LgbmOnlineReranker.__new__(
+        lgbm_reranker.LgbmOnlineReranker
+    )
+    reranker.ctx = type("Ctx", (), {
+        "memo": Store("memo"),
+        "msg_store": Store("msg_store"),
+    })()
+
+    reranker.flush()
+
+    assert calls == ["memo", "msg_store"]
+
+
 def test_feature_catalog_adapter_uses_public_feature_rows_accessor():
     source = _CompilerCatalogSource()
     rows = source._rows
@@ -225,6 +248,66 @@ def _make_synthetic_lgbm_reranker(cat):
     reranker.booster = _RecordingBooster()
     reranker.top_k_out = 3
     return reranker
+
+
+def test_online_reranker_excludes_hard_drop_tracks_before_scoring():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    trace = {
+        "branches": {
+            "pools": [
+                {
+                    "name": "bm25",
+                    "hits": [("t-two", 2.0), ("t-one", 1.0)],
+                }
+            ],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "state": {"current_request": {"request_type": "mood"}},
+        "resolver": {"played_track_ids": [], "positive_tags": []},
+    }
+    session_meta = {
+        "session_id": "s1",
+        "turn_number": 2,
+        "session_date": "2020-01-01",
+        "conversations": [{"role": "user", "content": "try something else", "turn_number": 2}],
+        "user_profile": {},
+        "conversation_goal": {},
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta,
+        user_id="u1",
+        hard_drop={"t-two"},
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-one"]
+    assert reranker.booster.calls[-1].shape[0] == 1
+
+
+def test_online_reranker_filters_hard_drop_when_feature_rows_empty():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    trace = {
+        "branches": {"pools": [], "fused": [], "branch_queries": {}},
+        "state": {},
+        "resolver": {},
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta=None,
+        user_id="u1",
+        hard_drop={"t-two"},
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-one"]
 
 
 def test_feature_catalog_adapter_matches_offline_catalog_rerank_outputs(tmp_path):

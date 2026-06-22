@@ -385,6 +385,105 @@ def test_completion_marker_payload_uses_actual_trace_record_count():
     assert payload["trace_path"] == "foo_devset.run_RID.shard_1_trace.jsonl"
 
 
+def test_run_inference_devset_flush_runtime_caches_calls_crs_flush():
+    calls: list[str] = []
+    runtime = {"music_crs": SimpleNamespace(flush_caches=lambda: calls.append("flush"))}
+    timings = {}
+
+    run_inference_devset._flush_runtime_caches(runtime, timings)
+
+    assert calls == ["flush"]
+    assert "flush_caches" in timings
+
+
+def test_run_inference_devset_shard_flushes_runtime_caches(monkeypatch, tmp_path):
+    calls: list[str] = []
+
+    class FlushableCRS:
+        last_batch_timings = {}
+
+        def batch_chat(self, batch):
+            return [
+                {"retrieval_items": ["t1"], "response": "ok", "trace": {}}
+                for _ in batch
+            ]
+
+        def flush_caches(self):
+            calls.append("flush")
+
+    runtime = {
+        "db": ["row"],
+        "music_crs": FlushableCRS(),
+        "trace_run_metadata": {},
+    }
+    monkeypatch.setattr(run_inference_devset, "_select_shard", lambda db, args, sid, nshards: db)
+    monkeypatch.setattr(
+        run_inference_devset,
+        "_build_batch_data",
+        lambda db, music_crs: (
+            [{"user_query": "play", "session_memory": []}],
+            [{"session_id": "s1", "user_id": "u1", "turn_number": 1}],
+        ),
+    )
+    args = SimpleNamespace(
+        tid="tid",
+        batch_size=1,
+        exp_dir=str(tmp_path / "exp"),
+    )
+
+    run_inference_devset._run_shard(args, runtime, shard_id=0, num_shards=1, output_suffix="")
+
+    assert calls == ["flush"]
+
+
+def test_run_inference_blindset_flush_runtime_caches_calls_crs_flush():
+    calls: list[str] = []
+    runtime = {"music_crs": SimpleNamespace(flush_caches=lambda: calls.append("flush"))}
+    timings = {}
+
+    run_inference_blindset._flush_runtime_caches(runtime, timings)
+
+    assert calls == ["flush"]
+    assert "flush_caches" in timings
+
+
+def test_run_inference_blindset_shard_flushes_runtime_caches(monkeypatch, tmp_path):
+    calls: list[str] = []
+
+    class FlushableCRS:
+        last_batch_timings = {}
+
+        def batch_chat(self, batch):
+            return [
+                {"retrieval_items": ["t1"], "response": "ok", "trace": {}}
+                for _ in batch
+            ]
+
+        def flush_caches(self):
+            calls.append("flush")
+
+    runtime = {"db": ["row"], "music_crs": FlushableCRS()}
+    monkeypatch.setattr(run_inference_blindset, "_select_shard", lambda db, sid, nshards: db)
+    monkeypatch.setattr(
+        run_inference_blindset,
+        "_build_batch_data",
+        lambda db, music_crs: (
+            [{"user_query": "play", "session_memory": []}],
+            [{"session_id": "s1", "user_id": "u1", "turn_number": 1}],
+        ),
+    )
+    args = SimpleNamespace(
+        tid="tid",
+        eval_dataset="blindset_A",
+        batch_size=1,
+        exp_dir=str(tmp_path / "exp"),
+    )
+
+    run_inference_blindset._run_shard(args, runtime, shard_id=0, num_shards=1, output_suffix="")
+
+    assert calls == ["flush"]
+
+
 def test_run_inference_devset_does_not_require_legacy_retrieval_type(monkeypatch, tmp_path):
     captured = {}
 

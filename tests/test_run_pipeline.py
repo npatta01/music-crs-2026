@@ -244,6 +244,39 @@ def test_rerank_forwards_dataset_name_from_retrieval_config(tmp_path, monkeypatc
     assert commands[0][commands[0].index("--dataset-name") + 1] == "talkpl-ai/Custom-Sessions"
 
 
+def test_rerank_offline_requires_cache_coverage_by_default(tmp_path, monkeypatch):
+    module = _load_module("run_pipeline_rerank_cache_guard", "run_pipeline.py")
+    config_path = tmp_path / "configs" / "pipelines" / "pipe.yaml"
+    _write_pipeline_config(config_path)
+    retrieval_run = tmp_path / "prior"
+    commands: list[list[str]] = []
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(module.sys, "executable", "/usr/bin/python3")
+    monkeypatch.setattr(
+        module,
+        "run_command",
+        lambda cmd, cwd=None: commands.append([str(part) for part in cmd]),
+    )
+
+    assert module.main(
+        [
+            "--config",
+            str(config_path),
+            "--only",
+            "rerank",
+            "--retrieval-run",
+            str(retrieval_run),
+            "--run-id",
+            "rerankA",
+            "--offline-rerank",
+        ]
+    ) == 0
+
+    assert "--offline" in commands[0]
+    assert "--require-cache-coverage" in commands[0]
+
+
 def test_rerank_can_run_parallel_shards_and_merge_without_traces(tmp_path, monkeypatch):
     module = _load_module("run_pipeline_rerank_parallel", "run_pipeline.py")
     config_path = tmp_path / "configs" / "pipelines" / "pipe.yaml"

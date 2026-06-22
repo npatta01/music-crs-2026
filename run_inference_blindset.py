@@ -17,6 +17,7 @@ from run_inference_devset import (
     _add_elapsed,
     _add_timing_snapshot,
     _config_qu_kwargs,
+    _flush_runtime_caches,
     _litellm_cache_required,
     _load_dotenv,
     _print_timings,
@@ -211,40 +212,43 @@ def _run_shard(args, runtime: dict, shard_id: int, num_shards: int, output_suffi
     saw_trace = False
 
     desc = f"Shard {shard_id}/{num_shards} inference" if num_shards > 1 else "Batch inference"
-    with open(trace_path, "w", encoding="utf-8") as trace_file:
-        for i in tqdm(range(0, len(batch_data), args.batch_size), desc=desc):
-            batch = batch_data[i:i+args.batch_size]
-            batch_metadata = metadata[i:i+args.batch_size]
-            start = time.perf_counter()
-            results = music_crs.batch_chat(batch)
-            _add_elapsed(timings, "batch_chat", start)
-            _add_timing_snapshot(
-                timings,
-                "batch_chat.",
-                getattr(music_crs, "last_batch_timings", None),
-            )
+    try:
+        with open(trace_path, "w", encoding="utf-8") as trace_file:
+            for i in tqdm(range(0, len(batch_data), args.batch_size), desc=desc):
+                batch = batch_data[i:i+args.batch_size]
+                batch_metadata = metadata[i:i+args.batch_size]
+                start = time.perf_counter()
+                results = music_crs.batch_chat(batch)
+                _add_elapsed(timings, "batch_chat", start)
+                _add_timing_snapshot(
+                    timings,
+                    "batch_chat.",
+                    getattr(music_crs, "last_batch_timings", None),
+                )
 
-            start = time.perf_counter()
-            for j, result in enumerate(results):
-                inference_results.append({
-                    "session_id": batch_metadata[j]['session_id'],
-                    "user_id": batch_metadata[j]['user_id'],
-                    "turn_number": batch_metadata[j]['turn_number'],
-                    "predicted_track_ids": result['retrieval_items'],
-                    "predicted_response": result["response"]
-                })
-                trace = result.get("trace")
-                saw_trace = saw_trace or bool(trace)
-                # V0PlusCompilerQU populates result["trace"] (per-branch pools,
-                # state, resolver). Needed for reranker/debug runs.
-                trace_file.write(json.dumps({
-                    "session_id": batch_metadata[j]['session_id'],
-                    "user_id": batch_metadata[j]['user_id'],
-                    "turn_number": batch_metadata[j]['turn_number'],
-                    "trace": trace,
-                }, ensure_ascii=False, default=str) + "\n")
-            trace_file.flush()
-            _add_elapsed(timings, "trace_write", start)
+                start = time.perf_counter()
+                for j, result in enumerate(results):
+                    inference_results.append({
+                        "session_id": batch_metadata[j]['session_id'],
+                        "user_id": batch_metadata[j]['user_id'],
+                        "turn_number": batch_metadata[j]['turn_number'],
+                        "predicted_track_ids": result['retrieval_items'],
+                        "predicted_response": result["response"]
+                    })
+                    trace = result.get("trace")
+                    saw_trace = saw_trace or bool(trace)
+                    # V0PlusCompilerQU populates result["trace"] (per-branch pools,
+                    # state, resolver). Needed for reranker/debug runs.
+                    trace_file.write(json.dumps({
+                        "session_id": batch_metadata[j]['session_id'],
+                        "user_id": batch_metadata[j]['user_id'],
+                        "turn_number": batch_metadata[j]['turn_number'],
+                        "trace": trace,
+                    }, ensure_ascii=False, default=str) + "\n")
+                trace_file.flush()
+                _add_elapsed(timings, "trace_write", start)
+    finally:
+        _flush_runtime_caches(runtime, timings)
 
     start = time.perf_counter()
     with open(out_path, "w", encoding="utf-8") as f:
