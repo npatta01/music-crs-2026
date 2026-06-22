@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import secrets
 import subprocess
 import sys
@@ -68,6 +69,23 @@ def config_hash(config: dict[str, Any]) -> str:
 def load_config(path: str | Path) -> dict[str, Any]:
     cfg = OmegaConf.load(resolve_path(path))
     return OmegaConf.to_container(cfg, resolve=True) or {}
+
+
+def _load_dotenv() -> None:
+    dotenv_path = PROJECT_ROOT / ".env"
+    if not dotenv_path.exists():
+        return
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        for line in dotenv_path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            key, value = stripped.split("=", 1)
+            os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+        return
+    load_dotenv(dotenv_path)
 
 
 def config_for_tid(tid: str) -> dict[str, Any]:
@@ -322,8 +340,11 @@ def run_rerank(
         "--output-topk",
         str(rerank_cfg.get("output_topk", 20)),
     ]
-    if args.offline_rerank or rerank_cfg.get("offline", False):
+    offline_rerank = bool(args.offline_rerank or rerank_cfg.get("offline", False))
+    if offline_rerank:
         cmd.append("--offline")
+    if rerank_cfg.get("require_cache_coverage", offline_rerank):
+        cmd.append("--require-cache-coverage")
 
     num_shards = int(rerank_cfg.get("num_shards", 1))
     if num_shards < 1:
@@ -462,6 +483,7 @@ def run_evaluation(
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    _load_dotenv()
     cfg = load_config(args.config)
     if "id" not in cfg:
         raise ValueError("Pipeline config must include id")

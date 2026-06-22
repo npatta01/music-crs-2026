@@ -374,6 +374,7 @@ def _inference_devset(
 
     _run_inference_command(cmd)
     results_vol.commit()
+    cache_vol.commit()
     print(f"Results saved to volume: inference/devset/{tid}{output_suffix}.json")
 
 
@@ -422,6 +423,7 @@ def _inference_devset_cpu(
 
     _run_inference_command(cmd, lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI)
     results_vol.commit()
+    cache_vol.commit()
     print(f"CPU results saved to volume: inference/devset/{tid}{output_suffix}.json")
 
 
@@ -451,6 +453,7 @@ def _inference_devset_grouped(
         session_ids_json=session_ids_json,
     )
     results_vol.commit()
+    cache_vol.commit()
     print(f"Grouped results saved for devset shards {shard_ids}.")
 
 
@@ -482,6 +485,7 @@ def _inference_devset_cpu_grouped(
         lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI,
     )
     results_vol.commit()
+    cache_vol.commit()
     print(f"CPU grouped results saved for devset shards {shard_ids}.")
 
 
@@ -515,6 +519,7 @@ def _inference_blindset(
         cmd += ["--output_suffix", output_suffix]
     _run_inference_command(cmd)
     results_vol.commit()
+    cache_vol.commit()
     print(f"Results saved to volume: inference/{eval_dataset}/{tid}{output_suffix}.json")
 
 
@@ -549,6 +554,7 @@ def _inference_blindset_cpu(
         cmd += ["--output_suffix", output_suffix]
     _run_inference_command(cmd, lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI)
     results_vol.commit()
+    cache_vol.commit()
     print(f"CPU results saved to volume: inference/{eval_dataset}/{tid}{output_suffix}.json")
 
 
@@ -576,6 +582,7 @@ def _inference_blindset_grouped(
         run_id=run_id,
     )
     results_vol.commit()
+    cache_vol.commit()
     print(f"Grouped results saved for {eval_dataset} shards {shard_ids}.")
 
 
@@ -605,6 +612,7 @@ def _inference_blindset_cpu_grouped(
         lancedb_uri=DEFAULT_REMOTE_LANCEDB_URI,
     )
     results_vol.commit()
+    cache_vol.commit()
     print(f"CPU grouped results saved for {eval_dataset} shards {shard_ids}.")
 
 

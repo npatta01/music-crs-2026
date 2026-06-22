@@ -9,7 +9,9 @@ and writes normal inference JSON + trace sidecar files.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -25,6 +27,23 @@ for path in (PROJECT_ROOT, RERANK_DIR):
 from build_features import constraint_feature_row  # noqa: E402
 from mcrs.qu_modules.compiled_state import final_recommendation, ranking_stage  # noqa: E402
 from mcrs.qu_modules.lgbm_reranker import CATEGORICALS  # noqa: E402
+
+
+def _load_dotenv() -> None:
+    dotenv_path = PROJECT_ROOT / ".env"
+    if not dotenv_path.exists():
+        return
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        for line in dotenv_path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            key, value = stripped.split("=", 1)
+            os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+        return
+    load_dotenv(dotenv_path)
 
 
 def model_bundle_paths(model_ref: str | Path) -> dict[str, Path]:
@@ -64,8 +83,10 @@ def fallback_track_ids(trace: dict[str, Any]) -> list[str]:
 
 def hard_drop_ids(trace: dict[str, Any]) -> set[str]:
     retrieval = trace.get("retrieval") or {}
+    branches = trace.get("branches") or {}
     resolver = trace.get("resolver") or {}
     ids = set(retrieval.get("hard_drop") or [])
+    ids.update(branches.get("hard_drop") or [])
     ids.update(resolver.get("played_track_ids") or [])
     ids.update(resolver.get("rejected_track_ids") or [])
     return {str(track_id) for track_id in ids}
@@ -75,16 +96,24 @@ def validate_replay_trace_contract(rows: list[dict[str, Any]], trace: dict[str, 
     if not rows:
         return
     retrieval = trace.get("retrieval") or {}
-    if "hard_drop" not in retrieval:
+    branches = trace.get("branches") or {}
+    has_retrieval_contract = "hard_drop" in retrieval
+    has_legacy_branch_contract = isinstance(branches, dict) and "hard_drop" in branches
+    if not has_retrieval_contract and not has_legacy_branch_contract:
         raise ValueError(
-            "Replay trace is missing retrieval.hard_drop; rerun retrieval with "
-            "branch trace depth enabled before LGBM replay."
+            "Replay trace is missing retrieval.hard_drop or branches.hard_drop; "
+            "rerun retrieval with branch trace depth enabled before LGBM replay."
         )
-    trace_depth = int(retrieval.get("trace_depth") or 0)
+    trace_depth = int(
+        retrieval.get("trace_depth")
+        or branches.get("trace_depth")
+        or branches.get("depth")
+        or 0
+    )
     if trace_depth <= 0:
         raise ValueError(
-            "Replay trace has retrieval.trace_depth <= 0; rerun retrieval with "
-            "branch trace depth enabled before LGBM replay."
+            "Replay trace has retrieval.trace_depth/branches.depth <= 0; rerun "
+            "retrieval with branch trace depth enabled before LGBM replay."
         )
 
 
@@ -177,6 +206,121 @@ def should_process_row(row_index: int, *, num_shards: int, shard_id: int) -> boo
     return row_index % num_shards == shard_id
 
 
+def collect_embedding_cache_texts(
+    trace_path: str | Path,
+    sessions: dict,
+    *,
+    feature_trace_view,
+    num_shards: int = 1,
+    shard_id: int = 0,
+) -> tuple[set[str], set[str]]:
+    """Collect text keys used by offline rerank embedding features."""
+    q06_texts: set[str] = set()
+    msg_texts: set[str] = set()
+    with Path(trace_path).open(encoding="utf-8") as handle:
+        for row_index, line in enumerate(handle):
+            if not line.strip():
+                continue
+            if not should_process_row(row_index, num_shards=num_shards, shard_id=shard_id):
+                continue
+            row = json.loads(line)
+            sid = str(row.get("session_id") or "")
+            try:
+                turn_number = int(row.get("turn_number") or 0)
+            except (TypeError, ValueError):
+                turn_number = 0
+            trace = feature_trace_view(row.get("trace") or {})
+            branch_queries = (trace.get("branches") or {}).get("branch_queries") or {}
+            for query in branch_queries.values():
+                if (
+                    isinstance(query, dict)
+                    and query.get("kind") == "dense"
+                    and query.get("query_text")
+                ):
+                    q06_texts.add(str(query["query_text"]))
+            session = sessions.get(sid, {})
+            listener_goal = str(session.get("listener_goal") or "")
+            if listener_goal:
+                q06_texts.add(listener_goal)
+            user_text_by_turn = session.get("user_text_by_turn") or {}
+            msg = str(user_text_by_turn.get(turn_number, "") or "")
+            context = " ".join(
+                str(user_text_by_turn.get(key, "") or "")
+                for key in (turn_number - 2, turn_number - 1, turn_number)
+            ).strip()
+            if msg:
+                msg_texts.add(msg)
+            if context:
+                msg_texts.add(context)
+    return q06_texts, msg_texts
+
+
+def embedding_cache_coverage(memo, msg_store, *, q06_texts: set[str], msg_texts: set[str]) -> dict:
+    q06_missing = [
+        text
+        for text in sorted(q06_texts)
+        if hashlib.sha1(text.encode()).hexdigest() not in memo.memo
+    ]
+    msg_present = set(msg_store.get_many(sorted(msg_texts), offline=True))
+    msg_missing = [text for text in sorted(msg_texts) if text not in msg_present]
+    return {
+        "q06_total": len(q06_texts),
+        "q06_missing": len(q06_missing),
+        "q06_missing_samples": q06_missing[:10],
+        "msg_total": len(msg_texts),
+        "msg_missing": len(msg_missing),
+        "msg_missing_samples": msg_missing[:10],
+    }
+
+
+def _cache_coverage_message(coverage: dict) -> str:
+    return (
+        "offline replay embedding cache coverage is incomplete: "
+        f"q06_missing={coverage['q06_missing']}/{coverage['q06_total']} "
+        f"msg_missing={coverage['msg_missing']}/{coverage['msg_total']} "
+        f"q06_samples={coverage['q06_missing_samples']} "
+        f"msg_samples={coverage['msg_missing_samples']}"
+    )
+
+
+def check_offline_embedding_cache_coverage(
+    args: argparse.Namespace,
+    *,
+    sessions: dict,
+    memo,
+    msg_store,
+    feature_trace_view,
+) -> None:
+    if not args.offline:
+        return
+    if not hasattr(memo, "memo") or not hasattr(msg_store, "get_many"):
+        return
+    q06_texts, msg_texts = collect_embedding_cache_texts(
+        args.trace,
+        sessions,
+        feature_trace_view=feature_trace_view,
+        num_shards=args.num_shards,
+        shard_id=args.shard_id,
+    )
+    coverage = embedding_cache_coverage(
+        memo,
+        msg_store,
+        q06_texts=q06_texts,
+        msg_texts=msg_texts,
+    )
+    if coverage["q06_missing"] == 0 and coverage["msg_missing"] == 0:
+        print(
+            "offline replay cache coverage ok: "
+            f"q06={coverage['q06_total']} msg={coverage['msg_total']}",
+            flush=True,
+        )
+        return
+    message = _cache_coverage_message(coverage)
+    if getattr(args, "require_cache_coverage", False):
+        raise RuntimeError(message)
+    print(f"WARNING: {message}", file=sys.stderr, flush=True)
+
+
 def validate_args(args: argparse.Namespace) -> None:
     if args.num_shards < 1:
         raise ValueError("--num-shards must be >= 1")
@@ -193,6 +337,7 @@ def run(args: argparse.Namespace) -> None:
         Catalog,
         EmbedMemo,
         NpzEmbedStore,
+        feature_trace_view,
         load_sessions,
         load_user_cf,
     )
@@ -231,6 +376,13 @@ def run(args: argparse.Namespace) -> None:
         branch_names=branch_names,
         pool_k=args.pool_k,
         offline=args.offline,
+    )
+    check_offline_embedding_cache_coverage(
+        args,
+        sessions=sessions,
+        memo=memo,
+        msg_store=msg_store,
+        feature_trace_view=feature_trace_view,
     )
 
     write_trace = not args.no_trace_output
@@ -288,7 +440,12 @@ def run(args: argparse.Namespace) -> None:
                             seen.add(track_id)
                     ranked = ranked[: args.top_k_out]
                 else:
-                    ranked = fallback[: args.top_k_out]
+                    dropped = hard_drop_ids(trace)
+                    ranked = [
+                        track_id
+                        for track_id in fallback
+                        if track_id not in dropped
+                    ][: args.top_k_out]
                     n_fallback += 1
 
                 predictions.append(
@@ -372,10 +529,19 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Do not fill missing embedding memo entries during replay.",
     )
+    parser.add_argument(
+        "--require-cache-coverage",
+        action="store_true",
+        help=(
+            "With --offline, fail before scoring if q06 query/listener-goal or "
+            "message/context embedding stores are missing feature texts."
+        ),
+    )
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
+    _load_dotenv()
     args = build_parser().parse_args(argv)
     validate_args(args)
     run(args)

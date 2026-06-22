@@ -35,6 +35,16 @@ from mcrs.qu_modules.fuzzy_matcher import RapidfuzzCatalogMatcher
 from tests.v0plus_fakes import DictCatalog, FakeEmbeddingClient, FakeRetriever
 
 
+def test_v0plus_qu_flush_caches_delegates_to_loaded_reranker():
+    calls: list[str] = []
+    qu = V0PlusCompilerQU.__new__(V0PlusCompilerQU)
+    qu._reranker = SimpleNamespace(flush=lambda: calls.append("reranker"))
+
+    qu.flush_caches()
+
+    assert calls == ["reranker"]
+
+
 # ---------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------

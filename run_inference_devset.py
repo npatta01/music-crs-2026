@@ -22,7 +22,7 @@ def _load_dotenv() -> None:
     try:
         from dotenv import load_dotenv
 
-        load_dotenv()
+        load_dotenv(os.path.join(os.getcwd(), ".env"))
     except Exception:
         pass
 
@@ -149,6 +149,15 @@ def _litellm_cache_required(args, config, qu_kwargs: dict) -> bool:
 
 def _add_elapsed(timings: dict[str, float], key: str, start: float) -> None:
     timings[key] = timings.get(key, 0.0) + (time.perf_counter() - start)
+
+
+def _flush_runtime_caches(runtime: dict, timings: dict[str, float]) -> None:
+    flush = getattr(runtime.get("music_crs"), "flush_caches", None)
+    if not callable(flush):
+        return
+    start = time.perf_counter()
+    flush()
+    _add_elapsed(timings, "flush_caches", start)
 
 
 def _print_timings(label: str, timings: dict[str, float]) -> None:
@@ -350,44 +359,47 @@ def _run_shard(args, runtime: dict, shard_id: int, num_shards: int, output_suffi
     trace_records = 0
 
     desc = f"Shard {shard_id}/{num_shards} inference" if num_shards > 1 else "Batch inference"
-    with open(trace_path, "w", encoding="utf-8") as trace_file:
-        for i in tqdm(range(0, len(batch_data), args.batch_size), desc=desc):
-            batch = batch_data[i:i+args.batch_size]
-            batch_metadata = metadata[i:i+args.batch_size]
-            start = time.perf_counter()
-            results = music_crs.batch_chat(batch)
-            _add_elapsed(timings, "batch_chat", start)
-            _add_timing_snapshot(
-                timings,
-                "batch_chat.",
-                getattr(music_crs, "last_batch_timings", None),
-            )
+    try:
+        with open(trace_path, "w", encoding="utf-8") as trace_file:
+            for i in tqdm(range(0, len(batch_data), args.batch_size), desc=desc):
+                batch = batch_data[i:i+args.batch_size]
+                batch_metadata = metadata[i:i+args.batch_size]
+                start = time.perf_counter()
+                results = music_crs.batch_chat(batch)
+                _add_elapsed(timings, "batch_chat", start)
+                _add_timing_snapshot(
+                    timings,
+                    "batch_chat.",
+                    getattr(music_crs, "last_batch_timings", None),
+                )
 
-            start = time.perf_counter()
-            for j, result in enumerate(results):
-                inference_results.append({
-                    "session_id": batch_metadata[j]['session_id'],
-                    "user_id": batch_metadata[j]['user_id'],
-                    "turn_number": batch_metadata[j]['turn_number'],
-                    "predicted_track_ids": result['retrieval_items'],
-                    "predicted_response": result["response"]
-                })
-                # V0PlusCompilerQU populates `result["trace"]`; other QUs leave
-                # it as None. Save in a sibling file so the main predictions JSON
-                # stays small and easy to diff between runs.
-                trace_record = {
-                    "session_id": batch_metadata[j]['session_id'],
-                    "user_id": batch_metadata[j]['user_id'],
-                    "turn_number": batch_metadata[j]['turn_number'],
-                    "trace": _with_trace_run_metadata(
-                        result.get("trace"),
-                        runtime["trace_run_metadata"],
-                    ),
-                }
-                trace_file.write(json.dumps(trace_record, ensure_ascii=False, default=str) + "\n")
-                trace_records += 1
-            trace_file.flush()
-            _add_elapsed(timings, "trace_write", start)
+                start = time.perf_counter()
+                for j, result in enumerate(results):
+                    inference_results.append({
+                        "session_id": batch_metadata[j]['session_id'],
+                        "user_id": batch_metadata[j]['user_id'],
+                        "turn_number": batch_metadata[j]['turn_number'],
+                        "predicted_track_ids": result['retrieval_items'],
+                        "predicted_response": result["response"]
+                    })
+                    # V0PlusCompilerQU populates `result["trace"]`; other QUs leave
+                    # it as None. Save in a sibling file so the main predictions JSON
+                    # stays small and easy to diff between runs.
+                    trace_record = {
+                        "session_id": batch_metadata[j]['session_id'],
+                        "user_id": batch_metadata[j]['user_id'],
+                        "turn_number": batch_metadata[j]['turn_number'],
+                        "trace": _with_trace_run_metadata(
+                            result.get("trace"),
+                            runtime["trace_run_metadata"],
+                        ),
+                    }
+                    trace_file.write(json.dumps(trace_record, ensure_ascii=False, default=str) + "\n")
+                    trace_records += 1
+                trace_file.flush()
+                _add_elapsed(timings, "trace_write", start)
+    finally:
+        _flush_runtime_caches(runtime, timings)
 
     start = time.perf_counter()
     with open(out_path, "w", encoding="utf-8") as f:
