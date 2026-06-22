@@ -100,6 +100,23 @@ def _is_expected_target(target: Path, source: Path) -> bool:
         return False
 
 
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
+
+
+def _would_create_recursive_symlink(target: Path, source: Path) -> bool:
+    if not source.is_dir():
+        return False
+    source_real = source.resolve(strict=False)
+    target_real_parent = target.parent.resolve(strict=False)
+    target_path = target_real_parent / target.name
+    return target_path != source_real and _is_relative_to(target_path, source_real)
+
+
 def _validate_source(spec: LinkSpec) -> None:
     missing = [path for path in spec.required if not path.exists()]
     if missing:
@@ -118,6 +135,10 @@ def _remove_existing(path: Path) -> None:
 
 def ensure_link(spec: LinkSpec, *, force: bool = False) -> str:
     _validate_source(spec)
+    if _would_create_recursive_symlink(spec.target, spec.source):
+        raise ValueError(
+            f"Refusing to create recursive symlink: {spec.target} -> {spec.source}"
+        )
     if _is_expected_target(spec.target, spec.source):
         return "ok"
     if spec.target.exists() or spec.target.is_symlink():

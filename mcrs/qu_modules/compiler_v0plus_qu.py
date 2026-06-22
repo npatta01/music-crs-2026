@@ -355,21 +355,123 @@ def _hard_filter_is_valid(hf: Any) -> bool:
     return False
 
 
-def _sanitize_parsed_state(parsed: Any) -> Any:
-    """Generic graceful degradation BEFORE schema validation: a single bad
-    optional field should never discard the whole turn's state (→ empty pool).
+_EVIDENCE_TEXT_MAX_LEN = 240
+_SAFE_TRACK_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+_ATTRIBUTE_FACET_TYPES = {
+    "genre",
+    "mood",
+    "sonic",
+    "instrument",
+    "energy",
+    "lyrical_theme",
+    "visual",
+    "popularity",
+    "era",
+    "performer",
+}
+_ATTRIBUTE_FACET_ALIASES = {
+    "language": "sonic",
+    "region": "sonic",
+    "theme": "lyrical_theme",
+    "setting": "lyrical_theme",
+}
 
-    Currently: drop malformed `hard_filters` (e.g. a `between` with start > end)
-    rather than letting one bad entry fail validation of the entire state. Era /
-    decade handling lives in `release_year_range`, which the LLM fills using
-    world knowledge and the schema self-normalizes (swaps inverted bounds) — no
-    code-side date parsing.
+
+def _trim_evidence_text_fields(value: Any) -> None:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key == "evidence_text" and isinstance(child, str):
+                value[key] = child[:_EVIDENCE_TEXT_MAX_LEN]
+            else:
+                _trim_evidence_text_fields(child)
+    elif isinstance(value, list):
+        for child in value:
+            _trim_evidence_text_fields(child)
+
+
+def _sanitize_state_item(item: Any) -> bool:
+    if not isinstance(item, dict):
+        return False
+    item_type = item.get("type")
+    if item_type in _ATTRIBUTE_FACET_TYPES:
+        item["type"] = "attribute"
+        item["facet"] = item_type
+    if item.get("type") == "attribute":
+        facet = item.get("facet")
+        if facet in _ATTRIBUTE_FACET_ALIASES:
+            item["facet"] = _ATTRIBUTE_FACET_ALIASES[facet]
+        if item.get("facet") not in _ATTRIBUTE_FACET_TYPES:
+            return False
+    if item.get("role") == "style_reference":
+        item["role"] = "current_target"
+        item.setdefault("relation", "style_reference")
+    return True
+
+
+def _track_feedback_item_is_valid(item: Any) -> bool:
+    if not isinstance(item, dict):
+        return False
+    track_id = item.get("track_id")
+    return isinstance(track_id, str) and _SAFE_TRACK_ID_RE.match(track_id) is not None
+
+
+def _loads_llm_json_object(cleaned: str) -> Any:
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError as exc:
+        if exc.msg != "Extra data":
+            raise
+        decoder = json.JSONDecoder()
+        parsed, end = decoder.raw_decode(cleaned)
+        trailing = cleaned[end:].strip()
+        if trailing.startswith(",") and end > 0 and cleaned[end - 1] == "}":
+            repaired = cleaned[: end - 1] + trailing
+            return json.loads(repaired)
+        if isinstance(parsed, dict) and trailing and trailing[0] not in ",]}{[":
+            return parsed
+        raise
+
+
+def _sanitize_parsed_state(parsed: Any) -> Any:
+    """Gracefully repair schema-shape drift before validation.
+
+    Drop malformed legacy hard_filters and normalize common LLM enum drift from
+    otherwise well-structured v1 responses. These repairs only reshape values
+    the model already emitted; they do not infer new facts from text.
     """
     if not isinstance(parsed, dict):
         return parsed
+    candidate_types = parsed.pop("candidate_types", None)
+    current_request = parsed.get("current_request")
+    if (
+        isinstance(candidate_types, list)
+        and isinstance(current_request, dict)
+        and "candidate_types" not in current_request
+    ):
+        current_request["candidate_types"] = candidate_types
+    _trim_evidence_text_fields(parsed)
     hfs = parsed.get("hard_filters")
     if isinstance(hfs, list):
         parsed["hard_filters"] = [hf for hf in hfs if _hard_filter_is_valid(hf)]
+    for key in ("facts", "exclusions"):
+        items = parsed.get(key)
+        if isinstance(items, list):
+            sanitized_items = []
+            for item in items:
+                if not _sanitize_state_item(item):
+                    continue
+                if key == "exclusions" and isinstance(item, dict) and "scope" not in item:
+                    if item.get("role") == "rejected" or item.get("relation") == "exclude" or item.get("reuse") == "must_exclude":
+                        item["scope"] = "next_turn_hard"
+                    else:
+                        item["scope"] = "soft_preference"
+                sanitized_items.append(item)
+            parsed[key] = sanitized_items
+    feedback = parsed.get("track_feedback")
+    if isinstance(feedback, list):
+        parsed["track_feedback"] = [
+            item for item in feedback if _track_feedback_item_is_valid(item)
+        ]
     return parsed
 
 
@@ -484,7 +586,9 @@ class LiteLLMExtractor:
             if cleaned.startswith("json"):
                 cleaned = cleaned[4:]
             cleaned = cleaned.rsplit("```", 1)[0].strip()
-        parsed = json.loads(cleaned)
+        elif cleaned.endswith("```"):
+            cleaned = cleaned[:-3].strip()
+        parsed = _loads_llm_json_object(cleaned)
         parsed = _sanitize_parsed_state(parsed)
         try:
             return project_v1_to_v0plus(ConversationStateV1.model_validate(parsed))
@@ -1339,6 +1443,7 @@ def build_v0plus_compiler_qu(
                 "disco_cap",
                 "disco_confidence_threshold",
                 "disco_gated_intents",
+                "disco_include_session_artists",
                 "enable_era_popularity",
                 "era_pop_weight",
                 "era_pop_cap",

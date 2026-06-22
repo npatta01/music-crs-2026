@@ -73,6 +73,15 @@ def test_setup_refuses_to_overwrite_real_paths_without_force(tmp_path):
         module.setup_worktree_cache(target, source)
 
 
+def test_setup_refuses_recursive_cache_link(tmp_path):
+    module = _load_module()
+    source = tmp_path / "source"
+    _make_source(source)
+
+    with pytest.raises(ValueError, match="recursive symlink"):
+        module.setup_worktree_cache(source / "cache", source)
+
+
 def test_resolve_source_prefers_env_then_git_config(tmp_path, monkeypatch):
     module = _load_module()
     env_source = tmp_path / "env-source"
