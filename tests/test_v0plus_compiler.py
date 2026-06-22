@@ -1168,6 +1168,77 @@ def test_candidate_filter_summary_counts_traced_topk_slice():
     assert summary["release_date_mask_dropped"] == 0
 
 
+def test_strict_artist_policy_filters_new_artist_candidates_before_fusion_and_backfill():
+    catalog = _catalog()
+    retriever = FakeRetriever(
+        text_hits_by_field={
+            "artist_name": [("t-fugazi-1", 10.0), ("t-tomwaits-1", 5.0)],
+            "tag_list": [("t-fugazi-2", 8.0), ("t-morphine-1", 4.0)],
+        },
+        embedding_hits=[("t-fugazi-1", 0.99), ("t-morphine-2", 0.7)],
+    )
+    state = _state(
+        turn_intent="another post-hardcore band, not Fugazi",
+        intent_mode="pivot",
+        target_artist_mode="new_artist",
+        retrieval_profile="novelty",
+        mentioned_entities=[
+            MentionedEntity(type="artist", value="Fugazi", sentiment=1),
+            MentionedEntity(type="tag", value="post-hardcore", sentiment=1),
+        ],
+    )
+    cfg = CompilerConfig(branch_trace_topk=10, final_topk=4)
+
+    result = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg)._compile(
+        _resolve(state, catalog)
+    )
+
+    assert all(catalog.artist_id_of(track_id) != "a-fugazi" for track_id in result.ranked)
+    assert {"t-fugazi-1", "t-fugazi-2"} <= set(result.hard_drop)
+    assert result.candidate_filter_summary["artist_policy_dropped"] == 2
+    assert result.candidate_filter_summary["artist_policy_filter_enabled"] == 1
+
+
+def test_strict_artist_policy_does_not_filter_same_artist_exact_probe():
+    catalog = _catalog()
+    retriever = FakeRetriever(
+        text_hits_by_field={
+            "artist_name": [("t-fugazi-1", 10.0), ("t-tomwaits-1", 5.0)],
+        },
+    )
+    state = _state(
+        turn_intent="more by Fugazi",
+        target_artist_mode="same_artist",
+        retrieval_profile="exact_probe",
+        mentioned_entities=[MentionedEntity(type="artist", value="Fugazi", sentiment=1)],
+    )
+    cfg = CompilerConfig(branch_trace_topk=10, final_topk=3)
+
+    result = V0PlusCompiler(catalog, retriever, _fake_encoder(), cfg)._compile(
+        _resolve(state, catalog)
+    )
+
+    assert "t-fugazi-1" in result.ranked
+    assert result.candidate_filter_summary["artist_policy_dropped"] == 0
+    assert result.candidate_filter_summary["artist_policy_filter_enabled"] == 0
+
+
+def test_strict_artist_policy_same_artist_state_overrides_other_artist_text():
+    catalog = _catalog()
+    state = _state(
+        turn_intent="Other tracks by Fugazi, or other artists from the same era.",
+        target_artist_mode="same_artist",
+        retrieval_profile="continuation",
+        mentioned_entities=[MentionedEntity(type="artist", value="Fugazi", sentiment=1)],
+    )
+    compiler = V0PlusCompiler(catalog, FakeRetriever(), _fake_encoder())
+
+    drop, trace = compiler._artist_policy_drop_set(_resolve(state, catalog))
+
+    assert drop == set()
+    assert trace == {"enabled": False, "strict": False, "blocked_artist_ids": []}
+
+
 def test_compile_result_exposes_stage_timings():
     catalog = _catalog()
     retriever = FakeRetriever(
