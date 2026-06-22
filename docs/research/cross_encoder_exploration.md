@@ -1,6 +1,8 @@
 # Cross-Encoder (Qwen3-Reranker) for Music-CRS — Exploration Report
 
-**Date:** 2026-06-21/22 · **Status:** complete · **Author:** Claude (agent session)
+**Date:** 2026-06-21/22 · **Status:** complete · **Author:** Claude (agent session) · **Branch:** `claude/angry-tereshkova-f218e8`
+
+**Skip to:** [TL;DR](#tldr-read-this-first) · [E1 labeler](#3-experiment-1--offline-data-labeler--works-modest) · [E2 ablation](#4-experiment-2--model--prompt--context-ablation-what-makes-the-ce-see-the-gt) · [E3 serving reranker](#5-experiment-3--serving-reranker--filter--the-main-negative-result) · [Root cause](#6-root-cause-verified-by-an-adversarial-review--offline-tests) · [Cost](#8-cost-analysis-modal-feature-generation) · [Reproduce](#9-how-to-reproduce) · [Limitations](#95-limitations--what-was-not-tested) · [Next steps](#10-recommendation--next-steps)
 
 This is a standalone record of an exploration into whether an off-the-shelf **Qwen3-Reranker**
 cross-encoder can improve the conversational music recommender. It covers what was tested, the
@@ -27,8 +29,16 @@ clear value is **offline** (labeler / teacher). The higher-ROI lever for retriev
 
 **Why the serving role fails (one sentence):** on the real task — ranking the ground-truth track
 against the *other ~100 already-plausible candidates in the pool* — the zero-shot cross-encoder is
-at **chance** (AUC 0.53 on the turns that matter), and any reranking aggressive enough to help the
+at **chance** (AUC 0.51 on the turns that matter), and any reranking aggressive enough to help the
 ~25% of "missed" turns also demotes the ground-truth on the ~75% of "already-correct" turns.
+
+**Key terms.** *nDCG@20* — score of the single ground-truth (GT) track's rank in the top 20 (1.0 at
+rank 1, 0 below 20). *recoverable miss* — a turn the deployed pipeline got wrong (GT not in top-20)
+but where the GT is still in the candidate pool, so a reranker *could* help. *control* — a turn
+already correct (GT in top-20), where a reranker can only *hurt*. *floored GT* — the cross-encoder
+scored the true track ≈0 (effectively didn't recognize it). *pool_k* — the 500 candidates the
+LightGBM reranks per turn. *clean-negative rate* — fraction of mined negatives the CE scores below
+the GT. *net ΔnDCG* — gains on misses minus losses on controls, weighted by how common each is.
 
 ---
 
@@ -62,25 +72,49 @@ single-GT-rank-driven term.)
 ## 2. How the cross-encoder is scored (shared mechanics)
 
 All experiments score a `(query, document)` pair with the Qwen3-Reranker yes/no template and read a
-single relevance probability `P(yes) ∈ [0,1]`. The serving format (byte-identical to the deployed
-`mcrs/qu_modules/cross_encoder_reranker.py` Qwen3 backend):
+single relevance probability `P(yes) ∈ [0,1]`. **The `system` line is the model's *fixed, official*
+Qwen3-Reranker scaffold** (do not rewrite it — it's how the yes/no head was trained); the
+**task-specific, music context goes in the `<Instruct>` field**. Schema (byte-identical to the
+deployed `mcrs/qu_modules/cross_encoder_reranker.py` Qwen3 backend):
 
 ```
 <|im_start|>system
 Judge whether the Document meets the requirements based on the Query and the Instruct provided.
 Note that the answer can only be "yes" or "no".<|im_end|>
 <|im_start|>user
-<Instruct>: {instruct}
-<Query>: {query}
-<Document>: {document}<|im_end|>
+<Instruct>: {instruct}      ← MUSIC task description goes here (see below)
+<Query>: {query}            ← the conversation (current request + prior context)
+<Document>: {document}       ← the candidate track text
+<|im_end|>
 <|im_start|>assistant
 <think>
 
 </think>
+```
 
+**Filled example (a real phase-3 call — note it *is* music-specific via `<Instruct>` + the query/doc):**
+
+```
+<|im_start|>system
+Judge whether the Document meets the requirements based on the Query and the Instruct provided.
+Note that the answer can only be "yes" or "no".<|im_end|>
+<|im_start|>user
+<Instruct>: You are evaluating candidate tracks for a music recommendation system. Judge whether
+the candidate track satisfies the user's CURRENT (last) request; use any earlier context only to
+resolve references.
+<Query>: user (previous): play something chill
+recommended: Bonobo - Kong
+user (current request): now something more upbeat and danceable
+<Document>: Justice - D.A.N.C.E. | Cross | electronic, dance, french house, funk, upbeat
+<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
 ```
 
 Score = `softmax([logit("no"), logit("yes")])[1]` from the final-token logits. Left-padded batches.
+The exact `<Instruct>` strings used (concise vs elaborate) are in §4 and the Appendix.
 
 **Document text** (the candidate track) = the catalog `track_text`:
 `"{artist} - {title} | {album} | {tag1, …, tag5}"` (no audio, no "known-for" line).
@@ -224,6 +258,14 @@ the already-correct GT — pure `replace` throws away the LightGBM order, and ev
 control GT at rank 3 falls to 14 because the top-100 of a correct turn is full of *other* tracks the
 CE scores higher.
 
+> ⚠️ **Two caveats so this isn't mis-read.** (1) The **+0.271** is **posthoc and NOT
+> serving-knowable** — that group is selected *on the GT's own score*, which you don't have at
+> inference; it is not evidence the CE helps in production. (2) These phase-3 runs used the
+> **concise** music `<Instruct>` (arm B). A more elaborate music instruction (`MUSIC_INSTRUCT`,
+> §4) was tested in E2 and came out **≈ placebo** (no real gain beyond token inflation); given the
+> chance-level in-pool AUC (§6), a heavier instruct would not plausibly flip this — but to be exact,
+> the net-negative table was *not* re-run with the elaborate instruct.
+
 ---
 
 ## 6. Root cause (verified by an adversarial review + offline tests)
@@ -233,9 +275,9 @@ it*) plus two code/data reviewers. **No bug** — reproduced to the digit — an
 deeper than "controls outnumber misses":
 
 - **The "AUC 0.96" was GT vs a *random* catalog track (easy).** On the **actual** task — GT vs the
-  other ~99 *in-pool* candidates the LightGBM already chose — AUC collapses to **0.527 on misses
-  (≈chance)** and 0.71 on controls. The CE genuinely **cannot pick the GT out of plausible
-  candidates**.
+  other ~99 *in-pool* candidates the LightGBM already chose — AUC collapses to **0.513 on misses
+  (≈chance)** and **0.725 on controls** (recomputed from the committed raw scores). The CE genuinely
+  **cannot pick the GT out of plausible candidates**.
 - A **cheating oracle gate** that applies the CE *only to true misses and never touches a control*
   still nets only **+0.0009** (≈6 of 1,709 recovered). So control-damage is a *symptom*; the disease
   is chance-level in-pool discrimination.
@@ -262,6 +304,10 @@ GT/assistant leak.
 | fp16 | 0.9563 | 0.7270 | 13.3 pairs/s | 10.8 GB |
 | bf16 | 0.9563 | 0.7302 | 13.2 pairs/s | 10.8 GB |
 | fp8 | — | — | **failed locally** (`kernels` triton fp8 pkg breaks transformers 5.6.2) | 4.7 GB loaded |
+
+*(These E4 numbers are from a one-off local GPU run; no precision result JSON is committed, so unlike
+E1/E2/E3 they aren't re-derivable from the committed artifacts — re-run `probe_xenc_precision.py` to
+regenerate.)*
 
 **Takeaways.** bf16 is **exactly lossless** but gives no speedup/memory benefit on this box. fp8/int8
 are not viable *locally* (the GB10 is aarch64 + cuda-capability sm_121; the `kernels` upgrade clobbers
@@ -361,6 +407,28 @@ python scripts/rerank/probe_xenc_precision.py --precision fp16 --limit 100
 
 ---
 
+## 9.5 Limitations / what was NOT tested
+
+So the trust boundaries are in one place:
+- **Zero-shot only.** The cross-encoder was never fine-tuned. A *fine-tuned* cross-encoder on
+  play/gpa labels is a different (untested) animal and could behave differently.
+- **Sampled, then population-weighted.** E3 nets come from a **397-miss / 200-control sample**;
+  the headline "net" multiplies the per-group means by the true devset populations (1,709 / 4,865).
+  E1 used 300 turns (90 / 194 judged); E2 used 150. Magnitudes are directional, not ±0.001-precise.
+- **The +0.271 recognized-miss recovery is posthoc / not serving-knowable** (group selected on the
+  GT's own score) — it is *not* evidence the CE helps in production.
+- **Serving instruct.** E3 used the *concise* music `<Instruct>`; the elaborate `MUSIC_INSTRUCT`
+  (≈placebo in E2) was not re-run through the full net table.
+- **Top-100 ceiling.** E3 reranks the LightGBM top-100; ~half the miss GTs sit deeper and are
+  structurally unreachable by this experiment (a deeper rerank wasn't run — but it only adds cost,
+  and §6's chance-level AUC says it wouldn't help).
+- **The independent judge (DeepSeek) is itself imperfect** — it rates even the *true* GT "GOOD"
+  only 44%, so soft-positive precision is a conservative proxy, not ground truth.
+- **Not tested here:** CE as a fine-tuned reranker; CE reranking the *fusion* pool (pre-LightGBM);
+  CE as a LightGBM feature end-to-end (only prior-logged +0.022); the full-121k reranker retrain.
+
+---
+
 ## 10. Recommendation / next steps
 
 1. **Do not add a cross-encoder serving reranker/filter** (any mode) to the deployed pipeline or the
@@ -369,8 +437,10 @@ python scripts/rerank/probe_xenc_precision.py --precision fp16 --limit 100
    validated **4B + richquery → judge-confirm** recipe (E1) — but note it's **second-order** (prior
    GATE-0 work shows label hygiene barely moves the bi-encoder).
 3. **CE-as-LightGBM-feature** is the only live serving use (prior +0.022 hard_pivot). It's **not
-   wired into the feature pipeline** and costs ~$2–40 on Modal to build (§8). **Low ROI** (~+0.005
-   composite) vs the effort — park it as a costed option for a final push.
+   wired into the feature pipeline** and costs ~$2–40 on Modal to build (§8). **Low ROI** — the
+   prior gain is **+0.022 nDCG on the hard_pivot *lane*** (~47% of turns), so roughly **+0.01 overall
+   nDCG → ~+0.005 composite** (nDCG is 0.50 of the composite) — modest vs the build/integration
+   effort. Park it as a costed option for a final push.
 4. **Spend the budget on the bi-encoder instead.** It is the higher-ROI retrieval lever (e.g. the
    `b1` max-len truncation fix recently bought **+7.4 r@20** nearly for free). Levers: 4B capacity,
    iterative (ANCE) hard-negative re-mining, grounded track-level doc text (within-artist collapse).
