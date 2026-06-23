@@ -65,6 +65,7 @@ def _make_crs(**resp_opts):
     crs.response_item_format = resp_opts.get("item_format", "plain")
     crs.response_max_tags = resp_opts.get("max_tags", 10)
     crs.response_echo_retries = resp_opts.get("echo_retries", 0)
+    crs.response_style = resp_opts.get("style", "")
     return crs
 
 
@@ -84,6 +85,35 @@ def test_state_conditioning_feeds_state_block_not_transcript():
     # item was the XML block, not the raw "title: ..." pipe string
     assert "<recommended_track>" in out[0]["response"]
     assert "Olvidarte" in out[0]["response"]
+
+
+def test_latest_state_conditioning_feeds_goal_language_latest_and_style():
+    crs = _make_crs(
+        conditioning="latest_state",
+        item_format="xml",
+        style="Write about only the selected track.",
+    )
+    out = crs.batch_chat(
+        [
+            {
+                "user_query": "play jazz",
+                "user_id": None,
+                "session_memory": [{"role": "user", "content": "older request"}],
+                "session_meta": {
+                    "conversation_goal": {"listener_goal": "discover modal jazz"},
+                    "user_profile": {"preferred_language": "English"},
+                },
+            }
+        ]
+    )
+
+    response = out[0]["response"]
+    assert "Listener goal: discover modal jazz" in response
+    assert "Preferred language: English" in response
+    assert "Latest user request: play jazz" in response
+    assert "Current request: play jazz" in response
+    assert "older request" not in response
+    assert "Response style: Write about only the selected track." in response
 
 
 def test_transcript_default_uses_session_memory_and_plain_item():

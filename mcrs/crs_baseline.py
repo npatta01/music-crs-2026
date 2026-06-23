@@ -5,7 +5,13 @@ from typing import Optional, Any, List, Dict
 from mcrs.db_item import MusicCatalogDB
 from mcrs.db_user import UserProfileDB
 from mcrs.lm_modules import load_lm_module
-from mcrs.response_context import format_state_block, is_metadata_echo, xml_track_item
+from mcrs.response_context import (
+    format_latest_state_context,
+    format_state_block,
+    is_metadata_echo,
+    resolve_response_kwargs,
+    xml_track_item,
+)
 from mcrs.qu_modules import load_qu_module
 
 class CRS_BASELINE:
@@ -88,13 +94,14 @@ class CRS_BASELINE:
         self.retrieval_topk = retrieval_topk
         self.retrieval_config = retrieval_config or {}
         # Response-generation options (default = legacy transcript behaviour).
-        # Blind-A enables the validated best setup: state-conditioned input +
-        # XML track item + echo-retry. See docs/research/2026-06-10-response-generation-bakeoff.md.
-        _rk = response_kwargs or {}
-        self.response_conditioning = _rk.get("conditioning", "transcript")  # "transcript" | "state"
+        # Named templates expand to the best observed packaging setup while
+        # keeping the retrieval/ranking candidate unchanged.
+        _rk = resolve_response_kwargs(response_kwargs)
+        self.response_conditioning = _rk.get("conditioning", "transcript")  # "transcript" | "state" | "latest_state"
         self.response_item_format = _rk.get("item_format", "plain")          # "plain" | "xml"
         self.response_max_tags = int(_rk.get("max_tags", 10))
         self.response_echo_retries = int(_rk.get("echo_retries", 0))
+        self.response_style = str(_rk.get("style") or "").strip()
         self.qu_kwargs = qu_kwargs or {}
         self.lm_kwargs = lm_kwargs or {}
         self.lm = load_lm_module(
@@ -335,6 +342,24 @@ class CRS_BASELINE:
                 if isinstance(trace, dict):
                     state = trace.get("extracted_state") or trace.get("state")
                 block = format_state_block(state, _safe_label)
+                if self.response_style:
+                    block = f"{block}\nResponse style: {self.response_style}"
+                response_contexts.append([{"role": "user", "content": block}])
+        elif self.response_conditioning == "latest_state":
+            response_contexts = []
+            for i, data in enumerate(batch_data):
+                trace = batch_traces[i] if i < len(batch_traces) else None
+                state = None
+                if isinstance(trace, dict):
+                    state = trace.get("extracted_state") or trace.get("state")
+                block = format_latest_state_context(
+                    data.get("session_meta"),
+                    str(data.get("user_query") or ""),
+                    state,
+                    _safe_label,
+                )
+                if self.response_style:
+                    block = f"{block}\nResponse style: {self.response_style}"
                 response_contexts.append([{"role": "user", "content": block}])
         else:
             response_contexts = session_memories

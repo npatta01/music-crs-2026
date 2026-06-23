@@ -5,13 +5,33 @@ Used by `CRS_BASELINE.batch_chat` when `response_kwargs` enable state-conditioni
 and/or the XML item format (e.g. the Blind-A config). Kept independent of the
 bake-off package so the production response path has no dev-only dependency.
 
-Validated setup (best Blind-A LLM-judge result, 4.2/5): state-conditioned input
-+ XML track item (<=10 tags) + role+goal "track explainer" prompt + profile.
-See docs/research/2026-06-10-response-generation-bakeoff.md.
+Validated Blind-A response setup: state-conditioned input + XML track item
+(<=10 tags) + role+goal "track explainer" prompt + profile. Phase 2 packaging
+uses the `phase2_best_qwen` respgen alias; see
+docs/research/2026-06-22-phase2-response-template-findings.md.
 """
 from __future__ import annotations
 
 from typing import Any, Callable
+
+
+PHASE2_BEST_QWEN_STYLE = (
+    "Write 1-2 concise sentences about only the selected track. "
+    "Prioritize the latest user request and extracted state over older conversation history. "
+    "If the track is reasonably aligned, explain the fit with one specific supported reason. "
+    "If it clearly conflicts with an explicit avoid/new-artist constraint, do not oversell it "
+    "or blame the system; briefly frame the limitation and the closest supported reason."
+)
+
+RESPONSE_TEMPLATE_DEFAULTS: dict[str, dict[str, Any]] = {
+    "phase2_best_qwen": {
+        "conditioning": "latest_state",
+        "item_format": "xml",
+        "max_tags": 10,
+        "echo_retries": 0,
+        "style": PHASE2_BEST_QWEN_STYLE,
+    },
+}
 
 
 def _first(value: Any) -> str:
@@ -41,6 +61,43 @@ def xml_track_item(meta: dict | None, track_id: str = "", max_tags: int = 10) ->
         f"  <tags>{_esc(', '.join(tags))}</tags>\n"
         "</recommended_track>"
     )
+
+
+def resolve_response_kwargs(response_kwargs: dict[str, Any] | None) -> dict[str, Any]:
+    """Expand named response template defaults, with explicit kwargs winning."""
+    raw = dict(response_kwargs or {})
+    template = raw.get("template")
+    if not template:
+        return raw
+    if template not in RESPONSE_TEMPLATE_DEFAULTS:
+        allowed = ", ".join(sorted(RESPONSE_TEMPLATE_DEFAULTS))
+        raise ValueError(f"Unknown response template {template!r}. Allowed: {allowed}")
+    return {**RESPONSE_TEMPLATE_DEFAULTS[template], **raw}
+
+
+def _nested_get(mapping: dict[str, Any] | None, key: str) -> Any:
+    return mapping.get(key) if isinstance(mapping, dict) else None
+
+
+def format_latest_state_context(
+    session_meta: dict[str, Any] | None,
+    latest_user: str,
+    state: dict | None,
+    track_label: Callable[[str], str] | None = None,
+) -> str:
+    """Render the Phase-2 response context: goal/language/latest request + state."""
+    session_meta = session_meta if isinstance(session_meta, dict) else {}
+    lines = ["[LISTENER CONTEXT]"]
+    goal = _nested_get(_nested_get(session_meta, "conversation_goal"), "listener_goal")
+    if goal:
+        lines.append(f"Listener goal: {goal}")
+    language = _nested_get(_nested_get(session_meta, "user_profile"), "preferred_language")
+    if language:
+        lines.append(f"Preferred language: {language}")
+    if latest_user:
+        lines.append(f"Latest user request: {latest_user}")
+    lines.append(format_state_block(state, track_label))
+    return "\n".join(lines)
 
 
 def format_state_block(state: dict | None, track_label: Callable[[str], str] | None = None) -> str:
