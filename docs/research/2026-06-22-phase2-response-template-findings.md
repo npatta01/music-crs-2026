@@ -9,6 +9,8 @@ candidates that are already worth one of the three daily submissions.
 
 If a Phase 2 retrieval/ranking artifact needs responses, use
 `phase2_best_qwen` / `top1_constraint_latest_state_qwen`.
+`configs/state_ranker_v10_lgbm_blindset_A.yaml` is wired to this response
+template so Blind-A packaging uses the fallback by default.
 
 Do not spend one of the three Phase 2 slots on the alt-model, close-fit,
 concise-only, exact-language, or sanitized no-alt response-only variants unless
@@ -17,6 +19,8 @@ a visible response score appears or there is otherwise unused submission budget.
 ## Best Template
 
 `phase2_best_qwen` is a stable alias for `top1_constraint_latest_state_qwen`.
+The runtime config expands this alias to `conditioning: latest_state`,
+`item_format: xml`, `max_tags: 10`, `temperature: 0.0`, and `max_tokens: 512`.
 
 ```json
 {

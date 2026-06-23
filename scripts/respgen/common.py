@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence
 
-from mcrs.response_context import format_state_block, xml_track_item
+from mcrs.response_context import PHASE2_BEST_QWEN_STYLE, format_state_block, xml_track_item
 
 
 @dataclass(frozen=True)
@@ -446,13 +446,7 @@ def variant_flags_for_name(name: str) -> dict[str, Any]:
             "preferred_language": True,
             "latest_user": True,
             "trace_state": True,
-            "style": (
-                "Write 1-2 concise sentences about only the selected track. "
-                "Prioritize the latest user request and extracted state over older conversation history. "
-                "If the track is reasonably aligned, explain the fit with one specific supported reason. "
-                "If it clearly conflicts with an explicit avoid/new-artist constraint, do not oversell it "
-                "or blame the system; briefly frame the limitation and the closest supported reason."
-            ),
+            "style": PHASE2_BEST_QWEN_STYLE,
             "item_format": "xml",
             "max_tags": 10,
             "temperature": 0.0,

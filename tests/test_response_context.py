@@ -1,6 +1,16 @@
 from __future__ import annotations
 
-from mcrs.response_context import format_state_block, is_metadata_echo, xml_track_item, response_state_dict
+import pytest
+
+from mcrs.response_context import (
+    PHASE2_BEST_QWEN_STYLE,
+    format_latest_state_context,
+    format_state_block,
+    is_metadata_echo,
+    resolve_response_kwargs,
+    response_state_dict,
+    xml_track_item,
+)
 from mcrs.conversation_state.schema import (
     ConversationStateV0Plus, StateEntity, EntityRole,
     TemporalConstraint, TemporalConstraintKind, ConstraintStrength,
@@ -43,6 +53,39 @@ def test_format_state_block_renders_fields_and_resolves_tracks():
 
 def test_format_state_block_none():
     assert "unavailable" in format_state_block(None, None)
+
+
+def test_format_latest_state_context_uses_goal_language_latest_and_state():
+    block = format_latest_state_context(
+        {
+            "conversation_goal": {"listener_goal": "discover modal jazz"},
+            "user_profile": {"preferred_language": "English"},
+        },
+        "play something blue",
+        {"turn_intent": "play jazz", "mentioned_entities": [{"value": "jazz", "sentiment": 1}]},
+        None,
+    )
+
+    assert "Listener goal: discover modal jazz" in block
+    assert "Preferred language: English" in block
+    assert "Latest user request: play something blue" in block
+    assert "Current request: play jazz" in block
+    assert "Liked / wants: jazz" in block
+
+
+def test_resolve_phase2_best_response_template_defaults():
+    resolved = resolve_response_kwargs({"template": "phase2_best_qwen"})
+
+    assert resolved["conditioning"] == "latest_state"
+    assert resolved["item_format"] == "xml"
+    assert resolved["max_tags"] == 10
+    assert resolved["echo_retries"] == 0
+    assert resolved["style"] == PHASE2_BEST_QWEN_STYLE
+
+
+def test_resolve_response_template_rejects_unknown_template():
+    with pytest.raises(ValueError, match="Unknown response template"):
+        resolve_response_kwargs({"template": "missing"})
 
 
 def test_is_metadata_echo():
