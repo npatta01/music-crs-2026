@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 import types
 from pathlib import Path
@@ -227,6 +228,54 @@ def test_build_features_allows_embedding_fill_by_default_and_flushes_msg_store(m
 
     assert captured_offline == [False]
     assert FakeMsgStore.instances[0].flushed == 1
+
+
+def test_build_features_main_loads_dotenv_before_embedding_fill(monkeypatch, tmp_path):
+    module = _load_module("build_features_loads_dotenv", "scripts/rerank/build_features.py")
+    (tmp_path / ".env").write_text("DEEPINFRA_API_KEY=from-dotenv\n", encoding="utf-8")
+
+    trace_path = tmp_path / "trace.jsonl"
+    gt_path = tmp_path / "ground_truth.json"
+    branch_names_path = tmp_path / "branch_names.json"
+    out_dir = tmp_path / "features"
+    env_seen: list[str | None] = []
+
+    def fake_sharded_build(args):
+        env_seen.append(os.environ.get("DEEPINFRA_API_KEY"))
+
+    monkeypatch.setattr(module, "PROJECT_ROOT", tmp_path)
+    monkeypatch.delenv("DEEPINFRA_API_KEY", raising=False)
+    monkeypatch.setattr(module, "run_sharded_build", fake_sharded_build, raising=False)
+    monkeypatch.setattr(
+        module,
+        "Catalog",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("should not run inline")),
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "build_features.py",
+            "--trace",
+            str(trace_path),
+            "--ground-truth",
+            str(gt_path),
+            "--db-uri",
+            str(tmp_path / "lancedb"),
+            "--tag-index",
+            str(tmp_path / "tag_index.npz"),
+            "--branch-names",
+            str(branch_names_path),
+            "--msg-store",
+            str(tmp_path / "msg_store"),
+            "--out",
+            str(out_dir),
+        ],
+    )
+
+    module.main()
+
+    assert env_seen == ["from-dotenv"]
 
 
 def test_build_features_defaults_to_parallel_shards(monkeypatch, tmp_path):

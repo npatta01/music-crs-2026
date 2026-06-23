@@ -34,6 +34,12 @@ class CRS_BASELINE:
     def _qu_owns_retrieval(qu) -> bool:
         return hasattr(qu, "compile_track_ids") or hasattr(qu, "batch_compile_track_ids")
 
+    def flush_caches(self) -> None:
+        """Persist live-filled caches owned by the active query understanding stack."""
+        flush = getattr(getattr(self, "qu", None), "flush_caches", None)
+        if callable(flush):
+            flush()
+
     def __init__(self,
         lm_type="meta-llama/Llama-3.2-1B-Instruct",
         retrieval_type="unused",

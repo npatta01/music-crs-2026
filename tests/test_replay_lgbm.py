@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -44,6 +45,72 @@ def test_should_process_row_uses_modulo_shards():
     ] == [1, 4, 7]
 
 
+def test_collect_embedding_cache_texts_reads_dense_queries_goal_and_messages(tmp_path):
+    module = _load_module("replay_lgbm_cache_texts", "scripts/rerank/replay_lgbm.py")
+    trace_path = tmp_path / "trace.jsonl"
+    trace_path.write_text(
+        json.dumps(
+            {
+                "session_id": "s1",
+                "turn_number": 3,
+                "trace": {
+                    "branches": {
+                        "branch_queries": {
+                            "dense.meta": {"kind": "dense", "query_text": "bright query"},
+                            "bm25": {"kind": "bm25", "query": "bright"},
+                        }
+                    }
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    sessions = {
+        "s1": {
+            "listener_goal": "find bright music",
+            "user_text_by_turn": {1: "first", 2: "second", 3: "third"},
+        }
+    }
+
+    q06_texts, msg_texts = module.collect_embedding_cache_texts(
+        trace_path,
+        sessions,
+        feature_trace_view=lambda trace: trace,
+    )
+
+    assert q06_texts == {"bright query", "find bright music"}
+    assert msg_texts == {"third", "first second third"}
+
+
+def test_embedding_cache_coverage_reports_missing_q06_and_message_texts():
+    module = _load_module("replay_lgbm_cache_coverage", "scripts/rerank/replay_lgbm.py")
+
+    class Memo:
+        memo = {hashlib.sha1("cached query".encode()).hexdigest(): [1.0]}
+
+    class MsgStore:
+        def get_many(self, texts, offline=True):
+            assert offline is True
+            return {"cached message": object()}
+
+    coverage = module.embedding_cache_coverage(
+        Memo(),
+        MsgStore(),
+        q06_texts={"cached query", "missing query"},
+        msg_texts={"cached message", "missing message"},
+    )
+
+    assert coverage == {
+        "q06_total": 2,
+        "q06_missing": 1,
+        "q06_missing_samples": ["missing query"],
+        "msg_total": 2,
+        "msg_missing": 1,
+        "msg_missing_samples": ["missing message"],
+    }
+
+
 def test_fallback_track_ids_prefers_final_recommendation():
     module = _load_module("replay_lgbm_fallback", "scripts/rerank/replay_lgbm.py")
 
@@ -85,6 +152,17 @@ def test_hard_drop_ids_prefers_serialized_retrieval_hard_drop_and_unions_rejecti
     ) == {"played-track", "resolved-rejection", "explicit-rejection"}
 
 
+def test_hard_drop_ids_supports_inline_legacy_branch_traces():
+    module = _load_module("replay_lgbm_legacy_hard_drop", "scripts/rerank/replay_lgbm.py")
+
+    assert module.hard_drop_ids(
+        {
+            "branches": {"hard_drop": ["legacy-drop"]},
+            "resolver": {"played_track_ids": ["played-track"]},
+        }
+    ) == {"legacy-drop", "played-track"}
+
+
 def test_validate_replay_trace_requires_hard_drop_for_candidate_rows():
     module = _load_module("replay_lgbm_validate_depth", "scripts/rerank/replay_lgbm.py")
 
@@ -115,6 +193,22 @@ def test_validate_replay_trace_allows_empty_hard_drop_at_positive_depth():
     module.validate_replay_trace_contract(
         [{"track_id": "t1"}],
         {"retrieval": {"trace_depth": 1000, "hard_drop": []}},
+    )
+
+
+def test_validate_replay_trace_allows_legacy_branch_hard_drop_contract():
+    module = _load_module("replay_lgbm_validate_legacy_drop", "scripts/rerank/replay_lgbm.py")
+
+    module.validate_replay_trace_contract(
+        [{"track_id": "t1"}],
+        {
+            "branches": {
+                "depth": 1000,
+                "hard_drop": [],
+                "pools": [],
+                "fused": [],
+            }
+        },
     )
 
 
@@ -283,6 +377,7 @@ def test_run_flushes_msg_store_at_shutdown(tmp_path, monkeypatch):
             Catalog=FakeCatalog,
             EmbedMemo=FakeMemo,
             NpzEmbedStore=FakeMsgStore,
+            feature_trace_view=lambda trace: trace,
             load_sessions=lambda dataset_name, split: {},
             load_user_cf=lambda: {},
         ),
@@ -332,3 +427,124 @@ def test_run_flushes_msg_store_at_shutdown(tmp_path, monkeypatch):
 
     assert FakeMemo.instances[0].flushed
     assert FakeMsgStore.instances[0].flushed
+
+
+def test_run_filters_hard_drop_when_feature_rows_empty(tmp_path, monkeypatch):
+    module = _load_module("replay_lgbm_fallback_hard_drop", "scripts/rerank/replay_lgbm.py")
+    model_dir = tmp_path / "model"
+    model_dir.mkdir()
+    (model_dir / "model.txt").write_text("fake", encoding="utf-8")
+    (model_dir / "meta.json").write_text(json.dumps({"cols": ["score"]}), encoding="utf-8")
+    (model_dir / "cat_maps.json").write_text("{}", encoding="utf-8")
+    (model_dir / "branch_names.json").write_text("[]", encoding="utf-8")
+    trace_path = tmp_path / "trace.jsonl"
+    trace_path.write_text(
+        json.dumps(
+            {
+                "session_id": "s1",
+                "user_id": "u1",
+                "turn_number": 1,
+                "trace": {
+                    "retrieval": {"trace_depth": 1000, "hard_drop": ["t-drop"]},
+                    "final_recommendation": {"track_ids": ["t-drop", "t-keep"]},
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    class FakeBooster:
+        def __init__(self, model_file):
+            pass
+
+        def num_feature(self):
+            return 1
+
+    class FakeMemo:
+        memo = {}
+
+        def __init__(self, path):
+            pass
+
+        def flush(self):
+            pass
+
+    class FakeMsgStore:
+        def __init__(self, path):
+            pass
+
+        def get_many(self, texts, offline=True):
+            return {}
+
+        def flush(self):
+            pass
+
+    class FakeTagEmbeddingIndex:
+        tags = []
+        matrix = np.empty((0, 1), dtype=np.float32)
+
+        @classmethod
+        def load(cls, path):
+            return cls()
+
+    monkeypatch.setitem(sys.modules, "lightgbm", SimpleNamespace(Booster=FakeBooster))
+    monkeypatch.setitem(
+        sys.modules,
+        "build_features",
+        SimpleNamespace(
+            Catalog=lambda db_uri, table_name: SimpleNamespace(meta={}),
+            EmbedMemo=FakeMemo,
+            NpzEmbedStore=FakeMsgStore,
+            feature_trace_view=lambda trace: trace,
+            load_sessions=lambda dataset_name, split: {},
+            load_user_cf=lambda: {},
+        ),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "features_v9",
+        SimpleNamespace(
+            TurnContext=lambda *args, **kwargs: SimpleNamespace(cat=args[0]),
+            compute_turn_features=lambda row, ctx, gt=None: ([], False),
+        ),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "mcrs.qu_modules.tag_resolver",
+        SimpleNamespace(
+            TagEmbeddingIndex=FakeTagEmbeddingIndex,
+            TieredTagResolver=lambda **kwargs: object(),
+        ),
+    )
+
+    module.run(
+        SimpleNamespace(
+            trace=trace_path,
+            out_exp_dir=tmp_path / "out",
+            out_tid="tid",
+            split="devset",
+            model_ref=model_dir,
+            model_version="lgbm_test",
+            db_uri="db",
+            table_name="table",
+            tag_index="tag.npz",
+            embed_memo=tmp_path / "memo.json",
+            msg_store=tmp_path / "msg_store",
+            dataset_name="talkpl-ai/Test",
+            dataset_split="test",
+            pool_k=500,
+            top_k_out=1000,
+            output_topk=20,
+            num_shards=1,
+            shard_id=0,
+            output_suffix="",
+            no_trace_output=True,
+            offline=True,
+            require_cache_coverage=False,
+        )
+    )
+
+    pred_path = tmp_path / "out" / "inference" / "devset" / "tid.json"
+    rows = json.loads(pred_path.read_text(encoding="utf-8"))
+    assert rows[0]["predicted_track_ids"] == ["t-keep"]

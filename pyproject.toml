@@ -30,8 +30,6 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "streamlit>=1.56.0",
     "torch>=2.9.1,<2.10",
-    "torchaudio",
-    "torchvision",
     "transformers>=4.51.0",
     "lancedb>=0.30.2",
     "rapidfuzz>=3.14",
@@ -62,18 +60,16 @@ testpaths = ["tests"]
 link-mode = "copy"
 
 [tool.uv.sources]
+# cu130 (CUDA 13.0) is required for the local GB10 / DGX Spark box (sm_121):
+# the cu128 build has no Blackwell GEMM heuristics and falls back to a slow
+# generic kernel (~5x slower). cu130 wheels exist for both linux x86_64 (Modal)
+# and aarch64 (GB10), and Modal's GPU hosts run a CUDA-13-capable driver (580.x).
 torch = [
-    { index = "pytorch-cu128", marker = "sys_platform == 'linux'" },
-]
-torchaudio = [
-    { index = "pytorch-cu128", marker = "sys_platform == 'linux'" },
-]
-torchvision = [
-    { index = "pytorch-cu128", marker = "sys_platform == 'linux'" },
+    { index = "pytorch-cu130", marker = "sys_platform == 'linux'" },
 ]
 flash-attn = { url = "https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.9cxx11abiTRUE-cp312-cp312-linux_x86_64.whl", marker = "sys_platform == 'linux' and platform_machine == 'x86_64'" }
 
 [[tool.uv.index]]
-name = "pytorch-cu128"
-url = "https://download.pytorch.org/whl/cu128"
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
 explicit = true

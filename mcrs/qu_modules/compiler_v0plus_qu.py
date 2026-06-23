@@ -864,6 +864,12 @@ class V0PlusCompilerQU:
                         self.reranker_cfg.get("model_path"))
         return self._reranker
 
+    def flush_caches(self) -> None:
+        """Persist live-filled caches owned by optional online components."""
+        flush = getattr(getattr(self, "_reranker", None), "flush", None)
+        if callable(flush):
+            flush()
+
     # ------------------------------------------------------------------
     # CRS_BASELINE QU contract
     # ------------------------------------------------------------------

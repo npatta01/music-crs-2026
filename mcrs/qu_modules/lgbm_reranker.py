@@ -372,6 +372,13 @@ class LgbmOnlineReranker:
         add_elapsed("total", total_start)
         self.load_timings = load_timings
 
+    def flush(self) -> None:
+        """Persist any live-filled reranker embedding caches."""
+        for store in (getattr(self.ctx, "memo", None), getattr(self.ctx, "msg_store", None)):
+            flush = getattr(store, "flush", None)
+            if callable(flush):
+                flush()
+
     def _assemble(self, rows: list[dict]) -> np.ndarray:
         X = np.empty((len(rows), len(self.cols)), dtype=np.float32)
         for j, c in enumerate(self.cols):
@@ -386,22 +393,35 @@ class LgbmOnlineReranker:
     def rerank(self, trace: dict, session_meta: dict | None,
                user_id: str | None, hard_drop: set[str],
                fallback: list[str]) -> list[str]:
-        """Re-order the branch-pool union; returns top_k_out ids (backfilled
-        from `fallback` to preserve depth). Any failure -> fallback unchanged."""
+        """Re-order the branch-pool union and keep hard drops out of fallbacks."""
         from features_v9 import compute_turn_features
+        dropped = {str(track_id) for track_id in hard_drop}
+
+        def filtered_fallback() -> list[str]:
+            return [
+                str(track_id)
+                for track_id in fallback
+                if str(track_id) not in dropped
+            ][: self.top_k_out]
 
         try:
             if not (trace.get("branches") or {}).get("pools"):
-                return fallback
+                return filtered_fallback()
             sid = str((session_meta or {}).get("session_id") or "")
             tn = int((session_meta or {}).get("turn_number") or 0)
             if session_meta:
                 self.ctx.sessions[sid] = session_entry_from_meta(session_meta)
+            trace_for_features = trace
+            if dropped:
+                branches = dict(trace.get("branches") or {})
+                existing_drop = {str(track_id) for track_id in branches.get("hard_drop") or []}
+                branches["hard_drop"] = sorted(existing_drop | dropped)
+                trace_for_features = {**trace, "branches": branches}
             row = {"session_id": sid, "turn_number": tn,
-                   "user_id": user_id, "trace": trace}
+                   "user_id": user_id, "trace": trace_for_features}
             rows, _ = compute_turn_features(row, self.ctx, gt=None)
             if not rows:
-                return fallback
+                return filtered_fallback()
             # sidecar constraint features — shared helper with the offline builder
             # (build_features.constraint_feature_row) so train/serve cannot drift
             from build_features import constraint_feature_row
@@ -422,14 +442,14 @@ class LgbmOnlineReranker:
             scores = self.booster.predict(X)
             order = np.argsort(-scores)
             ranked = [rows[i]["track_id"] for i in order
-                      if rows[i]["track_id"] not in hard_drop]
+                      if str(rows[i]["track_id"]) not in dropped]
             seen = set(ranked)
             for t in fallback:  # preserve depth for downstream consumers
-                if t not in seen and t not in hard_drop:
+                if t not in seen and str(t) not in dropped:
                     ranked.append(t)
                     seen.add(t)
             return ranked[: self.top_k_out]
         except Exception as e:  # serving must never hard-fail a turn
             print(f"[lgbm_reranker] fallback (turn {session_meta}): {e!r}",
                   flush=True)
-            return fallback
+            return filtered_fallback()

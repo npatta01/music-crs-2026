@@ -126,6 +126,21 @@ def test_response_generation_uses_final_recommendation_primary_track():
     assert "title: Olvidarte" not in out[0]["response"]
 
 
+def test_crs_flush_caches_delegates_to_qu():
+    crs = CRS_BASELINE.__new__(CRS_BASELINE)
+    flushed = []
+
+    class FlushableQU:
+        def flush_caches(self):
+            flushed.append("qu")
+
+    crs.qu = FlushableQU()
+
+    crs.flush_caches()
+
+    assert flushed == ["qu"]
+
+
 def test_batch_chat_exposes_stage_timings():
     crs = _make_crs(conditioning="state", item_format="plain")
 

@@ -91,6 +91,23 @@ def _norm_rows(mat: np.ndarray) -> np.ndarray:
     return mat / np.maximum(np.linalg.norm(mat, axis=1, keepdims=True), 1e-9)
 
 
+def _load_dotenv() -> None:
+    dotenv_path = PROJECT_ROOT / ".env"
+    if not dotenv_path.exists():
+        return
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        for line in dotenv_path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            key, value = stripped.split("=", 1)
+            os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+        return
+    load_dotenv(dotenv_path)
+
+
 def constraint_feature_row(track_id, artists, *, played, rejected_tracks,
                            rejected_artists, target_artist_mode,
                            same_artist_session):
@@ -503,13 +520,69 @@ def load_user_cf():
     return out
 
 
+def _track_id_from_scored_item(item) -> str | None:
+    if not isinstance(item, (list, tuple)) or not item:
+        return None
+    return str(item[0])
+
+
+def _feature_drop_ids(trace: dict) -> set[str]:
+    drop: set[str] = set()
+    retrieval = trace.get("retrieval") or {}
+    branches = trace.get("branches") or {}
+    resolver = trace.get("resolver") or {}
+    for source in (retrieval, branches):
+        drop.update(str(track_id) for track_id in source.get("hard_drop") or [])
+    for key in ("played_track_ids", "rejected_track_ids"):
+        drop.update(str(track_id) for track_id in resolver.get(key) or [])
+    return drop
+
+
+def _filter_feature_branches(branches: dict, drop: set[str]) -> dict:
+    if not drop:
+        return branches
+
+    out = dict(branches)
+    pools = []
+    for pool in branches.get("pools") or []:
+        if not isinstance(pool, dict):
+            pools.append(pool)
+            continue
+        kept_hits = [
+            hit for hit in (pool.get("hits") or [])
+            if _track_id_from_scored_item(hit) not in drop
+        ]
+        pools.append({**pool, "hits": kept_hits})
+    out["pools"] = pools
+    out["fused"] = [
+        item for item in (branches.get("fused") or [])
+        if _track_id_from_scored_item(item) not in drop
+    ]
+    final = branches.get("final")
+    if isinstance(final, dict):
+        out["final"] = {
+            **final,
+            "track_ids": [
+                str(track_id)
+                for track_id in (final.get("track_ids") or [])
+                if str(track_id) not in drop
+            ],
+        }
+    return out
+
+
 def feature_trace_view(trace: dict) -> dict:
     """Return the feature-builder view for legacy and state-ranker v10 traces."""
     if not isinstance(trace, dict):
         return {"branches": {"pools": [], "branch_queries": {}, "fused": []}, "state": {}}
     branches = trace.get("branches")
     if isinstance(branches, dict) and branches.get("pools") is not None:
-        return trace
+        drop = _feature_drop_ids(trace)
+        if not drop:
+            return trace
+        out = dict(trace)
+        out["branches"] = _filter_feature_branches(branches, drop)
+        return out
 
     retrieval = trace.get("retrieval") or {}
     ranking = trace.get("ranking") or {}
@@ -528,11 +601,11 @@ def feature_trace_view(trace: dict) -> dict:
     state = trace.get("state") or trace.get("extracted_state") or {}
     compiled_state = trace.get("compiled_state") or {}
     out = dict(trace)
-    out["branches"] = {
+    out["branches"] = _filter_feature_branches({
         "pools": retrieval.get("branches") or [],
         "branch_queries": retrieval.get("branch_queries") or {},
         "fused": fused,
-    }
+    }, _feature_drop_ids(trace))
     out["state"] = state
     out["routing_tags"] = (
         trace.get("routing_tags")
@@ -680,6 +753,7 @@ def run_sharded_build(args: argparse.Namespace) -> None:
 
 
 def main():
+    _load_dotenv()
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--trace", required=True)
     ap.add_argument("--ground-truth", default="exp/ground_truth/devset.json")

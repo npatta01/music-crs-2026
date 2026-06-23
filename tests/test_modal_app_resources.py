@@ -220,6 +220,29 @@ def test_modal_has_v10_ranker_entrypoints():
     assert "def run_train_lgbm_ranker(" in source
 
 
+def test_modal_inference_entrypoints_commit_cache_volume():
+    inference_functions = [
+        "_inference_devset",
+        "_inference_devset_cpu",
+        "_inference_devset_grouped",
+        "_inference_devset_cpu_grouped",
+        "_inference_blindset",
+        "_inference_blindset_cpu",
+        "_inference_blindset_grouped",
+        "_inference_blindset_cpu_grouped",
+    ]
+    for function_name in inference_functions:
+        function = _module_function(function_name)
+        calls = []
+        for node in ast.walk(function):
+            if not isinstance(node, ast.Call):
+                continue
+            if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+                calls.append(f"{node.func.value.id}.{node.func.attr}")
+        assert "results_vol.commit" in calls, function_name
+        assert "cache_vol.commit" in calls, function_name
+
+
 def test_modal_feature_shard_forces_single_build_features_shard():
     function = _module_function("_build_features_shard")
     constants = [

@@ -60,6 +60,58 @@ def test_feature_trace_view_reads_state_ranker_v10_trace():
     }
 
 
+def test_feature_trace_view_filters_retrieval_hard_drops_from_feature_pools():
+    trace = {
+        "retrieval": {
+            "hard_drop": ["played", "policy"],
+            "branches": [
+                {"name": "bm25", "hits": [["keep", 2.0], ["played", 1.0]]},
+                {"name": "dense", "hits": [["policy", 0.8], ["also-keep", 0.7]]},
+            ],
+            "branch_queries": {},
+        },
+        "ranking": {
+            "stages": [
+                {
+                    "name": "candidate_fusion",
+                    "scores": [["played", 0.5], ["keep", 0.4], ["policy", 0.3]],
+                }
+            ]
+        },
+        "resolver": {"played_track_ids": ["played"]},
+    }
+
+    view = feature_trace_view(trace)
+
+    assert view["branches"]["pools"] == [
+        {"name": "bm25", "hits": [["keep", 2.0]]},
+        {"name": "dense", "hits": [["also-keep", 0.7]]},
+    ]
+    assert view["branches"]["fused"] == [["keep", 0.4]]
+
+
+def test_feature_trace_view_filters_inline_branch_hard_drops_from_feature_pools():
+    trace = {
+        "branches": {
+            "hard_drop": ["played"],
+            "pools": [{"name": "bm25", "hits": [["played", 2.0], ["keep", 1.0]]}],
+            "branch_queries": {},
+            "fused": [["played", 0.5], ["keep", 0.4]],
+            "final": {"track_ids": ["played", "keep"]},
+        },
+        "state": {},
+    }
+
+    view = feature_trace_view(trace)
+
+    assert view is not trace
+    assert view["branches"]["pools"] == [
+        {"name": "bm25", "hits": [["keep", 1.0]]}
+    ]
+    assert view["branches"]["fused"] == [["keep", 0.4]]
+    assert view["branches"]["final"]["track_ids"] == ["keep"]
+
+
 def test_feature_trace_view_preserves_existing_feature_trace():
     trace = {"branches": {"pools": [], "branch_queries": {}, "fused": []}, "state": {}}
     assert feature_trace_view(trace) is trace

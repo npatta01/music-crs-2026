@@ -829,13 +829,15 @@ class V0PlusCompiler:
 
         # 5. Hard-drop set (played + rejections + tf.rejected)
         hard_drop = self._hard_drop_set(rs)
-        bm25_hits = [(t, s) for t, s in bm25_hits if t not in hard_drop]
+        artist_policy_drop, artist_policy_trace = self._artist_policy_drop_set(rs)
+        effective_hard_drop = hard_drop | artist_policy_drop
+        bm25_hits = [(t, s) for t, s in bm25_hits if t not in effective_hard_drop]
         dense_branch_results = [
-            [(t, s) for t, s in hits if t not in hard_drop]
+            [(t, s) for t, s in hits if t not in effective_hard_drop]
             for hits in dense_branch_results
         ]
         centroid_branch_results = [
-            ([(t, s) for t, s in hits if t not in hard_drop], w, n)
+            ([(t, s) for t, s in hits if t not in effective_hard_drop], w, n)
             for hits, w, n in centroid_branch_results
         ]
         add_elapsed("apply_filters", start)
@@ -873,7 +875,9 @@ class V0PlusCompiler:
                 list(disco_hits[:_trace_k]),
             ))
         disco_hits = [
-            (t, s) for t, s in disco_hits if t in candidate_mask and t not in hard_drop
+            (t, s)
+            for t, s in disco_hits
+            if t in candidate_mask and t not in effective_hard_drop
         ]
 
         # 6. Weighted RRF fusion (compiler-owned, cross-modal). Each pool's
@@ -945,7 +949,9 @@ class V0PlusCompiler:
         if trace_enabled and era_hits:
             named_pools.append((era_branch_name, list(era_hits[:_trace_k])))
         era_hits = [
-            (t, s) for t, s in era_hits if t in candidate_mask and t not in hard_drop
+            (t, s)
+            for t, s in era_hits
+            if t in candidate_mask and t not in effective_hard_drop
         ]
         if era_hits:
             weighted_pools.append(
@@ -1098,10 +1104,20 @@ class V0PlusCompiler:
 
         start = time.perf_counter()
         candidate_filter_summary = (
-            self._candidate_filter_summary(named_pools, candidate_mask, hard_drop, rs)
+            self._candidate_filter_summary(
+                named_pools,
+                candidate_mask,
+                effective_hard_drop,
+                rs,
+                artist_policy_drop=artist_policy_drop,
+            )
             if trace_enabled
             else {}
         )
+        if trace_enabled:
+            candidate_filter_summary["artist_policy_filter_enabled"] = int(
+                bool(artist_policy_trace.get("enabled"))
+            )
         add_elapsed("filter_summary", start)
         start = time.perf_counter()
         fused = self._rrf_fuse_weighted(weighted_pools, k=self.cfg.rrf_k)
@@ -1120,7 +1136,7 @@ class V0PlusCompiler:
         ranked = [tid for tid, _ in adjusted]
         n_from_fusion = min(len(ranked), self.cfg.final_topk)
         if len(ranked) < self.cfg.final_topk:
-            ranked = self._backfill(ranked, candidate_mask, hard_drop)
+            ranked = self._backfill(ranked, candidate_mask, effective_hard_drop)
         ranked = ranked[: self.cfg.final_topk]
         n_from_backfill = len(ranked) - n_from_fusion
         add_elapsed("backfill", start)
@@ -1136,7 +1152,7 @@ class V0PlusCompiler:
             branch_queries=branch_queries,
             branch_status=branch_status,
             candidate_filter_summary=candidate_filter_summary,
-            hard_drop=sorted(hard_drop) if _trace_k else [],
+            hard_drop=sorted(effective_hard_drop) if _trace_k else [],
             timings=timings,
         )
 
@@ -1238,12 +1254,74 @@ class V0PlusCompiler:
                 drop.update(self.catalog.tracks_by_artist_id(aid))
         return drop
 
+    @staticmethod
+    def _enum_value(value) -> str:
+        return str(getattr(value, "value", value) or "")
+
+    def _strict_artist_policy_active(self, rs: ResolvedConversationState) -> bool:
+        state = rs.state
+        mode = self._enum_value(getattr(state, "target_artist_mode", ""))
+        profile = self._enum_value(getattr(state, "retrieval_profile", ""))
+        intent_mode = self._enum_value(getattr(state, "intent_mode", ""))
+        turn_intent = str(getattr(state, "turn_intent", "") or "")
+
+        if profile == "exact_probe" or mode == "same_artist":
+            return False
+        if self._STRICT_DIFFERENT_ARTIST_RE.search(turn_intent):
+            return True
+        if mode in {"new_artist", "different_artist"}:
+            return True
+        return intent_mode == "pivot" or profile == "novelty"
+
+    def _artist_policy_drop_set(
+        self,
+        rs: ResolvedConversationState,
+    ) -> tuple[set[str], dict[str, object]]:
+        """Tracks blocked by explicit new/different-artist policy."""
+        strict = self._strict_artist_policy_active(rs)
+        if not strict:
+            return set(), {"enabled": False, "strict": False, "blocked_artist_ids": []}
+
+        blocked_artist_ids: set[str] = set()
+        for target in rs.resolved_targets:
+            if target.kind == "artist" and target.entity_id:
+                blocked_artist_ids.add(target.entity_id)
+
+        for track_id in rs.played_track_ids:
+            artist_id = self.catalog.artist_id_of(track_id)
+            if artist_id:
+                blocked_artist_ids.add(artist_id)
+
+        for feedback in rs.state.track_feedback:
+            if feedback.overall_sentiment <= 0 or feedback.role == "rejected":
+                continue
+            artist_id = rs.track_feedback_artist_ids.get(feedback.track_id)
+            if artist_id:
+                blocked_artist_ids.add(artist_id)
+
+        for rejection in rs.resolved_rejections.values():
+            blocked_artist_ids.update(rejection.artist_ids)
+
+        if not blocked_artist_ids:
+            return set(), {"enabled": False, "strict": True, "blocked_artist_ids": []}
+
+        drop: set[str] = set()
+        for artist_id in blocked_artist_ids:
+            drop.update(self.catalog.tracks_by_artist_id(artist_id))
+        return drop, {
+            "enabled": bool(drop),
+            "strict": True,
+            "blocked_artist_ids": sorted(blocked_artist_ids),
+        }
+
     def _candidate_filter_summary(
         self,
         named_pools: list[tuple[str, list[tuple[str, float]]]],
         candidate_mask: set[str],
         hard_drop: set[str],
         rs: ResolvedConversationState,
+        *,
+        artist_policy_drop: set[str] | None = None,
     ) -> dict[str, int]:
         """Compact filter counts over the traced top-k branch pools.
 
@@ -1258,10 +1336,14 @@ class V0PlusCompiler:
         after_mask = raw_union & candidate_mask
         played = set(rs.played_track_ids)
         explicit_rejections = self._resolved_rejection_drop_set(rs)
+        artist_policy_drop = artist_policy_drop or set()
         played_dropped = after_mask & played
         explicit_dropped = (after_mask - played_dropped) & explicit_rejections
-        other_hard_dropped = (
+        artist_policy_dropped = (
             after_mask - played_dropped - explicit_dropped
+        ) & artist_policy_drop
+        other_hard_dropped = (
+            after_mask - played_dropped - explicit_dropped - artist_policy_dropped
         ) & hard_drop
         return {
             "raw_union_size": len(raw_union),
@@ -1269,6 +1351,7 @@ class V0PlusCompiler:
             "release_date_mask_dropped": len(raw_union - candidate_mask),
             "played_track_dropped": len(played_dropped),
             "explicit_rejection_dropped": len(explicit_dropped),
+            "artist_policy_dropped": len(artist_policy_dropped),
             "other_hard_drop_dropped": len(other_hard_dropped),
         }
 
@@ -1465,6 +1548,13 @@ class V0PlusCompiler:
         r"\b(?:not|no|without|don'?t want|nothing|never|avoid(?:ing)?|"
         r"other than|except|besides|instead of)\b"
         r"(?:\s+\S+){0,4}", __import__("re").I)
+
+    _STRICT_DIFFERENT_ARTIST_RE = __import__("re").compile(
+        r"\b(?:different|new|other|another)\s+"
+        r"(?:artists?|bands?|composers?|acts?|performers?)\b"
+        r"|\bnot\s+(?:by|from)\b",
+        __import__("re").I,
+    )
 
     @classmethod
     def _strip_negated_spans(cls, text: str) -> str:
