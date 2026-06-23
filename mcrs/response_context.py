@@ -5,9 +5,10 @@ Used by `CRS_BASELINE.batch_chat` when `response_kwargs` enable state-conditioni
 and/or the XML item format (e.g. the Blind-A config). Kept independent of the
 bake-off package so the production response path has no dev-only dependency.
 
-Validated setup (best Blind-A LLM-judge result, 4.2/5): state-conditioned input
-+ XML track item (<=10 tags) + role+goal "track explainer" prompt + profile.
-See docs/research/2026-06-10-response-generation-bakeoff.md.
+Validated Blind-A response setup: state-conditioned input + XML track item
+(<=10 tags) + role+goal "track explainer" prompt + profile. Phase 2 packaging
+uses the `phase2_best_qwen` respgen alias; see
+docs/research/2026-06-22-phase2-response-template-findings.md.
 """
 from __future__ import annotations
 
