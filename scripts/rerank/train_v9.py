@@ -56,6 +56,143 @@ N_FOLDS = 5
 SEED = 13
 ES_ROUNDS = 100
 MAX_ROUNDS = 3000
+SUBSET = "all"  # "all" | "pivot" (restrict train+eval ROWS to pivot turns)
+FEATURE_SET = "all"  # "all" | "pivot" (restrict training COLUMNS to pivot features)
+FIXED_ROUNDS = 0  # >0: train a fixed boosting budget with NO early stopping (and
+# keep all trees). Use for small subsets (e.g. pivot) whose ~50-turn early-stop
+# validation set is too noisy — ES quits at noise and underfits. 0 = default ES.
+
+# Features dropped from training entirely. wants_new_artist is a deterministic
+# binary projection of the target_artist_mode categorical (1.0 iff "new"/"different"),
+# carries zero extra information, and the v10 booster never split on it (0 gain).
+DROPPED_FEATURES = ["wants_new_artist"]
+
+# Pivot feature set = symbolic "away-from" demotion signals (which candidates to
+# leave behind) PLUS continuous "toward" discriminators that order WITHIN the
+# new-artist block (these break the score ties the demotion-only set produced).
+_PIVOT_DEMOTION = [  # away-from / abandonment / new-vs-old-artist
+    "intent_mode", "target_artist_mode", "wants_new_proxy",
+    "x_same_artist_wants_new", "same_artist_session", "same_artist_last",
+    "artist_played_count", "artist_share", "n_same_artist_in_union",
+    "artist_best_rank_in_union", "same_artist_as_abandoned", "tag_overlap_abandoned",
+    "artist_mention", "rejected_artist_proxy", "is_played_track",
+    "rejected_artist_exact", "rejected_track_exact", "violates_new_artist",
+]
+# Tier-1 tie-breakers: continuous, candidate-specific signals (the within-turn
+# pct_* ranks are especially strong tie-breakers). This is the "30-feature" set
+# (18 demotion + 12 here). (A broader 43-feature "pivot-sensible" variant was
+# tried and regressed: 0.168 vs 0.176, so we keep the 30-feature set.)
+_PIVOT_TIER1 = [
+    "pct_cf_centroid", "pct_user_cf",                      # collaborative taste fit
+    "pct_pop_pct", "pct_era_pop_pct",                      # popularity / era fit
+    "tag_emb_cos", "pct_tag_overlap_idf",                  # content / tag match
+    "n_exact_tier", "max_tag_match_score",                 # grounded-tag strength
+    "q06_lyric_cos", "listener_goal_cos",                  # lyric / stated-goal match
+    "score__dense.qwen_8b.metadata.metadata_qwen3_embedding_8b",    # retrieval relevance
+    "z__score__dense.qwen_8b.metadata.metadata_qwen3_embedding_8b",
+]
+PIVOT_FEATURES = _PIVOT_DEMOTION + _PIVOT_TIER1
+
+
+def graded_label(is_gt: bool, gt_moves: bool, is_future: bool) -> int:
+    """Graded relevance grade for one candidate (LambdaRank label_gain handles 0-3):
+      3  GT and it moved toward the goal (next-turn assessment != DOES_NOT_MOVE)
+      2  not the GT but played LATER in the same session (future-track proxy for a
+         'good alternative' — we have no goal-progress signal off the realized GT)
+      1  GT but it did NOT move toward the goal (noisy positive, kept weak)
+      0  ordinary non-GT candidate
+    GT takes precedence over future-track membership."""
+    if is_gt:
+        return 3 if gt_moves else 1
+    if is_future:
+        return 2
+    return 0
+
+
+def artist_recency_in_session(cand_artists, played_by_turn, turn, sentinel=99) -> int:
+    """Turns since any of ``cand_artists`` was last played BEFORE ``turn``.
+
+    ``played_by_turn``: {turn_number: set_of_artist_ids}. Returns ``sentinel`` when
+    the candidate's artist was never played earlier in the session (full novelty).
+    Graded novelty for pivots: small = just heard (demote), large/sentinel = new."""
+    last = None
+    for t, arts in played_by_turn.items():
+        if t < turn and cand_artists & arts and (last is None or t > last):
+            last = t
+    return (turn - last) if last is not None else sentinel
+
+
+def training_feature_subset(all_cols, feature_set):
+    """Ordered feature-name subset to train on for a given mode.
+
+    'pivot' -> PIVOT_FEATURES restricted to the columns actually present;
+    'all'   -> every column except DROPPED_FEATURES (a dropped column that is
+    absent from the matrix is a no-op, so this is safe before/after a rebuild)."""
+    if feature_set == "pivot":
+        return [c for c in PIVOT_FEATURES if c in all_cols]
+    return [c for c in all_cols if c not in DROPPED_FEATURES]
+
+
+def select_feature_columns(cols, cat_idx, feature_subset):
+    """Map a feature-name subset to full-matrix column positions.
+
+    Returns ``(col_indices, sub_cols, sub_cat_idx)``:
+      - ``col_indices``: positions in the full matrix to select, in subset order;
+      - ``sub_cols``: the subset names (training feature_name);
+      - ``sub_cat_idx``: indices WITHIN the subset that are categorical."""
+    col_indices = [cols.index(c) for c in feature_subset]
+    cat_set = set(cat_idx)
+    sub_cat_idx = [j for j, ci in enumerate(col_indices) if ci in cat_set]
+    return col_indices, list(feature_subset), sub_cat_idx
+
+
+def _take(X, rows, col_indices):
+    """Contiguous (rows[, col_indices]) gather from the memmap. Uses np.ix_ for the
+    column subset so we never materialize the full-width block for the selected
+    rows (matters at ~16M training rows)."""
+    if col_indices is None:
+        return np.ascontiguousarray(X[rows])
+    return np.ascontiguousarray(X[np.ix_(rows, col_indices)])
+
+
+def _resolve_feature_cols(all_cols, cat_idx):
+    """(col_indices, feat_cols, feat_cat_idx) for the active FEATURE_SET, where
+    col_indices is None when the full column set is used (no selection)."""
+    subset = training_feature_subset(all_cols, FEATURE_SET)
+    if subset == all_cols:
+        return None, all_cols, cat_idx
+    col_indices, feat_cols, feat_cat_idx = select_feature_columns(all_cols, cat_idx, subset)
+    print(f"  feature_set={FEATURE_SET}: {len(feat_cols)}/{len(all_cols)} cols", flush=True)
+    return col_indices, feat_cols, feat_cat_idx
+
+
+def pivot_mask_from_codes(X, cols, cat_maps) -> np.ndarray:
+    """Boolean pivot mask over rows of ``X``, derived from the categorical CODE
+    columns already encoded in the training matrix (``intent_mode`` /
+    ``target_artist_mode``). Alignment is guaranteed because ``X`` is the exact
+    matrix the model trains on — no parquet rescan, no row-order assumption. Uses
+    the shared ``is_pivot_turn`` gate on the ``cat_maps`` *values*, then matches the
+    corresponding integer codes in ``X``."""
+    from features_v9 import is_pivot_turn
+
+    j_intent = cols.index("intent_mode")
+    j_tam = cols.index("target_artist_mode")
+    intent_codes = [c for v, c in cat_maps["intent_mode"].items()
+                    if is_pivot_turn(v, None)]
+    tam_codes = [c for v, c in cat_maps["target_artist_mode"].items()
+                 if is_pivot_turn(None, v)]
+    mask = np.isin(X[:, j_intent], intent_codes) | np.isin(X[:, j_tam], tam_codes)
+    return mask.astype(bool)
+
+
+def _pivot_rows(X, meta) -> np.ndarray:
+    """Boolean pivot mask for the loaded matrix, using the committed cat_maps
+    (read from OUT) so the codes match how X was factorized at build time."""
+    cat_maps = json.load(open(OUT / "cat_maps_v9.json"))
+    mask = pivot_mask_from_codes(X, meta["cols"], cat_maps)
+    print(f"  subset=pivot: {int(mask.sum()):,}/{len(mask):,} rows "
+          f"({mask.mean():.1%})", flush=True)
+    return mask
 
 
 def _ids_and_folds():
@@ -198,6 +335,7 @@ def stage_fold(fold: int):
     X = np.load(str(OUT / "X.npy"), mmap_mode="r")
     all_cols = meta["cols"]
     cat_idx = meta["cat_idx"]
+    col_indices, feat_cols, feat_cat_idx = _resolve_feature_cols(all_cols, cat_idx)
 
     row_fold = sid_fold[sid_codes]
     # ES split: 10% of this fold's TRAIN users (deterministic per fold)
@@ -210,49 +348,75 @@ def stage_fold(fold: int):
     sid_es = np.array([sess_user.get(s, s) in es_users for s in sid_uniq])
     row_es = sid_es[sid_codes]
 
+    pmask = _pivot_rows(X, meta) if SUBSET == "pivot" else None
     tr_mask = (row_fold != fold) & (row_fold != -1) & (~row_es)
     es_mask = (row_fold != fold) & (row_fold != -1) & row_es
+    if pmask is not None:
+        tr_mask &= pmask
+        es_mask &= pmask
     tr_idx = np.flatnonzero(tr_mask)
     es_idx = np.flatnonzero(es_mask)
     tr_idx, tr_groups = _grouped(tr_idx, sid_codes, turn_arr)
     es_idx, es_groups = _grouped(es_idx, sid_codes, turn_arr)
     print(f"fold {fold}: train {len(tr_idx):,} rows / es {len(es_idx):,}", flush=True)
 
-    mono = [(-1 if c == "is_played_track" else 0) for c in all_cols]
+    mono = [(-1 if c == "is_played_track" else 0) for c in feat_cols]
     params = dict(LGB_PARAMS, monotone_constraints=mono)
 
-    Xtr = np.ascontiguousarray(X[tr_idx])
+    Xtr = _take(X, tr_idx, col_indices)
     dtrain = lgb.Dataset(Xtr, label=y[tr_idx], group=tr_groups, weight=row_w[tr_idx],
-                         feature_name=all_cols, categorical_feature=cat_idx,
+                         feature_name=feat_cols, categorical_feature=feat_cat_idx,
                          free_raw_data=True)
     dtrain.construct()
     del Xtr; gc.collect()
-    Xes = np.ascontiguousarray(X[es_idx])
-    dvalid = lgb.Dataset(Xes, label=y[es_idx], group=es_groups, weight=row_w[es_idx],
-                         reference=dtrain, free_raw_data=False)
-    dvalid.construct()
-    del Xes; gc.collect()
 
-    booster = lgb.train(params, dtrain, num_boost_round=MAX_ROUNDS,
-                        valid_sets=[dvalid], valid_names=["es"],
-                        callbacks=[lgb.early_stopping(ES_ROUNDS, verbose=False),
-                                   lgb.log_evaluation(200)])
-    best = booster.best_iteration or MAX_ROUNDS
+    if FIXED_ROUNDS > 0:
+        # Fixed budget, no early stopping, keep ALL trees — for small subsets whose
+        # validation set is too noisy for reliable early stopping (see FIXED_ROUNDS).
+        booster = lgb.train(params, dtrain, num_boost_round=FIXED_ROUNDS,
+                            callbacks=[lgb.log_evaluation(200)])
+        best = FIXED_ROUNDS
+        del dtrain; gc.collect()
+    else:
+        Xes = _take(X, es_idx, col_indices)
+        dvalid = lgb.Dataset(Xes, label=y[es_idx], group=es_groups, weight=row_w[es_idx],
+                             reference=dtrain, free_raw_data=False)
+        dvalid.construct()
+        del Xes; gc.collect()
+        booster = lgb.train(params, dtrain, num_boost_round=MAX_ROUNDS,
+                            valid_sets=[dvalid], valid_names=["es"],
+                            callbacks=[lgb.early_stopping(ES_ROUNDS, verbose=False),
+                                       lgb.log_evaluation(200)])
+        best = booster.best_iteration or MAX_ROUNDS
+        del dtrain, dvalid; gc.collect()
     booster.save_model(str(OUT / f"model_fold{fold}.txt"), num_iteration=best)
-    del dtrain, dvalid; gc.collect()
 
     # score this fold's test rows + lockbox rows (chunked from memmap)
     for tag, mask in [("test", row_fold == fold), ("lockbox", row_fold == -1)]:
+        if pmask is not None:
+            mask = mask & pmask
         idx = np.flatnonzero(mask)
         scores = np.empty(len(idx), dtype=np.float32)
         for lo_i in range(0, len(idx), 2_000_000):
             sl = idx[lo_i:lo_i + 2_000_000]
             scores[lo_i:lo_i + len(sl)] = booster.predict(
-                X[sl], num_iteration=best)
+                _take(X, sl, col_indices), num_iteration=best)
             gc.collect()
         np.save(OUT / f"scores_{tag}_fold{fold}.npy", scores)
         np.save(OUT / f"idx_{tag}_fold{fold}.npy", idx)
     print(f"fold {fold} done: best_iter {best}", flush=True)
+
+
+def gt_tie_averaged_rank(scores, gt_score) -> float:
+    """Expected rank of the ground-truth item under random tie-breaking:
+    ``n_greater + (n_tied + 1) / 2`` where n_tied counts items equal to the GT
+    score (including the GT itself). A unique GT reduces to the old
+    ``n_greater + 1``; ties no longer collapse to best-case rank 1, so a
+    constant/coarse scorer can't game the ranking metric."""
+    scores = np.asarray(scores)
+    n_greater = int((scores > gt_score).sum())
+    n_tied = int((scores == gt_score).sum())
+    return n_greater + (n_tied + 1) / 2.0
 
 
 def _per_turn_metrics(sub: pd.DataFrame, denom: int):
@@ -262,7 +426,7 @@ def _per_turn_metrics(sub: pd.DataFrame, denom: int):
         gt = g[g.y == 1]
         if not len(gt):
             continue
-        r = int((g.score > float(gt.score.iloc[0])).sum()) + 1
+        r = gt_tie_averaged_rank(g.score.to_numpy(), float(gt.score.iloc[0]))
         pt.append((sid, int(tn), r))
     ranks = np.array([r for _, _, r in pt])
     for k in (1, 5, 10, 20):
@@ -279,6 +443,9 @@ def stage_finalize():
     rrf_rank = np.load(OUT / "rrf_rank.npy")
     n = meta["n"]
 
+    X = np.load(str(OUT / "X.npy"), mmap_mode="r")
+    pmask = _pivot_rows(X, meta) if SUBSET == "pivot" else None
+
     scores = np.full(n, np.nan, dtype=np.float32)
     lock_scores = np.zeros(n, dtype=np.float64)
     for f in range(N_FOLDS):
@@ -288,7 +455,9 @@ def stage_finalize():
         lock_scores[li] += np.load(OUT / f"scores_lockbox_fold{f}.npy")
     lock_idx = np.flatnonzero(sid_fold[sid_codes] == -1)
     scores[lock_idx] = (lock_scores[lock_idx] / N_FOLDS).astype(np.float32)
-    assert not np.isnan(scores).any(), "rows without scores"
+    # subset=pivot only scores pivot rows; assert coverage on the evaluated slice
+    assert not np.isnan(scores[pmask] if pmask is not None else scores).any(), \
+        "rows without scores"
 
     df = pd.DataFrame({
         "sid": np.asarray(sid_uniq, dtype=object)[sid_codes],
@@ -296,10 +465,30 @@ def stage_finalize():
         "rrf_rank": rrf_rank,
         "lockbox": sid_fold[sid_codes] == -1,
     })
-    # cold flag per turn from the X column has_user_vec
-    X = np.load(str(OUT / "X.npy"), mmap_mode="r")
     huv_col = meta["cols"].index("has_user_vec")
     df["has_user_vec"] = np.asarray(X[:, huv_col])
+
+    # PIVOT slice: model vs RRF on the identical pivot-turn set, single denom
+    # (# distinct pivot turns present). Comparable across the v10 and pivot runs.
+    if pmask is not None:
+        dfp = df[pmask].reset_index(drop=True)
+        denom_pivot = int(dfp.groupby(["sid", "turn"]).ngroups)
+        res, pt = _per_turn_metrics(dfp, denom_pivot)
+        rrp = dfp[dfp.y == 1].rrf_rank.to_numpy()
+        out = {
+            "subset": "pivot",
+            "n_pivot_turns": denom_pivot,
+            "model_full": res,
+            "rrf_full": {
+                "ndcg@20": float(sum(1 / math.log2(r + 1) for r in rrp if r <= 20) / denom_pivot),
+                "hit@20": float((rrp <= 20).sum() / denom_pivot),
+            },
+        }
+        json.dump(out, open(OUT / "metrics.json", "w"), indent=2)
+        pd.DataFrame(pt, columns=["session_id", "turn_number", "gt_rank"]).to_parquet(
+            OUT / "per_turn_ranks.parquet")
+        print(json.dumps(out, indent=2), flush=True)
+        return
 
     gt_rows = json.load(open(GT_PATH))
     denom_all = len(gt_rows)  # 8000
@@ -364,6 +553,7 @@ def stage_full_model():
     X = np.load(str(OUT / "X.npy"), mmap_mode="r")
     all_cols = meta["cols"]
     cat_idx = meta["cat_idx"]
+    col_indices, feat_cols, feat_cat_idx = _resolve_feature_cols(all_cols, cat_idx)
 
     best_iters = []
     for f in range(N_FOLDS):
@@ -373,13 +563,16 @@ def stage_full_model():
     n_rounds = int(statistics.median(best_iters))
     print(f"Fold best_iters: {best_iters}  →  full model rounds: {n_rounds}", flush=True)
 
-    all_idx, all_groups = _grouped(np.arange(len(sid_codes)), sid_codes, turn_arr)
-    Xall = np.ascontiguousarray(X[all_idx])
-    mono = [(-1 if c == "is_played_track" else 0) for c in all_cols]
+    base_idx = np.arange(len(sid_codes))
+    if SUBSET == "pivot":
+        base_idx = base_idx[_pivot_rows(X, meta)]
+    all_idx, all_groups = _grouped(base_idx, sid_codes, turn_arr)
+    Xall = _take(X, all_idx, col_indices)
+    mono = [(-1 if c == "is_played_track" else 0) for c in feat_cols]
     params = dict(LGB_PARAMS, monotone_constraints=mono)
     dtrain = lgb.Dataset(Xall, label=y[all_idx], group=all_groups,
-                         weight=row_w[all_idx], feature_name=all_cols,
-                         categorical_feature=cat_idx, free_raw_data=True)
+                         weight=row_w[all_idx], feature_name=feat_cols,
+                         categorical_feature=feat_cat_idx, free_raw_data=True)
     dtrain.construct()
     del Xall; gc.collect()
 
@@ -394,6 +587,14 @@ if __name__ == "__main__":
     ap.add_argument("--stage", required=True,
                     choices=["build", "fold", "finalize", "full_model"])
     ap.add_argument("--fold", type=int, default=0)
+    ap.add_argument("--subset", choices=["all", "pivot"], default="all",
+                    help="Restrict train+eval rows to pivot turns (default: all)")
+    ap.add_argument("--feature-set", choices=["all", "pivot"], default="all",
+                    help="Restrict training columns to pivot features (default: all)")
+    ap.add_argument("--fixed-rounds", type=int, default=0,
+                    help="Train this many boosting rounds with NO early stopping "
+                         "(keeps all trees). For small subsets whose ES validation "
+                         "is too noisy. 0 = default early stopping.")
     ap.add_argument("--out-dir", type=str, default=None,
                     help="Override output directory (default: exp/analysis/rerank/train_v9)")
     ap.add_argument("--features-dir", type=str, default=None,
@@ -407,6 +608,9 @@ if __name__ == "__main__":
     ap.add_argument("--gt", type=str, default=None,
                     help="Override ground_truth devset.json path")
     a = ap.parse_args()
+    SUBSET = a.subset
+    FEATURE_SET = a.feature_set
+    FIXED_ROUNDS = a.fixed_rounds
     if a.out_dir:
         OUT = Path(a.out_dir)
     if a.features_dir:

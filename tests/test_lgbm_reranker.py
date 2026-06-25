@@ -544,3 +544,158 @@ def test_constraint_feature_row_shared_helper():
         "t3", ("c1",), played=set(), rejected_tracks=set(),
         rejected_artists=set(), target_artist_mode="different_artist",
         same_artist_session=0.0)["violates_new_artist"] == 0.0
+
+
+@pytest.mark.parametrize(
+    "intent_mode,target_artist_mode,expected",
+    [
+        # intent_mode arm fires regardless of artist mode
+        ("pivot", "unknown", True),
+        ("pivot", "same_artist", True),
+        # artist-mode arm: "new" / "different" substrings fire
+        ("open_explore", "new_artist", True),
+        ("refinement", "different_artist", True),
+        ("open_explore", "different", True),
+        # neither arm -> not a pivot
+        ("open_explore", "same_artist", False),
+        ("refinement", "unknown", False),
+        ("open_explore", "", False),
+        # robustness: None inputs must not raise and must be False
+        (None, None, False),
+        (None, "same_artist", False),
+        ("open_explore", None, False),
+    ],
+)
+def test_is_pivot_turn_gate(intent_mode, target_artist_mode, expected):
+    """The shared pivot gate: pivot iff intent_mode=='pivot' OR
+    target_artist_mode contains 'new'/'different'. Single source of truth for
+    both the offline training-row filter and the online router."""
+    from features_v9 import is_pivot_turn
+
+    assert is_pivot_turn(intent_mode, target_artist_mode) is expected
+
+
+def test_pivot_mask_from_codes_matches_gate():
+    """The training-row pivot mask is derived from the categorical CODE columns
+    already encoded in X.npy (alignment-guaranteed, no parquet rescan). It must
+    reproduce is_pivot_turn applied to the decoded values, via either arm."""
+    from train_v9 import pivot_mask_from_codes
+
+    cols = ["pool_rank", "intent_mode", "popularity", "target_artist_mode"]
+    cat_maps = {
+        "intent_mode": {"open_explore": 0, "pivot": 1, "refinement": 2},
+        "target_artist_mode": {"unknown": 0, "new_artist": 1, "same_artist": 2},
+    }
+    # rows: (intent_code, tam_code) -> expected pivot
+    #  0: pivot, unknown        -> True  (intent arm)
+    #  1: open_explore, new     -> True  (artist-mode arm)
+    #  2: open_explore, same    -> False
+    #  3: refinement, unknown   -> False
+    X = np.array(
+        [
+            [9.0, 1, 0.5, 0],
+            [9.0, 0, 0.5, 1],
+            [9.0, 0, 0.5, 2],
+            [9.0, 2, 0.5, 0],
+        ],
+        dtype=np.float32,
+    )
+
+    mask = pivot_mask_from_codes(X, cols, cat_maps)
+
+    assert mask.dtype == bool
+    assert mask.tolist() == [True, True, False, False]
+
+
+def test_select_feature_columns_remaps_indices_and_categoricals():
+    """Restricting training to a feature subset must map names->full-matrix
+    column positions (in subset order) and re-express categorical indices
+    relative to the subset, so LightGBM gets the right cat columns."""
+    from train_v9 import select_feature_columns
+
+    cols = ["a", "b", "c", "d", "e"]
+    cat_idx = [1, 3]  # b, d are categorical in the full matrix
+    subset = ["c", "d", "a"]  # pick a non-contiguous, reordered subset
+
+    col_indices, sub_cols, sub_cat_idx = select_feature_columns(cols, cat_idx, subset)
+
+    assert col_indices == [2, 3, 0]      # positions of c, d, a in full matrix
+    assert sub_cols == ["c", "d", "a"]   # preserved subset order
+    assert sub_cat_idx == [1]            # only "d" (subset position 1) is categorical
+
+
+@pytest.mark.parametrize(
+    "scores,gt_score,expected",
+    [
+        ([0.9, 0.5, 0.3], 0.9, 1.0),    # unique top -> rank 1 (matches old behavior)
+        ([0.9, 0.8, 0.7], 0.7, 3.0),    # GT below two -> rank 3
+        ([0.9, 0.9, 0.3], 0.9, 1.5),    # GT tied with one at top -> expected 1.5
+        ([0.5, 0.5, 0.5, 0.5], 0.5, 2.5),  # constant scorer -> middle, NOT rank 1
+    ],
+)
+def test_gt_tie_averaged_rank(scores, gt_score, expected):
+    """Expected GT rank under random tie-breaking: n_greater + (n_tied+1)/2.
+    Unique GT reduces to the old (n_greater+1); ties no longer collapse to
+    best-case rank 1, so a constant scorer can't game the metric."""
+    from train_v9 import gt_tie_averaged_rank
+    import numpy as np
+
+    assert gt_tie_averaged_rank(np.array(scores), gt_score) == expected
+
+
+def test_training_feature_subset_all_excludes_dropped():
+    """'all' trains on every column EXCEPT DROPPED_FEATURES (order preserved);
+    a dropped column not present in the matrix is simply a no-op."""
+    import train_v9
+
+    cols = ["a", "wants_new_artist", "b", "c"]
+    assert train_v9.training_feature_subset(cols, "all") == ["a", "b", "c"]
+    # dropped feature absent -> unchanged
+    assert train_v9.training_feature_subset(["a", "b"], "all") == ["a", "b"]
+
+
+def test_training_feature_subset_pivot_uses_pivot_list_and_drops_wna():
+    """'pivot' trains on PIVOT_FEATURES restricted to available columns, and
+    wants_new_artist must no longer be in that list."""
+    import train_v9
+
+    assert "wants_new_artist" not in train_v9.PIVOT_FEATURES
+    cols = list(train_v9.PIVOT_FEATURES) + ["unrelated"]
+    assert train_v9.training_feature_subset(cols, "pivot") == list(train_v9.PIVOT_FEATURES)
+
+
+@pytest.mark.parametrize(
+    "is_gt,gt_moves,is_future,expected",
+    [
+        (True, True, False, 3),    # GT that moved toward goal -> strongest positive
+        (True, False, False, 1),   # GT that did NOT move toward goal -> weak positive
+        (False, False, True, 2),   # non-GT track played later in the session (proxy good)
+        (False, False, False, 0),  # ordinary non-GT candidate
+        (True, True, True, 3),     # GT takes precedence over future membership
+        (False, True, True, 2),    # gt_moves is irrelevant for non-GT rows
+    ],
+)
+def test_graded_label(is_gt, gt_moves, is_future, expected):
+    """Graded relevance: GT&moves=3, future-played proxy=2, GT&not-moves=1, else 0.
+    Mirrors the binary->graded upgrade (GT noise + reward for good alternatives)."""
+    from train_v9 import graded_label
+
+    assert graded_label(is_gt, gt_moves, is_future) == expected
+
+
+def test_artist_recency_in_session():
+    """Turns since the candidate's artist was last played BEFORE the current turn;
+    sentinel when never played. Graded novelty for pivots."""
+    from train_v9 import artist_recency_in_session
+
+    played = {1: {"A"}, 2: {"B"}, 3: {"A", "C"}}
+    # A last played at turn 3 -> recency 1 at turn 4
+    assert artist_recency_in_session({"A"}, played, 4, sentinel=99) == 1
+    # B last at turn 2 -> recency 2 at turn 4
+    assert artist_recency_in_session({"B"}, played, 4, sentinel=99) == 2
+    # never played -> sentinel
+    assert artist_recency_in_session({"Z"}, played, 4, sentinel=99) == 99
+    # only count plays strictly BEFORE the turn: C first appears AT turn 3
+    assert artist_recency_in_session({"C"}, played, 3, sentinel=99) == 99
+    # A at turn 1 is before turn 2
+    assert artist_recency_in_session({"A"}, played, 2, sentinel=99) == 1

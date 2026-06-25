@@ -95,6 +95,22 @@ class TurnContext:
         return v
 
 
+def is_pivot_turn(intent_mode, target_artist_mode) -> bool:
+    """Shared pivot gate — single source of truth for the offline training-row
+    filter and the online reranker router (they must never diverge).
+
+    A turn is a pivot when the canonical intent is ``pivot`` OR the requested
+    artist mode wants a new/different artist. NOTE (verified 2026-06-18): in the
+    current state schema these two arms are collinear (``intent_mode=='pivot'`` and
+    ``target_artist_mode=='new_artist'`` coincide, and ``'different'`` never occurs),
+    so the union equals ``intent_mode=='pivot'`` today; the union is kept as
+    future-proofing for a schema where they diverge. Inputs may be ``None``."""
+    if str(intent_mode or "") == "pivot":
+        return True
+    mode = str(target_artist_mode or "")
+    return ("new" in mode) or ("different" in mode)
+
+
 def _abandoned_sets(state: dict, resolver_block: dict, cat: Catalog):
     """Pivot-away targets from CURRENT state only (serving-safe).
 
@@ -120,7 +136,7 @@ def _abandoned_sets(state: dict, resolver_block: dict, cat: Catalog):
       {track_id, overall_sentiment: int, role: 'accepted'|'rejected'|'seed'|
        'neutral'|'satisfied'|'contrast'}."""
     mode = str(state.get("target_artist_mode") or "")
-    pivot = "new" in mode or "different" in mode
+    pivot = is_pivot_turn(None, mode)
 
     artist_ids: set[str] = {str(a) for a in (resolver_block.get("rejected_artist_ids") or [])}
     for fb in (state.get("track_feedback") or []):
@@ -358,7 +374,8 @@ def compute_turn_features(row: dict, ctx: TurnContext, gt: str | None = None):
             "temporal_strength": str(tc.get("strength") or ""),
             "year_in_constraint": in_constraint,
             "n_facts": len(state.get("facts") or []),
-            "wants_new_artist": wants_new,
+            # `wants_new_artist` dropped: deterministic projection of
+            # target_artist_mode (kept as `wants_new` for x_same_artist_wants_new).
             # dense fill-in: lyric only (8B branch scores carry metadata/attrs)
             "q06_lyric_cos": q06_lyric_c,
             # conversation proxies (NaN when no message embedding)

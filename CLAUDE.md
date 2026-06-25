@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # Music-CRS
 
 RecSys Challenge 2026 baseline — conversational music recommendation system. Given a multi-turn conversation, retrieve 20 tracks from a 47k-track catalog and generate a natural language response.
@@ -79,6 +83,17 @@ bash prepare_submission.sh state_ranker_v10_lgbm_blindset_A
 `--num_shards` defaults to 50 for `--backend modal`, 1 for local. Local devset runs may set `--num_shards > 1` with `--num_workers` to run session shards in parallel.
 
 Results saved to `exp/inference/{split}/{tid}.json`.
+
+## Test
+
+```bash
+pytest                                  # full suite (testpaths = tests/)
+pytest tests/test_lgbm_reranker.py      # single file
+pytest tests/test_lgbm_reranker.py::test_name   # single test
+pytest -k "lancedb and not modal"       # filter by keyword
+```
+
+`pytest` is the only dev tooling pinned in `pyproject.toml` (no configured linter/formatter). Some tests are network/Modal/HF-gated and will skip or fail without credentials — scope to the module you touched when iterating locally.
 
 ## Architecture notes
 
