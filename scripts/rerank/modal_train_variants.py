@@ -177,7 +177,7 @@ def train_eval_4b(variant, base="Qwen/Qwen3-Embedding-4B", special_tokens=None, 
 
 
 def _print_grid(results):
-    print("\n==== Round 1: baseline vs v_tok @ max_len=2048 (GOAL-FREE) ====")
+    print("\n==== Round 1: baseline / v_struct / v_tok @ max_len=2048 (GOAL-FREE) ====")
     print(f"{'run':<12} {'medrank':>8} {'r@1000':>7} {'r@100':>6} {'r@20':>6}")
     for name, m in results.items():
         print(f"{name:<12} {m['medrank']:8d} {m['r@1000']*100:7.1f} {m['r@100']*100:6.1f} {m['r@20']*100:6.1f}", flush=True)
@@ -193,7 +193,7 @@ def _print_grid(results):
 
 @app.local_entrypoint()
 def main():
-    # Round 1 (Issue #153): baseline vs v_tok, GOAL-FREE, max_len=2048. Each H100 job trains the b1
+    # Round 1 (Issue #153): baseline / v_struct / v_tok, GOAL-FREE, max_len=2048. Each H100 job trains the b1
     # recipe on its own goal-free input + on-Modal full-catalog retrieval eval (overall + per-lane).
     jobs = [
         ("baseline", dict(variant="baseline", special_tokens=None, max_len=2048)),

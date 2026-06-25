@@ -121,10 +121,15 @@ def short_track(doc):
     return re.sub(r"\s*\(\d{4}\)\s*$", "", s).strip()
 
 
-def prev_track_str(played_sid, tn, doc_by_tid):
+def prev_track_str(played_sid, tn, doc_by_tid, exclude_tid=None):
+    """Most-recent previously-played track rendered as text. Never returns the GT track
+    (exclude_tid) — a code-enforced leak guard. (Empirically the GT is never replayed at an
+    earlier turn, so this is a no-op on the current data; it makes leak-safety a guarantee.)"""
     for k in range(tn - 1, 0, -1):
         if played_sid.get(k):
-            return short_track(doc_by_tid.get(played_sid[k][-1], ""))
+            tid = played_sid[k][-1]
+            if tid and tid != exclude_tid:
+                return short_track(doc_by_tid.get(tid, ""))
     return ""
 
 
@@ -222,7 +227,7 @@ def build():
         prev, now = um_tr[sid].get(tn - 1, ""), um_tr[sid].get(tn, "")
         if not (prev or now):
             empty_pair += 1; continue
-        pt = prev_track_str(played_tr.get(sid, {}), tn, doc_by_tid)
+        pt = prev_track_str(played_tr.get(sid, {}), tn, doc_by_tid, exclude_tid=r["pos_id"])
         # OFF-BY-ONE FIX (memory goal-progress-label-offbyone): assessment[tn] grades track[tn-1];
         # the positive pos_id=track[tn] is graded by assessment[tn+1]. The last played track of a
         # session is unlabeled (gpa None -> the trainer's gpa!=MOVES filter drops it).
@@ -249,7 +254,7 @@ def build():
             prev, now = um_te[sid].get(tn - 1, ""), um_te[sid].get(tn, "")
             if not (prev or now):
                 empty_eval += 1; continue
-            pt = prev_track_str(played_te.get(sid, {}), tn, doc_by_tid)
+            pt = prev_track_str(played_te.get(sid, {}), tn, doc_by_tid, exclude_tid=gt_list[0])
             for v in VARIANTS:
                 q = build_q(v, prev, now, pt)
                 writers[v][1].write(json.dumps({"sid": sid, "tn": tn, "q": q, "gt": gt_list[0]}) + "\n")

@@ -40,7 +40,7 @@ Fine-tuned **{base}** conversation→track retriever (b1), Issue #153. PRIVATE.
 @app.function(volumes={"/models": model_vol, "/root/.cache/huggingface": hf_vol},
               secrets=[modal.Secret.from_name("huggingface")], cpu=4.0, memory=49152, timeout=5400)
 def promote(ckpt, repo_id, private=True, fp32_sha="", r100="", base="Qwen/Qwen3-Embedding-0.6B"):
-    import os, hashlib, shutil, torch
+    import os, glob, hashlib, shutil, torch
     from transformers import AutoModel, AutoTokenizer
     from huggingface_hub import HfApi, create_repo
     src = f"/models/{ckpt}"
@@ -57,16 +57,18 @@ def promote(ckpt, repo_id, private=True, fp32_sha="", r100="", base="Qwen/Qwen3-
     print(f"[{ckpt}] loading + casting to bf16 ...", flush=True)
     tok = AutoTokenizer.from_pretrained(src)
     model = AutoModel.from_pretrained(src, dtype=torch.bfloat16)
-    model.save_pretrained(out, safe_serialization=True)
+    model.save_pretrained(out, safe_serialization=True, max_shard_size="20GB")  # keep a single .safetensors
     tok.save_pretrained(out)
     open(f"{out}/README.md", "w").write(
         CARD.format(base=base, repo=repo_id, ckpt=ckpt, fp32_sha=fp32_sha or "(see registry)", r100=r100 or "(see registry)"))
 
-    sz = os.path.getsize(f"{out}/model.safetensors")
+    shards = sorted(glob.glob(f"{out}/*.safetensors"))   # single file via max_shard_size; glob is belt-and-suspenders
+    sz = sum(os.path.getsize(s) for s in shards)
     h = hashlib.sha256()
-    with open(f"{out}/model.safetensors", "rb") as f:
-        for c in iter(lambda: f.read(8 << 20), b""):
-            h.update(c)
+    for s in shards:                                     # sorted -> deterministic weight fingerprint
+        with open(s, "rb") as f:
+            for c in iter(lambda: f.read(8 << 20), b""):
+                h.update(c)
     bf16_sha = h.hexdigest()
 
     print(f"[{ckpt}] creating private repo {repo_id} + uploading bf16 ({sz/1e9:.2f} GB) ...", flush=True)
@@ -80,7 +82,7 @@ def promote(ckpt, repo_id, private=True, fp32_sha="", r100="", base="Qwen/Qwen3-
         print(f"  tag v1 skipped: {repr(e)[:120]}", flush=True)
 
     print(f"\nPROMOTED {ckpt} -> https://huggingface.co/{repo_id}  (private={private})", flush=True)
-    print(f"  bf16 model.safetensors: {sz/1e9:.2f} GB ({sz:,} bytes)", flush=True)
+    print(f"  bf16 weights: {sz/1e9:.2f} GB ({sz:,} bytes) over {len(shards)} shard(s)", flush=True)
     print(f"  bf16 sha256: {bf16_sha}", flush=True)
     return {"repo": repo_id, "bf16_bytes": sz, "bf16_sha256": bf16_sha}
 
