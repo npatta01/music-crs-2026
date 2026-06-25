@@ -6,7 +6,7 @@ size + sha256 (record it in MODEL_REGISTRY.md). Uses the `huggingface` Modal sec
 WRITE scope). No 16GB local download — the cast + push happen on Modal.
 
     modal run scripts/rerank/modal_promote_hf.py \
-        --ckpt biencoder_variant_v_struct_pt_l2048 --repo-id npatta01/b1-retriever-v_struct_pt-0.6b
+        --ckpt biencoder_variant_v_struct_pt_l2048 --repo-id music-recsys-2026-retriever-0.6b
 """
 import modal
 

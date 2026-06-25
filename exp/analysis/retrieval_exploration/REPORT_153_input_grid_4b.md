@@ -109,7 +109,9 @@ The hard_pivot *fix* is scoped, not implemented:
 
 ## 11. Files & artifacts
 - Scripts (committed, this branch): `scripts/rerank/{modal_build_data,modal_train_variants,
-  modal_spotcheck,modal_fixation}.py` + supporting `build_*`, `eval_scout_*`, `modal_embed_docs`.
+  modal_spotcheck,modal_fixation,modal_ckpt_info,modal_promote_hf}.py` — self-contained (the
+  doc-corpus build logic is inlined in `modal_build_data.py`). The reference originals
+  (`build_*`, `eval_scout_*`, `modal_embed_docs`) belong to the GATE-0 work and are not duplicated here.
 - Modal volumes: `biencoder-data` (corrected `input_variants/`, `doc_corpus`, `retriever_pairs`);
   `scout-models` (checkpoints + `ranks_<v>_l2048[_qwen3-embedding-4b].json`); catalog on
   `music-crs-models/lancedb` (has `cf_bpr`/`audio_laion_clap`/`image_siglip2`). Secret `huggingface`.
