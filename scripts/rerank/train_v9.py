@@ -43,6 +43,7 @@ LOCKBOX = ROOT / "exp/analysis/rerank/lockbox_users.json"
 
 ID_COLS = ["session_id", "turn_number", "track_id", "label"]
 EVAL_ONLY = ["rrf_rank", "rrf_score"]
+DROP_FEATURES: set = set()  # extra features excluded from the model (e.g. the artist-consensus crutch); set via --drop-features
 CATEGORICALS = ["age_group", "gender", "goal_category", "goal_specificity",
                 "request_type", "intent_mode", "target_artist_mode",
                 "temporal_strength"]
@@ -74,7 +75,7 @@ def stage_build():
     OUT.mkdir(parents=True, exist_ok=True)
     ds = pds.dataset(str(FEATURES))
     names = ds.schema.names
-    feature_cols = [c for c in names if c not in ID_COLS and c not in EVAL_ONLY]
+    feature_cols = [c for c in names if c not in ID_COLS and c not in EVAL_ONLY and c not in DROP_FEATURES]
     extra_names = [c for c in pq.read_schema(str(SIDECAR)).names
                    if c not in ("session_id", "turn_number", "track_id")]
     all_cols = feature_cols + extra_names
@@ -406,7 +407,11 @@ if __name__ == "__main__":
                     help="Override lockbox_users.json path")
     ap.add_argument("--gt", type=str, default=None,
                     help="Override ground_truth devset.json path")
+    ap.add_argument("--drop-features", type=str, default="",
+                    help="Comma-separated feature columns to exclude from the model (e.g. artist-consensus crutch)")
     a = ap.parse_args()
+    if a.drop_features:
+        DROP_FEATURES = set(c.strip() for c in a.drop_features.split(",") if c.strip())
     if a.out_dir:
         OUT = Path(a.out_dir)
     if a.features_dir:
