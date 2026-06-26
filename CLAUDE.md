@@ -11,6 +11,7 @@ Challenge: https://nlp4musa.github.io/music-crs-challenge/
 - [v10 State-Ranker Pipeline](docs/architectures/v0plus_retrieval.md) — retrievers, compiled state, explicit ranking stages, and final recommendation handoff for the `state_ranker_v10_*` path
 - [Staged Experiment Pipeline](docs/architectures/staged_pipeline.md) — config-driven retrieval → rerank replay → explanation → evaluation runs for faster local iteration
 - [Session State](docs/architectures/session_state.md) — the `ConversationStateV0Plus` schema, extract→resolve pipeline, and how each field drives retrieval
+- [b1 Bi-Encoder](docs/architectures/biencoder.md) — the fine-tuned Qwen3-Embedding-4B two-tower conv→track retriever: input/output spec, training (MNRL/MOVES-only), and the `b1_cos` reranker feature + cache-first serving
 - [Explanation / Response Generation](docs/architectures/explanation_generation.md) — how the natural-language response is generated, what the code was vs. is now doing (dummy), and per-track explanation scaffolding
 - [Evaluation](docs/evaluation.md) — metrics, devset leaderboard
 - [Reproduce the reranker](docs/reproduce_reranker.md) — **LambdaMART v10**: committed model bundle, required vs optional artifacts, FAST (use model) + FULL (retrain) paths
