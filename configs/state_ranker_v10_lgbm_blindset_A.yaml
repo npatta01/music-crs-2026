@@ -78,6 +78,7 @@ qu_kwargs:
     artist_match_topk: 20
     track_match_topk: 5
   compiler:
+    enable_strict_artist_policy: false   # #152 hard-drop nets the GT in 47.6% of fired turns (-0.04 nDCG@20)
     rejection_drop_policy: track_only
     enable_release_date_hard_filter: false
     soft_adjust_skip_intents: [pivot]
