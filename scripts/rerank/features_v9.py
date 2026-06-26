@@ -292,7 +292,12 @@ def compute_turn_features(row: dict, ctx: TurnContext, gt: str | None = None):
                 cur = artist_union_best.get(a)
                 artist_union_best[a] = float(best_r) if cur is None else min(cur, float(best_r))
 
-    b1_qv = ctx.b1_qvec.get((sid, tn)) if ctx.b1_qvec is not None else None
+    # b1 query vec: serving passes it per-call via row["b1_qvec"] (thread-safe — the
+    # online reranker shares one ctx across concurrent rerank() threads, so stashing
+    # it on ctx races). Offline/replay set the full ctx.b1_qvec dict once (no race).
+    b1_qv = row.get("b1_qvec")
+    if b1_qv is None and ctx.b1_qvec is not None:
+        b1_qv = ctx.b1_qvec.get((sid, tn))
     rows_out = []
     for tid_, branch_hits in cand_rank.items():
         m = cat.meta.get(tid_)

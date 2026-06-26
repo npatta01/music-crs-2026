@@ -9,7 +9,7 @@ import sys, os, json
 sys.path.insert(0, "scripts/rerank")
 import numpy as np
 import build_features as BF
-import modal_build_data as MBD
+import v_struct_pt_query as MBD
 from mcrs.embeddings.embedding_cache import DiskVectorCache, make_key
 from b1_live import B1_CACHE_NAMESPACE
 

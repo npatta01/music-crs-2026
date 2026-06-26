@@ -427,13 +427,17 @@ class LgbmOnlineReranker:
                 existing_drop = {str(track_id) for track_id in branches.get("hard_drop") or []}
                 branches["hard_drop"] = sorted(existing_drop | dropped)
                 trace_for_features = {**trace, "branches": branches}
-            if self.b1 is not None:
-                sent = self.ctx.sessions.get(sid)
-                self.ctx.b1_qvec = (
-                    {(sid, tn): self.b1.query_vecs([self.b1.query_text(sent, tn)])[0]}
-                    if sent is not None else None)
             row = {"session_id": sid, "turn_number": tn,
                    "user_id": user_id, "trace": trace_for_features}
+            # b1_cos: encode the per-turn query and pass the vec THROUGH THE ROW
+            # (thread-local) — never stash on the shared self.ctx (concurrent
+            # rerank() threads would clobber each other -> NaN b1_cos). getattr so
+            # rerankers built via __new__ (tests) without __init__ don't AttributeError.
+            b1 = getattr(self, "b1", None)
+            if b1 is not None:
+                sent = self.ctx.sessions.get(sid)
+                if sent is not None:
+                    row["b1_qvec"] = b1.query_vecs([b1.query_text(sent, tn)])[0]
             rows, _ = compute_turn_features(row, self.ctx, gt=None)
             if not rows:
                 return filtered_fallback()

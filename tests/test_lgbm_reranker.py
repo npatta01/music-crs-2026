@@ -627,3 +627,100 @@ def test_constraint_feature_row_shared_helper():
         "t3", ("c1",), played=set(), rejected_tracks=set(),
         rejected_artists=set(), target_artist_mode="different_artist",
         same_artist_session=0.0)["violates_new_artist"] == 0.0
+
+
+# --- b1_cos serving: per-call (thread-local) query vec, never the shared ctx ---
+
+class _B1CatalogSource(_CompilerCatalogSource):
+    """Adds a b1 doc column: t-one is a one-hot at slot 0, t-two at slot 1, so a
+    one-hot query vec at slot s yields b1_cos==1 for exactly that track."""
+
+    def vector(self, track_id, vector_field):
+        if vector_field == "b1_vstructpt_4b":
+            v = [0.0] * 2560
+            v[{"t-one": 0, "t-two": 1}[track_id]] = 1.0
+            return v
+        return super().vector(track_id, vector_field)
+
+
+class _MockB1:
+    """Maps a session's user text to a one-hot query vec (alpha->slot0, beta->slot1)."""
+    _SLOT = {"alpha": 0, "beta": 1}
+
+    def query_text(self, sent, tn):
+        return sent.get("user_text_by_turn", {}).get(tn, "")
+
+    def query_vecs(self, texts):
+        out = []
+        for t in texts:
+            v = np.zeros(2560, dtype=np.float32)
+            v[self._SLOT[t]] = 1.0
+            out.append(v)
+        return np.asarray(out, dtype=np.float32)
+
+
+class _ColScoreBooster:
+    """Score == one feature column, so the ranking directly reflects that feature."""
+    def __init__(self, idx):
+        self.idx = idx
+
+    def predict(self, features):
+        return features[:, self.idx]
+
+
+def _b1_trace():
+    return {
+        "branches": {
+            "pools": [{"name": "bm25", "hits": [("t-one", 1.0), ("t-two", 1.0)]}],
+            "fused": [("t-one", 1.0), ("t-two", 1.0)],
+            "branch_queries": {},
+        },
+        "state": {"current_request": {"request_type": "mood"}},
+        "resolver": {"played_track_ids": [], "positive_tags": []},
+    }
+
+
+def _b1_meta(sid, content):
+    return {
+        "session_id": sid, "turn_number": 2, "session_date": "2020-01-01",
+        "conversations": [{"role": "user", "content": content, "turn_number": 2}],
+        "user_profile": {}, "conversation_goal": {},
+    }
+
+
+def _make_b1_reranker():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_B1CatalogSource())
+    )
+    reranker.cols = reranker.cols + ["b1_cos"]
+    reranker.b1 = _MockB1()
+    reranker.booster = _ColScoreBooster(reranker.cols.index("b1_cos"))
+    reranker.top_k_out = 2
+    return reranker
+
+
+def test_b1_cos_uses_per_call_query_vec_single_threaded():
+    """Each session's b1_cos reflects ITS OWN query (alpha ranks t-one first, beta t-two)."""
+    reranker = _make_b1_reranker()
+    assert reranker.rerank(_b1_trace(), _b1_meta("sA", "alpha"), user_id="sA",
+                           hard_drop=set(), fallback=["t-one", "t-two"]) == ["t-one", "t-two"]
+    assert reranker.rerank(_b1_trace(), _b1_meta("sB", "beta"), user_id="sB",
+                           hard_drop=set(), fallback=["t-one", "t-two"]) == ["t-two", "t-one"]
+
+
+def test_b1_cos_thread_safe_under_concurrent_rerank():
+    """Regression for the shared-ctx b1_qvec race: with many interleaved concurrent
+    rerank() calls on ONE reranker, every turn must still get ITS OWN query vec (the
+    old code stashed it on self.ctx, so a concurrent turn clobbered it -> NaN/wrong)."""
+    from concurrent.futures import ThreadPoolExecutor
+    reranker = _make_b1_reranker()
+    cases = [("sA", "alpha", ["t-one", "t-two"]),
+             ("sB", "beta", ["t-two", "t-one"])] * 60
+    with ThreadPoolExecutor(max_workers=16) as ex:
+        futures = [(expected,
+                    ex.submit(reranker.rerank, _b1_trace(), _b1_meta(sid, content),
+                              sid, set(), ["t-one", "t-two"]))
+                   for sid, content, expected in cases]
+        results = [(expected, fut.result()) for expected, fut in futures]
+    for expected, got in results:
+        assert got == expected, f"expected {expected}, got {got} (b1_qvec contamination)"

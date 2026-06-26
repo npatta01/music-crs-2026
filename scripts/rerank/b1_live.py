@@ -20,12 +20,18 @@ B1_CACHE_NAMESPACE = "ft_qwen3_embedding_4b_v_struct_pt_l2048"
 
 
 class B1Live:
-    def __init__(self, cat, *, model_name: str = B1_MODEL, device: str = "cuda",
+    def __init__(self, cat, *, model_name: str = B1_MODEL, device: str = "auto",
                  topk: int = 1000, doc_corpus: str = DOC_CORPUS, inner=None):
         import os
-        import modal_build_data as MBD  # build_q / short_track / prev_track_str (training-exact)
+        import v_struct_pt_query as VQ  # build_q / short_track / prev_track_str (modal-free, training-exact)
+        if device == "auto":  # don't crash on a CPU box (e.g. a cache-miss without a GPU)
+            try:
+                import torch
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+            except Exception:
+                device = "cpu"
         from mcrs.embeddings.embedding_cache import DiskVectorCache, CachedTextEmbedder
-        self._mbd = MBD
+        self._mbd = VQ
         self.cat = cat
         self.topk = topk
         self.doc_by = {json.loads(l)["track_id"]: json.loads(l)["doc"] for l in open(doc_corpus)}
