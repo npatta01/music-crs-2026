@@ -20,7 +20,8 @@ a visible response score appears or there is otherwise unused submission budget.
 
 `phase2_best_qwen` is a stable alias for `top1_constraint_latest_state_qwen`.
 The runtime config expands this alias to `conditioning: latest_state`,
-`item_format: xml`, `max_tags: 10`, `temperature: 0.0`, and `max_tokens: 512`.
+`item_format: xml`, `max_tags: 10`, and `temperature: 0.0`. Blind-A keeps
+`max_tokens: 2048` as a conservative ceiling for response packaging.
 
 ```json
 {
@@ -32,7 +33,7 @@ The runtime config expands this alias to `conditioning: latest_state`,
   "item_format": "xml",
   "max_tags": 10,
   "temperature": 0.0,
-  "max_tokens": 512
+  "max_tokens": 2048
 }
 ```
 
