@@ -368,6 +368,16 @@ class LgbmOnlineReranker:
             branch_names=branch_names, pool_k=int(cfg.get("pool_k", 500)),
             offline=False)  # live-embed unseen query/message strings
         add_elapsed("turn_context", start)
+        # b1_cos (4B fine-tuned bi-encoder cosine) — load the encoder ONLY if the
+        # model uses the feature. Per turn we build the goal-free v_struct_pt query
+        # from the session, encode (local 4B), set ctx.b1_qvec; b1_cos then computes
+        # via cat.v("b1_vstructpt_4b"). No retrieval branch, no pool change.
+        self.b1 = None
+        if "b1_cos" in self.cols:
+            start = time.perf_counter()
+            from b1_live import B1Live
+            self.b1 = B1Live(cat)
+            add_elapsed("b1_encoder", start)
         self.top_k_out = int(cfg.get("top_k_out", 1000))
         add_elapsed("total", total_start)
         self.load_timings = load_timings
@@ -417,6 +427,11 @@ class LgbmOnlineReranker:
                 existing_drop = {str(track_id) for track_id in branches.get("hard_drop") or []}
                 branches["hard_drop"] = sorted(existing_drop | dropped)
                 trace_for_features = {**trace, "branches": branches}
+            if self.b1 is not None:
+                sent = self.ctx.sessions.get(sid)
+                self.ctx.b1_qvec = (
+                    {(sid, tn): self.b1.query_vecs([self.b1.query_text(sent, tn)])[0]}
+                    if sent is not None else None)
             row = {"session_id": sid, "turn_number": tn,
                    "user_id": user_id, "trace": trace_for_features}
             rows, _ = compute_turn_features(row, self.ctx, gt=None)

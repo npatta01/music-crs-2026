@@ -377,6 +377,15 @@ def run(args: argparse.Namespace) -> None:
         pool_k=args.pool_k,
         offline=args.offline,
     )
+    if "b1_cos" in cols:
+        # b1 DOC vectors are served from the catalog LanceDB column b1_vstructpt_4b
+        # (cat.v, loaded via VECTOR_FIELDS) — no npy. Only the per-turn b1 QUERY vec
+        # is provided here (offline/replay path; live serving sets it from the
+        # dense.b1 branch query embedding).
+        from features_v9 import load_b1_query_vectors
+        ctx.b1_qvec = load_b1_query_vectors(
+            args.b1_qvec_npy, f"exp/ground_truth/{args.split}.json")
+        print(f"loaded b1 query vecs: {len(ctx.b1_qvec)} (docs via cat.v b1_vstructpt_4b)", flush=True)
     check_offline_embedding_cache_coverage(
         args,
         sessions=sessions,
@@ -515,6 +524,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dataset-split", default="test")
     parser.add_argument("--pool-k", type=int, default=500)
     parser.add_argument("--top-k-out", type=int, default=1000)
+    parser.add_argument("--b1-doc-npy", default="exp/analysis/retrieval_exploration/_emb_cache/docs_vstructpt_4b.npy")
+    parser.add_argument("--b1-doc-corpus", default="exp/analysis/retrieval_exploration/doc_corpus.jsonl")
+    parser.add_argument("--b1-qvec-npy", default="exp/analysis/retrieval_exploration/_emb_cache/q_vstructpt_4b.npy")
     parser.add_argument("--output-topk", type=int, default=20)
     parser.add_argument("--num-shards", type=int, default=1)
     parser.add_argument("--shard-id", type=int, default=0)
