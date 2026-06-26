@@ -66,7 +66,7 @@ def load_b1_doc_vectors(doc_npy: str, doc_corpus: str) -> dict:
 def load_b1_query_vectors(qvec_npy: str, gt_file: str) -> dict:
     """b1 query vecs -> {(sid,tn): L2-normed vec}, keyed in ground-truth-file order
     (the cached Q was built in devset.json order). Offline/replay path only; live
-    serving sets ctx.b1_qvec per turn from the dense.b1 branch query embedding."""
+    serving instead passes the per-turn query vec via row["b1_qvec"] (thread-local)."""
     import json
     Q = np.load(qvec_npy).astype(np.float32)
     Q /= np.maximum(np.linalg.norm(Q, axis=1, keepdims=True), 1e-9)
@@ -92,9 +92,10 @@ class TurnContext:
         self.branch_names = list(branch_names)
         self.pool_k = pool_k
         self.offline = offline
-        # b1 (4B v_struct_pt) scout feature: doc vecs (track_id -> L2-normed vec)
-        # and per-turn query vecs ((sid,tn) -> L2-normed vec). Both None => b1_cos
-        # emits NaN (no behavior change for non-b1 configs).
+        # b1 (4B v_struct_pt) scout feature. b1_qvec is the OFFLINE/replay query dict
+        # ((sid,tn) -> L2-normed vec, set once); live serving instead passes the per-turn
+        # vec via row["b1_qvec"] (thread-local). b1_doc is unused (docs read via cat.v).
+        # No b1_qvec for a turn => b1_cos emits NaN (no behavior change for non-b1 configs).
         self.b1_doc: dict | None = None
         self.b1_qvec: dict | None = None
 

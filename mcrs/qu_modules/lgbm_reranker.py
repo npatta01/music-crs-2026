@@ -370,8 +370,9 @@ class LgbmOnlineReranker:
         add_elapsed("turn_context", start)
         # b1_cos (4B fine-tuned bi-encoder cosine) — load the encoder ONLY if the
         # model uses the feature. Per turn we build the goal-free v_struct_pt query
-        # from the session, encode (local 4B), set ctx.b1_qvec; b1_cos then computes
-        # via cat.v("b1_vstructpt_4b"). No retrieval branch, no pool change.
+        # from the session, encode (local 4B), and pass the vec via the per-call
+        # row["b1_qvec"] (thread-local); b1_cos then computes via cat.v("b1_vstructpt_4b").
+        # No retrieval branch, no pool change.
         self.b1 = None
         if "b1_cos" in self.cols:
             start = time.perf_counter()
