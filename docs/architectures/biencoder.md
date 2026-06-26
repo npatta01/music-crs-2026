@@ -13,6 +13,11 @@ nearest catalog vector. It is used two ways:
 
 ## Architecture
 
+![b1 bi-encoder architecture](biencoder.svg)
+
+<details>
+<summary>Same diagram as text (terminal / plain-text viewers)</summary>
+
 ```
             QUERY TOWER (live, per turn)                 DOC TOWER (precomputed, 47k tracks)
         ┌──────────────────────────────┐            ┌──────────────────────────────────┐
@@ -38,6 +43,8 @@ nearest catalog vector. It is used two ways:
                        ├─ top-k over all d_vec  →  dense.b1 retrieval branch
                        └─ cos with a candidate  →  b1_cos  (LightGBM feature)
 ```
+
+</details>
 
 **Single shared encoder.** Both towers are the *same* fine-tuned `Qwen/Qwen3-Embedding-4B`
 weights (a Siamese setup). The only asymmetry is the **query-side INSTRUCT prefix** — the
