@@ -1437,6 +1437,7 @@ def build_v0plus_compiler_qu(
                 "rejected_tag_multiplier",
                 "positive_tag_multiplier_step",
                 "same_artist_demote",
+                "enable_strict_artist_policy",
                 "enable_dense",
                 "enable_cf_bpr",
                 "cf_bpr_weight",

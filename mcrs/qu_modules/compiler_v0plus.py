@@ -247,6 +247,14 @@ class CompilerConfig:
     # Same-artist-as-rejected demote.
     same_artist_demote: float = 0.7
 
+    # Strict new/different-artist policy (#152): hard-drops every track by a
+    # blocked artist on pivot/novelty/different-artist turns. Devset audit (2026-06)
+    # found it hard-drops the ground-truth track in 47.6% of the turns it fires
+    # (8% of all turns; 100% of all GT hard-drops), costing ~0.04 nDCG@20. Active
+    # deploy configs set this False. Default stays True to preserve legacy behavior,
+    # but new deploy configs SHOULD set it False explicitly.
+    enable_strict_artist_policy: bool = True
+
     # Dense branches — one search_embedding call per entry. Default fans across
     # the three text-derived Qwen3 columns in the talkpl-ai catalog (metadata
     # + attributes + lyrics). The audio/image/CF columns aren't ANN-queryable
@@ -1259,6 +1267,8 @@ class V0PlusCompiler:
         return str(getattr(value, "value", value) or "")
 
     def _strict_artist_policy_active(self, rs: ResolvedConversationState) -> bool:
+        if not self.cfg.enable_strict_artist_policy:
+            return False
         state = rs.state
         mode = self._enum_value(getattr(state, "target_artist_mode", ""))
         profile = self._enum_value(getattr(state, "retrieval_profile", ""))
