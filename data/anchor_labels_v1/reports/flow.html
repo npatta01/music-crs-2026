@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How we label the music data</title>
+<style>
+  :root{
+    --ink:#1a2233; --muted:#5b6678; --line:#d7dde7; --bg:#f4f6fb; --card:#fff;
+    --blue:#2f6fed; --blue-bg:#eaf1ff; --green:#1f9d57; --green-bg:#e6f7ee;
+    --red:#d8453a; --red-bg:#fdecea; --amber:#c98a00; --amber-bg:#fff6e0;
+    --grey:#7a8699; --grey-bg:#eef1f6; --purple:#7a4fd6; --purple-bg:#f1ebff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5;padding:34px 18px 60px}
+  .wrap{max-width:880px;margin:0 auto}
+  h1{font-size:27px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:15px;margin:0 0 26px}
+  .why{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--blue);
+    border-radius:10px;padding:16px 18px;margin-bottom:30px}
+  .why b{color:var(--blue)}
+  .why .ex{margin-top:8px;font-size:14px;color:var(--muted)}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;
+    box-shadow:0 1px 2px rgba(20,30,60,.04)}
+  .kicker{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);margin:0 0 6px}
+  .step h3{margin:0 0 8px;font-size:18px}
+  .arrow{height:30px;display:flex;align-items:center;justify-content:center;color:#aeb7c6;font-size:20px}
+  .cols{display:flex;gap:14px;flex-wrap:wrap}
+  .col{flex:1;min-width:230px;border:1px solid var(--line);border-radius:10px;padding:13px 14px;background:#fbfcfe}
+  .col.a{border-top:4px solid var(--purple)} .col.b{border-top:4px solid var(--blue)}
+  .col h4{margin:0 0 4px;font-size:15px}
+  .col .q{font-style:italic;color:var(--muted);font-size:13.5px;margin-bottom:8px}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:20px;margin:2px 3px 0 0}
+  .p-blue{background:var(--blue-bg);color:var(--blue)} .p-purple{background:var(--purple-bg);color:var(--purple)}
+  .p-green{background:var(--green-bg);color:var(--green)} .p-red{background:var(--red-bg);color:var(--red)}
+  .p-amber{background:var(--amber-bg);color:var(--amber)} .p-grey{background:var(--grey-bg);color:var(--grey)}
+  .det{background:var(--green-bg);border:1px solid #bfe6cf;border-radius:8px;padding:8px 11px;font-size:13px;margin-top:10px}
+  .det b{color:var(--green)}
+  .judge{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
+  .judge .box{flex:1;min-width:240px}
+  .agree{border-left:4px solid var(--green)} .dis{border-left:4px solid var(--purple)}
+  .small{font-size:13px;color:var(--muted)}
+  table.lab{width:100%;border-collapse:collapse;margin-top:4px;font-size:14px}
+  table.lab td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.lab tr:last-child td{border-bottom:none}
+  .tag{font-weight:700;white-space:nowrap;padding:3px 10px;border-radius:6px;font-size:13px}
+  .t-pos{background:var(--green-bg);color:var(--green)} .t-neg{background:var(--red-bg);color:var(--red)}
+  .t-drop{background:var(--grey-bg);color:var(--grey)} .t-hold{background:var(--amber-bg);color:var(--amber)}
+  .ex2{background:#0f1830;color:#dfe6f2;border-radius:12px;padding:18px 20px;margin-top:30px}
+  .ex2 h3{margin:0 0 12px;color:#fff;font-size:17px}
+  .ex2 .row{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid #24304d;font-size:14px}
+  .ex2 .row:last-child{border-bottom:none}
+  .ex2 .lbl{color:#8fa1c4;min-width:150px;flex-shrink:0}
+  .ex2 .good{color:#7ee0a6;font-weight:700} .ex2 .bad{color:#ff9b91;font-weight:700}
+  .note{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .excard{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 16px;margin-bottom:12px}
+  .excard .exwhy{font-size:13px;color:var(--muted);margin-left:6px}
+  .excard .exask{font-size:14.5px;margin:9px 0 6px;color:var(--ink)}
+  .excard .exmeta{font-size:13px;color:var(--muted)}
+  .foot{margin-top:26px;font-size:12.5px;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>How we turn raw conversations into clean training labels</h1>
+  <p class="sub">A pipeline to teach a music recommender to actually follow what the listener just asked for.</p>
+
+  <div class="why">
+    <b>The problem we're fixing ("anchoring").</b> When a listener says <i>"play something by a
+    <u>different</u> artist,"</i> today's recommender often replies with… the <u>same</u> artist again.
+    It ignores the pivot. We're building data that teaches it not to.
+    <div class="ex">The catch: the raw data is AI-generated and comes with a "liked / disliked" tag we
+    don't fully trust — so independent AI judges re-check every recommendation.</div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="step">
+    <p class="kicker">Step 1 — The input (one turn)</p>
+    <h3>What the system looks at</h3>
+    <span class="pill p-blue">the last ~3 turns (incl. the current ask)</span>
+    <span class="pill p-blue">+ what was played each turn</span>
+    <span class="pill p-blue">+ the one track being judged</span>
+    <p class="small" style="margin:9px 0 0">The recent conversation — not just the current line — so we can tell
+      if the listener has been asking for the same thing repeatedly. We do this for all
+      <b>106,393</b> turns.</p>
+  </div>
+
+  <div class="arrow">▼</div>
+
+  <!-- STEP 2 -->
+  <div class="step">
+    <p class="kicker">Step 2 — What we judge (two separate questions)</p>
+    <h3>Did the track honor the current request?</h3>
+    <div class="cols">
+      <div class="col a">
+        <h4>① Artist pivot <span class="pill p-purple">the main bug</span></h4>
+        <div class="q">"Did the listener ask for a DIFFERENT artist?"</div>
+        <span class="pill p-purple">yes</span><span class="pill p-grey">no</span>
+        <div class="det"><b>＋ a 100%-reliable check:</b> is the played track the <b>same artist</b> as
+          before? (exact catalog match — no AI guessing)</div>
+        <p class="small" style="margin:9px 0 0"><b>Asked for different + got same = ANCHORING.</b></p>
+      </div>
+      <div class="col b">
+        <h4>② Content fit</h4>
+        <div class="q">"Does the track match the named genre / era / mood / song?"</div>
+        <span class="pill p-green">valid</span>
+        <span class="pill p-red">invalid</span>
+        <span class="pill p-amber">unsure</span>
+        <p class="small" style="margin:9px 0 0">Covers pivots on <i>any</i> facet — e.g.
+          "no more high-energy rock."</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow">▼</div>
+
+  <!-- STEP 3 -->
+  <div class="step">
+    <p class="kicker">Step 3 — Who answers</p>
+    <h3>Two cheap AI judges vote; a strong judge breaks ties</h3>
+    <div class="judge">
+      <div class="box col agree">
+        <h4>✅ They agree → trust it</h4>
+        <p class="small">Two different AI models answer both questions. When they agree (most of the
+          time), we take the answer.</p>
+      </div>
+      <div class="box col dis">
+        <h4>⚖️ They disagree → ask <b>Opus</b></h4>
+        <p class="small">On the ~8% where they conflict, the strongest, most trusted judge
+          (<b>Claude&nbsp;Opus</b>) re-judges the case <b>independently</b> — it answers the same two
+          questions fresh, it does <b>not</b> just pick a side.</p>
+      </div>
+    </div>
+    <p class="note">The two cheap judges (<b>Gemma</b> + <b>DeepSeek-V4-Flash</b>, different model
+      families) get the <b>identical prompt</b> — only the model differs. Why not Opus for everything?
+      Cost: the cheap judges cover all 106k turns; Opus is reserved for the hard, disputed cases.</p>
+  </div>
+
+  <div class="arrow">▼</div>
+
+  <!-- STEP 4 -->
+  <div class="step">
+    <p class="kicker">Step 4 — The label (and how the judgment decides it)</p>
+    <h3>Each turn becomes one labeled example + a confidence weight</h3>
+    <table class="lab">
+      <tr>
+        <td><span class="tag t-neg">NEGATIVE</span></td>
+        <td>Asked for a <b>different artist</b> but got the <b>same</b> one →
+          <b>the anchoring bug.</b> Marked negative <i>even if the data said "liked."</i></td>
+      </tr>
+      <tr>
+        <td><span class="tag t-neg">NEGATIVE</span></td>
+        <td>Track <b>clearly violates</b> the named request (wrong genre/era, or carries something they
+          just rejected).</td>
+      </tr>
+      <tr>
+        <td><span class="tag t-pos">POSITIVE</span></td>
+        <td>Track <b>fits</b> the request and the listener liked it → the good example to learn from.</td>
+      </tr>
+      <tr>
+        <td><span class="tag t-drop">DROP</span></td>
+        <td>Track fit the request but was disliked → personal taste, ambiguous → set aside (low weight).</td>
+      </tr>
+      <tr>
+        <td><span class="tag t-hold">HOLD</span></td>
+        <td>Can't verify (subtle mood, unrecognized song) → low-confidence, defer to the original tag.</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- WORKED EXAMPLE -->
+  <div class="ex2">
+    <h3>📌 Worked example — why we override "liked"</h3>
+    <div class="row"><div class="lbl">Listener (7 turns)</div><div>"Give me OTHER artists… <b>not Lorde</b>" — system keeps playing Lorde</div></div>
+    <div class="row"><div class="lbl">Track played</div><div>Garbage — "Empty" &nbsp;<span style="color:#8fa1c4">(a different artist!)</span></div></div>
+    <div class="row"><div class="lbl">① Artist pivot</div><div>asked for different = <b>yes</b> · same artist = <b>no</b> → <span class="good">not anchoring</span></div></div>
+    <div class="row"><div class="lbl">② Content</div><div>strong female vocals + empowerment → <span class="good">valid</span></div></div>
+    <div class="row"><div class="lbl">→ Label</div><div><span class="good">✅ POSITIVE</span> — exactly the "good pivot" we want the model to learn</div></div>
+    <div class="row" style="border-top:2px solid #3a4a6b;border-bottom:none;margin-top:6px;padding-top:12px">
+      <div class="lbl" style="color:#ff9b91">But if it had replayed Lorde…</div>
+      <div>asked for different = yes · same artist = <b>yes</b> → <span class="bad">❌ NEGATIVE (anchoring)</span> — even though the data labeled it "liked"</div></div>
+  </div>
+
+  <!-- REAL EXAMPLES -->
+  <h2 style="font-size:20px;margin:34px 0 4px">Real examples from the data</h2>
+  <p class="sub" style="margin-bottom:16px">Actual turns, actual labels — each shows the ask, the track played, and why it landed where it did.</p>
+
+  <div class="excard" style="border-left:5px solid var(--green)">
+    <span class="tag t-pos">✅ POSITIVE</span> <span class="exwhy">fits the ask + listener liked it</span>
+    <div class="exask">“…tracks specifically about <b>trickery or journeys into the underworld</b> from the myths?”</div>
+    <div class="exmeta">played: <b>Amon Amarth — Hermod's Ride To Hel</b> · same artist, but they asked about a <u>theme</u>, not a different artist → not anchoring · content fits · liked</div>
+  </div>
+
+  <div class="excard" style="border-left:5px solid var(--red)">
+    <span class="tag t-neg">❌ NEGATIVE</span> <span class="exwhy">artist anchoring — the core bug</span>
+    <div class="exask">“…Could you suggest some <b>other artists</b>, perhaps lesser-known ones, with a similar acoustic folk sound?”</div>
+    <div class="exmeta">played: <b>Kings of Convenience — Singing Softly To Me</b> · asked for a different artist + got the <u>same</u> artist → <b>anchoring</b> · marked NEGATIVE <i>even though the data said “liked.”</i></div>
+  </div>
+
+  <div class="excard" style="border-left:5px solid var(--red)">
+    <span class="tag t-neg">❌ NEGATIVE</span> <span class="exwhy">content — ignored the pivot</span>
+    <div class="exask">“…that song is really <b>heavy and serious</b>! I need something with a <b>positive, energetic vibe.</b>”</div>
+    <div class="exmeta">played: <b>Neil Young — After The Gold Rush</b> (another slow, heavy track) · violates the “upbeat” pivot → NEGATIVE (disliked too).</div>
+  </div>
+
+  <div class="excard" style="border-left:5px solid var(--amber)">
+    <span class="tag t-hold">🟡 HOLD</span> <span class="exwhy">judges disagreed → Opus couldn't verify → low weight</span>
+    <div class="exask">“…YES! ‘The Vengeful One’ by Disturbed! That's the one! Perfect for a workout.”</div>
+    <div class="exmeta">played: <b>Linkin Park — Papercut</b> · Gemma said fits, DeepSeek said no → <b>Opus</b>: can't verify the subtle workout-energy fit → HOLD (weight 0.6).</div>
+  </div>
+
+  <p class="foot">Output: ~106k clean <b>(request → track)</b> labels with confidence weights, used to retrain the retriever.<br>
+  Files: <b>judge1_gemma.jsonl</b> · <b>judge2_deepseek.jsonl</b> · <b>opus_arbiter.jsonl</b> · <b>final_labels.jsonl</b></p>
+
+</div>
+</body>
+</html>

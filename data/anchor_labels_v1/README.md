@@ -36,16 +36,20 @@ sha256sum -c train_labels_full.jsonl.gz.sha256 dev_labels_full.jsonl.gz.sha256
 gh release download anchor-labels-v1 -p '*_audit.tar.gz'
 ```
 
-## What's here
+## What's in this folder
 
-- **`DATASET_CARD.md`** — schema, labeling method (two cheap judges →
-  Opus arbiter on disagreements), label composition rules, full distribution,
-  and the two-tower training recipe.
+| File | What |
+|---|---|
+| **`DATASET_CARD.md`** | Schema, labeling method, composition rules, full distribution, two-tower training recipe. |
+| **`REPRODUCE.md`** | Step-by-step to rebuild the labels from scratch on a fresh machine (prereqs, exact commands, the arbiter with/without Claude Code). |
+| **`reports/train.html`** | Visual walkthrough of the full train result (open in a browser). |
+| **`reports/dev.html`** | Visual walkthrough of the dev result. |
+| **`reports/flow.html`** | Plain-English explainer of how the labeling works (for someone with no context). |
 
-See the card for everything else. The pipeline scripts are under
-`scripts/rerank/` (`build_anchor_universe.py`, `convo_context.py`,
-`judge_anchor_content.py`, `compose_labels.py`, `run_arbiter.py`) and the
-arbiter subagent at `.claude/agents/anchor-arbiter.md`.
+Pipeline scripts (committed): `scripts/rerank/build_anchor_universe.py`,
+`convo_context.py`, `batch_sheet.py`, `judge_anchor_content.py`,
+`compose_labels.py`, `run_arbiter.py`; arbiter subagent at
+`.claude/agents/anchor-arbiter.md`. See **`REPRODUCE.md`** to run them.
 
 ## Headline
 
