@@ -3,7 +3,7 @@
 Sessions are kept intact (all turns of a session land in the same batch) and in first-seen order, so
 batches are deterministic and reproducible.
 
-  python scripts/rerank/batch_sheet.py --sheet <sheet_full_train.jsonl> --out-dir <dir>/batches \
+  python scripts/rerank/anchor_labels/batch_sheet.py --sheet <sheet_full_train.jsonl> --out-dir <dir>/batches \
       --sessions-per-batch 1000
   -> writes <dir>/batches/batch_00.jsonl ... and prints a manifest (turns + sessions per batch).
 """

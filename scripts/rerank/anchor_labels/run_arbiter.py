@@ -5,14 +5,14 @@ are split into chunks; each chunk is judged by one `anchor-arbiter` invocation; 
 merged into a single axis-level arbiter file for compose_labels.py --arbiter.
 
   # 1) split the conflicts_sheet (emitted by compose_labels) into subagent-sized chunks
-  python scripts/rerank/run_arbiter.py chunk --conflicts <dir>/conflicts_sheet.jsonl \
+  python scripts/rerank/anchor_labels/run_arbiter.py chunk --conflicts <dir>/conflicts_sheet.jsonl \
       --work-dir <dir>/arbiter --size 150
   #    -> writes <dir>/arbiter/chunk_000.jsonl ... and prints the exact Agent calls to run.
 
   # 2) (the orchestrator runs the anchor-arbiter subagent on each chunk, writing arb_000.json ...)
 
   # 3) merge the chunk outputs + verify full coverage of the conflict set
-  python scripts/rerank/run_arbiter.py merge --conflicts <dir>/conflicts_sheet.jsonl \
+  python scripts/rerank/anchor_labels/run_arbiter.py merge --conflicts <dir>/conflicts_sheet.jsonl \
       --work-dir <dir>/arbiter --out <dir>/arbiter.json
 """
 from __future__ import annotations
@@ -36,7 +36,7 @@ def chunk(a):
         cf = os.path.join(a.work_dir, f"chunk_{j:03d}.jsonl")
         of = os.path.join(a.work_dir, f"arb_{j:03d}.json")
         print(f"  • INPUT {cf}  ->  OUTPUT {of}")
-    print(f"\nThen: python scripts/rerank/run_arbiter.py merge --conflicts {a.conflicts} "
+    print(f"\nThen: python scripts/rerank/anchor_labels/run_arbiter.py merge --conflicts {a.conflicts} "
           f"--work-dir {a.work_dir} --out {os.path.join(os.path.dirname(a.conflicts), 'arbiter.json')}")
 
 
