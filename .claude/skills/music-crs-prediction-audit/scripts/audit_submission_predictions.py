@@ -36,7 +36,9 @@ DEFAULT_CATALOG_SPLIT = "all_tracks"
 DEFAULT_JUDGE_MODEL = "openrouter/deepseek/deepseek-v4-flash"
 JUDGE_PROMPT_VERSION = "v3_conversation_only"
 EXPLANATION_JUDGE_PROMPT_VERSION = "v3_recsys_justification_profile"
+STATE_JUDGE_PROMPT_VERSION = "v1_state_accuracy"
 JUDGE_VERDICTS = {"good", "acceptable", "weak", "bad"}
+STATE_JUDGE_VERDICTS = {"good", "partial", "bad"}
 
 CATALOG_COLUMNS = [
     "track_id",
@@ -753,6 +755,21 @@ def profile_for_judge(row: dict[str, Any], max_chars: int = 1200) -> str:
     return text if len(text) <= max_chars else text[: max_chars - 3] + "..."
 
 
+def state_under_review(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "intent_mode": row.get("intent_mode"),
+        "request_type": row.get("request_type"),
+        "retrieval_profile": row.get("retrieval_profile"),
+        "routing_tags": row.get("routing_tags"),
+        "state_excerpt": row.get("state_excerpt"),
+    }
+
+
+def state_for_judge(row: dict[str, Any], max_chars: int = 5000) -> str:
+    text = json.dumps(state_under_review(row), ensure_ascii=False, sort_keys=True, indent=2)
+    return text if len(text) <= max_chars else text[: max_chars - 3] + "..."
+
+
 def item_for_judge(item: dict[str, Any], include_state: bool = False) -> str:
     track = item["track"]
     tags = ", ".join(track.get("tags", [])[:8]) or "no tags"
@@ -886,6 +903,43 @@ Return ONLY a JSON object with this shape:
 """
 
 
+def build_state_judge_prompt(row: dict[str, Any], catalog: Catalog) -> str:
+    return f"""You are judging whether a Music CRS pipeline's extracted/compiled state is accurate for one conversation turn.
+
+Important rules:
+- This is a diagnostic state/compiler audit, not a recommendation-quality judge.
+- Use the raw conversation as the source of truth. Conversation goal and user profile are auxiliary context only; if missing, ignore them.
+- Evaluate whether the extracted/compiled state captures the current user turn and relevant prior context: requested artists/tracks/albums, genre/mood/era/style constraints, explicit rejections/exclusions, branch-out/switch requests, continuation intent, and resolver outputs.
+- Penalize missing constraints, stale carried-over entities, contradictory state, or compiled routing/profile fields that would likely send retrieval in the wrong direction.
+- Do not judge whether the final recommendation is correct.
+
+Conversation goal:
+{row.get("conversation_goal") or "not provided"}
+
+User profile:
+{profile_for_judge(row)}
+
+Recent conversation:
+{conversation_for_judge(row, catalog)}
+
+Latest user request:
+{row.get("latest_user_text") or ""}
+
+Extracted/compiled state to judge:
+{state_for_judge(row)}
+
+Return ONLY a JSON object with this shape:
+{{
+  "verdict": "good" | "partial" | "bad",
+  "state_accurate": true | false,
+  "missing_constraints": ["short plain-English item", "..."],
+  "extra_or_stale_state": ["short plain-English item", "..."],
+  "compiled_state_risk": true | false,
+  "reason": "plain English, one or two sentences for a non-music expert"
+}}
+"""
+
+
 def extract_json_object(text: str) -> dict[str, Any]:
     text = text.strip()
     try:
@@ -982,6 +1036,25 @@ def explanation_judge_cache_key(row: dict[str, Any], catalog: Catalog, model: st
             "popularity": top_track.get("popularity"),
         },
         "prediction_response": row.get("prediction_response"),
+    }
+    raw = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def state_judge_cache_key(row: dict[str, Any], catalog: Catalog, model: str) -> str:
+    payload = {
+        "prompt_version": STATE_JUDGE_PROMPT_VERSION,
+        "model": model,
+        "session_id": row.get("session_id"),
+        "turn_number": row.get("turn_number"),
+        "latest_user_text": row.get("latest_user_text"),
+        "conversation_goal": row.get("conversation_goal"),
+        "user_profile": row.get("user_profile"),
+        "conversation": row.get("conversation"),
+        "conversation_prompt": conversation_for_judge(row, catalog),
+        "user_profile_prompt": profile_for_judge(row),
+        "state_prompt": state_for_judge(row),
+        "state_under_review": state_under_review(row),
     }
     raw = json.dumps(payload, ensure_ascii=False, sort_keys=True)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
@@ -1124,6 +1197,47 @@ def normalize_explanation_judgment(
     }
 
 
+def short_string_list(value: Any, limit: int = 8) -> list[str]:
+    out = []
+    for item in as_list(value):
+        text = str(item or "").strip()
+        if text:
+            out.append(text[:240])
+    return out[:limit]
+
+
+def normalize_state_judgment(
+    raw: dict[str, Any],
+    *,
+    model: str,
+    cache_key: str,
+    cached: bool,
+) -> dict[str, Any]:
+    verdict = str(raw.get("verdict") or "").strip().lower()
+    if verdict not in STATE_JUDGE_VERDICTS:
+        verdict = "partial"
+    missing = short_string_list(raw.get("missing_constraints"))
+    stale = short_string_list(raw.get("extra_or_stale_state"))
+    state_accurate = bool(raw.get("state_accurate", verdict == "good"))
+    compiled_state_risk = bool(raw.get("compiled_state_risk", verdict == "bad"))
+    if verdict == "good" and (not state_accurate or missing or stale or compiled_state_risk):
+        verdict = "partial"
+    if verdict == "partial" and compiled_state_risk and (missing or stale):
+        verdict = "bad"
+    return {
+        "model": model,
+        "prompt_version": STATE_JUDGE_PROMPT_VERSION,
+        "verdict": verdict,
+        "state_accurate": state_accurate,
+        "missing_constraints": missing,
+        "extra_or_stale_state": stale,
+        "compiled_state_risk": compiled_state_risk,
+        "reason": str(raw.get("reason") or "").strip()[:900],
+        "cache_key": cache_key,
+        "cached": cached,
+    }
+
+
 def configure_litellm_completion_cache(
     litellm_module: Any,
     mode: str,
@@ -1205,6 +1319,7 @@ def run_llm_json_judge(
     prompt_fn: Any,
     normalize_fn: Any,
     metadata_extra: dict[str, Any] | None = None,
+    label_free_only: bool = True,
 ) -> dict[str, Any]:
     load_dotenv_for_judge()
     metadata_extra = metadata_extra or {}
@@ -1213,7 +1328,7 @@ def run_llm_json_judge(
         return {
             "enabled": True,
             "model": model,
-            "label_free_only": True,
+            "label_free_only": label_free_only,
             **metadata_extra,
         }
 
@@ -1439,6 +1554,66 @@ def run_llm_explanation_judge(
         metadata_extra={
             "prompt_version": EXPLANATION_JUDGE_PROMPT_VERSION,
         },
+    )
+
+
+def run_llm_state_judge(
+    rows: list[dict[str, Any]],
+    catalog: Catalog,
+    *,
+    out_dir: Path,
+    model: str,
+    limit: int,
+    workers: int,
+    max_tokens: int,
+    cache_path: Path | None,
+    litellm_cache_mode: str,
+    litellm_cache_dir: Path | None,
+) -> dict[str, Any]:
+    state_rows = [row for row in rows if row.get("trace_available")]
+    if not state_rows:
+        return {
+            "enabled": True,
+            "ran": False,
+            "model": model,
+            "warning": "No trace rows were available, so no LLM state judge calls were made.",
+            "label_free_only": False,
+            "diagnostic_only": True,
+            "prompt_version": STATE_JUDGE_PROMPT_VERSION,
+            "litellm_cache": requested_litellm_cache_metadata(
+                litellm_cache_mode,
+                litellm_cache_dir,
+            ),
+        }
+    return run_llm_json_judge(
+        state_rows,
+        out_dir=out_dir,
+        model=model,
+        limit=limit,
+        workers=workers,
+        max_tokens=max_tokens,
+        cache_path=cache_path,
+        litellm_cache_mode=litellm_cache_mode,
+        litellm_cache_dir=litellm_cache_dir,
+        cache_filename="llm_state_judgments.jsonl",
+        judgment_key="llm_state_judgment",
+        log_label="LLM state judge",
+        warning_label="LLM state judge",
+        system_prompt="You are a strict but fair music conversation state-auditor. Return valid JSON only.",
+        non_json_label="state judge",
+        cache_key_fn=lambda row: state_judge_cache_key(row, catalog, model),
+        prompt_fn=lambda row: build_state_judge_prompt(row, catalog),
+        normalize_fn=lambda raw, key, cached: normalize_state_judgment(
+            raw,
+            model=model,
+            cache_key=key,
+            cached=cached,
+        ),
+        metadata_extra={
+            "prompt_version": STATE_JUDGE_PROMPT_VERSION,
+            "diagnostic_only": True,
+        },
+        label_free_only=False,
     )
 
 
@@ -1677,6 +1852,15 @@ def aggregate(audited: list[dict[str, Any]], metadata: dict[str, Any]) -> dict[s
         for row in audited
         if row.get("llm_explanation_judgment", {}).get("verdict") == "error"
     )
+    state_judge_counter = Counter(
+        str(row.get("llm_state_judgment", {}).get("verdict"))
+        for row in audited
+        if row.get("llm_state_judgment")
+        and row.get("llm_state_judgment", {}).get("verdict") != "error"
+    )
+    state_judge_errors = sum(
+        1 for row in audited if row.get("llm_state_judgment", {}).get("verdict") == "error"
+    )
 
     label_rows = [row for row in audited if row["metrics"]]
     label_metrics = None
@@ -1718,6 +1902,13 @@ def aggregate(audited: list[dict[str, Any]], metadata: dict[str, Any]) -> dict[s
             "weak_or_bad": explanation_judge_counter.get("weak", 0)
             + explanation_judge_counter.get("bad", 0),
             "error_rows": explanation_judge_errors,
+        },
+        "llm_state_judge_metrics": {
+            "n_judged": sum(state_judge_counter.values()),
+            "verdict_counts": dict(state_judge_counter.most_common()),
+            "partial_or_bad": state_judge_counter.get("partial", 0)
+            + state_judge_counter.get("bad", 0),
+            "error_rows": state_judge_errors,
         },
         "metadata": metadata,
     }
@@ -1879,6 +2070,8 @@ def render_summary(agg: dict[str, Any]) -> str:
     judge_metrics = agg.get("llm_judge_metrics") or {}
     explanation_judge_meta = (agg.get("metadata") or {}).get("llm_explanation_judge") or {}
     explanation_judge_metrics = agg.get("llm_explanation_judge_metrics") or {}
+    state_judge_meta = (agg.get("metadata") or {}).get("llm_state_judge") or {}
+    state_judge_metrics = agg.get("llm_state_judge_metrics") or {}
     if judge_meta.get("skipped_reason"):
         bullets.append(f"LLM judge was skipped: {judge_meta['skipped_reason']}")
     elif judge_meta.get("warning"):
@@ -1898,6 +2091,14 @@ def render_summary(agg: dict[str, Any]) -> str:
         counts_text = ", ".join(f"{k}={v}" for k, v in counts.items())
         bullets.append(
             f"LLM explanation judge reviewed {explanation_judge_metrics['n_judged']} label-free rows; weak/bad explanations={explanation_judge_metrics['weak_or_bad']} ({counts_text})."
+        )
+    if state_judge_meta.get("warning"):
+        bullets.append(f"LLM state judge warning: {state_judge_meta['warning']}")
+    elif state_judge_metrics.get("n_judged"):
+        counts = state_judge_metrics.get("verdict_counts") or {}
+        counts_text = ", ".join(f"{k}={v}" for k, v in counts.items())
+        bullets.append(
+            f"LLM state judge reviewed {state_judge_metrics['n_judged']} trace-backed rows; partial/bad state rows={state_judge_metrics['partial_or_bad']} ({counts_text})."
         )
     bullets.append(
         f"{agg['hard_top1_invalid']} rows ({agg['hard_top1_invalid'] / n:.1%}) have a hard top-1 rejection leak; these are the strongest proven-bad cases."
@@ -2054,6 +2255,42 @@ def render_llm_explanation_judge(row: dict[str, Any]) -> str:
     """
 
 
+def render_llm_state_judge(row: dict[str, Any]) -> str:
+    judgment = row.get("llm_state_judgment") or {}
+    verdict = str(judgment.get("verdict") or "")
+    if not judgment or verdict == "error":
+        return ""
+    missing = judgment.get("missing_constraints") or []
+    stale = judgment.get("extra_or_stale_state") or []
+    checks = [
+        ("state accurate", judgment.get("state_accurate")),
+        ("compiled risk", judgment.get("compiled_state_risk")),
+    ]
+    check_text = " · ".join(
+        f"{name}: {'yes' if bool(value) else 'no'}" for name, value in checks
+    )
+    missing_text = "; ".join(str(x) for x in missing) or "none called out"
+    stale_text = "; ".join(str(x) for x in stale) or "none called out"
+    reason = judgment.get("reason") or ""
+    model = judgment.get("model") or "external judge"
+    return f"""
+    <div class="llm-choice {escape(verdict)}">
+      <div>
+        <h3>LLM State Judge</h3>
+        <p><b>state verdict:</b> {escape(verdict)}</p>
+        <p>{escape(reason)}</p>
+        <p><b>missing:</b> {escape(missing_text)}</p>
+        <p><b>extra/stale:</b> {escape(stale_text)}</p>
+        <small>{escape(str(model))} · prompt {escape(str(judgment.get('prompt_version') or ''))}</small>
+      </div>
+      <div class="choice-meta">
+        <strong>{escape(verdict)}</strong>
+        <span>{escape(check_text)}</span>
+      </div>
+    </div>
+    """
+
+
 def row_search_text(row: dict[str, Any]) -> str:
     parts: list[str] = [
         row.get("session_id", ""),
@@ -2156,6 +2393,8 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
     judge_meta = agg["metadata"].get("llm_judge") or {}
     explanation_judge_metrics = agg.get("llm_explanation_judge_metrics") or {}
     explanation_judge_meta = agg["metadata"].get("llm_explanation_judge") or {}
+    state_judge_metrics = agg.get("llm_state_judge_metrics") or {}
+    state_judge_meta = agg["metadata"].get("llm_state_judge") or {}
     if judge_metrics.get("n_judged"):
         cards += [
             ("LLM Judged", judge_metrics["n_judged"]),
@@ -2170,6 +2409,13 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
         ]
     elif explanation_judge_meta.get("enabled"):
         cards.append(("Explanation Judge", "skipped"))
+    if state_judge_metrics.get("n_judged"):
+        cards += [
+            ("State Judged", state_judge_metrics["n_judged"]),
+            ("State Partial/Bad", state_judge_metrics["partial_or_bad"]),
+        ]
+    elif state_judge_meta.get("enabled"):
+        cards.append(("State Judge", "skipped"))
     leaderboard = agg["metadata"].get("leaderboard_metadata")
     if leaderboard:
         for k, v in leaderboard.items():
@@ -2177,7 +2423,7 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
 
     def card_tone(card_label: str) -> str:
         lower = card_label.lower()
-        if "hard" in lower or "weak/bad" in lower:
+        if "hard" in lower or "weak/bad" in lower or "partial/bad" in lower:
             return "danger"
         if "flagged" in lower or "better" in lower:
             return "warn"
@@ -2254,17 +2500,49 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
     else:
         explanation_filter_html = '<select id="explanationFilter" aria-label="Explanation label filter" disabled><option value="">Explanation labels unavailable</option></select>'
         explanation_pills = ""
+    state_counts = state_judge_metrics.get("verdict_counts") or {}
+    state_order = ["bad", "partial", "good"]
+    if state_counts:
+        state_filter_html = """
+	    <select id="stateFilter" aria-label="State label filter">
+	      <option value="">all state labels</option>
+	      {options}
+	    </select>
+        """.format(
+            options="\n".join(
+                f'<option value="{escape(label)}">{escape(label)} ({state_counts[label]})</option>'
+                for label in state_order
+                if state_counts.get(label)
+            )
+        )
+        state_pills = """
+        <section class="controls label-controls">
+          <span class="control-label">State labels</span>
+          {pills}
+        </section>
+        """.format(
+            pills="\n".join(
+                f'<button class="pill state-pill {escape(label)}" data-state="{escape(label)}">{escape(label)} <b>{state_counts[label]}</b></button>'
+                for label in state_order
+                if state_counts.get(label)
+            )
+        )
+    else:
+        state_filter_html = '<select id="stateFilter" aria-label="State label filter" disabled><option value="">State labels unavailable</option></select>'
+        state_pills = ""
 
     row_cards = []
     for row in rows:
         first = row["items"][0]["track"] if row["items"] else {"track_name": "", "artist_name": ""}
         judge_verdict = str(row.get("llm_judgment", {}).get("verdict") or "")
         explanation_verdict = str(row.get("llm_explanation_judgment", {}).get("verdict") or "")
+        state_verdict = str(row.get("llm_state_judgment", {}).get("verdict") or "")
         status = "bad" if row["top1_flags"] else (
             "warn"
             if row["gaps"]
             or judge_verdict in {"weak", "bad"}
             or explanation_verdict in {"weak", "bad"}
+            or state_verdict in {"partial", "bad"}
             else "ok"
         )
         gap_attr = " ".join(row["gaps"])
@@ -2284,6 +2562,7 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
             if row["gaps"]
             or judge_verdict in {"weak", "bad"}
             or explanation_verdict in {"weak", "bad"}
+            or state_verdict in {"partial", "bad"}
             else "clear"
         )
         judge_badge = (
@@ -2296,15 +2575,21 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
             if explanation_verdict and explanation_verdict != "error"
             else ""
         )
+        state_badge = (
+            f'<span class="badge judge {escape(state_verdict)}">STATE {escape(state_verdict)}</span>'
+            if state_verdict and state_verdict != "error"
+            else ""
+        )
         row_cards.append(
             f"""
-            <section class="row-card {status}" data-gaps="{escape(gap_attr)}" data-llm="{escape(judge_verdict)}" data-explanation="{escape(explanation_verdict)}" data-search="{escape(row_search_text(row))}">
+            <section class="row-card {status}" data-gaps="{escape(gap_attr)}" data-llm="{escape(judge_verdict)}" data-explanation="{escape(explanation_verdict)}" data-state="{escape(state_verdict)}" data-search="{escape(row_search_text(row))}">
               <header>
                 <div>
                   <div class="row-kicker">
                     <span class="badge {status}">{escape(status_label)}</span>
                     {judge_badge}
                     {explanation_badge}
+                    {state_badge}
                     <span>#{row['index']} · turn {row['turn_number']} · {escape(row['session_id'][:8])}</span>
                   </div>
                   <p>{escape(row['latest_user_text'][:260])}</p>
@@ -2329,6 +2614,7 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
 	                </div>
                 {render_llm_choice(row)}
                 {render_llm_explanation_judge(row)}
+                {render_llm_state_judge(row)}
                 <div class="grid">
                   <div>
                     <h3>Conversation</h3>
@@ -2436,7 +2722,7 @@ button {{ cursor: pointer; }}
 .row-kicker {{ display: flex; flex-wrap: wrap; align-items: center; gap: 7px; color: var(--quiet); font-size: 12px; font-weight: 700; text-transform: uppercase; }}
 .badge {{ display: inline-flex; align-items: center; min-height: 22px; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--line); background: #fff; color: #4b5563; font-size: 11px; font-weight: 800; text-transform: uppercase; white-space: nowrap; }}
 .badge.bad, .badge.judge.bad {{ color: var(--bad); border-color: #f3b8b0; background: var(--bad-bg); }}
-.badge.warn, .badge.judge.weak {{ color: var(--warn); border-color: #ecd48a; background: var(--warn-bg); }}
+.badge.warn, .badge.judge.weak, .badge.judge.partial {{ color: var(--warn); border-color: #ecd48a; background: var(--warn-bg); }}
 .badge.ok, .badge.judge.good {{ color: var(--ok); border-color: #a9dfc1; background: var(--ok-bg); }}
 .badge.judge.acceptable {{ color: var(--blue); border-color: #b8cdfd; background: var(--blue-bg); }}
 .status {{ text-align: right; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-soft); }}
@@ -2451,7 +2737,7 @@ summary {{ cursor: pointer; color: var(--blue); margin-top: 10px; font-weight: 7
 .explain p {{ margin: 7px 0; }}
 .llm-choice {{ display: grid; grid-template-columns: minmax(0, 1fr) minmax(210px, 300px); gap: 16px; align-items: start; border: 1px solid var(--line); border-left: 5px solid var(--line-strong); border-radius: 8px; background: #fff; padding: 13px 15px; margin: 14px 0; }}
 .llm-choice.bad {{ border-left-color: var(--bad); background: var(--bad-bg); }}
-.llm-choice.weak {{ border-left-color: var(--warn); background: var(--warn-bg); }}
+.llm-choice.weak, .llm-choice.partial {{ border-left-color: var(--warn); background: var(--warn-bg); }}
 .llm-choice.acceptable {{ border-left-color: var(--blue); background: var(--blue-bg); }}
 .llm-choice.good {{ border-left-color: var(--ok); background: var(--ok-bg); }}
 .llm-choice h3 {{ margin-top: 0; }}
@@ -2533,11 +2819,13 @@ blockquote {{ margin: 0; padding: 11px 13px; background: var(--panel-soft); bord
 	    </select>
 	    {llm_filter_html}
 	    {explanation_filter_html}
+	    {state_filter_html}
 	    <button id="clear">Clear filters</button>
 	  </section>
 	  <section class="controls">{gap_pills}</section>
 	  {llm_pills}
 	  {explanation_pills}
+	  {state_pills}
   <section id="rows">{''.join(row_cards)}</section>
   <section class="method">
     <h3>Sources And Caveats</h3>
@@ -2547,6 +2835,7 @@ blockquote {{ margin: 0; padding: 11px 13px; background: var(--panel-soft); bord
     <p>Dataset: {escape(str(source_bits.get('dataset_name') or 'not supplied'))}</p>
     <p>LLM judge: {escape(json.dumps(source_bits.get('llm_judge') or {'enabled': False}, ensure_ascii=False))}</p>
     <p>LLM explanation judge: {escape(json.dumps(source_bits.get('llm_explanation_judge') or {'enabled': False}, ensure_ascii=False))}</p>
+    <p>LLM state judge: {escape(json.dumps(source_bits.get('llm_state_judge') or {'enabled': False}, ensure_ascii=False))}</p>
     <p>Catalog warning: {escape(str(source_bits.get('catalog_warning') or 'none'))}</p>
   </section>
 </main>
@@ -2555,10 +2844,12 @@ const search = document.getElementById('search');
 const statusFilter = document.getElementById('statusFilter');
 const llmFilter = document.getElementById('llmFilter');
 const explanationFilter = document.getElementById('explanationFilter');
+const stateFilter = document.getElementById('stateFilter');
 const clear = document.getElementById('clear');
 const gapPills = Array.from(document.querySelectorAll('[data-gap]'));
 const llmPills = Array.from(document.querySelectorAll('.llm-pill[data-llm]'));
 const explanationPills = Array.from(document.querySelectorAll('.explanation-pill[data-explanation]'));
+const statePills = Array.from(document.querySelectorAll('.state-pill[data-state]'));
 const cards = Array.from(document.querySelectorAll('.row-card'));
 let activeGap = '';
 function normalizeSearch(value) {{
@@ -2572,35 +2863,45 @@ function syncExplanationPills() {{
   const explanation = explanationFilter ? explanationFilter.value : '';
   explanationPills.forEach(p => p.classList.toggle('active', p.dataset.explanation === explanation));
 }}
+function syncStatePills() {{
+  const state = stateFilter ? stateFilter.value : '';
+  statePills.forEach(p => p.classList.toggle('active', p.dataset.state === state));
+}}
 function applyFilters() {{
   const q = normalizeSearch(search.value);
   const status = statusFilter.value;
   const llm = llmFilter ? llmFilter.value : '';
   const explanation = explanationFilter ? explanationFilter.value : '';
+  const state = stateFilter ? stateFilter.value : '';
   cards.forEach(card => {{
     const matchesSearch = !q || card.dataset.search.includes(q);
     const matchesStatus = !status || card.classList.contains(status);
     const matchesGap = !activeGap || card.dataset.gaps.split(' ').includes(activeGap);
     const matchesLlm = !llm || card.dataset.llm === llm;
     const matchesExplanation = !explanation || card.dataset.explanation === explanation;
-    card.classList.toggle('hidden', !(matchesSearch && matchesStatus && matchesGap && matchesLlm && matchesExplanation));
+    const matchesState = !state || card.dataset.state === state;
+    card.classList.toggle('hidden', !(matchesSearch && matchesStatus && matchesGap && matchesLlm && matchesExplanation && matchesState));
   }});
   syncLlmPills();
   syncExplanationPills();
+  syncStatePills();
 }}
 search.addEventListener('input', applyFilters);
 statusFilter.addEventListener('change', applyFilters);
 if (llmFilter) llmFilter.addEventListener('change', applyFilters);
 if (explanationFilter) explanationFilter.addEventListener('change', applyFilters);
+if (stateFilter) stateFilter.addEventListener('change', applyFilters);
 clear.addEventListener('click', () => {{
   search.value = '';
   statusFilter.value = '';
   if (llmFilter) llmFilter.value = '';
   if (explanationFilter) explanationFilter.value = '';
+  if (stateFilter) stateFilter.value = '';
   activeGap = '';
   gapPills.forEach(p => p.classList.remove('active'));
   llmPills.forEach(p => p.classList.remove('active'));
   explanationPills.forEach(p => p.classList.remove('active'));
+  statePills.forEach(p => p.classList.remove('active'));
   applyFilters();
 }});
 gapPills.forEach(p => p.addEventListener('click', () => {{
@@ -2616,6 +2917,11 @@ llmPills.forEach(p => p.addEventListener('click', () => {{
 explanationPills.forEach(p => p.addEventListener('click', () => {{
   if (!explanationFilter) return;
   explanationFilter.value = explanationFilter.value === p.dataset.explanation ? '' : p.dataset.explanation;
+  applyFilters();
+}}));
+statePills.forEach(p => p.addEventListener('click', () => {{
+  if (!stateFilter) return;
+  stateFilter.value = stateFilter.value === p.dataset.state ? '' : p.dataset.state;
   applyFilters();
 }}));
 </script>
@@ -2670,6 +2976,14 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--llm-state-judge",
+        action="store_true",
+        help=(
+            "Run an optional diagnostic LLM judge for extracted/compiled state accuracy. "
+            "Requires trace rows and is separate from recommendation/explanation judging."
+        ),
+    )
+    parser.add_argument(
         "--judge-model",
         default=os.environ.get("MCRS_AUDIT_JUDGE_MODEL", DEFAULT_JUDGE_MODEL),
         help=f"LiteLLM model for label-free judging, default {DEFAULT_JUDGE_MODEL}",
@@ -2708,6 +3022,10 @@ def parse_args() -> argparse.Namespace:
             "Optional JSONL cache for LLM response/explanation judgments; "
             "defaults to <out>/llm_explanation_judgments.jsonl."
         ),
+    )
+    parser.add_argument(
+        "--state-judge-cache",
+        help="Optional JSONL cache for LLM state judgments; defaults to <out>/llm_state_judgments.jsonl.",
     )
     parser.add_argument(
         "--judge-litellm-cache",
@@ -2767,6 +3085,7 @@ def main() -> int:
         "leaderboard_metadata": leaderboard,
         "llm_judge": {"enabled": False},
         "llm_explanation_judge": {"enabled": False},
+        "llm_state_judge": {"enabled": False},
     }
     rows = audit_rows(
         predictions,
@@ -2845,6 +3164,26 @@ def main() -> int:
                 litellm_cache_mode=args.judge_litellm_cache,
                 litellm_cache_dir=litellm_cache_dir,
             )
+    if args.llm_state_judge:
+        litellm_cache_dir = (
+            Path(args.judge_litellm_cache_dir).resolve()
+            if args.judge_litellm_cache_dir
+            else out_dir.parent / ".litellm_cache"
+        )
+        metadata["llm_state_judge"] = run_llm_state_judge(
+            rows,
+            catalog,
+            out_dir=out_dir,
+            model=args.judge_model,
+            limit=args.judge_limit,
+            workers=max(1, args.judge_workers),
+            max_tokens=max(128, args.judge_max_tokens),
+            cache_path=Path(args.state_judge_cache).resolve()
+            if args.state_judge_cache
+            else None,
+            litellm_cache_mode=args.judge_litellm_cache,
+            litellm_cache_dir=litellm_cache_dir,
+        )
     audit = {
         "aggregate": aggregate(rows, metadata),
         "rows": rows,
@@ -2886,6 +3225,16 @@ def main() -> int:
                 "LLM explanation judge skipped: "
                 f"{explanation_judge.get('skipped_reason') or explanation_judge.get('warning')}"
             )
+    state_judge = metadata.get("llm_state_judge") or {}
+    if state_judge.get("enabled"):
+        if state_judge.get("ran"):
+            print(
+                "LLM state judge={model} judged_rows={judged_rows} errors={error_rows}".format(
+                    **state_judge
+                )
+            )
+        else:
+            print(f"LLM state judge skipped: {state_judge.get('warning')}")
     sys.stdout.flush()
     # Some LanceDB/PyArrow builds abort during interpreter teardown in local
     # plugin sessions. Files and stdout are already flushed; exit directly.
