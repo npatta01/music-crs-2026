@@ -130,4 +130,14 @@ def test_render_html_groups_metric_cards_into_collapsible_rows():
     assert "Run Coverage" in rendered
     assert "Validity And Gaps" in rendered
     assert "Judge Evaluations" in rendered
-    assert rendered.index("Judge Evaluations") < rendered.index("Fit Judged")
+    assert "Judge Coverage" in rendered
+    assert "Fit 80/80" in rendered
+    assert "Response 80/80" in rendered
+    assert "State 80/80" in rendered
+    assert "Judge Issues" in rendered
+    assert "Weak/bad fits 54" in rendered
+    assert "Thin/misleading 16" in rendered
+    assert "Partial/inaccurate state 41" in rendered
+    assert "Fit Judged" not in rendered
+    assert "Responses Judged" not in rendered
+    assert "State Judged" not in rendered

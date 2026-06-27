@@ -2433,27 +2433,45 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
     explanation_judge_meta = agg["metadata"].get("llm_explanation_judge") or {}
     state_judge_metrics = agg.get("llm_state_judge_metrics") or {}
     state_judge_meta = agg["metadata"].get("llm_state_judge") or {}
+    coverage_lines = []
+    issue_lines = []
+    issue_values = []
     if judge_metrics.get("n_judged"):
-        judge_cards += [
-            ("Fit Judged", judge_metrics["n_judged"]),
-            ("Weak/Bad Fits", judge_metrics["weak_or_bad"]),
-        ]
+        coverage_lines.append(f"Fit {judge_metrics['n_judged']}/{agg['n_rows']}")
+        issue_lines.append(f"Weak/bad fits {judge_metrics['weak_or_bad']}")
+        issue_values.append(str(judge_metrics["weak_or_bad"]))
     elif judge_meta.get("enabled"):
-        judge_cards.append(("Recommendation Fit", "skipped"))
+        coverage_lines.append("Fit skipped")
     if explanation_judge_metrics.get("n_judged"):
-        judge_cards += [
-            ("Responses Judged", explanation_judge_metrics["n_judged"]),
-            ("Thin/Misleading", explanation_judge_metrics["weak_or_bad"]),
-        ]
+        coverage_lines.append(f"Response {explanation_judge_metrics['n_judged']}/{agg['n_rows']}")
+        issue_lines.append(f"Thin/misleading {explanation_judge_metrics['weak_or_bad']}")
+        issue_values.append(str(explanation_judge_metrics["weak_or_bad"]))
     elif explanation_judge_meta.get("enabled"):
-        judge_cards.append(("Response Quality", "skipped"))
+        coverage_lines.append("Response skipped")
     if state_judge_metrics.get("n_judged"):
-        judge_cards += [
-            ("State Judged", state_judge_metrics["n_judged"]),
-            ("Partial/Inaccurate State", state_judge_metrics["partial_or_bad"]),
-        ]
+        coverage_lines.append(f"State {state_judge_metrics['n_judged']}/{agg['n_rows']}")
+        issue_lines.append(f"Partial/inaccurate state {state_judge_metrics['partial_or_bad']}")
+        issue_values.append(str(state_judge_metrics["partial_or_bad"]))
     elif state_judge_meta.get("enabled"):
-        judge_cards.append(("State Accuracy", "skipped"))
+        coverage_lines.append("State skipped")
+    if coverage_lines:
+        judged_counts = [
+            safe_float(metrics.get("n_judged"), 0)
+            for metrics in [
+                judge_metrics,
+                explanation_judge_metrics,
+                state_judge_metrics,
+            ]
+            if metrics.get("n_judged")
+        ]
+        coverage_value = (
+            f"{int(min(judged_counts))}/{agg['n_rows']}"
+            if judged_counts and len(set(judged_counts)) == 1
+            else "mixed"
+        )
+        judge_cards.append(("Judge Coverage", coverage_value, " · ".join(coverage_lines)))
+    if issue_lines:
+        judge_cards.append(("Judge Issues", " / ".join(issue_values), " · ".join(issue_lines)))
     leaderboard = agg["metadata"].get("leaderboard_metadata")
     if leaderboard:
         for k, v in leaderboard.items():
@@ -2467,6 +2485,7 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
             or "partial/bad" in lower
             or "thin/misleading" in lower
             or "inaccurate" in lower
+            or "issues" in lower
         ):
             return "danger"
         if "flagged" in lower or "better" in lower:
@@ -2478,16 +2497,23 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
             "fit judged",
             "responses judged",
             "state judged",
+            "judge coverage",
             "rows",
             "trace rows",
         }:
             return "good"
         return "neutral"
 
-    def render_card_grid(cards: list[tuple[str, Any]]) -> str:
+    def render_card_grid(cards: list[tuple[Any, ...]]) -> str:
         return "\n".join(
-            f'<div class="card {card_tone(str(label))}"><span>{escape(label)}</span><strong>{escape(str(value))}</strong></div>'
-            for label, value in cards
+            (
+                f'<div class="card {card_tone(str(card[0]))}">'
+                f'<span>{escape(str(card[0]))}</span>'
+                f'<strong>{escape(str(card[1]))}</strong>'
+                f"{f'<small>{escape(str(card[2]))}</small>' if len(card) > 2 and card[2] else ''}"
+                "</div>"
+            )
+            for card in cards
         )
 
     metric_groups = [
@@ -2771,6 +2797,7 @@ p {{ margin: 0 0 8px; }}
 .card.good {{ --accent: var(--ok); }}
 .card span {{ display: block; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0; }}
 .card strong {{ display: block; font-size: 24px; line-height: 1.1; margin-top: 8px; }}
+.card small {{ display: block; color: var(--muted); font-size: 12px; font-weight: 650; line-height: 1.35; margin-top: 8px; }}
 .summary {{ background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; margin: 16px 0; box-shadow: var(--shadow); }}
 .summary ul {{ margin: 8px 0 0; padding-left: 20px; }}
 .summary li {{ margin: 7px 0; color: #26313d; }}
