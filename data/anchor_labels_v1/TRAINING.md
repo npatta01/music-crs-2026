@@ -5,11 +5,13 @@ that changes everything. Read `DATASET_CARD.md` first for the schema; the data
 ships as a GitHub Release (`gh release download anchor-labels-v1 -p '*.jsonl.gz'`),
 not in this folder.
 
-> Reviewed against the repo code (claims below cite `file:line`). TL;DR of the
-> review: the central "labels fight nDCG" thesis is **verified**; the headline
-> recommendation is **don't feed anchor-NEGATIVE grades into the *submitted*
-> reranker** — keep it label-pure and run the anchoring fix as a separate
-> product model + the judge/diversity axes.
+> Reviewed against the repo code (claims below cite `file:line`). TL;DR: the
+> "labels fight nDCG" thesis is **verified for the DEVSET official harness**;
+> the **blind/final leaderboard is NOT this script** (extra server-side metrics —
+> see §0 Scope), so treat the devset tension as solid but **don't assume it
+> transfers 1:1 to the blind score**. Headline recommendation: **don't feed
+> anchor-NEGATIVE grades into the *submitted* reranker** — keep it label-pure,
+> run the anchoring fix as a product model + the judge/diversity axes.
 
 ---
 
@@ -29,8 +31,21 @@ played at that turn**, and there is exactly **one GT track per turn**:
   train turns**. Feeding our NEGATIVEs in as low grades literally **inverts the
   label on the metric's own GT.**
 
-So our labels encode a **cleaner notion of relevance than the leaderboard's GT**;
-the anchoring negatives point *away* from the GT track. Consequences:
+> **Scope — devset vs blind (read this).** The above is the **official DEVSET**
+> framework (`evaluator/readme.md:3`) and is verified. The **blind sets (Blind A/B)
+> — which decide the actual leaderboard/winners — are explicitly NOT scored by this
+> script** (`readme.md:65-71`: "Blind set evaluation is not supported … full
+> evaluation on blind sets includes **additional metrics kept server-side**").
+> We can't see the blind GT or its full metric, and the blindset is structurally
+> different (single prediction per session — anchoring may not even arise without a
+> prior played track). So: the played-track / single-GT / "labels fight nDCG"
+> finding is **solid for the devset**, **unverified for the blind/final score** —
+> which, given the server-side metrics likely weight response/judgment quality,
+> may actually *favor* the anchoring fix. Don't over-fit your strategy to the
+> devset nDCG tension alone.
+
+So on the **devset**, our labels encode a **cleaner notion of relevance than its
+GT**; the anchoring negatives point *away* from the GT track. Consequences (devset):
 - nDCG is single-GT, so surfacing a *different* artist above the anchored GT
   **lowers** that turn's nDCG. The anchoring fix and raw nDCG are opposed by
   construction.
@@ -184,10 +199,18 @@ the submitted ranking model. In order of ROI:
 
 ## 7. Open questions to verify before a training run (load-bearing)
 
-1. **Confirm GT = one played track per turn on a built artifact.** Code says yes
+1. **The blind/final eval is unknown — don't over-fit to the devset tension.**
+   The devset harness is official (`evaluator/readme.md:3`) but blind A/B use
+   **additional server-side metrics** (`readme.md:65-71`). The whole "labels fight
+   nDCG" conclusion is a **devset** statement. The blind score — which decides the
+   leaderboard — may weight response/judgment quality (where the anchoring fix
+   helps) and the blindset may be structurally single-turn (no anchoring at all).
+   Find out (challenge page / Codabench / a probe submission) what the blind metric
+   actually rewards before committing a leaderboard strategy.
+2. **Confirm GT = one played track per turn on a built artifact.** Code says yes
    (`make_ground_truth.py:22-44`, `evaluate_devset.py:135`), but the GT json
    wasn't materialized when reviewed — re-run `make_ground_truth.py` and diff
-   against the played track for 2–3 devset turns. Everything here rests on this.
+   against the played track for 2–3 devset turns. The devset reasoning rests on this.
 2. **nDCG@10 vs @20** — reconcile `docs/evaluation.md` (@10 "official primary")
    with the Codabench composite (@20). Doesn't change the tension; do change which
    number you report.
