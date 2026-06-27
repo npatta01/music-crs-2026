@@ -39,6 +39,28 @@ EXPLANATION_JUDGE_PROMPT_VERSION = "v3_recsys_justification_profile"
 STATE_JUDGE_PROMPT_VERSION = "v1_state_accuracy"
 JUDGE_VERDICTS = {"good", "acceptable", "weak", "bad"}
 STATE_JUDGE_VERDICTS = {"good", "partial", "bad"}
+VERDICT_LABELS = {
+    "recommendation": {
+        "good": "strong fit",
+        "acceptable": "plausible",
+        "weak": "weak fit",
+        "bad": "bad fit",
+        "error": "error",
+    },
+    "explanation": {
+        "good": "clear",
+        "acceptable": "acceptable",
+        "weak": "thin",
+        "bad": "misleading",
+        "error": "error",
+    },
+    "state": {
+        "good": "accurate",
+        "partial": "partial",
+        "bad": "inaccurate",
+        "error": "error",
+    },
+}
 
 CATALOG_COLUMNS = [
     "track_id",
@@ -96,6 +118,18 @@ STOPWORDS = {
 
 def norm(value: Any) -> str:
     return re.sub(r"[^a-z0-9]+", " ", str(value or "").lower()).strip()
+
+
+def verdict_label(kind: str, verdict: Any) -> str:
+    value = str(verdict or "").strip().lower()
+    return VERDICT_LABELS.get(kind, {}).get(value, value or "not available")
+
+
+def verdict_counts_text(kind: str, counts: dict[str, Any]) -> str:
+    return ", ".join(
+        f"{verdict_label(kind, key)}={value}"
+        for key, value in counts.items()
+    )
 
 
 def as_list(value: Any) -> list[Any]:
@@ -1989,10 +2023,10 @@ def row_explanation(row: dict[str, Any]) -> dict[str, str]:
             verdict = "Wrong by provided label"
             reason = "The provided label track is not in the submitted top 20, so this row is a label miss."
     elif judge_verdict in {"weak", "bad"}:
-        verdict = f"LLM judge: {judge_verdict}"
+        verdict = f"Recommendation fit: {verdict_label('recommendation', judge_verdict)}"
         reason = judgment.get("reason") or "The label-free judge thought the top recommendation was weak."
     elif judge_verdict in {"good", "acceptable"}:
-        verdict = f"LLM judge: {judge_verdict}"
+        verdict = f"Recommendation fit: {verdict_label('recommendation', judge_verdict)}"
         reason = judgment.get("reason") or "The label-free judge did not find an obvious problem."
     elif gaps:
         verdict = "Needs review"
@@ -2041,10 +2075,11 @@ def row_explanation(row: dict[str, Any]) -> dict[str, str]:
         else:
             best_text = f" Best shown candidate: rank {best_rank}."
         if judge_verdict == "error":
-            judge = f"LLM judge failed: {judgment.get('reason', '')}"
+            judge = f"Recommendation fit judge failed: {judgment.get('reason', '')}"
         else:
             judge = (
-                f"LLM judge ({judgment.get('model', 'model unknown')}): {judge_verdict}."
+                f"Recommendation fit ({judgment.get('model', 'model unknown')}): "
+                f"{verdict_label('recommendation', judge_verdict)}."
                 f"{best_text} {judgment.get('reason', '')}"
             ).strip()
 
@@ -2073,32 +2108,32 @@ def render_summary(agg: dict[str, Any]) -> str:
     state_judge_meta = (agg.get("metadata") or {}).get("llm_state_judge") or {}
     state_judge_metrics = agg.get("llm_state_judge_metrics") or {}
     if judge_meta.get("skipped_reason"):
-        bullets.append(f"LLM judge was skipped: {judge_meta['skipped_reason']}")
+        bullets.append(f"Recommendation fit judge was skipped: {judge_meta['skipped_reason']}")
     elif judge_meta.get("warning"):
-        bullets.append(f"LLM judge warning: {judge_meta['warning']}")
+        bullets.append(f"Recommendation fit judge warning: {judge_meta['warning']}")
     elif judge_metrics.get("n_judged"):
         counts = judge_metrics.get("verdict_counts") or {}
-        counts_text = ", ".join(f"{k}={v}" for k, v in counts.items())
+        counts_text = verdict_counts_text("recommendation", counts)
         bullets.append(
-            f"LLM judge reviewed {judge_metrics['n_judged']} label-free rows; weak/bad rows={judge_metrics['weak_or_bad']} ({counts_text})."
+            f"Recommendation fit reviewed {judge_metrics['n_judged']} label-free rows; weak/bad-fit rows={judge_metrics['weak_or_bad']} ({counts_text})."
         )
     if explanation_judge_meta.get("skipped_reason"):
-        bullets.append(f"LLM explanation judge was skipped: {explanation_judge_meta['skipped_reason']}")
+        bullets.append(f"Response quality judge was skipped: {explanation_judge_meta['skipped_reason']}")
     elif explanation_judge_meta.get("warning"):
-        bullets.append(f"LLM explanation judge warning: {explanation_judge_meta['warning']}")
+        bullets.append(f"Response quality judge warning: {explanation_judge_meta['warning']}")
     elif explanation_judge_metrics.get("n_judged"):
         counts = explanation_judge_metrics.get("verdict_counts") or {}
-        counts_text = ", ".join(f"{k}={v}" for k, v in counts.items())
+        counts_text = verdict_counts_text("explanation", counts)
         bullets.append(
-            f"LLM explanation judge reviewed {explanation_judge_metrics['n_judged']} label-free rows; weak/bad explanations={explanation_judge_metrics['weak_or_bad']} ({counts_text})."
+            f"Response quality reviewed {explanation_judge_metrics['n_judged']} label-free rows; thin/misleading responses={explanation_judge_metrics['weak_or_bad']} ({counts_text})."
         )
     if state_judge_meta.get("warning"):
-        bullets.append(f"LLM state judge warning: {state_judge_meta['warning']}")
+        bullets.append(f"State accuracy judge warning: {state_judge_meta['warning']}")
     elif state_judge_metrics.get("n_judged"):
         counts = state_judge_metrics.get("verdict_counts") or {}
-        counts_text = ", ".join(f"{k}={v}" for k, v in counts.items())
+        counts_text = verdict_counts_text("state", counts)
         bullets.append(
-            f"LLM state judge reviewed {state_judge_metrics['n_judged']} trace-backed rows; partial/bad state rows={state_judge_metrics['partial_or_bad']} ({counts_text})."
+            f"State accuracy reviewed {state_judge_metrics['n_judged']} trace-backed rows; partial/inaccurate state rows={state_judge_metrics['partial_or_bad']} ({counts_text})."
         )
     bullets.append(
         f"{agg['hard_top1_invalid']} rows ({agg['hard_top1_invalid'] / n:.1%}) have a hard top-1 rejection leak; these are the strongest proven-bad cases."
@@ -2208,10 +2243,10 @@ def render_llm_choice(row: dict[str, Any]) -> str:
     return f"""
     <div class="llm-choice {escape(verdict)}">
       <div>
-        <h3>LLM Judge Pick</h3>
+        <h3>Recommendation Fit</h3>
         <p><b>{escape(action)}:</b> {escape(track['track_name'])}{' by ' + escape(track['artist_name']) if track.get('artist_name') else ''}</p>
         <p>{escape(reason)}</p>
-        <small>{escape(str(model))}{escape(top_k_text)} · verdict {escape(verdict)}</small>
+        <small>{escape(str(model))}{escape(top_k_text)} · {escape(verdict_label('recommendation', verdict))}</small>
       </div>
       <div class="choice-meta">
         <strong>{escape(rank_text)}</strong>
@@ -2242,13 +2277,13 @@ def render_llm_explanation_judge(row: dict[str, Any]) -> str:
     return f"""
     <div class="llm-choice {escape(verdict)}">
       <div>
-        <h3>LLM Explanation Judge</h3>
-        <p><b>explanation verdict:</b> {escape(verdict)}</p>
+        <h3>Response Quality</h3>
+        <p><b>response quality:</b> {escape(verdict_label('explanation', verdict))}</p>
         <p>{escape(reason)}</p>
         <small>{escape(str(model))} · prompt {escape(str(judgment.get('prompt_version') or ''))}</small>
       </div>
       <div class="choice-meta">
-        <strong>{escape(verdict)}</strong>
+        <strong>{escape(verdict_label('explanation', verdict))}</strong>
         <span>{escape(check_text)}</span>
       </div>
     </div>
@@ -2276,15 +2311,15 @@ def render_llm_state_judge(row: dict[str, Any]) -> str:
     return f"""
     <div class="llm-choice {escape(verdict)}">
       <div>
-        <h3>LLM State Judge</h3>
-        <p><b>state verdict:</b> {escape(verdict)}</p>
+        <h3>State Accuracy</h3>
+        <p><b>state accuracy:</b> {escape(verdict_label('state', verdict))}</p>
         <p>{escape(reason)}</p>
         <p><b>missing:</b> {escape(missing_text)}</p>
         <p><b>extra/stale:</b> {escape(stale_text)}</p>
         <small>{escape(str(model))} · prompt {escape(str(judgment.get('prompt_version') or ''))}</small>
       </div>
       <div class="choice-meta">
-        <strong>{escape(verdict)}</strong>
+        <strong>{escape(verdict_label('state', verdict))}</strong>
         <span>{escape(check_text)}</span>
       </div>
     </div>
@@ -2397,25 +2432,25 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
     state_judge_meta = agg["metadata"].get("llm_state_judge") or {}
     if judge_metrics.get("n_judged"):
         cards += [
-            ("LLM Judged", judge_metrics["n_judged"]),
-            ("LLM Weak/Bad", judge_metrics["weak_or_bad"]),
+            ("Fit Judged", judge_metrics["n_judged"]),
+            ("Weak/Bad Fits", judge_metrics["weak_or_bad"]),
         ]
     elif judge_meta.get("enabled"):
-        cards.append(("LLM Judge", "skipped"))
+        cards.append(("Recommendation Fit", "skipped"))
     if explanation_judge_metrics.get("n_judged"):
         cards += [
-            ("Expl. Judged", explanation_judge_metrics["n_judged"]),
-            ("Expl. Weak/Bad", explanation_judge_metrics["weak_or_bad"]),
+            ("Responses Judged", explanation_judge_metrics["n_judged"]),
+            ("Thin/Misleading", explanation_judge_metrics["weak_or_bad"]),
         ]
     elif explanation_judge_meta.get("enabled"):
-        cards.append(("Explanation Judge", "skipped"))
+        cards.append(("Response Quality", "skipped"))
     if state_judge_metrics.get("n_judged"):
         cards += [
             ("State Judged", state_judge_metrics["n_judged"]),
-            ("State Partial/Bad", state_judge_metrics["partial_or_bad"]),
+            ("Partial/Inaccurate State", state_judge_metrics["partial_or_bad"]),
         ]
     elif state_judge_meta.get("enabled"):
-        cards.append(("State Judge", "skipped"))
+        cards.append(("State Accuracy", "skipped"))
     leaderboard = agg["metadata"].get("leaderboard_metadata")
     if leaderboard:
         for k, v in leaderboard.items():
@@ -2423,11 +2458,26 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
 
     def card_tone(card_label: str) -> str:
         lower = card_label.lower()
-        if "hard" in lower or "weak/bad" in lower or "partial/bad" in lower:
+        if (
+            "hard" in lower
+            or "weak/bad" in lower
+            or "partial/bad" in lower
+            or "thin/misleading" in lower
+            or "inaccurate" in lower
+        ):
             return "danger"
         if "flagged" in lower or "better" in lower:
             return "warn"
-        if lower in {"ndcg@20", "hit@20", "mrr", "llm judged", "rows", "trace rows"}:
+        if lower in {
+            "ndcg@20",
+            "hit@20",
+            "mrr",
+            "fit judged",
+            "responses judged",
+            "state judged",
+            "rows",
+            "trace rows",
+        }:
             return "good"
         return "neutral"
 
@@ -2446,89 +2496,89 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
     if llm_counts:
         llm_filter_html = """
 	    <select id="llmFilter" aria-label="LLM label filter">
-	      <option value="">all recommendation LLM labels</option>
+	      <option value="">all recommendation-fit labels</option>
 	      {options}
 	    </select>
         """.format(
             options="\n".join(
-                f'<option value="{escape(label)}">{escape(label)} ({llm_counts[label]})</option>'
+                f'<option value="{escape(label)}">{escape(verdict_label("recommendation", label))} ({llm_counts[label]})</option>'
                 for label in llm_order
                 if llm_counts.get(label)
             )
         )
         llm_pills = """
         <section class="controls label-controls">
-          <span class="control-label">LLM labels</span>
+          <span class="control-label">Recommendation fit</span>
           {pills}
         </section>
         """.format(
             pills="\n".join(
-                f'<button class="pill llm-pill {escape(label)}" data-llm="{escape(label)}">{escape(label)} <b>{llm_counts[label]}</b></button>'
+                f'<button class="pill llm-pill {escape(label)}" data-llm="{escape(label)}">{escape(verdict_label("recommendation", label))} <b>{llm_counts[label]}</b></button>'
                 for label in llm_order
                 if llm_counts.get(label)
             )
         )
     else:
-        llm_filter_html = '<select id="llmFilter" aria-label="LLM label filter" disabled><option value="">LLM labels unavailable</option></select>'
+        llm_filter_html = '<select id="llmFilter" aria-label="Recommendation fit filter" disabled><option value="">Recommendation fit not run</option></select>'
         llm_pills = ""
     explanation_counts = explanation_judge_metrics.get("verdict_counts") or {}
     if explanation_counts:
         explanation_filter_html = """
 	    <select id="explanationFilter" aria-label="Explanation label filter">
-	      <option value="">all explanation labels</option>
+	      <option value="">all response-quality labels</option>
 	      {options}
 	    </select>
         """.format(
             options="\n".join(
-                f'<option value="{escape(label)}">{escape(label)} ({explanation_counts[label]})</option>'
+                f'<option value="{escape(label)}">{escape(verdict_label("explanation", label))} ({explanation_counts[label]})</option>'
                 for label in llm_order
                 if explanation_counts.get(label)
             )
         )
         explanation_pills = """
         <section class="controls label-controls">
-          <span class="control-label">Explanation labels</span>
+          <span class="control-label">Response quality</span>
           {pills}
         </section>
         """.format(
             pills="\n".join(
-                f'<button class="pill explanation-pill {escape(label)}" data-explanation="{escape(label)}">{escape(label)} <b>{explanation_counts[label]}</b></button>'
+                f'<button class="pill explanation-pill {escape(label)}" data-explanation="{escape(label)}">{escape(verdict_label("explanation", label))} <b>{explanation_counts[label]}</b></button>'
                 for label in llm_order
                 if explanation_counts.get(label)
             )
         )
     else:
-        explanation_filter_html = '<select id="explanationFilter" aria-label="Explanation label filter" disabled><option value="">Explanation labels unavailable</option></select>'
+        explanation_filter_html = '<select id="explanationFilter" aria-label="Response quality filter" disabled><option value="">Response quality not run</option></select>'
         explanation_pills = ""
     state_counts = state_judge_metrics.get("verdict_counts") or {}
     state_order = ["bad", "partial", "good"]
     if state_counts:
         state_filter_html = """
 	    <select id="stateFilter" aria-label="State label filter">
-	      <option value="">all state labels</option>
+	      <option value="">all state-accuracy labels</option>
 	      {options}
 	    </select>
         """.format(
             options="\n".join(
-                f'<option value="{escape(label)}">{escape(label)} ({state_counts[label]})</option>'
+                f'<option value="{escape(label)}">{escape(verdict_label("state", label))} ({state_counts[label]})</option>'
                 for label in state_order
                 if state_counts.get(label)
             )
         )
         state_pills = """
         <section class="controls label-controls">
-          <span class="control-label">State labels</span>
+          <span class="control-label">State accuracy</span>
           {pills}
         </section>
         """.format(
             pills="\n".join(
-                f'<button class="pill state-pill {escape(label)}" data-state="{escape(label)}">{escape(label)} <b>{state_counts[label]}</b></button>'
+                f'<button class="pill state-pill {escape(label)}" data-state="{escape(label)}">{escape(verdict_label("state", label))} <b>{state_counts[label]}</b></button>'
                 for label in state_order
                 if state_counts.get(label)
             )
         )
     else:
-        state_filter_html = '<select id="stateFilter" aria-label="State label filter" disabled><option value="">State labels unavailable</option></select>'
+        state_filter_html = '<select id="stateFilter" aria-label="State accuracy filter" disabled><option value="">State accuracy not run</option></select>'
         state_pills = ""
 
     row_cards = []
@@ -2554,9 +2604,11 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
         else:
             metric_text = "label-free"
         if judge_verdict and judge_verdict != "error":
-            metric_text += f" · LLM {judge_verdict}"
+            metric_text += f" · fit {verdict_label('recommendation', judge_verdict)}"
         if explanation_verdict and explanation_verdict != "error":
-            metric_text += f" · response {explanation_verdict}"
+            metric_text += f" · response {verdict_label('explanation', explanation_verdict)}"
+        if state_verdict and state_verdict != "error":
+            metric_text += f" · state {verdict_label('state', state_verdict)}"
         status_label = "hard flag" if row["top1_flags"] else (
             "review"
             if row["gaps"]
@@ -2566,17 +2618,17 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
             else "clear"
         )
         judge_badge = (
-            f'<span class="badge judge {escape(judge_verdict)}">LLM {escape(judge_verdict)}</span>'
+            f'<span class="badge judge {escape(judge_verdict)}">FIT {escape(verdict_label("recommendation", judge_verdict))}</span>'
             if judge_verdict and judge_verdict != "error"
             else ""
         )
         explanation_badge = (
-            f'<span class="badge judge {escape(explanation_verdict)}">EXPL {escape(explanation_verdict)}</span>'
+            f'<span class="badge judge {escape(explanation_verdict)}">RESPONSE {escape(verdict_label("explanation", explanation_verdict))}</span>'
             if explanation_verdict and explanation_verdict != "error"
             else ""
         )
         state_badge = (
-            f'<span class="badge judge {escape(state_verdict)}">STATE {escape(state_verdict)}</span>'
+            f'<span class="badge judge {escape(state_verdict)}">STATE {escape(verdict_label("state", state_verdict))}</span>'
             if state_verdict and state_verdict != "error"
             else ""
         )
@@ -2787,7 +2839,7 @@ blockquote {{ margin: 0; padding: 11px 13px; background: var(--panel-soft); bord
       <h1>Music CRS Prediction Audit</h1>
       <p class="meta">{escape(source_bits.get('tid', 'run'))} · {escape(source_bits.get('split', ''))} · generated {escape(source_bits.get('generated_at', ''))}</p>
     </div>
-    <div class="meta">Leaderboard metadata is optional. Hidden-label splits show validity, gap metrics, and optional LLM judgment.</div>
+    <div class="meta">Leaderboard metadata is optional. Hidden-label splits show validity, gap metrics, and optional judge evaluations.</div>
   </section>
   <section class="cards">{card_html}</section>
   <section class="summary">
@@ -2803,8 +2855,9 @@ blockquote {{ margin: 0; padding: 11px 13px; background: var(--panel-soft); bord
         <dt>Ranking gap</dt><dd>Cleaner candidates existed, but the final ordering placed a worse item above them.</dd>
         <dt>Fusion Rank</dt><dd>Where the item appeared in the candidate-fusion trace before final ordering. Lower usually means retrieval already liked it.</dd>
         <dt>Audit Fit</dt><dd>A simple metadata/tag/rejection heuristic used for inspection. It is not a leaderboard score.</dd>
-        <dt>LLM judge</dt><dd>Only available for label-free runs. It reads the conversation and visible candidates, then gives a recorded qualitative judgment.</dd>
-        <dt>LLM explanation judge</dt><dd>Only available for label-free runs. It reads the conversation, top recommendation metadata, and generated response, then judges whether the prose grounds and justifies the top recommendation without unsupported claims.</dd>
+        <dt>Recommendation Fit</dt><dd>Only available for label-free runs. It reads the conversation and visible candidates, then rates whether the submitted recommendation fits.</dd>
+        <dt>Response Quality</dt><dd>Only available for label-free runs. It reads the conversation, top recommendation metadata, and generated response, then judges whether the prose grounds and justifies the top recommendation without unsupported claims.</dd>
+        <dt>State Accuracy</dt><dd>Available for trace-backed runs. It compares raw conversation context against extracted/compiled state to find missing constraints or stale state.</dd>
         <dt>Label miss</dt><dd>Only for devset/ground-truth runs: the submitted top 20 did not contain the target track.</dd>
       </dl>
     </details>
@@ -2833,9 +2886,9 @@ blockquote {{ margin: 0; padding: 11px 13px; background: var(--panel-soft); bord
     <p>Trace: {escape(str(source_bits.get('trace_path') or 'not supplied'))}</p>
     <p>Ground truth: {escape(str(source_bits.get('ground_truth_path') or 'not supplied'))}</p>
     <p>Dataset: {escape(str(source_bits.get('dataset_name') or 'not supplied'))}</p>
-    <p>LLM judge: {escape(json.dumps(source_bits.get('llm_judge') or {'enabled': False}, ensure_ascii=False))}</p>
-    <p>LLM explanation judge: {escape(json.dumps(source_bits.get('llm_explanation_judge') or {'enabled': False}, ensure_ascii=False))}</p>
-    <p>LLM state judge: {escape(json.dumps(source_bits.get('llm_state_judge') or {'enabled': False}, ensure_ascii=False))}</p>
+    <p>Recommendation fit judge: {escape(json.dumps(source_bits.get('llm_judge') or {'enabled': False}, ensure_ascii=False))}</p>
+    <p>Response quality judge: {escape(json.dumps(source_bits.get('llm_explanation_judge') or {'enabled': False}, ensure_ascii=False))}</p>
+    <p>State accuracy judge: {escape(json.dumps(source_bits.get('llm_state_judge') or {'enabled': False}, ensure_ascii=False))}</p>
     <p>Catalog warning: {escape(str(source_bits.get('catalog_warning') or 'none'))}</p>
   </section>
 </main>

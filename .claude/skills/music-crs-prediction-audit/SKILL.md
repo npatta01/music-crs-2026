@@ -102,10 +102,10 @@ python .claude/skills/music-crs-prediction-audit/scripts/audit_submission_predic
    - final top-20 with colors
    - better submitted candidate
    - better candidate-pool candidate when trace is available
-   - optional LLM judge verdict/reason when labels are absent
-   - LLM verdict dropdown/chips for label-free judge runs
-   - explanation-judge dropdown/chips for label-free `predicted_response` audits
-   - state-judge dropdown/chips for trace-backed state accuracy audits
+   - Recommendation Fit verdict/reason when labels are absent
+   - Recommendation Fit dropdown/chips for label-free judge runs
+   - Response Quality dropdown/chips for label-free `predicted_response` audits
+   - State Accuracy dropdown/chips for trace-backed state accuracy audits
    - LLM judge pick from the shown submitted recommendations when `--llm-judge` is used
 
 5. Report source caveats clearly:
@@ -113,9 +113,9 @@ python .claude/skills/music-crs-prediction-audit/scripts/audit_submission_predic
    - Blind-B may have no `conversation_goal`; render this as `not provided` and judge from the raw conversation and candidate metadata.
    - Leaderboard scores are external optional metadata.
    - “Heuristic better” candidates are deterministic validity/intent heuristics unless ground truth confirms them.
-   - “LLM judge pick” is the external judge's recorded choice from the submitted recommendations it was shown.
-   - “LLM explanation judge” is the external judge's recorded assessment of the generated `predicted_response`, focusing on whether the prose grounds and justifies the submitted top recommendation, stays conversationally relevant, and avoids unsupported claims. It may use raw dataset `user_profile` when present and renders it as `not provided` when null. It is not a hidden-ground-truth retrieval judge.
-   - “LLM state judge” is a diagnostic compiler/state audit: it intentionally sees raw conversation plus extracted/compiled state, and reports missing constraints, stale state, and state-risk. It is not a recommendation-quality judge.
+   - “Recommendation Fit” is the external judge's recorded choice from the submitted recommendations it was shown. It displays raw verdicts as `strong fit`, `plausible`, `weak fit`, or `bad fit`.
+   - “Response Quality” is the external judge's recorded assessment of the generated `predicted_response`, focusing on whether the prose grounds and justifies the submitted top recommendation, stays conversationally relevant, and avoids unsupported claims. It may use raw dataset `user_profile` when present and renders it as `not provided` when null. It is not a hidden-ground-truth retrieval judge. It displays raw verdicts as `clear`, `acceptable`, `thin`, or `misleading`.
+   - “State Accuracy” is a diagnostic compiler/state audit: it intentionally sees raw conversation plus extracted/compiled state, and reports missing constraints, stale state, and state-risk. It is not a recommendation-quality judge. It displays raw verdicts as `accurate`, `partial`, or `inaccurate`.
    - LLM judge is qualitative and should only be used when labels are missing; it is never a substitute for devset labels.
    - LLM judge responses are still recorded in the report JSONL cache for auditability; LiteLLM disk/local cache only avoids repeated provider calls for identical uncached completions.
    - The LLM judge prompt must not include compiled/extracted state by default, because state/compiler bugs can contaminate the judge. Keep state visible in the HTML debugging panel; use `--judge-include-state` only for diagnosis runs.

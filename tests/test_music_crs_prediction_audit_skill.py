@@ -76,3 +76,14 @@ def test_state_judge_cache_key_changes_with_rendered_state():
     second = audit.state_judge_cache_key(changed, catalog, "model-a")
 
     assert first != second
+
+
+def test_judge_verdict_labels_are_user_facing():
+    audit = load_audit_module()
+
+    assert audit.verdict_label("recommendation", "good") == "strong fit"
+    assert audit.verdict_label("recommendation", "bad") == "bad fit"
+    assert audit.verdict_label("explanation", "weak") == "thin"
+    assert audit.verdict_label("explanation", "bad") == "misleading"
+    assert audit.verdict_label("state", "good") == "accurate"
+    assert audit.verdict_label("state", "bad") == "inaccurate"
