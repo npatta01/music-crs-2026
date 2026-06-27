@@ -377,7 +377,7 @@ class LgbmOnlineReranker:
         if "b1_cos" in self.cols:
             start = time.perf_counter()
             from b1_live import B1Live
-            self.b1 = B1Live(cat)
+            self.b1 = B1Live(cat, db_uri=db_uri, table_name=table_name)
             add_elapsed("b1_encoder", start)
         self.top_k_out = int(cfg.get("top_k_out", 1000))
         add_elapsed("total", total_start)

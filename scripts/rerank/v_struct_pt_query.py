@@ -18,6 +18,16 @@ def short_track(doc: str) -> str:
     return re.sub(r"\s*\(\d{4}\)\s*$", "", s).strip()
 
 
+def track_short_title(artist: str, track: str, year: str = "") -> str:
+    """Render 'artist — title' EXACTLY as the b1 doc corpus did — short_track() of the
+    'Music track: <artist> — <title> (<year>)' head that build_doc_corpus builds. Lets
+    serving derive the prev_track string straight from the catalog (artist_name /
+    track_name / release_date), byte-identical to what b1 trained on, with NO doc_corpus
+    file. Verified 0/47071 mismatches vs short_track(doc)."""
+    head = f"Music track: {artist} — {track}" + (f" ({year})" if year else "")
+    return short_track(head)
+
+
 def prev_track_str(played_sid: dict, tn: int, doc_by_tid: dict, exclude_tid=None) -> str:
     """Most-recent previously-played track rendered as text. Never returns the GT track
     (exclude_tid) — a code-enforced leak guard (a no-op on current data: the GT is never

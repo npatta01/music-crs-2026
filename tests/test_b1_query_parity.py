@@ -32,6 +32,25 @@ def test_build_q_parity():
                 (variant, prev, now, pt)
 
 
+def test_track_short_title_matches_short_track_of_doc():
+    """track_short_title (catalog-derived prev_track text) must equal short_track(doc)
+    for the build_doc_corpus head — incl. the edge cases the 47k parity sweep surfaced:
+    a ' | ' inside the title (truncated like the tag separator), an empty artist
+    (leading space stripped), and a year inside the title (only the release year stripped)."""
+    cases = [
+        ("Emancipator", "With Rainy Eyes", "2006", "Emancipator — With Rainy Eyes"),
+        ("Kendrick Lamar", "untitled 07 | levitate", "2016", "Kendrick Lamar — untitled 07"),
+        ("", "Non-Stop", "2015", "— Non-Stop"),
+        ("Artist", "Song (1999)", "2020", "Artist — Song (1999)"),
+        ("Artist", "Song", "", "Artist — Song"),
+    ]
+    for ar, nm, yr, expected in cases:
+        assert VQ.track_short_title(ar, nm, yr) == expected, (ar, nm, yr)
+        # and it equals short_track of the exact head build_doc_corpus writes
+        head = f"Music track: {ar} — {nm}" + (f" ({yr})" if yr else "")
+        assert VQ.track_short_title(ar, nm, yr) == VQ.short_track(head)
+
+
 def test_prev_track_str_parity():
     doc = "Music track: Bill Evans — Peace Piece (1959) | jazz"
     played = {1: ["t1"], 2: ["t2"]}

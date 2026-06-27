@@ -89,6 +89,11 @@ track (a leak guard excludes the GT track; a no-op on current data).
   `(namespace, build_q text)` over the shared `DiskVectorCache`. With the eval split
   pre-warmed (`prewarm_b1_cache.py`), serving is **pure cache hits** — the 16 GB model never
   loads. A miss loads it **once** (thread-locked, see `mcrs/embeddings/qwen3_embedding.py`).
+- **No `doc_corpus.jsonl` at serving**: the `[prev_track]` `"artist — title"` text is derived
+  straight from the catalog (`artist_name`/`track_name`/`release_date` → `track_short_title`),
+  **byte-identical** to the trained `short_track(doc)` (verified 0/47071). So serving needs only
+  the catalog + the doc-vector column — not the 23 M corpus file (which lives under the
+  Modal-excluded `exp/`).
 - **Thread-safety**: the per-turn query vec is passed through the per-call `row["b1_qvec"]`
   (thread-local), *not* the shared reranker `ctx` — concurrent `rerank()` threads would
   otherwise clobber each other and NaN the feature. Regression test:

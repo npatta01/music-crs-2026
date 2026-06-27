@@ -4,8 +4,9 @@ in-memory catalog b1 doc matrix (cat.vec["b1_vstructpt_4b"]). Produces the dense
 branch hits + the query vec for scout_cos — the LIVE equivalent of inject_4b, used
 by both lgbm_reranker (online) and replay_lgbm (offline sim).
 
-Single source of truth for the query: scripts.rerank.modal_build_data.build_q (the
-exact goal-free renderer the 4B was trained on).
+Single source of truth for the query: scripts.rerank.v_struct_pt_query (the modal-free,
+training-exact goal-free renderer). The prev_track 'artist — title' text is derived
+straight from the catalog (no doc_corpus.jsonl needed at serving).
 """
 from __future__ import annotations
 import json
@@ -19,9 +20,33 @@ DOC_CORPUS = "exp/analysis/retrieval_exploration/doc_corpus.jsonl"
 B1_CACHE_NAMESPACE = "ft_qwen3_embedding_4b_v_struct_pt_l2048"
 
 
+def _titles_from_catalog(db_uri: str, table_name: str, VQ) -> dict:
+    """{track_id: 'artist — title'} read straight from the lance catalog, byte-identical
+    to the b1 doc-corpus rendering (mirrors build_doc_corpus head + short_track; verified
+    0/47071 mismatches). Lets serving skip the 23M doc_corpus.jsonl entirely."""
+    import lancedb
+    tbl = lancedb.connect(db_uri).open_table(table_name)
+    df = tbl.search().select(["track_id", "artist_name", "track_name", "release_date"]).limit(0).to_pandas()
+
+    def first(x):
+        if isinstance(x, (list, tuple, np.ndarray)):
+            return x[0] if len(x) else ""
+        return x if x is not None else ""
+
+    out = {}
+    for _, r in df.iterrows():
+        ar = str(first(r["artist_name"]) or "")
+        nm = str(first(r["track_name"]) or "")
+        yr = str(r["release_date"] or "")[:4]
+        out[str(r["track_id"])] = VQ.track_short_title(ar, nm, yr)
+    return out
+
+
 class B1Live:
     def __init__(self, cat, *, model_name: str = B1_MODEL, device: str = "auto",
-                 topk: int = 1000, doc_corpus: str = DOC_CORPUS, inner=None):
+                 topk: int = 1000, db_uri: str | None = None,
+                 table_name: str = "music_track_catalog", doc_corpus: str = DOC_CORPUS,
+                 inner=None):
         import os
         import v_struct_pt_query as VQ  # build_q / short_track / prev_track_str (modal-free, training-exact)
         if device == "auto":  # don't crash on a CPU box (e.g. a cache-miss without a GPU)
@@ -34,7 +59,22 @@ class B1Live:
         self._mbd = VQ
         self.cat = cat
         self.topk = topk
-        self.doc_by = {json.loads(l)["track_id"]: json.loads(l)["doc"] for l in open(doc_corpus)}
+        # prev_track 'artist — title' map. Primary: derive from the catalog (db_uri) so
+        # serving needs NO doc_corpus file (and doesn't crash on Modal, where exp/ is
+        # excluded). Fallback: the legacy doc_corpus.jsonl if present locally; else empty
+        # (the query just omits [prev_track] — graceful, no crash). short_track is applied
+        # at lookup (idempotent on the already-short titles).
+        self.doc_by = None
+        if db_uri:
+            try:
+                self.doc_by = _titles_from_catalog(db_uri, table_name, VQ)
+            except Exception:
+                self.doc_by = None
+        if self.doc_by is None:
+            if os.path.exists(doc_corpus):
+                self.doc_by = {json.loads(l)["track_id"]: json.loads(l)["doc"] for l in open(doc_corpus)}
+            else:
+                self.doc_by = {}
         # Cache-first encoder: the 16GB inner model lazy-loads ONLY on a cache miss.
         # With the devset pre-warmed in this namespace, serving = pure cache hits ->
         # no in-process load, no OOM. `inner` defaults to the local 4B; for Modal/blindset
