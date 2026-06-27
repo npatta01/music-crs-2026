@@ -105,7 +105,8 @@ image = (
         ".",
         "/app",
         copy=True,
-        ignore=[".*", "__pycache__", "*.pyc", ".venv", "exp", "cache", "submission*"],
+        ignore=[".*", "__pycache__", "*.pyc", ".venv", "exp", "cache", "submission*",
+                "models/biencoder*"],  # 15GB b1 encoder lives on a volume / cache-served, never bundle it
     )
     .env(
         {
@@ -2294,7 +2295,8 @@ _clap_image = (
         ".",
         "/app",
         copy=True,
-        ignore=[".*", "__pycache__", "*.pyc", ".venv", "exp", "cache", "submission*"],
+        ignore=[".*", "__pycache__", "*.pyc", ".venv", "exp", "cache", "submission*",
+                "models/biencoder*"],  # 15GB b1 encoder lives on a volume / cache-served, never bundle it
     )
     .env({"PYTHONPATH": "/app"})
 )
