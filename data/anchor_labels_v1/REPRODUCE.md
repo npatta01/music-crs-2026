@@ -24,11 +24,19 @@ build sheet ─▶ 2 cheap judges (Gemma + DeepSeek) ─▶ compose (find confli
 | **`doc_corpus.jsonl`** (catalog: `{track_id, artist, title, doc}`, ~23 MB) | Lands at `exp/analysis/retrieval_exploration/doc_corpus.jsonl`. It's in the shared cache (`scripts/setup_worktree_cache.py`); it's derived from `talkpl-ai/TalkPlayData-Challenge-Track-Metadata` and is what makes `same_artist` deterministic. |
 | **The Opus arbiter** | Runs as the Claude Code `anchor-arbiter` subagent. No Claude Code? See [§5](#5-running-the-arbiter-without-claude-code). |
 
-Set a couple of shells vars used below:
+Set a couple of shell vars used below:
 
 ```bash
 PY=.venv/bin/python
 DATA=exp/analysis/retrieval_exploration          # all artifacts live under here
+```
+
+The scripts default their artifacts dir to `<repo>/exp/analysis/retrieval_exploration`.
+To point them at a different location (e.g. a shared cache shared across worktrees),
+export `ANCHOR_DATA_DIR` and it overrides the default everywhere:
+
+```bash
+export ANCHOR_DATA_DIR="$PWD/$DATA"     # or an absolute path to a shared cache
 ```
 
 > **Cost & time (full train):** ~$33 of DeepInfra for the two cheap judges

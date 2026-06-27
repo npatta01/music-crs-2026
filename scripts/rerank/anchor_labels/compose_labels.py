@@ -13,11 +13,13 @@ Emits four files into <out-dir>:
 from __future__ import annotations
 import argparse, json, os, sys
 
-REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.insert(0, REPO)
-from scripts.rerank.convo_context import load_index, load_docmap, prev_artist  # noqa: E402
+from scripts.rerank.anchor_labels.convo_context import load_index, load_docmap, prev_artist  # noqa: E402
 
-DD = "/home/nidhin/projects/music-conversational-music-recomender-2026/.claude/worktrees/amazing-mahavira-7ae8a6/exp/analysis/retrieval_exploration"
+# Artifacts dir: defaults to the local repo's exp/analysis/retrieval_exploration.
+# Set ANCHOR_DATA_DIR to point elsewhere (e.g. a shared cache; see scripts/setup_worktree_cache.py).
+DD = os.environ.get("ANCHOR_DATA_DIR", os.path.join(REPO, "exp/analysis/retrieval_exploration"))
 
 
 def label_and_reason(asked_diff, same_artist, content, reaction):

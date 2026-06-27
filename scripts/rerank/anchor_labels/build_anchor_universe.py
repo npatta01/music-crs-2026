@@ -10,20 +10,21 @@ A turn `tn` is labelable iff: a track was played at `tn` AND `assessment[tn+1]` 
 Writes a lightweight universe file (ids + flags) and a JUDGE-READY sheet (with request + track_meta)
 for a stratified sample that oversamples same_artist=True (the anchoring-relevant cell).
 
-  python scripts/rerank/build_anchor_universe.py --sample-n 2000          # validation sheet
-  python scripts/rerank/build_anchor_universe.py --expand-all             # full judge-ready sheet
+  python scripts/rerank/anchor_labels/build_anchor_universe.py --sample-n 2000          # validation sheet
+  python scripts/rerank/anchor_labels/build_anchor_universe.py --expand-all             # full judge-ready sheet
 """
 from __future__ import annotations
 import argparse, json, os, random, sys
 from collections import Counter
 
-REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.insert(0, REPO)
-from scripts.rerank.convo_context import (  # noqa: E402
+from scripts.rerank.anchor_labels.convo_context import (  # noqa: E402
     load_index, load_docmap, build_full_request, candidate_tid, same_artist)
 
-SIB = "/home/nidhin/projects/music-conversational-music-recomender-2026/.claude/worktrees/amazing-mahavira-7ae8a6"
-DD = f"{SIB}/exp/analysis/retrieval_exploration"
+# Artifacts dir: defaults to the local repo's exp/analysis/retrieval_exploration.
+# Set ANCHOR_DATA_DIR to point elsewhere (e.g. a shared cache; see scripts/setup_worktree_cache.py).
+DD = os.environ.get("ANCHOR_DATA_DIR", os.path.join(REPO, "exp/analysis/retrieval_exploration"))
 MOVES = "MOVES_TOWARD_GOAL"
 
 

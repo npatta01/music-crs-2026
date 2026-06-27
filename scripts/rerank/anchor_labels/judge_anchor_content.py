@@ -6,11 +6,11 @@ Per turn, two LLM calls (guided JSON, no regex), composed in code:
   CONTENT -> {reasoning, named_facets: [..], content: valid|invalid|unsure}  (ignores artist novelty)
 
 `same_artist` is the DETERMINISTIC catalog yardstick (candidate artist == just-played artist, computed
-upstream in the sheet via scripts/rerank/convo_context.same_artist) — the LLM never decides same-artist.
+upstream in the sheet via scripts/rerank/anchor_labels/convo_context.same_artist) — the LLM never decides same-artist.
 
 Rich per-turn record -> derive every training view (two-tower pos/neg, reranker, holds) downstream.
 
-  python scripts/rerank/judge_anchor_content.py --base https://api.deepinfra.com/v1/openai \
+  python scripts/rerank/anchor_labels/judge_anchor_content.py --base https://api.deepinfra.com/v1/openai \
       --key-env DEEPINFRA_API_KEY --model google/gemma-4-26B-A4B-it --concurrency 24 \
       --sheet <cases.jsonl> --out <records.jsonl>
 """
@@ -19,7 +19,10 @@ import argparse, concurrent.futures as cf, hashlib, json, os, re, threading, tim
 
 os.environ.setdefault("LITELLM_LOG", "ERROR")   # quiet litellm banner/debug
 
-REPO = "/home/nidhin/projects/music-conversational-music-recomender-2026/.claude/worktrees/cranky-ride-68c6ba"
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+# Artifacts dir: defaults to the local repo's exp/analysis/retrieval_exploration.
+# Set ANCHOR_DATA_DIR to point elsewhere (e.g. a shared cache; see scripts/setup_worktree_cache.py).
+DD = os.environ.get("ANCHOR_DATA_DIR", os.path.join(REPO, "exp/analysis/retrieval_exploration"))
 
 ANCHOR_SYS = (
     "You read ONE music-recommendation turn and answer ONE FACTUAL question about ARTIST novelty only. "
@@ -111,7 +114,7 @@ def main():
     ap.add_argument("--base", required=True); ap.add_argument("--model", required=True)
     ap.add_argument("--key-env", default=None); ap.add_argument("--sheet", required=True)
     ap.add_argument("--out", required=True); ap.add_argument("--concurrency", type=int, default=16)
-    ap.add_argument("--cache-dir", default=f"{REPO}/exp/analysis/retrieval_exploration/anchor_content_cache")
+    ap.add_argument("--cache-dir", default=f"{DD}/anchor_content_cache")
     a = ap.parse_args()
     key = load_env_key(a.key_env) if a.key_env else "EMPTY"
     if a.key_env and not key:
