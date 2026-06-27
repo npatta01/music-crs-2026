@@ -1,30 +1,39 @@
 # Anchoring-fix training labels — v1
 
-Clean, LLM-judged labels over the **train** split of
-`talkpl-ai/TalkPlayData-Challenge-Dataset` (106,393 turns / 15,199 sessions),
-built to retrain the two-tower retriever against the **anchoring bug** (returns
-the just-played artist when the listener asked for a *different* one).
+Clean, LLM-judged labels over the **train** and **dev** splits of
+`talkpl-ai/TalkPlayData-Challenge-Dataset`, built to retrain the two-tower
+retriever against the **anchoring bug** (returns the just-played artist when the
+listener asked for a *different* one).
+
+- **train** — 106,393 turns / 15,199 sessions
+- **dev** (this project's `test` split) — 7,000 turns / 1,000 sessions
 
 The data files are too large for the repo and live as **GitHub Release assets**
 on the [`anchor-labels-v1`](../../releases/tag/anchor-labels-v1) release:
 
 | Asset | Size | Contents |
 |---|---|---|
-| `train_labels_full.jsonl.gz` | ~10 MB | The deliverable — all 106,393 labeled turns (one JSON object per line). |
-| `anchor_labels_v1_audit.tar.gz` | ~26 MB | Per-batch `final_labels`, the **Opus arbiter verdicts** (`arbiter.json` + `arb_*.json`), conflict sheets, and both cheap-judge records — the full provenance, recoverable without re-running Opus. |
+| `train_labels_full.jsonl.gz` | ~10 MB | Train deliverable — 106,393 labeled turns (one JSON object per line). |
+| `dev_labels_full.jsonl.gz` | ~0.7 MB | Dev deliverable — 7,000 labeled turns. |
+| `anchor_labels_v1_audit.tar.gz` | ~26 MB | Train provenance: per-batch `final_labels`, **Opus arbiter verdicts** (`arbiter.json` + `arb_*.json`), conflict sheets, judge records — recoverable without re-running Opus. |
+| `dev_labels_audit.tar.gz` | ~1.2 MB | Dev provenance, same shape. |
+| `*.sha256` | — | Checksum sidecar per asset. |
 
-`train_labels_full.jsonl` sha256 prefix: `aefb058d8f99cf55`.
+sha256 (uncompressed): train `aefb058d8f99cf55…`, dev `227986a813f82b50…`.
 
 ## Download
 
 ```bash
-# the dataset
-gh release download anchor-labels-v1 -p 'train_labels_full.jsonl.gz'
-gunzip train_labels_full.jsonl.gz
+# the datasets
+gh release download anchor-labels-v1 -p 'dev_labels_full.jsonl.gz'   && gunzip dev_labels_full.jsonl.gz
+gh release download anchor-labels-v1 -p 'train_labels_full.jsonl.gz' && gunzip train_labels_full.jsonl.gz
 
-# (optional) the full audit/provenance bundle
-gh release download anchor-labels-v1 -p 'anchor_labels_v1_audit.tar.gz'
-tar xzf anchor_labels_v1_audit.tar.gz
+# verify
+gh release download anchor-labels-v1 -p '*.sha256'
+sha256sum -c train_labels_full.jsonl.gz.sha256 dev_labels_full.jsonl.gz.sha256
+
+# (optional) full audit/provenance bundles
+gh release download anchor-labels-v1 -p '*_audit.tar.gz'
 ```
 
 ## What's here
