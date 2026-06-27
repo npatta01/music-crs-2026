@@ -426,6 +426,17 @@ def compact_meta(catalog: Catalog, track_id: str) -> dict[str, Any]:
     }
 
 
+def compact_meta_text(meta: dict[str, Any]) -> str:
+    return " ".join(
+        [
+            meta.get("track_name", ""),
+            meta.get("artist_name", ""),
+            meta.get("album_name", ""),
+            " ".join(meta.get("tags") or []),
+        ]
+    )
+
+
 def latest_user_text(conversation: dict[str, Any] | None, turn_number: int) -> str:
     if not conversation:
         return ""
@@ -621,16 +632,20 @@ def derive_audit_terms(
     }
 
 
-def violation_flags(track_id: str, catalog: Catalog, terms: dict[str, Any]) -> list[str]:
-    m = compact_meta(catalog, track_id)
+def violation_flags(
+    track_id: str,
+    catalog: Catalog,
+    terms: dict[str, Any],
+    meta: dict[str, Any] | None = None,
+    text_norm: str | None = None,
+) -> list[str]:
+    m = meta or compact_meta(catalog, track_id)
     flags = []
     if track_id in set(terms["rejected_track_ids"]):
         flags.append("rejected_track_id")
     if m["artist_id"] and m["artist_id"] in set(terms["rejected_artist_ids"]):
         flags.append("rejected_artist_id")
-    text_norm = norm(
-        " ".join([m["track_name"], m["artist_name"], m["album_name"], " ".join(m["tags"])])
-    )
+    text_norm = text_norm or norm(compact_meta_text(m))
     for name in terms["rejected_names"]:
         name_norm = norm(name)
         if name_norm and name_norm in text_norm:
@@ -646,9 +661,15 @@ def violation_flags(track_id: str, catalog: Catalog, terms: dict[str, Any]) -> l
     return list(dict.fromkeys(flags))
 
 
-def candidate_fit_score(track_id: str, catalog: Catalog, terms: dict[str, Any]) -> float:
-    m = compact_meta(catalog, track_id)
-    text = norm(metadata_text(catalog, track_id))
+def candidate_fit_score(
+    track_id: str,
+    catalog: Catalog,
+    terms: dict[str, Any],
+    meta: dict[str, Any] | None = None,
+    text_norm: str | None = None,
+) -> float:
+    m = meta or compact_meta(catalog, track_id)
+    text = text_norm or norm(metadata_text(catalog, track_id))
     score = 0.0
     for term in terms["positive_terms"]:
         if term and term in text:
@@ -669,16 +690,18 @@ def find_better_candidate(
     for rank, tid in enumerate(track_ids, start=1):
         if tid in exclude_ids:
             continue
-        flags = violation_flags(tid, catalog, terms)
+        meta = compact_meta(catalog, tid)
+        text_norm = norm(compact_meta_text(meta))
+        flags = violation_flags(tid, catalog, terms, meta=meta, text_norm=text_norm)
         if flags:
             continue
-        score = candidate_fit_score(tid, catalog, terms)
+        score = candidate_fit_score(tid, catalog, terms, meta=meta, text_norm=text_norm)
         cf = cf_rank.get(tid) if cf_rank else None
         candidate = {
             "rank": rank,
             "candidate_fusion_rank": cf,
             "fit_score": score,
-            "track": compact_meta(catalog, tid),
+            "track": meta,
         }
         key = (score, -(cf or rank), -rank, safe_float(candidate["track"]["popularity"]))
         if best is None or key > best[0]:
@@ -900,7 +923,13 @@ def extract_json_object(text: str) -> dict[str, Any]:
     return salvaged
 
 
-def judge_cache_key(row: dict[str, Any], model: str, top_k: int, include_state: bool) -> str:
+def judge_cache_key(
+    row: dict[str, Any],
+    catalog: Catalog,
+    model: str,
+    top_k: int,
+    include_state: bool,
+) -> str:
     candidate_prompt_items = [
         item_for_judge(item, include_state=include_state) for item in row.get("items", [])[:top_k]
     ]
@@ -914,6 +943,7 @@ def judge_cache_key(row: dict[str, Any], model: str, top_k: int, include_state: 
         "latest_user_text": row.get("latest_user_text"),
         "conversation_goal": row.get("conversation_goal"),
         "conversation": row.get("conversation"),
+        "conversation_prompt": conversation_for_judge(row, catalog),
         "candidate_prompt_items": candidate_prompt_items,
     }
     if include_state:
@@ -929,7 +959,7 @@ def judge_cache_key(row: dict[str, Any], model: str, top_k: int, include_state: 
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
-def explanation_judge_cache_key(row: dict[str, Any], model: str) -> str:
+def explanation_judge_cache_key(row: dict[str, Any], catalog: Catalog, model: str) -> str:
     top_track = ((row.get("items") or [{}])[0].get("track") or {}) if row.get("items") else {}
     payload = {
         "prompt_version": EXPLANATION_JUDGE_PROMPT_VERSION,
@@ -940,6 +970,8 @@ def explanation_judge_cache_key(row: dict[str, Any], model: str) -> str:
         "conversation_goal": row.get("conversation_goal"),
         "user_profile": row.get("user_profile"),
         "conversation": row.get("conversation"),
+        "conversation_prompt": conversation_for_judge(row, catalog),
+        "user_profile_prompt": profile_for_judge(row),
         "top_item_prompt": top_item_for_explanation(row),
         "top_track": {
             "track_id": top_track.get("track_id"),
@@ -1152,6 +1184,169 @@ def requested_litellm_cache_metadata(mode: str, cache_dir: Path | None) -> dict[
     }
 
 
+def run_llm_json_judge(
+    rows: list[dict[str, Any]],
+    *,
+    out_dir: Path,
+    model: str,
+    limit: int,
+    workers: int,
+    max_tokens: int,
+    cache_path: Path | None,
+    litellm_cache_mode: str,
+    litellm_cache_dir: Path | None,
+    cache_filename: str,
+    judgment_key: str,
+    log_label: str,
+    warning_label: str,
+    system_prompt: str,
+    non_json_label: str,
+    cache_key_fn: Any,
+    prompt_fn: Any,
+    normalize_fn: Any,
+    metadata_extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    load_dotenv_for_judge()
+    metadata_extra = metadata_extra or {}
+
+    def base_metadata() -> dict[str, Any]:
+        return {
+            "enabled": True,
+            "model": model,
+            "label_free_only": True,
+            **metadata_extra,
+        }
+
+    if model.startswith("openrouter/") and not os.environ.get("OPENROUTER_API_KEY"):
+        return {
+            **base_metadata(),
+            "ran": False,
+            "warning": f"OPENROUTER_API_KEY is not set, so no {warning_label} calls were made.",
+            "litellm_cache": requested_litellm_cache_metadata(
+                litellm_cache_mode,
+                litellm_cache_dir,
+            ),
+        }
+
+    try:
+        import litellm
+    except Exception as exc:
+        return {
+            **base_metadata(),
+            "ran": False,
+            "warning": f"Could not import litellm: {exc}",
+            "litellm_cache": requested_litellm_cache_metadata(
+                litellm_cache_mode,
+                litellm_cache_dir,
+            ),
+        }
+
+    litellm.suppress_debug_info = True
+    litellm_cache = configure_litellm_completion_cache(
+        litellm,
+        litellm_cache_mode,
+        litellm_cache_dir,
+    )
+    cache_file = cache_path or (out_dir / cache_filename)
+    cache = load_judge_cache(cache_file)
+    max_rows = len(rows) if limit <= 0 else min(limit, len(rows))
+    judged = 0
+    errors = 0
+    pending: list[tuple[dict[str, Any], str]] = []
+
+    for row in rows[:max_rows]:
+        key = cache_key_fn(row)
+        cached_record = cache.get(key)
+        if cached_record and isinstance(cached_record.get("judgment"), dict):
+            row[judgment_key] = normalize_fn(cached_record["judgment"], key, True)
+            judged += 1
+            continue
+        pending.append((row, key))
+
+    if judged:
+        print(f"{log_label}: {judged}/{max_rows} cached", flush=True)
+
+    def call_one(row: dict[str, Any], key: str) -> dict[str, Any]:
+        prompt = prompt_fn(row)
+        call_kwargs = {
+            "model": model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": system_prompt,
+                },
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0,
+            "max_tokens": max_tokens,
+            "timeout": 90,
+            "extra_body": {"reasoning": {"enabled": False}},
+        }
+        if model.startswith("openrouter/"):
+            call_kwargs["response_format"] = {"type": "json_object"}
+        try:
+            response = litellm.completion(**call_kwargs)
+        except Exception as exc:
+            if "response_format" not in call_kwargs:
+                raise
+            call_kwargs.pop("response_format", None)
+            try:
+                response = litellm.completion(**call_kwargs)
+            except Exception:
+                raise exc
+        content = response.choices[0].message.content or ""
+        parsed = extract_json_object(content)
+        if not parsed:
+            raise ValueError(f"{non_json_label} returned non-JSON content: {content[:160]}")
+        return normalize_fn(parsed, key, False)
+
+    if pending:
+        with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
+            futures = {executor.submit(call_one, row, key): (row, key) for row, key in pending}
+            for future in as_completed(futures):
+                row, key = futures[future]
+                try:
+                    judgment = future.result()
+                    row[judgment_key] = judgment
+                    append_judge_cache(
+                        cache_file,
+                        {
+                            "cache_key": key,
+                            "session_id": row.get("session_id"),
+                            "turn_number": row.get("turn_number"),
+                            "model": model,
+                            "judgment": judgment,
+                        },
+                    )
+                    judged += 1
+                    if judged % 10 == 0 or judged == max_rows:
+                        print(f"{log_label}: {judged}/{max_rows}", flush=True)
+                except Exception as exc:
+                    errors += 1
+                    error_record = {
+                        "model": model,
+                        "verdict": "error",
+                        "reason": f"{type(exc).__name__}: {str(exc)[:220]}",
+                        "cache_key": key,
+                        "cached": False,
+                    }
+                    if "prompt_version" in metadata_extra:
+                        error_record["prompt_version"] = metadata_extra["prompt_version"]
+                    row[judgment_key] = error_record
+
+    return {
+        **base_metadata(),
+        "ran": judged > 0,
+        "limit": limit,
+        "workers": max(1, workers),
+        "max_tokens": max_tokens,
+        "judged_rows": judged,
+        "error_rows": errors,
+        "cache_path": str(cache_file),
+        "litellm_cache": litellm_cache,
+    }
+
+
 def run_llm_judge(
     rows: list[dict[str, Any]],
     catalog: Catalog,
@@ -1167,155 +1362,41 @@ def run_llm_judge(
     litellm_cache_mode: str,
     litellm_cache_dir: Path | None,
 ) -> dict[str, Any]:
-    load_dotenv_for_judge()
-
-    if model.startswith("openrouter/") and not os.environ.get("OPENROUTER_API_KEY"):
-        return {
-            "enabled": True,
-            "ran": False,
-            "model": model,
-            "warning": "OPENROUTER_API_KEY is not set, so no LLM judge calls were made.",
-            "label_free_only": True,
-            "include_state": include_state,
-            "litellm_cache": requested_litellm_cache_metadata(
-                litellm_cache_mode,
-                litellm_cache_dir,
-            ),
-        }
-
-    try:
-        import litellm
-    except Exception as exc:
-        return {
-            "enabled": True,
-            "ran": False,
-            "model": model,
-            "warning": f"Could not import litellm: {exc}",
-            "label_free_only": True,
-            "include_state": include_state,
-            "litellm_cache": requested_litellm_cache_metadata(
-                litellm_cache_mode,
-                litellm_cache_dir,
-            ),
-        }
-
-    litellm.suppress_debug_info = True
-    litellm_cache = configure_litellm_completion_cache(
-        litellm,
-        litellm_cache_mode,
-        litellm_cache_dir,
-    )
-    cache_file = cache_path or (out_dir / "llm_judgments.jsonl")
-    cache = load_judge_cache(cache_file)
-    max_rows = len(rows) if limit <= 0 else min(limit, len(rows))
-    judged = 0
-    errors = 0
-    pending: list[tuple[dict[str, Any], str]] = []
-
-    for row in rows[:max_rows]:
-        key = judge_cache_key(row, model, top_k, include_state)
-        cached_record = cache.get(key)
-        if cached_record and isinstance(cached_record.get("judgment"), dict):
-            row["llm_judgment"] = normalize_judgment(
-                cached_record["judgment"],
-                model=model,
-                top_k=top_k,
-                cache_key=key,
-                cached=True,
-            )
-            judged += 1
-            continue
-        pending.append((row, key))
-
-    if judged:
-        print(f"LLM judge: {judged}/{max_rows} cached", flush=True)
-
-    def call_one(row: dict[str, Any], key: str) -> dict[str, Any]:
-        prompt = build_judge_prompt(row, catalog, top_k, include_state=include_state)
-        call_kwargs = {
-            "model": model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "You are a strict but fair music recommendation judge. Return valid JSON only.",
-                },
-                {"role": "user", "content": prompt},
-            ],
-            "temperature": 0,
-            "max_tokens": max_tokens,
-            "timeout": 90,
-            "extra_body": {"reasoning": {"enabled": False}},
-        }
-        if model.startswith("openrouter/"):
-            call_kwargs["response_format"] = {"type": "json_object"}
-        try:
-            response = litellm.completion(**call_kwargs)
-        except Exception as exc:
-            if "response_format" not in call_kwargs:
-                raise
-            call_kwargs.pop("response_format", None)
-            try:
-                response = litellm.completion(**call_kwargs)
-            except Exception:
-                raise exc
-        content = response.choices[0].message.content or ""
-        parsed = extract_json_object(content)
-        if not parsed:
-            raise ValueError(f"judge returned non-JSON content: {content[:160]}")
-        return normalize_judgment(
-            parsed,
+    return run_llm_json_judge(
+        rows,
+        out_dir=out_dir,
+        model=model,
+        limit=limit,
+        workers=workers,
+        max_tokens=max_tokens,
+        cache_path=cache_path,
+        litellm_cache_mode=litellm_cache_mode,
+        litellm_cache_dir=litellm_cache_dir,
+        cache_filename="llm_judgments.jsonl",
+        judgment_key="llm_judgment",
+        log_label="LLM judge",
+        warning_label="LLM judge",
+        system_prompt="You are a strict but fair music recommendation judge. Return valid JSON only.",
+        non_json_label="judge",
+        cache_key_fn=lambda row: judge_cache_key(row, catalog, model, top_k, include_state),
+        prompt_fn=lambda row: build_judge_prompt(
+            row,
+            catalog,
+            top_k,
+            include_state=include_state,
+        ),
+        normalize_fn=lambda raw, key, cached: normalize_judgment(
+            raw,
             model=model,
             top_k=top_k,
             cache_key=key,
-            cached=False,
-        )
-
-    if pending:
-        with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
-            futures = {executor.submit(call_one, row, key): (row, key) for row, key in pending}
-            for future in as_completed(futures):
-                row, key = futures[future]
-                try:
-                    judgment = future.result()
-                    row["llm_judgment"] = judgment
-                    append_judge_cache(
-                        cache_file,
-                        {
-                            "cache_key": key,
-                            "session_id": row.get("session_id"),
-                            "turn_number": row.get("turn_number"),
-                            "model": model,
-                            "judgment": judgment,
-                        },
-                    )
-                    judged += 1
-                    if judged % 10 == 0 or judged == max_rows:
-                        print(f"LLM judge: {judged}/{max_rows}", flush=True)
-                except Exception as exc:
-                    errors += 1
-                    row["llm_judgment"] = {
-                        "model": model,
-                        "verdict": "error",
-                        "reason": f"{type(exc).__name__}: {str(exc)[:220]}",
-                        "cache_key": key,
-                        "cached": False,
-                    }
-
-    return {
-        "enabled": True,
-        "ran": judged > 0,
-        "model": model,
-        "top_k": top_k,
-        "limit": limit,
-        "workers": max(1, workers),
-        "max_tokens": max_tokens,
-        "judged_rows": judged,
-        "error_rows": errors,
-        "cache_path": str(cache_file),
-        "label_free_only": True,
-        "include_state": include_state,
-        "litellm_cache": litellm_cache,
-    }
+            cached=cached,
+        ),
+        metadata_extra={
+            "top_k": top_k,
+            "include_state": include_state,
+        },
+    )
 
 
 def run_llm_explanation_judge(
@@ -1331,152 +1412,34 @@ def run_llm_explanation_judge(
     litellm_cache_mode: str,
     litellm_cache_dir: Path | None,
 ) -> dict[str, Any]:
-    load_dotenv_for_judge()
-
-    if model.startswith("openrouter/") and not os.environ.get("OPENROUTER_API_KEY"):
-        return {
-            "enabled": True,
-            "ran": False,
-            "model": model,
-            "warning": "OPENROUTER_API_KEY is not set, so no LLM explanation judge calls were made.",
-            "label_free_only": True,
-            "prompt_version": EXPLANATION_JUDGE_PROMPT_VERSION,
-            "litellm_cache": requested_litellm_cache_metadata(
-                litellm_cache_mode,
-                litellm_cache_dir,
-            ),
-        }
-
-    try:
-        import litellm
-    except Exception as exc:
-        return {
-            "enabled": True,
-            "ran": False,
-            "model": model,
-            "warning": f"Could not import litellm: {exc}",
-            "label_free_only": True,
-            "prompt_version": EXPLANATION_JUDGE_PROMPT_VERSION,
-            "litellm_cache": requested_litellm_cache_metadata(
-                litellm_cache_mode,
-                litellm_cache_dir,
-            ),
-        }
-
-    litellm.suppress_debug_info = True
-    litellm_cache = configure_litellm_completion_cache(
-        litellm,
-        litellm_cache_mode,
-        litellm_cache_dir,
-    )
-    cache_file = cache_path or (out_dir / "llm_explanation_judgments.jsonl")
-    cache = load_judge_cache(cache_file)
-    max_rows = len(rows) if limit <= 0 else min(limit, len(rows))
-    judged = 0
-    errors = 0
-    pending: list[tuple[dict[str, Any], str]] = []
-
-    for row in rows[:max_rows]:
-        key = explanation_judge_cache_key(row, model)
-        cached_record = cache.get(key)
-        if cached_record and isinstance(cached_record.get("judgment"), dict):
-            row["llm_explanation_judgment"] = normalize_explanation_judgment(
-                cached_record["judgment"],
-                model=model,
-                cache_key=key,
-                cached=True,
-            )
-            judged += 1
-            continue
-        pending.append((row, key))
-
-    if judged:
-        print(f"LLM explanation judge: {judged}/{max_rows} cached", flush=True)
-
-    def call_one(row: dict[str, Any], key: str) -> dict[str, Any]:
-        prompt = build_explanation_judge_prompt(row, catalog)
-        call_kwargs = {
-            "model": model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "You are a strict but fair music response-quality judge. Return valid JSON only.",
-                },
-                {"role": "user", "content": prompt},
-            ],
-            "temperature": 0,
-            "max_tokens": max_tokens,
-            "timeout": 90,
-            "extra_body": {"reasoning": {"enabled": False}},
-        }
-        if model.startswith("openrouter/"):
-            call_kwargs["response_format"] = {"type": "json_object"}
-        try:
-            response = litellm.completion(**call_kwargs)
-        except Exception as exc:
-            if "response_format" not in call_kwargs:
-                raise
-            call_kwargs.pop("response_format", None)
-            try:
-                response = litellm.completion(**call_kwargs)
-            except Exception:
-                raise exc
-        content = response.choices[0].message.content or ""
-        parsed = extract_json_object(content)
-        if not parsed:
-            raise ValueError(f"explanation judge returned non-JSON content: {content[:160]}")
-        return normalize_explanation_judgment(
-            parsed,
+    return run_llm_json_judge(
+        rows,
+        out_dir=out_dir,
+        model=model,
+        limit=limit,
+        workers=workers,
+        max_tokens=max_tokens,
+        cache_path=cache_path,
+        litellm_cache_mode=litellm_cache_mode,
+        litellm_cache_dir=litellm_cache_dir,
+        cache_filename="llm_explanation_judgments.jsonl",
+        judgment_key="llm_explanation_judgment",
+        log_label="LLM explanation judge",
+        warning_label="LLM explanation judge",
+        system_prompt="You are a strict but fair music response-quality judge. Return valid JSON only.",
+        non_json_label="explanation judge",
+        cache_key_fn=lambda row: explanation_judge_cache_key(row, catalog, model),
+        prompt_fn=lambda row: build_explanation_judge_prompt(row, catalog),
+        normalize_fn=lambda raw, key, cached: normalize_explanation_judgment(
+            raw,
             model=model,
             cache_key=key,
-            cached=False,
-        )
-
-    if pending:
-        with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
-            futures = {executor.submit(call_one, row, key): (row, key) for row, key in pending}
-            for future in as_completed(futures):
-                row, key = futures[future]
-                try:
-                    judgment = future.result()
-                    row["llm_explanation_judgment"] = judgment
-                    append_judge_cache(
-                        cache_file,
-                        {
-                            "cache_key": key,
-                            "session_id": row.get("session_id"),
-                            "turn_number": row.get("turn_number"),
-                            "model": model,
-                            "judgment": judgment,
-                        },
-                    )
-                    judged += 1
-                    if judged % 10 == 0 or judged == max_rows:
-                        print(f"LLM explanation judge: {judged}/{max_rows}", flush=True)
-                except Exception as exc:
-                    errors += 1
-                    row["llm_explanation_judgment"] = {
-                        "model": model,
-                        "verdict": "error",
-                        "reason": f"{type(exc).__name__}: {str(exc)[:220]}",
-                        "cache_key": key,
-                        "cached": False,
-                    }
-
-    return {
-        "enabled": True,
-        "ran": judged > 0,
-        "model": model,
-        "limit": limit,
-        "workers": max(1, workers),
-        "max_tokens": max_tokens,
-        "judged_rows": judged,
-        "error_rows": errors,
-        "cache_path": str(cache_file),
-        "label_free_only": True,
-        "prompt_version": EXPLANATION_JUDGE_PROMPT_VERSION,
-        "litellm_cache": litellm_cache,
-    }
+            cached=cached,
+        ),
+        metadata_extra={
+            "prompt_version": EXPLANATION_JUDGE_PROMPT_VERSION,
+        },
+    )
 
 
 def get_rank(gold: str, preds: list[str]) -> int | None:
@@ -1531,7 +1494,7 @@ def classify_gaps(
             gaps.append("resolver_gap")
         if better_submitted or better_pool:
             gaps.append("ranking_gap")
-    if not better_submitted and not better_pool and (top_flags or terms["switch_requested"]):
+    if not better_submitted and not better_pool and (top_flags or any_flags):
         gaps.append("retrieval_gap")
     if row_metrics and row_metrics.get("hit@20") == 0.0:
         gaps.append("label_miss")
@@ -2091,6 +2054,46 @@ def render_llm_explanation_judge(row: dict[str, Any]) -> str:
     """
 
 
+def row_search_text(row: dict[str, Any]) -> str:
+    parts: list[str] = [
+        row.get("session_id", ""),
+        row.get("user_id", ""),
+        row.get("latest_user_text", ""),
+        row.get("conversation_goal", ""),
+        row.get("prediction_response", ""),
+        row.get("current_request_summary", ""),
+        row.get("intent_mode", ""),
+        row.get("request_type", ""),
+        " ".join(row.get("gaps") or []),
+        " ".join(row.get("branch_names") or []),
+    ]
+    for name in ["rejected_names", "avoid_names", "positive_terms"]:
+        parts.append(" ".join(str(x) for x in row.get(name) or []))
+    for item in row.get("items") or []:
+        track = item.get("track") or {}
+        parts.extend(
+            [
+                track.get("track_id", ""),
+                track.get("track_name", ""),
+                track.get("artist_name", ""),
+                track.get("album_name", ""),
+                " ".join(track.get("tags") or []),
+                " ".join(item.get("flags") or []),
+            ]
+        )
+    for key in ["better_submitted", "better_pool"]:
+        candidate = row.get(key) or {}
+        track = candidate.get("track") or {}
+        parts.extend(
+            [
+                track.get("track_name", ""),
+                track.get("artist_name", ""),
+                track.get("album_name", ""),
+            ]
+        )
+    return norm(" ".join(str(part or "") for part in parts))
+
+
 def render_conversation(conversation: list[dict[str, Any]], catalog: Catalog) -> str:
     if not conversation:
         return '<div class="empty">Conversation text unavailable.</div>'
@@ -2295,7 +2298,7 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
         )
         row_cards.append(
             f"""
-            <section class="row-card {status}" data-gaps="{escape(gap_attr)}" data-llm="{escape(judge_verdict)}" data-explanation="{escape(explanation_verdict)}" data-search="{escape(norm(json.dumps(row, ensure_ascii=False)))}">
+            <section class="row-card {status}" data-gaps="{escape(gap_attr)}" data-llm="{escape(judge_verdict)}" data-explanation="{escape(explanation_verdict)}" data-search="{escape(row_search_text(row))}">
               <header>
                 <div>
                   <div class="row-kicker">
@@ -2558,6 +2561,9 @@ const llmPills = Array.from(document.querySelectorAll('.llm-pill[data-llm]'));
 const explanationPills = Array.from(document.querySelectorAll('.explanation-pill[data-explanation]'));
 const cards = Array.from(document.querySelectorAll('.row-card'));
 let activeGap = '';
+function normalizeSearch(value) {{
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}}
 function syncLlmPills() {{
   const llm = llmFilter ? llmFilter.value : '';
   llmPills.forEach(p => p.classList.toggle('active', p.dataset.llm === llm));
@@ -2567,7 +2573,7 @@ function syncExplanationPills() {{
   explanationPills.forEach(p => p.classList.toggle('active', p.dataset.explanation === explanation));
 }}
 function applyFilters() {{
-  const q = search.value.trim().toLowerCase();
+  const q = normalizeSearch(search.value);
   const status = statusFilter.value;
   const llm = llmFilter ? llmFilter.value : '';
   const explanation = explanationFilter ? explanationFilter.value : '';
