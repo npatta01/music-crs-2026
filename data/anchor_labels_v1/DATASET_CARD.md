@@ -72,10 +72,10 @@ content_fit, label, label_reason, confidence_weight, decided_by`
 - Weight the loss by `confidence_weight` (down-weight arbiter 0.6 / HOLD 0.3).
 
 ## Provenance / reproduce
-- Sheet build: `scripts/rerank/build_anchor_universe.py` (full conversation via
-  `scripts/rerank/convo_context.py`), batched by `scripts/rerank/batch_sheet.py`.
-- Judges: `scripts/rerank/judge_anchor_content.py`. Arbiter subagent:
-  `.claude/agents/anchor-arbiter.md` (+ `scripts/rerank/run_arbiter.py` chunk/merge).
-- Compose: `scripts/rerank/compose_labels.py --split train`.
+- Sheet build: `scripts/rerank/anchor_labels/build_anchor_universe.py` (full conversation via
+  `scripts/rerank/anchor_labels/convo_context.py`), batched by `scripts/rerank/anchor_labels/batch_sheet.py`.
+- Judges: `scripts/rerank/anchor_labels/judge_anchor_content.py`. Arbiter subagent:
+  `.claude/agents/anchor-arbiter.md` (+ `scripts/rerank/anchor_labels/run_arbiter.py` chunk/merge).
+- Compose: `scripts/rerank/anchor_labels/compose_labels.py --split train`.
 - Per-batch artifacts under `labels_train/bNN/` (judge records, conflicts, arbiter
   verdicts, final_labels). Coverage was verified per batch (0 dropped, 0 unresolved).

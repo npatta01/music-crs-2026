@@ -42,10 +42,10 @@ DATA=exp/analysis/retrieval_exploration          # all artifacts live under here
 
 ```bash
 # TRAIN — writes $DATA/judge_bakeoff/sheet_full_train.jsonl
-$PY scripts/rerank/build_anchor_universe.py --split train --expand-all
+$PY scripts/rerank/anchor_labels/build_anchor_universe.py --split train --expand-all
 
 # DEV (this project's "test" split) — override the train-named defaults
-$PY scripts/rerank/build_anchor_universe.py --split test --expand-all \
+$PY scripts/rerank/anchor_labels/build_anchor_universe.py --split test --expand-all \
     --out-universe   $DATA/anchor_universe_test.jsonl \
     --out-sample     $DATA/judge_bakeoff/sheet_strat2k_test.jsonl \
     --out-full       $DATA/judge_bakeoff/sheet_full_test.jsonl
@@ -60,7 +60,7 @@ kept), `track_meta` (the candidate doc), and `same_artist` (deterministic).
 ## 3. Slice into batches of whole sessions
 
 ```bash
-$PY scripts/rerank/batch_sheet.py \
+$PY scripts/rerank/anchor_labels/batch_sheet.py \
     --sheet $DATA/judge_bakeoff/sheet_full_train.jsonl \
     --out-dir $DATA/labels_train/batches --sessions-per-batch 1000
 # -> batch_00.jsonl ... batch_15.jsonl (sessions kept intact, deterministic)
@@ -77,22 +77,22 @@ Do this for each `batch_NN`; `B=$DATA/labels_train/b00`, `SHEET=$DATA/labels_tra
 mkdir -p $B
 
 # 4a. two cheap judges (DeepInfra, via LiteLLM). Cached + resumable.
-$PY scripts/rerank/judge_anchor_content.py --base https://api.deepinfra.com/v1/openai \
+$PY scripts/rerank/anchor_labels/judge_anchor_content.py --base https://api.deepinfra.com/v1/openai \
     --key-env DEEPINFRA_API_KEY --model google/gemma-4-26B-A4B-it --concurrency 64 \
     --sheet $SHEET --out $B/records_gemma.jsonl
-$PY scripts/rerank/judge_anchor_content.py --base https://api.deepinfra.com/v1/openai \
+$PY scripts/rerank/anchor_labels/judge_anchor_content.py --base https://api.deepinfra.com/v1/openai \
     --key-env DEEPINFRA_API_KEY --model deepseek-ai/DeepSeek-V4-Flash --concurrency 64 \
     --sheet $SHEET --out $B/records_deepseek.jsonl
 
 # 4b. compose -> finds the ~16% of turns where the two judges DISAGREE
-$PY scripts/rerank/compose_labels.py --split train \
+$PY scripts/rerank/anchor_labels/compose_labels.py --split train \
     --judge1 $B/records_gemma.jsonl --j1-name gemma \
     --judge2 $B/records_deepseek.jsonl --j2-name deepseek_v4_flash \
     --sheet $SHEET --out-dir $B
 # -> $B/conflicts_sheet.jsonl  (turns needing the arbiter)
 
 # 4c. chunk the conflicts for the arbiter (~150 rows/chunk fits an Opus context)
-$PY scripts/rerank/run_arbiter.py chunk \
+$PY scripts/rerank/anchor_labels/run_arbiter.py chunk \
     --conflicts $B/conflicts_sheet.jsonl --work-dir $B/arbiter --size 150
 # -> chunk_000.jsonl ...  AND prints the exact Agent calls to run next
 
@@ -100,11 +100,11 @@ $PY scripts/rerank/run_arbiter.py chunk \
 #     each reads chunk_00N.jsonl, writes arb_00N.json keyed by "sid|tn"
 
 # 4e. merge the chunk verdicts + VERIFY full coverage (must be MISSING: 0)
-$PY scripts/rerank/run_arbiter.py merge \
+$PY scripts/rerank/anchor_labels/run_arbiter.py merge \
     --conflicts $B/conflicts_sheet.jsonl --work-dir $B/arbiter --out $B/arbiter.json
 
 # 4f. final compose, now with the arbiter verdicts folded in
-$PY scripts/rerank/compose_labels.py --split train \
+$PY scripts/rerank/anchor_labels/compose_labels.py --split train \
     --judge1 $B/records_gemma.jsonl --j1-name gemma \
     --judge2 $B/records_deepseek.jsonl --j2-name deepseek_v4_flash \
     --sheet $SHEET --arbiter $B/arbiter.json --out-dir $B

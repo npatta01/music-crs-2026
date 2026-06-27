@@ -46,7 +46,7 @@ gh release download anchor-labels-v1 -p '*_audit.tar.gz'
 | **`reports/dev.html`** | Visual walkthrough of the dev result. |
 | **`reports/flow.html`** | Plain-English explainer of how the labeling works (for someone with no context). |
 
-Pipeline scripts (committed): `scripts/rerank/build_anchor_universe.py`,
+Pipeline scripts (committed): `scripts/rerank/anchor_labels/build_anchor_universe.py`,
 `convo_context.py`, `batch_sheet.py`, `judge_anchor_content.py`,
 `compose_labels.py`, `run_arbiter.py`; arbiter subagent at
 `.claude/agents/anchor-arbiter.md`. See **`REPRODUCE.md`** to run them.
