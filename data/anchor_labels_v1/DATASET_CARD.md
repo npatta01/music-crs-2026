@@ -62,15 +62,6 @@ Off-by-one honored upstream: a turn's reaction = `MOVES` iff
 (MOVES|DOES_NOT), same_artist, asked_for_different_artist, anchoring,
 content_fit, label, label_reason, confidence_weight, decided_by`
 
-## Training recipe (two-tower retriever)
-- **Positives:** `label == POSITIVE` → (conversation query, candidate_track) pairs.
-- **Hard negatives, query-local:** `label == NEGATIVE`. The
-  `label_reason == artist_anchoring` subset is the targeted anchoring signal —
-  mine them as **per-query** negatives (same conversation), not global randoms.
-- **DROP:** fit-but-disliked — exclude from positives; optionally a weak negative.
-- **HOLD:** exclude from training (unverifiable).
-- Weight the loss by `confidence_weight` (down-weight arbiter 0.6 / HOLD 0.3).
-
 ## Provenance / reproduce
 - Sheet build: `scripts/rerank/anchor_labels/build_anchor_universe.py` (full conversation via
   `scripts/rerank/anchor_labels/convo_context.py`), batched by `scripts/rerank/anchor_labels/batch_sheet.py`.

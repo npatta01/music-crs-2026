@@ -40,13 +40,11 @@ gh release download anchor-labels-v1 -p '*_audit.tar.gz'
 
 | File | What |
 |---|---|
-| **`DATASET_CARD.md`** | Schema, labeling method, composition rules, full distribution, two-tower training recipe. |
+| **`DATASET_CARD.md`** | Schema, labeling method, composition rules, full distribution. |
 | **`REPRODUCE.md`** | Step-by-step to rebuild the labels from scratch on a fresh machine (prereqs, exact commands, the arbiter with/without Claude Code). |
-| **`TRAINING.md`** | How to use the labels for a bi-encoder retriever vs a LambdaMART reranker — and the critical caveat (eval GT = the played track) with the leaderboard-vs-product strategy. Advisor-reviewed against the repo. |
 | **`reports/train.html`** | Visual walkthrough of the full train result (open in a browser). |
 | **`reports/dev.html`** | Visual walkthrough of the dev result. |
 | **`reports/flow.html`** | Plain-English explainer of how the labeling works (for someone with no context). |
-| **`reports/strategy.html`** | Visual one-pager of how to *use* the labels for retrieval/reranking — the catch (devset GT = the played track) and the plan. Companion to `TRAINING.md`. |
 
 Pipeline scripts (committed): `scripts/rerank/anchor_labels/build_anchor_universe.py`,
 `convo_context.py`, `batch_sheet.py`, `judge_anchor_content.py`,
