@@ -52,6 +52,43 @@ def _titles_from_catalog(db_uri: str, table_name: str, VQ) -> dict:
     return out
 
 
+def _build_b1_encoder(model_name: str, device: str):
+    """Construct the b1 query encoder used on a cache MISS.
+
+    Backend chosen by ``MCRS_B1_ENCODER_BACKEND`` (``auto`` | ``local`` | ``modal``,
+    default ``auto``):
+
+    - ``local`` — load the fine-tuned 4B in-process (needs the ~16GB weights at
+      ``model_name`` and a GPU). This is the path on Modal, where the encoder
+      lives on the models volume (``MCRS_B1_MODEL_DIR``).
+    - ``modal`` — forward each miss to the deployed ``B1Encoder`` Modal class via
+      ``ModalQwen3EmbeddingClient``. No local weights/GPU needed; the encode runs
+      on Modal. The class applies the same query instruct + L2-norm, so its vecs
+      are interchangeable with the local encoder's (and with the pre-warm cache).
+    - ``auto`` (default) — ``local`` when the weights dir exists on disk, else
+      ``modal``. So a local run *without* the 16GB weights serves ``b1_cos`` via
+      Modal instead of crashing on the in-process load.
+
+    The encoder only fires on cache misses; a pre-warmed namespace serves with no
+    encoder at all.
+    """
+    backend = os.environ.get("MCRS_B1_ENCODER_BACKEND", "auto").strip().lower()
+    if backend == "auto":
+        backend = "local" if os.path.isdir(model_name) else "modal"
+    if backend == "modal":
+        from mcrs.embeddings.modal_qwen3_client import ModalQwen3EmbeddingClient
+        app_name = os.environ.get("MCRS_B1_MODAL_APP", "music-crs")
+        cls_name = os.environ.get("MCRS_B1_MODAL_CLS", "B1Encoder")
+        print(f"[b1_live] b1 encoder backend=modal ({app_name}/{cls_name}); "
+              f"local weights '{model_name}' unavailable or overridden", flush=True)
+        return ModalQwen3EmbeddingClient(app_name=app_name, cls_name=cls_name)
+    from mcrs.embeddings.qwen3_embedding import (
+        Qwen3EmbeddingClient, DEFAULT_QUERY_INSTRUCT_FOR_MUSIC_CRS)
+    return Qwen3EmbeddingClient(
+        model_name=model_name, device=device, torch_dtype_name="bfloat16",
+        max_length=2048, query_instruct=DEFAULT_QUERY_INSTRUCT_FOR_MUSIC_CRS, batch_size=8)
+
+
 class B1Live:
     def __init__(self, cat, *, model_name: str = B1_MODEL, device: str = "auto",
                  topk: int = 1000, db_uri: str | None = None,
@@ -91,14 +128,11 @@ class B1Live:
             self.doc_by = {}  # offline/tests only (no db_uri, no corpus)
         # Cache-first encoder: the 16GB inner model lazy-loads ONLY on a cache miss.
         # With the devset pre-warmed in this namespace, serving = pure cache hits ->
-        # no in-process load, no OOM. `inner` defaults to the local 4B; for Modal/blindset
-        # pass a Modal-served b1 client (same v_struct_pt query, same namespace).
+        # no in-process load, no OOM. `inner` defaults to a backend-selected encoder
+        # (local 4B, or the Modal `B1Encoder` fallback when the weights aren't on
+        # disk); an explicit `inner` (e.g. a custom Modal client) still wins.
         if inner is None:
-            from mcrs.embeddings.qwen3_embedding import (
-                Qwen3EmbeddingClient, DEFAULT_QUERY_INSTRUCT_FOR_MUSIC_CRS)
-            inner = Qwen3EmbeddingClient(
-                model_name=model_name, device=device, torch_dtype_name="bfloat16",
-                max_length=2048, query_instruct=DEFAULT_QUERY_INSTRUCT_FOR_MUSIC_CRS, batch_size=8)
+            inner = _build_b1_encoder(model_name, device)
         cache_dir = os.environ.get("MCRS_EMBEDDING_CACHE_DIR", "cache/embeddings")
         self.enc = CachedTextEmbedder(inner, DiskVectorCache(cache_dir), B1_CACHE_NAMESPACE)
         self.D = cat.vec.get(B1_FIELD)            # (n_docs, 2560), L2-normed
