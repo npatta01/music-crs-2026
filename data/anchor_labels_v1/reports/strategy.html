@@ -53,16 +53,16 @@ On the <b>devset official scoring</b>, the ground-truth track for a turn <b>is t
 </div>
 
 <!-- WHERE VALUE LANDS -->
-<h2>Where the value lands in the score</h2>
+<h2>What these labels can (and can’t) move</h2>
 <div class="card">
-  <p class="kicker" style="color:var(--blue)">Composite = 0.50·nDCG@20 + 0.10·diversity + 0.10·lexical + 0.30·judge</p>
+  <p class="kicker" style="color:var(--blue)">Composite = 0.50·nDCG@20 + 0.10·catalog + 0.10·lexical + 0.30·judge</p>
   <div class="seg">
-    <span style="width:50%;background:var(--red)">nDCG 0.50 — in tension ⚠</span>
-    <span style="width:30%;background:var(--green)">judge 0.30 — helps ✓</span>
-    <span style="width:10%;background:#54b27e">div 0.10 ✓</span>
-    <span style="width:10%;background:#7fc79c">lex 0.10</span>
+    <span style="width:50%;background:var(--red)">nDCG 0.50 — tracks ⚠</span>
+    <span style="width:30%;background:var(--grey)">judge 0.30 — prose</span>
+    <span style="width:10%;background:#9aa6b5">cat 0.10</span>
+    <span style="width:10%;background:#b4bcc8">lex 0.10 — prose</span>
   </div>
-  <p class="legend">The anchoring fix <b style="color:var(--red)">fights</b> the 0.50 nDCG term on the devset (it demotes the played GT), but <b style="color:var(--green)">helps</b> the 0.40 judge+diversity that rewards respecting the “different artist” ask. <b>Put the labels where they help, keep them out of where they hurt.</b></p>
+  <p class="legend"><b style="color:var(--ink)">nDCG (0.50, tracks):</b> POSITIVE labels <b style="color:var(--green)">help</b> (clean query→track pairs that match the GT); anchoring NEGATIVES <b style="color:var(--red)">fight</b> it (they demote the played GT). <b style="color:var(--ink)">judge 0.30 + lexical 0.10 are the response TEXT</b> — a separate generator effort (currently off, grounded in the <b>top-1 track only</b>); these track-labels don’t directly move them. <b>So on the devset the only clean use is POSITIVE pairs for recall;</b> the anchoring NEGATIVES belong in a <b>product / held-out / blind</b> evaluation, not the devset score.</p>
 </div>
 
 <!-- THE ONE RULE -->
@@ -100,15 +100,15 @@ On the <b>devset official scoring</b>, the ground-truth track for a turn <b>is t
 </div>
 <div class="do">
   <div class="n">②</div>
-  <div class="body"><b>Use the labels in the PRODUCT retriever — “add, don’t subtract.”</b> Pull different-artist tracks into the top-1000 pool <i>alongside</i> the anchored GT; anchoring tracks as moderate hard-negatives. Recall- and diversity-positive, metric-neutral. <span class="chip c-dev">devset-safe</span></div>
+  <div class="body"><b>Leaderboard-safe use = the POSITIVE turns.</b> Clean query→track positives that <i>match</i> the nDCG GT — use them to improve retrieval recall/ranking. This is the one place the labels help the devset score. <span class="chip c-dev">devset-safe</span></div>
 </div>
 <div class="do">
   <div class="n">③</div>
-  <div class="body"><b>Spend the labels on the JUDGE + diversity axes</b> (response generation + slate). That’s ~40% of the composite, rewards respecting the “different artist” ask, and is the axis the <b>blind</b> eval most likely weights. <span class="chip c-blind">helps blind too</span></div>
+  <div class="body"><b>Anchoring NEGATIVES → PRODUCT retriever + a held-out anchoring slice.</b> “Add, don’t subtract”: pull different-artist tracks into the top-1000 pool alongside the anchored GT, as moderate hard-negatives. <b>Not</b> the submitted model; measure on a held-out slice, not dev nDCG (anchoring is only 5% of dev). <span class="chip c-blind">+ maybe blind</span></div>
 </div>
-<div class="do">
+<div class="do warn">
   <div class="n">④</div>
-  <div class="body"><b>Measure anchoring on a held-out anchoring-rich slice, not dev nDCG.</b> Anchoring is only 5% of the devset — the fix is invisible (or looks negative) on dev nDCG by construction.</div>
+  <div class="body"><b>The judge (0.30) + lexical (0.10) is a SEPARATE effort — not these labels.</b> It scores the generated <i>response text</i> (prose, grounded in the top-1 track, currently off). These track-labels reach it <i>only</i> via a better top-1 — which trades off nDCG. The judge lever is the <b>response-gen sweep</b>, a different workstream.</div>
 </div>
 
 <!-- LABEL CHEAT SHEET -->

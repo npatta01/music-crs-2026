@@ -50,10 +50,14 @@ GT**; the anchoring negatives point *away* from the GT track. Consequences (devs
   **lowers** that turn's nDCG. The anchoring fix and raw nDCG are opposed by
   construction.
 - Composite = `0.50·nDCG@20 + 0.10·catalog_diversity + 0.10·lexical + 0.30·(judge−1)/4`.
-  The anchoring fix pays off on **judge (0.30) + diversity (0.10)** and the
-  **product**, not nDCG (0.50). *(Note: `docs/evaluation.md` calls nDCG@10 the
-  official primary ranking metric while the Codabench composite weights nDCG@20 —
-  both are single-GT-per-turn, so the tension holds either way.)*
+  **The judge (0.30) + lexical (0.10) score the generated RESPONSE TEXT**, not the
+  tracks — a separate generator effort (currently `lm_type: dummy`), grounded in
+  the **top-1 track only** (`explanation_generation.md:21,28`); the team's own spec
+  calls this front *"independent of retrieval"*. So **these track-labels do not
+  directly move the judge.** Their only path to it is changing the **top-1** track
+  to a different artist — which is the nDCG@1 GT, so it **trades off nDCG**, not
+  free. *(Note: `docs/evaluation.md` calls nDCG@10 the official primary while the
+  composite weights nDCG@20 — both single-GT, so the tension holds either way.)*
 - Anchoring is only **5% of dev turns** (vs 18.6% train) → invisible on dev. Build
   a **held-out anchoring-rich eval slice**; don't judge the fix by dev nDCG.
 
@@ -151,34 +155,37 @@ where the metric conflict is **most** direct (it re-grades the GT). Iterate the
 
 ## 5. Recommended strategy (ranked — leaderboard vs product)
 
-The verified single-GT tension means the labels' biggest, safest wins are *not* in
-the submitted ranking model. In order of ROI:
+The single-GT tension **plus** the fact that the judge scores *prose, not tracks*
+mean these labels have **no clean positive home in the submitted ranking model**.
+In order of ROI:
 
-1. **A3 — judge (0.30) + diversity (0.10) axes. Highest leaderboard-safe ROI.**
-   Anchoring maps directly to "did you respect the explicit different-artist ask"
-   — what the LLM judge scores. Use the labels to condition **response generation
-   + slate construction** (surface a different-artist track in the response /
-   non-GT slate slots) **without** demoting the GT out of the top-20. Captures up
-   to 0.40 of the composite, orthogonal to nDCG. Needs the response-gen path wired
-   (currently `lm_type: dummy`).
-2. **A4 — retriever, "add don't subtract" (recall-positive, metric-neutral).**
-   Bi-encoder pulls different-artist tracks into the deep pool alongside the
-   anchored GT; anchoring tracks only as moderate-margin in-batch hard negatives;
-   top-1000; gate on `% GT not in top-1000`. (= §2.)
-3. **A2 — clean positives, don't add negatives (low risk, modest upside).**
-   Down-weight / stop trusting the synthetic `MOVES` on the **6,234 poisoned-MOVES**
-   turns (anchoring negs the raw data marked "liked") anywhere it leaks into
-   auxiliary positives. Removes label noise without fighting the metric.
-4. **A1 — two models. Protect the leaderboard.** Keep the submitted LambdaMART
-   label-pure (§3); run the anchoring fix as a separate product model + the
-   held-out anchoring eval. Only fold it into the submission if an explicit dev
-   A/B shows net-positive **composite** (nDCG loss on 5% of turns vs judge+diversity
-   gain).
-5. **A5 — one reranker with capped asymmetric demotion (only if A1 is off the
-   table).** Grade anchoring/content NEGATIVE = 0 **only when the track is not the
-   GT**; when anchored == GT keep it ≥ the positive floor. Requires a train-time
-   join against `make_ground_truth`. Complex, still partly fights the metric on
-   the 6,234 poisoned-MOVES turns.
+1. **Use the POSITIVE turns for retrieval recall — the one leaderboard-safe use.**
+   Clean (query → played-track) positives that *match* the nDCG GT. Improve the
+   retriever/reranker on the ~33% of turns where the played track was genuinely
+   right. This is metric-aligned; do it.
+2. **A1 — keep the SUBMITTED reranker label-pure.** It trains on
+   `label = int(track==gt)` (`features_v9.py:306`); anchor-NEGATIVE grades invert
+   the metric's own GT. Don't feed them in.
+3. **A4 — anchoring NEGATIVES → product retriever + held-out slice (+ maybe blind).**
+   "Add don't subtract": pull different-artist tracks into the top-1000 pool
+   alongside the anchored GT, as moderate-margin hard negatives; gate on
+   `% GT not in top-1000`. **Not** the submitted model; measure on a held-out
+   anchoring-rich slice. The blind eval *may* reward this (unverified — §7).
+4. **The judge (0.30) + lexical (0.10) is a SEPARATE workstream — not these labels.**
+   It scores the generated response *text* (prose, grounded in the **top-1 track**,
+   `lm_type: dummy` today). These track-labels reach it **only** via a better top-1,
+   which trades off nDCG. The judge lever is the **response-gen sweep**
+   (`docs/superpowers/specs/2026-06-13-response-gen-judge-sweep-design.md`) — it
+   tunes the prose/model/state, independent of which tracks you retrieve. Don't
+   credit these labels toward the judge.
+5. **A2 — clean positives (low risk).** Down-weight / stop trusting the synthetic
+   `MOVES` on the **6,234 poisoned-MOVES** turns wherever it leaks into auxiliary
+   positives. Removes noise without fighting the metric.
+6. **A5 — one reranker with capped asymmetric demotion (only if A1 is off the
+   table).** Anchoring/content NEGATIVE = 0 **only when the track is not the GT**;
+   when anchored == GT keep it ≥ the positive floor. Train-time join against
+   `make_ground_truth`. Complex; still partly fights the metric on the 6,234
+   poisoned-MOVES turns.
 
 ---
 
