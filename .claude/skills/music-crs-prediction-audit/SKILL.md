@@ -94,7 +94,7 @@ python .claude/skills/music-crs-prediction-audit/scripts/audit_submission_predic
 ```
 
 4. Open `index.html` from the output directory and inspect:
-   - summary cards
+   - collapsible metric groups
    - gap breakdown
    - row table filters
    - conversation/current request

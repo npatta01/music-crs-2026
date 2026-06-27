@@ -2406,9 +2406,11 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
     agg = audit["aggregate"]
     rows = audit["rows"]
     label = agg.get("label_metrics")
-    cards = [
+    run_cards = [
         ("Rows", agg["n_rows"]),
         ("Trace Rows", agg["n_with_trace"]),
+    ]
+    gap_cards = [
         ("Flagged Top1", agg["top1_flagged"]),
         ("Flagged Top20 Rows", agg["top20_flagged_rows"]),
         ("Hard Top1 Leaks", agg["hard_top1_invalid"]),
@@ -2416,14 +2418,15 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
         ("Better In List", agg["with_better_submitted"]),
         ("Better In Pool", agg["with_better_pool"]),
     ]
+    judge_cards = []
     if label:
-        cards += [
+        run_cards += [
             ("nDCG@20", f"{label['ndcg@20']:.4f}"),
             ("Hit@20", f"{label['hit@20']:.4f}"),
             ("MRR", f"{label['mrr']:.4f}"),
         ]
     else:
-        cards.append(("Labels", "not available"))
+        run_cards.append(("Labels", "not available"))
     judge_metrics = agg.get("llm_judge_metrics") or {}
     judge_meta = agg["metadata"].get("llm_judge") or {}
     explanation_judge_metrics = agg.get("llm_explanation_judge_metrics") or {}
@@ -2431,30 +2434,30 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
     state_judge_metrics = agg.get("llm_state_judge_metrics") or {}
     state_judge_meta = agg["metadata"].get("llm_state_judge") or {}
     if judge_metrics.get("n_judged"):
-        cards += [
+        judge_cards += [
             ("Fit Judged", judge_metrics["n_judged"]),
             ("Weak/Bad Fits", judge_metrics["weak_or_bad"]),
         ]
     elif judge_meta.get("enabled"):
-        cards.append(("Recommendation Fit", "skipped"))
+        judge_cards.append(("Recommendation Fit", "skipped"))
     if explanation_judge_metrics.get("n_judged"):
-        cards += [
+        judge_cards += [
             ("Responses Judged", explanation_judge_metrics["n_judged"]),
             ("Thin/Misleading", explanation_judge_metrics["weak_or_bad"]),
         ]
     elif explanation_judge_meta.get("enabled"):
-        cards.append(("Response Quality", "skipped"))
+        judge_cards.append(("Response Quality", "skipped"))
     if state_judge_metrics.get("n_judged"):
-        cards += [
+        judge_cards += [
             ("State Judged", state_judge_metrics["n_judged"]),
             ("Partial/Inaccurate State", state_judge_metrics["partial_or_bad"]),
         ]
     elif state_judge_meta.get("enabled"):
-        cards.append(("State Accuracy", "skipped"))
+        judge_cards.append(("State Accuracy", "skipped"))
     leaderboard = agg["metadata"].get("leaderboard_metadata")
     if leaderboard:
         for k, v in leaderboard.items():
-            cards.append((str(k), v))
+            run_cards.append((str(k), v))
 
     def card_tone(card_label: str) -> str:
         lower = card_label.lower()
@@ -2481,9 +2484,28 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
             return "good"
         return "neutral"
 
-    card_html = "\n".join(
-        f'<div class="card {card_tone(str(label))}"><span>{escape(label)}</span><strong>{escape(str(value))}</strong></div>'
-        for label, value in cards
+    def render_card_grid(cards: list[tuple[str, Any]]) -> str:
+        return "\n".join(
+            f'<div class="card {card_tone(str(label))}"><span>{escape(label)}</span><strong>{escape(str(value))}</strong></div>'
+            for label, value in cards
+        )
+
+    metric_groups = [
+        ("Run Coverage", run_cards, "Rows, trace availability, labels, and leaderboard metadata."),
+        ("Validity And Gaps", gap_cards, "Hard leaks, broader risk flags, and heuristic alternatives."),
+    ]
+    if judge_cards:
+        metric_groups.append(
+            ("Judge Evaluations", judge_cards, "Recommendation fit, response quality, and state accuracy.")
+        )
+    metric_group_html = "\n".join(
+        f"""
+        <details class="metric-group" open>
+          <summary><span>{escape(title)}</span><small>{escape(description)}</small></summary>
+          <div class="cards">{render_card_grid(cards)}</div>
+        </details>
+        """
+        for title, cards, description in metric_groups
     )
     gap_pills = "\n".join(
         f'<button class="pill" data-gap="{escape(k)}">{escape(k)} <b>{v}</b></button>'
@@ -2736,7 +2758,13 @@ h3 {{ font-size: 13px; line-height: 1.25; margin: 20px 0 9px; letter-spacing: 0;
 p {{ margin: 0 0 8px; }}
 .hero {{ display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }}
 .meta {{ color: var(--muted); max-width: 620px; }}
-.cards {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(154px, 1fr)); gap: 12px; margin: 18px 0; }}
+.metric-groups {{ display: grid; gap: 12px; margin: 18px 0; }}
+.metric-group {{ background: rgba(255, 255, 255, .72); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 1px 0 rgba(15, 23, 42, .03); overflow: hidden; }}
+.metric-group > summary {{ display: flex; justify-content: space-between; gap: 14px; align-items: baseline; margin: 0; padding: 12px 14px; color: var(--ink); border-bottom: 1px solid var(--line); list-style-position: inside; }}
+.metric-group > summary span {{ font-weight: 850; }}
+.metric-group > summary small {{ color: var(--muted); font-weight: 650; text-align: right; }}
+.metric-group:not([open]) > summary {{ border-bottom: 0; }}
+.cards {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(154px, 1fr)); gap: 12px; margin: 0; padding: 12px; }}
 .card {{ --accent: var(--line-strong); background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: 8px; padding: 13px 14px 12px; box-shadow: 0 1px 0 rgba(15, 23, 42, .03); min-height: 86px; }}
 .card.danger {{ --accent: var(--bad); background: linear-gradient(#fff, #fff), var(--bad-bg); }}
 .card.warn {{ --accent: var(--warn); }}
@@ -2841,7 +2869,7 @@ blockquote {{ margin: 0; padding: 11px 13px; background: var(--panel-soft); bord
     </div>
     <div class="meta">Leaderboard metadata is optional. Hidden-label splits show validity, gap metrics, and optional judge evaluations.</div>
   </section>
-  <section class="cards">{card_html}</section>
+  <section class="metric-groups">{metric_group_html}</section>
   <section class="summary">
     <h2>Top-Level Read</h2>
     <ul>{render_summary(agg)}</ul>

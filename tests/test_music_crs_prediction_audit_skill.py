@@ -87,3 +87,47 @@ def test_judge_verdict_labels_are_user_facing():
     assert audit.verdict_label("explanation", "bad") == "misleading"
     assert audit.verdict_label("state", "good") == "accurate"
     assert audit.verdict_label("state", "bad") == "inaccurate"
+
+
+def test_render_html_groups_metric_cards_into_collapsible_rows():
+    audit = load_audit_module()
+    rendered = audit.render_html(
+        {
+            "aggregate": {
+                "n_rows": 80,
+                "n_with_trace": 80,
+                "top1_flagged": 28,
+                "top20_flagged_rows": 34,
+                "hard_top1_invalid": 3,
+                "hard_top20_invalid_rows": 3,
+                "with_better_submitted": 33,
+                "with_better_pool": 34,
+                "label_metrics": None,
+                "gap_counts": {},
+                "llm_judge_metrics": {"n_judged": 80, "weak_or_bad": 54},
+                "llm_explanation_judge_metrics": {"n_judged": 80, "weak_or_bad": 16},
+                "llm_state_judge_metrics": {"n_judged": 80, "partial_or_bad": 41},
+                "metadata": {
+                    "tid": "t1",
+                    "split": "blindset_A",
+                    "generated_at": "2026-06-27 08:32:20",
+                    "prediction_path": "prediction.zip",
+                    "trace_path": "trace.jsonl",
+                    "ground_truth_path": None,
+                    "dataset_name": "dataset",
+                    "leaderboard_metadata": None,
+                    "llm_judge": {"enabled": True},
+                    "llm_explanation_judge": {"enabled": True},
+                    "llm_state_judge": {"enabled": True},
+                },
+            },
+            "rows": [],
+        },
+        audit.Catalog({}),
+    )
+
+    assert 'class="metric-groups"' in rendered
+    assert "Run Coverage" in rendered
+    assert "Validity And Gaps" in rendered
+    assert "Judge Evaluations" in rendered
+    assert rendered.index("Judge Evaluations") < rendered.index("Fit Judged")
