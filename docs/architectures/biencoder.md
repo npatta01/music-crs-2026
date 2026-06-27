@@ -89,6 +89,16 @@ track (a leak guard excludes the GT track; a no-op on current data).
   `(namespace, build_q text)` over the shared `DiskVectorCache`. With the eval split
   pre-warmed (`prewarm_b1_cache.py`), serving is **pure cache hits** — the 16 GB model never
   loads. A miss loads it **once** (thread-locked, see `mcrs/embeddings/qwen3_embedding.py`).
+- **Cache-miss encoder backend** (`_build_b1_encoder`, env `MCRS_B1_ENCODER_BACKEND` =
+  `auto` | `local` | `modal`, default `auto`): `local` loads the in-process 4B (needs the
+  ~16 GB weights at `MCRS_B1_MODEL_DIR` + a GPU); `modal` forwards the encode to the
+  deployed `B1Encoder` Modal class (`ModalQwen3EmbeddingClient`, same instruct + L2-norm, so
+  its vecs are interchangeable with the local encoder's and the pre-warm cache); `auto` picks
+  `local` when the weights dir exists, else falls back to `modal`. This means a **local /
+  blindset run without the weights serves `b1_cos` via Modal instead of crashing** on the
+  in-process load. `B1Encoder` is GPU-backed (L4), loads from the models volume, scales to
+  zero; deploy with `modal deploy modal/app.py`. Selection is covered by
+  `tests/test_b1_encoder_backend.py`.
 - **No `doc_corpus.jsonl` at serving**: the `[prev_track]` `"artist — title"` text is derived
   straight from the catalog (`artist_name`/`track_name`/`release_date` → `track_short_title`),
   **byte-identical** to the trained `short_track(doc)` (verified 0/47071). So serving needs only

@@ -86,11 +86,27 @@ QWEN3_ENCODER_MAX_CONTAINERS = int(_cfg.qwen3_encoder.max_containers)
 QWEN3_ENCODER_TORCH_DTYPE = str(_cfg.qwen3_encoder.torch_dtype)
 QWEN3_ENCODER_BATCH_SIZE = int(_cfg.qwen3_encoder.batch_size)
 
+B1_ENCODER_GPU = str(_cfg.b1_encoder.gpu)
+B1_ENCODER_CPU = float(_cfg.b1_encoder.cpu)
+B1_ENCODER_MEMORY = int(_cfg.b1_encoder.memory)
+B1_ENCODER_TIMEOUT = int(_cfg.b1_encoder.timeout)
+B1_ENCODER_SCALEDOWN_WINDOW = int(_cfg.b1_encoder.scaledown_window)
+B1_ENCODER_MAX_CONTAINERS = int(_cfg.b1_encoder.max_containers)
+B1_ENCODER_TORCH_DTYPE = str(_cfg.b1_encoder.torch_dtype)
+B1_ENCODER_BATCH_SIZE = int(_cfg.b1_encoder.batch_size)
+B1_ENCODER_MAX_LENGTH = int(_cfg.b1_encoder.max_length)
+B1_ENCODER_WEIGHTS_VOLUME = str(_cfg.b1_encoder.weights_volume)
+B1_ENCODER_WEIGHTS_MOUNT = str(_cfg.b1_encoder.weights_mount)
+B1_ENCODER_MODEL_SUBDIR = str(_cfg.b1_encoder.model_subdir)
+
 app = modal.App(APP_NAME)
 
 hf_cache_vol = modal.Volume.from_name(HF_CACHE_VOLUME, create_if_missing=True)
 results_vol = modal.Volume.from_name(RESULTS_VOLUME, create_if_missing=True)
 models_vol = modal.Volume.from_name(MODELS_VOLUME, create_if_missing=True)
+# Fine-tuned b1 (4B v_struct_pt) encoder weights, written by the bi-encoder
+# variant trainer. Mounted read-only into B1Encoder (the b1_cos Modal fallback).
+b1_weights_vol = modal.Volume.from_name(B1_ENCODER_WEIGHTS_VOLUME, create_if_missing=True)
 # Single unified cache volume. Mounted at CACHE_DIR; the LiteLLM file cache lives
 # under LITELLM_CACHE_DIR and the GPU-encoder DiskVectorCache under
 # EMBEDDING_CACHE_DIR, both subdirs of CACHE_DIR.
@@ -1309,6 +1325,72 @@ class Qwen3Encoder:
     def _commit_embedding_cache(self):
         if self._cache_enabled:
             cache_vol.commit()
+
+
+@app.cls(
+    image=image,
+    gpu=B1_ENCODER_GPU,
+    volumes={HF_CACHE_DIR: hf_cache_vol, B1_ENCODER_WEIGHTS_MOUNT: b1_weights_vol},
+    secrets=[ENV_SECRET],
+    cpu=B1_ENCODER_CPU,
+    memory=B1_ENCODER_MEMORY,
+    timeout=B1_ENCODER_TIMEOUT,
+    min_containers=0,
+    max_containers=B1_ENCODER_MAX_CONTAINERS,
+    scaledown_window=B1_ENCODER_SCALEDOWN_WINDOW,
+)
+class B1Encoder:
+    """GPU-backed fine-tuned 4B b1 (v_struct_pt) query encoder.
+
+    The `b1_cos` cache-MISS fallback: `scripts/rerank/b1_live.py` forwards b1
+    query encodes here (via `ModalQwen3EmbeddingClient(cls_name="B1Encoder")`)
+    when `MCRS_B1_ENCODER_BACKEND=modal` or when the ~16GB weights aren't on the
+    local disk. Loads the fine-tuned encoder from the `scout-models` volume
+    (mounted at ``B1_ENCODER_WEIGHTS_MOUNT``; the weights are NOT on
+    music-crs-models), applies the same query instruct + max_length as the
+    in-process encoder, so its vectors are interchangeable with the local
+    encoder's (and the pre-warm cache). Callers L2-normalize; results are not
+    cached here (the caller's `CachedTextEmbedder` owns the b1 namespace cache).
+
+    Scales to zero after `scaledown_window`s; cold start ~30-60 s (4B load from
+    the volume). Deploy via `modal deploy modal/app.py`.
+    """
+
+    @modal.enter()
+    def setup(self):
+        import os
+
+        os.environ.setdefault("HF_HOME", HF_CACHE_DIR)
+        from mcrs.embeddings.qwen3_embedding import (
+            Qwen3EmbeddingClient,
+            DEFAULT_QUERY_INSTRUCT_FOR_MUSIC_CRS,
+        )
+
+        model_dir = os.environ.get(
+            "MCRS_B1_ENCODER_MODEL_DIR",
+            f"{B1_ENCODER_WEIGHTS_MOUNT}/{B1_ENCODER_MODEL_SUBDIR}",
+        )
+        if not os.path.isdir(model_dir):
+            raise RuntimeError(
+                f"b1 encoder weights not found at {model_dir} (volume "
+                f"'{B1_ENCODER_WEIGHTS_VOLUME}'). Upload the fine-tuned 4B "
+                "encoder there before serving the B1Encoder fallback.")
+        self.client = Qwen3EmbeddingClient(
+            model_name=model_dir,
+            device="cuda",
+            torch_dtype_name=B1_ENCODER_TORCH_DTYPE,
+            max_length=B1_ENCODER_MAX_LENGTH,
+            query_instruct=DEFAULT_QUERY_INSTRUCT_FOR_MUSIC_CRS,
+            batch_size=B1_ENCODER_BATCH_SIZE,
+        )
+        # Eager-load so the first remote call doesn't pay the load tax.
+        self.client._ensure_loaded()
+
+    @modal.method()
+    def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        return self.client.embed_batch(texts)
 
 
 @app.cls(

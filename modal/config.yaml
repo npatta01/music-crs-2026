@@ -81,6 +81,30 @@ qwen3_encoder:
   torch_dtype: "bfloat16"
   batch_size: 32
 
+# Modal GPU-backed b1 encoder: the fine-tuned 4B v_struct_pt conv->track model,
+# served as the `b1_cos` cache-MISS fallback so a local (or blindset) run that
+# lacks the ~16GB weights on disk encodes on Modal instead of crashing. Loads
+# from the models volume (MCRS_B1_MODEL_DIR) on @modal.enter; scales to zero idle.
+# L4 (24GB) fits the 4B in bf16 (matches vllm-4b). Kept low in the GPU budget
+# since it only fires on un-warmed b1 queries (a pre-warmed namespace = pure
+# cache hits, no encoder).
+b1_encoder:
+  gpu: "L4"
+  cpu: 4.0
+  memory: 16384
+  timeout: 600
+  scaledown_window: 300
+  max_containers: 2
+  torch_dtype: "bfloat16"
+  batch_size: 8
+  max_length: 2048
+  # The fine-tuned 4B weights live on the `scout-models` volume (written by the
+  # bi-encoder variant trainer), NOT music-crs-models — mount it read-only and
+  # load from <weights_mount>/<model_subdir>.
+  weights_volume: "scout-models"
+  weights_mount: "/root/scout-models"
+  model_subdir: "biencoder_variant_v_struct_pt_l2048_qwen3-embedding-4b"
+
 # vLLM OpenAI-compatible embedding services (separate Modal app "music-crs-vllm").
 # Scale-to-zero; weights lazy-downloaded to the hf-cache volume on first boot.
 vllm:
