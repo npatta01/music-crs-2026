@@ -64,17 +64,21 @@ class B1Live:
         # excluded). Fallback: the legacy doc_corpus.jsonl if present locally; else empty
         # (the query just omits [prev_track] — graceful, no crash). short_track is applied
         # at lookup (idempotent on the already-short titles).
-        self.doc_by = None
         if db_uri:
-            try:
-                self.doc_by = _titles_from_catalog(db_uri, table_name, VQ)
-            except Exception:
-                self.doc_by = None
-        if self.doc_by is None:
-            if os.path.exists(doc_corpus):
-                self.doc_by = {json.loads(l)["track_id"]: json.loads(l)["doc"] for l in open(doc_corpus)}
-            else:
-                self.doc_by = {}
+            # Serving: the catalog MUST yield titles. Fail HARD on error/empty rather
+            # than silently degrading — an empty map changes build_q (drops [prev_track])
+            # -> different cache key -> cache MISS -> tries to load the 16GB encoder,
+            # which is excluded from the Modal image -> crash. A clear error beats a
+            # silent wrong-key serve. (codex review)
+            self.doc_by = _titles_from_catalog(db_uri, table_name, VQ)
+            if not self.doc_by:
+                raise RuntimeError(
+                    f"b1 catalog title map is empty for {db_uri}/{table_name} — "
+                    "refusing to serve (would change cache keys)")
+        elif os.path.exists(doc_corpus):
+            self.doc_by = {json.loads(l)["track_id"]: json.loads(l)["doc"] for l in open(doc_corpus)}
+        else:
+            self.doc_by = {}  # offline/tests only (no db_uri, no corpus)
         # Cache-first encoder: the 16GB inner model lazy-loads ONLY on a cache miss.
         # With the devset pre-warmed in this namespace, serving = pure cache hits ->
         # no in-process load, no OOM. `inner` defaults to the local 4B; for Modal/blindset

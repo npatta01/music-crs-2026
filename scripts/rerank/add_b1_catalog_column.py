@@ -44,16 +44,25 @@ def main():
     vidx = {str(tt): i for i, tt in enumerate(tids)}
 
     if FIELD in names:
-        s = t.search().select(["track_id", FIELD]).limit(5).to_pandas()
-        if all(_is_vec(r[FIELD], dim) for _, r in s.iterrows()):
-            print(f"IDEMPOTENT: {FIELD} present and filled -> no-op")
+        # Check ALL rows, not a 5-row sample — a crash mid-fill leaves a partially
+        # filled column that a sampled check would falsely call idempotent. (codex review)
+        s = t.search().select(["track_id", FIELD]).limit(0).to_pandas()
+        bad = sum(0 if _is_vec(r[FIELD], dim) else 1 for _, r in s.iterrows())
+        if bad == 0:
+            print(f"IDEMPOTENT: {FIELD} fully filled ({len(s)} rows) -> no-op")
             return
-        print(f"{FIELD} present but NULL/unfilled -> filling", flush=True)
+        print(f"{FIELD} present but {bad}/{len(s)} unfilled -> filling", flush=True)
     else:
         print(f"creating column {FIELD} (fixed_size_list<float32>[{dim}])", flush=True)
         t.add_columns(pa.schema([pa.field(FIELD, pa.list_(pa.float32(), dim))]))
 
     cat_tids = t.search().select(["track_id"]).limit(0).to_pandas()["track_id"].astype(str).tolist()
+    # Refuse to write all-zero vectors for catalog tracks missing from the doc corpus:
+    # b1_cos would then be float(cv @ 0)=0.0 (a fake in-distribution score), not NaN. (codex review)
+    missing = [tt for tt in cat_tids if tt not in vidx]
+    if missing:
+        raise SystemExit(f"{len(missing)} catalog tracks missing from the doc corpus "
+                         f"(e.g. {missing[:3]}) -> would be all-zero vectors. Rebuild doc_corpus first.")
     n_filled = 0
     for s0 in range(0, len(cat_tids), a.batch):
         chunk = cat_tids[s0:s0 + a.batch]
