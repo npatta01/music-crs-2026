@@ -1,0 +1,4 @@
+interface:
+  display_name: "Music CRS Prediction Audit"
+  short_description: "Interactive audits for Music CRS predictions."
+  default_prompt: "Use $music-crs-prediction-audit to audit this Music CRS prediction run and generate the interactive HTML report."
