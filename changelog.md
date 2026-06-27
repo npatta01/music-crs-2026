@@ -7,6 +7,12 @@ Repo: https://github.com/npatta01/music-conversational-music-recomender-2026
 
 ## 2026-06
 
+- `Added` **Anchoring-fix relevance labels v1** ([PR #161](https://github.com/npatta01/music-conversational-music-recomender-2026/pull/161)).
+  Clean LLM-judged labels over train (106,393 turns) + dev (7,000), built to
+  retrain the retriever against the anchoring bug. Data ships on the
+  [`anchor-labels-v1`](https://github.com/npatta01/music-conversational-music-recomender-2026/releases/tag/anchor-labels-v1)
+  release; docs + build pipeline in [`data/anchor_labels_v1/`](data/anchor_labels_v1/README.md)
+  and `scripts/rerank/anchor_labels/`.
 - `Changed` **State-ranker v10 cleanup**. Active configs now use
   `state_ranker_v10_*` instead of `v0plus_compiler_*`; traces expose
   `extracted_state`, `compiled_state`, `retrieval.branches`, ordered
