@@ -18,6 +18,7 @@ Challenge: https://nlp4musa.github.io/music-crs-challenge/
 - [Mac / Local Dev](docs/mac_dev.md) — local testing on Apple Silicon
 - [Modal Setup](docs/modal_setup.md) — cloud GPU authentication and smoke test
 - [Codebase Map](docs/codebase/README.md) — **start here to understand the code**: per-module internals (`docs/codebase/modules/`) and the [verified-bugs audit](docs/codebase/bugs.md)
+- [Anchoring-fix labels v1](data/anchor_labels_v1/README.md) — clean LLM-judged relevance labels (train + dev) for retraining the retriever against the anchoring bug; data files ship on the `anchor-labels-v1` GitHub release. Build pipeline: `scripts/rerank/anchor_labels/`
 
 ## Setup
 

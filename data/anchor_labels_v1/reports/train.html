@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Training set — full results (all 16 batches)</title>
+<style>
+  :root{--ink:#172033;--muted:#5b6678;--line:#dbe1ea;--bg:#f5f7fb;--card:#fff;
+    --blue:#2f6fed;--blue-bg:#eaf1ff;--green:#1f9d57;--green-bg:#e7f7ee;--red:#d8453a;--red-bg:#fdecea;
+    --amber:#bf8500;--amber-bg:#fff6e0;--grey:#7a8699;--grey-bg:#eef1f6;--purple:#7a4fd6;--purple-bg:#f1ebff;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:34px 18px 70px}
+  .wrap{max-width:920px;margin:0 auto}
+  h1{font-size:27px;margin:0 0 4px}
+  h2{font-size:20px;margin:34px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+  .sub{color:var(--muted);font-size:16px;margin:0 0 8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:0 1px 2px rgba(20,30,60,.04)}
+  .kicker{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);margin:0 0 6px}
+  .lead{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--green);border-radius:10px;padding:15px 18px;margin-bottom:8px}
+  .lead b{color:var(--green)}
+  .pillrow{margin:6px 0}
+  .bar{display:flex;align-items:center;gap:10px;margin:5px 0;font-size:13.5px}
+  .bar .name{min-width:160px;color:var(--muted)}
+  .bar .track{flex:1;background:var(--grey-bg);border-radius:6px;height:22px;overflow:hidden}
+  .bar .fill{height:100%;border-radius:6px}
+  .bar .pct{min-width:104px;font-weight:600}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr}}
+  .funnel .stage{display:flex;align-items:center;gap:14px;margin:0 0 4px}
+  .funnel .num{font-size:22px;font-weight:800;min-width:104px;text-align:right}
+  .funnel .d{color:var(--muted);font-size:13.5px}
+  .down{color:#aeb7c6;text-align:center;margin:1px 0 1px 40px;font-size:15px}
+  .split{display:flex;gap:12px;margin:6px 0}
+  .split>div{flex:1;border-radius:10px;padding:10px 13px;font-size:13.5px}
+  .agree{background:var(--green-bg);border:1px solid #bfe6cf}.dis{background:var(--purple-bg);border:1px solid #d8c9f5}
+  .ex{border:1px solid var(--line);border-radius:11px;padding:13px 15px;margin-bottom:11px;background:var(--card)}
+  .tag{display:inline-block;font-weight:700;padding:3px 10px;border-radius:6px;font-size:12.5px}
+  .t-pos{background:var(--green-bg);color:var(--green)}.t-neg{background:var(--red-bg);color:var(--red)}
+  .t-drop{background:var(--grey-bg);color:var(--grey)}.t-hold{background:var(--amber-bg);color:var(--amber)}
+  .exwhy{color:var(--muted);font-size:13px;margin-left:6px}
+  .flow{margin:8px 0 4px;font-size:14px}.flow .played{color:var(--muted)}
+  .verdict{font-size:13px;margin-top:7px;padding-top:7px;border-top:1px dashed var(--line)}
+  .chip{display:inline-block;font-size:11.5px;font-weight:600;padding:1px 8px;border-radius:20px;margin-right:4px}
+  .c-grey{background:var(--grey-bg);color:var(--grey)}.c-purple{background:var(--purple-bg);color:var(--purple)}
+  .c-green{background:var(--green-bg);color:var(--green)}.c-red{background:var(--red-bg);color:var(--red)}
+  .small{font-size:13px;color:var(--muted)}
+  table.tech{width:100%;border-collapse:collapse;font-size:14px}
+  table.tech td{padding:7px 10px;border-bottom:1px solid var(--line)}
+  table.tech td:first-child{color:var(--muted);width:42%}
+  .foot{margin-top:26px;font-size:12.5px;color:var(--muted);text-align:center}
+  .ok{color:var(--green);font-weight:700}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>Training-set labeling — full results</h1>
+<p class="sub">All <b>16 batches</b> of the training run: 15,199 conversations · 106,393 turns. The same pipeline validated on the devset, applied end-to-end to the full train split.</p>
+
+<div class="lead">
+<b>✓ The full training set is clean.</b> 106,393 turns labeled with <b>0 errors</b> and <b>0 unresolved</b>; every disagreement
+between the two cheap judges was resolved by the Opus arbiter (full coverage on all 16 batches).
+<div class="small" style="margin-top:6px"><b>"anchoring"</b> = the bug we're fixing — the listener asks for a <i>different</i> artist and the system serves the <i>same</i> one.</div>
+</div>
+
+<h2>What the data looks like</h2>
+<div class="grid2">
+  <div class="card">
+    <p class="kicker">Original data — balanced (unlike the devset)</p>
+    <div class="bar"><span class="name">Liked (MOVES)</span><span class="track"><span class="fill" style="width:51%;background:var(--green)"></span></span><span class="pct">53,885 · 51%</span></div>
+    <div class="bar"><span class="name">Disliked (DOES_NOT)</span><span class="track"><span class="fill" style="width:49%;background:var(--grey)"></span></span><span class="pct">52,508 · 49%</span></div>
+    <div style="height:6px"></div>
+    <div class="bar"><span class="name">Same artist as before</span><span class="track"><span class="fill" style="width:50%;background:var(--purple)"></span></span><span class="pct">53,087 · 50%</span></div>
+    <div class="bar"><span class="name">Different artist</span><span class="track"><span class="fill" style="width:50%;background:var(--blue)"></span></span><span class="pct">53,306 · 50%</span></div>
+    <p class="small" style="margin-top:8px">~50/50 liked-vs-disliked and ~50% same-artist (the devset was 88% liked, 27% same-artist). This balance is what makes the anchoring bug show up.</p>
+  </div>
+  <div class="card">
+    <p class="kicker">Our clean labels — 106,393 turns</p>
+    <div class="bar"><span class="name">NEGATIVE — anchoring</span><span class="track"><span class="fill" style="width:17.1%;background:var(--red)"></span></span><span class="pct">18,222 · 17.1%</span></div>
+    <div class="bar"><span class="name">NEGATIVE — wrong fit</span><span class="track"><span class="fill" style="width:40.3%;background:#e8857d"></span></span><span class="pct">42,841 · 40.3%</span></div>
+    <div class="bar"><span class="name">POSITIVE — good</span><span class="track"><span class="fill" style="width:33.1%;background:var(--green)"></span></span><span class="pct">35,191 · 33.1%</span></div>
+    <div class="bar"><span class="name">HOLD — can't tell</span><span class="track"><span class="fill" style="width:5.8%;background:var(--amber)"></span></span><span class="pct">6,132 · 5.8%</span></div>
+    <div class="bar"><span class="name">DROP — ambiguous</span><span class="track"><span class="fill" style="width:3.8%;background:var(--grey)"></span></span><span class="pct">4,007 · 3.8%</span></div>
+    <p class="small" style="margin-top:8px"><b class="ok">18,222 anchoring cases</b> — of which <b class="ok">5,880</b> the original data had wrongly marked "liked." Those are the poisoned positives this dataset rescues.</p>
+  </div>
+</div>
+
+<h2>How the 106,393 turns flowed through</h2>
+<div class="card funnel">
+  <div class="stage"><div class="num" style="color:var(--blue)">106,393</div><div><b>turns</b><div class="d">15,199 conversations · each = recent chat + the track played</div></div></div>
+  <div class="down">▼ &nbsp; two cheap AI judges each answer: "different-artist ask?" + "does the track fit?"</div>
+  <div class="split">
+    <div class="agree"><b>85,208 agreed</b> (80%) → trusted (weight 1.0 / HOLD 0.3)</div>
+    <div class="dis"><b>21,185 disagreed</b> (20%) → <b>Opus arbiter</b> decided independently (weight 0.6)</div>
+  </div>
+  <div class="down">▼ &nbsp; the arbiter resolved its 21,185 to a real spread — <b>not</b> all "can't tell": 10,123 POS · 4,855 NEG · 1,801 DROP · 4,406 HOLD</div>
+  <div class="stage"><div class="num" style="color:var(--green)">106,393</div><div><b>clean labels</b> <span class="ok">· 0 errors · 0 unresolved</span></div></div>
+</div>
+
+<h2>5 real examples from the training set</h2>
+
+<div class="ex" style="border-left:5px solid var(--red)">
+  <span class="tag t-neg">NEGATIVE</span><span class="exwhy">anchoring — the core bug, and the original data called it "liked"</span>
+  <div class="flow">"YES! That's it! Black Sabbath's Paranoid! Perfect. Can you recommend another super heavy, dark and doomy album from the 70s <b>by a different band</b>?"</div>
+  <div class="flow played">just played: Black Sabbath → played: <b>Black Sabbath — Paranoid</b> · original label: <i>liked</i></div>
+  <div class="verdict"><span class="chip c-purple">asked different artist? yes</span> <span class="chip c-red">same artist served? yes</span> → asked for a different band, got Black Sabbath again. Relabeled NEGATIVE.</div>
+</div>
+
+<div class="ex" style="border-left:5px solid var(--green)">
+  <span class="tag t-pos">POSITIVE</span><span class="exwhy">good example — different artist, fit + liked</span>
+  <div class="flow">"…<b>RHCP isn't quite the sound</b> I'm looking for this time. I want that catchy, angsty <b>late-90s pop-punk</b> vibe."</div>
+  <div class="flow played">just played: Red Hot Chili Peppers → played: <b>blink-182 — First Date</b> · liked</div>
+  <div class="verdict"><span class="chip c-purple">asked different artist? yes</span> <span class="chip c-grey">same artist? no</span> <span class="chip c-green">fits? yes</span> → a clean pivot to a different artist they enjoyed.</div>
+</div>
+
+<div class="ex" style="border-left:5px solid var(--red)">
+  <span class="tag t-neg">NEGATIVE</span><span class="exwhy">wrong fit — violates the named era</span>
+  <div class="flow">"Something that screams <b>late 90s / early 2000s</b> alternative rock — that energetic, slightly angsty vibe."</div>
+  <div class="flow played">played: <b>Red Hot Chili Peppers — Suck My Kiss (1991)</b> · disliked</div>
+  <div class="verdict"><span class="chip c-grey">different artist? no</span> <span class="chip c-red">fits? no</span> → asked late-90s/2000s, got a 1991 track. Era miss.</div>
+</div>
+
+<div class="ex" style="border-left:5px solid var(--grey)">
+  <span class="tag t-drop">DROP</span><span class="exwhy">ambiguous — the right track, but they didn't take to it</span>
+  <div class="flow">"I've heard good things about <b>At The Gates</b> but don't know where to start. Any recommendations?"</div>
+  <div class="flow played">played: <b>At The Gates — Slaughter Of The Soul</b> (their landmark album) · disliked</div>
+  <div class="verdict"><span class="chip c-green">fits? yes (the canonical pick)</span> <span class="chip c-grey">but disliked</span> → matched the ask but didn't land → set aside (not used as a positive).</div>
+</div>
+
+<div class="ex" style="border-left:5px solid var(--amber)">
+  <span class="tag t-hold">HOLD</span><span class="exwhy">can't tell — a subjective feel (Opus reviewed it)</span>
+  <div class="flow">"A <b>Tracy Chapman</b> song that makes me feel like I want to <b>get away from everything, just hit the road</b>."</div>
+  <div class="flow played">played: <b>Tracy Chapman — Sing For You</b> · disliked</div>
+  <div class="verdict">The judges disagreed; <b>Opus</b> ruled <span class="chip c-grey">unsure</span> — "wanderlust/road feeling" can't be verified from the track data. Kept at low confidence.</div>
+</div>
+
+<h2>Final validation</h2>
+<table class="tech">
+  <tr><td>Turns labeled</td><td><b>106,393</b> (15,199 conversations, 16 batches)</td></tr>
+  <tr><td>Errors / Unresolved</td><td class="ok">0 / 0</td></tr>
+  <tr><td>Judge agreement</td><td>80% agreed · 20% sent to Opus (full coverage, 21,185/21,185)</td></tr>
+  <tr><td>Anchoring caught</td><td><b>18,222</b> (17.1%) — incl. <b>5,880</b> rescued from a wrong "liked" label</td></tr>
+  <tr><td>Arbiter gate</td><td class="ok">passed — arbitrated conflicts resolved to a real POS/NEG/DROP/HOLD spread</td></tr>
+  <tr><td>Robustness</td><td>per-batch coverage check + dropped-row refill; recovered cleanly from a mid-run process restart (batch 13)</td></tr>
+  <tr><td>Cost</td><td>≈ $33 (cheap judges, DeepInfra) + Opus arbiter (Claude plan + usage credits)</td></tr>
+</table>
+
+<p class="foot">All 16 batches complete and combined into <b>train_labels_full.jsonl</b> (106,393 turns).<br>
+Method, prompts, and the devset validation: see <b>flow.html</b> and <b>dev.html</b>; full schema + distribution in <b>DATASET_CARD.md</b>.</p>
+
+</div></body></html>
