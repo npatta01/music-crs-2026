@@ -192,5 +192,5 @@ catalog match)`. Judges agree â†’ `confidence_weight` 1.0 (HOLD 0.3); arbiter â†
 - **Split flag must match:** `compose_labels.py --split` must be `train` for train
   sheets, `test` for the dev sheet (it asserts session ids are in that index).
 
-See `DATASET_CARD.md` for the schema + two-tower training recipe, and
+See `DATASET_CARD.md` for the schema, method, and distribution, and
 `reports/` for the visual walkthroughs.
