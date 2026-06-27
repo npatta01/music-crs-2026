@@ -18,14 +18,21 @@ def short_track(doc: str) -> str:
     return re.sub(r"\s*\(\d{4}\)\s*$", "", s).strip()
 
 
+def track_doc_head(artist: str, track: str, year: str = "") -> str:
+    """The 'Music track: <artist> — <title> (<year>)' head that build_doc_corpus writes
+    (sans the ' | tags…' / ' | known for…' suffix). short_track(head) == short_track(full
+    doc) because short_track splits on the first ' | '. Serving stores THIS head (a doc-like
+    string), so prev_track_str's short_track is applied exactly ONCE — matching the
+    prewarm/full-doc path byte-for-byte, including titles that themselves end in '(YYYY)'
+    (which a second short_track would wrongly strip)."""
+    return f"Music track: {artist} — {track}" + (f" ({year})" if year else "")
+
+
 def track_short_title(artist: str, track: str, year: str = "") -> str:
-    """Render 'artist — title' EXACTLY as the b1 doc corpus did — short_track() of the
-    'Music track: <artist> — <title> (<year>)' head that build_doc_corpus builds. Lets
-    serving derive the prev_track string straight from the catalog (artist_name /
-    track_name / release_date), byte-identical to what b1 trained on, with NO doc_corpus
-    file. Verified 0/47071 mismatches vs short_track(doc)."""
-    head = f"Music track: {artist} — {track}" + (f" ({year})" if year else "")
-    return short_track(head)
+    """'artist — title' EXACTLY as the b1 doc corpus rendered it — short_track() of the
+    head. (Standalone helper; serving stores track_doc_head and lets prev_track_str apply
+    short_track once.) Verified 0/47071 mismatches vs short_track(doc)."""
+    return short_track(track_doc_head(artist, track, year))
 
 
 def prev_track_str(played_sid: dict, tn: int, doc_by_tid: dict, exclude_tid=None) -> str:

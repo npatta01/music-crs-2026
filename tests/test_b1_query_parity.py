@@ -51,6 +51,23 @@ def test_track_short_title_matches_short_track_of_doc():
         assert VQ.track_short_title(ar, nm, yr) == VQ.short_track(head)
 
 
+def test_catalog_head_prev_track_matches_full_doc():
+    """PR #160 review P2: the SERVING path stores track_doc_head and applies short_track
+    once via prev_track_str; the prewarm/training path holds the full doc. They must yield
+    the SAME prev_track text — including titles ending in '(YYYY)', which the previous
+    (store-the-short-title) code double-stripped."""
+    cases = [("Artist", "Song (1999)", "2020"),       # title ends in a year — the P2 repro
+             ("Bill Evans", "Peace Piece", "1959"),
+             ("X", "untitled 07 | levitate", "2016"),  # pipe in title
+             ("", "Non-Stop", "2015")]                 # empty artist
+    for ar, nm, yr in cases:
+        head = VQ.track_doc_head(ar, nm, yr)                         # serving stores this
+        full_doc = head + " | tags: a, b | known for: x"            # prewarm/training holds this
+        serving = VQ.prev_track_str({1: ["t"]}, 2, {"t": head})
+        prewarm = VQ.prev_track_str({1: ["t"]}, 2, {"t": full_doc})
+        assert serving == prewarm, (ar, nm, yr, serving, prewarm)
+
+
 def test_prev_track_str_parity():
     doc = "Music track: Bill Evans — Peace Piece (1959) | jazz"
     played = {1: ["t1"], 2: ["t2"]}

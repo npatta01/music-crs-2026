@@ -9,11 +9,18 @@ training-exact goal-free renderer). The prev_track 'artist — title' text is de
 straight from the catalog (no doc_corpus.jsonl needed at serving).
 """
 from __future__ import annotations
+import os
 import json
 import numpy as np
 
 B1_FIELD = "b1_vstructpt_4b"
-B1_MODEL = "models/biencoder_variant_v_struct_pt_l2048_qwen3-embedding-4b"
+# Env-overridable so a cache MISS can load the encoder from the Modal models volume
+# (the relative default resolves to /app/models, which is excluded from the image —
+# unwarmed/blindset queries would otherwise fail to load and fall back). On Modal set
+# MCRS_B1_MODEL_DIR=/root/models/biencoder_variant_v_struct_pt_l2048_qwen3-embedding-4b
+# and upload the weights there. (PR #160 review P1)
+B1_MODEL = os.environ.get(
+    "MCRS_B1_MODEL_DIR", "models/biencoder_variant_v_struct_pt_l2048_qwen3-embedding-4b")
 DOC_CORPUS = "exp/analysis/retrieval_exploration/doc_corpus.jsonl"
 # Namespace pins the b1 model identity in the shared embedding cache. Pre-warm
 # (prewarm_b1_cache.py) and serving MUST use the same namespace + query text.
@@ -38,7 +45,10 @@ def _titles_from_catalog(db_uri: str, table_name: str, VQ) -> dict:
         ar = str(first(r["artist_name"]) or "")
         nm = str(first(r["track_name"]) or "")
         yr = str(r["release_date"] or "")[:4]
-        out[str(r["track_id"])] = VQ.track_short_title(ar, nm, yr)
+        # store the doc HEAD (not the pre-short_track'd title) so prev_track_str's
+        # short_track runs exactly once, matching the prewarm/full-doc path even for
+        # titles ending in '(YYYY)' (PR #160 review P2).
+        out[str(r["track_id"])] = VQ.track_doc_head(ar, nm, yr)
     return out
 
 
