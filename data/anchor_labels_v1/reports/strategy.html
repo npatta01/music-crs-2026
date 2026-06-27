@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to use the anchoring labels — strategy</title>
+<style>
+  :root{--ink:#172033;--muted:#5b6678;--line:#dbe1ea;--bg:#f5f7fb;--card:#fff;
+    --blue:#2f6fed;--blue-bg:#eaf1ff;--green:#1f9d57;--green-bg:#e7f7ee;--red:#d8453a;--red-bg:#fdecea;
+    --amber:#bf8500;--amber-bg:#fff6e0;--grey:#7a8699;--grey-bg:#eef1f6;--purple:#7a4fd6;--purple-bg:#f1ebff;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:32px 18px 64px}
+  .wrap{max-width:940px;margin:0 auto}
+  h1{font-size:26px;margin:0 0 4px}
+  h2{font-size:19px;margin:30px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+  .sub{color:var(--muted);font-size:15.5px;margin:0 0 8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px;box-shadow:0 1px 2px rgba(20,30,60,.04)}
+  .kicker{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin:0 0 7px}
+  .lead{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--amber);border-radius:10px;padding:14px 17px;margin-bottom:8px}
+  .small{font-size:13px;color:var(--muted)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  @media(max-width:700px){.grid2{grid-template-columns:1fr}}
+  .seg{display:flex;height:30px;border-radius:7px;overflow:hidden;border:1px solid var(--line);margin:8px 0 4px}
+  .seg span{display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
+  .legend{font-size:12.5px;color:var(--muted);margin-top:6px}
+  .legend b{color:var(--ink)}
+  .tag{display:inline-block;font-weight:700;padding:3px 10px;border-radius:6px;font-size:12px}
+  .t-bad{background:var(--red-bg);color:var(--red)}.t-good{background:var(--green-bg);color:var(--green)}
+  .ex{font-size:13px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);color:var(--muted)}
+  .ex b{color:var(--ink)}
+  table.cmp{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:2px}
+  table.cmp td,table.cmp th{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  table.cmp th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  table.cmp td:first-child{color:var(--muted);width:30%}
+  .do{display:flex;gap:11px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--green);border-radius:10px;padding:12px 15px;margin-bottom:9px}
+  .do .n{font-size:18px;line-height:1.2}
+  .do .body{font-size:14px}.do .body b{color:var(--ink)}
+  .do.warn{border-left-color:var(--amber)}
+  .chip{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:4px}
+  .c-dev{background:var(--blue-bg);color:var(--blue)}.c-blind{background:var(--purple-bg);color:var(--purple)}
+  .foot{margin-top:26px;font-size:12.5px;color:var(--muted);text-align:center}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>Using the anchoring labels — the strategy</h1>
+<p class="sub">Turning the POSITIVE / NEGATIVE / DROP / HOLD labels into retriever + reranker training, and the one catch that decides <i>how</i> you use them.</p>
+
+<!-- THE CATCH -->
+<div class="lead">
+<p class="kicker" style="color:var(--amber)">⚠ The catch</p>
+On the <b>devset official scoring</b>, the ground-truth track for a turn <b>is the track the system played</b> — the exact track our labels grade. So our labels call that GT <b>“bad”</b> on <b>58% of train turns</b> (anchoring or wrong-fit). Demoting it = <b>fighting devset nDCG</b>.
+<div class="small" style="margin-top:7px"><b>Scope:</b> this is the <span class="chip c-dev">devset</span> script. The <span class="chip c-blind">blind A/B</span> sets that decide the leaderboard are <b>not</b> this script (extra metrics kept server-side) and are likely quality-weighted — they may <i>favor</i> the fix. Don’t over-fit to devset nDCG.</div>
+</div>
+
+<!-- WHERE VALUE LANDS -->
+<h2>Where the value lands in the score</h2>
+<div class="card">
+  <p class="kicker" style="color:var(--blue)">Composite = 0.50·nDCG@20 + 0.10·diversity + 0.10·lexical + 0.30·judge</p>
+  <div class="seg">
+    <span style="width:50%;background:var(--red)">nDCG 0.50 — in tension ⚠</span>
+    <span style="width:30%;background:var(--green)">judge 0.30 — helps ✓</span>
+    <span style="width:10%;background:#54b27e">div 0.10 ✓</span>
+    <span style="width:10%;background:#7fc79c">lex 0.10</span>
+  </div>
+  <p class="legend">The anchoring fix <b style="color:var(--red)">fights</b> the 0.50 nDCG term on the devset (it demotes the played GT), but <b style="color:var(--green)">helps</b> the 0.40 judge+diversity that rewards respecting the “different artist” ask. <b>Put the labels where they help, keep them out of where they hurt.</b></p>
+</div>
+
+<!-- THE ONE RULE -->
+<h2>The one rule: rank it down, don’t ban it</h2>
+<div class="grid2">
+  <div class="card" style="border-left:5px solid var(--red)">
+    <span class="tag t-bad">✗ pool removal (ban)</span>
+    <p style="margin:9px 0 0">Treat “bad” as <b>“never retrieve this track.”</b> The track is deleted from results.</p>
+    <div class="ex">User: “…another doomy 70s album by a <b>different band</b>.” → ban Black Sabbath.<br>But the devset GT <i>is</i> Black Sabbath → you deleted the answer → <b style="color:var(--red)">nDCG = 0</b>.</div>
+  </div>
+  <div class="card" style="border-left:5px solid var(--green)">
+    <span class="tag t-good">✓ ranking hard-negative</span>
+    <p style="margin:9px 0 0">Treat “bad” as a <b>training example</b>: rank other artists <i>above</i> it. The track stays retrievable.</p>
+    <div class="ex">Pull “different band” tracks to the top; Black Sabbath still sits at, say, rank 8 → slate respects the ask <b>and</b> the GT stays in the 20.</div>
+  </div>
+</div>
+
+<!-- RETRIEVER VS RERANKER -->
+<h2>Two models, two jobs</h2>
+<table class="cmp">
+  <tr><th></th><th>Bi-encoder (retriever)</th><th>Reranker (LambdaMART)</th></tr>
+  <tr><td>label becomes</td><td>(query, positive, hard-negative) triplet</td><td>graded relevance, grouped per query</td></tr>
+  <tr><td>controls</td><td><b>what’s in the pool</b> (recall)</td><td><b>the order</b> of a fixed pool (precision)</td></tr>
+  <tr><td>anchoring signal</td><td>pull different-artist <i>into</i> the deep pool</td><td>push the anchored track <i>down</i> the slate</td></tr>
+  <tr><td>over-apply → you lose</td><td>GT <b>from the pool</b> → unrecoverable</td><td>GT <b>below rank 20</b> → recoverable (cap it)</td></tr>
+  <tr><td>safe move</td><td>“add, don’t subtract”; retrieve top-1000; watch %GT-not-in-pool</td><td>iterate the <b>product</b> reranker; keep the <b>submitted</b> one label-pure</td></tr>
+</table>
+
+<!-- THE PLAN -->
+<h2>What I’m suggesting — the plan</h2>
+
+<div class="do warn">
+  <div class="n">①</div>
+  <div class="body"><b>Keep the SUBMITTED reranker label-pure.</b> It’s trained on <code>label = (track == played GT)</code>. Feeding anchor-NEGATIVE grades in would <b>invert the metric’s own GT</b>. Don’t. <span class="chip c-dev">protects devset</span></div>
+</div>
+<div class="do">
+  <div class="n">②</div>
+  <div class="body"><b>Use the labels in the PRODUCT retriever — “add, don’t subtract.”</b> Pull different-artist tracks into the top-1000 pool <i>alongside</i> the anchored GT; anchoring tracks as moderate hard-negatives. Recall- and diversity-positive, metric-neutral. <span class="chip c-dev">devset-safe</span></div>
+</div>
+<div class="do">
+  <div class="n">③</div>
+  <div class="body"><b>Spend the labels on the JUDGE + diversity axes</b> (response generation + slate). That’s ~40% of the composite, rewards respecting the “different artist” ask, and is the axis the <b>blind</b> eval most likely weights. <span class="chip c-blind">helps blind too</span></div>
+</div>
+<div class="do">
+  <div class="n">④</div>
+  <div class="body"><b>Measure anchoring on a held-out anchoring-rich slice, not dev nDCG.</b> Anchoring is only 5% of the devset — the fix is invisible (or looks negative) on dev nDCG by construction.</div>
+</div>
+
+<!-- LABEL CHEAT SHEET -->
+<h2>Per-label cheat sheet (product / retriever model)</h2>
+<table class="cmp">
+  <tr><th>label</th><th>retriever (bi-encoder)</th><th>product reranker</th></tr>
+  <tr><td>POSITIVE</td><td>positive in the triplet</td><td>high grade</td></tr>
+  <tr><td>NEGATIVE · anchoring</td><td>query-local hard negative (moderate)</td><td>low grade</td></tr>
+  <tr><td>NEGATIVE · content</td><td>query-local hard negative (moderate)</td><td>low grade</td></tr>
+  <tr><td>DROP (fit, disliked)</td><td>exclude</td><td><b>middle</b> grade (not as low as anchoring)</td></tr>
+  <tr><td>HOLD (unverifiable)</td><td>exclude</td><td>exclude</td></tr>
+  <tr><td>weight</td><td colspan="2">sample / instance weight = <code>confidence_weight</code> (1.0 agree · 0.6 arbiter · 0.3 HOLD)</td></tr>
+</table>
+
+<p class="foot">Full detail + the <code>file:line</code> evidence in <b>TRAINING.md</b> (Opus-advisor-reviewed); schema in <b>DATASET_CARD.md</b>.<br>
+Open item: confirm what the <b>blind</b> metric actually rewards before any leaderboard bet.</p>
+
+</div></body></html>

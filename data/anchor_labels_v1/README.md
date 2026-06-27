@@ -46,6 +46,7 @@ gh release download anchor-labels-v1 -p '*_audit.tar.gz'
 | **`reports/train.html`** | Visual walkthrough of the full train result (open in a browser). |
 | **`reports/dev.html`** | Visual walkthrough of the dev result. |
 | **`reports/flow.html`** | Plain-English explainer of how the labeling works (for someone with no context). |
+| **`reports/strategy.html`** | Visual one-pager of how to *use* the labels for retrieval/reranking — the catch (devset GT = the played track) and the plan. Companion to `TRAINING.md`. |
 
 Pipeline scripts (committed): `scripts/rerank/anchor_labels/build_anchor_universe.py`,
 `convo_context.py`, `batch_sheet.py`, `judge_anchor_content.py`,
