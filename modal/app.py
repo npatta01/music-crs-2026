@@ -105,7 +105,8 @@ image = (
         ".",
         "/app",
         copy=True,
-        ignore=[".*", "__pycache__", "*.pyc", ".venv", "exp", "cache", "submission*"],
+        ignore=[".*", "__pycache__", "*.pyc", ".venv", "exp", "cache", "submission*",
+                "models/biencoder*"],  # 15GB b1 encoder lives on a volume / cache-served, never bundle it
     )
     .env(
         {
@@ -215,6 +216,11 @@ def _populate_inference_env(env: dict[str, str], *, lancedb_uri: str | None = No
     # Cache root for volume-backed files referenced via ${oc.env:MCRS_CACHE_DIR,...}
     # (e.g. tag_embedding_index). Defaults to ./cache for local runs.
     env.setdefault("MCRS_CACHE_DIR", CACHE_DIR)
+    # b1_cos serving: the 4B encoder lives on the models volume (excluded from the image),
+    # so a cache MISS (unwarmed/blindset query) loads the weights from the volume instead
+    # of the absent /app/models path. Upload the weights to this dir before serving. (PR #160)
+    env.setdefault("MCRS_B1_MODEL_DIR",
+                   f"{MODELS_DIR}/biencoder_variant_v_struct_pt_l2048_qwen3-embedding-4b")
 
 
 def _apply_inference_env(*, lancedb_uri: str | None = None) -> None:
@@ -2294,7 +2300,8 @@ _clap_image = (
         ".",
         "/app",
         copy=True,
-        ignore=[".*", "__pycache__", "*.pyc", ".venv", "exp", "cache", "submission*"],
+        ignore=[".*", "__pycache__", "*.pyc", ".venv", "exp", "cache", "submission*",
+                "models/biencoder*"],  # 15GB b1 encoder lives on a volume / cache-served, never bundle it
     )
     .env({"PYTHONPATH": "/app"})
 )

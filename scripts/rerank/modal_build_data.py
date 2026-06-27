@@ -19,7 +19,7 @@ What it does (one CPU function):
 
 Setup (one-time small uploads to the volume), then run:
     modal volume put --force biencoder-data \
-        exp/analysis/retrieval_exploration/artist_knownfor.json /artist_knownfor.json
+        data/artist_knownfor.json /artist_knownfor.json
     modal volume put --force biencoder-data \
         exp/analysis/rerank/devset_lanes_v10.jsonl /devset_lanes_v10.jsonl
     modal run scripts/rerank/modal_build_data.py

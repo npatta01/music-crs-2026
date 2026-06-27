@@ -45,6 +45,7 @@ See:
 
 from __future__ import annotations
 
+import threading as _threading
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -188,6 +189,10 @@ class Qwen3EmbeddingClient:
     _tokenizer: Any = field(default=None, init=False, repr=False)
     _torch: Any = field(default=None, init=False, repr=False)
     _F: Any = field(default=None, init=False, repr=False)
+    # Serializes the lazy model load: without it, concurrent threads (the
+    # reranker's async fan-out hitting cache MISSES) each load the 16GB model
+    # -> N x weights -> OOM. First thread loads; the rest wait and reuse it.
+    _load_lock: Any = field(default_factory=_threading.Lock, init=False, repr=False)
 
     # ------------------------------------------------------------------
     # Public surface
@@ -220,6 +225,12 @@ class Qwen3EmbeddingClient:
     def _ensure_loaded(self) -> None:
         if self._model is not None:
             return
+        with self._load_lock:
+            if self._model is not None:  # another thread loaded it while we waited
+                return
+            self._load_model()
+
+    def _load_model(self) -> None:
         import torch
         import torch.nn.functional as F
         from transformers import AutoModel, AutoTokenizer

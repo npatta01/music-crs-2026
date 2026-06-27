@@ -54,6 +54,27 @@ PCT_FEATURES_V9 = [
 NAN = float("nan")
 
 
+def load_b1_doc_vectors(doc_npy: str, doc_corpus: str) -> dict:
+    """b1 (4B v_struct_pt) doc vectors -> {track_id: L2-normed np.float32 vec}."""
+    import json
+    tids = [json.loads(line)["track_id"] for line in open(doc_corpus)]
+    D = np.load(doc_npy).astype(np.float32)
+    D /= np.maximum(np.linalg.norm(D, axis=1, keepdims=True), 1e-9)
+    return {str(t): D[i] for i, t in enumerate(tids)}
+
+
+def load_b1_query_vectors(qvec_npy: str, gt_file: str) -> dict:
+    """b1 query vecs -> {(sid,tn): L2-normed vec}, keyed in ground-truth-file order
+    (the cached Q was built in devset.json order). Offline/replay path only; live
+    serving instead passes the per-turn query vec via row["b1_qvec"] (thread-local)."""
+    import json
+    Q = np.load(qvec_npy).astype(np.float32)
+    Q /= np.maximum(np.linalg.norm(Q, axis=1, keepdims=True), 1e-9)
+    keys = [(str(r["session_id"]), int(r["turn_number"])) for r in json.load(open(gt_file))]
+    assert len(keys) == Q.shape[0], f"keys {len(keys)} != Q {Q.shape[0]}"
+    return {k: Q[i] for i, k in enumerate(keys)}
+
+
 class TurnContext:
     """Everything compute_turn_features needs, built once per process."""
 
@@ -71,6 +92,12 @@ class TurnContext:
         self.branch_names = list(branch_names)
         self.pool_k = pool_k
         self.offline = offline
+        # b1 (4B v_struct_pt) scout feature. b1_qvec is the OFFLINE/replay query dict
+        # ((sid,tn) -> L2-normed vec, set once); live serving instead passes the per-turn
+        # vec via row["b1_qvec"] (thread-local). b1_doc is unused (docs read via cat.v).
+        # No b1_qvec for a turn => b1_cos emits NaN (no behavior change for non-b1 configs).
+        self.b1_doc: dict | None = None
+        self.b1_qvec: dict | None = None
 
         tok_df: Counter = Counter()
         self.name_tokens_all: dict[str, frozenset] = {}
@@ -266,6 +293,12 @@ def compute_turn_features(row: dict, ctx: TurnContext, gt: str | None = None):
                 cur = artist_union_best.get(a)
                 artist_union_best[a] = float(best_r) if cur is None else min(cur, float(best_r))
 
+    # b1 query vec: serving passes it per-call via row["b1_qvec"] (thread-safe — the
+    # online reranker shares one ctx across concurrent rerank() threads, so stashing
+    # it on ctx races). Offline/replay set the full ctx.b1_qvec dict once (no race).
+    b1_qv = row.get("b1_qvec")
+    if b1_qv is None and ctx.b1_qvec is not None:
+        b1_qv = ctx.b1_qvec.get((sid, tn))
     rows_out = []
     for tid_, branch_hits in cand_rank.items():
         m = cat.meta.get(tid_)
@@ -301,6 +334,12 @@ def compute_turn_features(row: dict, ctx: TurnContext, gt: str | None = None):
         msg_attr_c = cos(msg_vec, "attributes_qwen3_embedding_0_6b")
         msg_lyr_c = cos(msg_vec, "lyrics_qwen3_embedding_0_6b")
         ctx_meta_c = cos(ctx_vec, "metadata_qwen3_embedding_0_6b")
+        # b1_cos (4B v_struct_pt) cosine: query . doc, doc via cat.v("b1_vstructpt_4b")
+        # (LanceDB, L2-normed). Dim guard mirrors qcos() — a stale-dim query NaNs
+        # rather than raising.
+        b1_cos_c = (cos(b1_qv, "b1_vstructpt_4b")
+                    if (b1_qv is not None and len(b1_qv) == 2560)
+                    else NAN)
         rec = {
             "session_id": sid, "turn_number": tn, "track_id": tid_,
             "label": int(tid_ == gt) if gt is not None else 0,
@@ -322,6 +361,7 @@ def compute_turn_features(row: dict, ctx: TurnContext, gt: str | None = None):
             "clap_last": clap_last_c,
             "clap_centroid": clap_centroid_c,
             "siglip_centroid": siglip_centroid_c,
+            "b1_cos": b1_cos_c,
             "same_artist_session": same_artist,
             "same_artist_last": float(bool(set(m["artists"]) & last_artists)),
             "same_album_last": float(bool(albums & last_albums)),

@@ -65,6 +65,7 @@ VECTOR_FIELDS = {
     "metadata_qwen3_embedding_0_6b": "q06_meta",
     "attributes_qwen3_embedding_0_6b": "q06_attr",
     "lyrics_qwen3_embedding_0_6b": "q06_lyr",
+    "b1_vstructpt_4b": "b1",  # 4B fine-tuned conv->track doc vec (scout_cos); L2-normed in catalog
 }
 
 

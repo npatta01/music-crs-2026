@@ -21,6 +21,7 @@ _NON_EMBEDDING_VECTOR_COLUMNS = (
     "cf_bpr",            # 128-d collaborative-filtering BPR vector
     "audio_laion_clap",  # 512-d LAION CLAP audio embedding
     "image_siglip2",     # 768-d SigLIP-2 cover-image embedding
+    "b1_vstructpt_4b",   # 2560-d fine-tuned Qwen3-Embedding-4B conv->track (goal-free v_struct_pt); L2-normed
 )
 
 if TYPE_CHECKING:

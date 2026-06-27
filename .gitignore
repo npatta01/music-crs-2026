@@ -8,7 +8,10 @@ inference/
 .DS_Store
 evaluator/exp/*
 submission/
-data/
+# data/ is ignored EXCEPT small committed reference data (expensive to regenerate)
+data/*
+!data/artist_knownfor.json
+!data/README.md
 exp/
 .claude/worktrees/
 logs/
