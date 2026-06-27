@@ -22,6 +22,9 @@ import argparse, glob, json, os
 def chunk(a):
     rows = [json.loads(l) for l in open(a.conflicts)]
     os.makedirs(a.work_dir, exist_ok=True)
+    # clear stale chunk/arb outputs from a prior run so merge() can't pick up orphan verdicts
+    for old in glob.glob(os.path.join(a.work_dir, "chunk_*.jsonl")) + glob.glob(os.path.join(a.work_dir, "arb_*.json")):
+        os.remove(old)
     n = 0
     for i in range(0, len(rows), a.size):
         part = rows[i:i + a.size]
@@ -35,7 +38,7 @@ def chunk(a):
     for j in range(n):
         cf = os.path.join(a.work_dir, f"chunk_{j:03d}.jsonl")
         of = os.path.join(a.work_dir, f"arb_{j:03d}.json")
-        print(f"  • INPUT {cf}  ->  OUTPUT {of}")
+        print(f"  - INPUT {cf}  ->  OUTPUT {of}")
     print(f"\nThen: python scripts/rerank/anchor_labels/run_arbiter.py merge --conflicts {a.conflicts} "
           f"--work-dir {a.work_dir} --out {os.path.join(os.path.dirname(a.conflicts), 'arbiter.json')}")
 
@@ -49,17 +52,21 @@ def merge(a):
             print(f"  WARN {len(dup)} duplicate keys in {os.path.basename(p)} (last wins)")
         merged.update(d)
     want = {f"{r['sid']}|{r['tn']}" for r in (json.loads(l) for l in open(a.conflicts))}
-    missing = want - set(merged)
     extra = set(merged) - want
+    if extra:                                       # verdicts for keys not in THIS conflict set = stale
+        print(f"  WARN {len(extra)} arbiter verdict(s) for keys NOT in this conflict set "
+              f"(stale outputs?) — dropping: {sorted(extra)[:3]}")
+        merged = {k: v for k, v in merged.items() if k in want}
+    missing = want - set(merged)
     json.dump(merged, open(a.out, "w"))
     print(f"merged {len(merged)} arbiter verdicts -> {a.out}")
     print(f"  conflicts to cover: {len(want)} | covered: {len(want & set(merged))} | "
           f"MISSING: {len(missing)} | extra: {len(extra)}")
     if missing:
-        print(f"  ❌ NOT all conflicts arbitrated — re-run the arbiter on: {sorted(missing)[:5]}...")
+        print(f"  [X] NOT all conflicts arbitrated — re-run the arbiter on: {sorted(missing)[:5]}...")
         print(f"     (compose_labels will mark these UNRESOLVED until covered)")
     else:
-        print("  ✅ full coverage — feed to compose_labels.py --arbiter " + a.out)
+        print("  [OK] full coverage — feed to compose_labels.py --arbiter " + a.out)
 
 
 def main():

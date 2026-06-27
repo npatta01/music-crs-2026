@@ -1,4 +1,4 @@
-# Anchoring-fix training labels — v1
+# Anchoring-fix training labels — v1.1
 
 Clean, LLM-judged labels over the **train** and **dev** splits of
 `talkpl-ai/TalkPlayData-Challenge-Dataset`, built to retrain the two-tower
@@ -8,8 +8,13 @@ listener asked for a *different* one).
 - **train** — 106,393 turns / 15,199 sessions
 - **dev** (this project's `test` split) — 7,000 turns / 1,000 sessions
 
+> **v1.1** supersedes v1: the conflict gate now arbitrates judge splits on
+> *either axis* (not only the final label), and the Opus arbiter judges **blind
+> to the synthetic reaction**. Net: 3,486 axis-split turns re-arbitrated, 1,591
+> moved out of `artist_anchoring`. See **`DATASET_CARD.md` → Revision history**.
+
 The data files are too large for the repo and live as **GitHub Release assets**
-on the [`anchor-labels-v1`](../../releases/tag/anchor-labels-v1) release:
+on the [`anchor-labels-v1.1`](../../releases/tag/anchor-labels-v1.1) release:
 
 | Asset | Size | Contents |
 |---|---|---|
@@ -19,21 +24,21 @@ on the [`anchor-labels-v1`](../../releases/tag/anchor-labels-v1) release:
 | `dev_labels_audit.tar.gz` | ~1.2 MB | Dev provenance, same shape. |
 | `*.sha256` | — | Checksum sidecar per asset. |
 
-sha256 (uncompressed): train `aefb058d8f99cf55…`, dev `227986a813f82b50…`.
+sha256 (uncompressed): train `64c82bc14208c76f…`, dev `cda599a7ec9df36f…`.
 
 ## Download
 
 ```bash
 # the datasets
-gh release download anchor-labels-v1 -p 'dev_labels_full.jsonl.gz'   && gunzip dev_labels_full.jsonl.gz
-gh release download anchor-labels-v1 -p 'train_labels_full.jsonl.gz' && gunzip train_labels_full.jsonl.gz
+gh release download anchor-labels-v1.1 -p 'dev_labels_full.jsonl.gz'   && gunzip dev_labels_full.jsonl.gz
+gh release download anchor-labels-v1.1 -p 'train_labels_full.jsonl.gz' && gunzip train_labels_full.jsonl.gz
 
 # verify
-gh release download anchor-labels-v1 -p '*.sha256'
+gh release download anchor-labels-v1.1 -p '*.sha256'
 sha256sum -c train_labels_full.jsonl.gz.sha256 dev_labels_full.jsonl.gz.sha256
 
 # (optional) full audit/provenance bundles
-gh release download anchor-labels-v1 -p '*_audit.tar.gz'
+gh release download anchor-labels-v1.1 -p '*_audit.tar.gz'
 ```
 
 ## What's in this folder
@@ -53,8 +58,8 @@ Pipeline scripts (committed): `scripts/rerank/anchor_labels/build_anchor_univers
 
 ## Headline
 
-POSITIVE 34,938 (32.8%) · NEGATIVE 61,784 (58.1%) · DROP 3,922 · HOLD 5,749.
-**artist_anchoring negatives = 19,813**, of which **6,234 carried the
+POSITIVE 35,191 (33.1%) · NEGATIVE 61,063 (57.4%) · DROP 4,007 · HOLD 6,132.
+**artist_anchoring negatives = 18,222**, of which **5,880 carried the
 synthetic reaction `MOVES`** — the poisoned positives this dataset rescues
 (the raw label said the listener "liked" the anchored artist right after asking
 for a different one).

@@ -107,8 +107,8 @@ building data that teaches the model not to do that.
   <div class="stage"><div class="num" style="color:var(--blue)">7,000</div><div class="lab"><div class="t">Turns to label</div><div class="d">from 1,000 conversations · each = (chat so far + the track played)</div></div></div>
   <div class="down">▼ &nbsp; two AI judges each answer: “did they ask for a different artist?” + “does the track fit the request?”</div>
   <div class="split">
-    <div class="agree"><b>5,462 agreed</b> (78%)<div class="small">both judges gave the same verdict → we trust it</div></div>
-    <div class="dis"><b>1,538 disagreed</b> (22%)<div class="small">→ sent to the <b>Opus</b> arbiter to decide independently</div></div>
+    <div class="agree"><b>5,408 agreed</b> (77%)<div class="small">both judges gave the same verdict → we trust it</div></div>
+    <div class="dis"><b>1,592 disagreed</b> (23%)<div class="small">→ sent to the <b>Opus</b> arbiter to decide independently</div></div>
   </div>
   <div class="down">▼ &nbsp; combine into one clean label + a confidence weight</div>
   <div class="stage"><div class="num" style="color:var(--green)">7,000</div><div class="lab"><div class="t">Clean labels out</div><div class="d">0 errors · 0 unresolved · every turn labeled</div></div></div>
@@ -128,12 +128,12 @@ building data that teaches the model not to do that.
   </div>
   <div class="card">
     <p class="kicker">Our clean labels (the output)</p>
-    <div class="bar"><span class="name">POSITIVE — good</span><span class="track"><span class="fill" style="width:67.7%;background:var(--green)"></span></span><span class="pct">4,739 · 68%</span></div>
-    <div class="bar"><span class="name">NEGATIVE — anchoring</span><span class="track"><span class="fill" style="width:5%;background:var(--red)"></span></span><span class="pct">352 · 5%</span></div>
-    <div class="bar"><span class="name">NEGATIVE — wrong fit</span><span class="track"><span class="fill" style="width:19.8%;background:#e8857d"></span></span><span class="pct">1,383 · 20%</span></div>
-    <div class="bar"><span class="name">HOLD — can't tell</span><span class="track"><span class="fill" style="width:5.2%;background:var(--amber)"></span></span><span class="pct">367 · 5%</span></div>
-    <div class="bar"><span class="name">DROP — ambiguous</span><span class="track"><span class="fill" style="width:2.3%;background:var(--grey)"></span></span><span class="pct">159 · 2%</span></div>
-    <p class="small" style="margin-top:9px"><b>352 anchoring negatives</b> = caught instances of the bug. Note many were tagged “liked” in the original data — we override that, because the system still ignored the pivot.</p>
+    <div class="bar"><span class="name">POSITIVE — good</span><span class="track"><span class="fill" style="width:67.9%;background:var(--green)"></span></span><span class="pct">4,754 · 68%</span></div>
+    <div class="bar"><span class="name">NEGATIVE — anchoring</span><span class="track"><span class="fill" style="width:4.6%;background:var(--red)"></span></span><span class="pct">324 · 5%</span></div>
+    <div class="bar"><span class="name">NEGATIVE — wrong fit</span><span class="track"><span class="fill" style="width:19.9%;background:#e8857d"></span></span><span class="pct">1,391 · 20%</span></div>
+    <div class="bar"><span class="name">HOLD — can't tell</span><span class="track"><span class="fill" style="width:5.3%;background:var(--amber)"></span></span><span class="pct">371 · 5%</span></div>
+    <div class="bar"><span class="name">DROP — ambiguous</span><span class="track"><span class="fill" style="width:2.3%;background:var(--grey)"></span></span><span class="pct">160 · 2%</span></div>
+    <p class="small" style="margin-top:9px"><b>324 anchoring negatives</b> = caught instances of the bug. Note many were tagged “liked” in the original data — we override that, because the system still ignored the pivot.</p>
   </div>
 </div>
 <p class="small" style="margin-top:10px">⚠️ This devset is unusually positive (88% liked, few same-artist) because it's an <b>evaluation</b> set. The main <b>training</b> set is ~15× bigger (≈106,000 turns) and far more balanced (~50% liked, ~50% same-artist), so it will surface many more anchoring cases.</p>
@@ -178,7 +178,7 @@ building data that teaches the model not to do that.
 
 <!-- ARBITER -->
 <h2>When the two judges disagree → Opus reviews it</h2>
-<p class="small">22% of turns (1,538 here) were disagreements. A stronger model (Claude Opus) re-judges those <b>independently</b> — it answers the same questions fresh, it does not just pick a side. Two real ones:</p>
+<p class="small">23% of turns (1,592 here) were disagreements. A stronger model (Claude Opus) re-judges those <b>independently</b> — it answers the same questions fresh, it does not just pick a side. Two real ones:</p>
 <div class="grid2">
   <div class="ex" style="margin:0;border-left:5px solid var(--purple)">
     <span class="tag t-pos">POSITIVE</span> <span class="exwhy">Opus resolved →</span>
@@ -239,7 +239,7 @@ content “unsure” → <b>HOLD</b>.
 <table class="tech">
   <tr><td>Dataset</td><td>TalkPlayData (AI-generated conversational music-rec data). Devset = 1,000 conversations / 7,000 labelable turns; training set ≈ 106,000 turns.</td></tr>
   <tr><td>Two cheap judges</td><td><code>Gemma-4-26B</code> + <code>DeepSeek-V4-Flash</code> (different model families, for diversity). Identical prompt; ~$0.07–0.10 per million tokens.</td></tr>
-  <tr><td>Arbiter</td><td><code>Claude Opus</code> — only on the 22% the judges disagree on. Validated as the trusted reference (93% agreement with hand-checks on the artist question).</td></tr>
+  <tr><td>Arbiter</td><td><code>Claude Opus</code> — only on the 23% the judges disagree on. Validated as the trusted reference (93% agreement with hand-checks on the artist question).</td></tr>
   <tr><td>Confidence weights</td><td>Both judges agree = 1.0 · Opus-arbitrated = 0.6 · HOLD = 0.3. So the model can down-weight the shaky labels.</td></tr>
   <tr><td>Deterministic check</td><td>“Same artist?” is an exact catalog match in code — not left to the AI.</td></tr>
   <tr><td>Quality control</td><td>2 independent code reviews; error-retry + auto-recovery built in. Devset finished with 0 errors / 0 unresolved.</td></tr>

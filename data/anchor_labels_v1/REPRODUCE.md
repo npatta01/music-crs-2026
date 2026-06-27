@@ -62,8 +62,9 @@ $PY scripts/rerank/anchor_labels/build_anchor_universe.py --split test --expand-
 A turn is **labelable** iff a track was played at `tn` AND `assessment[tn+1]` is
 non-null (off-by-one: `assessment[tn+1]` grades `track[tn]`; the last track per
 session is unlabeled). Each sheet row carries: `sid, tn, gt_label, request`
-(full conversation, assistant replies stripped, `[system played: …]` markers
-kept), `track_meta` (the candidate doc), and `same_artist` (deterministic).
+(the last `--ctx-turns` turns up to the current ask — default 3 — assistant
+replies stripped, `[system played: …]` markers kept; pass `--ctx-turns 0` for the
+full conversation), `track_meta` (the candidate doc), and `same_artist` (deterministic).
 
 ## 3. Slice into batches of whole sessions
 
@@ -79,7 +80,9 @@ $PY scripts/rerank/anchor_labels/batch_sheet.py \
 
 ## 4. Label one batch end-to-end
 
-Do this for each `batch_NN`; `B=$DATA/labels_train/b00`, `SHEET=$DATA/labels_train/batches/batch_00.jsonl`:
+Do this for each `batch_NN` (`NN = 00…15`; batches are independent — run them in
+sequence or in parallel). Shown for `b00`; set `B=$DATA/labels_train/b00`,
+`SHEET=$DATA/labels_train/batches/batch_00.jsonl` and repeat with `01…15`:
 
 ```bash
 mkdir -p $B
@@ -92,7 +95,7 @@ $PY scripts/rerank/anchor_labels/judge_anchor_content.py --base https://api.deep
     --key-env DEEPINFRA_API_KEY --model deepseek-ai/DeepSeek-V4-Flash --concurrency 64 \
     --sheet $SHEET --out $B/records_deepseek.jsonl
 
-# 4b. compose -> finds the ~16% of turns where the two judges DISAGREE
+# 4b. compose -> finds the ~20% of turns where the judges split on the label OR an axis
 $PY scripts/rerank/anchor_labels/compose_labels.py --split train \
     --judge1 $B/records_gemma.jsonl --j1-name gemma \
     --judge2 $B/records_deepseek.jsonl --j2-name deepseek_v4_flash \
@@ -142,7 +145,7 @@ conflict turns and returns, per turn, the two axes:
   and each chunk line as input; write the `{sid|tn: {asked_diff, content}}` JSON
   to `arb_00N.json`. `compose_labels.py --arbiter` accepts either that `.json`
   map or a `.jsonl` of records. (Sonnet works too at lower cost — it only sees
-  the ~16% the cheap judges disagree on.)
+  the ~20% the cheap judges split on.)
 
 ## 6. Assemble the full set
 
@@ -150,9 +153,10 @@ After all 16 batches pass step 4:
 
 ```bash
 $PY - <<'EOF'
-import json, glob
+import os, json, glob
+dd = os.environ.get("ANCHOR_DATA_DIR", "exp/analysis/retrieval_exploration")   # honor the override from §1
 rows, seen = [], set()
-for f in sorted(glob.glob("exp/analysis/retrieval_exploration/labels_train/b[01][0-9]/final_labels.jsonl")):
+for f in sorted(glob.glob(f"{dd}/labels_train/b[01][0-9]/final_labels.jsonl")):
     for line in open(f):
         r = json.loads(line); k = (r["sid"], r["tn"])
         if k not in seen: seen.add(k); rows.append(r)

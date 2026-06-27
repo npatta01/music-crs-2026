@@ -18,7 +18,9 @@ input. Each line is one turn:
 - `track_meta` — the ONE candidate track the system played at this turn (what you are judging).
 - `same_artist` — deterministic ground truth (catalog exact-match): is the candidate by the SAME
   artist as the just-played track? Use this value AS GIVEN; never re-guess artist identity.
-- `gt_label` — the listener's reaction (MOVES/DOES_NOT). Context only; do NOT let it decide content.
+
+(The listener's synthetic reaction is deliberately NOT shown — judge the request + track on their
+own merits, not on whether the listener happened to like it.)
 
 For each turn answer TWO independent questions:
 

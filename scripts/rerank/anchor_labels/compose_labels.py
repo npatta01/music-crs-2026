@@ -85,7 +85,14 @@ def main():
     if bad:
         raise SystemExit(f"{len(bad)} sids absent from '{a.split}' index — wrong --split? e.g. {bad[:3]}")
 
-    keys = sorted(set(J1) & set(J2) & set(sheet))
+    # Integrity: every sheet row MUST be judged by both judges. A truncated/partial judge file
+    # would silently shrink the intersection and pass the "0 dropped" check while turns vanish.
+    present = set(J1) & set(J2)
+    missing = set(sheet) - present
+    if missing:
+        raise SystemExit(f"{len(missing)} sheet rows absent from a judge file (incomplete judge run?) "
+                         f"— e.g. {sorted(missing)[:3]}. Re-run the judges before composing.")
+    keys = sorted(set(sheet))
     j1_out, j2_out, arb_out, final_out, conflict_keys, dropped = [], [], [], [], [], []
     n_agree = n_arb = n_unres = 0
 
@@ -103,11 +110,15 @@ def main():
         j2_out.append({"sid": sid, "tn": tn, "asked_diff": r2["asked_diff"], "same_artist": same,
                        "anchoring": anc2, "content": r2["content"], "label": l2})
 
-        if l1 == l2:                               # judges agree
+        # Agree only when the OUTCOME matches — same label AND same reason. `why` uniquely encodes
+        # the anchoring axis (artist_anchoring iff anchoring) and the content bucket, so this also
+        # catches axis-level splits that happen to collapse to the same label (e.g. one judge
+        # content_violation, the other artist_anchoring) — those go to the arbiter, not silently to j1.
+        if l1 == l2 and why1 == why2:              # judges agree on label AND reason/axis
             n_agree += 1
             ad, ct, lab, why = r1["asked_diff"], r1["content"], l1, why1
             source, weight = "both_agree", (0.3 if lab == "HOLD" else 1.0)
-        else:                                       # disagree -> needs the Opus arbiter
+        else:                                       # disagree (label OR axis) -> needs the Opus arbiter
             conflict_keys.append(k)
             o = ARB.get(k)
             if not o or (o.get("asked_diff") is None and o.get("content") is None):
@@ -148,8 +159,11 @@ def main():
     dump(f"judge1_{a.j1_name}.jsonl", j1_out)
     dump(f"judge2_{a.j2_name}.jsonl", j2_out)
     dump("opus_arbiter.jsonl", arb_out)
-    # the EXACT arbiter input, derived from THIS judge pair (fixes the build_seeboth pair-mismatch):
-    dump("conflicts_sheet.jsonl", [sheet[k] for k in conflict_keys])
+    # the EXACT arbiter input, derived from THIS judge pair (fixes the build_seeboth pair-mismatch).
+    # gt_label (the synthetic reaction) is STRIPPED here — the arbiter judges artist-novelty + content
+    # fit only, and must not see the reaction it could be biased by.
+    dump("conflicts_sheet.jsonl",
+         [{kk: vv for kk, vv in sheet[k].items() if kk != "gt_label"} for k in conflict_keys])
     fp = dump("final_labels.jsonl", final_out)
 
     from collections import Counter

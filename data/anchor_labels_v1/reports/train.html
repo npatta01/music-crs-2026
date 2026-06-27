@@ -74,12 +74,12 @@ between the two cheap judges was resolved by the Opus arbiter (full coverage on 
   </div>
   <div class="card">
     <p class="kicker">Our clean labels — 106,393 turns</p>
-    <div class="bar"><span class="name">NEGATIVE — anchoring</span><span class="track"><span class="fill" style="width:18.6%;background:var(--red)"></span></span><span class="pct">19,813 · 18.6%</span></div>
-    <div class="bar"><span class="name">NEGATIVE — wrong fit</span><span class="track"><span class="fill" style="width:39.4%;background:#e8857d"></span></span><span class="pct">41,971 · 39.4%</span></div>
-    <div class="bar"><span class="name">POSITIVE — good</span><span class="track"><span class="fill" style="width:32.8%;background:var(--green)"></span></span><span class="pct">34,938 · 32.8%</span></div>
-    <div class="bar"><span class="name">HOLD — can't tell</span><span class="track"><span class="fill" style="width:5.4%;background:var(--amber)"></span></span><span class="pct">5,749 · 5.4%</span></div>
-    <div class="bar"><span class="name">DROP — ambiguous</span><span class="track"><span class="fill" style="width:3.7%;background:var(--grey)"></span></span><span class="pct">3,922 · 3.7%</span></div>
-    <p class="small" style="margin-top:8px"><b class="ok">19,813 anchoring cases</b> — of which <b class="ok">6,234</b> the original data had wrongly marked "liked." Those are the poisoned positives this dataset rescues.</p>
+    <div class="bar"><span class="name">NEGATIVE — anchoring</span><span class="track"><span class="fill" style="width:17.1%;background:var(--red)"></span></span><span class="pct">18,222 · 17.1%</span></div>
+    <div class="bar"><span class="name">NEGATIVE — wrong fit</span><span class="track"><span class="fill" style="width:40.3%;background:#e8857d"></span></span><span class="pct">42,841 · 40.3%</span></div>
+    <div class="bar"><span class="name">POSITIVE — good</span><span class="track"><span class="fill" style="width:33.1%;background:var(--green)"></span></span><span class="pct">35,191 · 33.1%</span></div>
+    <div class="bar"><span class="name">HOLD — can't tell</span><span class="track"><span class="fill" style="width:5.8%;background:var(--amber)"></span></span><span class="pct">6,132 · 5.8%</span></div>
+    <div class="bar"><span class="name">DROP — ambiguous</span><span class="track"><span class="fill" style="width:3.8%;background:var(--grey)"></span></span><span class="pct">4,007 · 3.8%</span></div>
+    <p class="small" style="margin-top:8px"><b class="ok">18,222 anchoring cases</b> — of which <b class="ok">5,880</b> the original data had wrongly marked "liked." Those are the poisoned positives this dataset rescues.</p>
   </div>
 </div>
 
@@ -88,10 +88,10 @@ between the two cheap judges was resolved by the Opus arbiter (full coverage on 
   <div class="stage"><div class="num" style="color:var(--blue)">106,393</div><div><b>turns</b><div class="d">15,199 conversations · each = recent chat + the track played</div></div></div>
   <div class="down">▼ &nbsp; two cheap AI judges each answer: "different-artist ask?" + "does the track fit?"</div>
   <div class="split">
-    <div class="agree"><b>88,640 agreed</b> (83%) → trusted (weight 1.0 / HOLD 0.3)</div>
-    <div class="dis"><b>17,753 disagreed</b> (17%) → <b>Opus arbiter</b> decided independently (weight 0.6)</div>
+    <div class="agree"><b>85,208 agreed</b> (80%) → trusted (weight 1.0 / HOLD 0.3)</div>
+    <div class="dis"><b>21,185 disagreed</b> (20%) → <b>Opus arbiter</b> decided independently (weight 0.6)</div>
   </div>
-  <div class="down">▼ &nbsp; the arbiter resolved its 17,753 to a real spread — <b>not</b> all "can't tell": 9,870 POS · 2,144 NEG · 1,716 DROP · 4,023 HOLD</div>
+  <div class="down">▼ &nbsp; the arbiter resolved its 21,185 to a real spread — <b>not</b> all "can't tell": 10,123 POS · 4,855 NEG · 1,801 DROP · 4,406 HOLD</div>
   <div class="stage"><div class="num" style="color:var(--green)">106,393</div><div><b>clean labels</b> <span class="ok">· 0 errors · 0 unresolved</span></div></div>
 </div>
 
@@ -136,8 +136,8 @@ between the two cheap judges was resolved by the Opus arbiter (full coverage on 
 <table class="tech">
   <tr><td>Turns labeled</td><td><b>106,393</b> (15,199 conversations, 16 batches)</td></tr>
   <tr><td>Errors / Unresolved</td><td class="ok">0 / 0</td></tr>
-  <tr><td>Judge agreement</td><td>83% agreed · 17% sent to Opus (full coverage, 17,753/17,753)</td></tr>
-  <tr><td>Anchoring caught</td><td><b>19,813</b> (18.6%) — incl. <b>6,234</b> rescued from a wrong "liked" label</td></tr>
+  <tr><td>Judge agreement</td><td>80% agreed · 20% sent to Opus (full coverage, 21,185/21,185)</td></tr>
+  <tr><td>Anchoring caught</td><td><b>18,222</b> (17.1%) — incl. <b>5,880</b> rescued from a wrong "liked" label</td></tr>
   <tr><td>Arbiter gate</td><td class="ok">passed — arbitrated conflicts resolved to a real POS/NEG/DROP/HOLD spread</td></tr>
   <tr><td>Robustness</td><td>per-batch coverage check + dropped-row refill; recovered cleanly from a mid-run process restart (batch 13)</td></tr>
   <tr><td>Cost</td><td>≈ $33 (cheap judges, DeepInfra) + Opus arbiter (Claude plan + usage credits)</td></tr>

@@ -71,10 +71,17 @@ def load_env_key(name):
     if name in os.environ:
         return os.environ[name]
     for p in (f"{REPO}/.env", os.path.expanduser("~/.env")):
-        if os.path.exists(p):
-            for line in open(p):
-                if line.strip().startswith(name + "="):
-                    return line.split("=", 1)[1].strip().strip('"').strip("'")
+        if not os.path.exists(p):
+            continue
+        for line in open(p):
+            s = line.strip()
+            if s.startswith("export "):          # tolerate `export KEY=...`
+                s = s[len("export "):].lstrip()
+            if "=" not in s:
+                continue
+            k, v = s.split("=", 1)
+            if k.strip() == name:                # tolerate spaces around `=`
+                return v.strip().strip('"').strip("'")
     return None
 
 

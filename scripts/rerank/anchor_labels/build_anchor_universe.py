@@ -5,7 +5,8 @@ A turn `tn` is labelable iff: a track was played at `tn` AND `assessment[tn+1]` 
   reaction    = MOVES / DOES_NOT   (from assessment[tn+1])
   same_artist = deterministic catalog match (candidate artist == just-played artist)
   track_meta  = candidate doc text
-  request     = FULL conversation up to the current ask (assistant-stripped, played-markers kept)
+  request     = the last `--ctx-turns` turns up to the current ask (default 3; assistant-stripped,
+                played-markers kept). Pass `--ctx-turns 0` for the full conversation.
 
 Writes a lightweight universe file (ids + flags) and a JUDGE-READY sheet (with request + track_meta)
 for a stratified sample that oversamples same_artist=True (the anchoring-relevant cell).
