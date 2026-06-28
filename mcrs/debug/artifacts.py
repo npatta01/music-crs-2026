@@ -193,6 +193,7 @@ def catalog_search(
     artist_key = _surface_key(artist)
     album_key = _surface_key(album)
     text_tokens = tuple(tok for tok in _surface_key(text).split() if tok)
+    artist_only = bool(artist_key and not track_key and not album_key and not text_tokens)
 
     exact: list[CatalogHit] = []
     title_or_album_only: list[CatalogHit] = []
@@ -212,6 +213,10 @@ def catalog_search(
         album_matches = bool(album_key and album_row_key == album_key)
         entity_matches = title_matches or album_matches
         artist_matches = not artist_key or artist_key in artist_keys
+
+        if artist_only and artist_matches:
+            exact.append(hit)
+            continue
 
         if entity_matches and artist_matches:
             exact.append(hit)

@@ -10,6 +10,10 @@ from mcrs.conversation_state.schema import ConversationStateV0Plus, MentionedEnt
 from mcrs.debug.cli import main
 from mcrs.debug.formatting import _track_payload
 from mcrs.debug.artifacts import (
+    _catalog_hit,
+    _first_str,
+    _str_values,
+    _surface_key,
     catalog_search,
     load_run_aliases,
     resolve_run_alias,
@@ -91,6 +95,29 @@ def test_catalog_search_finds_exact_artist_and_track_match():
     assert result.title_or_album_only == []
 
 
+def test_catalog_search_artist_only_returns_artist_matches():
+    rows = {
+        "t-one": {
+            "track_name": "One",
+            "artist_name": ["Target Artist"],
+            "album_name": "Album A",
+            "tag_list": ["rock"],
+        },
+        "t-two": {
+            "track_name": "Two",
+            "artist_name": ["Other Artist"],
+            "album_name": "Album B",
+            "tag_list": ["pop"],
+        },
+    }
+
+    result = catalog_search(rows, artist="Target Artist")
+
+    assert [hit.track_id for hit in result.exact] == ["t-one"]
+    assert result.title_or_album_only == []
+    assert result.contains == []
+
+
 def test_debug_cli_shim_exports_legacy_surface():
     import mcrs.debug_cli as legacy_debug_cli
 
@@ -101,6 +128,15 @@ def test_debug_cli_shim_exports_legacy_surface():
     assert legacy_debug_cli.catalog_search is catalog_search
     assert callable(legacy_debug_cli.trace_row)
     assert callable(legacy_debug_cli._load_config_for_args)
+
+
+def test_debug_tools_shim_exports_legacy_private_helpers():
+    import mcrs.debug_tools as legacy_debug_tools
+
+    assert legacy_debug_tools._surface_key is _surface_key
+    assert legacy_debug_tools._catalog_hit is _catalog_hit
+    assert legacy_debug_tools._first_str is _first_str
+    assert legacy_debug_tools._str_values is _str_values
 
 
 def test_dense_search_command_embeds_query_and_returns_catalog_rows(tmp_path, monkeypatch):
@@ -873,6 +909,38 @@ def test_rerank_feature_payload_reports_encoded_and_raw_model_features(monkeypat
     assert candidate["contrib"] == {"age_group": 0.2, "score_feature": 0.3, "bias": 0.1}
 
 
+def test_load_trace_document_selects_jsonl_row_by_session_and_turn(tmp_path):
+    trace_path = tmp_path / "trace.jsonl"
+    trace_path.write_text(
+        json.dumps(
+            {
+                "session_id": "sid-1",
+                "turn_number": 1,
+                "trace": {"final_recommendation": {"track_ids": ["t-one"]}},
+            }
+        )
+        + "\n"
+        + json.dumps(
+            {
+                "session_id": "sid-2",
+                "turn_number": 4,
+                "trace": {"final_recommendation": {"track_ids": ["t-two"]}},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    wrapper, trace = debug_rerank._load_trace_document(
+        trace_path,
+        session_id="sid-2",
+        turn_number=4,
+    )
+
+    assert wrapper["session_id"] == "sid-2"
+    assert trace["final_recommendation"]["track_ids"] == ["t-two"]
+
+
 def test_rerank_features_command_reports_scores_features_and_diff(tmp_path, monkeypatch):
     class FakeQU:
         def _get_reranker(self):
@@ -886,6 +954,7 @@ def test_rerank_features_command_reports_scores_features_and_diff(tmp_path, monk
         assert [hit[0] for hit in feature_trace["branches"]["pools"][0]["hits"]] == [
             "t-target",
             "t-winner",
+            "t-other",
         ]
         return {
             "columns": ["b1_cos", "rank__bm25", "same_artist_session"],
@@ -971,9 +1040,7 @@ def test_rerank_features_command_reports_scores_features_and_diff(tmp_path, monk
             "--trace",
             str(trace_path),
             "--candidate",
-            "t-target",
-            "--candidate",
-            "t-winner",
+            "t-other",
             "--diff",
             "t-target",
             "t-winner",
@@ -1148,6 +1215,60 @@ def test_bundle_case_command_writes_replay_files(tmp_path):
     assert "rerank-subset --config configs/example.yaml --trace replay_trace.json --candidates candidates.txt --session-id sid-1 --turn 4 --user-id u1" in commands
     assert "rerank-features --config configs/example.yaml --trace replay_trace.json --candidates candidates.txt --session-id sid-1 --turn 4 --user-id u1" in commands
     assert "--target-track-id t-target" in commands
+
+
+def test_bundle_case_without_target_omits_target_audit_command(tmp_path):
+    trace_path = tmp_path / "trace.jsonl"
+    trace_path.write_text(
+        json.dumps(
+            {
+                "session_id": "sid-1",
+                "turn_number": 4,
+                "user_id": "u1",
+                "trace": {
+                    "extracted_state": {"turn_intent": "find something"},
+                    "compiled_state": {},
+                    "ranking": {
+                        "stages": [
+                            {
+                                "name": "candidate_fusion",
+                                "track_ids": ["t-candidate"],
+                                "scores": [["t-candidate", 1.0]],
+                            }
+                        ]
+                    },
+                    "final_recommendation": {"track_ids": ["t-candidate"]},
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    run_file = tmp_path / "runs.json"
+    run_file.write_text(json.dumps({"blind": {"trace": str(trace_path)}}), encoding="utf-8")
+    out_dir = tmp_path / "case"
+
+    rc = main(
+        [
+            "--run-file",
+            str(run_file),
+            "--run",
+            "blind",
+            "bundle-case",
+            "sid",
+            "4",
+            "--out",
+            str(out_dir),
+            "--config",
+            "configs/example.yaml",
+        ]
+    )
+
+    assert rc == 0
+    commands = (out_dir / "commands.sh").read_text(encoding="utf-8")
+    assert "target-audit" not in commands
+    assert "--target-track-id" not in commands
+    assert "rerank-features" in commands
 
 
 def test_target_audit_command_reports_catalog_retrieval_and_final_ranks(tmp_path, monkeypatch, capsys):

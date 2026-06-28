@@ -190,6 +190,8 @@ def _build_parser() -> argparse.ArgumentParser:
 
     target = sub.add_parser("target-audit", help="Audit where a target track appears in catalog/retrieval/ranking.")
     target.add_argument("--trace", required=True)
+    target.add_argument("--session-id")
+    target.add_argument("--turn", type=int)
     target.add_argument("--target-track-id", required=True)
     target.add_argument("--track")
     target.add_argument("--artist")

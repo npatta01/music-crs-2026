@@ -71,7 +71,11 @@ def _cmd_bundle_case(args: argparse.Namespace) -> int:
     return 0
 
 def _cmd_target_audit(args: argparse.Namespace) -> int:
-    _, trace = _load_trace_document(args.trace)
+    _, trace = _load_trace_document(
+        args.trace,
+        session_id=getattr(args, "session_id", None),
+        turn_number=getattr(args, "turn", None),
+    )
     catalog = runtime._load_catalog(runtime._optional_run(args), args)
     rows = catalog.feature_rows()
     payload = _target_audit_payload(
@@ -182,10 +186,15 @@ def _bundle_commands(
         "",
         f"mcrs-debug retrieve-state {config_args} --state state.json --conversation conversation.json --session-id {sid} --turn {turn}{user} --trace-out replay_trace.json --compiled-out replay_compiled.json",
         f"mcrs-debug --format json diff-trace trace.json replay_trace.json{target} > trace_diff.json",
-        f"mcrs-debug --format json target-audit --trace replay_trace.json{target} > target_audit.json",
+    ]
+    if args.target_track_id:
+        lines.append(
+            f"mcrs-debug --format json target-audit --trace replay_trace.json --session-id {sid} --turn {turn}{target} > target_audit.json"
+        )
+    lines.extend([
         f"mcrs-debug rerank-subset {config_args} --trace replay_trace.json --candidates candidates.txt --session-id {sid} --turn {turn}{user} --out rerank_subset.json",
         f"mcrs-debug rerank-features {config_args} --trace replay_trace.json --candidates candidates.txt --session-id {sid} --turn {turn}{user} --contrib --out rerank_features.json",
-    ]
+    ])
     return "\n".join(lines) + "\n"
 
 def _bundle_config_args(args: argparse.Namespace) -> str:

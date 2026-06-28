@@ -16,7 +16,7 @@ _OFFLINE_UNCHANGED = object()
 
 
 def _cmd_rerank_subset(args: argparse.Namespace) -> int:
-    wrapper, trace = _load_trace_document(args.trace)
+    wrapper, trace = _load_trace_document(args.trace, session_id=args.session_id, turn_number=args.turn)
     candidate_ids = _load_candidate_ids(args.candidate, args.candidates)
     if not candidate_ids:
         raise ValueError("provide at least one --candidate or --candidates file")
@@ -65,10 +65,10 @@ def _cmd_rerank_subset(args: argparse.Namespace) -> int:
     return 0
 
 def _cmd_rerank_features(args: argparse.Namespace) -> int:
-    wrapper, trace = _load_trace_document(args.trace)
+    wrapper, trace = _load_trace_document(args.trace, session_id=args.session_id, turn_number=args.turn)
     candidate_ids = _load_candidate_ids(args.candidate, args.candidates)
-    if not candidate_ids and args.diff:
-        candidate_ids = list(args.diff)
+    if args.diff:
+        candidate_ids = _dedupe([*candidate_ids, *args.diff])
     if not candidate_ids:
         raise ValueError("provide at least one --candidate, --candidates file, or --diff pair")
     feature_trace, injected = _subset_feature_trace(
@@ -377,19 +377,88 @@ def _rerank_feature_diff(
         "features": rows[:limit],
     }
 
-def _load_trace_document(path: str | Path) -> tuple[dict[str, Any], dict[str, Any]]:
+def _load_trace_document(
+    path: str | Path,
+    *,
+    session_id: str | None = None,
+    turn_number: int | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
     raw_text = Path(path).read_text(encoding="utf-8").strip()
     if not raw_text:
         raise ValueError(f"empty trace file: {path}")
-    if raw_text.startswith("{"):
-        doc = json.loads(raw_text)
+    try:
+        parsed = json.loads(raw_text)
+    except json.JSONDecodeError:
+        docs = [json.loads(line) for line in raw_text.splitlines() if line.strip()]
+        doc = _select_trace_document(
+            docs,
+            path=path,
+            session_id=session_id,
+            turn_number=turn_number,
+        )
     else:
-        first = next((line for line in raw_text.splitlines() if line.strip()), "")
-        doc = json.loads(first)
+        if isinstance(parsed, list):
+            doc = _select_trace_document(
+                parsed,
+                path=path,
+                session_id=session_id,
+                turn_number=turn_number,
+            )
+        else:
+            doc = parsed
     if not isinstance(doc, dict):
         raise ValueError(f"trace file must contain a JSON object: {path}")
     trace = doc.get("trace") if isinstance(doc.get("trace"), dict) else doc
     return doc, trace
+
+
+def _select_trace_document(
+    docs: list[Any],
+    *,
+    path: str | Path,
+    session_id: str | None,
+    turn_number: int | None,
+) -> dict[str, Any]:
+    rows = [doc for doc in docs if isinstance(doc, dict)]
+    if len(rows) != len(docs):
+        raise ValueError(f"trace rows must be JSON objects: {path}")
+    if not rows:
+        raise ValueError(f"empty trace file: {path}")
+    if session_id is None and turn_number is None:
+        if len(rows) == 1:
+            return rows[0]
+        raise ValueError(
+            f"trace file contains {len(rows)} rows; pass --session-id and/or --turn to select one"
+        )
+    matches = [
+        row
+        for row in rows
+        if _trace_row_matches(row, session_id=session_id, turn_number=turn_number)
+    ]
+    if len(matches) != 1:
+        raise ValueError(
+            f"expected one trace row for session_id={session_id!r} turn={turn_number!r}; "
+            f"found {len(matches)} in {path}"
+        )
+    return matches[0]
+
+
+def _trace_row_matches(
+    row: dict[str, Any],
+    *,
+    session_id: str | None,
+    turn_number: int | None,
+) -> bool:
+    if session_id is not None and str(row.get("session_id") or "") != str(session_id):
+        return False
+    if turn_number is not None:
+        try:
+            row_turn = int(row.get("turn_number"))
+        except (TypeError, ValueError):
+            return False
+        if row_turn != int(turn_number):
+            return False
+    return True
 
 def _load_candidate_ids(inline: list[str], path: str | None) -> list[str]:
     values: list[str] = [str(item) for item in inline or []]
