@@ -50,7 +50,7 @@ notebooks = [
 
 [project.scripts]
 music-dashboard = "mcrs.dashboard:main"
-mcrs-debug = "mcrs.debug_cli:main"
+mcrs-debug = "mcrs.debug.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["mcrs*"]

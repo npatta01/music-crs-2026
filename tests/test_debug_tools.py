@@ -4,10 +4,12 @@ import types
 
 import pytest
 
-import mcrs.debug_cli as debug_cli
+import mcrs.debug.rerank as debug_rerank
+import mcrs.debug.runtime as debug_runtime
 from mcrs.conversation_state.schema import ConversationStateV0Plus, MentionedEntity
-from mcrs.debug_cli import _track_payload, main
-from mcrs.debug_tools import (
+from mcrs.debug.cli import main
+from mcrs.debug.formatting import _track_payload
+from mcrs.debug.artifacts import (
     catalog_search,
     load_run_aliases,
     resolve_run_alias,
@@ -89,6 +91,18 @@ def test_catalog_search_finds_exact_artist_and_track_match():
     assert result.title_or_album_only == []
 
 
+def test_debug_cli_shim_exports_legacy_surface():
+    import mcrs.debug_cli as legacy_debug_cli
+
+    assert legacy_debug_cli.DEFAULT_RUN_FILE == "mcrs_debug_runs.json"
+    assert legacy_debug_cli.DEFAULT_CATALOG_DB_URI == "cache/lancedb"
+    assert legacy_debug_cli.DEFAULT_CATALOG_TABLE == "music_track_catalog"
+    assert legacy_debug_cli.RunArtifacts.__name__ == "RunArtifacts"
+    assert legacy_debug_cli.catalog_search is catalog_search
+    assert callable(legacy_debug_cli.trace_row)
+    assert callable(legacy_debug_cli._load_config_for_args)
+
+
 def test_dense_search_command_embeds_query_and_returns_catalog_rows(tmp_path, monkeypatch):
     class FakeEncoder:
         def embed_batch(self, texts):
@@ -134,19 +148,19 @@ def test_dense_search_command_embeds_query_and_returns_catalog_rows(tmp_path, mo
     )
     out_path = tmp_path / "dense.json"
     monkeypatch.setattr(
-        debug_cli,
+        debug_runtime,
         "_build_debug_encoder_from_config",
         lambda config, encoder_id, allow_cache_write=False: FakeEncoder(),
         raising=False,
     )
     monkeypatch.setattr(
-        debug_cli,
+        debug_runtime,
         "_build_debug_lancedb_retriever",
         lambda config, run, args: FakeRetriever(),
         raising=False,
     )
     monkeypatch.setattr(
-        debug_cli,
+        debug_runtime,
         "_load_debug_lancedb_catalog",
         lambda config, run, args: FakeCatalog(),
         raising=False,
@@ -181,6 +195,72 @@ def test_dense_search_command_embeds_query_and_returns_catalog_rows(tmp_path, mo
     assert payload["hits"][0]["artist_name"] == "Painter"
 
 
+def test_debug_cli_shim_monkeypatches_still_drive_main(tmp_path, monkeypatch):
+    import mcrs.debug_cli as legacy_debug_cli
+
+    class FakeEncoder:
+        def embed_batch(self, texts):
+            return [[0.4, 0.5]]
+
+    class FakeRetriever:
+        def search_embedding(self, query_vector, *, vector_field, topk, distance_type, filter_missing):
+            assert query_vector == [0.4, 0.5]
+            return [("t-legacy", 0.99)]
+
+    class FakeCatalog:
+        def feature_rows(self):
+            return {
+                "t-legacy": {
+                    "track_name": "Legacy Patch",
+                    "artist_name": ["Shim Artist"],
+                    "album_name": "Compat",
+                    "tag_list": ["debug"],
+                }
+            }
+
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        "qu_kwargs:\n"
+        "  encoders:\n"
+        "    siglip2_text:\n"
+        "      backend: fake\n",
+        encoding="utf-8",
+    )
+    out_path = tmp_path / "legacy-dense.json"
+    monkeypatch.setattr(
+        legacy_debug_cli,
+        "_build_debug_encoder_from_config",
+        lambda config, encoder_id, allow_cache_write=False: FakeEncoder(),
+    )
+    monkeypatch.setattr(
+        legacy_debug_cli,
+        "_build_debug_lancedb_retriever",
+        lambda config, run, args: FakeRetriever(),
+    )
+    monkeypatch.setattr(
+        legacy_debug_cli,
+        "_load_debug_lancedb_catalog",
+        lambda config, run, args: FakeCatalog(),
+    )
+
+    rc = legacy_debug_cli.main(
+        [
+            "dense-search",
+            "--config",
+            str(config_path),
+            "--query",
+            "legacy shim patch",
+            "--out",
+            str(out_path),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(out_path.read_text(encoding="utf-8"))
+    assert payload["hits"][0]["track_id"] == "t-legacy"
+    assert payload["hits"][0]["artist_name"] == "Shim Artist"
+
+
 def test_dense_search_disables_configured_encoder_cache_by_default(monkeypatch):
     seen = []
 
@@ -205,7 +285,7 @@ def test_dense_search_disables_configured_encoder_cache_by_default(monkeypatch):
         }
     }
 
-    debug_cli._build_debug_encoder_from_config(config, "siglip2_text")
+    debug_runtime._build_debug_encoder_from_config(config, "siglip2_text")
 
     assert seen[0]["cache"] is False
 
@@ -353,7 +433,7 @@ def test_extract_state_command_writes_state_json(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     out_path = tmp_path / "state.json"
-    monkeypatch.setattr(debug_cli, "_build_extractor_from_config", lambda config: FakeExtractor())
+    monkeypatch.setattr(debug_runtime, "_build_extractor_from_config", lambda config: FakeExtractor())
 
     rc = main(
         [
@@ -414,7 +494,7 @@ def test_retrieve_state_command_writes_trace_and_compiled_state(tmp_path, monkey
     state_path.write_text(_debug_state().model_dump_json(), encoding="utf-8")
     trace_out = tmp_path / "trace.json"
     compiled_out = tmp_path / "compiled.json"
-    monkeypatch.setattr(debug_cli, "_build_state_ranker_from_config", lambda config: FakeQU())
+    monkeypatch.setattr(debug_runtime, "_build_state_ranker_from_config", lambda config: FakeQU())
 
     rc = main(
         [
@@ -510,7 +590,7 @@ def test_replay_turn_command_retrieves_from_saved_trace_state(tmp_path, monkeypa
     config_path = tmp_path / "config.yaml"
     config_path.write_text("qu_kwargs: {}\n", encoding="utf-8")
     trace_out = tmp_path / "replay.json"
-    monkeypatch.setattr(debug_cli, "_build_state_ranker_from_config", lambda config: FakeQU())
+    monkeypatch.setattr(debug_runtime, "_build_state_ranker_from_config", lambda config: FakeQU())
 
     rc = main(
         [
@@ -594,7 +674,7 @@ def test_rerank_subset_command_filters_trace_and_injects_missing_candidate(tmp_p
     config_path = tmp_path / "config.yaml"
     config_path.write_text("qu_kwargs: {}\n", encoding="utf-8")
     out_path = tmp_path / "rerank.json"
-    monkeypatch.setattr(debug_cli, "_build_state_ranker_from_config", lambda config: FakeQU())
+    monkeypatch.setattr(debug_runtime, "_build_state_ranker_from_config", lambda config: FakeQU())
 
     rc = main(
         [
@@ -670,7 +750,7 @@ def test_rerank_subset_runs_reranker_offline_by_default_and_restores(tmp_path, m
     )
     config_path = tmp_path / "config.yaml"
     config_path.write_text("qu_kwargs: {}\n", encoding="utf-8")
-    monkeypatch.setattr(debug_cli, "_build_state_ranker_from_config", lambda config: fake_qu)
+    monkeypatch.setattr(debug_runtime, "_build_state_ranker_from_config", lambda config: fake_qu)
 
     rc = main(
         [
@@ -701,7 +781,7 @@ def test_session_meta_from_wrapper_preserves_dataset_style_fields():
         "session_date": "2026-06-28",
     }
 
-    meta = debug_cli._session_meta_from_wrapper(wrapper, None, None)
+    meta = debug_rerank._session_meta_from_wrapper(wrapper, None, None)
 
     assert meta["conversations"] == conversations
     assert meta["user_profile"] == user_profile
@@ -740,7 +820,7 @@ def test_reranker_debug_policy_uses_b1_cache_read_only_and_restores():
 
     reranker = FakeReranker()
     original_enc = reranker.b1.enc
-    policy = debug_cli._set_reranker_debug_policy(reranker, allow_cache_write=False)
+    policy = debug_rerank._set_reranker_debug_policy(reranker, allow_cache_write=False)
 
     assert reranker.ctx.offline is True
     assert reranker.b1.enc.embed_batch(["cached"]) == [[1.0, 0.0]]
@@ -748,7 +828,7 @@ def test_reranker_debug_policy_uses_b1_cache_read_only_and_restores():
         reranker.b1.enc.embed_batch(["missing"])
     assert original_enc._store.writes == []
 
-    debug_cli._restore_reranker_debug_policy(reranker, policy)
+    debug_rerank._restore_reranker_debug_policy(reranker, policy)
 
     assert reranker.ctx.offline is False
     assert reranker.b1.enc is original_enc
@@ -771,14 +851,14 @@ def test_rerank_feature_payload_reports_encoded_and_raw_model_features(monkeypat
             return [[2.0, 1.5]]
 
     monkeypatch.setattr(
-        debug_cli,
+        debug_rerank,
         "_compute_rerank_feature_rows",
         lambda reranker, feature_trace, session_meta, user_id, hard_drop: [
             {"track_id": "t-1", "age_group": "young", "score_feature": 1.5}
         ],
     )
 
-    payload = debug_cli._compute_rerank_feature_payload(
+    payload = debug_rerank._compute_rerank_feature_payload(
         FakeReranker(),
         {},
         None,
@@ -880,8 +960,8 @@ def test_rerank_features_command_reports_scores_features_and_diff(tmp_path, monk
     config_path = tmp_path / "config.yaml"
     config_path.write_text("qu_kwargs: {}\n", encoding="utf-8")
     out_path = tmp_path / "features.json"
-    monkeypatch.setattr(debug_cli, "_build_state_ranker_from_config", lambda config: FakeQU())
-    monkeypatch.setattr(debug_cli, "_compute_rerank_feature_payload", fake_compute, raising=False)
+    monkeypatch.setattr(debug_runtime, "_build_state_ranker_from_config", lambda config: FakeQU())
+    monkeypatch.setattr(debug_rerank, "_compute_rerank_feature_payload", fake_compute, raising=False)
 
     rc = main(
         [
@@ -1106,7 +1186,7 @@ def test_target_audit_command_reports_catalog_retrieval_and_final_ranks(tmp_path
         ),
         encoding="utf-8",
     )
-    monkeypatch.setattr(debug_cli, "_load_catalog", lambda run, args: FakeCatalog())
+    monkeypatch.setattr(debug_runtime, "_load_catalog", lambda run, args: FakeCatalog())
 
     rc = main(
         [
