@@ -1,6 +1,6 @@
 ---
 name: music-crs-prediction-audit
-description: Build an interactive Music CRS prediction audit from a tid, config, prediction JSON, or submission ZIP. Use when diagnosing devset, blindset, test, or pre-submission recommendations; mapping conversations/state/traces to predicted tracks; checking rejection leaks, state/compiler/resolver/ranking/retriever gaps; selecting better candidates from the submitted list or candidate pool; optionally adding a label-free LLM judge; or generating an HTML report with aggregate validity metrics.
+description: Build an interactive Music CRS prediction audit from a tid, config, prediction JSON, or submission ZIP. Use when diagnosing devset, blindset, test, or pre-submission recommendations; mapping conversations/state/traces to predicted tracks; checking rejection leaks, state/compiler/resolver/ranking/retriever gaps; selecting better candidates from the submitted list or candidate pool; running label-free recommendation/state judges; or generating an HTML report with aggregate validity metrics.
 ---
 
 # Music CRS Prediction Audit
@@ -32,9 +32,9 @@ Useful optional inputs:
 - `--catalog-source {auto,lancedb,hf}`: catalog metadata source, default `auto`. `auto` tries LanceDB first, then falls back to Hugging Face track metadata.
 - `--catalog-hf-dataset <name>` / `--catalog-hf-split <split>`: HF catalog source, defaults to `talkpl-ai/TalkPlayData-Challenge-Track-Metadata` split `all_tracks`.
 - `--leaderboard-metadata <path>`: optional JSON with external leaderboard scores. Never require this for pre-submission audits.
-- `--llm-judge`: optional qualitative judge for label-free/blind audits only. The script skips model calls automatically when `--ground-truth` is supplied.
+- `--llm-judge` / `--no-llm-judge`: qualitative recommendation-fit judge for label-free/blind audits. It auto-runs by default only when no `--ground-truth` is supplied; ground-truth audits keep it off and should use labels instead.
 - `--llm-explanation-judge`: optional qualitative judge for the generated natural-language response/explanation in label-free/blind audits. It is separate from the recommendation judge and also skips when `--ground-truth` is supplied.
-- `--llm-state-judge`: optional diagnostic judge for extracted/compiled state accuracy. It compares raw conversation against trace state and is separate from recommendation/explanation judging.
+- `--llm-state-judge` / `--no-llm-state-judge`: diagnostic judge for extracted/compiled state accuracy. It auto-runs by default only when no `--ground-truth` is supplied and trace rows are available; ground-truth audits keep it off.
 - `--judge-model <model>`: LiteLLM model for label-free judging. Defaults to `MCRS_AUDIT_JUDGE_MODEL` or `openrouter/deepseek/deepseek-v4-flash`; `openrouter/google/gemma-3-12b-it` is also a known option.
 - `--judge-limit <n>`: maximum rows to judge, default 80; use `0` for all audited rows.
 - `--judge-top-k <n>`: number of submitted recommendations shown to the LLM judge, default 20.

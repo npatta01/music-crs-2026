@@ -1762,7 +1762,7 @@ def run_llm_state_judge(
             "ran": False,
             "model": model,
             "warning": "No trace rows were available, so no LLM state judge calls were made.",
-            "label_free_only": False,
+            "label_free_only": True,
             "diagnostic_only": True,
             "prompt_version": STATE_JUDGE_PROMPT_VERSION,
             "litellm_cache": requested_litellm_cache_metadata(
@@ -1798,7 +1798,7 @@ def run_llm_state_judge(
             "prompt_version": STATE_JUDGE_PROMPT_VERSION,
             "diagnostic_only": True,
         },
-        label_free_only=False,
+        label_free_only=True,
     )
 
 
@@ -2718,7 +2718,7 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
             )
         )
     else:
-        llm_filter_html = '<select id="llmFilter" aria-label="Recommendation fit filter" disabled><option value="">Recommendation fit not run</option></select>'
+        llm_filter_html = '<span class="filter-note">Recommendation fit not run</span>'
         llm_pills = ""
     explanation_counts = explanation_judge_metrics.get("verdict_counts") or {}
     if explanation_counts:
@@ -2747,7 +2747,7 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
             )
         )
     else:
-        explanation_filter_html = '<select id="explanationFilter" aria-label="Response quality filter" disabled><option value="">Response quality not run</option></select>'
+        explanation_filter_html = '<span class="filter-note">Response quality not run</span>'
         explanation_pills = ""
     state_counts = state_judge_metrics.get("verdict_counts") or {}
     state_order = ["bad", "partial", "good"]
@@ -2777,7 +2777,7 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
             )
         )
     else:
-        state_filter_html = '<select id="stateFilter" aria-label="State accuracy filter" disabled><option value="">State accuracy not run</option></select>'
+        state_filter_html = '<span class="filter-note">State accuracy not run</span>'
         state_pills = ""
 
     row_cards = []
@@ -2964,6 +2964,7 @@ input:focus, select:focus, button:focus-visible {{ outline: 2px solid rgba(29, 7
 select:disabled {{ color: var(--quiet); background: #f8fafc; }}
 input {{ min-width: 300px; flex: 1; }}
 button {{ cursor: pointer; }}
+.filter-note {{ display: inline-flex; align-items: center; min-height: 39px; border: 1px solid var(--line); border-radius: 7px; padding: 0 11px; color: var(--quiet); background: #f8fafc; }}
 .pill {{ background: #fff; color: #374151; }}
 .pill:hover {{ border-color: var(--blue); color: var(--blue); }}
 .pill.active {{ border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }}
@@ -3165,6 +3166,9 @@ clear.addEventListener('click', () => {{
 }});
 gapPills.forEach(p => p.addEventListener('click', () => {{
   activeGap = activeGap === p.dataset.gap ? '' : p.dataset.gap;
+  if (activeGap && statusFilter.value === 'ok') {{
+    statusFilter.value = '';
+  }}
   gapPills.forEach(x => x.classList.toggle('active', x.dataset.gap === activeGap));
   applyFilters();
 }}));
@@ -3223,8 +3227,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit", type=int, help="Audit only the first N prediction rows")
     parser.add_argument(
         "--llm-judge",
-        action="store_true",
-        help="Run an optional LLM judge. Skipped automatically when ground truth labels are supplied.",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "Run the LLM recommendation-fit judge. Default auto-runs for label-free/blind audits. "
+            "Use --no-llm-judge to skip. Skipped automatically when ground truth labels are supplied."
+        ),
     )
     parser.add_argument(
         "--llm-explanation-judge",
@@ -3236,10 +3244,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--llm-state-judge",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
+        default=None,
         help=(
-            "Run an optional diagnostic LLM judge for extracted/compiled state accuracy. "
-            "Requires trace rows and is separate from recommendation/explanation judging."
+            "Run the diagnostic LLM judge for extracted/compiled state accuracy. "
+            "Default auto-runs for label-free/blind audits with trace rows. "
+            "Use --no-llm-state-judge to skip. Requires trace rows and is separate from "
+            "recommendation/explanation judging."
         ),
     )
     parser.add_argument(
@@ -3307,6 +3318,22 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def should_run_default_judge(
+    requested: bool | None,
+    *,
+    has_ground_truth: bool,
+    requires_trace: bool = False,
+    has_trace: bool = False,
+) -> bool:
+    if has_ground_truth:
+        return False
+    if requested is not None:
+        return requested
+    if requires_trace and not has_trace:
+        return False
+    return True
+
+
 def main() -> int:
     args = parse_args()
     resolved = resolve_inputs(args)
@@ -3355,7 +3382,17 @@ def main() -> int:
         args.max_candidate_pool,
         args.limit,
     )
-    if args.llm_judge:
+    run_llm_judge_by_default = should_run_default_judge(
+        args.llm_judge,
+        has_ground_truth=bool(ground_truth),
+    )
+    run_llm_state_judge_by_default = should_run_default_judge(
+        args.llm_state_judge,
+        has_ground_truth=bool(ground_truth),
+        requires_trace=True,
+        has_trace=bool(traces),
+    )
+    if run_llm_judge_by_default:
         litellm_cache_dir = (
             Path(args.judge_litellm_cache_dir).resolve()
             if args.judge_litellm_cache_dir
@@ -3423,7 +3460,7 @@ def main() -> int:
                 litellm_cache_mode=args.judge_litellm_cache,
                 litellm_cache_dir=litellm_cache_dir,
             )
-    if args.llm_state_judge:
+    if run_llm_state_judge_by_default:
         litellm_cache_dir = (
             Path(args.judge_litellm_cache_dir).resolve()
             if args.judge_litellm_cache_dir

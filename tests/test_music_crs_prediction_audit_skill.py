@@ -89,6 +89,56 @@ def test_judge_verdict_labels_are_user_facing():
     assert audit.verdict_label("state", "bad") == "inaccurate"
 
 
+def test_recommendation_and_state_judges_auto_only_for_label_free_trace_audits():
+    audit = load_audit_module()
+    old_argv = sys.argv
+    try:
+        sys.argv = ["audit_submission_predictions.py", "--tid", "state_ranker_v10_lgbm_blindset_B"]
+        args = audit.parse_args()
+        assert args.llm_judge is None
+        assert args.llm_state_judge is None
+
+        sys.argv = [
+            "audit_submission_predictions.py",
+            "--tid",
+            "state_ranker_v10_lgbm_blindset_B",
+            "--no-llm-judge",
+            "--no-llm-state-judge",
+        ]
+        args = audit.parse_args()
+        assert args.llm_judge is False
+        assert args.llm_state_judge is False
+    finally:
+        sys.argv = old_argv
+
+    assert audit.should_run_default_judge(
+        None,
+        has_ground_truth=False,
+    )
+    assert not audit.should_run_default_judge(
+        None,
+        has_ground_truth=True,
+    )
+    assert audit.should_run_default_judge(
+        None,
+        has_ground_truth=False,
+        requires_trace=True,
+        has_trace=True,
+    )
+    assert not audit.should_run_default_judge(
+        None,
+        has_ground_truth=False,
+        requires_trace=True,
+        has_trace=False,
+    )
+    assert not audit.should_run_default_judge(
+        True,
+        has_ground_truth=True,
+        requires_trace=True,
+        has_trace=True,
+    )
+
+
 def test_recommendation_judge_prompt_identifies_submitted_rank_one():
     audit = load_audit_module()
     row = {
