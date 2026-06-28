@@ -259,6 +259,101 @@ def _load_feature_catalog(
     return _FeatureCatalogFromCompilerCatalog(catalog_source)
 
 
+def _current_request_type(trace: dict) -> str:
+    state = trace.get("state") or trace.get("extracted_state") or {}
+    current_request = state.get("current_request") or {}
+    raw = current_request.get("request_type")
+    return str(getattr(raw, "value", raw) or "")
+
+
+def _resolved_exact_track_ids(trace: dict, *, min_confidence: float) -> list[str]:
+    if _current_request_type(trace) != "exact_track":
+        return []
+    resolver = trace.get("resolver") or {}
+    seen: set[str] = set()
+    out: list[str] = []
+    target_records = resolver.get("exact_track_targets") or []
+    if target_records:
+        for target in target_records:
+            if not isinstance(target, dict):
+                continue
+            track_id = str(target.get("track_id") or target.get("entity_id") or "")
+            try:
+                confidence = float(target.get("confidence") or 0.0)
+            except (TypeError, ValueError):
+                confidence = 0.0
+            if not track_id or track_id in seen or confidence < min_confidence:
+                continue
+            seen.add(track_id)
+            out.append(track_id)
+        return out
+
+    for raw_track_id in _as_list(resolver.get("exact_track_target_ids")):
+        track_id = str(raw_track_id or "")
+        if not track_id or track_id in seen:
+            continue
+        seen.add(track_id)
+        out.append(track_id)
+    return out
+
+
+def _apply_exact_track_pins(
+    ranked: list[str],
+    trace: dict,
+    *,
+    dropped: set[str],
+    top_k_out: int,
+    pin_limit: int,
+    min_confidence: float,
+) -> list[str]:
+    if pin_limit <= 0:
+        return ranked[:top_k_out]
+    resolver = trace.get("resolver") or {}
+    played = {str(track_id) for track_id in resolver.get("played_track_ids") or []}
+    rejected = {str(track_id) for track_id in resolver.get("rejected_track_ids") or []}
+    pins: list[str] = []
+    drop_overrides: dict[str, str] = {}
+    for track_id in _resolved_exact_track_ids(
+        trace,
+        min_confidence=min_confidence,
+    )[:pin_limit]:
+        if track_id in dropped:
+            if track_id not in played or track_id in rejected:
+                continue
+            drop_overrides[track_id] = "played_exact_request"
+        pins.append(track_id)
+    if not pins:
+        return ranked[:top_k_out]
+
+    original_rank = {str(track_id): idx + 1 for idx, track_id in enumerate(ranked)}
+    pin_set = set(pins)
+    reranked = pins + [track_id for track_id in ranked if str(track_id) not in pin_set]
+
+    actions = []
+    request_type = _current_request_type(trace)
+    for idx, track_id in enumerate(pins, start=1):
+        from_rank = original_rank.get(track_id)
+        if from_rank == idx:
+            continue
+        actions.append(
+            {
+                "type": "exact_track_pin",
+                "track_id": track_id,
+                "from_rank": from_rank,
+                "to_rank": idx,
+                "request_type": request_type,
+                **(
+                    {"drop_override": drop_override}
+                    if (drop_override := drop_overrides.get(track_id))
+                    else {}
+                ),
+            }
+        )
+    if actions:
+        trace.setdefault("ranking_guard_actions", []).extend(actions)
+    return reranked[:top_k_out]
+
+
 def session_entry_from_meta(meta: dict) -> dict:
     """Build the load_sessions()-shaped entry from a raw dataset row (parity
     with scripts/rerank/build_features.load_sessions)."""
@@ -380,6 +475,8 @@ class LgbmOnlineReranker:
             self.b1 = B1Live(cat, db_uri=db_uri, table_name=table_name)
             add_elapsed("b1_encoder", start)
         self.top_k_out = int(cfg.get("top_k_out", 1000))
+        self.exact_pin_top_n = int(cfg.get("exact_pin_top_n", 2))
+        self.exact_pin_min_confidence = float(cfg.get("exact_pin_min_confidence", 90.0))
         add_elapsed("total", total_start)
         self.load_timings = load_timings
 
@@ -407,6 +504,8 @@ class LgbmOnlineReranker:
         """Re-order the branch-pool union and keep hard drops out of fallbacks."""
         from features_v9 import compute_turn_features
         dropped = {str(track_id) for track_id in hard_drop}
+        pin_limit = int(getattr(self, "exact_pin_top_n", 2))
+        min_confidence = float(getattr(self, "exact_pin_min_confidence", 90.0))
 
         def filtered_fallback() -> list[str]:
             return [
@@ -415,9 +514,19 @@ class LgbmOnlineReranker:
                 if str(track_id) not in dropped
             ][: self.top_k_out]
 
+        def finalize(ranked: list[str]) -> list[str]:
+            return _apply_exact_track_pins(
+                [str(track_id) for track_id in ranked],
+                trace,
+                dropped=dropped,
+                top_k_out=self.top_k_out,
+                pin_limit=pin_limit,
+                min_confidence=min_confidence,
+            )
+
         try:
             if not (trace.get("branches") or {}).get("pools"):
-                return filtered_fallback()
+                return finalize(filtered_fallback())
             sid = str((session_meta or {}).get("session_id") or "")
             tn = int((session_meta or {}).get("turn_number") or 0)
             if session_meta:
@@ -441,7 +550,7 @@ class LgbmOnlineReranker:
                     row["b1_qvec"] = b1.query_vecs([b1.query_text(sent, tn)])[0]
             rows, _ = compute_turn_features(row, self.ctx, gt=None)
             if not rows:
-                return filtered_fallback()
+                return finalize(filtered_fallback())
             # sidecar constraint features — shared helper with the offline builder
             # (build_features.constraint_feature_row) so train/serve cannot drift
             from build_features import constraint_feature_row
@@ -468,8 +577,8 @@ class LgbmOnlineReranker:
                 if t not in seen and str(t) not in dropped:
                     ranked.append(t)
                     seen.add(t)
-            return ranked[: self.top_k_out]
+            return finalize(ranked)
         except Exception as e:  # serving must never hard-fail a turn
             print(f"[lgbm_reranker] fallback (turn {session_meta}): {e!r}",
                   flush=True)
-            return filtered_fallback()
+            return finalize(filtered_fallback())

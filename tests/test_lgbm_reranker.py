@@ -310,6 +310,172 @@ def test_online_reranker_filters_hard_drop_when_feature_rows_empty():
     assert ranked == ["t-one"]
 
 
+def test_online_reranker_pins_resolved_exact_track_target():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    trace = {
+        "branches": {
+            "pools": [
+                {
+                    "name": "bm25",
+                    "hits": [("t-two", 2.0), ("t-one", 1.0)],
+                }
+            ],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "state": {"current_request": {"request_type": "exact_track"}},
+        "resolver": {
+            "exact_track_target_ids": ["t-one"],
+            "played_track_ids": [],
+            "positive_tags": [],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta=None,
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-one", "t-two"]
+    assert trace["ranking_guard_actions"] == [
+        {
+            "type": "exact_track_pin",
+            "track_id": "t-one",
+            "from_rank": 2,
+            "to_rank": 1,
+            "request_type": "exact_track",
+        }
+    ]
+
+
+def test_online_reranker_inserts_resolved_exact_track_target_missing_from_pool():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    trace = {
+        "branches": {
+            "pools": [{"name": "bm25", "hits": [("t-two", 2.0)]}],
+            "fused": [("t-two", 2.0)],
+            "branch_queries": {},
+        },
+        "state": {"current_request": {"request_type": "exact_track"}},
+        "resolver": {
+            "exact_track_target_ids": ["t-one"],
+            "played_track_ids": [],
+            "positive_tags": [],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta=None,
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two"],
+    )
+
+    assert ranked == ["t-one", "t-two"]
+    assert trace["ranking_guard_actions"] == [
+        {
+            "type": "exact_track_pin",
+            "track_id": "t-one",
+            "from_rank": None,
+            "to_rank": 1,
+            "request_type": "exact_track",
+        }
+    ]
+
+
+def test_online_reranker_does_not_pin_low_confidence_exact_track_target():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.exact_pin_min_confidence = 90.0
+    trace = {
+        "branches": {
+            "pools": [
+                {
+                    "name": "bm25",
+                    "hits": [("t-two", 2.0), ("t-one", 1.0)],
+                }
+            ],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "state": {"current_request": {"request_type": "exact_track"}},
+        "resolver": {
+            "exact_track_target_ids": ["t-one"],
+            "exact_track_targets": [
+                {
+                    "track_id": "t-one",
+                    "source_text": "Blue Smoke",
+                    "confidence": 84.0,
+                }
+            ],
+            "played_track_ids": [],
+            "positive_tags": [],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta=None,
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-two", "t-one"]
+    assert "ranking_guard_actions" not in trace
+
+
+def test_online_reranker_pins_played_track_when_current_request_is_exact_target():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    trace = {
+        "branches": {"pools": [], "fused": [], "branch_queries": {}},
+        "state": {"current_request": {"request_type": "exact_track"}},
+        "resolver": {
+            "exact_track_target_ids": ["t-one"],
+            "exact_track_targets": [
+                {
+                    "track_id": "t-one",
+                    "source_text": "Blue Smoke",
+                    "confidence": 100.0,
+                }
+            ],
+            "played_track_ids": ["t-one"],
+            "rejected_track_ids": [],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta=None,
+        user_id="u1",
+        hard_drop={"t-one"},
+        fallback=["t-two"],
+    )
+
+    assert ranked == ["t-one", "t-two"]
+    assert trace["ranking_guard_actions"] == [
+        {
+            "type": "exact_track_pin",
+            "track_id": "t-one",
+            "from_rank": None,
+            "to_rank": 1,
+            "request_type": "exact_track",
+            "drop_override": "played_exact_request",
+        }
+    ]
+
+
 def test_feature_catalog_adapter_matches_offline_catalog_rerank_outputs(tmp_path):
     pytest.importorskip("lancedb")
     import lancedb

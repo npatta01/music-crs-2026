@@ -24,9 +24,12 @@ class _FakeExtractor:
 class _FakeRanker:
     def __init__(self):
         self.last_trace = None
+        self.guard_actions = []
 
     def rerank(self, trace, session_meta, user_id, hard_drop, fallback):
         self.last_trace = trace
+        if self.guard_actions:
+            trace["ranking_guard_actions"] = list(self.guard_actions)
         return ["t-fugazi-1", "t-morphine-1"] + [
             track_id for track_id in fallback if track_id not in {"t-fugazi-1", "t-morphine-1"}
         ]
@@ -177,6 +180,34 @@ def test_state_ranker_lgbm_serving_trace_keeps_routing_tags_for_reranker():
         "hidden_target_search": False,
     }
     assert qu._reranker.last_trace["compiled_state"]["routing_tags"]["exact_entity_probe"] is True
+
+
+def test_state_ranker_lgbm_trace_exposes_exact_pin_guard_actions():
+    qu = _build_qu_with_state(
+        _state(mentioned_entities=[MentionedEntity(type="track", value="Cure for Pain", sentiment=1)]),
+        mode="lgbm",
+    )
+    action = {
+        "type": "exact_track_pin",
+        "track_id": "t-morphine-1",
+        "from_rank": 2,
+        "to_rank": 1,
+        "request_type": "exact_track",
+    }
+    qu._reranker.guard_actions = [action]
+
+    qu.batch_compile_track_ids([[{"role": "user", "content": "play Cure for Pain"}]], topk=2)
+
+    resolver = qu._reranker.last_trace["resolver"]
+    assert resolver["exact_track_target_ids"] == ["t-morphine-1"]
+    assert resolver["exact_track_targets"] == [
+        {
+            "track_id": "t-morphine-1",
+            "source_text": "Cure for Pain",
+            "confidence": 100.0,
+        }
+    ]
+    assert qu.last_traces[0]["ranking"]["guard_actions"] == [action]
 
 
 def test_state_ranker_resolver_trace_uses_artist_ids_and_keeps_surface_values():
