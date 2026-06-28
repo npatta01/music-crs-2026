@@ -60,11 +60,40 @@ class FuzzyMatcher(Protocol):
         """
         ...
 
+    def match_track_by_artist(
+        self,
+        query: str,
+        *,
+        artist_ids: set[str],
+        artist_names: set[str],
+        topk: int = 20,
+        score_cutoff: int = 80,
+    ) -> list[tuple[str, float]]:
+        """Return track matches whose catalog artist credit matches a constraint."""
+        ...
+
+
+def _as_list(value: object) -> list[object]:
+    if value is None:
+        return []
+    if hasattr(value, "tolist"):
+        value = value.tolist()
+    if isinstance(value, (list, tuple, set)):
+        return [item for item in value if item is not None]
+    return [value]
+
+
+def _surface_key(value: object) -> str:
+    return str(value or "").casefold().strip()
+
 
 class RapidfuzzCatalogMatcher:
-    """Catalog-backed FuzzyMatcher using rapidfuzz `token_set_ratio` with
-    case-folding. Pre-bakes the catalog's name lists on init so every match
-    call is in-memory.
+    """Catalog-backed FuzzyMatcher using rapidfuzz scorers with case-folding.
+
+    Artist names use `token_set_ratio` because artist credits often include
+    extra collaborators or punctuation. Track names use `WRatio` so full-title
+    exact matches outrank short subset ties such as "Bad" inside a long title.
+    Pre-bakes the catalog's name lists on init so every match call is in-memory.
 
     For ~9k artists / 47k tracks (TalkPlayData), this is small enough to keep
     in RAM. If the catalog grows order-of-magnitude, swap in a FST/Aho-Corasick
@@ -72,6 +101,7 @@ class RapidfuzzCatalogMatcher:
     """
 
     def __init__(self, catalog: CompilerCatalog) -> None:
+        self._catalog = catalog
         # Pre-bake: per entity type, (original_name, entity_id) tuples.
         # `process.extract` with `processor=str.lower` lowercases both query
         # and choice at match time, so we keep the originals here for return.
@@ -113,11 +143,13 @@ class RapidfuzzCatalogMatcher:
         if not query or not query.strip():
             return []
 
+        scorer = fuzz.WRatio if entity_type == "track" else fuzz.token_set_ratio
+
         # rapidfuzz returns (name, score, index). We map name → entity_id.
         raw = process.extract(
             query,
             self._choices[entity_type],
-            scorer=fuzz.token_set_ratio,
+            scorer=scorer,
             limit=topk,
             score_cutoff=score_cutoff,
             processor=str.lower,
@@ -128,4 +160,60 @@ class RapidfuzzCatalogMatcher:
             eid = id_map.get(name)
             if eid is not None:
                 out.append((eid, float(score)))
+        return out
+
+    def match_track_by_artist(
+        self,
+        query: str,
+        *,
+        artist_ids: set[str],
+        artist_names: set[str],
+        topk: int = 20,
+        score_cutoff: int = 80,
+    ) -> list[tuple[str, float]]:
+        if not query or not query.strip():
+            return []
+        if not artist_ids and not artist_names:
+            return self.match(query, "track", topk=topk, score_cutoff=score_cutoff)
+        feature_rows = getattr(self._catalog, "feature_rows", None)
+        if not callable(feature_rows):
+            return []
+        artist_name_keys = {
+            _surface_key(name) for name in artist_names if str(name or "").strip()
+        }
+        matches: list[tuple[float, int, str]] = []
+        for track_id, row in feature_rows().items():
+            if not isinstance(row, dict):
+                continue
+            row_artist_ids = {str(value) for value in _as_list(row.get("artist_id"))}
+            artist_id_of = getattr(self._catalog, "artist_id_of", None)
+            if callable(artist_id_of):
+                if artist_id := artist_id_of(str(track_id)):
+                    row_artist_ids.add(str(artist_id))
+            row_artist_names = {
+                _surface_key(value) for value in _as_list(row.get("artist_name"))
+            }
+            if artist_ids and row_artist_ids & artist_ids:
+                artist_match = True
+            else:
+                artist_match = bool(artist_name_keys and row_artist_names & artist_name_keys)
+            if not artist_match:
+                continue
+            for track_name in _as_list(row.get("track_name")):
+                text = str(track_name or "").strip()
+                if not text:
+                    continue
+                score = float(fuzz.WRatio(query, text, processor=str.lower))
+                if score < score_cutoff:
+                    continue
+                matches.append((score, len(text), str(track_id)))
+        out: list[tuple[str, float]] = []
+        seen: set[str] = set()
+        for score, _, track_id in sorted(matches, reverse=True):
+            if track_id in seen:
+                continue
+            seen.add(track_id)
+            out.append((track_id, score))
+            if len(out) >= topk:
+                break
         return out

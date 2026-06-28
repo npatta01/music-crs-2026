@@ -43,6 +43,10 @@ from dataclasses import dataclass, field
 # non-word character so substring matches like `"story" in "history"` or
 # `"deep" in "deepfake"` don't accidentally fire the lyric branch.
 _LYRIC_TOKEN_RE = re.compile(r"\w+")
+_ARTIST_CREDIT_SPLIT_RE = re.compile(
+    r"\s*(?:&|,|\b(?:and|with|feat|featuring|ft)\.?\b)\s*",
+    re.IGNORECASE,
+)
 
 from mcrs.conversation_state.schema import (
     AnchorUse,
@@ -470,6 +474,7 @@ class V0PlusCompiler:
         self.cfg = config or CompilerConfig()
         self._catalog_tag_keys_cache: set[str] | None = None
         self._catalog_tag_df_cache: dict[str, int] | None = None
+        self._tracks_by_artist_name_key_cache: dict[str, list[str]] | None = None
         self._track_tag_keys_cache: dict[str, set[str]] = {}
         self._track_text_key_cache: dict[str, str] = {}
         self._track_cf_bpr_cache: dict[str, list[float] | None] = {}
@@ -1254,13 +1259,71 @@ class V0PlusCompiler:
         backfill silently re-admit tracks that soft adjustments excluded.
         """
         drop: set[str] = set()
-        for rej in rs.resolved_rejections.values():
+        explicit_rejections = list(rs.state.explicit_rejections)
+        for index, rej in rs.resolved_rejections.items():
             drop.update(rej.track_ids)
+            rejection_kind = (
+                explicit_rejections[index].kind
+                if 0 <= index < len(explicit_rejections)
+                else None
+            )
             if self.cfg.rejection_drop_policy == "track_only":
                 continue
             for aid in rej.artist_ids:
                 drop.update(self.catalog.tracks_by_artist_id(aid))
+            if rejection_kind == "artist" and 0 <= index < len(explicit_rejections):
+                drop.update(
+                    self._tracks_by_artist_name(
+                        explicit_rejections[index].value
+                    )
+                )
         return drop
+
+    @staticmethod
+    def _surface_key(value: str) -> str:
+        return value.casefold().strip()
+
+    @staticmethod
+    def _iter_catalog_strings(raw: object) -> list[str]:
+        if raw is None:
+            return []
+        if hasattr(raw, "tolist"):
+            raw = raw.tolist()
+        if isinstance(raw, (list, tuple, set)):
+            return [str(item) for item in raw if str(item or "").strip()]
+        text = str(raw)
+        return [text] if text.strip() else []
+
+    @staticmethod
+    def _iter_artist_names(raw: object) -> list[str]:
+        return V0PlusCompiler._iter_catalog_strings(raw)
+
+    @classmethod
+    def _artist_name_lookup_keys(cls, artist_name: str) -> set[str]:
+        keys: set[str] = set()
+        full_key = cls._catalog_tag_key(artist_name)
+        if full_key:
+            keys.add(full_key)
+        for part in _ARTIST_CREDIT_SPLIT_RE.split(artist_name):
+            part_key = cls._catalog_tag_key(part)
+            if part_key:
+                keys.add(part_key)
+        return keys
+
+    def _tracks_by_artist_name(self, artist_name: str) -> list[str]:
+        key = self._catalog_tag_key(artist_name)
+        if not key:
+            return []
+        if self._tracks_by_artist_name_key_cache is None:
+            by_name: dict[str, list[str]] = {}
+            for track_id, row in self.catalog.feature_rows().items():
+                if not isinstance(row, dict):
+                    continue
+                for name in self._iter_artist_names(row.get("artist_name")):
+                    for name_key in self._artist_name_lookup_keys(name):
+                        by_name.setdefault(name_key, []).append(str(track_id))
+            self._tracks_by_artist_name_key_cache = by_name
+        return list(self._tracks_by_artist_name_key_cache.get(key, []))
 
     @staticmethod
     def _enum_value(value) -> str:
@@ -2918,7 +2981,9 @@ class V0PlusCompiler:
         if rs.state.intent_mode.value in cfg.disco_gated_intents:
             return []
         artist_ids: list[str] = []
+        artist_names: list[str] = []
         seen_artists: set[str] = set()
+        seen_artist_names: set[str] = set()
         for tgt in rs.resolved_targets:
             if (
                 tgt.kind == "artist"
@@ -2929,6 +2994,11 @@ class V0PlusCompiler:
             ):
                 seen_artists.add(tgt.entity_id)
                 artist_ids.append(tgt.entity_id)
+                source_text = str(getattr(tgt, "source_text", "") or "").strip()
+                source_key = self._surface_key(source_text)
+                if source_key and source_key not in seen_artist_names:
+                    seen_artist_names.add(source_key)
+                    artist_names.append(source_text)
         # a2: also seed from artists of tracks played earlier in the session.
         if cfg.disco_include_session_artists:
             for tid in rs.played_track_ids:
@@ -2936,7 +3006,7 @@ class V0PlusCompiler:
                 if aid is not None and aid not in seen_artists:
                     seen_artists.add(aid)
                     artist_ids.append(aid)
-        if not artist_ids:
+        if not artist_ids and not artist_names:
             return []
         pop_rank = self._popularity_rank()
         sentinel = len(pop_rank)
@@ -2945,6 +3015,15 @@ class V0PlusCompiler:
         for aid in artist_ids:
             ranked = sorted(
                 self.catalog.tracks_by_artist_id(aid),
+                key=lambda t: pop_rank.get(t, sentinel),
+            )[: cfg.disco_cap]
+            for t in ranked:
+                if t not in seen_tracks:
+                    seen_tracks.add(t)
+                    track_ids.append(t)
+        for artist_name in artist_names:
+            ranked = sorted(
+                self._tracks_by_artist_name(artist_name),
                 key=lambda t: pop_rank.get(t, sentinel),
             )[: cfg.disco_cap]
             for t in ranked:
