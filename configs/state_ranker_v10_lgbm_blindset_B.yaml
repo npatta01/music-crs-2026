@@ -23,6 +23,10 @@ qu_kwargs:
     temperature: 0.0
     max_tokens: 8000
     timeout_s: 120
+    state_cache:
+      enabled: true
+      mode: file_per_turn
+      dir: cache/state_extraction/blindset_B
   catalog:
     metadata_dataset: talkpl-ai/TalkPlayData-Challenge-Track-Metadata
     embeddings_dataset: talkpl-ai/TalkPlayData-Challenge-Track-Embeddings

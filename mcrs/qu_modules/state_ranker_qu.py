@@ -23,8 +23,10 @@ from mcrs.qu_modules.compiler_v0plus import CompileResult
 from mcrs.qu_modules.compiler_v0plus_qu import (
     V0PlusCompilerQU,
     _add_elapsed,
+    aextract_with_cache_context,
     build_v0plus_compiler_qu,
     session_memory_to_conversation,
+    state_cache_context_from_session_meta,
 )
 from mcrs.qu_modules.retrieval_compiler import (
     candidate_fusion_track_ids,
@@ -97,8 +99,14 @@ class StateRankerQU(V0PlusCompilerQU):
         conv, played = session_memory_to_conversation(session_memory, self.catalog)
         _add_elapsed(timings, "session_memory", start)
         start = time.perf_counter()
+        cache_context = state_cache_context_from_session_meta(session_meta)
         async with extract_sem:
-            state = await self.extractor.aextract(conv, played)
+            state = await aextract_with_cache_context(
+                self.extractor,
+                conv,
+                played,
+                cache_context=cache_context,
+            )
         _add_elapsed(timings, "extractor", start)
         if state is None:
             timings.setdefault("resolver", 0.0)
