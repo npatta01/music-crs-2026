@@ -13,6 +13,7 @@ Challenge: https://nlp4musa.github.io/music-crs-challenge/
 - [Session State](docs/architectures/session_state.md) — the `ConversationStateV0Plus` schema, extract→resolve pipeline, and how each field drives retrieval
 - [b1 Bi-Encoder](docs/architectures/biencoder.md) — the fine-tuned Qwen3-Embedding-4B two-tower conv→track retriever: input/output spec, training (MNRL/MOVES-only), and the `b1_cos` reranker feature + cache-first serving
 - [Explanation / Response Generation](docs/architectures/explanation_generation.md) — how the natural-language response is generated, what the code was vs. is now doing (dummy), and per-track explanation scaffolding
+- [State Extraction Cache](docs/state_extraction_cache.md) — file-per-turn cache layout, override precedence, GitHub Release packaging, and install/verify commands
 - [Evaluation](docs/evaluation.md) — metrics, devset leaderboard
 - [Reproduce the reranker](docs/reproduce_reranker.md) — **LambdaMART v10**: committed model bundle, required vs optional artifacts, FAST (use model) + FULL (retrain) paths
 - [Mac / Local Dev](docs/mac_dev.md) — local testing on Apple Silicon
@@ -38,16 +39,39 @@ or redownloading them. Configure the shared cache-owner root once:
 git config --global mcrs.sharedRoot /path/to/music-crs-cache-owner
 ```
 
+In Codex worktrees on this machine, the standard cache-owner checkout is:
+
+```bash
+git config --global mcrs.sharedRoot /home/nidhin/projects/music-conversational-music-recomender-2026
+```
+
 Then, in any new worktree, run:
 
 ```bash
-python scripts/setup_worktree_cache.py
+uv run python scripts/setup_worktree_cache.py
 ```
 
 The script links `cache`, `exp/analysis/rerank`, and `.env` from the shared
 root. It also accepts `--source /path/to/root` or `MCRS_SHARED_ROOT=/path/to/root`
 instead of git config. If a local run is requested and these paths are missing,
-run the setup script before trying to recompute artifacts.
+run the setup script before trying to recompute artifacts. If a worktree already
+has throwaway local cache artifacts from a failed run, use `--force` to replace
+them with the shared links.
+
+For state-cache materialization and release packaging, follow
+[`docs/state_extraction_cache.md`](docs/state_extraction_cache.md). Blind sets
+only need the final turn per session; devset and trainset use all turns. Use
+`--skip-existing` so backfills do not redo existing files:
+
+```bash
+uv run python scripts/extract_state.py --tid state_ranker_v10_lgbm_blindset_A --turn-scope final --output-dir cache/state_extraction/blindset_A --skip-existing
+uv run python scripts/extract_state.py --tid state_ranker_v10_lgbm_blindset_B --turn-scope final --output-dir cache/state_extraction/blindset_B --skip-existing
+uv run python scripts/extract_state.py --tid state_ranker_v10_lgbm_devset --turn-scope all --output-dir cache/state_extraction/devset --skip-existing
+```
+
+Trainset has an existing extracted-state artifact at
+`exp/state_extraction/deepseek_train_all.jsonl`; materialize it into
+`cache/state_extraction/trainset` without making LiteLLM calls.
 
 ## Run
 

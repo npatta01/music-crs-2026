@@ -8,6 +8,10 @@ Usage:
   python scripts/extract_state.py --config configs/local_state.yaml \
     --sessions-file data/local_sessions.json --output exp/state/local_state.jsonl
 
+  python scripts/extract_state.py --tid state_ranker_v10_lgbm_blindset_B \
+    --turn-scope final --output-dir cache/state_extraction/blindset_B \
+    --skip-existing
+
 The sessions file may be either {"session_ids": ["..."]} or a JSON list of
 session ids. Model/provider/cache settings come from the config.
 
@@ -34,7 +38,24 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from mcrs.litellm_cache import setup_litellm_cache  # noqa: E402
-from mcrs.qu_modules.compiler_v0plus_qu import LiteLLMExtractor  # noqa: E402
+from mcrs.conversation_state.schema import ConversationStateV0Plus  # noqa: E402
+from mcrs.qu_modules.compiler_v0plus_qu import (  # noqa: E402
+    LiteLLMExtractor,
+    extract_with_cache_context,
+)
+from mcrs.qu_modules.state_cache import state_cache_file_path  # noqa: E402
+
+
+def _load_dotenv() -> None:
+    dotenv_path = PROJECT_ROOT / ".env"
+    if not dotenv_path.exists():
+        return
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(dotenv_path)
+    except Exception:
+        pass
 
 
 @dataclass(frozen=True)
@@ -57,12 +78,31 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--sessions-file",
-        required=True,
         help='JSON list or object with "session_ids".',
     )
     parser.add_argument(
         "--output",
-        help="Optional JSONL output path. Defaults to config state_extraction.output_path or exp/state_extraction/<name>.jsonl.",
+        help="Optional JSONL output path. Without --output or state_extraction.output_path, writes file-per-turn JSON under cache/state_extraction/<name>/.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        help="Directory for file-per-turn JSON output. Defaults to cache/state_extraction/<name>/ when --output is not set.",
+    )
+    parser.add_argument(
+        "--turn-scope",
+        choices=("all", "final"),
+        default="all",
+        help="Which user turns to extract per selected session. Defaults to all.",
+    )
+    parser.add_argument(
+        "--litellm-cache-only",
+        action="store_true",
+        help="Read existing LiteLLM cache entries only; never make live provider calls.",
+    )
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="For file-per-turn output, reuse valid existing turn files and only extract missing turns.",
     )
     return parser
 
@@ -101,7 +141,9 @@ def load_config(
     return config
 
 
-def load_session_ids(path: str | os.PathLike[str]) -> set[str]:
+def load_session_ids(path: str | os.PathLike[str] | None) -> set[str] | None:
+    if path is None:
+        return None
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if isinstance(data, dict):
         data = data.get("session_ids")
@@ -143,7 +185,15 @@ def _is_ollama_model(model_name: str) -> bool:
     return model_name.startswith("ollama/") or model_name.startswith("ollama_chat/")
 
 
-def extractor_config_from_config(config: dict[str, Any]) -> dict[str, Any]:
+def _truthy(value: Any) -> bool:
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def extractor_config_from_config(
+    config: dict[str, Any],
+    *,
+    litellm_cache_only: bool = False,
+) -> dict[str, Any]:
     raw = _extractor_cfg(config)
     model_name = str(raw.get("model_name", "openrouter/google/gemma-3-12b-it"))
     api_base = _optional_text(raw.get("api_base"))
@@ -169,6 +219,10 @@ def extractor_config_from_config(config: dict[str, Any]) -> dict[str, Any]:
         "prompt_version": str(raw.get("prompt_version", "v1")),
         "retry_temperature": float(raw.get("retry_temperature", 0.3)),
         "extra_params": dict(raw.get("extra_params") or {}),
+        "litellm_cache_only": _truthy(raw.get("litellm_cache_only")) or litellm_cache_only,
+        # This script creates the file-per-turn state cache, so it must not read
+        # from the same cache while generating raw extraction artifacts.
+        "state_cache": {},
     }
 
 
@@ -183,6 +237,8 @@ def build_extractor(config: dict[str, Any]) -> LiteLLMExtractor:
         prompt_version=str(config.get("prompt_version", "v1")),
         retry_temperature=float(config.get("retry_temperature", 0.3)),
         extra_params=dict(config.get("extra_params") or {}),
+        state_cache=dict(config.get("state_cache") or {}),
+        litellm_cache_only=_truthy(config.get("litellm_cache_only")),
     )
 
 
@@ -267,13 +323,16 @@ def _conversation_for_turn(
 def build_extraction_cases(
     dataset: Iterable[dict[str, Any]],
     *,
-    session_ids: set[str],
+    session_ids: set[str] | None,
     track_labels: dict[str, str],
+    turn_scope: str = "all",
 ) -> list[ExtractionCase]:
+    if turn_scope not in {"all", "final"}:
+        raise ValueError(f"turn_scope must be 'all' or 'final'; got {turn_scope!r}")
     cases: list[ExtractionCase] = []
     for session in dataset:
         session_id = str(session.get("session_id", ""))
-        if session_id not in session_ids:
+        if session_ids is not None and session_id not in session_ids:
             continue
         conversations = list(session.get("conversations") or [])
         turn_numbers = sorted(
@@ -283,6 +342,8 @@ def build_extraction_cases(
                 if message.get("role") == "user" and message.get("turn_number") is not None
             }
         )
+        if turn_scope == "final" and turn_numbers:
+            turn_numbers = [turn_numbers[-1]]
         for turn_number in turn_numbers:
             conversation, played = _conversation_for_turn(
                 conversations,
@@ -316,6 +377,16 @@ def _output_path(args: argparse.Namespace, config: dict[str, Any]) -> Path:
         return _resolve_project_path(str(state_cfg["output_path"]))
     name = str(config.get("_state_extraction_name") or "state_extraction")
     return PROJECT_ROOT / "exp" / "state_extraction" / f"{name}.jsonl"
+
+
+def _output_dir(args: argparse.Namespace, config: dict[str, Any]) -> Path:
+    if getattr(args, "output_dir", None):
+        return _resolve_project_path(str(args.output_dir))
+    state_cfg = _state_cfg(config)
+    if state_cfg.get("output_dir"):
+        return _resolve_project_path(str(state_cfg["output_dir"]))
+    name = str(config.get("_state_extraction_name") or "state_extraction")
+    return PROJECT_ROOT / "cache" / "state_extraction" / name
 
 
 def _setup_cache(config: dict[str, Any]) -> None:
@@ -356,29 +427,104 @@ def _row_for_result(
     }
 
 
+def _cache_context(case: ExtractionCase) -> dict[str, Any]:
+    return {"session_id": case.session_id, "turn_number": case.turn_number}
+
+
+def _existing_file_row(root: Path, case: ExtractionCase) -> dict[str, Any] | None:
+    path = state_cache_file_path(
+        root,
+        session_id=case.session_id,
+        turn_number=case.turn_number,
+    )
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict) or not isinstance(payload.get("state"), dict):
+            return None
+        state = ConversationStateV0Plus.model_validate(payload["state"])
+    except Exception:
+        return None
+    return {
+        "session_id": case.session_id,
+        "turn_number": case.turn_number,
+        "state": state.model_dump(mode="json"),
+        "error": None,
+    }
+
+
+def _write_jsonl_output(path: Path, rows: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
+def _write_file_output(root: Path, rows: list[dict[str, Any]]) -> int:
+    written = 0
+    for row in rows:
+        if row.get("state") is None:
+            continue
+        path = state_cache_file_path(
+            root,
+            session_id=row["session_id"],
+            turn_number=row["turn_number"],
+        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(row, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        written += 1
+    return written
+
+
 def run(args: argparse.Namespace) -> list[dict[str, Any]]:
+    _load_dotenv()
     config = load_config(
         config_path=args.config,
         tid=args.tid,
         config_dir=args.config_dir,
     )
+    if getattr(args, "output", None) and getattr(args, "output_dir", None):
+        raise ValueError("Use --output for JSONL or --output-dir for file output, not both")
+    write_jsonl = bool(getattr(args, "output", None)) or (
+        not getattr(args, "output_dir", None)
+        and bool(_state_cfg(config).get("output_path"))
+    )
+    output_dir = None if write_jsonl else _output_dir(args, config)
+    skip_existing = bool(getattr(args, "skip_existing", False)) and output_dir is not None
     _setup_cache(config)
-    extractor = build_extractor(extractor_config_from_config(config))
-    session_ids = load_session_ids(args.sessions_file)
+    extractor = build_extractor(
+        extractor_config_from_config(
+            config,
+            litellm_cache_only=bool(getattr(args, "litellm_cache_only", False)),
+        )
+    )
+    session_ids = load_session_ids(getattr(args, "sessions_file", None))
     dataset = load_dataset(_dataset_name(config), split=_dataset_split(config))
     track_labels = load_track_labels(config)
     cases = build_extraction_cases(
         dataset,
         session_ids=session_ids,
         track_labels=track_labels,
+        turn_scope=str(getattr(args, "turn_scope", "all")),
     )
     if not cases:
         raise ValueError("No extraction cases found for requested sessions")
 
     rows: list[dict[str, Any]] = []
     for case in cases:
+        if skip_existing and output_dir is not None:
+            existing = _existing_file_row(output_dir, case)
+            if existing is not None:
+                rows.append(existing)
+                continue
         try:
-            state = extractor.extract(case.conversation, case.played_track_ids)
+            state = extract_with_cache_context(
+                extractor,
+                case.conversation,
+                case.played_track_ids,
+                cache_context=_cache_context(case),
+            )
             if state is None:
                 rows.append(_row_for_result(case, None, "extractor returned None"))
             else:
@@ -386,12 +532,16 @@ def run(args: argparse.Namespace) -> list[dict[str, Any]]:
         except Exception as exc:
             rows.append(_row_for_result(case, None, f"{type(exc).__name__}: {exc}"))
 
-    output_path = _output_path(args, config)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open("w", encoding="utf-8") as handle:
-        for row in rows:
-            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
-    print(f"Wrote {len(rows)} state rows to {output_path}", file=sys.stderr)
+    if write_jsonl:
+        output_path = _output_path(args, config)
+        _write_jsonl_output(output_path, rows)
+        print(f"Wrote {len(rows)} state rows to {output_path}", file=sys.stderr)
+    else:
+        assert output_dir is not None
+        written = _write_file_output(output_dir, rows)
+        skipped = len(rows) - written
+        suffix = f" (skipped {skipped} error rows)" if skipped else ""
+        print(f"Wrote {written} state files to {output_dir}{suffix}", file=sys.stderr)
     return rows
 
 

@@ -20,9 +20,59 @@ git config --global mcrs.sharedRoot /path/to/music-crs-cache-owner
 uv run python scripts/setup_worktree_cache.py
 ```
 
+For Codex worktrees on this machine, use the main checkout as the standard
+cache owner:
+
+```bash
+git config --global mcrs.sharedRoot /home/nidhin/projects/music-conversational-music-recomender-2026
+uv run python scripts/setup_worktree_cache.py
+```
+
 `scripts/setup_worktree_cache.py` links `cache`, `exp/analysis/rerank`, and
 `.env`. It never hardcodes a machine path; source lookup is `--source`, then
 `MCRS_SHARED_ROOT`, then `git config mcrs.sharedRoot`.
+
+If a worktree already has local ignored cache artifacts from a failed run,
+replace them with the shared links:
+
+```bash
+uv run python scripts/setup_worktree_cache.py --force
+```
+
+## State extraction cache
+
+State files should be materialized into the shared `cache/` tree, not `exp/`.
+Use `--skip-existing` for backfill runs so existing turn files are reused and
+only missing turns call LiteLLM. Blind sets only need the final turn per session;
+devset and trainset cache materialization use all turns.
+
+See [State Extraction Cache](state_extraction_cache.md) for the standard GitHub
+Release packaging, install, checksum verification, and override-file workflow.
+
+```bash
+uv run python scripts/extract_state.py \
+  --tid state_ranker_v10_lgbm_blindset_A \
+  --turn-scope final \
+  --output-dir cache/state_extraction/blindset_A \
+  --skip-existing
+
+uv run python scripts/extract_state.py \
+  --tid state_ranker_v10_lgbm_blindset_B \
+  --turn-scope final \
+  --output-dir cache/state_extraction/blindset_B \
+  --skip-existing
+
+uv run python scripts/extract_state.py \
+  --tid state_ranker_v10_lgbm_devset \
+  --turn-scope all \
+  --output-dir cache/state_extraction/devset \
+  --skip-existing
+```
+
+The trainset cache is materialized from the existing extracted-state artifact
+`exp/state_extraction/deepseek_train_all.jsonl` into `cache/state_extraction/trainset`.
+
+Manual corrections go next to the raw file as `turn_<n>_override.json`.
 
 ## Run the local split
 

@@ -585,6 +585,216 @@ def test_litellm_extractor_uses_cached_valid_response(monkeypatch):
     assert "cache" not in cache_get_kwargs[0]
 
 
+def test_litellm_extractor_cache_only_raises_before_live_call(monkeypatch):
+    completion_called = False
+
+    class FakeCache:
+        def get_cache(self, **kwargs):
+            return None
+
+    def fake_completion(**kwargs):
+        nonlocal completion_called
+        completion_called = True
+        raise AssertionError("completion should not run in cache-only mode")
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(completion=fake_completion, cache=FakeCache()),
+    )
+
+    extractor = LiteLLMExtractor(
+        model_name="openrouter/fake",
+        retry_temperature=0.0,
+        litellm_cache_only=True,
+    )
+
+    with pytest.raises(RuntimeError, match="LiteLLM cache miss"):
+        extractor.extract([{"turn": 1, "role": "user", "text": "x"}], [])
+
+    assert completion_called is False
+
+
+def _write_state_cache_file(path, turn_intent: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "state": {
+                    "turn_intent": turn_intent,
+                    "intent_mode": "refinement",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_litellm_extractor_file_cache_prefers_override(tmp_path, monkeypatch):
+    def fail_completion(**kwargs):
+        raise AssertionError("LiteLLM should not be called when override cache exists")
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(completion=fail_completion, cache=None),
+    )
+    _write_state_cache_file(tmp_path / "s1" / "turn_8.json", "raw state")
+    _write_state_cache_file(tmp_path / "s1" / "turn_8_override.json", "manual override")
+
+    extractor = LiteLLMExtractor(
+        model_name="openrouter/fake",
+        retry_temperature=0.0,
+        state_cache={"enabled": True, "mode": "file_per_turn", "dir": str(tmp_path)},
+    )
+
+    state = extractor.extract(
+        [{"turn": 8, "role": "user", "text": "more like this"}],
+        [],
+        cache_context={"session_id": "s1", "turn_number": 8},
+    )
+
+    assert state is not None
+    assert state.turn_intent == "manual override"
+
+
+def test_litellm_extractor_file_cache_uses_original_when_override_absent_async(tmp_path, monkeypatch):
+    async def fail_acompletion(**kwargs):
+        raise AssertionError("LiteLLM should not be called when original cache exists")
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(acompletion=fail_acompletion, cache=None),
+    )
+    _write_state_cache_file(tmp_path / "s1" / "turn_8.json", "raw state")
+
+    extractor = LiteLLMExtractor(
+        model_name="openrouter/fake",
+        retry_temperature=0.0,
+        state_cache={"enabled": True, "mode": "file_per_turn", "dir": str(tmp_path)},
+    )
+
+    state = asyncio.run(
+        extractor.aextract(
+            [{"turn": 8, "role": "user", "text": "more like this"}],
+            [],
+            cache_context={"session_id": "s1", "turn_number": 8},
+        )
+    )
+
+    assert state is not None
+    assert state.turn_intent == "raw state"
+
+
+def test_litellm_extractor_file_cache_missing_falls_through_to_litellm(tmp_path, monkeypatch):
+    completion_kwargs = []
+    response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(
+                    content='{"turn_intent": "live state", "intent_mode": "refinement"}'
+                )
+            )
+        ],
+        model_dump_json=lambda: '{"cached": true}',
+    )
+
+    def fake_completion(**kwargs):
+        completion_kwargs.append(kwargs)
+        return response
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(
+            completion=fake_completion,
+            cache=SimpleNamespace(add_cache=lambda *args, **kwargs: None),
+        ),
+    )
+
+    extractor = LiteLLMExtractor(
+        model_name="openrouter/fake",
+        retry_temperature=0.0,
+        state_cache={"enabled": True, "mode": "file_per_turn", "dir": str(tmp_path)},
+    )
+
+    state = extractor.extract(
+        [{"turn": 8, "role": "user", "text": "more like this"}],
+        [],
+        cache_context={"session_id": "s1", "turn_number": 8},
+    )
+
+    assert state is not None
+    assert state.turn_intent == "live state"
+    assert completion_kwargs
+
+
+def test_litellm_extractor_file_cache_invalid_override_raises(tmp_path):
+    from mcrs.qu_modules.state_cache import StateCacheError
+
+    bad_path = tmp_path / "s1" / "turn_8_override.json"
+    bad_path.parent.mkdir(parents=True, exist_ok=True)
+    bad_path.write_text(json.dumps({"state": []}), encoding="utf-8")
+
+    extractor = LiteLLMExtractor(
+        model_name="openrouter/fake",
+        retry_temperature=0.0,
+        state_cache={"enabled": True, "mode": "file_per_turn", "dir": str(tmp_path)},
+    )
+
+    with pytest.raises(StateCacheError, match="override"):
+        extractor.extract(
+            [{"turn": 8, "role": "user", "text": "more like this"}],
+            [],
+            cache_context={"session_id": "s1", "turn_number": 8},
+        )
+
+
+def test_litellm_extractor_file_cache_invalid_original_falls_through_to_litellm(
+    tmp_path,
+    monkeypatch,
+    caplog,
+):
+    bad_path = tmp_path / "s1" / "turn_8.json"
+    bad_path.parent.mkdir(parents=True, exist_ok=True)
+    bad_path.write_text(json.dumps({"state": []}), encoding="utf-8")
+    response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(
+                    content='{"turn_intent": "live state", "intent_mode": "refinement"}'
+                )
+            )
+        ],
+        model_dump_json=lambda: '{"cached": true}',
+    )
+
+    monkeypatch.setitem(
+        sys.modules,
+        "litellm",
+        SimpleNamespace(
+            completion=lambda **kwargs: response,
+            cache=SimpleNamespace(add_cache=lambda *args, **kwargs: None),
+        ),
+    )
+    extractor = LiteLLMExtractor(
+        model_name="openrouter/fake",
+        retry_temperature=0.0,
+        state_cache={"enabled": True, "mode": "file_per_turn", "dir": str(tmp_path)},
+    )
+
+    state = extractor.extract(
+        [{"turn": 8, "role": "user", "text": "more like this"}],
+        [],
+        cache_context={"session_id": "s1", "turn_number": 8},
+    )
+
+    assert state is not None
+    assert state.turn_intent == "live state"
+    assert "original state cache load failed" in caplog.text
+
+
 def test_litellm_extractor_caches_retry_success_under_primary_key(monkeypatch):
     completion_kwargs = []
     stored = []

@@ -44,6 +44,7 @@ import os
 import re
 import time
 from dataclasses import dataclass, field
+import inspect
 from typing import Any
 
 from pydantic import ValidationError
@@ -68,6 +69,7 @@ from mcrs.conversation_state.schema import (
     project_v1_to_v0plus,
 )
 from mcrs.response_context import response_state_dict
+from mcrs.qu_modules.state_cache import FilePerTurnStateCache, StateCacheError
 
 
 def _resolve_prompt_fns(prompt_version: str | None):
@@ -117,6 +119,52 @@ def _aggregate_trace_timings(traces: list[dict[str, Any]]) -> dict[str, float]:
             if isinstance(value, (int, float)):
                 aggregate[key] = aggregate.get(key, 0.0) + float(value)
     return aggregate
+
+
+def state_cache_context_from_session_meta(
+    session_meta: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if not isinstance(session_meta, dict):
+        return None
+    session_id = session_meta.get("session_id")
+    turn_number = session_meta.get("turn_number")
+    if session_id is None or turn_number is None:
+        return None
+    return {"session_id": session_id, "turn_number": turn_number}
+
+
+def _method_accepts_cache_context(method: Any) -> bool:
+    try:
+        params = inspect.signature(method).parameters
+    except (TypeError, ValueError):
+        return True
+    return "cache_context" in params or any(
+        p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()
+    )
+
+
+def extract_with_cache_context(
+    extractor: Any,
+    conversation: list[dict[str, Any]],
+    played_track_ids: list[str],
+    cache_context: dict[str, Any] | None = None,
+) -> ConversationStateV0Plus | None:
+    method = extractor.extract
+    if cache_context is not None and _method_accepts_cache_context(method):
+        return method(conversation, played_track_ids, cache_context=cache_context)
+    return method(conversation, played_track_ids)
+
+
+async def aextract_with_cache_context(
+    extractor: Any,
+    conversation: list[dict[str, Any]],
+    played_track_ids: list[str],
+    cache_context: dict[str, Any] | None = None,
+) -> ConversationStateV0Plus | None:
+    method = extractor.aextract
+    if cache_context is not None and _method_accepts_cache_context(method):
+        return await method(conversation, played_track_ids, cache_context=cache_context)
+    return await method(conversation, played_track_ids)
 
 
 def _with_no_store_cache(call_kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -496,6 +544,8 @@ class LiteLLMExtractor:
     # Provider-specific LiteLLM kwargs are merged last so configs can
     # intentionally override core request keys when a provider requires it.
     extra_params: dict[str, Any] = field(default_factory=dict)
+    state_cache: dict[str, Any] | None = None
+    litellm_cache_only: bool = False
 
     # Which extraction prompt to use. "current" maps to the production prompt;
     # "previous" keeps the prior prompt as a comparison/rollback reference.
@@ -508,9 +558,33 @@ class LiteLLMExtractor:
     # bypasses the LiteLLM cache (key includes temperature) and shifts the
     # sampling trajectory off the degenerative path.
     retry_temperature: float = 0.3
+    _state_cache: FilePerTurnStateCache | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         self._build_messages_fn, self._schema_fn = _resolve_prompt_fns(self.prompt_version)
+        self._state_cache = FilePerTurnStateCache.from_config(self.state_cache)
+
+    def _extract_from_state_cache(
+        self,
+        cache_context: dict[str, Any] | None,
+    ) -> ConversationStateV0Plus | None:
+        if self._state_cache is None:
+            return None
+        try:
+            hit = self._state_cache.load(cache_context)
+        except StateCacheError as exc:
+            if exc.source == "original":
+                logger.warning(
+                    "v0+ extractor original state cache load failed (%s): %s",
+                    exc.path,
+                    exc,
+                )
+                return None
+            raise
+        if hit is None:
+            return None
+        logger.info("v0+ extractor state cache hit source=%s path=%s", hit.source, hit.path)
+        return hit.state
 
     def _build_kwargs(
         self,
@@ -599,7 +673,12 @@ class LiteLLMExtractor:
         self,
         conversation: list[dict[str, Any]],
         played_track_ids: list[str],
+        cache_context: dict[str, Any] | None = None,
     ) -> ConversationStateV0Plus | None:
+        cached_state = self._extract_from_state_cache(cache_context)
+        if cached_state is not None:
+            return cached_state
+
         import litellm
 
         # Try the configured temperature first; if the response is unparseable
@@ -629,6 +708,11 @@ class LiteLLMExtractor:
                         "(attempt %d, temp=%.2f): %s: %s | raw=%r",
                         attempt, temp, type(exc).__name__, exc, cached_raw[:6000],
                     )
+            if self.litellm_cache_only:
+                raise RuntimeError(
+                    "LiteLLM cache miss for state extraction with "
+                    "litellm_cache_only enabled"
+                )
             try:
                 response = litellm.completion(**_with_no_store_cache(call_kwargs))
                 raw = _content_from_litellm_response(response) or ""
@@ -663,10 +747,15 @@ class LiteLLMExtractor:
         self,
         conversation: list[dict[str, Any]],
         played_track_ids: list[str],
+        cache_context: dict[str, Any] | None = None,
     ) -> ConversationStateV0Plus | None:
         """Async variant of `extract` — used by `abatch_compile_track_ids` to
         fan out extractor calls concurrently with `asyncio.gather`. Same
         retry semantics as the sync path."""
+        cached_state = self._extract_from_state_cache(cache_context)
+        if cached_state is not None:
+            return cached_state
+
         import litellm
 
         temps = [self.temperature]
@@ -697,6 +786,11 @@ class LiteLLMExtractor:
                         "(async, attempt %d, temp=%.2f): %s: %s | raw=%r",
                         attempt, temp, type(exc).__name__, exc, cached_raw[:6000],
                     )
+            if self.litellm_cache_only:
+                raise RuntimeError(
+                    "LiteLLM cache miss for state extraction with "
+                    "litellm_cache_only enabled"
+                )
             try:
                 response = await litellm.acompletion(**_with_no_store_cache(call_kwargs))
                 raw = _content_from_litellm_response(response) or ""
@@ -739,6 +833,10 @@ def _optional_api_key(value: Any) -> str | None:
 def _is_ollama_model(model_name: Any) -> bool:
     text = str(model_name or "")
     return text.startswith("ollama/") or text.startswith("ollama_chat/")
+
+
+def _truthy_config(value: Any) -> bool:
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _extractor_api_key(ex_cfg: dict[str, Any]) -> str | None:
@@ -954,8 +1052,14 @@ class V0PlusCompilerQU:
         conv, played = session_memory_to_conversation(session_memory, self.catalog)
         _add_elapsed(timings, "session_memory", start)
         start = time.perf_counter()
+        cache_context = state_cache_context_from_session_meta(session_meta)
         async with extract_sem:
-            state = await self.extractor.aextract(conv, played)
+            state = await aextract_with_cache_context(
+                self.extractor,
+                conv,
+                played,
+                cache_context=cache_context,
+            )
         _add_elapsed(timings, "extractor", start)
         if state is None:
             timings.setdefault("resolver", 0.0)
@@ -1358,6 +1462,8 @@ def build_v0plus_compiler_qu(
             prompt_version=str(ex_cfg.get("prompt_version", "current")),
             retry_temperature=float(ex_cfg.get("retry_temperature", 0.3)),
             extra_params=dict(ex_cfg.get("extra_params") or {}),
+            state_cache=dict(ex_cfg.get("state_cache") or {}),
+            litellm_cache_only=_truthy_config(ex_cfg.get("litellm_cache_only")),
         )
 
     # ----- Resolver -----
