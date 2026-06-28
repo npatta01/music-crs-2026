@@ -126,7 +126,6 @@ from mcrs.debug.replay import (
 )
 from mcrs.debug.rerank import (
     _OFFLINE_UNCHANGED,
-    _ReadOnlyCachedTextEmbedder,
     _cmd_rerank_features,
     _cmd_rerank_subset,
     _compute_rerank_feature_payload,
