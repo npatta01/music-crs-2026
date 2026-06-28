@@ -5,7 +5,13 @@ from .base import (
     LastNUserTurnsQU,
     NoMusicHistoryQU,
 )
-from .llm_rewrite import LLMRewriteQU
+
+
+def __getattr__(name):
+    if name == "LLMRewriteQU":
+        from .llm_rewrite import LLMRewriteQU
+        return LLMRewriteQU
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def load_qu_module(
@@ -29,7 +35,7 @@ def load_qu_module(
     elif qu_type == "no_music_history":
         return NoMusicHistoryQU()
     elif qu_type == "llm_rewrite":
-        from .llm_rewrite import build_model_adapter
+        from .llm_rewrite import LLMRewriteQU, build_model_adapter
         backend = qu_kwargs.get("backend", "local")
         adapter = build_model_adapter(
             model_name=qu_kwargs["model_name"],

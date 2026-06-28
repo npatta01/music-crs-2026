@@ -1,6 +1,9 @@
 import json
+import subprocess
 import sys
+import textwrap
 import types
+from pathlib import Path
 
 import pytest
 
@@ -137,6 +140,39 @@ def test_debug_tools_shim_exports_legacy_private_helpers():
     assert legacy_debug_tools._catalog_hit is _catalog_hit
     assert legacy_debug_tools._first_str is _first_str
     assert legacy_debug_tools._str_values is _str_values
+
+
+def test_state_ranker_import_does_not_require_llm_rewrite():
+    code = textwrap.dedent(
+        """
+        import builtins
+
+        real_import = builtins.__import__
+
+        def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name == "llm_rewrite" or name == "mcrs.qu_modules.llm_rewrite":
+                raise RuntimeError("llm_rewrite should be loaded only for llm_rewrite QU")
+            return real_import(name, globals, locals, fromlist, level)
+
+        builtins.__import__ = guarded_import
+
+        from mcrs.qu_modules import load_qu_module
+        import mcrs.qu_modules.state_ranker_qu  # noqa: F401
+        import mcrs.debug.runtime  # noqa: F401
+
+        assert callable(load_qu_module)
+        """
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_dense_search_command_embeds_query_and_returns_catalog_rows(tmp_path, monkeypatch):
