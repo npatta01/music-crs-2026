@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import copy
 import os
 from pathlib import Path
 from typing import Any
@@ -34,27 +33,62 @@ def _load_config_for_args(args: argparse.Namespace) -> dict[str, Any]:
         raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     if not isinstance(raw, dict):
         raise ValueError(f"config must be a YAML object: {path}")
+    qu_kwargs = raw.get("qu_kwargs")
+    if isinstance(qu_kwargs, dict):
+        _resolve_vllm_endpoints_if_needed(qu_kwargs)
     return raw
 
-def _debug_config_for_cache_policy(config: dict[str, Any], *, allow_cache_write: bool) -> dict[str, Any]:
-    if allow_cache_write:
-        return config
-    out = copy.deepcopy(config)
-    qu_kwargs = out.get("qu_kwargs")
-    if not isinstance(qu_kwargs, dict):
-        return out
+def _encoder_has_vllm_endpoint(value: Any) -> bool:
+    return isinstance(value, dict) and bool(value.get("vllm_endpoint"))
 
-    def disable_encoder_cache(encoder_cfg: Any) -> None:
-        if isinstance(encoder_cfg, dict):
-            encoder_cfg["cache"] = False
-            encoder_cfg["disk_cache"] = False
+def _qu_kwargs_has_vllm_endpoint(qu_kwargs: dict[str, Any]) -> bool:
+    if _encoder_has_vllm_endpoint(qu_kwargs.get("encoder")):
+        return True
+    encoders = qu_kwargs.get("encoders")
+    if not isinstance(encoders, dict):
+        return False
+    return any(_encoder_has_vllm_endpoint(value) for value in encoders.values())
 
-    disable_encoder_cache(qu_kwargs.get("encoder"))
+def _vllm_app_name() -> str:
+    config_path = Path(__file__).resolve().parents[2] / "modal" / "config.yaml"
+    try:
+        import yaml
+
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+        vllm = config.get("vllm") if isinstance(config, dict) else None
+        if isinstance(vllm, dict) and vllm.get("app_name"):
+            return str(vllm["app_name"])
+    except Exception:
+        pass
+    return "music-crs-vllm"
+
+def _vllm_serve_fn_name(model_key: str) -> str:
+    return "serve_" + str(model_key).replace("-", "_")
+
+def _vllm_endpoint_url(model_key: str) -> str:
+    import modal
+
+    fn = modal.Function.from_name(_vllm_app_name(), _vllm_serve_fn_name(model_key))
+    return fn.get_web_url().rstrip("/") + "/v1"
+
+def _resolve_encoder_vllm_endpoint(enc_cfg: Any) -> None:
+    if isinstance(enc_cfg, dict) and enc_cfg.get("vllm_endpoint"):
+        enc_cfg["api_base"] = _vllm_endpoint_url(str(enc_cfg.pop("vllm_endpoint")))
+
+def _resolve_vllm_endpoints_if_needed(qu_kwargs: dict[str, Any]) -> None:
+    if not _qu_kwargs_has_vllm_endpoint(qu_kwargs):
+        return
+    _resolve_encoder_vllm_endpoint(qu_kwargs.get("encoder"))
     encoders = qu_kwargs.get("encoders")
     if isinstance(encoders, dict):
-        for encoder_cfg in encoders.values():
-            disable_encoder_cache(encoder_cfg)
-    return out
+        for enc_cfg in encoders.values():
+            _resolve_encoder_vllm_endpoint(enc_cfg)
+
+def _debug_config_for_cache_policy(config: dict[str, Any], *, allow_cache_write: bool) -> dict[str, Any]:
+    del allow_cache_write
+    # Keep encoder cache settings intact: debug replay should read local vector
+    # caches first and fall through to the configured remote encoder on miss.
+    return config
 
 def _build_debug_encoder_from_config(
     config: dict[str, Any],
@@ -82,11 +116,8 @@ def _build_debug_encoder_from_config(
         raise ValueError(f"encoder config for {encoder_id!r} must be a mapping")
     from mcrs.qu_modules.compiler_v0plus_qu import _build_encoder
 
-    debug_cfg = dict(encoder_cfg)
-    if not allow_cache_write:
-        debug_cfg["cache"] = False
-        debug_cfg["disk_cache"] = False
-    return _build_encoder(debug_cfg)
+    del allow_cache_write
+    return _build_encoder(dict(encoder_cfg))
 
 def _debug_lancedb_params(
     config: dict[str, Any],

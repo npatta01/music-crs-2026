@@ -1,3 +1,4 @@
+import argparse
 import json
 import subprocess
 import sys
@@ -361,7 +362,7 @@ def test_debug_cli_shim_monkeypatches_still_drive_main(tmp_path, monkeypatch):
     assert payload["hits"][0]["artist_name"] == "Shim Artist"
 
 
-def test_dense_search_disables_configured_encoder_cache_by_default(monkeypatch):
+def test_dense_search_preserves_configured_encoder_cache_by_default(monkeypatch):
     seen = []
 
     def fake_build_encoder(cfg):
@@ -380,6 +381,7 @@ def test_dense_search_disables_configured_encoder_cache_by_default(monkeypatch):
                     "backend": "modal_multimodal",
                     "method": "embed_siglip_text",
                     "cache": True,
+                    "disk_cache": True,
                 }
             }
         }
@@ -387,7 +389,95 @@ def test_dense_search_disables_configured_encoder_cache_by_default(monkeypatch):
 
     debug_runtime._build_debug_encoder_from_config(config, "siglip2_text")
 
-    assert seen[0]["cache"] is False
+    assert seen[0]["cache"] is True
+    assert seen[0]["disk_cache"] is True
+
+
+def test_load_config_for_args_resolves_named_vllm_endpoints(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        debug_runtime,
+        "_vllm_endpoint_url",
+        lambda endpoint: f"https://fake.modal/{endpoint}/v1",
+    )
+    config_dir = tmp_path / "configs"
+    config_dir.mkdir()
+    (config_dir / "debug_vllm.yaml").write_text(
+        textwrap.dedent(
+            """
+            qu_kwargs:
+              encoders:
+                qwen_0_6b:
+                  backend: litellm
+                  api_base: https://api.deepinfra.com/v1/openai
+                qwen_8b:
+                  backend: litellm
+                  model_name: openai/Qwen/Qwen3-Embedding-8B
+                  vllm_endpoint: qwen3-embedding-8b
+                  api_key: token-from-env
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    config = debug_runtime._load_config_for_args(
+        argparse.Namespace(config=None, tid="debug_vllm", config_dir=str(config_dir))
+    )
+
+    qwen_8b = config["qu_kwargs"]["encoders"]["qwen_8b"]
+    assert qwen_8b["api_base"] == "https://fake.modal/qwen3-embedding-8b/v1"
+    assert "vllm_endpoint" not in qwen_8b
+
+
+def test_vllm_endpoint_url_uses_modal_function_lookup(monkeypatch):
+    calls = []
+
+    class FakeFunction:
+        @staticmethod
+        def from_name(app_name, fn_name):
+            calls.append((app_name, fn_name))
+            return types.SimpleNamespace(get_web_url=lambda: "https://fake.modal.run/")
+
+    monkeypatch.setitem(sys.modules, "modal", types.SimpleNamespace(Function=FakeFunction))
+    monkeypatch.setattr(debug_runtime, "_vllm_app_name", lambda: "music-crs-vllm")
+
+    assert debug_runtime._vllm_endpoint_url("qwen3-embedding-8b") == "https://fake.modal.run/v1"
+    assert calls == [("music-crs-vllm", "serve_qwen3_embedding_8b")]
+
+
+def test_debug_config_for_cache_policy_preserves_encoder_cache_settings():
+    config = {
+        "qu_kwargs": {
+            "encoder": {
+                "backend": "litellm",
+                "cache": {"ttl": 3600},
+                "disk_cache": True,
+            },
+            "encoders": {
+                "qwen_0_6b": {
+                    "backend": "litellm",
+                    "cache": {"ttl": 3600},
+                    "disk_cache": True,
+                },
+                "siglip2_text": {
+                    "backend": "modal_multimodal",
+                    "cache": True,
+                    "disk_cache": True,
+                },
+            },
+        }
+    }
+
+    debug_config = debug_runtime._debug_config_for_cache_policy(
+        config,
+        allow_cache_write=False,
+    )
+
+    assert debug_config["qu_kwargs"]["encoder"]["cache"] == {"ttl": 3600}
+    assert debug_config["qu_kwargs"]["encoder"]["disk_cache"] is True
+    assert debug_config["qu_kwargs"]["encoders"]["qwen_0_6b"]["cache"] == {"ttl": 3600}
+    assert debug_config["qu_kwargs"]["encoders"]["qwen_0_6b"]["disk_cache"] is True
+    assert debug_config["qu_kwargs"]["encoders"]["siglip2_text"]["cache"] is True
+    assert debug_config["qu_kwargs"]["encoders"]["siglip2_text"]["disk_cache"] is True
 
 
 def test_case_command_prints_focused_turn_from_run_alias(tmp_path, capsys):
@@ -803,7 +893,7 @@ def test_rerank_subset_command_filters_trace_and_injects_missing_candidate(tmp_p
     assert payload["injected_missing_ids"] == ["t-missing"]
 
 
-def test_rerank_subset_runs_reranker_offline_by_default_and_restores(tmp_path, monkeypatch):
+def test_rerank_subset_preserves_online_reranker_by_default(tmp_path, monkeypatch):
     class FakeCtx:
         offline = False
 
@@ -812,7 +902,7 @@ def test_rerank_subset_runs_reranker_offline_by_default_and_restores(tmp_path, m
             self.ctx = FakeCtx()
 
         def rerank(self, trace, session_meta, user_id, hard_drop, fallback):
-            assert self.ctx.offline is True
+            assert self.ctx.offline is False
             return list(fallback)
 
     class FakeQU:
@@ -889,27 +979,17 @@ def test_session_meta_from_wrapper_preserves_dataset_style_fields():
     assert meta["session_date"] == "2026-06-28"
 
 
-def test_reranker_debug_policy_uses_b1_cache_read_only_and_restores():
-    from mcrs.embeddings.embedding_cache import make_key
-
-    class FakeStore:
-        def __init__(self):
-            self.values = {make_key("b1-test", "cached"): [1.0, 0.0]}
-            self.writes = []
-
-        def get(self, key):
-            return self.values.get(key)
-
-        def set(self, key, vec):
-            self.writes.append((key, vec))
+def test_reranker_debug_policy_preserves_online_b1_fallback():
+    class FakeCtx:
+        offline = False
 
     class FakeEnc:
         def __init__(self):
-            self._store = FakeStore()
-            self._namespace = "b1-test"
+            self.calls = []
 
-    class FakeCtx:
-        offline = False
+        def embed_batch(self, texts):
+            self.calls.append(list(texts))
+            return [[float(i), 0.0] for i, _ in enumerate(texts)]
 
     class FakeB1:
         enc = FakeEnc()
@@ -922,11 +1002,10 @@ def test_reranker_debug_policy_uses_b1_cache_read_only_and_restores():
     original_enc = reranker.b1.enc
     policy = debug_rerank._set_reranker_debug_policy(reranker, allow_cache_write=False)
 
-    assert reranker.ctx.offline is True
-    assert reranker.b1.enc.embed_batch(["cached"]) == [[1.0, 0.0]]
-    with pytest.raises(ValueError, match="read-only debug mode"):
-        reranker.b1.enc.embed_batch(["missing"])
-    assert original_enc._store.writes == []
+    assert reranker.ctx.offline is False
+    assert reranker.b1.enc is original_enc
+    assert reranker.b1.enc.embed_batch(["cached", "missing"]) == [[0.0, 0.0], [1.0, 0.0]]
+    assert original_enc.calls == [["cached", "missing"]]
 
     debug_rerank._restore_reranker_debug_policy(reranker, policy)
 

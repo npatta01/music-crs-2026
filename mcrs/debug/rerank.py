@@ -188,42 +188,11 @@ def _matrix_rows(matrix: Any) -> list[list[Any]]:
     values = matrix.tolist() if hasattr(matrix, "tolist") else matrix
     return [list(row) for row in values]
 
-class _ReadOnlyCachedTextEmbedder:
-    def __init__(self, wrapped: Any) -> None:
-        self._store = wrapped._store
-        self._namespace = wrapped._namespace
-
-    def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        from mcrs.embeddings.embedding_cache import make_key
-
-        out: list[list[float]] = []
-        missing: list[str] = []
-        for text in texts:
-            hit = self._store.get(make_key(self._namespace, text))
-            if hit is None:
-                missing.append(text)
-                continue
-            out.append(hit)
-        if missing:
-            raise ValueError(
-                "read-only debug mode found missing b1 query embedding cache entries; "
-                "rerun with --allow-cache-write to allow live fills"
-            )
-        return out
-
 def _set_reranker_debug_policy(reranker: Any, *, allow_cache_write: bool) -> dict[str, Any]:
-    previous: dict[str, Any] = {
-        "offline": _set_reranker_offline(reranker, offline=not allow_cache_write),
-        "b1_enc": _OFFLINE_UNCHANGED,
-    }
-    if allow_cache_write:
-        return previous
-    b1 = getattr(reranker, "b1", None)
-    enc = getattr(b1, "enc", None)
-    if enc is not None and all(hasattr(enc, attr) for attr in ("_store", "_namespace")):
-        previous["b1_enc"] = enc
-        b1.enc = _ReadOnlyCachedTextEmbedder(enc)
-    return previous
+    del reranker, allow_cache_write
+    # Preserve the configured online/read-through behavior: local caches are
+    # checked first and misses fall through to the configured remote encoder.
+    return {"offline": _OFFLINE_UNCHANGED, "b1_enc": _OFFLINE_UNCHANGED}
 
 def _restore_reranker_debug_policy(reranker: Any, previous: dict[str, Any]) -> None:
     _restore_reranker_offline(reranker, previous.get("offline", _OFFLINE_UNCHANGED))
