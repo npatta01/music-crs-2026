@@ -133,6 +133,34 @@ def test_debug_cli_shim_exports_legacy_surface():
     assert callable(legacy_debug_cli._load_config_for_args)
 
 
+def test_debug_cli_file_execution_does_not_shadow_lancedb():
+    repo_root = Path(__file__).resolve().parents[1]
+    code = "\n".join(
+        [
+            "import importlib",
+            "import runpy",
+            "import sys",
+            f"repo_root = {str(repo_root)!r}",
+            'script_path = repo_root + "/mcrs/debug_cli.py"',
+            'sys.path.insert(0, repo_root + "/mcrs")',
+            "sys.path.insert(1, repo_root)",
+            'runpy.run_path(script_path, run_name="debug_cli_path_test")',
+            'lancedb = importlib.import_module("lancedb")',
+            'assert hasattr(lancedb, "connect"), getattr(lancedb, "__file__", None)',
+            'assert "/mcrs/lancedb/" not in str(getattr(lancedb, "__file__", ""))',
+        ]
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+
 def test_debug_tools_shim_exports_legacy_private_helpers():
     import mcrs.debug_tools as legacy_debug_tools
 

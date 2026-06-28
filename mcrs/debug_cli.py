@@ -2,7 +2,25 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+import sys
 from typing import Any
+
+
+def _prefer_repo_root_imports() -> None:
+    """Avoid script-directory shadowing when run as ``python mcrs/debug_cli.py``."""
+    script_dir = Path(__file__).resolve().parent
+    repo_root = script_dir.parent
+    cleaned: list[str] = []
+    for entry in sys.path:
+        resolved = Path(entry or ".").resolve()
+        if resolved in {script_dir, repo_root}:
+            continue
+        cleaned.append(entry)
+    sys.path[:] = [str(repo_root), *cleaned]
+
+
+_prefer_repo_root_imports()
 
 from mcrs.debug import audit as _audit
 from mcrs.debug import catalog as _catalog
