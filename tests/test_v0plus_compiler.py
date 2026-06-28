@@ -23,6 +23,7 @@ from mcrs.qu_modules.compiler_v0plus import (
 from mcrs.qu_modules.fuzzy_matcher import RapidfuzzCatalogMatcher
 from mcrs.qu_modules.resolver_v0plus import (
     ResolvedConversationState,
+    ResolvedRejection,
     ResolvedTarget,
     V0PlusResolver,
 )
@@ -1660,6 +1661,138 @@ def test_resolver_grounds_exact_track_title():
     assert tracks and tracks[0].entity_id == "t-morphine-1"
 
 
+def test_resolver_constrains_exact_track_to_named_artist():
+    catalog = DictCatalog(
+        tracks={
+            **_catalog().tracks,
+            "t-sarah-hold": {
+                "artist_id": "a-sarah",
+                "artist_name": "Sarah McLachlan",
+                "track_name": "Hold On",
+                "tag_list": ["singer-songwriter"],
+                "popularity": 55.0,
+                "release_date": "1993-01-01",
+                "metadata_vector": [0.2, 0.0, 0.0],
+            },
+            "t-wrong-hold": {
+                "artist_id": "a-wrong",
+                "artist_name": "Wrong Artist",
+                "track_name": "Hold On",
+                "tag_list": ["pop"],
+                "popularity": 95.0,
+                "release_date": "2020-01-01",
+                "metadata_vector": [0.1, 0.0, 0.0],
+            },
+        }
+    )
+    state = _state(
+        facts=[
+            {
+                "type": "artist",
+                "value": "Sarah McLachlan",
+                "role": "current_target",
+                "anchor_use": "must_use",
+                "relation": "exact_target",
+                "reuse": "must_reuse",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+                "evidence_text": "Sarah McLachlan",
+            },
+            {
+                "type": "track",
+                "value": "Hold On",
+                "role": "current_target",
+                "anchor_use": "must_use",
+                "relation": "exact_target",
+                "reuse": "must_reuse",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+                "evidence_text": "Hold On",
+            },
+        ],
+        mentioned_entities=[
+            MentionedEntity(type="track", value="Hold On", sentiment=1),
+            MentionedEntity(type="artist", value="Sarah McLachlan", sentiment=1),
+        ],
+    )
+
+    rs = _resolve(state, catalog)
+
+    tracks = [t for t in rs.resolved_targets if t.kind == "track"]
+    assert tracks and tracks[0].entity_id == "t-sarah-hold"
+
+
+def test_resolver_does_not_anchor_wrong_artist_track_when_named_artist_has_no_match():
+    catalog = DictCatalog(
+        tracks={
+            **_catalog().tracks,
+            "t-wrong-sometimes": {
+                "artist_id": "a-wrong",
+                "artist_name": "Wrong Artist",
+                "track_name": "Sometimes I Cry",
+                "tag_list": ["rock"],
+                "popularity": 95.0,
+                "release_date": "2020-01-01",
+                "metadata_vector": [0.1, 0.0, 0.0],
+            },
+            "t-chris-other": {
+                "artist_id": "a-chris",
+                "artist_name": "Chris Stapleton",
+                "track_name": "Parachute",
+                "tag_list": ["country"],
+                "popularity": 75.0,
+                "release_date": "2015-01-01",
+                "metadata_vector": [0.2, 0.0, 0.0],
+            },
+            "t-chris-loose": {
+                "artist_id": "a-chris",
+                "artist_name": "Chris Stapleton",
+                "track_name": "Last Thing I Needed, First Thing This Morning",
+                "tag_list": ["country"],
+                "popularity": 80.0,
+                "release_date": "2017-01-01",
+                "metadata_vector": [0.3, 0.0, 0.0],
+            },
+        }
+    )
+    state = _state(
+        facts=[
+            {
+                "type": "artist",
+                "value": "Chris Stapleton",
+                "role": "current_target",
+                "anchor_use": "must_use",
+                "relation": "exact_target",
+                "reuse": "must_reuse",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+                "evidence_text": "Chris Stapleton",
+            },
+            {
+                "type": "track",
+                "value": "Sometimes I Cry",
+                "role": "current_target",
+                "anchor_use": "must_use",
+                "relation": "exact_target",
+                "reuse": "must_reuse",
+                "source_turn": 1,
+                "mentioned_current_turn": True,
+                "evidence_text": "Sometimes I Cry",
+            },
+        ],
+        mentioned_entities=[
+            MentionedEntity(type="track", value="Sometimes I Cry", sentiment=1),
+            MentionedEntity(type="artist", value="Chris Stapleton", sentiment=1),
+        ],
+    )
+
+    rs = _resolve(state, catalog)
+
+    tracks = [t for t in rs.resolved_targets if t.kind == "track"]
+    assert tracks and tracks[0].entity_id is None
+    assert tracks[0].candidates
+
+
 def test_resolver_does_not_ground_negative_sentiment_mention():
     catalog = _catalog()
     state = _state(mentioned_entities=[MentionedEntity(type="artist", value="Morphine", sentiment=-1)])
@@ -1753,6 +1886,46 @@ def test_discography_branch_respects_hard_drop():
     # discography track is brought in.
     assert "t-morphine-1" not in result
     assert "t-morphine-2" in result
+
+
+def test_discography_branch_includes_fragmented_artist_name_tracks():
+    catalog = DictCatalog(
+        tracks={
+            "t-kam-main": {
+                "artist_id": "a-kamelot-main",
+                "artist_name": "Kamelot",
+                "track_name": "Center of the Universe",
+                "tag_list": ["power metal"],
+                "popularity": 80.0,
+                "release_date": "2003-01-01",
+            },
+            "t-kam-fragment": {
+                "artist_id": "a-kamelot-fragment",
+                "artist_name": "Kamelot",
+                "track_name": "Sacrimony",
+                "tag_list": ["power metal"],
+                "popularity": 90.0,
+                "release_date": "2012-01-01",
+            },
+        }
+    )
+    state = _state(
+        mentioned_entities=[
+            MentionedEntity(type="artist", value="Kamelot", sentiment=1),
+        ],
+    )
+    rs = _resolve(state, catalog)
+    pool = V0PlusCompiler(
+        catalog,
+        FakeRetriever(),
+        _fake_encoder(),
+        _disco_cfg(),
+    )._resolved_artist_discography_pool(rs)
+
+    assert [track_id for track_id, _score in pool] == [
+        "t-kam-fragment",
+        "t-kam-main",
+    ]
 
 
 def test_routing_tags_default_false_and_settable():
@@ -3292,6 +3465,101 @@ def test_rejection_drop_policy_track_only_keeps_artist_discography():
     assert "t-morphine-2" in drop_legacy
     assert "t-morphine-2" not in drop_fixed
     assert "t-morphine-1" in drop_fixed  # the named track itself still drops
+
+
+def test_artist_rejection_expanded_drops_compound_artist_credit_aliases():
+    catalog = DictCatalog(
+        tracks={
+            **_catalog().tracks,
+            "t-ryan-1": {
+                "artist_id": "a-ryan",
+                "artist_name": "Ryan Adams",
+                "track_name": "Come Pick Me Up",
+                "tag_list": ["alt-country"],
+                "popularity": 80.0,
+                "release_date": "2000-09-05",
+                "metadata_vector": [0.0, 0.8, 0.1],
+            },
+            "t-ryan-cardinals": {
+                "artist_id": "a-cardinals",
+                "artist_name": "Ryan Adams & The Cardinals",
+                "track_name": "Magnolia Mountain",
+                "tag_list": ["alt-country"],
+                "popularity": 70.0,
+                "release_date": "2005-05-03",
+                "metadata_vector": [0.0, 0.7, 0.2],
+            },
+        }
+    )
+    state = _state(
+        explicit_rejections=[
+            ExplicitRejection(kind="artist", value="Ryan Adams", source_turn=1),
+        ],
+    )
+    rs = ResolvedConversationState(
+        state=state,
+        resolved_rejections={
+            0: ResolvedRejection(artist_ids=("a-ryan",), track_ids=()),
+        },
+    )
+    compiler = V0PlusCompiler(
+        catalog,
+        FakeRetriever(),
+        _fake_encoder(),
+        CompilerConfig(rejection_drop_policy="expanded"),
+    )
+
+    drop = compiler._resolved_rejection_drop_set(rs)
+
+    assert "t-ryan-1" in drop
+    assert "t-ryan-cardinals" in drop
+
+
+def test_artist_rejection_track_only_keeps_artist_discography_label_tolerant():
+    catalog = DictCatalog(
+        tracks={
+            "t-flylo": {
+                "artist_id": "a-flylo",
+                "artist_name": "Flying Lotus",
+                "track_name": "Recoiled",
+                "tag_list": ["experimental electronic"],
+                "popularity": 80.0,
+                "release_date": "2010-01-01",
+                "metadata_vector": [0.0, 0.8, 0.1],
+            },
+            "t-flylo-alias": {
+                "artist_id": "a-flylo-alias",
+                "artist_name": "Flying Lotus & Laura Darlington",
+                "track_name": "Table Tennis",
+                "tag_list": ["experimental electronic"],
+                "popularity": 70.0,
+                "release_date": "2010-01-01",
+                "metadata_vector": [0.0, 0.7, 0.2],
+            },
+        }
+    )
+    state = _state(
+        explicit_rejections=[
+            ExplicitRejection(kind="artist", value="Flying Lotus", source_turn=3),
+        ],
+    )
+    rs = ResolvedConversationState(
+        state=state,
+        resolved_rejections={
+            0: ResolvedRejection(artist_ids=("a-flylo",), track_ids=()),
+        },
+    )
+    compiler = V0PlusCompiler(
+        catalog,
+        FakeRetriever(),
+        _fake_encoder(),
+        CompilerConfig(rejection_drop_policy="track_only"),
+    )
+
+    drop = compiler._resolved_rejection_drop_set(rs)
+
+    assert "t-flylo" not in drop
+    assert "t-flylo-alias" not in drop
 
 
 def test_release_date_hard_filter_gate():

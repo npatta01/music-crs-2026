@@ -1452,14 +1452,135 @@ class ConversationStateV0Plus(BaseModel):
         }
 
 
+_SWITCH_AWAY_RE = _re.compile(
+    r"\b(?:"
+    r"switch|different|new|not (?:that|those|this|the same)|no more|"
+    r"instead|away|done with|tired of|still getting|something else|"
+    r"another genre|change it up|mix it up|moving beyond"
+    r")\b",
+    _re.IGNORECASE,
+)
+
+
+def _hard_exclusion_entity_keys(payload: dict) -> set[tuple[str, str]]:
+    keys: set[tuple[str, str]] = set()
+    for item in payload.get("exclusions") or []:
+        if _enum_value(item.get("scope")) != ExclusionScope.next_turn_hard.value:
+            continue
+        key = _state_entity_key(item.get("type"), item.get("value"))
+        if key is not None:
+            keys.add(key)
+    for item in payload.get("rejections") or []:
+        if _enum_value(item.get("scope")) != RejectionScope.hard.value:
+            continue
+        key = _state_entity_key(item.get("kind"), item.get("value"))
+        if key is not None:
+            keys.add(key)
+    return keys
+
+
+def _hard_switch_away_candidate_fact(
+    fact: dict, hard_exclusion_keys: set[tuple[str, str]]
+) -> bool:
+    if _enum_value(fact.get("type")) not in {
+        FactType.artist.value,
+        FactType.album.value,
+        FactType.track.value,
+    }:
+        return False
+    if _enum_value(fact.get("role")) != FactRole.satisfied_prior.value:
+        return False
+    if _enum_value(fact.get("anchor_use")) != AnchorUse.do_not_use.value:
+        return False
+    if _fact_relation_value(fact) != FactRelation.satisfied_prior.value:
+        return False
+    if _fact_reuse_value(fact) not in {
+        ReusePolicy.may_reuse.value,
+        ReusePolicy.avoid_exact.value,
+    }:
+        return False
+    key = _state_entity_key(fact.get("type"), fact.get("value"))
+    return key in hard_exclusion_keys
+
+
+def _switch_away_evidence_text(payload: dict, facts: list[dict]) -> str:
+    chunks: list[str] = []
+    current_request = payload.get("current_request")
+    if isinstance(current_request, dict):
+        chunks.extend(
+            str(current_request.get(field) or "")
+            for field in ("summary", "evidence_text")
+        )
+    chunks.extend(str(fact.get("evidence_text") or "") for fact in facts)
+    fact_keys = {
+        _state_entity_key(fact.get("type"), fact.get("value"))
+        for fact in facts
+    }
+    for item in payload.get("exclusions") or []:
+        if _state_entity_key(item.get("type"), item.get("value")) in fact_keys:
+            chunks.append(str(item.get("evidence_text") or ""))
+    return " ".join(chunk for chunk in chunks if chunk)
+
+
+def _repair_hard_switch_away_payload(payload: dict) -> dict:
+    hard_exclusion_keys = _hard_exclusion_entity_keys(payload)
+    if not hard_exclusion_keys:
+        return payload
+    facts = [
+        fact
+        for fact in payload.get("facts") or []
+        if isinstance(fact, dict)
+        and _hard_switch_away_candidate_fact(fact, hard_exclusion_keys)
+    ]
+    if not facts or not _SWITCH_AWAY_RE.search(
+        _switch_away_evidence_text(payload, facts)
+    ):
+        return payload
+
+    out = dict(payload)
+    repaired_facts: list[dict] = []
+    changed = False
+    for raw_fact in out.get("facts") or []:
+        fact = dict(raw_fact)
+        if _hard_switch_away_candidate_fact(fact, hard_exclusion_keys):
+            fact["role"] = FactRole.rejected.value
+            fact["anchor_use"] = AnchorUse.do_not_use.value
+            fact["relation"] = FactRelation.exclude.value
+            fact["reuse"] = ReusePolicy.must_exclude.value
+            changed = True
+        repaired_facts.append(fact)
+    if not changed:
+        return payload
+    out["facts"] = repaired_facts
+
+    current_request = out.get("current_request")
+    request_type = (
+        _enum_value(current_request.get("request_type"))
+        if isinstance(current_request, dict)
+        else ""
+    )
+    if request_type in {
+        RequestType.attribute_search.value,
+        RequestType.new_artist.value,
+        RequestType.hidden_target.value,
+    }:
+        out["retrieval_profile"] = RetrievalProfile.novelty.value
+        if _enum_value(out.get("target_artist_mode")) in {"", "None", "unknown"}:
+            out["target_artist_mode"] = TargetArtistMode.new_artist.value
+    return out
+
+
 def project_v1_to_v0plus(state: ConversationStateV1) -> ConversationStateV0Plus:
     """Project the fact-first LLM state into the existing compiler contract.
 
-    This is intentionally structural: it copies V1 fields and lets the V0Plus
-    compatibility model derive legacy views from those fields. It does not
-    inspect the raw conversation text or repair phrases with ad hoc matching.
+    This stays structural: it copies V1 fields and lets the V0Plus compatibility
+    model derive legacy views from those fields. The one repair here handles a
+    fact-consistency mismatch where a hard switch-away exclusion is otherwise
+    still projected as a positive style reference.
     """
 
     return ConversationStateV0Plus.model_validate(
-        state.model_dump(mode="json", exclude_none=True)
+        _repair_hard_switch_away_payload(
+            state.model_dump(mode="json", exclude_none=True)
+        )
     )

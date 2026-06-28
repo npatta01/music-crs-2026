@@ -34,7 +34,7 @@ DEFAULT_CATALOG_DATASET = "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
 DEFAULT_CATALOG_SPLIT = "all_tracks"
 
 DEFAULT_JUDGE_MODEL = "openrouter/deepseek/deepseek-v4-flash"
-JUDGE_PROMPT_VERSION = "v3_conversation_only"
+JUDGE_PROMPT_VERSION = "v4_rank1_explicit"
 EXPLANATION_JUDGE_PROMPT_VERSION = "v3_recsys_justification_profile"
 STATE_JUDGE_PROMPT_VERSION = "v1_state_accuracy"
 JUDGE_VERDICTS = {"good", "acceptable", "weak", "bad"}
@@ -545,6 +545,57 @@ def extract_named_values(items: list[Any]) -> list[str]:
     return out
 
 
+def extract_named_terms(items: list[Any]) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    for item in items:
+        if isinstance(item, dict):
+            value = item.get("value") or item.get("name") or item.get("text")
+            if value:
+                out.append(
+                    {
+                        "value": str(value),
+                        "kind": str(item.get("kind") or item.get("type") or ""),
+                    }
+                )
+        elif item:
+            out.append({"value": str(item), "kind": ""})
+    return out
+
+
+def extract_fact_terms(facts: list[Any], mode: str) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    for fact in facts:
+        if not isinstance(fact, dict):
+            continue
+        role = str(fact.get("role", ""))
+        relation = str(fact.get("relation", ""))
+        reuse = str(fact.get("reuse", ""))
+        anchor = str(fact.get("anchor_use", ""))
+        if mode == "hard" and not {
+            role,
+            relation,
+            reuse,
+            anchor,
+        }.intersection({"rejected", "exclude", "must_exclude"}):
+            continue
+        if mode == "soft" and not {
+            role,
+            relation,
+            reuse,
+            anchor,
+        }.intersection({"satisfied_prior", "avoid_exact", "do_not_use"}):
+            continue
+        value = str(fact.get("value", "")).strip()
+        if value:
+            out.append(
+                {
+                    "value": value,
+                    "kind": str(fact.get("kind") or fact.get("type") or ""),
+                }
+            )
+    return out
+
+
 def significant_terms(text: str) -> list[str]:
     raw = [w for w in re.findall(r"[A-Za-z0-9][A-Za-z0-9'-]{2,}", text.lower())]
     terms = []
@@ -567,11 +618,11 @@ def derive_audit_terms(
     latest = latest_user_text(conversation, turn_number)
     facts = as_list(extracted.get("facts"))
 
-    rejected_names = []
-    avoid_names = []
-    rejected_names += extract_named_values(state_values(trace, ["exclusions", "rejections", "explicit_rejections"]))
-    rejected_names += extract_fact_values(facts, "hard")
-    avoid_names += extract_fact_values(facts, "soft")
+    rejected_terms = []
+    avoid_terms = []
+    rejected_terms += extract_named_terms(state_values(trace, ["exclusions", "rejections", "explicit_rejections"]))
+    rejected_terms += extract_fact_terms(facts, "hard")
+    avoid_terms += extract_fact_terms(facts, "soft")
 
     latest_norm = norm(latest)
     switch_requested = any(
@@ -618,16 +669,26 @@ def derive_audit_terms(
     prior_artist_counts = Counter(prior_artists)
     prior_album_counts = Counter(prior_albums)
     if switch_requested:
-        avoid_names += [name for name, count in prior_artist_counts.items() if count >= 1]
+        avoid_terms += [
+            {"value": name, "kind": "artist"}
+            for name, count in prior_artist_counts.items()
+            if count >= 1
+        ]
     if different_album_requested:
-        avoid_names += [name for name, count in prior_album_counts.items() if count >= 1]
+        avoid_terms += [
+            {"value": name, "kind": "album"}
+            for name, count in prior_album_counts.items()
+            if count >= 1
+        ]
 
     current_request = extracted.get("current_request") or {}
     request_summary = ""
     if isinstance(current_request, dict):
         request_summary = str(current_request.get("summary") or "")
+        current_request_type = str(current_request.get("request_type") or "")
     else:
         request_summary = str(current_request)
+        current_request_type = ""
     positive_text = " ".join(
         [
             latest,
@@ -641,16 +702,39 @@ def derive_audit_terms(
         ]
     )
 
+    def clean_terms(raw_terms: list[dict[str, str]]) -> list[dict[str, str]]:
+        cleaned: list[dict[str, str]] = []
+        seen: set[tuple[str, str]] = set()
+        for term in raw_terms:
+            value = str(term.get("value") or "").strip()
+            kind = str(term.get("kind") or "").strip()
+            key = (norm(value), norm(kind))
+            if key in seen:
+                continue
+            if len(norm(value)) < 3 or norm(value) in {"unknown", "none", "other artists"}:
+                continue
+            seen.add(key)
+            cleaned.append({"value": value, "kind": kind})
+        return cleaned
+
+    rejected_terms = clean_terms(rejected_terms)
+    avoid_terms = clean_terms(avoid_terms)
     rejected_names = [
-        x.strip()
-        for x in dict.fromkeys(rejected_names)
-        if len(norm(x)) >= 3 and norm(x) not in {"unknown", "none", "other artists"}
+        x["value"]
+        for x in rejected_terms
+        if len(norm(x["value"])) >= 3 and norm(x["value"]) not in {"unknown", "none", "other artists"}
     ]
     avoid_names = [
-        x.strip()
-        for x in dict.fromkeys(avoid_names)
-        if len(norm(x)) >= 3 and norm(x) not in {"unknown", "none", "other artists"}
+        x["value"]
+        for x in avoid_terms
+        if len(norm(x["value"])) >= 3 and norm(x["value"]) not in {"unknown", "none", "other artists"}
     ]
+    exact_track_album_names: list[str] = []
+    if current_request_type == "exact_track":
+        for tid in as_list(resolver.get("anchor_track_ids")):
+            album_name = compact_meta(catalog, str(tid)).get("album_name") or ""
+            if album_name:
+                exact_track_album_names.append(str(album_name))
 
     return {
         "latest_user_text": latest,
@@ -661,11 +745,73 @@ def derive_audit_terms(
         "different_album_requested": different_album_requested,
         "rejected_names": rejected_names,
         "avoid_names": avoid_names,
+        "rejected_name_terms": rejected_terms,
+        "avoid_name_terms": avoid_terms,
         "rejected_artist_ids": [str(x) for x in as_list(resolver.get("rejected_artist_ids"))],
         "rejected_track_ids": [str(x) for x in as_list(resolver.get("rejected_track_ids"))],
         "positive_terms": significant_terms(positive_text)[:40],
         "current_request_summary": request_summary,
+        "current_request_type": current_request_type,
+        "exact_track_album_names": list(dict.fromkeys(exact_track_album_names)),
     }
+
+
+def tag_term_matches(name_norm: str, tag_norm: str) -> bool:
+    if not name_norm or not tag_norm:
+        return False
+    if tag_norm == name_norm:
+        return True
+    name_tokens = name_norm.split()
+    tag_tokens = tag_norm.split()
+    if len(name_tokens) == 1 and name_tokens[0] in tag_tokens:
+        return True
+    if len(name_tokens) > 1:
+        width = len(name_tokens)
+        for i in range(0, len(tag_tokens) - width + 1):
+            if tag_tokens[i : i + width] == name_tokens:
+                return True
+    return False
+
+
+def name_term_matches_meta(
+    term: dict[str, Any],
+    meta: dict[str, Any],
+    terms: dict[str, Any],
+) -> bool:
+    value = str(term.get("value") or "").strip()
+    name_norm = norm(value)
+    if not name_norm:
+        return False
+    kind = norm(term.get("kind") or "")
+    track_norm = norm(meta.get("track_name"))
+    artist_norm = norm(meta.get("artist_name"))
+    album_norm = norm(meta.get("album_name"))
+    tag_norms = [norm(tag) for tag in as_list(meta.get("tags"))]
+
+    if kind == "track":
+        return track_norm == name_norm
+    if kind == "artist":
+        return artist_norm == name_norm
+    if kind == "album":
+        if (
+            terms.get("current_request_type") == "exact_track"
+            and name_norm
+            in {norm(name) for name in as_list(terms.get("exact_track_album_names"))}
+        ):
+            return False
+        return album_norm == name_norm
+    if kind in {"tag", "attribute", "genre", "energy", "mood", "sonic", "lyrical_theme"}:
+        return any(tag_term_matches(name_norm, tag_norm) for tag_norm in tag_norms)
+    return name_norm in {track_norm, artist_norm, album_norm} or any(
+        tag_term_matches(name_norm, tag_norm) for tag_norm in tag_norms
+    )
+
+
+def name_terms_for_flags(terms: dict[str, Any], key: str, fallback_key: str) -> list[dict[str, Any]]:
+    structured = terms.get(key)
+    if structured:
+        return [term for term in structured if isinstance(term, dict)]
+    return [{"value": name, "kind": ""} for name in terms.get(fallback_key, [])]
 
 
 def violation_flags(
@@ -681,14 +827,13 @@ def violation_flags(
         flags.append("rejected_track_id")
     if m["artist_id"] and m["artist_id"] in set(terms["rejected_artist_ids"]):
         flags.append("rejected_artist_id")
-    text_norm = text_norm or norm(compact_meta_text(m))
-    for name in terms["rejected_names"]:
-        name_norm = norm(name)
-        if name_norm and name_norm in text_norm:
+    for term in name_terms_for_flags(terms, "rejected_name_terms", "rejected_names"):
+        name = str(term.get("value") or "").strip()
+        if name and name_term_matches_meta(term, m, terms):
             flags.append(f"rejected_name:{name}")
-    for name in terms.get("avoid_names", []):
-        name_norm = norm(name)
-        if name_norm and name_norm in text_norm:
+    for term in name_terms_for_flags(terms, "avoid_name_terms", "avoid_names"):
+        name = str(term.get("value") or "").strip()
+        if name and name_term_matches_meta(term, m, terms):
             flags.append(f"avoid_name:{name}")
     if terms["switch_requested"] and m["artist_name"] in terms["prior_artists"]:
         flags.append(f"prior_artist_after_switch:{m['artist_name']}")
@@ -807,8 +952,13 @@ def state_for_judge(row: dict[str, Any], max_chars: int = 5000) -> str:
 def item_for_judge(item: dict[str, Any], include_state: bool = False) -> str:
     track = item["track"]
     tags = ", ".join(track.get("tags", [])[:8]) or "no tags"
+    rank_prefix = (
+        f"{item['rank']}. [SUBMITTED TOP]"
+        if int(item.get("rank") or 0) == 1
+        else f"{item['rank']}."
+    )
     text = (
-        f"{item['rank']}. {track['track_name']} by {track['artist_name']} | "
+        f"{rank_prefix} {track['track_name']} by {track['artist_name']} | "
         f"album: {track['album_name']} | popularity: {track.get('popularity', 0):.0f} | "
         f"tags: {tags}"
     )
@@ -851,8 +1001,9 @@ Important rules:
 - Use the visible conversation and candidate metadata as the source of truth.
 - Infer user constraints directly from the conversation; do not assume pipeline state is correct.
 - Do not assume the hidden leaderboard answer.
-- Judge whether the current top recommendation is a good response to the user's latest request.
-- If another candidate in the shown list is clearly better, identify its rank.
+- Rank 1 is the submitted top recommendation under review. Do not treat songs mentioned earlier in the conversation as the submitted top recommendation unless they are also candidate rank 1.
+- Judge whether candidate rank 1 is a good response to the user's latest request.
+- If another candidate in the shown list is clearly better, identify its displayed rank; best_rank must be one of the displayed candidate ranks.
 - If the latest user request is informational, asks for an album/artist fact, asks for an explanation, or otherwise should not be answered by recommending a track, mark the top recommendation bad and set best_rank to null unless one shown track directly answers the request.
 - If none of the shown candidates is a valid response, set best_rank to null and explain that no submitted track should be recommended for this turn.
 - Prefer respecting explicit rejections, requested changes, genre/mood/artist constraints, and conversation continuity.

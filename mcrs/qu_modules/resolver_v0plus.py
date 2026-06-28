@@ -27,12 +27,16 @@ See: docs/architectures/session_state.md
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from mcrs.conversation_state.schema import (
     ConversationStateV0Plus,
 )
 from mcrs.qu_modules.fuzzy_matcher import FuzzyMatcher
 from mcrs.qu_modules.v0plus_catalog import CompilerCatalog
+
+
+_EXACT_TRACK_ARTIST_CONSTRAINED_MIN_SCORE = 90
 
 
 @dataclass(frozen=True)
@@ -126,6 +130,7 @@ class V0PlusResolver:
     def _ground_targets(self, state: ConversationStateV0Plus) -> list[ResolvedTarget]:
         out: list[ResolvedTarget] = []
         seen: set[tuple[str, str]] = set()
+        exact_artist_ids, exact_artist_names = self._exact_artist_constraints(state)
         for me in state.mentioned_entities:
             if me.sentiment < 0 or me.type not in ("artist", "track"):
                 continue
@@ -133,7 +138,15 @@ class V0PlusResolver:
             if key in seen:
                 continue
             seen.add(key)
-            out.append(self._ground_target(me.type, me.value, "exact_target"))
+            out.append(
+                self._ground_target(
+                    me.type,
+                    me.value,
+                    "exact_target",
+                    exact_artist_ids=exact_artist_ids,
+                    exact_artist_names=exact_artist_names,
+                )
+            )
         for me in state.style_reference_entities:
             if me.sentiment < 0 or me.type not in ("artist", "track"):
                 continue
@@ -149,11 +162,45 @@ class V0PlusResolver:
         kind: str,
         value: str,
         resolution_role: str = "exact_target",
+        *,
+        exact_artist_ids: set[str] | None = None,
+        exact_artist_names: set[str] | None = None,
     ) -> ResolvedTarget:
         topk = self.artist_match_topk if kind == "artist" else self.track_match_topk
         matches = self.matcher.match(
             value, kind, topk=topk, score_cutoff=self.score_cutoff
         )
+        if (
+            kind == "track"
+            and resolution_role == "exact_target"
+            and (exact_artist_ids or exact_artist_names)
+        ):
+            constrained_matcher = getattr(self.matcher, "match_track_by_artist", None)
+            constrained = (
+                constrained_matcher(
+                    value,
+                    artist_ids=exact_artist_ids or set(),
+                    artist_names=exact_artist_names or set(),
+                    topk=max(topk, 20),
+                    score_cutoff=max(
+                        self.score_cutoff,
+                        _EXACT_TRACK_ARTIST_CONSTRAINED_MIN_SCORE,
+                    ),
+                )
+                if callable(constrained_matcher)
+                else []
+            )
+            if constrained:
+                matches = constrained
+            else:
+                return ResolvedTarget(
+                    kind=kind,
+                    source_text=value,
+                    entity_id=None,
+                    confidence=0.0,
+                    candidates=tuple((eid, float(s)) for eid, s in matches),
+                    resolution_role=resolution_role,
+                )
         best_id, best_score = matches[0] if matches else (None, 0.0)
         return ResolvedTarget(
             kind=kind,
@@ -163,6 +210,58 @@ class V0PlusResolver:
             candidates=tuple((eid, float(s)) for eid, s in matches),
             resolution_role=resolution_role,
         )
+
+    @staticmethod
+    def _enum_value(value: Any) -> str:
+        return str(getattr(value, "value", value) or "")
+
+    @classmethod
+    def _request_type_value(cls, state: ConversationStateV0Plus) -> str:
+        current_request = getattr(state, "current_request", None)
+        request_type = getattr(current_request, "request_type", None)
+        return cls._enum_value(request_type)
+
+    def _exact_artist_constraints(
+        self,
+        state: ConversationStateV0Plus,
+    ) -> tuple[set[str], set[str]]:
+        values: list[str] = []
+        for fact in getattr(state, "facts", []) or []:
+            if self._enum_value(getattr(fact, "type", None)) != "artist":
+                continue
+            if self._enum_value(getattr(fact, "role", None)) != "current_target":
+                continue
+            anchor_use = self._enum_value(getattr(fact, "anchor_use", None))
+            relation = self._enum_value(getattr(fact, "relation", None))
+            reuse = self._enum_value(getattr(fact, "reuse", None))
+            if (
+                anchor_use != "must_use"
+                and relation != "exact_target"
+                and reuse != "must_reuse"
+            ):
+                continue
+            value = str(getattr(fact, "value", "") or "").strip()
+            if value:
+                values.append(value)
+        if not values and self._request_type_value(state) == "exact_track":
+            values.extend(
+                me.value
+                for me in state.mentioned_entities
+                if me.sentiment > 0 and me.type == "artist" and me.value
+            )
+        names = {value.casefold().strip() for value in values if value.strip()}
+        ids: set[str] = set()
+        for value in values:
+            ids.update(
+                entity_id
+                for entity_id, _ in self.matcher.match(
+                    value,
+                    "artist",
+                    topk=self.artist_match_topk,
+                    score_cutoff=self.score_cutoff,
+                )
+            )
+        return ids, names
 
     def _resolve_rejection(self, kind: str, value: str) -> ResolvedRejection:
         if kind == "artist":
