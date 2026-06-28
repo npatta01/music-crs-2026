@@ -383,7 +383,17 @@ def _normalise_ranking_config(qu_kwargs: dict[str, Any]) -> tuple[dict[str, Any]
         "pool_k": int(ranking.get("pool_k", 500)),
         "top_k_out": int(ranking.get("top_k_out", 1000)),
     }
-    for key in ("exact_pin_top_n", "exact_pin_min_confidence"):
+    for key in (
+        "exact_pin_top_n",
+        "exact_pin_min_confidence",
+        "visual_rescue_enabled",
+        "visual_rescue_top_n",
+        "visual_rescue_target_rank",
+        "lyric_rescue_enabled",
+        "lyric_rescue_top_n",
+        "lyric_rescue_target_rank",
+        "lyric_rescue_require_phrase",
+    ):
         if key in ranking:
             next_kwargs["reranker"][key] = ranking[key]
     return next_kwargs, mode, model_version, final_stage

@@ -32,6 +32,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import re
 import sys
 import time
 from collections import Counter, defaultdict
@@ -49,6 +50,8 @@ for p in (_PROJECT_ROOT, _PROJECT_ROOT / "scripts" / "rerank"):
 CATEGORICALS = ["age_group", "gender", "goal_category", "goal_specificity",
                 "request_type", "intent_mode", "target_artist_mode",
                 "temporal_strength"]
+VISUAL_RESCUE_BRANCH = "dense.siglip2_text.visual_nl.image_siglip2"
+LYRIC_RESCUE_BRANCH = "dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b"
 logger = logging.getLogger(__name__)
 
 
@@ -85,6 +88,14 @@ def _float_or_nan(value: Any) -> float:
         return float(raw)
     except (TypeError, ValueError):
         return float("nan")
+
+
+def _as_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
 
 
 class _FeatureCatalogFromCompilerCatalog:
@@ -266,6 +277,102 @@ def _current_request_type(trace: dict) -> str:
     return str(getattr(raw, "value", raw) or "")
 
 
+def _routing_tag_enabled(trace: dict, tag: str) -> bool:
+    for block in (
+        trace.get("routing_tags"),
+        (trace.get("compiled_state") or {}).get("routing_tags"),
+        (trace.get("state") or trace.get("extracted_state") or {}).get("routing_tags"),
+    ):
+        if isinstance(block, dict) and tag in block:
+            return _as_bool(block[tag])
+    return False
+
+
+def _branch_hits(trace: dict, branch_name: str) -> list[tuple[str, float]]:
+    branches = trace.get("branches") or {}
+    for pool in branches.get("pools") or []:
+        if not isinstance(pool, dict) or pool.get("name") != branch_name:
+            continue
+        hits = []
+        for hit in pool.get("hits") or []:
+            track_id: Any = None
+            score: Any = 0.0
+            if isinstance(hit, dict):
+                track_id = hit.get("track_id") or hit.get("id")
+                score = hit.get("score", hit.get("distance", 0.0))
+            elif isinstance(hit, (list, tuple)) and hit:
+                track_id = hit[0]
+                score = hit[1] if len(hit) > 1 else 0.0
+            track_id = str(track_id or "")
+            if not track_id:
+                continue
+            try:
+                score_f = float(score)
+            except (TypeError, ValueError):
+                score_f = 0.0
+            hits.append((track_id, score_f))
+        return hits
+    return []
+
+
+def _word_count(text: Any) -> int:
+    return len(re.findall(r"[A-Za-z0-9']+", str(text or "")))
+
+
+def _lyric_phrase_like_request(trace: dict) -> bool:
+    state = trace.get("state") or trace.get("extracted_state") or {}
+    resolver = trace.get("resolver") or {}
+    phrase_candidates: list[str] = []
+    context_candidates: list[str] = []
+
+    if state.get("lyrical_theme"):
+        phrase_candidates.append(str(state["lyrical_theme"]))
+    if state.get("turn_intent"):
+        context_candidates.append(str(state["turn_intent"]))
+
+    current_request = state.get("current_request") or {}
+    current_summary = str(current_request.get("summary") or "")
+    if current_summary:
+        context_candidates.append(current_summary)
+
+    for fact in state.get("facts") or []:
+        if not isinstance(fact, dict):
+            continue
+        if fact.get("facet") == "lyrical_theme" or fact.get("type") == "lyrical_theme":
+            if fact.get("value"):
+                phrase_candidates.append(str(fact["value"]))
+
+    phrase_candidates.extend(
+        str(tag) for tag in _as_list(resolver.get("positive_tags")) if tag
+    )
+    if not phrase_candidates:
+        return False
+
+    marker_text = " ".join([*phrase_candidates, *context_candidates]).lower()
+    has_exact_phrase_marker = any(
+        marker in marker_text
+        for marker in (
+            "exact lyric",
+            "exact lyrical phrase",
+            "exact phrase",
+            "contains the exact",
+            "containing the exact",
+            "quoted lyric",
+            "lyric phrase",
+        )
+    )
+    has_quoted_lyric_marker = bool(
+        re.search(r"(lyric|lyrics|says|saying|phrase).{0,60}[\"']", marker_text)
+    )
+    if not (has_exact_phrase_marker or has_quoted_lyric_marker):
+        return False
+    for text in phrase_candidates:
+        words = _word_count(text)
+        if words >= 4:
+            return True
+    return False
+
+
 def _resolved_exact_track_ids(trace: dict, *, min_confidence: float) -> list[str]:
     if _current_request_type(trace) != "exact_track":
         return []
@@ -295,6 +402,89 @@ def _resolved_exact_track_ids(trace: dict, *, min_confidence: float) -> list[str
         seen.add(track_id)
         out.append(track_id)
     return out
+
+
+def _apply_branch_rescue(
+    ranked: list[str],
+    trace: dict,
+    *,
+    dropped: set[str],
+    top_k_out: int,
+    enabled: bool,
+    guard_type: str,
+    routing_tag: str,
+    branch_name: str,
+    top_n: int,
+    target_rank: int,
+    require_lyric_phrase: bool = False,
+) -> list[str]:
+    if not enabled or top_n <= 0 or target_rank <= 0:
+        return ranked[:top_k_out]
+    if not _routing_tag_enabled(trace, routing_tag):
+        return ranked[:top_k_out]
+    if require_lyric_phrase and not _lyric_phrase_like_request(trace):
+        return ranked[:top_k_out]
+
+    rescue_records = []
+    seen: set[str] = set()
+    branch_hits = _branch_hits(trace, branch_name)
+    for branch_rank, (track_id, branch_score) in enumerate(branch_hits, start=1):
+        if track_id in seen or track_id in dropped:
+            continue
+        seen.add(track_id)
+        rescue_records.append(
+            {
+                "track_id": track_id,
+                "branch_rank": branch_rank,
+                "branch_score": branch_score,
+            }
+        )
+        if len(rescue_records) >= top_n:
+            break
+    if not rescue_records:
+        return ranked[:top_k_out]
+
+    original_rank = {str(track_id): idx + 1 for idx, track_id in enumerate(ranked)}
+    moving = []
+    for record in rescue_records:
+        track_id = record["track_id"]
+        from_rank = original_rank.get(track_id)
+        if from_rank is not None and from_rank <= target_rank:
+            continue
+        moving.append(record)
+    if not moving:
+        return ranked[:top_k_out]
+
+    moving_ids = {record["track_id"] for record in moving}
+    base = [track_id for track_id in ranked if track_id not in moving_ids]
+    insert_at = min(max(target_rank - 1, 0), len(base))
+    inserted = [record["track_id"] for record in moving]
+    reranked = base[:insert_at] + inserted + base[insert_at:]
+
+    request_type = _current_request_type(trace)
+    actions = []
+    for offset, record in enumerate(moving, start=0):
+        track_id = record["track_id"]
+        to_rank = insert_at + offset + 1
+        from_rank = original_rank.get(track_id)
+        if from_rank == to_rank:
+            continue
+        actions.append(
+            {
+                "type": guard_type,
+                "track_id": track_id,
+                "from_rank": from_rank,
+                "to_rank": to_rank,
+                "request_type": request_type,
+                "routing_tag": routing_tag,
+                "branch_name": branch_name,
+                "branch_rank": record["branch_rank"],
+                "branch_score": record["branch_score"],
+            }
+        )
+    if actions:
+        trace.setdefault("ranking_guard_actions", []).extend(actions)
+    return reranked[:top_k_out]
 
 
 def _apply_exact_track_pins(
@@ -477,6 +667,15 @@ class LgbmOnlineReranker:
         self.top_k_out = int(cfg.get("top_k_out", 1000))
         self.exact_pin_top_n = int(cfg.get("exact_pin_top_n", 2))
         self.exact_pin_min_confidence = float(cfg.get("exact_pin_min_confidence", 90.0))
+        self.visual_rescue_enabled = _as_bool(cfg.get("visual_rescue_enabled", False))
+        self.visual_rescue_top_n = int(cfg.get("visual_rescue_top_n", 1))
+        self.visual_rescue_target_rank = int(cfg.get("visual_rescue_target_rank", 10))
+        self.lyric_rescue_enabled = _as_bool(cfg.get("lyric_rescue_enabled", False))
+        self.lyric_rescue_top_n = int(cfg.get("lyric_rescue_top_n", 1))
+        self.lyric_rescue_target_rank = int(cfg.get("lyric_rescue_target_rank", 10))
+        self.lyric_rescue_require_phrase = _as_bool(
+            cfg.get("lyric_rescue_require_phrase", True)
+        )
         add_elapsed("total", total_start)
         self.load_timings = load_timings
 
@@ -506,6 +705,15 @@ class LgbmOnlineReranker:
         dropped = {str(track_id) for track_id in hard_drop}
         pin_limit = int(getattr(self, "exact_pin_top_n", 2))
         min_confidence = float(getattr(self, "exact_pin_min_confidence", 90.0))
+        visual_rescue_enabled = _as_bool(getattr(self, "visual_rescue_enabled", False))
+        visual_rescue_top_n = int(getattr(self, "visual_rescue_top_n", 1))
+        visual_rescue_target_rank = int(getattr(self, "visual_rescue_target_rank", 10))
+        lyric_rescue_enabled = _as_bool(getattr(self, "lyric_rescue_enabled", False))
+        lyric_rescue_top_n = int(getattr(self, "lyric_rescue_top_n", 1))
+        lyric_rescue_target_rank = int(getattr(self, "lyric_rescue_target_rank", 10))
+        lyric_rescue_require_phrase = _as_bool(
+            getattr(self, "lyric_rescue_require_phrase", True)
+        )
 
         def filtered_fallback() -> list[str]:
             return [
@@ -515,13 +723,38 @@ class LgbmOnlineReranker:
             ][: self.top_k_out]
 
         def finalize(ranked: list[str]) -> list[str]:
-            return _apply_exact_track_pins(
+            guarded = _apply_exact_track_pins(
                 [str(track_id) for track_id in ranked],
                 trace,
                 dropped=dropped,
                 top_k_out=self.top_k_out,
                 pin_limit=pin_limit,
                 min_confidence=min_confidence,
+            )
+            guarded = _apply_branch_rescue(
+                guarded,
+                trace,
+                dropped=dropped,
+                top_k_out=self.top_k_out,
+                enabled=visual_rescue_enabled,
+                guard_type="visual_branch_rescue",
+                routing_tag="image_or_visual_search",
+                branch_name=VISUAL_RESCUE_BRANCH,
+                top_n=visual_rescue_top_n,
+                target_rank=visual_rescue_target_rank,
+            )
+            return _apply_branch_rescue(
+                guarded,
+                trace,
+                dropped=dropped,
+                top_k_out=self.top_k_out,
+                enabled=lyric_rescue_enabled,
+                guard_type="lyric_branch_rescue",
+                routing_tag="lyric_search",
+                branch_name=LYRIC_RESCUE_BRANCH,
+                top_n=lyric_rescue_top_n,
+                target_rank=lyric_rescue_target_rank,
+                require_lyric_phrase=lyric_rescue_require_phrase,
             )
 
         try:

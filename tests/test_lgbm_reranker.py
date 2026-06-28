@@ -476,6 +476,213 @@ def test_online_reranker_pins_played_track_when_current_request_is_exact_target(
     ]
 
 
+def test_online_reranker_visual_rescue_preserves_visual_branch_candidate_when_enabled():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.visual_rescue_enabled = True
+    reranker.visual_rescue_top_n = 1
+    reranker.visual_rescue_target_rank = 1
+    trace = {
+        "branches": {
+            "pools": [
+                {
+                    "name": "bm25",
+                    "hits": [("t-two", 2.0), ("t-one", 1.0)],
+                },
+                {
+                    "name": "dense.siglip2_text.visual_nl.image_siglip2",
+                    "hits": [("t-one", 0.99)],
+                },
+            ],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "routing_tags": {"image_or_visual_search": True},
+        "state": {"current_request": {"request_type": "attribute_search"}},
+        "resolver": {"played_track_ids": [], "positive_tags": []},
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta=None,
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-one", "t-two"]
+    assert trace["ranking_guard_actions"] == [
+        {
+            "type": "visual_branch_rescue",
+            "track_id": "t-one",
+            "from_rank": 2,
+            "to_rank": 1,
+            "request_type": "attribute_search",
+            "routing_tag": "image_or_visual_search",
+            "branch_name": "dense.siglip2_text.visual_nl.image_siglip2",
+            "branch_rank": 1,
+            "branch_score": 0.99,
+        }
+    ]
+
+
+def test_online_reranker_lyric_rescue_preserves_phrase_candidate_when_enabled():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.lyric_rescue_enabled = True
+    reranker.lyric_rescue_top_n = 1
+    reranker.lyric_rescue_target_rank = 1
+    trace = {
+        "branches": {
+            "pools": [
+                {
+                    "name": "bm25",
+                    "hits": [("t-two", 2.0), ("t-one", 1.0)],
+                },
+                {
+                    "name": "dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b",
+                    "hits": [("t-one", 0.95)],
+                },
+            ],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "routing_tags": {"lyric_search": True},
+        "state": {
+            "current_request": {
+                "request_type": "attribute_search",
+                "summary": (
+                    "Find the song containing the exact lyric phrase "
+                    "your name is a strong tower."
+                ),
+            },
+            "lyrical_theme": "your name is a strong tower",
+        },
+        "resolver": {
+            "played_track_ids": [],
+            "positive_tags": ["your name is a strong tower"],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta=None,
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-one", "t-two"]
+    assert trace["ranking_guard_actions"] == [
+        {
+            "type": "lyric_branch_rescue",
+            "track_id": "t-one",
+            "from_rank": 2,
+            "to_rank": 1,
+            "request_type": "attribute_search",
+            "routing_tag": "lyric_search",
+            "branch_name": "dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b",
+            "branch_rank": 1,
+            "branch_score": 0.95,
+        }
+    ]
+
+
+def test_online_reranker_lyric_rescue_ignores_broad_lyrical_theme():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.lyric_rescue_enabled = True
+    reranker.lyric_rescue_top_n = 1
+    reranker.lyric_rescue_target_rank = 1
+    trace = {
+        "branches": {
+            "pools": [
+                {
+                    "name": "bm25",
+                    "hits": [("t-two", 2.0), ("t-one", 1.0)],
+                },
+                {
+                    "name": "dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b",
+                    "hits": [("t-one", 0.95)],
+                },
+            ],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "routing_tags": {"lyric_search": True},
+        "state": {
+            "current_request": {
+                "request_type": "attribute_search",
+                "summary": "A song with a strong narrative and life-story feel.",
+            },
+            "lyrical_theme": "strong narrative life story unfolding",
+        },
+        "resolver": {
+            "played_track_ids": [],
+            "positive_tags": ["strong narrative", "life story unfolding"],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta=None,
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-two", "t-one"]
+    assert "ranking_guard_actions" not in trace
+
+
+def test_online_reranker_lyric_rescue_requires_phrase_like_request():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.lyric_rescue_enabled = True
+    reranker.lyric_rescue_top_n = 1
+    reranker.lyric_rescue_target_rank = 1
+    trace = {
+        "branches": {
+            "pools": [
+                {
+                    "name": "bm25",
+                    "hits": [("t-two", 2.0), ("t-one", 1.0)],
+                },
+                {
+                    "name": "dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b",
+                    "hits": [("t-one", 0.95)],
+                },
+            ],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "routing_tags": {"lyric_search": True},
+        "state": {
+            "current_request": {
+                "request_type": "attribute_search",
+                "summary": "Find worship songs.",
+            },
+            "lyrical_theme": "worship",
+        },
+        "resolver": {"played_track_ids": [], "positive_tags": ["worship"]},
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta=None,
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-two", "t-one"]
+    assert "ranking_guard_actions" not in trace
+
+
 def test_feature_catalog_adapter_matches_offline_catalog_rerank_outputs(tmp_path):
     pytest.importorskip("lancedb")
     import lancedb
