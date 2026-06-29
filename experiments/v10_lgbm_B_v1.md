@@ -4,13 +4,20 @@
 |---|---|
 | **Version** | v1 (first Blind-B submission) |
 | **Date prepared** | 2026-06-29 |
-| **Status** | ✅ Packaged locally — **NOT yet uploaded to CodaBench** |
+| **Status** | ✅ **Submitted to CodaBench — Finished** |
 | **Split** | blindset_B (`talkpl-ai/TalkPlayData-Challenge-Blind-B`, 80 sessions, final turn each) |
 | **Artifact** | [`submission/v10_lgbm_B_v1.zip`](../submission/v10_lgbm_B_v1.zip) (packaged 2026-06-29) |
 | **Zip SHA-256** | `d75e85d314ea0c262c81f8f0325f0e5ef89ad4a8186f2299688f1e911c16f6e2` |
 | **Contents** | `prediction.json` (80 rows) |
 
-➡️ **Upload to CodaBench Blind-B:** [`submission/v10_lgbm_B_v1.zip`](../submission/v10_lgbm_B_v1.zip)
+## CodaBench result
+
+| Submission ID | File | Submitted | Status | Composite score |
+|---|---|---|---|---:|
+| `819863` | `v10_lgbm_B_v1.zip` | 2026-06-29 17:16 | Finished | **0.38** |
+
+Composite = `0.50·nDCG@20 + 0.10·catalog_diversity + 0.10·lexical_diversity + 0.30·(judge−1)/4`.
+For reference, the Blind-A v10 submission scored composite 0.5389 (different/easier split).
 
 ## Git state
 

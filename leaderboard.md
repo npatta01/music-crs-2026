@@ -57,6 +57,17 @@ likely reflects pipeline drift since 2026-06-15 (config pruned/`_fastlocal` fold
 reranker fix commits #173–#178) rather than a clean regression. Treat 0.4562 as a stale
 Modal number; rerun on Modal for an apples-to-apples current baseline before ranking.
 
+## Blind-B (CodaBench)
+
+| Submission | File | Submitted | Status | composite |
+|---|---|---|---|---:|
+| `819863` | `v10_lgbm_B_v1.zip` | 2026-06-29 17:16 | Finished | **0.38** |
+
+First Blind-B submission. Uses the goal-free `reranker_v12_goalfree` bundle and the
+qwen3-30b explanation LM (see `experiments/v10_lgbm_B_v1.md`). Per-axis composite
+breakdown not exposed by the leaderboard at capture time; label-free audit flagged
+ranking/ordering (ranking_gap dominant) as the main lever.
+
 ## Blind-A (CodaBench)
 
 | Submission | File | nDCG@20 | catalog_diversity | lexical_diversity | llm_judge | composite |
