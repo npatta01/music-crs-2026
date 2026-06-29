@@ -6,7 +6,7 @@ import pytest
 
 from mcrs.conversation_state.schema import ConversationStateV0Plus, MentionedEntity
 from mcrs.qu_modules.fuzzy_matcher import RapidfuzzCatalogMatcher
-from mcrs.qu_modules.state_ranker_qu import build_state_ranker_qu
+from mcrs.qu_modules.state_ranker_qu import _normalise_ranking_config, build_state_ranker_qu
 from tests.v0plus_fakes import DictCatalog, FakeEmbeddingClient, FakeRetriever
 
 
@@ -24,9 +24,12 @@ class _FakeExtractor:
 class _FakeRanker:
     def __init__(self):
         self.last_trace = None
+        self.guard_actions = []
 
     def rerank(self, trace, session_meta, user_id, hard_drop, fallback):
         self.last_trace = trace
+        if self.guard_actions:
+            trace["ranking_guard_actions"] = list(self.guard_actions)
         return ["t-fugazi-1", "t-morphine-1"] + [
             track_id for track_id in fallback if track_id not in {"t-fugazi-1", "t-morphine-1"}
         ]
@@ -177,6 +180,67 @@ def test_state_ranker_lgbm_serving_trace_keeps_routing_tags_for_reranker():
         "hidden_target_search": False,
     }
     assert qu._reranker.last_trace["compiled_state"]["routing_tags"]["exact_entity_probe"] is True
+
+
+def test_state_ranker_lgbm_trace_exposes_exact_pin_guard_actions():
+    qu = _build_qu_with_state(
+        _state(mentioned_entities=[MentionedEntity(type="track", value="Cure for Pain", sentiment=1)]),
+        mode="lgbm",
+    )
+    action = {
+        "type": "exact_track_pin",
+        "track_id": "t-morphine-1",
+        "from_rank": 2,
+        "to_rank": 1,
+        "request_type": "exact_track",
+    }
+    qu._reranker.guard_actions = [action]
+
+    qu.batch_compile_track_ids([[{"role": "user", "content": "play Cure for Pain"}]], topk=2)
+
+    resolver = qu._reranker.last_trace["resolver"]
+    assert resolver["exact_track_target_ids"] == ["t-morphine-1"]
+    assert resolver["exact_track_targets"] == [
+        {
+            "track_id": "t-morphine-1",
+            "source_text": "Cure for Pain",
+            "confidence": 100.0,
+        }
+    ]
+    assert qu.last_traces[0]["ranking"]["guard_actions"] == [action]
+
+
+def test_state_ranker_lgbm_ranking_config_passes_guard_flags_to_reranker():
+    reranker_cfg, mode, _, _ = _normalise_ranking_config(
+        {
+            "ranking": {
+                "mode": "lgbm",
+                "model_path": "models/reranker_v10/model.txt",
+                "meta_path": "models/reranker_v10/meta.json",
+                "cat_maps": "models/reranker_v10/cat_maps.json",
+                "branch_names": "models/reranker_v10/branch_names.json",
+                "tag_index": "cache/tag_embedding_index/qwen_0_6b.npz",
+                "embed_memo": "exp/analysis/rerank/q06_memo.json",
+                "msg_store": "exp/analysis/rerank/raw_msg_store",
+                "visual_rescue_enabled": True,
+                "visual_rescue_top_n": 1,
+                "visual_rescue_target_rank": 10,
+                "lyric_rescue_enabled": True,
+                "lyric_rescue_top_n": 1,
+                "lyric_rescue_target_rank": 10,
+                "lyric_rescue_require_phrase": True,
+            }
+        }
+    )
+
+    assert mode == "lgbm"
+    assert reranker_cfg["reranker"]["visual_rescue_enabled"] is True
+    assert reranker_cfg["reranker"]["visual_rescue_top_n"] == 1
+    assert reranker_cfg["reranker"]["visual_rescue_target_rank"] == 10
+    assert reranker_cfg["reranker"]["lyric_rescue_enabled"] is True
+    assert reranker_cfg["reranker"]["lyric_rescue_top_n"] == 1
+    assert reranker_cfg["reranker"]["lyric_rescue_target_rank"] == 10
+    assert reranker_cfg["reranker"]["lyric_rescue_require_phrase"] is True
 
 
 def test_state_ranker_resolver_trace_uses_artist_ids_and_keeps_surface_values():

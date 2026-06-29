@@ -177,6 +177,26 @@ class StateRankerQU(V0PlusCompilerQU):
             and t.entity_id
             and getattr(t, "resolution_role", "exact_target") == "exact_target"
         }
+        exact_track_targets: list[dict[str, Any]] = []
+        seen_exact_track_ids: set[str] = set()
+        for target in rs.resolved_targets:
+            if (
+                target.kind != "track"
+                or not target.entity_id
+                or getattr(target, "resolution_role", "exact_target") != "exact_target"
+            ):
+                continue
+            track_id = str(target.entity_id)
+            if track_id in seen_exact_track_ids:
+                continue
+            seen_exact_track_ids.add(track_id)
+            exact_track_targets.append(
+                {
+                    "track_id": track_id,
+                    "source_text": target.source_text,
+                    "confidence": target.confidence,
+                }
+            )
         resolved_artist_ids_by_surface = {
             _surface_key(t.source_text): t.entity_id
             for t in rs.resolved_targets
@@ -199,6 +219,10 @@ class StateRankerQU(V0PlusCompilerQU):
             "anchor_track_values": _dedupe_preserving_order(anchor_track_values),
             "anchor_artist_ids": _dedupe_preserving_order(anchor_artist_ids),
             "anchor_artist_values": _dedupe_preserving_order(anchor_artist_values),
+            "exact_track_target_ids": [
+                target["track_id"] for target in exact_track_targets
+            ],
+            "exact_track_targets": exact_track_targets,
             "rejected_track_ids": rejected_track_ids,
             "rejected_artist_ids": rejected_artist_ids,
             "rejected_tags": [
@@ -239,6 +263,7 @@ class StateRankerQU(V0PlusCompilerQU):
             )
         ]
         served_track_ids = list(candidate_track_ids)
+        ranking_guard_actions: list[dict[str, Any]] = []
 
         if self.ranking_mode == "lgbm":
             had_reranker = self._reranker is not None
@@ -253,28 +278,30 @@ class StateRankerQU(V0PlusCompilerQU):
                         )
             if rr is not None:
                 start = time.perf_counter()
+                rerank_trace = {
+                    "trace_schema_version": TRACE_SCHEMA_VERSION,
+                    "extracted_state": extracted_state,
+                    "compiled_state": compiled_state,
+                    "state": extracted_state,
+                    "intent_mode": intent_mode,
+                    "resolver": resolver_block,
+                    "routing_tags": routing_tags,
+                    "retrieval": retrieval,
+                    "branches": {
+                        "pools": retrieval["branches"],
+                        "branch_queries": retrieval["branch_queries"],
+                        "fused": compile_result.fused,
+                    },
+                }
                 served_track_ids = await asyncio.to_thread(
                     rr.rerank,
-                    {
-                        "trace_schema_version": TRACE_SCHEMA_VERSION,
-                        "extracted_state": extracted_state,
-                        "compiled_state": compiled_state,
-                        "state": extracted_state,
-                        "intent_mode": intent_mode,
-                        "resolver": resolver_block,
-                        "routing_tags": routing_tags,
-                        "retrieval": retrieval,
-                        "branches": {
-                            "pools": retrieval["branches"],
-                            "branch_queries": retrieval["branch_queries"],
-                            "fused": compile_result.fused,
-                        },
-                    },
+                    rerank_trace,
                     session_meta,
                     user_id,
                     set(compile_result.hard_drop),
                     candidate_track_ids,
                 )
+                ranking_guard_actions = list(rerank_trace.get("ranking_guard_actions") or [])
                 _add_elapsed(timings, "rerank", start)
             else:
                 timings.setdefault("rerank", 0.0)
@@ -307,6 +334,7 @@ class StateRankerQU(V0PlusCompilerQU):
             "ranking": {
                 "stages": stages,
                 "final_stage": self.final_stage,
+                "guard_actions": ranking_guard_actions,
             },
             "final_recommendation": final_recommendation(
                 final_ids,
@@ -355,6 +383,19 @@ def _normalise_ranking_config(qu_kwargs: dict[str, Any]) -> tuple[dict[str, Any]
         "pool_k": int(ranking.get("pool_k", 500)),
         "top_k_out": int(ranking.get("top_k_out", 1000)),
     }
+    for key in (
+        "exact_pin_top_n",
+        "exact_pin_min_confidence",
+        "visual_rescue_enabled",
+        "visual_rescue_top_n",
+        "visual_rescue_target_rank",
+        "lyric_rescue_enabled",
+        "lyric_rescue_top_n",
+        "lyric_rescue_target_rank",
+        "lyric_rescue_require_phrase",
+    ):
+        if key in ranking:
+            next_kwargs["reranker"][key] = ranking[key]
     return next_kwargs, mode, model_version, final_stage
 
 

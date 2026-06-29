@@ -310,6 +310,540 @@ def test_online_reranker_filters_hard_drop_when_feature_rows_empty():
     assert ranked == ["t-one"]
 
 
+def test_online_reranker_pins_resolved_exact_track_target():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    trace = {
+        "branches": {
+            "pools": [
+                {
+                    "name": "bm25",
+                    "hits": [("t-two", 2.0), ("t-one", 1.0)],
+                }
+            ],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "state": {
+            "current_request": {"request_type": "exact_track", "source_turn": 1},
+            "facts": [
+                {
+                    "type": "track",
+                    "role": "current_target",
+                    "anchor_use": "must_use",
+                    "relation": "exact_target",
+                    "reuse": "must_reuse",
+                    "mentioned_current_turn": True,
+                    "source_turn": 1,
+                    "value": "Blue Smoke",
+                }
+            ],
+        },
+        "resolver": {
+            "exact_track_target_ids": ["t-one"],
+            "exact_track_targets": [
+                {
+                    "track_id": "t-one",
+                    "source_text": "Blue Smoke",
+                    "confidence": 100.0,
+                }
+            ],
+            "played_track_ids": [],
+            "positive_tags": [],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta={"turn_number": 1},
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-one", "t-two"]
+    assert trace["ranking_guard_actions"] == [
+        {
+            "type": "exact_track_pin",
+            "track_id": "t-one",
+            "from_rank": 2,
+            "to_rank": 1,
+            "request_type": "exact_track",
+        }
+    ]
+
+
+def test_online_reranker_inserts_resolved_exact_track_target_missing_from_pool():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    trace = {
+        "branches": {
+            "pools": [{"name": "bm25", "hits": [("t-two", 2.0)]}],
+            "fused": [("t-two", 2.0)],
+            "branch_queries": {},
+        },
+        "state": {
+            "current_request": {"request_type": "exact_track", "source_turn": 1},
+            "facts": [
+                {
+                    "type": "track",
+                    "role": "current_target",
+                    "anchor_use": "must_use",
+                    "relation": "exact_target",
+                    "reuse": "must_reuse",
+                    "mentioned_current_turn": True,
+                    "source_turn": 1,
+                    "value": "Blue Smoke",
+                }
+            ],
+        },
+        "resolver": {
+            "exact_track_target_ids": ["t-one"],
+            "exact_track_targets": [
+                {
+                    "track_id": "t-one",
+                    "source_text": "Blue Smoke",
+                    "confidence": 100.0,
+                }
+            ],
+            "played_track_ids": [],
+            "positive_tags": [],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta={"turn_number": 1},
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two"],
+    )
+
+    assert ranked == ["t-one", "t-two"]
+    assert trace["ranking_guard_actions"] == [
+        {
+            "type": "exact_track_pin",
+            "track_id": "t-one",
+            "from_rank": None,
+            "to_rank": 1,
+            "request_type": "exact_track",
+        }
+    ]
+
+
+def test_online_reranker_does_not_pin_low_confidence_exact_track_target():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.exact_pin_min_confidence = 90.0
+    trace = {
+        "branches": {
+            "pools": [
+                {
+                    "name": "bm25",
+                    "hits": [("t-two", 2.0), ("t-one", 1.0)],
+                }
+            ],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "state": {
+            "current_request": {"request_type": "exact_track", "source_turn": 1},
+            "facts": [
+                {
+                    "type": "track",
+                    "role": "current_target",
+                    "anchor_use": "must_use",
+                    "relation": "exact_target",
+                    "reuse": "must_reuse",
+                    "mentioned_current_turn": True,
+                    "source_turn": 1,
+                    "value": "Blue Smoke",
+                }
+            ],
+        },
+        "resolver": {
+            "exact_track_target_ids": ["t-one"],
+            "exact_track_targets": [
+                {
+                    "track_id": "t-one",
+                    "source_text": "Blue Smoke",
+                    "confidence": 84.0,
+                }
+            ],
+            "played_track_ids": [],
+            "positive_tags": [],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta={"turn_number": 1},
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-two", "t-one"]
+    assert "ranking_guard_actions" not in trace
+
+
+def test_online_reranker_does_not_pin_stale_exact_track_target():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.exact_pin_min_confidence = 90.0
+    trace = {
+        "branches": {"pools": [], "fused": [], "branch_queries": {}},
+        "state": {
+            "current_request": {
+                "request_type": "exact_track",
+                "source_turn": 1,
+            },
+            "facts": [
+                {
+                    "type": "track",
+                    "role": "current_target",
+                    "anchor_use": "must_use",
+                    "relation": "exact_target",
+                    "reuse": "must_reuse",
+                    "mentioned_current_turn": True,
+                    "source_turn": 1,
+                    "value": "Blue Smoke",
+                }
+            ],
+        },
+        "resolver": {
+            "exact_track_target_ids": ["t-one"],
+            "exact_track_targets": [
+                {
+                    "track_id": "t-one",
+                    "source_text": "Blue Smoke",
+                    "confidence": 100.0,
+                }
+            ],
+            "played_track_ids": ["t-one"],
+            "positive_tags": [],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta={"turn_number": 2},
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-two", "t-one"]
+    assert "ranking_guard_actions" not in trace
+
+
+def test_online_reranker_does_not_pin_legacy_exact_track_id_without_evidence():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    trace = {
+        "branches": {"pools": [], "fused": [], "branch_queries": {}},
+        "state": {
+            "current_request": {"request_type": "exact_track", "source_turn": 1},
+            "facts": [
+                {
+                    "type": "track",
+                    "role": "current_target",
+                    "anchor_use": "must_use",
+                    "relation": "exact_target",
+                    "reuse": "must_reuse",
+                    "mentioned_current_turn": True,
+                    "source_turn": 1,
+                    "value": "Blue Smoke",
+                }
+            ],
+        },
+        "resolver": {
+            "exact_track_target_ids": ["t-one"],
+            "played_track_ids": [],
+            "positive_tags": [],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta={"turn_number": 1},
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-two", "t-one"]
+    assert "ranking_guard_actions" not in trace
+
+
+def test_online_reranker_pins_played_track_when_current_request_is_exact_target():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    trace = {
+        "branches": {"pools": [], "fused": [], "branch_queries": {}},
+        "state": {
+            "current_request": {"request_type": "exact_track", "source_turn": 1},
+            "facts": [
+                {
+                    "type": "track",
+                    "role": "current_target",
+                    "anchor_use": "must_use",
+                    "relation": "exact_target",
+                    "reuse": "must_reuse",
+                    "mentioned_current_turn": True,
+                    "source_turn": 1,
+                    "value": "Blue Smoke",
+                }
+            ],
+        },
+        "resolver": {
+            "exact_track_target_ids": ["t-one"],
+            "exact_track_targets": [
+                {
+                    "track_id": "t-one",
+                    "source_text": "Blue Smoke",
+                    "confidence": 100.0,
+                }
+            ],
+            "played_track_ids": ["t-one"],
+            "rejected_track_ids": [],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta={"turn_number": 1},
+        user_id="u1",
+        hard_drop={"t-one"},
+        fallback=["t-two"],
+    )
+
+    assert ranked == ["t-one", "t-two"]
+    assert trace["ranking_guard_actions"] == [
+        {
+            "type": "exact_track_pin",
+            "track_id": "t-one",
+            "from_rank": None,
+            "to_rank": 1,
+            "request_type": "exact_track",
+            "drop_override": "played_exact_request",
+        }
+    ]
+
+
+def test_online_reranker_visual_rescue_preserves_visual_branch_candidate_when_enabled():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.visual_rescue_enabled = True
+    reranker.visual_rescue_top_n = 1
+    reranker.visual_rescue_target_rank = 1
+    trace = {
+        "branches": {
+            "pools": [
+                {
+                    "name": "bm25",
+                    "hits": [("t-two", 2.0), ("t-one", 1.0)],
+                },
+                {
+                    "name": "dense.siglip2_text.visual_nl.image_siglip2",
+                    "hits": [("t-one", 0.99)],
+                },
+            ],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "routing_tags": {"image_or_visual_search": True},
+        "state": {"current_request": {"request_type": "attribute_search"}},
+        "resolver": {"played_track_ids": [], "positive_tags": []},
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta=None,
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-one", "t-two"]
+    assert trace["ranking_guard_actions"] == [
+        {
+            "type": "visual_branch_rescue",
+            "track_id": "t-one",
+            "from_rank": 2,
+            "to_rank": 1,
+            "request_type": "attribute_search",
+            "routing_tag": "image_or_visual_search",
+            "branch_name": "dense.siglip2_text.visual_nl.image_siglip2",
+            "branch_rank": 1,
+            "branch_score": 0.99,
+        }
+    ]
+
+
+def test_online_reranker_lyric_rescue_preserves_phrase_candidate_when_enabled():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.lyric_rescue_enabled = True
+    reranker.lyric_rescue_top_n = 1
+    reranker.lyric_rescue_target_rank = 1
+    trace = {
+        "branches": {
+            "pools": [
+                {
+                    "name": "bm25",
+                    "hits": [("t-two", 2.0), ("t-one", 1.0)],
+                },
+                {
+                    "name": "dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b",
+                    "hits": [("t-one", 0.95)],
+                },
+            ],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "routing_tags": {"lyric_search": True},
+        "state": {
+            "current_request": {
+                "request_type": "attribute_search",
+                "summary": (
+                    "Find the song containing the exact lyric phrase "
+                    "your name is a strong tower."
+                ),
+            },
+            "lyrical_theme": "your name is a strong tower",
+        },
+        "resolver": {
+            "played_track_ids": [],
+            "positive_tags": ["your name is a strong tower"],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta=None,
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-one", "t-two"]
+    assert trace["ranking_guard_actions"] == [
+        {
+            "type": "lyric_branch_rescue",
+            "track_id": "t-one",
+            "from_rank": 2,
+            "to_rank": 1,
+            "request_type": "attribute_search",
+            "routing_tag": "lyric_search",
+            "branch_name": "dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b",
+            "branch_rank": 1,
+            "branch_score": 0.95,
+        }
+    ]
+
+
+def test_online_reranker_lyric_rescue_ignores_broad_lyrical_theme():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.lyric_rescue_enabled = True
+    reranker.lyric_rescue_top_n = 1
+    reranker.lyric_rescue_target_rank = 1
+    trace = {
+        "branches": {
+            "pools": [
+                {
+                    "name": "bm25",
+                    "hits": [("t-two", 2.0), ("t-one", 1.0)],
+                },
+                {
+                    "name": "dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b",
+                    "hits": [("t-one", 0.95)],
+                },
+            ],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "routing_tags": {"lyric_search": True},
+        "state": {
+            "current_request": {
+                "request_type": "attribute_search",
+                "summary": "A song with a strong narrative and life-story feel.",
+            },
+            "lyrical_theme": "strong narrative life story unfolding",
+        },
+        "resolver": {
+            "played_track_ids": [],
+            "positive_tags": ["strong narrative", "life story unfolding"],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta=None,
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-two", "t-one"]
+    assert "ranking_guard_actions" not in trace
+
+
+def test_online_reranker_lyric_rescue_requires_phrase_like_request():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.lyric_rescue_enabled = True
+    reranker.lyric_rescue_top_n = 1
+    reranker.lyric_rescue_target_rank = 1
+    trace = {
+        "branches": {
+            "pools": [
+                {
+                    "name": "bm25",
+                    "hits": [("t-two", 2.0), ("t-one", 1.0)],
+                },
+                {
+                    "name": "dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b",
+                    "hits": [("t-one", 0.95)],
+                },
+            ],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "routing_tags": {"lyric_search": True},
+        "state": {
+            "current_request": {
+                "request_type": "attribute_search",
+                "summary": "Find worship songs.",
+            },
+            "lyrical_theme": "worship",
+        },
+        "resolver": {"played_track_ids": [], "positive_tags": ["worship"]},
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta=None,
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-two", "t-one"]
+    assert "ranking_guard_actions" not in trace
+
+
 def test_feature_catalog_adapter_matches_offline_catalog_rerank_outputs(tmp_path):
     pytest.importorskip("lancedb")
     import lancedb
