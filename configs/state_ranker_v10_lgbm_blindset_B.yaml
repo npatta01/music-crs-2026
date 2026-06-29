@@ -30,6 +30,12 @@ qu_kwargs:
     msg_store: ${oc.env:MCRS_RERANKER_DIR,./exp/analysis/rerank}/raw_msg_store
     pool_k: 500
     top_k_out: 1000
+    # PR recommender: supply-gated pivot reorder (fix1) on top of the cleaned-label
+    # reranker. Demotes blocked-artist tracks below non-blocked within top-20 on
+    # pivot/new-different-artist turns; never removes a track.
+    pivot_demote_enabled: true
+    pivot_demote_min_alternatives: 2
+    pivot_demote_window: 20
     # Final-stage same-turn artist veto. Gated by structured current-turn
     # do_not_use artist evidence, so it only touches explicit "different/new
     # artist" or "no more X" turns after the ranker has picked candidates.
