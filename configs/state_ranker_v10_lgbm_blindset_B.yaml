@@ -1,10 +1,21 @@
-# Devset learned-ranker evaluation for state-ranker v10.
+# Blind-B learned-ranker submission config for state-ranker v10 (goal-free reranker).
 
+explanation_lm_type: litellm
+explanation_lm_kwargs:
+  model_name: openrouter/qwen/qwen3-30b-a3b-instruct-2507
+  temperature: 0.0
+  max_tokens: 2048
+explanation_kwargs:
+  template: phase2_best_qwen
+  conditioning: latest_state
+  item_format: xml
+  max_tags: 10
+  echo_retries: 0
 lm_type: dummy
 qu_type: state_ranker
 qu_kwargs:
-  max_in_flight: 24
-  compile_max_in_flight: 8
+  max_in_flight: 4
+  compile_max_in_flight: 4
   ranking:
     mode: lgbm
     model_version: lgbm_v10
@@ -46,6 +57,9 @@ qu_kwargs:
       encoding_format: float
       disk_cache: true
       cache_dir: ${oc.env:MCRS_EMBEDDING_CACHE_DIR,./cache/embeddings}
+      extra_params:
+        num_retries: 4
+        timeout: 60
     qwen_8b:
       backend: litellm
       model_name: openai/Qwen/Qwen3-Embedding-8B
