@@ -15,7 +15,7 @@ DOCS = "exp/analysis/retrieval_exploration/doc_corpus.jsonl"
 DOCEMB = "exp/analysis/retrieval_exploration/_emb_cache/docs_vstructpt_4b.npy"
 QEMB = "exp/analysis/retrieval_exploration/_emb_cache/q_vstructpt_4b.npy"
 GT_FILE = "exp/ground_truth/devset.json"
-TRACE = "exp/inference/devset/state_ranker_v10_lgbm_devset_fastlocal_trace.jsonl"
+TRACE = "exp/inference/devset/state_ranker_v10_lgbm_devset_trace.jsonl"
 CHUNK = 100_000
 
 

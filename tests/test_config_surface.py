@@ -28,6 +28,8 @@ def test_current_config_surface_has_no_deleted_devset_references():
         "state_ranker_v10_lgbm_devset.yaml",
         "state_ranker_v10_rrf_devset.yaml",
     ]
+    # The folded-in fastlocal variant must not be reintroduced as a config.
+    assert f"{DELETED_FASTLOCAL_TID}.yaml" not in configs
 
     checked_paths = [
         "AGENTS.md",

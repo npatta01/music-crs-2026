@@ -373,7 +373,7 @@ dataset/blind splits.
 
 **Inputs (committed-or-derivable):**
 - Catalog text: LanceDB `cache/lancedb` table `music_track_catalog` (`track_text`).
-- Devset trace (LightGBM pool + `turn_intent`): `exp/inference/devset/state_ranker_v10_lgbm_devset_fastlocal_trace.jsonl`
+- Devset trace (LightGBM pool + `turn_intent`): `exp/inference/devset/state_ranker_v10_lgbm_devset_trace.jsonl`
   (`trace.ranking.stages` → `candidate_fusion` + `lgbm_v10`; `trace.extracted_state.turn_intent`).
 - Lanes: `exp/analysis/rerank/devset_lanes_v10.jsonl` (`hit`, `oracle`, `lane`, `rank`).
 - Ground truth: `exp/ground_truth/devset.json`. Train pairs: `exp/analysis/retrieval_exploration/retriever_pairs.jsonl`.

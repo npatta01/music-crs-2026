@@ -28,7 +28,7 @@ from collections import Counter, defaultdict
 
 LANES = "exp/analysis/rerank/devset_lanes_v10.jsonl"
 GT_FILE = "exp/ground_truth/devset.json"
-TRACE = "exp/inference/devset/state_ranker_v10_lgbm_devset_fastlocal_trace.jsonl"
+TRACE = "exp/inference/devset/state_ranker_v10_lgbm_devset_trace.jsonl"
 OUT = "exp/analysis/retrieval_exploration/xenc_probe_results.json"
 BASE_MODEL = "Qwen/Qwen3-Reranker-0.6B"
 MOVES = "MOVES_TOWARD_GOAL"
