@@ -325,9 +325,30 @@ def test_online_reranker_pins_resolved_exact_track_target():
             "fused": [("t-two", 2.0), ("t-one", 1.0)],
             "branch_queries": {},
         },
-        "state": {"current_request": {"request_type": "exact_track"}},
+        "state": {
+            "current_request": {"request_type": "exact_track", "source_turn": 1},
+            "facts": [
+                {
+                    "type": "track",
+                    "role": "current_target",
+                    "anchor_use": "must_use",
+                    "relation": "exact_target",
+                    "reuse": "must_reuse",
+                    "mentioned_current_turn": True,
+                    "source_turn": 1,
+                    "value": "Blue Smoke",
+                }
+            ],
+        },
         "resolver": {
             "exact_track_target_ids": ["t-one"],
+            "exact_track_targets": [
+                {
+                    "track_id": "t-one",
+                    "source_text": "Blue Smoke",
+                    "confidence": 100.0,
+                }
+            ],
             "played_track_ids": [],
             "positive_tags": [],
         },
@@ -335,7 +356,7 @@ def test_online_reranker_pins_resolved_exact_track_target():
 
     ranked = reranker.rerank(
         trace,
-        session_meta=None,
+        session_meta={"turn_number": 1},
         user_id="u1",
         hard_drop=set(),
         fallback=["t-two", "t-one"],
@@ -363,9 +384,30 @@ def test_online_reranker_inserts_resolved_exact_track_target_missing_from_pool()
             "fused": [("t-two", 2.0)],
             "branch_queries": {},
         },
-        "state": {"current_request": {"request_type": "exact_track"}},
+        "state": {
+            "current_request": {"request_type": "exact_track", "source_turn": 1},
+            "facts": [
+                {
+                    "type": "track",
+                    "role": "current_target",
+                    "anchor_use": "must_use",
+                    "relation": "exact_target",
+                    "reuse": "must_reuse",
+                    "mentioned_current_turn": True,
+                    "source_turn": 1,
+                    "value": "Blue Smoke",
+                }
+            ],
+        },
         "resolver": {
             "exact_track_target_ids": ["t-one"],
+            "exact_track_targets": [
+                {
+                    "track_id": "t-one",
+                    "source_text": "Blue Smoke",
+                    "confidence": 100.0,
+                }
+            ],
             "played_track_ids": [],
             "positive_tags": [],
         },
@@ -373,7 +415,7 @@ def test_online_reranker_inserts_resolved_exact_track_target_missing_from_pool()
 
     ranked = reranker.rerank(
         trace,
-        session_meta=None,
+        session_meta={"turn_number": 1},
         user_id="u1",
         hard_drop=set(),
         fallback=["t-two"],
@@ -407,7 +449,21 @@ def test_online_reranker_does_not_pin_low_confidence_exact_track_target():
             "fused": [("t-two", 2.0), ("t-one", 1.0)],
             "branch_queries": {},
         },
-        "state": {"current_request": {"request_type": "exact_track"}},
+        "state": {
+            "current_request": {"request_type": "exact_track", "source_turn": 1},
+            "facts": [
+                {
+                    "type": "track",
+                    "role": "current_target",
+                    "anchor_use": "must_use",
+                    "relation": "exact_target",
+                    "reuse": "must_reuse",
+                    "mentioned_current_turn": True,
+                    "source_turn": 1,
+                    "value": "Blue Smoke",
+                }
+            ],
+        },
         "resolver": {
             "exact_track_target_ids": ["t-one"],
             "exact_track_targets": [
@@ -424,7 +480,98 @@ def test_online_reranker_does_not_pin_low_confidence_exact_track_target():
 
     ranked = reranker.rerank(
         trace,
-        session_meta=None,
+        session_meta={"turn_number": 1},
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-two", "t-one"]
+    assert "ranking_guard_actions" not in trace
+
+
+def test_online_reranker_does_not_pin_stale_exact_track_target():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.exact_pin_min_confidence = 90.0
+    trace = {
+        "branches": {"pools": [], "fused": [], "branch_queries": {}},
+        "state": {
+            "current_request": {
+                "request_type": "exact_track",
+                "source_turn": 1,
+            },
+            "facts": [
+                {
+                    "type": "track",
+                    "role": "current_target",
+                    "anchor_use": "must_use",
+                    "relation": "exact_target",
+                    "reuse": "must_reuse",
+                    "mentioned_current_turn": True,
+                    "source_turn": 1,
+                    "value": "Blue Smoke",
+                }
+            ],
+        },
+        "resolver": {
+            "exact_track_target_ids": ["t-one"],
+            "exact_track_targets": [
+                {
+                    "track_id": "t-one",
+                    "source_text": "Blue Smoke",
+                    "confidence": 100.0,
+                }
+            ],
+            "played_track_ids": ["t-one"],
+            "positive_tags": [],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta={"turn_number": 2},
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-two", "t-one"]
+    assert "ranking_guard_actions" not in trace
+
+
+def test_online_reranker_does_not_pin_legacy_exact_track_id_without_evidence():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    trace = {
+        "branches": {"pools": [], "fused": [], "branch_queries": {}},
+        "state": {
+            "current_request": {"request_type": "exact_track", "source_turn": 1},
+            "facts": [
+                {
+                    "type": "track",
+                    "role": "current_target",
+                    "anchor_use": "must_use",
+                    "relation": "exact_target",
+                    "reuse": "must_reuse",
+                    "mentioned_current_turn": True,
+                    "source_turn": 1,
+                    "value": "Blue Smoke",
+                }
+            ],
+        },
+        "resolver": {
+            "exact_track_target_ids": ["t-one"],
+            "played_track_ids": [],
+            "positive_tags": [],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta={"turn_number": 1},
         user_id="u1",
         hard_drop=set(),
         fallback=["t-two", "t-one"],
@@ -440,7 +587,21 @@ def test_online_reranker_pins_played_track_when_current_request_is_exact_target(
     )
     trace = {
         "branches": {"pools": [], "fused": [], "branch_queries": {}},
-        "state": {"current_request": {"request_type": "exact_track"}},
+        "state": {
+            "current_request": {"request_type": "exact_track", "source_turn": 1},
+            "facts": [
+                {
+                    "type": "track",
+                    "role": "current_target",
+                    "anchor_use": "must_use",
+                    "relation": "exact_target",
+                    "reuse": "must_reuse",
+                    "mentioned_current_turn": True,
+                    "source_turn": 1,
+                    "value": "Blue Smoke",
+                }
+            ],
+        },
         "resolver": {
             "exact_track_target_ids": ["t-one"],
             "exact_track_targets": [
@@ -457,7 +618,7 @@ def test_online_reranker_pins_played_track_when_current_request_is_exact_target(
 
     ranked = reranker.rerank(
         trace,
-        session_meta=None,
+        session_meta={"turn_number": 1},
         user_id="u1",
         hard_drop={"t-one"},
         fallback=["t-two"],

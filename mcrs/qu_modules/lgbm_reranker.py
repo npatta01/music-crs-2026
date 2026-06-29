@@ -277,6 +277,58 @@ def _current_request_type(trace: dict) -> str:
     return str(getattr(raw, "value", raw) or "")
 
 
+def _int_or_none(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _surface_key(value: Any) -> str:
+    return str(value or "").casefold().strip()
+
+
+def _same_turn_exact_request(trace: dict, current_turn: int | None) -> bool:
+    if not current_turn:
+        return False
+    state = trace.get("state") or trace.get("extracted_state") or {}
+    current_request = state.get("current_request") or {}
+    return _int_or_none(current_request.get("source_turn")) == int(current_turn)
+
+
+def _same_turn_exact_track_fact(
+    trace: dict,
+    *,
+    source_text: str,
+    current_turn: int | None,
+) -> bool:
+    if not current_turn:
+        return False
+    source_key = _surface_key(source_text)
+    state = trace.get("state") or trace.get("extracted_state") or {}
+    for fact in state.get("facts") or []:
+        if not isinstance(fact, dict):
+            continue
+        if _int_or_none(fact.get("source_turn")) != int(current_turn):
+            continue
+        if _surface_key(fact.get("value")) != source_key:
+            continue
+        if str(fact.get("type") or "") != "track":
+            continue
+        if str(fact.get("role") or "") != "current_target":
+            continue
+        if str(fact.get("anchor_use") or "") != "must_use":
+            continue
+        if str(fact.get("relation") or "") != "exact_target":
+            continue
+        if str(fact.get("reuse") or "") != "must_reuse":
+            continue
+        if fact.get("mentioned_current_turn") is not True:
+            continue
+        return True
+    return False
+
+
 def _routing_tag_enabled(trace: dict, tag: str) -> bool:
     for block in (
         trace.get("routing_tags"),
@@ -373,31 +425,36 @@ def _lyric_phrase_like_request(trace: dict) -> bool:
     return False
 
 
-def _resolved_exact_track_ids(trace: dict, *, min_confidence: float) -> list[str]:
+def _resolved_exact_track_ids(
+    trace: dict,
+    *,
+    min_confidence: float,
+    current_turn: int | None = None,
+) -> list[str]:
     if _current_request_type(trace) != "exact_track":
+        return []
+    if not _same_turn_exact_request(trace, current_turn):
         return []
     resolver = trace.get("resolver") or {}
     seen: set[str] = set()
     out: list[str] = []
     target_records = resolver.get("exact_track_targets") or []
-    if target_records:
-        for target in target_records:
-            if not isinstance(target, dict):
-                continue
-            track_id = str(target.get("track_id") or target.get("entity_id") or "")
-            try:
-                confidence = float(target.get("confidence") or 0.0)
-            except (TypeError, ValueError):
-                confidence = 0.0
-            if not track_id or track_id in seen or confidence < min_confidence:
-                continue
-            seen.add(track_id)
-            out.append(track_id)
-        return out
-
-    for raw_track_id in _as_list(resolver.get("exact_track_target_ids")):
-        track_id = str(raw_track_id or "")
-        if not track_id or track_id in seen:
+    for target in target_records:
+        if not isinstance(target, dict):
+            continue
+        track_id = str(target.get("track_id") or target.get("entity_id") or "")
+        source_text = str(target.get("source_text") or "")
+        try:
+            confidence = float(target.get("confidence") or 0.0)
+        except (TypeError, ValueError):
+            confidence = 0.0
+        if not track_id or track_id in seen or confidence < min_confidence:
+            continue
+        if not _same_turn_exact_track_fact(
+            trace,
+            source_text=source_text,
+            current_turn=current_turn,
+        ):
             continue
         seen.add(track_id)
         out.append(track_id)
@@ -495,6 +552,7 @@ def _apply_exact_track_pins(
     top_k_out: int,
     pin_limit: int,
     min_confidence: float,
+    current_turn: int | None = None,
 ) -> list[str]:
     if pin_limit <= 0:
         return ranked[:top_k_out]
@@ -506,6 +564,7 @@ def _apply_exact_track_pins(
     for track_id in _resolved_exact_track_ids(
         trace,
         min_confidence=min_confidence,
+        current_turn=current_turn,
     )[:pin_limit]:
         if track_id in dropped:
             if track_id not in played or track_id in rejected:
@@ -714,6 +773,7 @@ class LgbmOnlineReranker:
         lyric_rescue_require_phrase = _as_bool(
             getattr(self, "lyric_rescue_require_phrase", True)
         )
+        current_turn = int((session_meta or {}).get("turn_number") or 0)
 
         def filtered_fallback() -> list[str]:
             return [
@@ -730,6 +790,7 @@ class LgbmOnlineReranker:
                 top_k_out=self.top_k_out,
                 pin_limit=pin_limit,
                 min_confidence=min_confidence,
+                current_turn=current_turn,
             )
             guarded = _apply_branch_rescue(
                 guarded,
@@ -761,7 +822,7 @@ class LgbmOnlineReranker:
             if not (trace.get("branches") or {}).get("pools"):
                 return finalize(filtered_fallback())
             sid = str((session_meta or {}).get("session_id") or "")
-            tn = int((session_meta or {}).get("turn_number") or 0)
+            tn = current_turn
             if session_meta:
                 self.ctx.sessions[sid] = session_entry_from_meta(session_meta)
             trace_for_features = trace
