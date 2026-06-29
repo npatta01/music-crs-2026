@@ -229,6 +229,8 @@ def test_state_ranker_lgbm_ranking_config_passes_guard_flags_to_reranker():
                 "lyric_rescue_top_n": 1,
                 "lyric_rescue_target_rank": 10,
                 "lyric_rescue_require_phrase": True,
+                "final_artist_guard_enabled": True,
+                "final_artist_guard_top_k": 1,
             }
         }
     )
@@ -241,6 +243,8 @@ def test_state_ranker_lgbm_ranking_config_passes_guard_flags_to_reranker():
     assert reranker_cfg["reranker"]["lyric_rescue_top_n"] == 1
     assert reranker_cfg["reranker"]["lyric_rescue_target_rank"] == 10
     assert reranker_cfg["reranker"]["lyric_rescue_require_phrase"] is True
+    assert reranker_cfg["reranker"]["final_artist_guard_enabled"] is True
+    assert reranker_cfg["reranker"]["final_artist_guard_top_k"] == 1
 
 
 def test_state_ranker_resolver_trace_uses_artist_ids_and_keeps_surface_values():

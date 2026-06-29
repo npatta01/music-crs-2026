@@ -844,6 +844,186 @@ def test_online_reranker_lyric_rescue_requires_phrase_like_request():
     assert "ranking_guard_actions" not in trace
 
 
+def test_online_reranker_final_artist_guard_demotes_same_turn_rejected_artist():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.final_artist_guard_enabled = True
+    trace = {
+        "branches": {
+            "pools": [
+                {
+                    "name": "bm25",
+                    "hits": [("t-two", 2.0), ("t-one", 1.0)],
+                }
+            ],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "state": {
+            "current_request": {
+                "request_type": "new_artist",
+                "source_turn": 2,
+                "evidence_text": "no more Other Band",
+            },
+            "facts": [
+                {
+                    "type": "artist",
+                    "value": "Other Band",
+                    "role": "rejected",
+                    "anchor_use": "do_not_use",
+                    "relation": "exclude",
+                    "reuse": "must_exclude",
+                    "source_turn": 2,
+                    "mentioned_current_turn": True,
+                    "evidence_text": "no more Other Band",
+                }
+            ],
+        },
+        "resolver": {
+            "played_track_ids": [],
+            "rejected_artist_ids": ["a-other"],
+            "positive_tags": [],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta={"turn_number": 2},
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-one", "t-two"]
+    assert trace["ranking_guard_actions"] == [
+        {
+            "type": "final_artist_guard",
+            "track_id": "t-two",
+            "from_rank": 1,
+            "to_rank": 2,
+            "request_type": "new_artist",
+            "matched_artist_id": "a-other",
+            "matched_artist_name": "Other Band",
+            "evidence_role": "rejected",
+            "evidence_relation": "exclude",
+        }
+    ]
+
+
+def test_online_reranker_final_artist_guard_demotes_same_turn_different_artist_reference():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.final_artist_guard_enabled = True
+    trace = {
+        "branches": {
+            "pools": [{"name": "bm25", "hits": [("t-two", 2.0), ("t-one", 1.0)]}],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "state": {
+            "current_request": {
+                "request_type": "new_artist",
+                "source_turn": 7,
+                "summary": "different artist than Other Band",
+                "evidence_text": "different artist",
+            },
+            "facts": [
+                {
+                    "type": "artist",
+                    "value": "Other Band",
+                    "role": "satisfied_prior",
+                    "anchor_use": "do_not_use",
+                    "relation": "style_reference",
+                    "reuse": "avoid_exact",
+                    "source_turn": 7,
+                    "mentioned_current_turn": True,
+                    "evidence_text": "different artist",
+                }
+            ],
+        },
+        "resolver": {
+            "played_track_ids": [],
+            "rejected_artist_ids": ["a-other"],
+            "positive_tags": [],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta={"turn_number": 7},
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-one", "t-two"]
+    assert trace["ranking_guard_actions"] == [
+        {
+            "type": "final_artist_guard",
+            "track_id": "t-two",
+            "from_rank": 1,
+            "to_rank": 2,
+            "request_type": "new_artist",
+            "matched_artist_id": "a-other",
+            "matched_artist_name": "Other Band",
+            "evidence_role": "satisfied_prior",
+            "evidence_relation": "style_reference",
+        }
+    ]
+
+
+def test_online_reranker_final_artist_guard_ignores_stale_rejected_artist():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.final_artist_guard_enabled = True
+    trace = {
+        "branches": {
+            "pools": [{"name": "bm25", "hits": [("t-two", 2.0), ("t-one", 1.0)]}],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "state": {
+            "current_request": {
+                "request_type": "new_artist",
+                "source_turn": 1,
+                "evidence_text": "no more Other Band",
+            },
+            "facts": [
+                {
+                    "type": "artist",
+                    "value": "Other Band",
+                    "role": "rejected",
+                    "anchor_use": "do_not_use",
+                    "relation": "exclude",
+                    "reuse": "must_exclude",
+                    "source_turn": 1,
+                    "mentioned_current_turn": True,
+                    "evidence_text": "no more Other Band",
+                }
+            ],
+        },
+        "resolver": {
+            "played_track_ids": [],
+            "rejected_artist_ids": ["a-other"],
+            "positive_tags": [],
+        },
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta={"turn_number": 2},
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-two", "t-one"]
+    assert "ranking_guard_actions" not in trace
+
+
 def test_feature_catalog_adapter_matches_offline_catalog_rerank_outputs(tmp_path):
     pytest.importorskip("lancedb")
     import lancedb
