@@ -46,7 +46,7 @@ def test_current_config_surface_has_no_deleted_devset_references():
     expected_mentions = {
         "AGENTS.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_BLINDSET_TID, CANONICAL_BLINDSET_B_TID},
         "CLAUDE.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_BLINDSET_TID, CANONICAL_BLINDSET_B_TID},
-        "readme.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_BLINDSET_TID},
+        "readme.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_BLINDSET_TID, CANONICAL_BLINDSET_B_TID},
         "docs/mac_dev.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID},
         "docs/modal_setup.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_BLINDSET_TID},
         "run_inference_devset.py": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID},
@@ -82,8 +82,29 @@ def test_state_ranker_v10_configs_are_active_and_do_not_use_v0plus_qu_type():
             assert "model_path" not in config["qu_kwargs"]["ranking"]
         else:
             # The trained-bundle directory is an independent counter from the
-            # pipeline (state_ranker_v10) and feature-schema (lgbm_v10) versions.
+            # pipeline (state_ranker_v10) and trace/stage label (lgbm_v10).
             assert "models/reranker_" in config["qu_kwargs"]["ranking"]["model_path"]
+
+
+def test_lgbm_configs_pin_the_current_default_model_bundle():
+    current_default_bundle = {
+        "state_ranker_v10_lgbm_devset.yaml": "models/reranker_v12_goalfree",
+        "state_ranker_v10_lgbm_blindset_A.yaml": "models/reranker_v12_goalfree",
+        "state_ranker_v10_lgbm_blindset_B.yaml": "models/reranker_v12_goalfree",
+    }
+    expected_files = {
+        "model_path": "model.txt",
+        "meta_path": "meta.json",
+        "cat_maps": "cat_maps.json",
+        "branch_names": "branch_names.json",
+    }
+    config_dir = PROJECT_ROOT / "configs"
+    for config_name, bundle in current_default_bundle.items():
+        config = yaml.safe_load((config_dir / config_name).read_text(encoding="utf-8"))
+        ranking = config["qu_kwargs"]["ranking"]
+        assert ranking["model_version"] == "lgbm_v10"
+        for key, filename in expected_files.items():
+            assert ranking[key] == f"${{oc.env:MCRS_MODEL_DIR,{bundle}}}/{filename}"
 
 
 def test_active_configs_enable_litellm_embedding_disk_cache():

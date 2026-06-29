@@ -50,7 +50,7 @@ The system operates on a **two-stage pipeline**:
 - **Track Metadata**: [TalkPlayData-Challenge-Track-Metadata](https://huggingface.co/datasets/talkpl-ai/TalkPlayData-Challenge-Track-Metadata)
 - **User Profiles**: [TalkPlayData-Challenge-User-Metadata](https://huggingface.co/datasets/talkpl-ai/TalkPlayData-Challenge-User-Metadata)
 - **Blind A Dataset**: [TalkPlayData-Challenge-Blind-A](https://huggingface.co/datasets/talkpl-ai/TalkPlayData-Challenge-Blind-A)
-- **Blind B Dataset**: Will be uploaded @ 15 Jun
+- **Blind B Dataset**: [TalkPlayData-Challenge-Blind-B](https://huggingface.co/datasets/talkpl-ai/TalkPlayData-Challenge-Blind-B)
 
 ---
 
@@ -100,11 +100,14 @@ The preferred operator command is the unified experiment wrapper:
 # Explicit RRF/candidate-fusion devset baseline + local evaluation
 python run_experiment.py --backend local --tid state_ranker_v10_rrf_devset --batch_size 16
 
-# LambdaMART v10 devset run + download into local exp/ + local evaluation
+# Current goal-free LGBM devset run + download into local exp/ + local evaluation
 python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset --batch_size 8
 
 # Blind A submission path
 python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_A --eval_dataset blindset_A --batch_size 8
+
+# Blind B submission path
+python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_B --eval_dataset blindset_B --batch_size 8
 ```
 
 Devset runs write predictions to `exp/inference/devset/{tid}.json` and scores to `exp/scores/devset/{tid}.json`.
@@ -117,6 +120,7 @@ python run_inference_devset.py --tid state_ranker_v10_rrf_devset --batch_size 16
 
 # Blind set inference
 python run_inference_blindset.py --tid state_ranker_v10_lgbm_blindset_A --eval_dataset blindset_A --batch_size 16
+python run_inference_blindset.py --tid state_ranker_v10_lgbm_blindset_B --eval_dataset blindset_B --batch_size 16
 ```
 
 ### Run Inference on the Development Set
@@ -140,7 +144,7 @@ If you do not use `all_tracks`, your evaluation may be considered invalid.
 # Explicit RRF/candidate-fusion devset baseline
 python run_experiment.py --backend local --tid state_ranker_v10_rrf_devset --batch_size 16
 
-# LambdaMART v10 devset experiment
+# Current goal-free LGBM devset experiment
 python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset --batch_size 8
 ```
 
@@ -180,6 +184,7 @@ The downloader defaults to `evaluator/exp/` and mirrors any available remote:
 
 ```bash
 python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_A --eval_dataset blindset_A --batch_size 8
+python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_B --eval_dataset blindset_B --batch_size 8
 ```
 
 ---
