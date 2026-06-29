@@ -1,10 +1,14 @@
 # Devset learned-ranker evaluation for state-ranker v10.
+#
+# Single canonical devset config (the old `_fastlocal` variant was folded in).
+# Concurrency is env-overridable: defaults stay Modal-safe (4), and for fast
+# local iteration export MCRS_MAX_IN_FLIGHT=24 / MCRS_COMPILE_MAX_IN_FLIGHT=8.
 
 lm_type: dummy
 qu_type: state_ranker
 qu_kwargs:
-  max_in_flight: 4
-  compile_max_in_flight: 4
+  max_in_flight: ${oc.env:MCRS_MAX_IN_FLIGHT,4}
+  compile_max_in_flight: ${oc.env:MCRS_COMPILE_MAX_IN_FLIGHT,4}
   ranking:
     mode: lgbm
     model_version: lgbm_v10

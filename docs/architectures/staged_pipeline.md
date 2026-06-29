@@ -112,14 +112,18 @@ rejects `--num_sessions` plus sharding.
 `run_experiment.py --backend local` now supports devset sharding:
 
 ```bash
+MCRS_MAX_IN_FLIGHT=24 MCRS_COMPILE_MAX_IN_FLIGHT=8 \
 python run_experiment.py \
   --backend local \
-  --tid state_ranker_v10_lgbm_devset_fastlocal \
+  --tid state_ranker_v10_lgbm_devset \
   --batch_size 128 \
   --num_shards 4 \
   --num_workers 4 \
   --exp_dir exp_local_verify
 ```
+
+(The old `_fastlocal` config is now the canonical devset config with concurrency
+raised via `MCRS_MAX_IN_FLIGHT` / `MCRS_COMPILE_MAX_IN_FLIGHT`.)
 
 This launches one `run_inference_devset.py` process per shard, writes per-shard
 logs under `logs/local_shards/<run_id>/`, merges the shard outputs with
