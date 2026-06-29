@@ -98,6 +98,51 @@ def _as_bool(value: Any) -> bool:
     return bool(value)
 
 
+def supply_gated_pivot_reorder(
+    ranked: list,
+    *,
+    artist_of,
+    blocked_artists: set,
+    min_alternatives: int,
+    window: int,
+) -> list:
+    """Supply-gated pivot demote (fix #1 / block-P concept).
+
+    On a pivot / new-different-artist turn the user wants to move away from the
+    `blocked_artists` (artists already played + explicit rejections). The deployed
+    pipeline applies no demote on pivot turns (hard-drop is off, soft-adjust is
+    skipped, `same_artist_demote=1.0`), so the booster freely ranks a blocked
+    artist at rank 1. This reorder moves blocked-artist tracks below non-blocked
+    ones *within the top `window`*, but only when at least `min_alternatives`
+    non-blocked candidates exist there.
+
+    Crucially it never removes a track — blocked tracks are pushed down, not out
+    — so recall@window is preserved. When the blocked artist is the only supply
+    (or the alternatives are too thin), it is a no-op, which respects the finding
+    that over-anchoring to the referenced artist is often the correct answer.
+    """
+    if not blocked_artists or window <= 0 or not ranked:
+        return ranked
+
+    head = ranked[:window]
+    tail = ranked[window:]
+
+    def _is_blocked(tid) -> bool:
+        arts = artist_of(tid) or ()
+        # A track is blocked if ANY of its artists is pivoted-away (a collab
+        # featuring the referenced artist is not a "new" artist).
+        return any(a in blocked_artists for a in arts)
+
+    non_blocked = [t for t in head if not _is_blocked(t)]
+    if len(non_blocked) < int(min_alternatives):
+        return ranked
+
+    blocked = [t for t in head if _is_blocked(t)]
+    if not blocked:
+        return ranked
+    return non_blocked + blocked + tail
+
+
 class _FeatureCatalogFromCompilerCatalog:
     """Catalog adapter for online reranking.
 
@@ -954,6 +999,11 @@ class LgbmOnlineReranker:
             cfg.get("final_artist_guard_enabled", False)
         )
         self.final_artist_guard_top_k = int(cfg.get("final_artist_guard_top_k", 1))
+        # Supply-gated pivot demote (fix #1 / block-P). Off unless configured.
+        self.pivot_demote_enabled = bool(cfg.get("pivot_demote_enabled", False))
+        self.pivot_demote_min_alternatives = int(
+            cfg.get("pivot_demote_min_alternatives", 2))
+        self.pivot_demote_window = int(cfg.get("pivot_demote_window", 20))
         add_elapsed("total", total_start)
         self.load_timings = load_timings
 
@@ -1103,8 +1153,65 @@ class LgbmOnlineReranker:
                 if t not in seen and str(t) not in dropped:
                     ranked.append(t)
                     seen.add(t)
+            # Supply-gated pivot demote (fix #1) runs before the rescue/guard
+            # finalize pass so downstream pins/guards see the de-anchored order.
+            ranked = self._maybe_pivot_reorder(ranked, trace, res)
             return finalize(ranked)
         except Exception as e:  # serving must never hard-fail a turn
             print(f"[lgbm_reranker] fallback (turn {session_meta}): {e!r}",
                   flush=True)
             return finalize(filtered_fallback())
+
+    def _maybe_pivot_reorder(self, ranked: list, trace: dict, res: dict) -> list:
+        """Apply the supply-gated pivot demote when this is a pivot-away turn.
+
+        No-op unless `pivot_demote_enabled` and the turn is a pivot /
+        new-different-artist turn. Blocked artists = explicit rejections plus the
+        artists of already-played tracks (the user is moving away from these).
+        """
+        if not getattr(self, "pivot_demote_enabled", False):
+            return ranked
+        intent_mode = str(trace.get("intent_mode") or "")
+        compiled = trace.get("compiled_state") or {}
+        target_mode = str(compiled.get("target_artist_mode") or "")
+        is_pivot = (
+            intent_mode == "pivot"
+            or target_mode in {"new_artist", "different_artist"}
+        )
+        if not is_pivot:
+            return ranked
+
+        from mcrs.qu_modules.tag_resolver import catalog_tag_key
+
+        def _tokens(tid):
+            """Artist ids + normalized name-keys for a track (blocked-set match)."""
+            m = self.ctx.cat.meta.get(str(tid), {})
+            ids = tuple(str(a) for a in m.get("artists", ()))
+            keys = tuple(m.get("artist_name_keys", ()))
+            return ids + keys
+
+        res = res or {}
+        # Block by artist id AND by normalized artist name-key: the resolver maps
+        # only some rejected names to ids (e.g. "Deltron 3030" can be rejected by
+        # name with no id), so an id-only block leaks them back to the top.
+        blocked: set = {str(a) for a in (res.get("rejected_artist_ids") or [])}
+        compiled = trace.get("compiled_state") or {}
+        for rej in compiled.get("explicit_rejections") or []:
+            if str(rej.get("kind")) == "artist":
+                key = catalog_tag_key(str(rej.get("value") or ""))
+                if key:
+                    blocked.add(key)
+        for tid in res.get("played_track_ids") or []:
+            blocked.update(_tokens(tid))
+        if not blocked:
+            return ranked
+
+        artist_of = _tokens
+
+        return supply_gated_pivot_reorder(
+            ranked,
+            artist_of=artist_of,
+            blocked_artists=blocked,
+            min_alternatives=self.pivot_demote_min_alternatives,
+            window=self.pivot_demote_window,
+        )
