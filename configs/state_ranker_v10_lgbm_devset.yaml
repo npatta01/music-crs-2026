@@ -50,6 +50,9 @@ qu_kwargs:
       encoding_format: float
       disk_cache: true
       cache_dir: ${oc.env:MCRS_EMBEDDING_CACHE_DIR,./cache/embeddings}
+      extra_params:
+        num_retries: 4
+        timeout: 60
     qwen_8b:
       backend: litellm
       model_name: openai/Qwen/Qwen3-Embedding-8B

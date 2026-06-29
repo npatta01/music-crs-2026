@@ -35,6 +35,28 @@ The v10 public trace uses `extracted_state`, `compiled_state`,
 extracted and compiled states, 0 extractor failures, and no mismatches for
 `intent_mode`, `process_constraints`, `routing_tags`, or `hard_filters`.
 
+## Local Devset Recapture (2026-06-29)
+
+Run: `state_ranker_v10_lgbm_devset`, **local 2-shard** (`20260629T190936Z-54e94a`)
+on the current pruned config (post #178). Full 8000 turns.
+
+| Metric family | @1 | @5 | @10 | @20 | @50 | @100 | @200 | @1000 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| final Hit@k | 0.2546 | 0.4240 | 0.4904 | 0.5610 | 0.5610 | 0.5610 | 0.5610 | 0.5610 |
+| branch union@k | - | - | - | 0.4323 | - | 0.6270 | 0.7223 | 0.8931 |
+| `candidate_fusion` stage Hit@k | 0.0496 | - | - | 0.3197 | 0.4240 | 0.4936 | 0.5576 | 0.7212 |
+| `lgbm_v10` stage Hit@k | 0.2546 | - | - | 0.5610 | 0.6372 | 0.6827 | 0.7220 | 0.8159 |
+
+NDCG@20 **0.3844**, MRR **0.3325**, catalog_diversity@20 0.5265 (lexical 0.0, lm_type=dummy).
+
+⚠️ **Discrepancy vs the 2026-06-15 Modal capture** (NDCG@20 0.4562 / Hit@20 0.6138):
+the candidate pool matches (fusion Hit@20 0.3197 vs 0.3182; all multimodal branches
+fired — CLAP 8000, SigLIP/CLAP centroids ~6950), so retrieval is equivalent. The
+−0.072 NDCG@20 gap is entirely in the **lgbm rerank** (Hit@20 0.561 vs 0.614) and most
+likely reflects pipeline drift since 2026-06-15 (config pruned/`_fastlocal` folded in,
+reranker fix commits #173–#178) rather than a clean regression. Treat 0.4562 as a stale
+Modal number; rerun on Modal for an apples-to-apples current baseline before ranking.
+
 ## Blind-A (CodaBench)
 
 | Submission | File | nDCG@20 | catalog_diversity | lexical_diversity | llm_judge | composite |
