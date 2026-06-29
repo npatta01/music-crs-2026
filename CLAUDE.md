@@ -124,9 +124,9 @@ See `tips/` for directions: better item representations, reranker modules, gener
 
 ## Experiments Workspace
 
-- The experiment workspace is intentionally pruned. Do not treat deleted historical reports or `configs/archive/` as missing current context.
+- The experiment workspace is intentionally pruned. Do not treat deleted historical reports or configs as missing current context.
 - Use [`experiments/README.md`](experiments/README.md) for the current config/report surface.
 - Use [`experiments/experiment_log.md`](experiments/experiment_log.md) for the concise current-state decision log.
 - [`leaderboard.md`](leaderboard.md) is the compact devset table; [`changelog.md`](changelog.md) links current outcomes to PRs.
-- Active configs under `configs/`: `state_ranker_v10_rrf_devset` (devset explicit RRF/candidate-fusion baseline), `state_ranker_v10_lgbm_devset` (devset LambdaMART v10), `state_ranker_v10_lgbm_devset_fastlocal` (higher-concurrency local devset variant), `state_ranker_v10_lgbm_blindset_A` (blindset LambdaMART v10). Pipeline configs live under `configs/pipelines/`.
+- Active configs under `configs/`: `state_ranker_v10_rrf_devset` (devset explicit RRF/candidate-fusion baseline), `state_ranker_v10_lgbm_devset` (devset LambdaMART v10; single canonical devset config — for fast local iteration export `MCRS_MAX_IN_FLIGHT=24` / `MCRS_COMPILE_MAX_IN_FLIGHT=8`), `state_ranker_v10_lgbm_blindset_A` / `state_ranker_v10_lgbm_blindset_B` (blindset LambdaMART v10; B uses the goal-free `reranker_v12_goalfree` bundle). Pipeline configs live under `configs/pipelines/`. Note the three version axes: pipeline lineage `state_ranker_v10`, feature-schema `lgbm_v10` (`model_version`), and the trained-bundle directory (`reranker_v10`, `reranker_v12_goalfree`) are independent counters.
 - If working inside `experiments/`, read the local [`experiments/CLAUDE.md`](experiments/CLAUDE.md) and follow its prune-first conventions.

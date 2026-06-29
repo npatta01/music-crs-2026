@@ -5,15 +5,18 @@ import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CANONICAL_DEVSET_TID = "state_ranker_v10_lgbm_devset"
-CANONICAL_FASTLOCAL_DEVSET_TID = "state_ranker_v10_lgbm_devset_fastlocal"
 CANONICAL_RRF_DEVSET_TID = "state_ranker_v10_rrf_devset"
 CANONICAL_BLINDSET_TID = "state_ranker_v10_lgbm_blindset_A"
+CANONICAL_BLINDSET_B_TID = "state_ranker_v10_lgbm_blindset_B"
 DELETED_DEVSET_TID = "v0plus_compiler_image_devset"
+# The `_fastlocal` devset variant was folded into the canonical devset config;
+# concurrency is now raised via MCRS_MAX_IN_FLIGHT / MCRS_COMPILE_MAX_IN_FLIGHT.
+DELETED_FASTLOCAL_TID = "state_ranker_v10_lgbm_devset_fastlocal"
 ACTIVE_STATE_RANKER_CONFIGS = [
     "state_ranker_v10_rrf_devset.yaml",
     "state_ranker_v10_lgbm_devset.yaml",
-    "state_ranker_v10_lgbm_devset_fastlocal.yaml",
     "state_ranker_v10_lgbm_blindset_A.yaml",
+    "state_ranker_v10_lgbm_blindset_B.yaml",
 ]
 
 
@@ -21,10 +24,12 @@ def test_current_config_surface_has_no_deleted_devset_references():
     configs = sorted(path.name for path in (PROJECT_ROOT / "configs").glob("*.yaml"))
     assert configs == [
         "state_ranker_v10_lgbm_blindset_A.yaml",
+        "state_ranker_v10_lgbm_blindset_B.yaml",
         "state_ranker_v10_lgbm_devset.yaml",
-        "state_ranker_v10_lgbm_devset_fastlocal.yaml",
         "state_ranker_v10_rrf_devset.yaml",
     ]
+    # The folded-in fastlocal variant must not be reintroduced as a config.
+    assert f"{DELETED_FASTLOCAL_TID}.yaml" not in configs
 
     checked_paths = [
         "AGENTS.md",
@@ -39,10 +44,10 @@ def test_current_config_surface_has_no_deleted_devset_references():
         "streamlit_app.py",
     ]
     expected_mentions = {
-        "AGENTS.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_FASTLOCAL_DEVSET_TID, CANONICAL_BLINDSET_TID},
-        "CLAUDE.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_FASTLOCAL_DEVSET_TID, CANONICAL_BLINDSET_TID},
+        "AGENTS.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_BLINDSET_TID, CANONICAL_BLINDSET_B_TID},
+        "CLAUDE.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_BLINDSET_TID, CANONICAL_BLINDSET_B_TID},
         "readme.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_BLINDSET_TID},
-        "docs/mac_dev.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_FASTLOCAL_DEVSET_TID},
+        "docs/mac_dev.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID},
         "docs/modal_setup.md": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID, CANONICAL_BLINDSET_TID},
         "run_inference_devset.py": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID},
         "evaluator/evaluate_devset.py": {CANONICAL_RRF_DEVSET_TID, CANONICAL_DEVSET_TID},
@@ -61,8 +66,8 @@ def test_state_ranker_v10_configs_are_active_and_do_not_use_v0plus_qu_type():
     expected = {
         "state_ranker_v10_rrf_devset.yaml",
         "state_ranker_v10_lgbm_devset.yaml",
-        "state_ranker_v10_lgbm_devset_fastlocal.yaml",
         "state_ranker_v10_lgbm_blindset_A.yaml",
+        "state_ranker_v10_lgbm_blindset_B.yaml",
     }
     config_dir = PROJECT_ROOT / "configs"
     existing = {path.name for path in config_dir.glob("state_ranker_v10_*.yaml")}
@@ -76,7 +81,9 @@ def test_state_ranker_v10_configs_are_active_and_do_not_use_v0plus_qu_type():
         if config["qu_kwargs"]["ranking"]["mode"] == "rrf":
             assert "model_path" not in config["qu_kwargs"]["ranking"]
         else:
-            assert "models/reranker_v10" in config["qu_kwargs"]["ranking"]["model_path"]
+            # The trained-bundle directory is an independent counter from the
+            # pipeline (state_ranker_v10) and feature-schema (lgbm_v10) versions.
+            assert "models/reranker_" in config["qu_kwargs"]["ranking"]["model_path"]
 
 
 def test_active_configs_enable_litellm_embedding_disk_cache():
