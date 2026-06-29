@@ -425,6 +425,221 @@ def _lyric_phrase_like_request(trace: dict) -> bool:
     return False
 
 
+def _artist_switch_marker(text: str) -> bool:
+    lowered = text.casefold()
+    return any(
+        marker in lowered
+        for marker in (
+            "different artist",
+            "new artist",
+            "another artist",
+            "other artist",
+            "break away",
+            "no more",
+            "not ",
+            "without ",
+            "avoid ",
+            "away from",
+            "stop",
+        )
+    )
+
+
+def _same_turn_artist_guard_targets(
+    trace: dict,
+    *,
+    current_turn: int | None,
+) -> list[dict[str, str]]:
+    if not current_turn:
+        return []
+    state = trace.get("state") or trace.get("extracted_state") or {}
+    current_request = state.get("current_request") or {}
+    if _int_or_none(current_request.get("source_turn")) != int(current_turn):
+        return []
+
+    request_type = _current_request_type(trace)
+    target_artist_mode = str(
+        state.get("target_artist_mode")
+        or current_request.get("target_artist_mode")
+        or ""
+    )
+    if request_type not in {"new_artist", "different_artist"} and target_artist_mode not in {
+        "new_artist",
+        "different_artist",
+    }:
+        return []
+
+    from mcrs.qu_modules.tag_resolver import catalog_tag_key
+
+    request_text = " ".join(
+        str(value or "")
+        for value in (
+            current_request.get("summary"),
+            current_request.get("evidence_text"),
+            state.get("turn_intent"),
+        )
+    )
+    out: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for fact in state.get("facts") or []:
+        if not isinstance(fact, dict):
+            continue
+        if _int_or_none(fact.get("source_turn")) != int(current_turn):
+            continue
+        if fact.get("mentioned_current_turn") is not True:
+            continue
+        if str(fact.get("type") or "") != "artist":
+            continue
+        name = str(fact.get("value") or "").strip()
+        name_key = catalog_tag_key(name)
+        if not name_key or name_key in seen:
+            continue
+
+        role = str(fact.get("role") or "")
+        anchor_use = str(fact.get("anchor_use") or "")
+        relation = str(fact.get("relation") or "")
+        reuse = str(fact.get("reuse") or "")
+        evidence_text = str(fact.get("evidence_text") or "")
+        fact_text = f"{request_text} {evidence_text}"
+        is_hard_rejection = (
+            role == "rejected"
+            and anchor_use == "do_not_use"
+            and (relation == "exclude" or reuse == "must_exclude")
+        )
+        is_different_artist_reference = (
+            role == "satisfied_prior"
+            and anchor_use == "do_not_use"
+            and reuse in {"avoid_exact", "must_exclude"}
+            and _artist_switch_marker(fact_text)
+        )
+        if not (is_hard_rejection or is_different_artist_reference):
+            continue
+        seen.add(name_key)
+        out.append(
+            {
+                "artist_name": name,
+                "artist_name_key": name_key,
+                "role": role,
+                "relation": relation,
+            }
+        )
+    return out
+
+
+def _exact_pin_ids(trace: dict) -> set[str]:
+    pinned: set[str] = set()
+    for action in trace.get("ranking_guard_actions") or []:
+        if not isinstance(action, dict):
+            continue
+        if action.get("type") != "exact_track_pin":
+            continue
+        track_id = str(action.get("track_id") or "")
+        if track_id:
+            pinned.add(track_id)
+    return pinned
+
+
+def _artist_guard_match(
+    track_id: str,
+    *,
+    catalog_meta: dict[str, dict],
+    targets: list[dict[str, str]],
+    resolver_rejected_artist_ids: set[str],
+) -> dict[str, str] | None:
+    meta = catalog_meta.get(track_id) or {}
+    artist_name_keys = set(str(key) for key in meta.get("artist_name_keys") or [])
+    if not artist_name_keys:
+        return None
+    artists = [str(artist_id) for artist_id in meta.get("artists") or []]
+    matched_artist_id = ""
+    for artist_id in artists:
+        if artist_id in resolver_rejected_artist_ids:
+            matched_artist_id = artist_id
+            break
+    for target in targets:
+        if target["artist_name_key"] not in artist_name_keys:
+            continue
+        return {
+            "matched_artist_id": matched_artist_id,
+            "matched_artist_name": target["artist_name"],
+            "evidence_role": target["role"],
+            "evidence_relation": target["relation"],
+        }
+    return None
+
+
+def _apply_final_artist_guard(
+    ranked: list[str],
+    trace: dict,
+    *,
+    catalog_meta: dict[str, dict],
+    top_k_out: int,
+    enabled: bool,
+    guard_top_k: int,
+    current_turn: int | None,
+) -> list[str]:
+    if not enabled or guard_top_k <= 0:
+        return ranked[:top_k_out]
+    targets = _same_turn_artist_guard_targets(trace, current_turn=current_turn)
+    if not targets:
+        return ranked[:top_k_out]
+
+    resolver = trace.get("resolver") or {}
+    resolver_rejected_artist_ids = {
+        str(artist_id) for artist_id in resolver.get("rejected_artist_ids") or []
+    }
+    pinned = _exact_pin_ids(trace)
+    original_rank = {str(track_id): idx + 1 for idx, track_id in enumerate(ranked)}
+    offender_records = []
+    offender_ids: set[str] = set()
+    for track_id in ranked[:guard_top_k]:
+        track_id = str(track_id)
+        if track_id in pinned:
+            continue
+        match = _artist_guard_match(
+            track_id,
+            catalog_meta=catalog_meta,
+            targets=targets,
+            resolver_rejected_artist_ids=resolver_rejected_artist_ids,
+        )
+        if match is None:
+            continue
+        offender_ids.add(track_id)
+        offender_records.append({"track_id": track_id, **match})
+
+    if not offender_records:
+        return ranked[:top_k_out]
+    kept = [track_id for track_id in ranked if str(track_id) not in offender_ids]
+    if not kept:
+        return ranked[:top_k_out]
+
+    reranked = kept + [record["track_id"] for record in offender_records]
+    request_type = _current_request_type(trace)
+    actions = []
+    for offset, record in enumerate(offender_records, start=1):
+        track_id = record["track_id"]
+        to_rank = len(kept) + offset
+        from_rank = original_rank.get(track_id)
+        if from_rank == to_rank:
+            continue
+        action = {
+            "type": "final_artist_guard",
+            "track_id": track_id,
+            "from_rank": from_rank,
+            "to_rank": to_rank,
+            "request_type": request_type,
+            "matched_artist_name": record["matched_artist_name"],
+            "evidence_role": record["evidence_role"],
+            "evidence_relation": record["evidence_relation"],
+        }
+        if record.get("matched_artist_id"):
+            action["matched_artist_id"] = record["matched_artist_id"]
+        actions.append(action)
+    if actions:
+        trace.setdefault("ranking_guard_actions", []).extend(actions)
+    return reranked[:top_k_out]
+
+
 def _resolved_exact_track_ids(
     trace: dict,
     *,
@@ -735,6 +950,10 @@ class LgbmOnlineReranker:
         self.lyric_rescue_require_phrase = _as_bool(
             cfg.get("lyric_rescue_require_phrase", True)
         )
+        self.final_artist_guard_enabled = _as_bool(
+            cfg.get("final_artist_guard_enabled", False)
+        )
+        self.final_artist_guard_top_k = int(cfg.get("final_artist_guard_top_k", 1))
         add_elapsed("total", total_start)
         self.load_timings = load_timings
 
@@ -773,6 +992,10 @@ class LgbmOnlineReranker:
         lyric_rescue_require_phrase = _as_bool(
             getattr(self, "lyric_rescue_require_phrase", True)
         )
+        final_artist_guard_enabled = _as_bool(
+            getattr(self, "final_artist_guard_enabled", False)
+        )
+        final_artist_guard_top_k = int(getattr(self, "final_artist_guard_top_k", 1))
         current_turn = int((session_meta or {}).get("turn_number") or 0)
 
         def filtered_fallback() -> list[str]:
@@ -804,7 +1027,7 @@ class LgbmOnlineReranker:
                 top_n=visual_rescue_top_n,
                 target_rank=visual_rescue_target_rank,
             )
-            return _apply_branch_rescue(
+            guarded = _apply_branch_rescue(
                 guarded,
                 trace,
                 dropped=dropped,
@@ -816,6 +1039,15 @@ class LgbmOnlineReranker:
                 top_n=lyric_rescue_top_n,
                 target_rank=lyric_rescue_target_rank,
                 require_lyric_phrase=lyric_rescue_require_phrase,
+            )
+            return _apply_final_artist_guard(
+                guarded,
+                trace,
+                catalog_meta=self.ctx.cat.meta,
+                top_k_out=self.top_k_out,
+                enabled=final_artist_guard_enabled,
+                guard_top_k=final_artist_guard_top_k,
+                current_turn=current_turn,
             )
 
         try:

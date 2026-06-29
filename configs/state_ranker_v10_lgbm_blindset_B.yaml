@@ -17,6 +17,11 @@ qu_kwargs:
     msg_store: ${oc.env:MCRS_RERANKER_DIR,./exp/analysis/rerank}/raw_msg_store
     pool_k: 500
     top_k_out: 1000
+    # Final-stage same-turn artist veto. Gated by structured current-turn
+    # do_not_use artist evidence, so it only touches explicit "different/new
+    # artist" or "no more X" turns after the ranker has picked candidates.
+    final_artist_guard_enabled: true
+    final_artist_guard_top_k: 20
   extractor:
     model_name: openrouter/deepseek/deepseek-v4-flash
     prompt_version: v1

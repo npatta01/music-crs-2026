@@ -393,6 +393,8 @@ def _normalise_ranking_config(qu_kwargs: dict[str, Any]) -> tuple[dict[str, Any]
         "lyric_rescue_top_n",
         "lyric_rescue_target_rank",
         "lyric_rescue_require_phrase",
+        "final_artist_guard_enabled",
+        "final_artist_guard_top_k",
     ):
         if key in ranking:
             next_kwargs["reranker"][key] = ranking[key]
