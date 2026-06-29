@@ -1201,8 +1201,14 @@ class LgbmOnlineReranker:
                 key = catalog_tag_key(str(rej.get("value") or ""))
                 if key:
                     blocked.add(key)
-        for tid in res.get("played_track_ids") or []:
-            blocked.update(_tokens(tid))
+        # Block only the MOST-RECENT played artist (the anchoring target), not
+        # every session-played artist: an artist played earlier but different
+        # from the just-played one is a valid pivot answer, and blocking it
+        # demotes legit GTs. played_track_ids is chronological; [-1] is the
+        # just-played track (verified: its artist == the anchor-label just_played).
+        played = res.get("played_track_ids") or []
+        if played:
+            blocked.update(_tokens(played[-1]))
         if not blocked:
             return ranked
 
