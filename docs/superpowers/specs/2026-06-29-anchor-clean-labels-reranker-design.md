@@ -1,7 +1,7 @@
 # Anchor-clean labels: anchor-aware eval + reranker re-label
 
 **Date:** 2026-06-29
-**Status:** design (approved decisions inline; pending spec review)
+**Status:** implemented + validated held-out — see [`docs/anchor_clean_labels.md`](../../anchor_clean_labels.md)
 
 ## Problem
 
