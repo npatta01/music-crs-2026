@@ -4,6 +4,10 @@
 **Config:** `configs/state_ranker_v10_lgbm_devset.yaml`
 **Backend:** local (2 shards / 2 workers), run_id `20260629T190936Z-54e94a`
 
+> Historical capture: this report was produced before the active config moved to
+> `models/reranker_v12_goalfree`. Rerun devset before using these numbers as the
+> current goal-free LGBM baseline.
+
 ## Configuration
 
 | Field | Value |
@@ -11,7 +15,7 @@
 | lm_type | dummy |
 | retrieval_type | candidate_fusion → lgbm_v10 rerank |
 | retrieval_topk | 20 |
-| ranking.mode | lgbm (model_version lgbm_v10, bundle models/reranker_v10) |
+| ranking.mode | lgbm (model_version lgbm_v10, bundle at run time models/reranker_v10) |
 | state extraction | prompt_version v1, file_per_turn cache |
 
 ## Ranking Quality

@@ -9,8 +9,9 @@ misleading agents about the current system. Use Git history for older waves.
 | Config | Role | Notes |
 |---|---|---|
 | `configs/state_ranker_v10_rrf_devset.yaml` | Devset candidate-fusion baseline | Explicit `ranking.mode: rrf`; useful for retrieval and candidate-pool recall. |
-| `configs/state_ranker_v10_lgbm_devset.yaml` | Current devset score anchor | Fresh v10 LambdaMART run: NDCG@20 0.4562, Hit@20 0.6138. |
-| `configs/state_ranker_v10_lgbm_blindset_A.yaml` | Blind A submission path | CodaBench submission `797598`: nDCG@20 0.4380, composite 0.5389. |
+| `configs/state_ranker_v10_lgbm_devset.yaml` | Current devset LGBM path | Uses current `models/reranker_v12_goalfree`; existing score reports are historical until recaptured. |
+| `configs/state_ranker_v10_lgbm_blindset_A.yaml` | Blind A submission path | Uses current `models/reranker_v12_goalfree`; CodaBench submission `797598` is the prior v10 result. |
+| `configs/state_ranker_v10_lgbm_blindset_B.yaml` | Blind B submission path | CodaBench submission `819863`: composite 0.38; uses `models/reranker_v12_goalfree` plus qwen3-30b explanations. |
 
 ## Current Reports
 
@@ -18,6 +19,7 @@ misleading agents about the current system. Use Git history for older waves.
 |---|---|
 | [state_ranker_v10_lgbm_devset.md](state_ranker_v10_lgbm_devset.md) | Current devset score anchor and stage-by-stage recall handoff. |
 | [state_ranker_v10_rrf_devset.md](state_ranker_v10_rrf_devset.md) | Explicit candidate-fusion baseline used to build fresh v10 reranker features. |
+| [v10_lgbm_B_v1.md](v10_lgbm_B_v1.md) | Blind-B v1 submission record; documents the goal-free `reranker_v12_goalfree` bundle and explanation-generation settings. |
 | [visual_route_lever_b.md](visual_route_lever_b.md) | Issue #127 visual-route finding: SigLIP-2 cover-art branch lifts visual union (+4.4pt@1000) but not top-20; pool-position diagnosis points to pool-depth/reranker, not branch wiring. |
 | [analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/index.html](analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/index.html) | Durable baseline recall-gap snapshot for the all-retrievers devset run. Treat as an experiment analysis and replay contract; rerun after extractor, retriever, ranker, catalog, or split changes. |
 | [experiment_log.md](experiment_log.md) | Short current-state note only. Historical wave logs were pruned. |

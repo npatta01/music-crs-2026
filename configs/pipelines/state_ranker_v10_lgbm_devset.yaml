@@ -14,7 +14,9 @@ rerank:
   enabled: true
   backend: local
   mode: lgbm
-  model_ref: models/reranker_v10
+  # Actual LightGBM bundle used by replay. model_version below is the trace
+  # stage label written into ranking.stages/final_recommendation.
+  model_ref: models/reranker_v12_goalfree
   model_version: lgbm_v10
   pool_k: 500
   top_k_out: 1000

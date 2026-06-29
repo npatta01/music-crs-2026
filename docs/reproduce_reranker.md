@@ -1,20 +1,21 @@
-# Reproducing the LambdaMART v10 reranker
+# Reproducing the LightGBM reranker
 
 The v10 state-ranker path makes ranking explicit: `state_ranker_v10_rrf_devset`
-serves the `candidate_fusion` stage, while `state_ranker_v10_lgbm_devset` and
-`state_ranker_v10_lgbm_blindset_A` serve the `lgbm_v10` stage. This doc lists
-what ships in the repo, what does not, and the two ways to reproduce:
-**FAST** (use the committed seed model) and **FULL** (retrain from fresh v10
-traces). Do not treat v9/v0plus artifacts as current training inputs.
+serves the `candidate_fusion` stage, while the LGBM configs serve a LightGBM
+bundle selected by their `ranking.model_path` values. The current active bundle
+for devset, Blind-A, and Blind-B is `models/reranker_v12_goalfree`.
+`model_version` is the trace/stage label, not the source of truth for which
+booster is loaded. This doc lists what ships in the repo, what does not, and the
+two ways to reproduce: **FAST** (use the committed model) and **FULL** (retrain
+from fresh v10 traces). Do not treat v9/v0plus artifacts as current training
+inputs.
 
 ## What ships in the repo
 
 | Path | What | Size |
 |---|---|---|
-| `models/reranker_v10/model.txt` | committed LightGBM LambdaMART seed booster | 1.9 MB |
-| `models/reranker_v10/meta.json` | feature columns + categorical indices | 5 KB |
-| `models/reranker_v10/cat_maps.json` | categorical value→code maps (8 categoricals) | <1 KB |
-| `models/reranker_v10/branch_names.json` | canonical 11 retrieval branches | <1 KB |
+| `models/reranker_v12_goalfree/` | current active goal-free LightGBM bundle | 1.9 MB |
+| `models/reranker_v10/` | retained historical v10 LightGBM bundle | 1.9 MB |
 | `mcrs/qu_modules/lgbm_reranker.py` | online in-pipeline reranker (config-driven) | — |
 | `scripts/rerank/replay_lgbm.py` | offline replay runner for applying a model bundle to saved retrieval traces | — |
 | `run_pipeline.py` | staged experiment runner for retrieval → rerank replay → explanation → evaluation | — |
@@ -25,14 +26,17 @@ traces). Do not treat v9/v0plus artifacts as current training inputs.
 | `scripts/rerank/train_v9.py` | LightGBM trainer — stages `build → fold ×5 → finalize → full_model` (`full_model` writes `model_full.txt`) | — |
 | `scripts/build_tag_embedding_index.py` | builds the tag-embedding index (below) | — |
 | `configs/state_ranker_v10_rrf_devset.yaml` | devset candidate-fusion/RRF baseline | — |
-| `configs/state_ranker_v10_lgbm_devset.yaml` | devset `lgbm_v10` reranker | — |
-| `configs/state_ranker_v10_lgbm_blindset_A.yaml` | blind-A `lgbm_v10` reranker + response gen | — |
+| `configs/state_ranker_v10_lgbm_devset.yaml` | devset goal-free reranker | — |
+| `configs/state_ranker_v10_lgbm_blindset_A.yaml` | blind-A goal-free reranker + response gen | — |
+| `configs/state_ranker_v10_lgbm_blindset_B.yaml` | blind-B goal-free reranker + response gen | — |
 | `configs/pipelines/state_ranker_v10_lgbm_devset.yaml` | staged devset pipeline config for local iteration | — |
 
-The model bundle is referenced via `${oc.env:MCRS_MODEL_DIR,models/reranker_v10}`,
-so it resolves to the committed path locally **and** inside the Modal image
-(the repo is copied to `/app`; `models/` is not in the image ignore list) — no
-volume upload needed for the model.
+The model bundle is referenced via `${oc.env:MCRS_MODEL_DIR,<default-bundle>}`,
+where the default is `models/reranker_v12_goalfree` for all active LGBM configs.
+That resolves to a committed path locally and inside the Modal image (the repo is
+copied to `/app`; `models/` is not in the image ignore list), so no volume upload
+is needed for these bundles.
+Setting `MCRS_MODEL_DIR` overrides all four bundle files for a run.
 
 ## What does NOT ship (and how to get it)
 
@@ -71,6 +75,11 @@ python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset --ba
 python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_A \
   --eval_dataset blindset_A --batch_size 8
 bash prepare_submission.sh state_ranker_v10_lgbm_blindset_A
+
+# Blind-B submission path:
+python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_B \
+  --eval_dataset blindset_B --batch_size 8
+bash prepare_submission.sh state_ranker_v10_lgbm_blindset_B blindset_B
 ```
 
 ### Staged FAST path — reuse retrieval traces
@@ -95,7 +104,7 @@ python run_pipeline.py \
   --config configs/pipelines/state_ranker_v10_lgbm_devset.yaml \
   --only rerank \
   --retrieval-run exp/pipeline/runs/<retrieval_run_id> \
-  --model-ref models/reranker_v10_candidate \
+  --model-ref models/<candidate_bundle> \
   --run-id <rerank_run_id>
 ```
 
@@ -143,7 +152,7 @@ python scripts/rerank/build_features.py \
   --db-uri cache/lancedb \
   --tag-index cache/tag_embedding_index/qwen_0_6b.npz \
   --embed-memo exp/analysis/rerank/q06_memo.json \
-  --branch-names models/reranker_v10/branch_names.json \
+  --branch-names models/reranker_v12_goalfree/branch_names.json \
   --msg-store exp/analysis/rerank/raw_msg_store \
   --out exp/analysis/rerank/v10/features
 # By default this fans out to 12 checkpointed shards with 4 local workers and
@@ -170,16 +179,16 @@ modal run modal/app.py::run_train_lgbm_ranker --lineage v10
 modal volume get music-crs-cache rerank/v10/train/model_full.txt   exp/analysis/rerank/v10/train/
 modal volume get music-crs-cache rerank/v10/train/meta.json        exp/analysis/rerank/v10/train/
 modal volume get music-crs-cache rerank/v10/train/cat_maps_v9.json exp/analysis/rerank/v10/train/
-cp exp/analysis/rerank/v10/train/model_full.txt   models/reranker_v10/model.txt
-cp exp/analysis/rerank/v10/train/meta.json        models/reranker_v10/meta.json
-cp exp/analysis/rerank/v10/train/cat_maps_v9.json models/reranker_v10/cat_maps.json
+cp exp/analysis/rerank/v10/train/model_full.txt   models/reranker_v12_goalfree/model.txt
+cp exp/analysis/rerank/v10/train/meta.json        models/reranker_v12_goalfree/meta.json
+cp exp/analysis/rerank/v10/train/cat_maps_v9.json models/reranker_v12_goalfree/cat_maps.json
 
 # 7. Serve + evaluate (FAST path).
 ```
 
 > The Modal v10 trainer writes scratch under `music-crs-cache:/rerank/v10/train/`
 > (including the large feature matrix). Only the small published bundle in
-> `models/reranker_v10/` is committed.
+> `models/reranker_v12_goalfree/` is the active committed bundle.
 
 ## Train/serve parity
 

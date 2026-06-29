@@ -18,6 +18,8 @@ qu_kwargs:
   compile_max_in_flight: 4
   ranking:
     mode: lgbm
+    # Trace/stage label retained for the v10 state-ranker contract. The current
+    # served LightGBM booster is the goal-free bundle below.
     model_version: lgbm_v10
     model_path: ${oc.env:MCRS_MODEL_DIR,models/reranker_v12_goalfree}/model.txt
     meta_path: ${oc.env:MCRS_MODEL_DIR,models/reranker_v12_goalfree}/meta.json

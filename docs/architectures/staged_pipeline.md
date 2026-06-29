@@ -39,8 +39,8 @@ The active staged config is:
 configs/pipelines/state_ranker_v10_lgbm_devset.yaml
 ```
 
-It runs local RRF/candidate-fusion retrieval with four local shards, then replays
-the committed `models/reranker_v10` LambdaMART bundle with four local rerank
+It runs local RRF/candidate-fusion retrieval with local shards, then replays
+the committed `models/reranker_v12_goalfree` LightGBM bundle with local rerank
 shards. Trace rewrites are disabled by default for faster ranking/evaluation loops.
 
 Important knobs:
@@ -90,7 +90,7 @@ python run_pipeline.py \
   --config configs/pipelines/state_ranker_v10_lgbm_devset.yaml \
   --only rerank \
   --retrieval-run exp/pipeline/runs/retrieval-v10-local \
-  --model-ref models/reranker_v10_candidate \
+  --model-ref models/<candidate_bundle> \
   --run-id rerank-v10-candidate
 ```
 

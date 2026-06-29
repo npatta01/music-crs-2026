@@ -15,7 +15,7 @@ Challenge: https://nlp4musa.github.io/music-crs-challenge/
 - [Explanation / Response Generation](docs/architectures/explanation_generation.md) — how the natural-language response is generated, what the code was vs. is now doing (dummy), and per-track explanation scaffolding
 - [State Extraction Cache](docs/state_extraction_cache.md) — file-per-turn cache layout, override precedence, GitHub Release packaging, and install/verify commands
 - [Evaluation](docs/evaluation.md) — metrics, devset leaderboard
-- [Reproduce the reranker](docs/reproduce_reranker.md) — **LambdaMART v10**: committed model bundle, required vs optional artifacts, FAST (use model) + FULL (retrain) paths
+- [Reproduce the reranker](docs/reproduce_reranker.md) — LightGBM bundle, required vs optional artifacts, FAST (use model) + FULL (retrain) paths
 - [Mac / Local Dev](docs/mac_dev.md) — local testing on Apple Silicon
 - [Modal Setup](docs/modal_setup.md) — cloud GPU authentication and smoke test
 - [Codebase Map](docs/codebase/README.md) — **start here to understand the code**: per-module internals (`docs/codebase/modules/`) and the [verified-bugs audit](docs/codebase/bugs.md)
@@ -82,7 +82,7 @@ python run_experiment.py --backend local --tid state_ranker_v10_rrf_devset --bat
 # Devset — explicit RRF candidate-fusion baseline (Modal, 50 shards default)
 python run_experiment.py --backend modal --tid state_ranker_v10_rrf_devset --batch_size 64
 
-# Devset — LambdaMART v10 reranker (Modal)
+# Devset — current goal-free LGBM reranker (Modal)
 python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset --batch_size 8
 
 # Devset — staged local iteration: RRF retrieval, LambdaMART replay, dummy explanation, eval
@@ -91,7 +91,7 @@ python run_pipeline.py --config configs/pipelines/state_ranker_v10_lgbm_devset.y
 # Reuse an existing staged retrieval run and replay rerank/eval only
 python run_pipeline.py --config configs/pipelines/state_ranker_v10_lgbm_devset.yaml --from rerank --retrieval-run exp/pipeline/runs/<run_id> --run-id <rerank_run_id>
 
-# Blindset — LambdaMART v10 reranker (Modal)
+# Blindset — current goal-free LGBM reranker (Modal)
 python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_A --eval_dataset blindset_A --batch_size 8
 
 # Low-level inference scripts still work
@@ -110,7 +110,7 @@ Results saved to `exp/inference/{split}/{tid}.json`.
 
 - v10 catalog source of truth is LanceDB (`mcrs/qu_modules/v0plus_catalog_lance.py`). The HF-backed `HFTalkPlayCatalog` is retained only for unit tests.
 - State extraction uses `prompt_version: v1` (ConversationStateV1 → projected to V0Plus) in all active configs. Use `prompt_version: v0plus` to switch to the old generous V0Plus extraction.
-- LambdaMART v10 reranker (`mcrs/qu_modules/lgbm_reranker.py`) is config-driven via `qu_kwargs.ranking.mode: lgbm`. Set `ranking.mode: rrf` for the explicit candidate-fusion baseline.
+- The LightGBM reranker (`mcrs/qu_modules/lgbm_reranker.py`) is config-driven via `qu_kwargs.ranking.mode: lgbm` and currently defaults to `models/reranker_v12_goalfree`. Set `ranking.mode: rrf` for the explicit candidate-fusion baseline.
 - `run_pipeline.py` is the faster iteration path: retrieval/state extraction can be saved once, then local LambdaMART replay/evaluation can be rerun from the saved trace. Model training stays outside the pipeline config.
 
 ## Extend
@@ -128,5 +128,5 @@ See `tips/` for directions: better item representations, reranker modules, gener
 - Use [`experiments/README.md`](experiments/README.md) for the current config/report surface.
 - Use [`experiments/experiment_log.md`](experiments/experiment_log.md) for the concise current-state decision log.
 - [`leaderboard.md`](leaderboard.md) is the compact devset table; [`changelog.md`](changelog.md) links current outcomes to PRs.
-- Active configs under `configs/`: `state_ranker_v10_rrf_devset` (devset explicit RRF/candidate-fusion baseline), `state_ranker_v10_lgbm_devset` (devset LambdaMART v10; single canonical devset config — for fast local iteration export `MCRS_MAX_IN_FLIGHT=24` / `MCRS_COMPILE_MAX_IN_FLIGHT=8`), `state_ranker_v10_lgbm_blindset_A` / `state_ranker_v10_lgbm_blindset_B` (blindset LambdaMART v10; B uses the goal-free `reranker_v12_goalfree` bundle). Pipeline configs live under `configs/pipelines/`. Note the three version axes: pipeline lineage `state_ranker_v10`, feature-schema `lgbm_v10` (`model_version`), and the trained-bundle directory (`reranker_v10`, `reranker_v12_goalfree`) are independent counters.
+- Active configs under `configs/`: `state_ranker_v10_rrf_devset` (devset explicit RRF/candidate-fusion baseline), `state_ranker_v10_lgbm_devset`, `state_ranker_v10_lgbm_blindset_A`, and `state_ranker_v10_lgbm_blindset_B`. All active LGBM configs currently use the goal-free `models/reranker_v12_goalfree` bundle; for fast local devset iteration export `MCRS_MAX_IN_FLIGHT=24` / `MCRS_COMPILE_MAX_IN_FLIGHT=8`. Pipeline configs live under `configs/pipelines/`. To identify the actual trained model, inspect `ranking.model_path` or pipeline `rerank.model_ref`; `model_version` is the trace/stage label written into `ranking.stages` and may remain `lgbm_v10` for the v10 state-ranker contract.
 - If working inside `experiments/`, read the local [`experiments/CLAUDE.md`](experiments/CLAUDE.md) and follow its prune-first conventions.

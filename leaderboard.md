@@ -6,13 +6,17 @@ diagnostics report deeper stage recall separately.
 
 | Rank | Run / config | Role | NDCG@20 | Hit@20 | Hit@1000 | MRR |
 |---:|---|---|---:|---:|---:|---:|
-| 1 | `state_ranker_v10_lgbm_devset` | **Current best** - v10 state-ranker, fresh LambdaMART v10 | 0.4562 | 0.6138 | 0.6138† | 0.4102 |
+| 1 | `state_ranker_v10_lgbm_devset` | Historical v10 state-ranker capture | 0.4562 | 0.6138 | 0.6138† | 0.4102 |
 | 2 | `v0plus_compiler_devset_rr2` | Previous best - LambdaMART v9, v0plus trace contract | 0.3450 | 0.5305 | 0.5305† | 0.2908 |
 | 3 | `state_ranker_v10_rrf_devset` | Explicit RRF/candidate-fusion baseline | 0.1492 | 0.3183 | 0.3183† | 0.1015 |
 
 † Final prediction files are top-20 lists, so final Hit@1000 equals Hit@20 for
 these rows. Use stage diagnostics for candidate-pool and learned-ranker deep
 recall.
+
+Active LGBM configs currently point at `models/reranker_v12_goalfree`
+bundle. Devset/Blind-A score rows below are historical captures until rerun with
+that bundle.
 
 ## Fresh Devset Capture (2026-06-15 UTC)
 
@@ -82,9 +86,10 @@ serving trace; rerun Blind-A before treating the next submission as comparable.
 
 ## Interpretation
 
-- **state_ranker_v10_lgbm_devset**: Fresh v10 traces plus LambdaMART v10 improve
+- **state_ranker_v10_lgbm_devset**: Historical v10 traces plus LambdaMART v10 improved
   devset NDCG@20 by +0.1112, Hit@20 by +0.0833, and MRR by +0.1194 versus the
-  previous v9 `rr2` devset report.
+  previous v9 `rr2` devset report. Current active configs now use
+  `models/reranker_v12_goalfree` and need a fresh devset recapture.
 - **state_ranker_v10_rrf_devset**: Explicit candidate-fusion baseline; RRF is no
   longer an implicit production default.
 - **v0plus_compiler_devset_rr2**: Previous best retained only as historical

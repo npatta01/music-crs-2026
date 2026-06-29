@@ -11,11 +11,13 @@ qu_kwargs:
   compile_max_in_flight: ${oc.env:MCRS_COMPILE_MAX_IN_FLIGHT,4}
   ranking:
     mode: lgbm
+    # Trace/stage label. The current served LightGBM booster is the
+    # goal-free bundle selected by the paths below.
     model_version: lgbm_v10
-    model_path: ${oc.env:MCRS_MODEL_DIR,models/reranker_v10}/model.txt
-    meta_path: ${oc.env:MCRS_MODEL_DIR,models/reranker_v10}/meta.json
-    cat_maps: ${oc.env:MCRS_MODEL_DIR,models/reranker_v10}/cat_maps.json
-    branch_names: ${oc.env:MCRS_MODEL_DIR,models/reranker_v10}/branch_names.json
+    model_path: ${oc.env:MCRS_MODEL_DIR,models/reranker_v12_goalfree}/model.txt
+    meta_path: ${oc.env:MCRS_MODEL_DIR,models/reranker_v12_goalfree}/meta.json
+    cat_maps: ${oc.env:MCRS_MODEL_DIR,models/reranker_v12_goalfree}/cat_maps.json
+    branch_names: ${oc.env:MCRS_MODEL_DIR,models/reranker_v12_goalfree}/branch_names.json
     tag_index: ${oc.env:MCRS_CACHE_DIR,./cache}/tag_embedding_index/qwen_0_6b.npz
     embed_memo: ${oc.env:MCRS_RERANKER_DIR,./exp/analysis/rerank}/q06_memo.json
     msg_store: ${oc.env:MCRS_RERANKER_DIR,./exp/analysis/rerank}/raw_msg_store
