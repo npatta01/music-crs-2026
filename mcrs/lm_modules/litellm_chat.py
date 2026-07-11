@@ -1,7 +1,10 @@
 """LiteLLM-backed chat LM for response generation."""
 
+import logging
 import os
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 _VALID_ROLES = {"system", "user", "assistant"}
 
@@ -111,9 +114,16 @@ class LITELLM_LM:
         kwargs = self._completion_kwargs(max_new_tokens)
         responses = litellm.batch_completion(messages=batch_messages, **kwargs)
         outputs: list[str] = []
-        for response in responses:
+        for index, response in enumerate(responses):
             try:
                 outputs.append(response.choices[0].message.content or "")
-            except Exception:
+            except Exception as exc:
+                logger.warning(
+                    "batch_response_generation: item %d failed, returning blank "
+                    "response instead of raising: %s: %s",
+                    index,
+                    type(exc).__name__,
+                    exc,
+                )
                 outputs.append("")
         return outputs

@@ -32,10 +32,18 @@ def _resolve_cache_dir(cache_dir: str | None) -> str:
 
 
 def cache_namespace_for_client(client: "LiteLLMEmbeddingClient") -> str:
+    """Cache key for this client's model identity.
+
+    Deliberately excludes `api_base`: a self-hosted vLLM endpoint (Modal or
+    local) and any other backend serving the same checkpoint produce the same
+    vectors, so the cache should be portable across serving backends — this
+    mirrors the b1 bi-encoder's local/Modal-interchangeable design
+    (docs/architectures/biencoder.md, scripts/rerank/b1_live.py). It also lets
+    a cache lookup happen without ever resolving a live endpoint URL.
+    """
     payload = {
         "backend": "litellm",
         "model": client.model_name,
-        "api_base": client.api_base,
         "dimensions": client.dimensions,
         "encoding_format": client.encoding_format,
         "query_instruct": client.query_instruct,
@@ -43,6 +51,24 @@ def cache_namespace_for_client(client: "LiteLLMEmbeddingClient") -> str:
     }
     rendered = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return f"litellm:{rendered}"
+
+
+def _resolve_vllm_endpoint_url(model_key: str) -> str:
+    """Resolve a logical Modal vLLM endpoint key (e.g. "qwen3-embedding-8b")
+    to a live serving URL.
+
+    Loaded by file path rather than `import modal.vllm_serve`: the repo's
+    top-level `modal/` directory shadows the installed `modal` SDK package.
+    """
+    import importlib.util
+    from pathlib import Path
+
+    vs_path = Path(__file__).resolve().parents[2] / "modal" / "vllm_serve.py"
+    spec = importlib.util.spec_from_file_location("mcrs_vllm_serve_lazy", vs_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module.endpoint_url(model_key)
 
 
 def cache_wrap(
@@ -74,6 +100,12 @@ class LiteLLMEmbeddingClient:
     cache: dict[str, Any] | None = None
     query_instruct: str = ""
     extra_params: dict[str, Any] = field(default_factory=dict)
+    # Logical Modal vLLM endpoint key (e.g. "qwen3-embedding-8b"). When set
+    # and `api_base` is not, the live serving URL is resolved lazily on the
+    # first actual live call rather than eagerly at construction time — a
+    # cache hit (see cache_namespace_for_client) never needs Modal
+    # credentials at all.
+    vllm_endpoint: str | None = None
 
     def __post_init__(self) -> None:
         self.batch_size = int(self.batch_size)
@@ -82,7 +114,13 @@ class LiteLLMEmbeddingClient:
         if not self.model_name.strip():
             raise ValueError("model_name must be a non-empty string")
 
+    def _resolve_api_base(self) -> None:
+        if self.api_base is not None or not self.vllm_endpoint:
+            return
+        self.api_base = _resolve_vllm_endpoint_url(self.vllm_endpoint)
+
     def build_request_kwargs(self, texts: list[str]) -> dict[str, Any]:
+        self._resolve_api_base()
         rendered_texts = [
             f"{self.query_instruct}{text}" if self.query_instruct else text
             for text in texts

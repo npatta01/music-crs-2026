@@ -346,9 +346,16 @@ def _build_encoder(enc_cfg: dict) -> EmbeddingClient:
         from mcrs.embeddings.litellm_client import LiteLLMEmbeddingClient, cache_wrap
 
         api_key = enc_cfg.get("api_key") or os.environ.get("DEEPINFRA_API_KEY")
+        vllm_endpoint = enc_cfg.get("vllm_endpoint")
+        # Only default to the DeepInfra URL when neither an explicit api_base
+        # nor a (still-unresolved) vllm_endpoint is configured — otherwise
+        # this would clobber a lazily-resolved Modal endpoint with the wrong
+        # provider. See LiteLLMEmbeddingClient._resolve_api_base.
+        default_api_base = None if vllm_endpoint else "https://api.deepinfra.com/v1/openai"
         client = LiteLLMEmbeddingClient(
             model_name=enc_cfg.get("model_name", "openai/Qwen/Qwen3-Embedding-0.6B"),
-            api_base=enc_cfg.get("api_base", "https://api.deepinfra.com/v1/openai"),
+            api_base=enc_cfg.get("api_base", default_api_base),
+            vllm_endpoint=vllm_endpoint,
             api_key=api_key,
             batch_size=int(enc_cfg.get("batch_size", 32)),
             encoding_format=enc_cfg.get("encoding_format", "float"),
