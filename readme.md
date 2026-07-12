@@ -103,11 +103,11 @@ Predictions land in `exp/inference/{split}/{tid}.json`. See [CLAUDE.md](CLAUDE.m
 
 ---
 
-## Reproducing our results (Stage 1 / Stage 2 verification)
+## Reproducing our results
 
-Two independent ways to verify the pipeline, both documented for the organizers' code-review process:
+Two independent things you can do, both documented for the organizers' code-review process:
 
-**Zero-credential rerun (Stage 1 — "does inference run?")** — no Modal, HF, or LLM credentials needed. Downloads a bundled cache (catalog, embeddings, extracted state, frozen LLM cache) from Hugging Face and runs Blind-B end to end:
+**Running inference on Blind-A/B (zero-credential)** — no Modal, HF, or LLM credentials needed. Downloads a bundled cache (catalog, embeddings, extracted state, frozen LLM cache) from Hugging Face and runs Blind-B end to end:
 
 ```bash
 scripts/repro_setup.sh   # downloads + verifies the offline bundle
@@ -116,10 +116,18 @@ scripts/repro_run.sh     # runs Blind-B, no credentials, no Modal
 
 Verified under a network fence (Modal genuinely unreachable) across all of devset/Blind-A/Blind-B. See [docs/reproduce_offline_bundle.md](docs/reproduce_offline_bundle.md) for the byte-exact frozen-replay path vs. this live rerun, and how to check the reported score rather than just the prediction file.
 
-**Retrain from scratch (Stage 2 — "can the model be reproduced?")** — rebuild retrieval traces, features, and retrain the LightGBM reranker on Modal:
+**Training the models from scratch (LightGBM reranker, b1 bi-encoder)** — needs Modal + the usual credentials:
 
 ```bash
-# See docs/reproduce_reranker.md for the full FULL-path command sequence
+# LightGBM reranker: rebuild retrieval traces/features, retrain on Modal.
+# See docs/reproduce_reranker.md for the full command sequence.
+
+# b1 bi-encoder (the fine-tuned Qwen3-Embedding conv->track retriever
+# behind the b1_cos reranker feature):
+modal run scripts/rerank/modal_train_biencoder.py
+modal volume get scout-models /biencoder_qwen06_eN ./models/   # N = 1,2,3 (one checkpoint/epoch)
+# See docs/architectures/biencoder.md for the training recipe (MNRL, MOVES-only
+# positives, known-for field dropout) and how the checkpoint gets promoted/served.
 ```
 
 Offline bundle (catalog, caches, frozen traces, model weights): **https://huggingface.co/datasets/Npatta01/music-crs-repro-2026**
