@@ -51,6 +51,8 @@ which copies `exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json` �
 
 ## Setup
 
+Only needed for live/credentialed runs (below, and training). The zero-credential reproduction path further down is self-contained and skips this entirely.
+
 ```bash
 uv venv .venv --python=3.12
 source .venv/bin/activate
@@ -92,7 +94,7 @@ Predictions land in `exp/inference/{split}/{tid}.json`. See [CLAUDE.md](CLAUDE.m
 
 Two independent things you can do, both documented for the organizers' code-review process:
 
-**Running inference on Blind-A/B (zero-credential)** — no Modal, HF, or LLM credentials needed. Downloads a bundled cache (catalog, embeddings, extracted state, frozen LLM cache) from Hugging Face and runs Blind-B end to end:
+**Running inference on Blind-A/B (zero-credential)** — self-contained; skips the Setup section above entirely (`repro_setup.sh` creates its own venv and installs its own deps). No Modal, HF, or LLM credentials needed either way. Downloads a bundled cache (catalog, embeddings, extracted state, frozen LLM cache) from Hugging Face and runs Blind-B end to end:
 
 ```bash
 scripts/repro_setup.sh   # downloads + verifies the offline bundle
