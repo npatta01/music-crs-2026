@@ -52,7 +52,7 @@ which copies `exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json` â†
 ## Setup
 
 ```bash
-uv venv .venv --python=3.10
+uv venv .venv --python=3.12
 source .venv/bin/activate
 uv pip install -e .
 

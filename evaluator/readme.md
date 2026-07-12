@@ -47,13 +47,13 @@ files stay at top-20; dev-set inference can retrieve deeper.
 
 ### Requirements
 
-- Python 3.10+
+- Python 3.12+
 - Dependencies: `datasets`, `pandas`, `numpy`, `scipy`, `tqdm`
 
 ### Installation
 
 ```bash
-uv venv .venv --python=3.10
+uv venv .venv --python=3.12
 source .venv/bin/activate
 uv pip install -r requirments.txt
 ```
