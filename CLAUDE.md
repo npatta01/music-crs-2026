@@ -59,6 +59,18 @@ run the setup script before trying to recompute artifacts. If a worktree already
 has throwaway local cache artifacts from a failed run, use `--force` to replace
 them with the shared links.
 
+**LiteLLM disk cache is a single shared setting, not per-call-site.** Every
+`litellm.completion`/`batch_completion` call — state extraction *and* response
+generation — goes through whatever `MCRS_LITELLM_CACHE_DIR` currently points
+at (see `.env.example`). `cache/litellm-state` (the `.env` default) is a
+plain, growing local dev cache with no completeness guarantee — a miss falls
+straight through to a live OpenRouter call. For a guaranteed-zero-cost
+verification run, source the offline reproduction bundle's env instead
+(`source .repro/scripts/activate_repro_env.sh`), which points at the curated,
+frozen `cache/litellm-repro/` and sets `MCRS_REQUIRE_LITELLM_CACHE=1` so a
+miss hard-fails instead of silently spending money. See
+[`docs/reproduce_offline_bundle.md`](docs/reproduce_offline_bundle.md).
+
 For state-cache materialization and release packaging, follow
 [`docs/state_extraction_cache.md`](docs/state_extraction_cache.md). Blind sets
 only need the final turn per session; devset and trainset use all turns. Use
