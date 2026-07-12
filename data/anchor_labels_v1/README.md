@@ -30,16 +30,17 @@ sha256 (uncompressed): train `64c82bc14208c76f…`, dev `cda599a7ec9df36f…`.
 ## Download
 
 ```bash
-# the datasets
+# the datasets + checksum sidecars
 hf download Npatta01/music-crs-repro-2026 --repo-type dataset --local-dir . \
   --include "anchor_labels_v1.1/dev_labels_full.jsonl.gz" \
-  --include "anchor_labels_v1.1/train_labels_full.jsonl.gz"
-gunzip anchor_labels_v1.1/dev_labels_full.jsonl.gz anchor_labels_v1.1/train_labels_full.jsonl.gz
-
-# verify
-hf download Npatta01/music-crs-repro-2026 --repo-type dataset --local-dir . \
+  --include "anchor_labels_v1.1/train_labels_full.jsonl.gz" \
   --include "anchor_labels_v1.1/*.sha256"
+
+# verify (before decompressing — the checksums are over the .gz files)
 sha256sum -c anchor_labels_v1.1/train_labels_full.jsonl.gz.sha256 anchor_labels_v1.1/dev_labels_full.jsonl.gz.sha256
+
+# decompress
+gunzip anchor_labels_v1.1/dev_labels_full.jsonl.gz anchor_labels_v1.1/train_labels_full.jsonl.gz
 
 # (optional) full audit/provenance bundles
 hf download Npatta01/music-crs-repro-2026 --repo-type dataset --local-dir . \

@@ -127,10 +127,12 @@ inference with zero credentials relies on two things in `mcrs/`:
   hit).
 
 ```bash
+# activate_repro_env.sh sets MCRS_CACHE_DIR / MCRS_EMBEDDING_CACHE_DIR /
+# MCRS_LITELLM_CACHE_DIR / MCRS_REQUIRE_LITELLM_CACHE=1 / HF_HOME and blanks
+# all 6 credential vars — source it first even if you skipped Path 1:
+source .repro/scripts/activate_repro_env.sh
+
 MCRS_LAZY_VLLM_ENDPOINT=1 \
-OPENROUTER_API_KEY= DEEPINFRA_API_KEY= VLLM_API_KEY= LITELLM_PROXY_KEY= \
-MODAL_TOKEN_ID= MODAL_TOKEN_SECRET= \
-MCRS_REQUIRE_LITELLM_CACHE=1 \
 python run_inference_blindset.py --tid state_ranker_v10_lgbm_blindset_A \
   --eval_dataset blindset_A --batch_size 8 --require_litellm_cache
 
