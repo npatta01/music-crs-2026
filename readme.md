@@ -102,7 +102,7 @@ which copies `exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json` �
 
 ## Setup
 
-Needed for the live/credentialed paths — [Running inference](#running-inference) below, and [Training the models from scratch](#training-the-models-from-scratch) above. The zero-credential reproduction path above is self-contained and skips this entirely.
+Needed for the live/credentialed paths — [Running inference](#running-inference) below, and [Training the models from scratch](#training-the-models-from-scratch) above. `scripts/repro_setup.sh` in the zero-credential path already creates its own venv and runs `uv pip install -e .` internally, so the overlap with the commands below is real — but it deliberately does **not** run `hf auth login` or `modal setup`, and it pulls down a multi-GB offline bundle you don't want for live work. That's what this section is actually for: credentials, not just a Python env.
 
 ```bash
 uv venv .venv --python=3.12
