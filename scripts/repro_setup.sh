@@ -32,7 +32,7 @@ fi
 
 echo "== Installing Python environment (.venv) =="
 if [ ! -d .venv ]; then
-  uv venv .venv --python=3.10
+  uv venv .venv --python=3.12
 fi
 source .venv/bin/activate
 uv pip install -e .
