@@ -192,6 +192,12 @@ def _resolve_vllm_endpoints_if_needed(qu_kwargs: dict) -> None:
     # declared on either the legacy top-level encoder or a named encoder.
     if not _qu_kwargs_has_vllm_endpoint(qu_kwargs):
         return
+    if os.environ.get("MCRS_LAZY_VLLM_ENDPOINT", "1") != "0":
+        # Default: leave `vllm_endpoint` in place so LiteLLMEmbeddingClient
+        # resolves it lazily on the first genuine cache miss instead of here,
+        # eagerly, before any cache is even checked. Set
+        # MCRS_LAZY_VLLM_ENDPOINT=0 to force eager resolution up front.
+        return
     import importlib.util
     from pathlib import Path as _Path
 

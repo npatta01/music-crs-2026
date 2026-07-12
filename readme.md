@@ -189,6 +189,27 @@ python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_B 
 
 ---
 
+## Reproducing Submitted Results (No Credentials)
+
+Everything above needs Modal + Hugging Face access to run new experiments.
+To instead verify the already-submitted devset / Blind-A / Blind-B
+results — byte-exact, or as a fresh offline rerun — with **no paid LLM,
+embedding, Modal, or Hugging Face calls**, the ignored artifacts (caches,
+traces, frozen predictions) are hosted separately:
+
+**https://huggingface.co/datasets/Npatta01/music-crs-repro-2026**
+
+```bash
+scripts/repro_setup.sh   # checks uv/hf are installed, downloads + verifies the bundle
+scripts/repro_run.sh     # runs Blind-B end to end — no credentials, no Modal
+```
+
+See [`docs/reproduce_offline_bundle.md`](docs/reproduce_offline_bundle.md)
+for both reproduction paths (byte-exact frozen replay vs. live offline
+rerun) and how to verify the reported score, not just the prediction file.
+
+---
+
 ## Custom Configuration
 
 Create a config file in `configs/` or copy one of the current v10 state-ranker configs:

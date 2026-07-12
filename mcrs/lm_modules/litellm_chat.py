@@ -1,7 +1,10 @@
 """LiteLLM-backed chat LM for response generation."""
 
+import logging
 import os
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 _VALID_ROLES = {"system", "user", "assistant"}
 
@@ -111,9 +114,31 @@ class LITELLM_LM:
         kwargs = self._completion_kwargs(max_new_tokens)
         responses = litellm.batch_completion(messages=batch_messages, **kwargs)
         outputs: list[str] = []
-        for response in responses:
+        for index, response in enumerate(responses):
             try:
+                # litellm.batch_completion puts the raw exception object in
+                # the results list on a per-item failure rather than raising.
+                if isinstance(response, BaseException):
+                    raise response
                 outputs.append(response.choices[0].message.content or "")
-            except Exception:
-                outputs.append("")
+            except Exception as exc:
+                logger.warning(
+                    "batch_response_generation: item %d failed (%s: %s), "
+                    "retrying as a single completion",
+                    index,
+                    type(exc).__name__,
+                    exc,
+                )
+                try:
+                    retry_response = litellm.completion(messages=batch_messages[index], **kwargs)
+                    outputs.append(retry_response.choices[0].message.content or "")
+                except Exception as retry_exc:
+                    logger.warning(
+                        "batch_response_generation: item %d retry also failed, "
+                        "returning blank response instead of raising: %s: %s",
+                        index,
+                        type(retry_exc).__name__,
+                        retry_exc,
+                    )
+                    outputs.append("")
         return outputs

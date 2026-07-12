@@ -9,9 +9,10 @@ Repo: https://github.com/npatta01/music-conversational-music-recomender-2026
 
 - `Added` **Anchoring-fix relevance labels v1.1** ([PR #161](https://github.com/npatta01/music-conversational-music-recomender-2026/pull/161)).
   Clean LLM-judged labels over train (106,393 turns) + dev (7,000), built to
-  retrain the retriever against the anchoring bug. Data ships on the
-  [`anchor-labels-v1.1`](https://github.com/npatta01/music-conversational-music-recomender-2026/releases/tag/anchor-labels-v1.1)
-  release; docs + build pipeline in [`data/anchor_labels_v1/`](data/anchor_labels_v1/README.md)
+  retrain the retriever against the anchoring bug. Data shipped as the
+  `anchor-labels-v1.1` GitHub release at the time, since migrated to the
+  [`Npatta01/music-crs-repro-2026`](https://huggingface.co/datasets/Npatta01/music-crs-repro-2026)
+  HF dataset; docs + build pipeline in [`data/anchor_labels_v1/`](data/anchor_labels_v1/README.md)
   and `scripts/rerank/anchor_labels/`. **v1.1** arbitrates judge splits on either
   axis (not just the label) and judges blind to the synthetic reaction → 1,591
   turns moved out of `artist_anchoring` (19,813 → 18,222); supersedes v1.
