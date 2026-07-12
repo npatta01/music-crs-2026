@@ -1,8 +1,8 @@
 # Session / Conversation State
 
-> **What it is:** the structured, per-turn understanding of the conversation that drives retrieval. An LLM reads the multi-turn `session_memory` and emits a `ConversationStateV0Plus`; a resolver then grounds its surface-form names to catalog IDs.
-> **Source of truth:** `mcrs/conversation_state/schema.py` (the Pydantic models) + `mcrs/conversation_state/prompts/current.py` (production prompt) + `mcrs/qu_modules/resolver.py` (resolution) + `mcrs/qu_modules/compiler_qu.py` (extractor wiring).
-> Last verified: 2026-06-01 (code at `1a8aee5`).
+> **What it is:** the structured, per-turn understanding of the conversation that drives retrieval. An LLM reads the multi-turn `session_memory`; all active configs (`prompt_version: v1`) get back fact-first `ConversationStateV1` JSON, which is immediately projected into the compiler's actual contract type, `ConversationStateV0Plus`, via `project_v1_to_v0plus()`. A resolver then grounds the projected state's surface-form names to catalog IDs. (`_decode` tries the V1-then-project path first and only falls back to validating raw V0Plus JSON directly if V1 validation fails — the fallback path is what the legacy `prompt_version: previous`/`v0plus` prompt still exercises.)
+> **Source of truth:** `mcrs/conversation_state/schema.py` (the Pydantic models, incl. `project_v1_to_v0plus`) + `mcrs/conversation_state/prompts/current.py` (production prompt, emits V1 JSON) + `mcrs/qu_modules/resolver.py` (resolution) + `mcrs/qu_modules/compiler_qu.py` (extractor wiring + the V1→V0Plus decode logic, `_decode()`).
+> Last verified: 2026-07-12.
 
 Session state is the contract between the **conversation** and the **retriever**. Everything the compiler does (which branches fire, how they're weighted, what's filtered or demoted — see [`v0plus_retrieval.md`](v0plus_retrieval.md)) is a function of this object. Get the state wrong and no amount of reranking recovers it — fix representation here first.
 
@@ -14,8 +14,16 @@ Session state is the contract between the **conversation** and the **retriever**
 session_memory  (list of {role, content} turns)
    │
    1. EXTRACT   LiteLLMExtractor (compiler_qu.py)
-   │              LLM call, JSON-schema-constrained to the Pydantic model,
-   │              prompt_version current/previous → ConversationStateV0Plus
+   │              LLM call, JSON-schema-constrained to the Pydantic model.
+   │              prompt_version: v1 (all active configs; an alias for the
+   │              "current" prompt) → LLM returns ConversationStateV1 JSON
+   │
+   1b. PROJECT  project_v1_to_v0plus()  (conversation_state/schema.py)
+   │              structural copy of V1 fields onto the compiler's actual
+   │              contract type → ConversationStateV0Plus
+   │              (prompt_version: previous/v0plus skips this: that legacy
+   │              prompt emits V0Plus-shaped JSON directly, and V1 validation
+   │              failing is exactly what triggers _decode()'s fallback path)
    │
    2. RESOLVE   V0PlusResolver (resolver.py)
    │              fuzzy-match surface names → catalog artist/track IDs;
@@ -24,12 +32,14 @@ session_memory  (list of {role, content} turns)
    → ResolvedConversationState   (what the compiler consumes)
 ```
 
-- **Extract** — `LiteLLMExtractor` sends the conversation + the JSON schema to an LLM (the production extractor uses `prompt_version: current`; `previous` is retained as the single reference prompt). The model returns a JSON object validated into `ConversationStateV0Plus`. Validation is deliberately *tolerant* (see §5) so one bad field never voids the whole turn.
-- **Resolve** — the raw state names entities as the user said them ("more like Radiohead"). `V0PlusResolver` turns those surface forms into catalog IDs via `FuzzyMatcher`, resolves rejections, annotates the artist IDs behind track feedback, and attaches the session's `played_track_ids`. The output `ResolvedConversationState` is what `V0PlusCompiler.compile()` actually reads.
+- **Extract** — `LiteLLMExtractor` sends the conversation + the JSON schema to an LLM. All active configs set `prompt_version: v1`, which resolves to the same `current_prompt` builder as the default (`_resolve_prompt_fns` in `compiler_qu.py` treats `"current"`/`"v4"`/`"default"`/`"v1"` as synonyms) and asks the model for fact-first `ConversationStateV1` JSON. `_decode()` validates the raw JSON as `ConversationStateV1` first and immediately projects it into `ConversationStateV0Plus` via `project_v1_to_v0plus()` — a structural copy, not a rewrite, that lets the V0Plus compatibility model derive its legacy view fields from the V1 facts. Only if V1 validation raises does `_decode()` fall back to validating the JSON directly as `ConversationStateV0Plus` — the path the legacy `prompt_version: previous`/`reference`/`v3`/`v0plus` prompt (`previous_prompt`, the "old generous V0Plus extraction" CLAUDE.md refers to) actually exercises, since that prompt emits V0Plus-shaped JSON that doesn't validate as V1. Validation (of whichever type ends up used) is deliberately *tolerant* (see §5) so one bad field never voids the whole turn.
+- **Resolve** — the (projected) state names entities as the user said them ("more like Radiohead"). `V0PlusResolver` turns those surface forms into catalog IDs via `FuzzyMatcher`, resolves rejections, annotates the artist IDs behind track feedback, and attaches the session's `played_track_ids`. The output `ResolvedConversationState` is what `V0PlusCompiler.compile()` actually reads.
 
 ---
 
 ## 2. `ConversationStateV0Plus` — field reference
+
+This is the **post-projection, compiler-facing** shape — what `resolver.py` and `compiler.py` actually read, regardless of whether it arrived via `project_v1_to_v0plus()` (the active path) or direct validation (the legacy-prompt fallback path). It is *not* what the LLM emits under `prompt_version: v1`: that raw response is fact-first `ConversationStateV1` JSON, which `project_v1_to_v0plus()` derives these legacy view fields from (not a 1:1 field rename — see the function's docstring in `mcrs/conversation_state/schema.py`). `ConversationStateV1`'s own field reference isn't duplicated here; read the schema directly for that.
 
 The state grew from an original **7-field minimal schema** (iteration 1) to **11 fields** today. Each field maps to a concrete retrieval behavior.
 
