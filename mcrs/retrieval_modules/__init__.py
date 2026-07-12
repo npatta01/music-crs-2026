@@ -48,17 +48,6 @@ def load_retrieval_module(
             formatter=formatter,
             **config,
         )
-    elif retrieval_type == "milvus":
-        from .milvus import MILVUS_MODEL
-
-        return MILVUS_MODEL(
-            dataset_name=dataset_name,
-            split_types=track_split_types,
-            corpus_types=corpus_types,
-            cache_dir=cache_dir,
-            formatter=formatter,
-            retrieval_config=retrieval_config,
-        )
     elif retrieval_type == "lancedb":
         from .lancedb import LANCEDB_MODEL
 

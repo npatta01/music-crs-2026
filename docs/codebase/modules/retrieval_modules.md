@@ -18,10 +18,9 @@ The factory function `load_retrieval_module` (in `__init__.py`) still selects an
 | File | Responsibility |
 |---|---|
 | `base.py` | Defines the `Retriever` Protocol and `FieldQuery` dataclass — the shared v0+ interface that compiler-facing backends must satisfy. |
-| `__init__.py` | `load_retrieval_module` factory: maps string keys (`"bert"`, `"dense_transformer"`, `"litellm_embedding"`, `"milvus"`, `"lancedb"`, `"modal_lancedb"`) to concrete backend constructors. The old standalone `"bm25"` backend was removed. |
+| `__init__.py` | `load_retrieval_module` factory: maps string keys (`"bert"`, `"dense_transformer"`, `"litellm_embedding"`, `"lancedb"`, `"modal_lancedb"`) to concrete backend constructors. The old standalone `"bm25"` backend was removed; the `"milvus"` backend (`MILVUS_MODEL`) was removed as unreachable dead code — see [Milvus indexing helpers](milvus.md) for what remains. |
 | `bert.py` | `DENSE_TRANSFORMER_MODEL` + `BERT_MODEL` alias: on-device dense retrieval; encodes all tracks once and persists a `.pt` embedding matrix; cosine-searches at query time. Configurable pooling (mean / cls / last_token), query template, dtype. |
 | `litellm_embedding.py` | `LITELLM_EMBEDDING_MODEL`: same index-and-search pattern as `DENSE_TRANSFORMER_MODEL` but uses a LiteLLM proxy (OpenAI-compatible endpoint) for embedding instead of a local transformer. Uses async concurrency for corpus indexing. |
-| `milvus.py` | `MILVUS_MODEL`: delegates to a running Milvus instance; supports `bm25_compat`, `bm25_fields`, and `dense` search kinds; multi-search paths combine results via Milvus `WeightedRanker` (server-side fusion). |
 | `lancedb.py` | `LANCEDB_MODEL`: thin wrapper that ignores legacy constructor arguments (`dataset_name`, `split_types`, etc.) and delegates to `mcrs.lancedb.retriever.LanceDbRetriever`. |
 | `modal_lancedb.py` | `MODAL_LANCEDB_MODEL`: thin wrapper that delegates to `mcrs.lancedb.modal_client.LanceDbModalClient`, issuing retrieval RPCs to a Modal-hosted service rather than running locally. |
 
@@ -78,7 +77,7 @@ def load_retrieval_module(
     retrieval_config: dict | None = None,
 ) -> Any:   # __init__.py:4
 ```
-Factory for historical standalone retriever paths. Returns a concrete model object exposing `text_to_item_retrieval` and `batch_text_to_item_retrieval`. Deferred imports are used for `milvus`, `lancedb`, and `modal_lancedb` so their heavy dependencies are only loaded when the corresponding key is requested.
+Factory for historical standalone retriever paths. Returns a concrete model object exposing `text_to_item_retrieval` and `batch_text_to_item_retrieval`. Deferred imports are used for `lancedb` and `modal_lancedb` so their heavy dependencies are only loaded when the corresponding key is requested.
 
 ### `bert.py`
 
@@ -99,15 +98,6 @@ class LITELLM_EMBEDDING_MODEL:   # litellm_embedding.py:25
     def batch_text_to_item_retrieval(self, queries: list[str], topk: int) -> list[list[str]]:  # litellm_embedding.py:198
 ```
 Reads `LITELLM_PROXY_BASE` / `LITELLM_PROXY_KEY` env vars (or constructor args). Corpus indexing uses async batched embedding with a configurable `concurrency` semaphore.
-
-### `milvus.py`
-
-```python
-class MILVUS_MODEL:   # milvus.py:156
-    def text_to_item_retrieval(self, query: str, topk: int) -> list[str]:         # milvus.py:348
-    def batch_text_to_item_retrieval(self, queries: list[str], topk: int) -> list[list[str]]:  # milvus.py:385
-```
-Configured entirely through `retrieval_config`. Requires `uri`, `db_name`, `collection_name`, a `fusion` dict with `method: "weighted"`, and a `searches` list. Batch retrieval is a sequential loop (no native Milvus batching).
 
 ### `lancedb.py`
 
@@ -138,12 +128,11 @@ Frozen dataclass with `field: str`, `query: str`, `boost: float`. Built by the v
 All backends except `bm25` and `bert`/`dense_transformer` accept a `retrieval_config: dict` to pass backend-specific settings. Notable sub-keys:
 
 - **LanceDB**: `db_uri`, `table_name`, `fusion.method` (must be `"weighted_rrf"`), `searches` list. Each search entry has `name`, `kind` (`fts_compat` | `fts_bm25s_compat` | `fts_fields` | `dense_vector`), `weight`, `topk`, and kind-specific keys.
-- **Milvus**: `uri`, `db_name`, `collection_name`, `fusion.method` (must be `"weighted"`), `searches` list. Search kinds: `bm25_compat`, `bm25_fields`, `dense`. Dense searches carry a `query_encoder` sub-dict with `model_name`, `pooling`, `query_template`, `max_length`, `padding_side`.
 - **Modal LanceDB**: `app_name`, `class_name`, plus any keys forwarded to the remote service's `retrieval_config`.
 - **LiteLLM**: `model_name`, `api_base`, `api_key`, `embedding_query_prefix`, `embedding_passage_prefix`, `batch_size`, `concurrency`, `dimensions`.
 
-### Internal search-spec dataclasses (`milvus.py`, `mcrs/lancedb/retriever.py`)
-Both backends use private frozen dataclasses (`_Bm25CompatSearch`, `_DenseSearch`, `_FtsCompatSearch`, `_DenseVectorSearch`, etc.) to represent parsed search entries. These are only used internally; callers interact only through `retrieval_config`.
+### Internal search-spec dataclasses (`mcrs/lancedb/retriever.py`)
+Uses private frozen dataclasses (`_FtsCompatSearch`, `_DenseVectorSearch`, etc.) to represent parsed search entries. These are only used internally; callers interact only through `retrieval_config`.
 
 ### Dense index on-disk format (`bert.py`, `litellm_embedding.py`)
 `{cache_dir}/dense/{model_name}/{index_name}/embeddings.pt` (L2-normalized `torch.Tensor`, shape `[N, D]`), plus `track_ids.json` and `config.json`. The index name is derived from corpus type, pooling, dtype, and a 12-char SHA1 of template strings so layout changes automatically invalidate the cache.
@@ -159,7 +148,6 @@ Both backends use private frozen dataclasses (`_Bm25CompatSearch`, `_DenseSearch
 3. The caller invokes `text_to_item_retrieval(query, topk)` or `batch_text_to_item_retrieval(queries, topk)` on the returned model.
 4. `DENSE_TRANSFORMER_MODEL`/`LITELLM_EMBEDDING_MODEL`: encodes the query, computes `torch.matmul(embeddings, query_emb)`, returns `topk` indices.
 5. `LANCEDB_MODEL`/`MODAL_LANCEDB_MODEL`: delegate immediately to `LanceDbRetriever.retrieve` or `LanceDbModalClient.query`.
-6. `MILVUS_MODEL`: builds `_SearchRequestSpec` list, calls `client.search` (single spec) or `client.hybrid_search` with `WeightedRanker` (multi-spec).
 
 ### v0+ Compiler path (`compiler_v0plus.py` → `Retriever` Protocol)
 
@@ -179,35 +167,31 @@ Both backends use private frozen dataclasses (`_Bm25CompatSearch`, `_DenseSearch
 - `mcrs.lancedb.retriever.LanceDbRetriever` — the actual implementation behind `LANCEDB_MODEL`.
 - `mcrs.lancedb.modal_client.LanceDbModalClient` — the Modal RPC client behind `MODAL_LANCEDB_MODEL`.
 - `mcrs.lancedb.indexing` — `connect_lancedb`, field-name constants, used inside `LanceDbRetriever`.
-- `mcrs.milvus.indexing` — `connect_milvus`, `BM25_COMPAT_CORPUS_FIELDS`, `BM25_EXPERIMENTAL_FIELDS`, `bm25_sparse_field_name`, etc.; used by `MILVUS_MODEL` and `LanceDbRetriever`.
-- `mcrs.retrieval_modules.bert._resolve_torch_dtype` — re-used by `milvus.py`'s `_DenseQueryEncoder`.
+- `mcrs.milvus.indexing` — legacy-named module; `LanceDbRetriever` and `mcrs/lancedb/indexing.py` reuse its `milvus_safe_field_name`/`EMBEDDING_FIELDS`/`build_track_document` helpers. See [Milvus indexing helpers](milvus.md).
 
 ### External libraries
 | Library | Used by |
 |---|---|
 | `bm25s` | `lancedb/retriever.py` (bm25s tokenization for `fts_bm25s_compat` kind) |
 | `datasets` (HuggingFace) | `bert.py`, `litellm_embedding.py` for catalog loading |
-| `torch`, `transformers` | `bert.py`, `milvus.py` (`_DenseQueryEncoder`) |
+| `torch`, `transformers` | `bert.py` |
 | `litellm` | `litellm_embedding.py` |
-| `pymilvus` | `milvus.py` (imported lazily inside `text_to_item_retrieval` for `AnnSearchRequest`, `WeightedRanker`) |
 | `lancedb` | `lancedb/retriever.py` (`BooleanQuery`, `MatchQuery`, `Occur`) |
 
 ---
 
 ## Gotchas
 
-1. **Two separate interfaces coexist.** The standalone `text_to_item_retrieval` / `batch_text_to_item_retrieval` interface is what `load_retrieval_module` returns. The v0+ `Retriever` Protocol (`search` / `search_embedding`) is used by the v0+ compiler and is implemented by `LanceDbRetriever` — none of `DENSE_TRANSFORMER_MODEL`, `MILVUS_MODEL`, etc. satisfy it.
+1. **Two separate interfaces coexist.** The standalone `text_to_item_retrieval` / `batch_text_to_item_retrieval` interface is what `load_retrieval_module` returns. The v0+ `Retriever` Protocol (`search` / `search_embedding`) is used by the v0+ compiler and is implemented by `LanceDbRetriever` — none of `DENSE_TRANSFORMER_MODEL`, `LITELLM_EMBEDDING_MODEL`, etc. satisfy it.
 
 2. **`LANCEDB_MODEL` and `MODAL_LANCEDB_MODEL` silently discard constructor arguments.** Both classes open with `del dataset_name, split_types, corpus_types, cache_dir, formatter` (`lancedb.py:22`, `modal_lancedb.py:21`). Passing non-default values for these parameters has no effect. All meaningful configuration comes through `retrieval_config`.
 
 3. **`BERT_MODEL` is a deprecated alias, not a distinct implementation.** It just hard-codes `torch_dtype="float32"` (previously the only supported dtype) and delegates to `DENSE_TRANSFORMER_MODEL`. New experiment configs should use `dense_transformer` directly.
 
-4. **`MILVUS_MODEL.batch_text_to_item_retrieval` is a serial loop** (`milvus.py:385`): no native Milvus batching. This is also true for `LANCEDB_MODEL` and `MODAL_LANCEDB_MODEL`.
+4. **`LANCEDB_MODEL.batch_text_to_item_retrieval` and `MODAL_LANCEDB_MODEL.batch_text_to_item_retrieval` are serial loops** — no native backend batching.
 
 5. **Dense index cache invalidation is content-addressed but partial.** `DENSE_TRANSFORMER_MODEL` and `LITELLM_EMBEDDING_MODEL` hash the query/document templates and a few config fields to produce the cache directory name. Changing `corpus_types` or `formatter.name` is also encoded, but changing the underlying HF dataset content without changing `dataset_name` will not bust the cache — stale embeddings will be reused silently.
 
 6. **LiteLLM proxy defaults.** `LITELLM_EMBEDDING_MODEL` defaults `api_base` to `http://localhost:4000` and `api_key` to `"sk-anything"` if the corresponding env vars (`LITELLM_PROXY_BASE`, `LITELLM_PROXY_KEY`) are unset. Missing a running proxy will cause a connection error only at index-build or query time, not at construction.
 
 7. **`LanceDbRetriever.text_to_item_retrieval` raises if `searches` is empty.** If the retriever was constructed without a `searches` list in the config (valid for the pure Protocol path), calling the legacy method raises `RuntimeError` with a diagnostic message pointing at the Protocol methods instead (`retriever.py:375`).
-
-8. **Milvus `pymilvus` hybrid-search imports are deferred.** `AnnSearchRequest` and `WeightedRanker` are imported inside `text_to_item_retrieval` when more than one search spec is configured (`milvus.py:363`). This avoids a hard dependency on a specific pymilvus version for single-search configurations, but can surface import errors late.
