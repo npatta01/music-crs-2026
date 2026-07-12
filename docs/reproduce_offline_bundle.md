@@ -35,31 +35,21 @@ downloads directly into place with no extraction needed.
 | `cache/tag_embedding_index/` | 69 MB | Tag vocabulary vectors |
 | `cache/litellm-repro/` | 18 MB | Frozen LLM response cache (Blind-B explanation generation) |
 | `.repro/reference/`, `.repro/submissions/`, `.repro/scripts/` | 8 MB | Frozen predictions, original submitted ZIPs, install/verify/rebuild scripts |
-| `anchor_labels_v1.1/` | 67 MB | LLM-judged anchoring-bug relabeling data (train+dev), migrated from the now-retired `anchor-labels-v1.1` GitHub release — unrelated to devset/Blind-A/B reproduction, kept here for single-source-of-truth |
+| `anchor_labels_v1.1/` | 67 MB | LLM-judged anchoring-bug relabeling data (train+dev) — unrelated to devset/Blind-A/B reproduction, kept here as a single source of truth |
 
-**Why two components are tarred and the rest aren't:** `cache/embedding` and
-`cache/state_extraction` are file-per-cache-key/file-per-turn caches — great
-for the *runtime* (read one key at a time), terrible for *distribution*
-(163,018 files combined). Shipping them as individual files on HF triggers
-server-side rate limiting on the per-file metadata-check endpoint badly
-enough that a full download can take hours instead of seconds. Packed as
-single `zstd -19` archives, the same content downloads in under 15 seconds
-combined and verifies byte-for-byte identical to the unpacked originals
-(`diff -rq`, zero differences across all 163,018 files). **Do not re-split
-these into individual files on HF** — that's what caused the problem.
-`state-extraction-cache-v1` and `deepseek-train-state-v1` (the GitHub
-releases that used to separately ship trainset's raw and materialized state)
-are retired — this bundle's `cache/state_extraction.tar.zst` is the single
-source of truth now, verified as a complete, faithful materialization
-(121,592/121,592 rows matched, 0 missing, 0 mismatched).
+`cache/embedding` and `cache/state_extraction` ship as single `zstd -19`
+archives rather than as their 163,018 individual files — extraction
+reproduces the originals byte-for-byte (`diff -rq`, zero differences).
+**Do not re-split these into individual files on HF**: downloading them as
+individual files triggers severe server-side rate limiting on HF's
+per-file metadata-check endpoint, turning a seconds-long download into
+hours.
 
 ## Path 1 — Frozen replay (byte-exact, works on `main`)
 
 ```bash
 git clone --branch main https://github.com/npatta01/music-conversational-music-recomender-2026.git
 cd music-conversational-music-recomender-2026
-git switch main && git pull --ff-only
-git merge-base --is-ancestor f519a83b0cb29ae60622116acc69b111aa20bc78 HEAD
 
 hf download Npatta01/music-crs-repro-2026 --repo-type dataset --local-dir .
 
@@ -95,12 +85,10 @@ hf download Npatta01/music-crs-repro-2026 --repo-type dataset --local-dir . \
 tar --use-compress-program=unzstd -xf cache/embedding.tar.zst
 ```
 
-**Avoid `--include` glob patterns across the whole repo** (e.g. don't try to
-list-and-filter everything in one call) — with the old many-small-file
-layout this triggered severe HF-side rate limiting; even after tarring the
-two big offenders, a wildcard `--include "cache/*"` still has to resolve the
-full remaining tree first. Downloading named paths (folders or the two
-tarballs) directly, as above, avoids that entirely.
+**Avoid `--include` glob patterns across the whole repo** (e.g. `--include
+"cache/*"`) — they resolve the full remaining tree before filtering, which
+is slow. Downloading named paths (folders or the two tarballs) directly, as
+above, avoids that entirely.
 
 ### Why frozen replay, not live rerun, is canonical
 
@@ -121,10 +109,9 @@ inference with zero credentials relies on two things in `mcrs/`:
 - A portable embedding cache key (`mcrs/embeddings/litellm_client.py`) that
   doesn't bake in a resolved `api_base` URL, so a cache lookup never needs a
   live endpoint resolved at all.
-- Lazy endpoint resolution, opt-in via `MCRS_LAZY_VLLM_ENDPOINT=1` (off by
-  default — a run without this flag set eagerly resolves a live Modal URL
-  before ever checking cache, so it needs Modal auth even on a pure cache
-  hit).
+- Lazy endpoint resolution, on by default: a vLLM endpoint is only resolved
+  into a live Modal URL on a genuine cache miss, never just to check the
+  cache. Set `MCRS_LAZY_VLLM_ENDPOINT=0` to force eager resolution instead.
 
 ```bash
 # activate_repro_env.sh sets MCRS_CACHE_DIR / MCRS_EMBEDDING_CACHE_DIR /
@@ -132,7 +119,6 @@ inference with zero credentials relies on two things in `mcrs/`:
 # all 6 credential vars — source it first even if you skipped Path 1:
 source .repro/scripts/activate_repro_env.sh
 
-MCRS_LAZY_VLLM_ENDPOINT=1 \
 python run_inference_blindset.py --tid state_ranker_v10_lgbm_blindset_A \
   --eval_dataset blindset_A --batch_size 8 --require_litellm_cache
 
@@ -147,12 +133,3 @@ blanked. `cache/embedding`'s keys cover the exact set each real,
 network-fenced run actually touches (33,257 keys, zero slack, zero gaps),
 which is what makes this possible without Modal having ever needed to see
 these three splits' traffic again.
-
-If you point this at an *older* copy of `cache/embedding` (e.g. one warmed
-before the portable cache key landed), its entries are keyed the old way —
-including the resolved `api_base` URL — and won't be found by the new
-namespace. That's a one-time re-key, not a re-embed: for every text the old
-key already has an entry, copy it to the new key (no live call), re-deriving
-the mapping from `mcrs/embeddings/litellm_client.py::cache_namespace_for_client`'s
-old vs. new payload shape. The bundle above already ships fully re-keyed, so
-this only matters if you're merging in your own older cache.
