@@ -34,7 +34,7 @@ Full detail per stage:
 |---|---:|---:|---:|---:|---:|---|
 | Devset | 0.4562 | — | — | — | — | Local evaluator ([leaderboard.md](leaderboard.md)) |
 | Blind-A | 0.4380 | 0.0313 | 0.7670 | 4.2000 | **0.5389** | CodaBench submission `797598` |
-| Blind-B | 0.2537 | 0.0315 | 0.7862 | 3.3000 | **0.3811** | CodaBench final leaderboard (rank 29) |
+| Blind-B | 0.2537 | 0.0315 | 0.7862 | 3.3000 | **0.3811** | CodaBench submission `819863` (rank 29, final leaderboard) |
 
 Devset extras (no CodaBench equivalent): Hit@20 0.6138, MRR 0.4102 — see [leaderboard.md](leaderboard.md) for deep-cutoff diagnostics (@50–@1000) and per-stage recall breakdowns.
 
@@ -44,26 +44,58 @@ Devset and Blind-A/B aren't directly comparable: devset is scored locally agains
 
 ---
 
-## Reproducing our results
+## Running inference
 
-Two independent things you can do, both documented for the organizers' code-review process.
-
-### Zero-credential reproduction (Blind-A/B)
-
-Self-contained — creates its own venv and installs its own deps, skipping the [Setup](#setup) section below entirely. No Modal, HF, or LLM credentials needed either way. Downloads a bundled cache (catalog, embeddings, extracted state, frozen LLM cache) from Hugging Face and runs Blind-B end to end:
+Runs locally, no live credentials needed. One-time setup, then run any split:
 
 ```bash
-scripts/repro_setup.sh   # downloads + verifies the offline bundle
-scripts/repro_run.sh     # runs Blind-B, no credentials, no Modal
+scripts/repro_setup.sh   # one-time: creates .venv, installs deps, downloads the offline
+                          # bundle (catalog, embeddings, extracted state, frozen LLM cache)
+                          # from Hugging Face -- the catalog it downloads is also what
+                          # training needs, so this is the right first step either way
+
+scripts/repro_run.sh                          # Blind-B (default), 80 sessions
+scripts/repro_run.sh --eval_dataset blindset_A   # 80 sessions
+scripts/repro_run.sh --eval_dataset devset       # 1000 sessions, so proportionally longer
 ```
 
-Verified under a network fence (Modal genuinely unreachable) across all of devset/Blind-A/Blind-B. See [docs/reproduce_offline_bundle.md](docs/reproduce_offline_bundle.md) for the byte-exact frozen-replay path vs. this live rerun, and how to check the reported score rather than just the prediction file.
+These commands never invoke Modal — this path is fully local, verified under a network fence (Modal genuinely unreachable) across all three splits. Within it, Modal is only ever a transparent, automatic fallback for specific embedding calls (e.g. the b1 bi-encoder and the CLAP/SigLIP-2 text encoders) when local GPU weights aren't available, and even that never fires here since the offline bundle pre-caches every query embedding these three splits touch. (Elsewhere in the repo — e.g. `docs/reproduce_reranker.md`'s FAST path, or CLAUDE.md's own command reference — Modal is also used to orchestrate live, credentialed runs at scale; that's a maintainer/retraining concern, not part of reproducing what we submitted.)
 
-### Training the models from scratch
+See [docs/reproduce_offline_bundle.md](docs/reproduce_offline_bundle.md) for the byte-exact frozen-replay path vs. this live rerun, and how to check the reported score rather than just the prediction file. Predictions land in `exp/inference/{split}/{tid}.json`. See [CLAUDE.md](CLAUDE.md) for the full command reference (including `run_pipeline.py` for faster staged local iteration) and shared-cache setup for local worktrees.
 
-Rebuilds the LightGBM reranker and/or the b1 bi-encoder — needs the [Setup](#setup) below plus Modal + the usual credentials:
+---
+
+## Submission file
+
+Our current active configs (all set `track_split_types: ["all_tracks"]`, so retrieval always searches the full 47k-track catalog — none subset it during inference):
+
+| Config | Role |
+|---|---|
+| `configs/state_ranker_v10_lgbm_blindset_A.yaml` | Blind-A submission — `models/reranker_v12_goalfree` |
+| `configs/state_ranker_v10_lgbm_blindset_B.yaml` | Blind-B submission — `models/reranker_v12_goalfree` |
+| `configs/state_ranker_v10_lgbm_devset.yaml` | Devset scoring — `models/reranker_v12_goalfree` |
+| `configs/state_ranker_v10_rrf_devset.yaml` | Explicit RRF/candidate-fusion baseline — no reranker |
+
+`prediction.json` is packaged with a `<tid> [split]` pair (split defaults to `blindset_A`):
 
 ```bash
+bash prepare_submission.sh state_ranker_v10_lgbm_blindset_A                # Blind-A (default split)
+bash prepare_submission.sh state_ranker_v10_lgbm_blindset_B blindset_B     # Blind-B
+```
+
+which copies `exp/inference/{split}/{tid}.json` → `submission/prediction.json` and zips it. Previously submitted zips are kept in [`submission/`](submission/).
+
+---
+
+## Training the models from scratch
+
+The one place real credentials are unavoidable — this is genuine GPU training work on Modal, not just running the shipped pipeline. Builds on the same venv `scripts/repro_setup.sh` above already creates; add credentials on top:
+
+```bash
+uvx hf auth login                # HF account with access to the TalkPlay Data Challenge collection
+uv run python -m modal setup     # Modal auth
+# and set OPENROUTER_API_KEY / DEEPINFRA_API_KEY / VLLM_API_KEY in .env
+
 # LightGBM reranker: rebuild retrieval traces/features, retrain on Modal.
 # See docs/reproduce_reranker.md for the full command sequence.
 
@@ -76,66 +108,6 @@ modal volume get scout-models /biencoder_qwen06_eN ./models/   # N = 1,2,3 (one 
 ```
 
 Offline bundle (catalog, caches, frozen traces, model weights): **https://huggingface.co/datasets/Npatta01/music-crs-repro-2026**
-
----
-
-## Submission file
-
-Our current active configs (all use `models/reranker_v12_goalfree`, committed in-repo; all set `track_split_types: ["all_tracks"]`, so retrieval always searches the full 47k-track catalog — none subset it during inference):
-
-| Config | Role |
-|---|---|
-| `configs/state_ranker_v10_lgbm_blindset_A.yaml` | Blind-A submission |
-| `configs/state_ranker_v10_lgbm_blindset_B.yaml` | Blind-B submission |
-| `configs/state_ranker_v10_lgbm_devset.yaml` | Devset scoring |
-| `configs/state_ranker_v10_rrf_devset.yaml` | Explicit RRF/candidate-fusion baseline (no reranker) |
-
-`prediction.json` is packaged with:
-
-```bash
-bash prepare_submission.sh state_ranker_v10_lgbm_blindset_B blindset_B
-```
-
-which copies `exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json` → `submission/prediction.json` and zips it. Previously submitted zips are kept in [`submission/`](submission/).
-
----
-
-## Setup
-
-Needed for the live/credentialed paths — [Running inference](#running-inference) below, and [Training the models from scratch](#training-the-models-from-scratch) above. The zero-credential reproduction path above is self-contained and skips this entirely.
-
-```bash
-uv venv .venv --python=3.12
-source .venv/bin/activate
-uv pip install -e .
-
-uvx hf auth login   # HF account with access to the TalkPlay Data Challenge collection
-```
-
-Cloud GPU runs (Modal):
-
-```bash
-uv run python -m modal setup
-uv run modal run other/modal_get_started.py   # smoke test
-```
-
----
-
-## Running inference
-
-```bash
-# Devset — current goal-free LGBM reranker
-python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset --batch_size 8
-
-# Blind-A / Blind-B submission paths
-python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_A --eval_dataset blindset_A --batch_size 8
-python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_B --eval_dataset blindset_B --batch_size 8
-
-# Faster local iteration: retrieval once, LambdaMART replay/eval from the saved trace
-python run_pipeline.py --config configs/pipelines/state_ranker_v10_lgbm_devset.yaml
-```
-
-Predictions land in `exp/inference/{split}/{tid}.json`. See [CLAUDE.md](CLAUDE.md) for the full command reference and shared-cache setup for local worktrees.
 
 ---
 
