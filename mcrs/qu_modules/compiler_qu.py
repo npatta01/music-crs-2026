@@ -32,7 +32,7 @@ special-case QUs that expose `compile_track_ids(...)` and skip the
 
 Inference itself does NOT touch HuggingFace — `LanceDbCatalog` reads the
 prebuilt LanceDB locally. For smoke / unit tests, inject `_overrides` to
-swap in fakes (see `tests/test_v0plus_compiler_qu.py`).
+swap in fakes (see `tests/test_compiler_qu.py`).
 """
 
 from __future__ import annotations
@@ -86,7 +86,7 @@ def _resolve_prompt_fns(prompt_version: str | None):
     raise ValueError(f"unknown extractor prompt_version: {prompt_version!r}")
 from mcrs.embeddings.base import EmbeddingClient
 from mcrs.embeddings.qwen3_embedding import Qwen3EmbeddingClient
-from mcrs.qu_modules.compiler_v0plus import (
+from mcrs.qu_modules.compiler import (
     CentroidOnlyBranch,
     CompileResult,
     CompilerConfig,
@@ -95,8 +95,8 @@ from mcrs.qu_modules.compiler_v0plus import (
 )
 from mcrs.qu_modules.user_embeddings import UserEmbeddings
 from mcrs.qu_modules.fuzzy_matcher import FuzzyMatcher, RapidfuzzCatalogMatcher
-from mcrs.qu_modules.resolver_v0plus import V0PlusResolver
-from mcrs.qu_modules.v0plus_catalog import CompilerCatalog
+from mcrs.qu_modules.resolver import V0PlusResolver
+from mcrs.qu_modules.catalog import CompilerCatalog
 from mcrs.retrieval_modules.base import Retriever
 
 logger = logging.getLogger(__name__)
@@ -1344,7 +1344,7 @@ def build_v0plus_compiler_qu(
                 "v0+ catalog requires a LanceDB URI. Set qu_kwargs.lancedb.db_uri "
                 "or the MCRS_LANCEDB_URI environment variable."
             )
-        from mcrs.qu_modules.v0plus_catalog_lance import LanceDbCatalog
+        from mcrs.qu_modules.catalog_lance import LanceDbCatalog
         eager_fields = lance_cfg.get("eager_vector_fields")
         if eager_fields is None:
             # Eager-load every vector field the compiler does per-anchor
@@ -1354,7 +1354,7 @@ def build_v0plus_compiler_qu(
             # turn.
             #
             # Base set = the compiler's built-in default dense branches
-            # (compiler_v0plus.py, used when a config declares no explicit
+            # (compiler.py, used when a config declares no explicit
             # dense_branches) plus the 0.6B metadata field the fallback anchor
             # centroid queries directly.
             eager_fields = [

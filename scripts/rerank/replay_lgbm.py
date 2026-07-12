@@ -341,7 +341,7 @@ def run(args: argparse.Namespace) -> None:
         load_sessions,
         load_user_cf,
     )
-    from features_v9 import TurnContext, compute_turn_features  # noqa: WPS433
+    from features import TurnContext, compute_turn_features  # noqa: WPS433
     from mcrs.qu_modules.tag_resolver import TagEmbeddingIndex, TieredTagResolver  # noqa: WPS433
 
     paths = model_bundle_paths(args.model_ref)
@@ -382,7 +382,7 @@ def run(args: argparse.Namespace) -> None:
         # (cat.v, loaded via VECTOR_FIELDS) — no npy. Only the per-turn b1 QUERY vec
         # is provided here (offline/replay path; live serving sets it from the
         # dense.b1 branch query embedding).
-        from features_v9 import load_b1_query_vectors
+        from features import load_b1_query_vectors
         ctx.b1_qvec = load_b1_query_vectors(
             args.b1_qvec_npy, f"exp/ground_truth/{args.split}.json")
         print(f"loaded b1 query vecs: {len(ctx.b1_qvec)} (docs via cat.v b1_vstructpt_4b)", flush=True)

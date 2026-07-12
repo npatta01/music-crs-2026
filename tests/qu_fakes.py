@@ -1,7 +1,8 @@
 """In-memory fakes for the v0+ Catalog and Retriever Protocols.
 
-Used by `test_v0plus_resolver.py` and `test_v0plus_compiler.py`. Kept here
-(not in `mcrs/`) so production code can't accidentally import them.
+Used by `test_compiler.py`, `test_compiler_qu.py`, `test_fuzzy_matcher.py`,
+and `test_state_ranker_qu.py`. Kept here (not in `mcrs/`) so production code
+can't accidentally import them.
 
 The fakes are intentionally narrow — only the catalog/retriever surface
 the Resolver and Compiler actually call. If a test fails because the fake

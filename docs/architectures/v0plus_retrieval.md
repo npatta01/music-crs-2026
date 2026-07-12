@@ -1,7 +1,7 @@
 # v0+ Retrieval Pipeline — Retrievers, Flow & Fusion
 
 > **Scope:** the canonical conversational-retrieval path used by every `v0plus_compiler_*` config.
-> **Source of truth:** `mcrs/qu_modules/compiler_v0plus.py` (+ `resolver_v0plus.py`, `post_fusion_features.py`, `cross_encoder_reranker.py`, `v0plus_catalog_lance.py`).
+> **Source of truth:** `mcrs/qu_modules/compiler.py` (+ `resolver.py`, `post_fusion_features.py`, `cross_encoder_reranker.py`, `catalog_lance.py`).
 > **Reflects:** code at `1a8aee5` (#84), including the current extractor prompt + new retriever branches.
 > Last verified: 2026-06-01.
 
@@ -11,19 +11,19 @@ This doc answers three things: **what the retrievers are**, **how a conversation
 
 ## 1. End-to-end flow
 
-A multi-turn conversation becomes a ranked top-1000 track list through these ordered stages. The whole thing runs inside `V0PlusCompiler._compile()` (`compiler_v0plus.py`), called once per turn.
+A multi-turn conversation becomes a ranked top-1000 track list through these ordered stages. The whole thing runs inside `V0PlusCompiler._compile()` (`compiler.py`), called once per turn.
 
 ```
 multi-turn conversation (session_memory)
   │
-  1. EXTRACT   LiteLLMExtractor → ConversationStateV0Plus   (compiler_v0plus_qu.py)
+  1. EXTRACT   LiteLLMExtractor → ConversationStateV0Plus   (compiler_qu.py)
   │              LLM (current prompt) emits structured intent/entities/constraints
   │
-  2. RESOLVE   V0PlusResolver → ResolvedConversationState   (resolver_v0plus.py)
+  2. RESOLVE   V0PlusResolver → ResolvedConversationState   (resolver.py)
   │              fuzzy-match surface names → catalog artist/track IDs;
   │              resolve rejections, collect played_track_ids, resolved_targets
   │
-  3. COMPILE   V0PlusCompiler._compile(rs, user_id)          (compiler_v0plus.py)
+  3. COMPILE   V0PlusCompiler._compile(rs, user_id)          (compiler.py)
   │   ├─ 3a. candidate mask     release-date / year pre-filter → allowed track IDs
   │   ├─ 3b. build queries      BM25 field clauses + per-branch dense query strings
   │   ├─ 3c. RUN BRANCHES       1 BM25 + N dense ANN + M centroid ANN + lookup pools
@@ -154,6 +154,6 @@ See [`leaderboard.md`](../../leaderboard.md) for the full devset ranking and [`s
 ## Pointers
 
 - Per-file internals: [`docs/codebase/modules/qu_modules.md`](../codebase/modules/qu_modules.md), [`retrieval_modules.md`](../codebase/modules/retrieval_modules.md)
-- Catalog / embedding columns: [`docs/data.md`](../data.md), `mcrs/qu_modules/v0plus_catalog_lance.py`
+- Catalog / embedding columns: [`docs/data.md`](../data.md), `mcrs/qu_modules/catalog_lance.py`
 - Trace diagnostics: [`scripts/branch_diagnostics.py`](../../scripts/branch_diagnostics.py)
 - Verified-bugs audit: [`docs/codebase/bugs.md`](../codebase/bugs.md)

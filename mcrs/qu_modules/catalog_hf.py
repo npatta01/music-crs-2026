@@ -62,7 +62,7 @@ class HFTalkPlayCatalog:
     """In-memory CompilerCatalog used by unit tests.
 
     Production v0+ inference reads from `LanceDbCatalog`
-    (`mcrs/qu_modules/v0plus_catalog_lance.py`); this class is retained for
+    (`mcrs/qu_modules/catalog_lance.py`); this class is retained for
     synthetic-data tests via `from_rows`.
     """
 

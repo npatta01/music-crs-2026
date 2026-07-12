@@ -2,11 +2,11 @@
 
 This is the contract the Resolver and Compiler use to talk to the underlying
 track catalog (metadata + precomputed embeddings). Production wires
-`LanceDbCatalog` (`mcrs/qu_modules/v0plus_catalog_lance.py`), which opens the
+`LanceDbCatalog` (`mcrs/qu_modules/catalog_lance.py`), which opens the
 same LanceDB table used for retrieval and builds per-track caches at init.
 Tests use the `HFTalkPlayCatalog.from_rows(...)` synthetic-data fake
-(`mcrs/qu_modules/v0plus_catalog_hf.py`) or the smaller `DictCatalog` fake
-in `tests/v0plus_fakes.py`.
+(`mcrs/qu_modules/catalog_hf.py`) or the smaller `DictCatalog` fake
+in `tests/qu_fakes.py`.
 
 Keeping the contract narrow lets us swap catalog implementations (in-memory
 dict for tests, LanceDB-backed for production) without touching Resolver /

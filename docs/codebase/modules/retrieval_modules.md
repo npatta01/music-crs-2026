@@ -7,7 +7,7 @@
 There are two distinct generations of interface in this group:
 
 - **Legacy standalone interface** (`text_to_item_retrieval` / `batch_text_to_item_retrieval`): exposed by each concrete class for historical baselines and tools.
-- **v0+ Retriever Protocol** (`search` / `search_embedding` with `FieldQuery` clauses): defined in `base.py`, implemented by `mcrs/lancedb/retriever.py::LanceDbRetriever`. The v0+ compiler (`mcrs/qu_modules/compiler_v0plus.py`) uses only this protocol.
+- **v0+ Retriever Protocol** (`search` / `search_embedding` with `FieldQuery` clauses): defined in `base.py`, implemented by `mcrs/lancedb/retriever.py::LanceDbRetriever`. The v0+ compiler (`mcrs/qu_modules/compiler.py`) uses only this protocol.
 
 The factory function `load_retrieval_module` (in `__init__.py`) still selects and instantiates a backend by string key for tests/tooling. It is no longer called by `CRS_BASELINE`.
 
@@ -38,7 +38,7 @@ class FieldQuery:          # base.py:34
     query: str
     boost: float = 1.0
 ```
-One field-targeted BM25 clause for the v0+ Retriever Protocol. Validates all three fields in `__post_init__`. Used by both the v0+ compiler (`compiler_v0plus.py`) and tests.
+One field-targeted BM25 clause for the v0+ Retriever Protocol. Validates all three fields in `__post_init__`. Used by both the v0+ compiler (`compiler.py`) and tests.
 
 ```python
 @runtime_checkable
@@ -161,7 +161,7 @@ Both backends use private frozen dataclasses (`_Bm25CompatSearch`, `_DenseSearch
 5. `LANCEDB_MODEL`/`MODAL_LANCEDB_MODEL`: delegate immediately to `LanceDbRetriever.retrieve` or `LanceDbModalClient.query`.
 6. `MILVUS_MODEL`: builds `_SearchRequestSpec` list, calls `client.search` (single spec) or `client.hybrid_search` with `WeightedRanker` (multi-spec).
 
-### v0+ Compiler path (`compiler_v0plus.py` → `Retriever` Protocol)
+### v0+ Compiler path (`compiler.py` → `Retriever` Protocol)
 
 1. `V0PlusCompiler.__init__` receives a `retriever: Retriever` (always a `LanceDbRetriever` instance in practice) and introspects `supported_text_fields` / `supported_vector_fields` at construction time.
 2. Per turn, `compile(state, ...)` calls:

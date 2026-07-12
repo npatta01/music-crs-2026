@@ -39,7 +39,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from mcrs.litellm_cache import setup_litellm_cache  # noqa: E402
 from mcrs.conversation_state.schema import ConversationStateV0Plus  # noqa: E402
-from mcrs.qu_modules.compiler_v0plus_qu import (  # noqa: E402
+from mcrs.qu_modules.compiler_qu import (  # noqa: E402
     LiteLLMExtractor,
     extract_with_cache_context,
 )

@@ -137,5 +137,5 @@ generalizable replacement** for that crutch, recovering prod-level nDCG without 
 - Doc render: [`scripts/rerank/build_doc_corpus.py`](../../scripts/rerank/build_doc_corpus.py) — the LLM "known for" lines are the committed cache [`data/artist_knownfor.json`](../../data/artist_knownfor.json) (~1.5M, 8983 artists); `doc_corpus.jsonl` (23M) and the b1 doc vectors are derived from it + the catalog and stay gitignored
 - Encoder: [`mcrs/embeddings/qwen3_embedding.py`](../../mcrs/embeddings/qwen3_embedding.py) (last-token pool, INSTRUCT, L2)
 - Train: [`scripts/rerank/modal_train_biencoder.py`](../../scripts/rerank/modal_train_biencoder.py)
-- Serve: [`scripts/rerank/b1_live.py`](../../scripts/rerank/b1_live.py) · feature: [`scripts/rerank/features_v9.py`](../../scripts/rerank/features_v9.py) (`b1_cos`)
+- Serve: [`scripts/rerank/b1_live.py`](../../scripts/rerank/b1_live.py) · feature: [`scripts/rerank/features.py`](../../scripts/rerank/features.py) (`b1_cos`)
 - Weights: `models/biencoder_variant_v_struct_pt_l2048_qwen3-embedding-4b/`

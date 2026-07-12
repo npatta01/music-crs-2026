@@ -31,7 +31,7 @@ class EmbeddingClient(Protocol):
     def embed_batch(self, texts: list[str]) -> list[list[float]]: ...
 ```
 
-Runtime-checkable `Protocol`. Any object that implements `embed_batch` satisfies it. All three concrete clients conform to this interface. Used as a type annotation in `compiler_v0plus.py:43`, `compiler_v0plus_qu.py:65`, and `retrieval_services/service.py:5`.
+Runtime-checkable `Protocol`. Any object that implements `embed_batch` satisfies it. All three concrete clients conform to this interface. Used as a type annotation in `compiler.py:43`, `compiler_qu.py:65`, and `retrieval_services/service.py:5`.
 
 ---
 
@@ -115,7 +115,7 @@ All three return an empty string when all fields are absent (matching upstream b
 
 ### Backend selection in YAML config (`encoder` block)
 
-The `compiler_v0plus_qu.py` factory reads an `encoder` dict from the experiment YAML config:
+The `compiler_qu.py` factory reads an `encoder` dict from the experiment YAML config:
 
 ```yaml
 encoder:
@@ -136,7 +136,7 @@ encoder:
   modal_cls_name: "Qwen3Encoder"
 ```
 
-Unknown `backend` values raise `ValueError` at construction time (`compiler_v0plus_qu.py:635`).
+Unknown `backend` values raise `ValueError` at construction time (`compiler_qu.py:635`).
 
 ### Module `__init__.py` exports
 
@@ -152,9 +152,9 @@ Only `EmbeddingClient` and the canonical `LiteLLMEmbeddingClient` (from `litellm
 
 ## Internal flow
 
-1. **Config read** (`compiler_v0plus_qu.py:599–637`): the factory function inspects `encoder.backend` and instantiates the appropriate concrete client.
-2. **Client passed to compiler**: the resulting `EmbeddingClient` is stored on `V0PlusQUCompiler.encoder` (`compiler_v0plus_qu.py:305`).
-3. **Query encoding** (`compiler_v0plus.py:356`): `compiler.compile()` calls `self.encoder.embed_batch([query_string])[0]` to get a single float vector.
+1. **Config read** (`compiler_qu.py:599–637`): the factory function inspects `encoder.backend` and instantiates the appropriate concrete client.
+2. **Client passed to compiler**: the resulting `EmbeddingClient` is stored on `V0PlusQUCompiler.encoder` (`compiler_qu.py:305`).
+3. **Query encoding** (`compiler.py:356`): `compiler.compile()` calls `self.encoder.embed_batch([query_string])[0]` to get a single float vector.
 4. **Backend dispatch**:
    - `local`: `Qwen3EmbeddingClient._ensure_loaded()` lazy-loads the HF model; `_encode_chunk()` tokenises, runs forward pass, last-token-pools, L2-normalises.
    - `litellm`: `LiteLLMEmbeddingClient.embed_batch()` splits into `batch_size` sub-lists, calls `litellm.embedding(**kwargs)` per chunk, extracts `item["embedding"]` or `item.embedding`.
@@ -171,8 +171,8 @@ Additionally, `RetrievalService` (`retrieval_services/service.py:8`) optionally 
 
 | Module | How used |
 |---|---|
-| `mcrs/qu_modules/compiler_v0plus_qu.py` | Imports all three client classes; builds the encoder via a factory. |
-| `mcrs/qu_modules/compiler_v0plus.py` | Imports `EmbeddingClient` for type annotation; calls `encoder.embed_batch`. |
+| `mcrs/qu_modules/compiler_qu.py` | Imports all three client classes; builds the encoder via a factory. |
+| `mcrs/qu_modules/compiler.py` | Imports `EmbeddingClient` for type annotation; calls `encoder.embed_batch`. |
 | `mcrs/retrieval_services/service.py` | Imports `EmbeddingClient`; stores an optional client; exposes `embed_batch`. |
 | `modal/app.py` | Imports `LiteLLMEmbeddingClient` for the CPU-inference path. |
 
@@ -192,7 +192,7 @@ Additionally, `RetrievalService` (`retrieval_services/service.py:8`) optionally 
 
 2. **Catalog vectors are un-normalized float32; query vectors are L2-normalized.** `Qwen3EmbeddingClient._encode_chunk()` applies `F.normalize(..., p=2)` to queries, but the catalog's `metadata-qwen3_embedding_0.6b` column was stored without normalization (per `qwen3_embedding.py:27–28`). True cosine similarity requires normalizing both sides at compare time; LanceDB's cosine metric handles this, but any direct dot-product comparison would be asymmetric.
 
-3. **`encoding_format="float"` is mandatory for DeepInfra** (`litellm_client.py:30`). Omitting it returns HTTP 422. The factory in `compiler_v0plus_qu.py:622` sets it as the default for the `litellm` backend.
+3. **`encoding_format="float"` is mandatory for DeepInfra** (`litellm_client.py:30`). Omitting it returns HTTP 422. The factory in `compiler_qu.py:622` sets it as the default for the `litellm` backend.
 
 4. **`query_instruct` default is intentionally empty.** `DEFAULT_QUERY_INSTRUCT = ""` (`qwen3_embedding.py:56`). The catalog was built without an instruct prefix, so enabling `DEFAULT_QUERY_INSTRUCT_FOR_MUSIC_CRS` for queries would create an asymmetric embedding space. It is retained as an opt-in for experiments only.
 

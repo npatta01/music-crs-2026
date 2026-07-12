@@ -33,7 +33,7 @@ from mcrs.conversation_state.schema import (
     ConversationStateV0Plus,
 )
 from mcrs.qu_modules.fuzzy_matcher import FuzzyMatcher
-from mcrs.qu_modules.v0plus_catalog import CompilerCatalog
+from mcrs.qu_modules.catalog import CompilerCatalog
 
 
 _EXACT_TRACK_ARTIST_CONSTRAINED_MIN_SCORE = 90

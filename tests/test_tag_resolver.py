@@ -41,7 +41,7 @@ def make_resolver(**kwargs) -> TieredTagResolver:
 
 
 def test_normalizer_matches_compiler():
-    from mcrs.qu_modules.compiler_v0plus import V0PlusCompiler
+    from mcrs.qu_modules.compiler import V0PlusCompiler
 
     for value in ("Post-Hardcore", "R&B / Soul", "  Alt  Rock ", "EDM!!!"):
         assert catalog_tag_key(value) == V0PlusCompiler._catalog_tag_key(value)

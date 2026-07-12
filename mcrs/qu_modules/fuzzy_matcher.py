@@ -12,7 +12,7 @@ Two impls in this file:
   lowercased name → id maps on init so every `match()` call hits in-memory
   data, not the catalog.
 
-For tests, see `tests/v0plus_fakes.py` — the `DictCatalog` is small enough
+For tests, see `tests/qu_fakes.py` — the `DictCatalog` is small enough
 that wrapping it in `RapidfuzzCatalogMatcher` IS the test fake.
 """
 
@@ -22,7 +22,7 @@ from typing import Protocol, runtime_checkable
 
 from rapidfuzz import fuzz, process
 
-from mcrs.qu_modules.v0plus_catalog import CompilerCatalog
+from mcrs.qu_modules.catalog import CompilerCatalog
 
 
 VALID_ENTITY_TYPES = frozenset({"artist", "track", "album"})

@@ -1,7 +1,7 @@
 """Online LightGBM (v10) reranker — serves the trained LambdaMART in-pipeline.
 
 Consumes the SAME trace payload the offline feature builder reads and computes
-features via the SAME `compute_turn_features` (scripts/rerank/features_v9.py —
+features via the SAME `compute_turn_features` (scripts/rerank/features.py —
 the feature builder kept its v9 module name across the v10 model bump),
 so train/serve drift is structurally impossible. Hooked by V0PlusCompilerQU
 right after trace assembly; replaces the RRF order over the branch-pool union.
@@ -877,7 +877,7 @@ class LgbmOnlineReranker:
         from mcrs.qu_modules.tag_resolver import TagEmbeddingIndex, TieredTagResolver
 
         from build_features import Catalog, EmbedMemo, NpzEmbedStore, load_user_cf
-        from features_v9 import TurnContext
+        from features import TurnContext
         add_elapsed("import_feature_helpers", start)
 
         start = time.perf_counter()
@@ -979,7 +979,7 @@ class LgbmOnlineReranker:
                user_id: str | None, hard_drop: set[str],
                fallback: list[str]) -> list[str]:
         """Re-order the branch-pool union and keep hard drops out of fallbacks."""
-        from features_v9 import compute_turn_features
+        from features import compute_turn_features
         dropped = {str(track_id) for track_id in hard_drop}
         pin_limit = int(getattr(self, "exact_pin_top_n", 2))
         min_confidence = float(getattr(self, "exact_pin_min_confidence", 90.0))

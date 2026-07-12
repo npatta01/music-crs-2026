@@ -227,7 +227,7 @@ def _compute_rerank_feature_rows(
     from mcrs.qu_modules.lgbm_reranker import session_entry_from_meta
 
     from build_features import constraint_feature_row
-    from features_v9 import compute_turn_features
+    from features import compute_turn_features
 
     ctx = getattr(reranker, "ctx", None)
     if ctx is None:

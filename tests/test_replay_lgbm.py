@@ -384,7 +384,7 @@ def test_run_flushes_msg_store_at_shutdown(tmp_path, monkeypatch):
     )
     monkeypatch.setitem(
         sys.modules,
-        "features_v9",
+        "features",
         SimpleNamespace(
             TurnContext=lambda *args, **kwargs: SimpleNamespace(cat=args[0]),
             compute_turn_features=lambda row, ctx, gt=None: ([{"track_id": "t1", "score": 1.0}], True),
@@ -503,7 +503,7 @@ def test_run_filters_hard_drop_when_feature_rows_empty(tmp_path, monkeypatch):
     )
     monkeypatch.setitem(
         sys.modules,
-        "features_v9",
+        "features",
         SimpleNamespace(
             TurnContext=lambda *args, **kwargs: SimpleNamespace(cat=args[0]),
             compute_turn_features=lambda row, ctx, gt=None: ([], False),

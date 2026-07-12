@@ -1,6 +1,6 @@
 """Inject real b1_cos into a feature dataset using CACHED 4B v_struct_pt embeddings,
 keyed by GROUND-TRUTH-FILE order (the authoritative mapping used by
-features_v9.load_b1_query_vectors), NOT trace order.
+features.load_b1_query_vectors), NOT trace order.
 
 Why not scripts/rerank/scout_from_cache.py: that script keys the cached query
 matrix Q positionally against a specific trace's gt-filtered turns. When the

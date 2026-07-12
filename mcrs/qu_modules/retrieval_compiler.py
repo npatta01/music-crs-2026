@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from mcrs.qu_modules.compiler_v0plus import CompileResult
+from mcrs.qu_modules.compiler import CompileResult
 
 
 def retrieval_trace_from_compile_result(result: CompileResult) -> dict[str, Any]:

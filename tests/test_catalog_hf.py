@@ -5,8 +5,8 @@ from __future__ import annotations
 from mcrs.conversation_state.schema import (
     HardFilter,
 )
-from mcrs.qu_modules.v0plus_catalog import CompilerCatalog
-from mcrs.qu_modules.v0plus_catalog_hf import (
+from mcrs.qu_modules.catalog import CompilerCatalog
+from mcrs.qu_modules.catalog_hf import (
     DEFAULT_VECTOR_COLUMN,
     HFTalkPlayCatalog,
 )

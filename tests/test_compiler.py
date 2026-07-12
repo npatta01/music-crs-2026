@@ -14,20 +14,20 @@ from mcrs.conversation_state.schema import (
     MentionedEntity,
     TrackFeedback,
 )
-from mcrs.qu_modules.compiler_v0plus import (
+from mcrs.qu_modules.compiler import (
     CentroidOnlyBranch,
     CompilerConfig,
     DenseBranch,
     V0PlusCompiler,
 )
 from mcrs.qu_modules.fuzzy_matcher import RapidfuzzCatalogMatcher
-from mcrs.qu_modules.resolver_v0plus import (
+from mcrs.qu_modules.resolver import (
     ResolvedConversationState,
     ResolvedRejection,
     ResolvedTarget,
     V0PlusResolver,
 )
-from tests.v0plus_fakes import DictCatalog, FakeEmbeddingClient, FakeRetriever
+from tests.qu_fakes import DictCatalog, FakeEmbeddingClient, FakeRetriever
 
 
 # ---------------------------------------------------------------------
@@ -879,7 +879,7 @@ def test_compiler_respects_custom_dense_branches_config():
             MentionedEntity(type="artist", value="Morphine", sentiment=1),
         ],
     )
-    from mcrs.qu_modules.compiler_v0plus import DenseBranch
+    from mcrs.qu_modules.compiler import DenseBranch
     cfg = CompilerConfig(
         dense_branches=[
             DenseBranch(vector_field="metadata_qwen3_embedding_0_6b"),
@@ -923,7 +923,7 @@ def test_compiler_skips_dense_branches_for_unsupported_vector_fields():
 def _branch(**overrides):
     """Shorthand for a DenseBranch — keeps tests readable when the branch
     list contains many entries differing only in encoder_id / query_id."""
-    from mcrs.qu_modules.compiler_v0plus import DenseBranch
+    from mcrs.qu_modules.compiler import DenseBranch
     defaults = dict(vector_field="metadata_qwen3_embedding_0_6b")
     defaults.update(overrides)
     return DenseBranch(**defaults)
