@@ -1,280 +1,127 @@
-# Music Conversational Recommendation Challenge — Baselines
+# Music-CRS — Our RecSys 2026 Music Conversational Recommendation Submission
 
-Official evaluation framework for the **The RecSys Challenge 2026 Conversational Music Recommendation System Challenge**. Music-CRS focuses on the evolving landscape of music discovery, where static recommendation lists are being replaced by dynamic, conversational interactions. As users increasingly interact with AI through natural language, there is a critical need for systems that can seamlessly integrate Natural Language Understanding (NLU) with high-precision Recommender Systems (RecSys). This challenge aims to push the boundaries of how AI understands nuanced user preferences, explores musical tastes through dialogue, and provides contextually relevant track recommendations.
+Our entry to the **[RecSys 2026 Music Conversational Recommendation Challenge](https://nlp4musa.github.io/music-crs-challenge/)**: given a multi-turn conversation, retrieve 20 tracks from a 47k-track catalog and generate a natural-language response explaining them.
 
-This repository provides standardized tools to evaluate music recommendation systems on the **TalkPlay Data Challenge** datasets. Participants must follow the strict inference JSON format specified below to ensure their submissions can be properly evaluated.
+Built on top of the organizers' official baseline/evaluation framework (task format, dataset loaders, inference contract). Everything past the original two-stage BM25/BERT + Llama-3.2-1B baseline — the state extraction, multi-branch retrieval, RRF fusion, learned reranker, and response generation — is our own pipeline, described below.
 
-- **ACM RecSys Website**: [https://www.recsyschallenge.com/](https://www.recsyschallenge.com/)
-- **Challenge Website**: [https://nlp4musa.github.io/music-crs-challenge/](https://nlp4musa.github.io/music-crs-challenge/)
-- **Challenge datasets**: [talkpl-ai/talkplay-data-challenge](https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge)
-
-## Timeline
-
-| Date | Milestone |
-|------|-----------|
-| 31 March 2026 | Website online |
-| 10 April 2026 | Start RecSys Challenge — Release dataset (Train, Development, Blind A) |
-| 15 April 2026 | Submission System Open — Leaderboard live (with Blind A dataset) |
-| 15 June 2026 | Blind Dataset B released, Activate submission system for Blind B dataset |
-| 30 June 2026 | End RecSys Challenge |
-| 6 July 2026 | Final Leaderboard & Winners — EasyChair open for submissions |
-| 9 July 2026 | Upload code of the final predictions |
-| 20 July 2026 | Paper Submission Due |
-| 3 August 2026 | Paper Acceptance Notifications |
-| 10 August 2026 | Camera-Ready Papers |
-| September 2026 | RecSys Challenge Workshop at ACM RecSys 2026 |
+- **Challenge site**: https://nlp4musa.github.io/music-crs-challenge/
+- **ACM RecSys Challenge**: https://www.recsyschallenge.com/2026
+- **Datasets**: [TalkPlayData-Challenge collection](https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge)
+- **Devset leaderboard (ours)**: [leaderboard.md](leaderboard.md) — NDCG@20 0.4562, Hit@20 0.6138
+- **Blind-B submission (CodaBench `819863`)**: composite score 0.38
 
 ---
 
-## Baseline System
+## Approach overview
 
-The system operates on a **two-stage pipeline**:
-1. **RecSys** — Retrieve candidate tracks matching user preferences
-2. **LLM** — Generate a natural language response explaining the recommendations
+Each turn compiles the running conversation into a structured state, retrieves candidates through several independent retrievers, fuses and reranks them, and generates a response for the top pick.
 
-### Core Components
+![Our submission pipeline: state extraction, resolve, multi-branch retrieval, weighted RRF fusion, LightGBM reranker, response generation](docs/architectures/submission_pipeline.svg)
 
-| Component | Description | Module |
-|---|---|---|
-| LLM | Generates natural language responses (Llama-3.2-1B-Instruct) | `mcrs/lm_modules/` |
-| RecSys | Retrieves relevant tracks via BM25 (sparse) or BERT (dense) | `mcrs/retrieval_modules/` |
-| User DB | Stores user profiles (user_id, age, gender, country) | `mcrs/db_user/user_profile.py` |
-| Item DB | Contains track metadata (name, artist, album, tags, release date) | `mcrs/db_item/music_catalog.py` |
+Full detail per stage:
 
----
-
-## Challenge Resources
-
-- **Dataset collection**: [TalkPlayData-Challenge](https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge)
-- **Conversation Dataset**: [TalkPlayData-Challenge-Dataset](https://huggingface.co/datasets/talkpl-ai/TalkPlayData-Challenge-Dataset)
-- **Track Metadata**: [TalkPlayData-Challenge-Track-Metadata](https://huggingface.co/datasets/talkpl-ai/TalkPlayData-Challenge-Track-Metadata)
-- **User Profiles**: [TalkPlayData-Challenge-User-Metadata](https://huggingface.co/datasets/talkpl-ai/TalkPlayData-Challenge-User-Metadata)
-- **Blind A Dataset**: [TalkPlayData-Challenge-Blind-A](https://huggingface.co/datasets/talkpl-ai/TalkPlayData-Challenge-Blind-A)
-- **Blind B Dataset**: [TalkPlayData-Challenge-Blind-B](https://huggingface.co/datasets/talkpl-ai/TalkPlayData-Challenge-Blind-B)
+- [docs/architectures/v0plus_retrieval.md](docs/architectures/v0plus_retrieval.md) — retriever branches, RRF fusion math, post-fusion features
+- [docs/architectures/session_state.md](docs/architectures/session_state.md) — the state schema and extract→resolve pipeline
+- [docs/reproduce_reranker.md](docs/reproduce_reranker.md) — LightGBM reranker: features, training, FAST vs FULL retrain
+- [docs/architectures/explanation_generation.md](docs/architectures/explanation_generation.md) — response generation
+- [docs/codebase/README.md](docs/codebase/README.md) — full module-by-module map + verified-bugs audit
 
 ---
 
-## Quick Start
+## Submission file
 
-### Installation
+Our current active configs (all use `models/reranker_v12_goalfree`, committed in-repo):
+
+| Config | Role |
+|---|---|
+| `configs/state_ranker_v10_lgbm_blindset_A.yaml` | Blind-A submission |
+| `configs/state_ranker_v10_lgbm_blindset_B.yaml` | Blind-B submission |
+| `configs/state_ranker_v10_lgbm_devset.yaml` | Devset scoring |
+| `configs/state_ranker_v10_rrf_devset.yaml` | Explicit RRF/candidate-fusion baseline (no reranker) |
+
+`prediction.json` is packaged with:
 
 ```bash
-# Required
+bash prepare_submission.sh state_ranker_v10_lgbm_blindset_B blindset_B
+```
+
+which copies `exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json` → `submission/prediction.json` and zips it. Previously submitted zips are kept in [`submission/`](submission/).
+
+---
+
+## Setup
+
+```bash
 uv venv .venv --python=3.10
 source .venv/bin/activate
 uv pip install -e .
-uv pip install -e ".[dev]"   # optional, for pytest-based local verification
 
-# Optional — faster LLM inference (requires CUDA toolkit + compatible gcc)
-uv pip install flash-attn --no-build-isolation
+uvx hf auth login   # HF account with access to the TalkPlay Data Challenge collection
 ```
 
-### Hugging Face Authentication
-
-The datasets and models are hosted on Hugging Face. Log in before running inference:
+Cloud GPU runs (Modal):
 
 ```bash
-uvx hf auth login
-```
-
-> **Note:** You will need a Hugging Face account with access to the [TalkPlay Data Challenge](https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge) collection.
-
-> **Note:** The default configs use `attn_implementation: "sdpa"` (PyTorch built-in, no extra install needed). If you successfully install `flash-attn`, you can switch to `attn_implementation: "sdpa"` in your config for a small speed boost.
-
-### Modal Authentication (for cloud GPU runs)
-
-```bash
-# Authenticate (opens browser)
 uv run python -m modal setup
-
-# Verify setup
-uv run modal run other/modal_get_started.py
-# Expected: "This code is running on a remote worker! the square is 1764"
+uv run modal run other/modal_get_started.py   # smoke test
 ```
 
-### Run Experiments
+⚠️ Retrieval must always search the **entire** track catalog — `track_split_types: ["all_tracks"]` in every config. Do not filter/subset the catalog during inference.
 
-The preferred operator command is the unified experiment wrapper:
+---
+
+## Running inference
 
 ```bash
-# Explicit RRF/candidate-fusion devset baseline + local evaluation
-python run_experiment.py --backend local --tid state_ranker_v10_rrf_devset --batch_size 16
-
-# Current goal-free LGBM devset run + download into local exp/ + local evaluation
+# Devset — current goal-free LGBM reranker
 python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset --batch_size 8
 
-# Blind A submission path
-python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_A --eval_dataset blindset_A --batch_size 8
-
-# Blind B submission path
-python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_B --eval_dataset blindset_B --batch_size 8
-```
-
-Devset runs write predictions to `exp/inference/devset/{tid}.json` and scores to `exp/scores/devset/{tid}.json`.
-
-The low-level inference scripts remain available when you want to run only one stage:
-
-```bash
-# Dev set inference only
-python run_inference_devset.py --tid state_ranker_v10_rrf_devset --batch_size 16
-
-# Blind set inference
-python run_inference_blindset.py --tid state_ranker_v10_lgbm_blindset_A --eval_dataset blindset_A --batch_size 16
-python run_inference_blindset.py --tid state_ranker_v10_lgbm_blindset_B --eval_dataset blindset_B --batch_size 16
-```
-
-### Run Inference on the Development Set
-
-**⚠️ Note: During inference, the recommender system must always retrieve candidates from the entire track catalog. Do not filter, subset, or restrict tracks using `track_split_types` or any other mechanism!**
-
-For BM25/dense baselines, your config must include:
-
-```yaml
-track_split_types:
-  - "all_tracks"
-```
-
-If you do not use `all_tracks`, your evaluation may be considered invalid.
-
-- Always use `all_tracks` for every experiment and submission.
-- Do **not** preprocess, filter, or use only a subset of tracks during inference.
-
-
-```bash
-# Explicit RRF/candidate-fusion devset baseline
-python run_experiment.py --backend local --tid state_ranker_v10_rrf_devset --batch_size 16
-
-# Current goal-free LGBM devset experiment
-python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset --batch_size 8
-```
-
-Results are saved under `exp/`.
-
-Rewrite-based QU experiments may also emit sidecars alongside the prediction file:
-
-- `exp/inference/devset/{tid}_rewrite_audit.jsonl`
-- `exp/inference/devset/{tid}_rewrite_stats.json`
-- Modal shard runs may also emit `exp/inference/devset/{tid}_trace.jsonl`
-
-To pull Modal-run artifacts back to your machine, use the bulk downloader:
-
-```bash
-# Download one run (predictions, traces, and scores if present)
-python modal/download_results.py --tid state_ranker_v10_lgbm_devset
-
-# Sync all missing artifacts from the Modal volume into evaluator/exp/
-python modal/download_results.py
-
-# Preview planned downloads and byte counts
-python modal/download_results.py --dry-run --verbose
-```
-
-If you are using Codex with this repo, the `download-artifacts` skill wraps the same workflow and defaults to syncing into `evaluator/exp`.
-
-The downloader defaults to `evaluator/exp/` and mirrors any available remote:
-
-- `inference/<split>/<tid>.json`
-- `inference/<split>/<tid>_trace.jsonl`
-- `inference/<split>/<tid>_rewrite_audit.jsonl`
-- `inference/<split>/<tid>_rewrite_stats.json`
-- `scores/<split>/<tid>.json`
-- `ground_truth/...`
-
-### Run Inference on Blind Sets (for submission)
-
-```bash
+# Blind-A / Blind-B submission paths
 python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_A --eval_dataset blindset_A --batch_size 8
 python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_B --eval_dataset blindset_B --batch_size 8
+
+# Faster local iteration: retrieval once, LambdaMART replay/eval from the saved trace
+python run_pipeline.py --config configs/pipelines/state_ranker_v10_lgbm_devset.yaml
 ```
+
+Predictions land in `exp/inference/{split}/{tid}.json`. See [CLAUDE.md](CLAUDE.md) for the full command reference and shared-cache setup for local worktrees.
 
 ---
 
-## Reproducing Submitted Results (No Credentials)
+## Reproducing our results (Stage 1 / Stage 2 verification)
 
-Everything above needs Modal + Hugging Face access to run new experiments.
-To instead verify the already-submitted devset / Blind-A / Blind-B
-results — byte-exact, or as a fresh offline rerun — with **no paid LLM,
-embedding, Modal, or Hugging Face calls**, the ignored artifacts (caches,
-traces, frozen predictions) are hosted separately:
+Two independent ways to verify the pipeline, both documented for the organizers' code-review process:
 
-**https://huggingface.co/datasets/Npatta01/music-crs-repro-2026**
+**Zero-credential rerun (Stage 1 — "does inference run?")** — no Modal, HF, or LLM credentials needed. Downloads a bundled cache (catalog, embeddings, extracted state, frozen LLM cache) from Hugging Face and runs Blind-B end to end:
 
 ```bash
-scripts/repro_setup.sh   # checks uv/hf are installed, downloads + verifies the bundle
-scripts/repro_run.sh     # runs Blind-B end to end — no credentials, no Modal
+scripts/repro_setup.sh   # downloads + verifies the offline bundle
+scripts/repro_run.sh     # runs Blind-B, no credentials, no Modal
 ```
 
-See [`docs/reproduce_offline_bundle.md`](docs/reproduce_offline_bundle.md)
-for both reproduction paths (byte-exact frozen replay vs. live offline
-rerun) and how to verify the reported score, not just the prediction file.
+Verified under a network fence (Modal genuinely unreachable) across all of devset/Blind-A/Blind-B. See [docs/reproduce_offline_bundle.md](docs/reproduce_offline_bundle.md) for the byte-exact frozen-replay path vs. this live rerun, and how to check the reported score rather than just the prediction file.
 
----
-
-## Custom Configuration
-
-Create a config file in `configs/` or copy one of the current v10 state-ranker configs:
-
-```yaml
-# configs/my_model.yaml
-lm_type: "dummy"
-qu_type: "state_ranker"
-qu_kwargs:
-  ranking:
-    mode: "rrf"
-  extractor:
-    model_name: "openrouter/deepseek/deepseek-v4-flash"
-    prompt_version: "v1"
-    temperature: 0.0
-  lancedb:
-    db_uri: "./cache/lancedb"
-    table_name: "music_track_catalog"
-test_dataset_name: "talkpl-ai/TalkPlayData-Challenge-Dataset"
-item_db_name: "talkpl-ai/TalkPlayData-Challenge-Track-Metadata"
-user_db_name: "talkpl-ai/TalkPlayData-Challenge-User-Metadata"
-track_split_types:
-  - "all_tracks"
-user_split_types:
-  - "all_users"
-corpus_types:
-  - "track_name"
-  - "artist_name"
-  - "album_name"
-  - "tag_list"
-cache_dir: "./cache"
-device: "cpu"
-attn_implementation: "eager"
-```
-
-`retrieval_type` is intentionally omitted for v10 configs: retrieval/ranking is
-owned by `qu_kwargs` and the full-pipeline state-ranker QU.
-
-Then run with your config:
+**Retrain from scratch (Stage 2 — "can the model be reproduced?")** — rebuild retrieval traces, features, and retrain the LightGBM reranker on Modal:
 
 ```bash
-python run_experiment.py --backend local --tid my_model --eval_dataset devset
+# See docs/reproduce_reranker.md for the full FULL-path command sequence
 ```
 
-The current v10 configs use `lm_type: "dummy"` because retrieval quality is the
-experiment scope; natural-language response generation is documented separately.
-For a new state-ranker config, keep `track_split_types: ["all_tracks"]` and start
-from one of the existing `state_ranker_v10_*` YAML files.
+Offline bundle (catalog, caches, frozen traces, model weights): **https://huggingface.co/datasets/Npatta01/music-crs-repro-2026**
 
 ---
 
-## Evaluation
+## Repo map
 
-For evaluation, please refer to: https://github.com/nlp4musa/music-crs-evaluator
-
----
-
-## Tips & Extensions
-
-See `./tips/` for advanced techniques. Some directions to explore:
-
-- **Improve Item Representation** — Add audio features or use stronger embedding models
-- **Add a Reranker Module** — Implement two-stage ranking with LLM or embedding-based rerankers
-- **Generative Retrieval** — Use semantic IDs for end-to-end track generation
+- [docs/codebase/README.md](docs/codebase/README.md) — start here for per-module internals
+- [docs/data.md](docs/data.md) — dataset schemas, splits, inference output format
+- [docs/evaluation.md](docs/evaluation.md) — metrics, devset leaderboard setup
+- [experiments/README.md](experiments/README.md) — current config/report index (pruned intentionally; see git history for older waves)
+- [leaderboard.md](leaderboard.md) / [changelog.md](changelog.md) — devset score table and PR-linked outcomes
+- [tips/](tips/) — extension ideas we didn't pursue (better item representations, generative retrieval, etc.)
 
 ---
 
-Good luck with the challenge!
+## Acknowledgments
+
+Built on the RecSys 2026 Music-CRS organizers' baseline evaluation framework and the [TalkPlayData-Challenge](https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge) datasets. Thanks to the organizing committee for the challenge and infrastructure.
