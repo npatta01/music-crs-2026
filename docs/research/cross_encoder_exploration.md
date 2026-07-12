@@ -20,7 +20,7 @@ for **three different roles**. Verdicts:
 |---|---|---|
 | **Serving reranker / filter** | Rerank the LightGBM top-K at inference to improve nDCG@20? | **❌ DEAD.** Net-negative nDCG@20 in *every* mode (replace, RRF-fusion, filter, promote) and across a full threshold sweep. Do **not** add it to the blindset. |
 | **Offline data labeler** | Clean false-negatives & mine soft-positives for bi-encoder training? | **✅ WORKS, but modest.** Use **4B + full-conversation query**; mine via *cross-encoder proposes → independent LLM judge confirms*. ~10% of mined negatives are genuine false-negatives. |
-| **LightGBM feature** | Add the CE score as a 145th reranker feature (retrain)? | **➖ Not tested here**, but prior work logged **+0.022 nDCG on the hard_pivot lane** ("bankable"). Costs ~$2–40 on Modal to build the feature (see [Cost](#6-cost-analysis-modal-feature-generation)). Modest ROI. |
+| **LightGBM feature** | Add the CE score as a 145th reranker feature (retrain)? | **➖ Not tested here**, but prior work logged **+0.022 nDCG on the hard_pivot lane** ("bankable"). Costs ~$2–40 on Modal to build the feature (see [Cost](#8-cost-analysis-modal-feature-generation)). Modest ROI. |
 
 **Bottom line:** the cross-encoder is **not** a serving reranker for this pipeline — it cannot beat
 the label-trained LightGBM and it *damages* the turns the pipeline already gets right. Its only

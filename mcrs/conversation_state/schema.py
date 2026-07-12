@@ -935,12 +935,18 @@ class RoutingTags(BaseModel):
 
 
 class ConversationStateV0Plus(BaseModel):
-    """v1 conversation state extracted by the LLM.
+    """The compiler-facing state contract -- what resolver.py and compiler.py read.
 
-    The public extractor schema exposes role-typed entities and operational
-    modes directly. Legacy compiler-facing views (`mentioned_entities`,
-    `explicit_rejections`, `intent_mode`, etc.) are derived properties below so
-    existing retrieval code can migrate gradually.
+    Despite the name, this is NOT what the LLM emits under the active
+    `prompt_version: v1` (every current config): there, the LLM returns
+    fact-first `ConversationStateV1` JSON, which `project_v1_to_v0plus()`
+    (below) projects into this shape before the resolver ever sees it. This
+    class's public extractor-schema fields (role-typed entities, operational
+    modes) are only extracted directly by the legacy `prompt_version:
+    previous`/`v0plus` prompt. Legacy compiler-facing views
+    (`mentioned_entities`, `explicit_rejections`, `intent_mode`, etc.) are
+    derived properties below either way, so existing retrieval code doesn't
+    care which path produced the instance.
     """
 
     current_request: CurrentRequest | None = Field(

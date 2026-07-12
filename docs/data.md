@@ -179,7 +179,7 @@ This dataset is the track-side dense representation companion to `TalkPlayData-C
 - seed a two-stage retriever or reranker without recomputing track embeddings locally
 - combine text retrieval scores with dense retrieval scores
 
-In this repo, the nearest extension point is a custom retrieval or reranker module. See [tips/add_reranker.md](tips/add_reranker.md) and [tips/improve_item_representation.md](tips/improve_item_representation.md) for related directions.
+In this repo, the nearest extension point is a custom retrieval or reranker module. See [tips/add_reranker.md](../tips/add_reranker.md) and [tips/improve_item_representation.md](../tips/improve_item_representation.md) for related directions.
 
 #### Schema
 
@@ -241,7 +241,7 @@ The baseline currently uses only structured demographics from `User Metadata` to
 ### Practical Notes
 
 - These embedding datasets are optional: nothing in the current baseline pipeline depends on them.
-- The repo already contains a local dense retriever in [mcrs/retrieval_modules/bert.py](mcrs/retrieval_modules/bert.py), but that module computes its own embeddings from track metadata rather than loading the precomputed challenge embeddings.
+- The repo already contains a local dense retriever in [mcrs/retrieval_modules/bert.py](../mcrs/retrieval_modules/bert.py), but that module computes its own embeddings from track metadata rather than loading the precomputed challenge embeddings.
 - When documenting or wiring a new module, join track embeddings on `track_id` and user embeddings on `user_id`.
 
 ---

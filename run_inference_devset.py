@@ -501,20 +501,29 @@ def _completion_marker_payload(
 
 def main(args):
     """
-    Run batch inference on TalkPlayData-2 test dataset.
+    Run batch inference on the devset (TalkPlayData-2 test) split.
 
     Args:
         args: Namespace object containing:
             - tid (str): Task/configuration identifier
             - batch_size (int): Batch size for inference
-            - save_path (str): Output directory (currently unused)
+            - session_ids_file (str | None): Optional explicit session subset
+            - num_sessions (int): Optional random-sample size for a smoke test (0 = all)
+            - exp_dir (str): Base directory for saving results (default 'exp')
+            - clear_cache (bool): Wipe the cache directory before running
+            - shard_ids (str | None): If set, dispatches to run_grouped() for a
+              multi-shard batch instead of running a single shard below --
+              programmatic/Modal-only, not exposed by build_parser()
+            - num_shards / shard_id / output_suffix: single-shard sharding,
+              read with getattr defaults so callers (tests, Modal) that omit
+              them still work
 
     Returns:
-        None. Results are saved to exp/inference/{tid}.json
+        None. Results are saved to {exp_dir}/inference/devset/{tid}{output_suffix}.json
 
     Processing:
         - Loads model configuration from configs/{tid}.yaml
-        - Processes all sessions × 8 turns in batches
+        - Processes every session's 8 turns (turn_number 1-8, hardcoded) in batches
         - Tracks progress with tqdm progress bar
         - Saves comprehensive results for evaluation
     """
