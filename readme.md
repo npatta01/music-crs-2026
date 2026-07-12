@@ -102,7 +102,7 @@ which copies `exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json` �
 
 ## Setup
 
-Needed for the live/credentialed paths — [Running inference](#running-inference) below, and [Training the models from scratch](#training-the-models-from-scratch) above. The zero-credential reproduction path above is self-contained and skips this entirely.
+Needed for the live/credentialed paths — [Running inference](#running-inference) below, and [Training the models from scratch](#training-the-models-from-scratch) above. `scripts/repro_setup.sh` in the zero-credential path above already creates its own venv and runs `uv pip install -e .` internally, so the overlap with the commands below is real — but it deliberately does **not** run `hf auth login` or `modal setup`, and it pulls down a multi-GB offline bundle you don't want for live work. That's what this section is actually for: credentials, not just a Python env.
 
 ```bash
 uv venv .venv --python=3.12
@@ -123,13 +123,17 @@ uv run modal run other/modal_get_started.py   # smoke test
 
 ## Running inference
 
-```bash
-# Devset — current goal-free LGBM reranker
-python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset --batch_size 8
+This is for genuinely fresh runs — different from [zero-credential reproduction](#zero-credential-reproduction-blind-ab) above, which only replays the exact sessions already frozen into that bundle. Either `--backend` here needs real credentials (see [Setup](#setup)); `local` just means the orchestration runs on this machine instead of dispatching to Modal's workers, not that it's free.
 
-# Blind-A / Blind-B submission paths
-python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_A --eval_dataset blindset_A --batch_size 8
-python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_B --eval_dataset blindset_B --batch_size 8
+```bash
+# Blind-A / Blind-B submission paths — 80 sessions, practical locally (~10 min, no Modal account needed)
+python run_experiment.py --backend local --tid state_ranker_v10_lgbm_blindset_A --eval_dataset blindset_A --batch_size 8
+python run_experiment.py --backend local --tid state_ranker_v10_lgbm_blindset_B --eval_dataset blindset_B --batch_size 8
+
+# Devset — current goal-free LGBM reranker. 1000 sessions (~12x blindset); Modal's default
+# 50-way sharding keeps this practical. `--backend local` also works (CLAUDE.md), but expect
+# well over an hour single-shard -- pass --num_shards/--num_workers to parallelize locally.
+python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset --batch_size 8
 
 # Faster local iteration: retrieval once, LambdaMART replay/eval from the saved trace
 python run_pipeline.py --config configs/pipelines/state_ranker_v10_lgbm_devset.yaml
