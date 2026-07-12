@@ -114,7 +114,7 @@ def _build_debug_encoder_from_config(
         raise ValueError(f"encoder_id {encoder_id!r} not found in config; available={available}")
     if not isinstance(encoder_cfg, dict):
         raise ValueError(f"encoder config for {encoder_id!r} must be a mapping")
-    from mcrs.qu_modules.compiler_v0plus_qu import _build_encoder
+    from mcrs.qu_modules.compiler_qu import _build_encoder
 
     del allow_cache_write
     return _build_encoder(dict(encoder_cfg))
@@ -151,7 +151,7 @@ def _build_debug_lancedb_retriever(config: dict[str, Any], run: RunArtifacts | N
 
 def _load_debug_lancedb_catalog(config: dict[str, Any], run: RunArtifacts | None, args: argparse.Namespace) -> Any:
     db_uri, table_name = _debug_lancedb_params(config, run, args)
-    from mcrs.qu_modules.v0plus_catalog_lance import LanceDbCatalog
+    from mcrs.qu_modules.catalog_lance import LanceDbCatalog
 
     return LanceDbCatalog(db_uri=db_uri, table_name=table_name)
 
@@ -195,6 +195,6 @@ def _resolve_session(run: RunArtifacts, value: str) -> str:
 def _load_catalog(run: RunArtifacts | None, args: argparse.Namespace) -> Any:
     db_uri = str(run.catalog_db_uri if run else args.catalog_db_uri)
     table_name = str(run.catalog_table if run else args.catalog_table)
-    from mcrs.qu_modules.v0plus_catalog_lance import LanceDbCatalog
+    from mcrs.qu_modules.catalog_lance import LanceDbCatalog
 
     return LanceDbCatalog(db_uri=db_uri, table_name=table_name)

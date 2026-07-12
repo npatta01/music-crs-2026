@@ -157,7 +157,7 @@ Callers of the data layer:
 
 2. **Dead parameter `use_semantic_id`** (`music_catalog.py:17`): `id_to_metadata` accepts `use_semantic_id: bool = False` but the parameter is never read — both branches produce the same output. Callers pass `False` (or omit it) and the flag has no effect.
 
-3. **Duplicate HF dataset load for non-LanceDB paths**: `DENSE_TRANSFORMER_MODEL` and `MusicCatalogDB` each independently call `load_dataset(dataset_name)` and build their own `metadata_dict`. In v0+ production runs the catalog is served from LanceDB (`v0plus_catalog_lance.py`) and `MusicCatalogDB` is only used for the `recommend_item` string passed to the LLM, so this duplication is acceptable but worth noting in refactors.
+3. **Duplicate HF dataset load for non-LanceDB paths**: `DENSE_TRANSFORMER_MODEL` and `MusicCatalogDB` each independently call `load_dataset(dataset_name)` and build their own `metadata_dict`. In v0+ production runs the catalog is served from LanceDB (`catalog_lance.py`) and `MusicCatalogDB` is only used for the `recommend_item` string passed to the LLM, so this duplication is acceptable but worth noting in refactors.
 
 4. **Hard-coded user profile columns**: `UserProfileDB.default_columns` (`user_profile.py:13`) is a hard-coded list. There is no config path to render additional fields (e.g. `listening_history`) without editing the source.
 

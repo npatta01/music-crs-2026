@@ -28,7 +28,7 @@ from typing import Protocol
 from mcrs.conversation_state.schema import (
     ExplorationPolicy,
 )
-from mcrs.qu_modules.resolver_v0plus import ResolvedConversationState
+from mcrs.qu_modules.resolver import ResolvedConversationState
 
 
 class CatalogProtocol(Protocol):

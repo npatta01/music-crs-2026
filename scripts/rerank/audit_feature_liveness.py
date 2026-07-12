@@ -2,7 +2,7 @@
 
 Confirms — on real saved traces — that the pivot-away signals are dead, and sizes
 how much the fixes would unlock. Doubles as a before/after harness for the
-_abandoned_sets fix (features_v9.py) and the label-weight artist fix
+_abandoned_sets fix (features.py) and the label-weight artist fix
 (build_label_weights.py).
 
 Checks:
@@ -55,7 +55,7 @@ class _ShimCat:
 def main():
     from mcrs.qu_modules.tag_resolver import catalog_tag_key
 
-    from features_v9 import _abandoned_sets  # the production logic, reused verbatim
+    from features import _abandoned_sets  # the production logic, reused verbatim
 
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--trace-glob", required=True)
@@ -123,7 +123,7 @@ def main():
 
     # C. abandoned-artist set, current (original broken prod) vs fixed (production)
     # FIXED calls the REAL production _abandoned_sets (now id-based) so it can never
-    # drift from features_v9.
+    # drift from features.
     shim = _ShimCat({tid: {"artists": ids} for tid, ids in trk_artist_ids.items()})
     cur_nonempty = fix_nonempty = fix_pivot_nonempty = pivot_turns = 0
     for (sid, tn), info in turns.items():

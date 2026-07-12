@@ -16,9 +16,9 @@ per-batch flush; ONE PROCESS PER FOLD (driver below) so each fold's contiguous
 train copy is reclaimed by the OS on exit.
 
   # build matrix + folds, then run folds sequentially, then finalize:
-  python scripts/rerank/train_v9.py --stage build
-  for f in 0 1 2 3 4; do python scripts/rerank/train_v9.py --stage fold --fold $f; done
-  python scripts/rerank/train_v9.py --stage finalize
+  python scripts/rerank/train_lgbm.py --stage build
+  for f in 0 1 2 3 4; do python scripts/rerank/train_lgbm.py --stage fold --fold $f; done
+  python scripts/rerank/train_lgbm.py --stage finalize
 """
 
 from __future__ import annotations

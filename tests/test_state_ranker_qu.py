@@ -7,7 +7,7 @@ import pytest
 from mcrs.conversation_state.schema import ConversationStateV0Plus, MentionedEntity
 from mcrs.qu_modules.fuzzy_matcher import RapidfuzzCatalogMatcher
 from mcrs.qu_modules.state_ranker_qu import _normalise_ranking_config, build_state_ranker_qu
-from tests.v0plus_fakes import DictCatalog, FakeEmbeddingClient, FakeRetriever
+from tests.qu_fakes import DictCatalog, FakeEmbeddingClient, FakeRetriever
 
 
 @dataclass

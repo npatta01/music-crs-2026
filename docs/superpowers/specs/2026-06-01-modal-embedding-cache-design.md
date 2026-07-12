@@ -11,7 +11,7 @@ Catalog vectors are already precomputed in LanceDB. The remaining hot path is **
 - `Qwen3Encoder` (`modal/app.py`) — Qwen3-Embedding-0.6B, metadata/attributes/lyrics/query text.
 - `MultimodalTextEncoder` (`modal/app.py`) — SigLIP-2 text (768d, image space) + LAION-CLAP music text (512d, audio space).
 
-Today the only dedup is an **in-turn** cache in `compiler_v0plus.py` keyed by `(encoder_id, query_id)`, which dies at the end of each turn. The same text on the next turn — or the next run — re-encodes from scratch on the GPU. Across a devset pass, templates and common phrases recur constantly, and iterative re-runs re-pay the full encode cost every time.
+Today the only dedup is an **in-turn** cache in `compiler.py` keyed by `(encoder_id, query_id)`, which dies at the end of each turn. The same text on the next turn — or the next run — re-encodes from scratch on the GPU. Across a devset pass, templates and common phrases recur constantly, and iterative re-runs re-pay the full encode cost every time.
 
 ## Goals / Non-goals
 

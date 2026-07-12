@@ -5,7 +5,7 @@ import pytest
 
 from mcrs.qu_modules import lgbm_reranker
 from mcrs.qu_modules.lgbm_reranker import _FeatureCatalogFromCompilerCatalog
-from mcrs.qu_modules.v0plus_catalog_lance import LanceDbCatalog
+from mcrs.qu_modules.catalog_lance import LanceDbCatalog
 
 
 class _CompilerCatalogSource:
@@ -198,7 +198,7 @@ class _RecordingBooster:
 
 
 def _make_synthetic_lgbm_reranker(cat):
-    from features_v9 import TurnContext
+    from features import TurnContext
 
     reranker = lgbm_reranker.LgbmOnlineReranker.__new__(lgbm_reranker.LgbmOnlineReranker)
     reranker.ctx = TurnContext(
@@ -1169,7 +1169,7 @@ def test_abandoned_sets_fires_on_pivot_satisfied_and_rejected_artist():
     leaving), and explicitly rejected artist UUIDs are added directly. Matching is
     by artist_id (UUID), not name-key — the catalog id<->name arrays aren't
     reliably pair-aligned."""
-    from features_v9 import _abandoned_sets
+    from features import _abandoned_sets
     from mcrs.qu_modules.tag_resolver import catalog_tag_key
 
     catalog = _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
@@ -1191,7 +1191,7 @@ def test_abandoned_sets_fires_on_pivot_satisfied_and_rejected_artist():
 def test_abandoned_sets_keeps_satisfied_artist_when_not_pivot():
     """Continuation turn: a satisfied artist is what the user wants MORE of — it
     must NOT be added to the abandoned set."""
-    from features_v9 import _abandoned_sets
+    from features import _abandoned_sets
 
     catalog = _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
     state = {
@@ -1208,7 +1208,7 @@ def test_abandoned_sets_keeps_satisfied_artist_when_not_pivot():
 
 def test_abandoned_sets_fires_on_negative_feedback_regardless_of_pivot():
     """A negatively-rated track's artist is abandoned even on a non-pivot turn."""
-    from features_v9 import _abandoned_sets
+    from features import _abandoned_sets
 
     catalog = _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
     state = {
@@ -1237,7 +1237,7 @@ def test_pivot_abandoned_features_parity_and_liveness(tmp_path):
     pytest.importorskip("lancedb")
     import lancedb
     from build_features import Catalog
-    from features_v9 import compute_turn_features
+    from features import compute_turn_features
 
     db_uri = str(tmp_path / "lancedb")
     table_name = "music_track_catalog"

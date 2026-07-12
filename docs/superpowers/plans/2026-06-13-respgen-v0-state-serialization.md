@@ -4,7 +4,7 @@
 
 **Goal:** Make the state-conditioned response path see the *full* extracted state — restore `mentioned_entities`, `explicit_rejections`, and `release_year_range`, which are currently silently dropped before they reach the response generator.
 
-**Architecture:** Those three fields are plain `@property` on `ConversationStateV0Plus`, so `state.model_dump(mode="json")` omits them. The trace dict built in `compiler_v0plus_qu._acompile_one` stores that lossy dump under `trace["state"]`, and `crs_baseline.batch_chat` feeds it to `format_state_block`. Fix: a small **local augmentation helper** (`response_state_dict`) that dumps the model *and* adds the three derived fields, used at the single trace-emission site. No global `@computed_field` (it would change every `model_dump` caller).
+**Architecture:** Those three fields are plain `@property` on `ConversationStateV0Plus`, so `state.model_dump(mode="json")` omits them. The trace dict built in `compiler_qu._acompile_one` stores that lossy dump under `trace["state"]`, and `crs_baseline.batch_chat` feeds it to `format_state_block`. Fix: a small **local augmentation helper** (`response_state_dict`) that dumps the model *and* adds the three derived fields, used at the single trace-emission site. No global `@computed_field` (it would change every `model_dump` caller).
 
 **Tech Stack:** Python 3.10, pydantic v2, pytest. Source: `mcrs/`. Tests: `tests/`.
 
@@ -18,7 +18,7 @@
 
 - **Create:** nothing new.
 - **Modify:** `mcrs/response_context.py` — add `response_state_dict(state) -> dict` (duck-typed; no new imports). This is the natural home: it sits next to `format_state_block`, its sole consumer-shape owner.
-- **Modify:** `mcrs/qu_modules/compiler_v0plus_qu.py` — import and call `response_state_dict` at the trace-emission site (line 746).
+- **Modify:** `mcrs/qu_modules/compiler_qu.py` — import and call `response_state_dict` at the trace-emission site (line 746).
 - **Test:** `tests/test_response_context.py` — unit tests for the helper against the real schema (authoritative).
 - **Test:** `tests/test_v0plus_compiler_qu.py` — one integration test proving the wired trace carries the fields when a real state flows through.
 
@@ -146,7 +146,7 @@ explicit rejections, or year range. Add response_state_dict() augmentation."
 ## Task 2: Wire the helper into the trace-emission site
 
 **Files:**
-- Modify: `mcrs/qu_modules/compiler_v0plus_qu.py` (import near top; call site at line 746)
+- Modify: `mcrs/qu_modules/compiler_qu.py` (import near top; call site at line 746)
 - Test: `tests/test_v0plus_compiler_qu.py`
 
 - [ ] **Step 1: Write the failing integration test** (append to `tests/test_v0plus_compiler_qu.py`)
@@ -189,13 +189,13 @@ def test_last_traces_state_serializes_derived_property_fields():
 Run: `pytest tests/test_v0plus_compiler_qu.py::test_last_traces_state_serializes_derived_property_fields -v`
 Expected: FAIL — `KeyError`/`assert "mentioned_entities" in state_dump` is False (line 746 still uses bare `model_dump`).
 
-- [ ] **Step 3: Add the import** near the other imports at the top of `mcrs/qu_modules/compiler_v0plus_qu.py`
+- [ ] **Step 3: Add the import** near the other imports at the top of `mcrs/qu_modules/compiler_qu.py`
 
 ```python
 from mcrs.response_context import response_state_dict
 ```
 
-- [ ] **Step 4: Swap the call site** in `mcrs/qu_modules/compiler_v0plus_qu.py` (inside `_acompile_one`, currently line 746)
+- [ ] **Step 4: Swap the call site** in `mcrs/qu_modules/compiler_qu.py` (inside `_acompile_one`, currently line 746)
 
 Change:
 ```python
@@ -214,7 +214,7 @@ Expected: PASS — the new test passes, and all pre-existing tests (incl. `test_
 - [ ] **Step 6: Commit**
 
 ```bash
-git add mcrs/qu_modules/compiler_v0plus_qu.py tests/test_v0plus_compiler_qu.py
+git add mcrs/qu_modules/compiler_qu.py tests/test_v0plus_compiler_qu.py
 git commit -m "fix(respgen): emit augmented response state in the v0+ trace (V0 wiring)"
 ```
 
@@ -242,7 +242,7 @@ Expected: clean (both commits landed).
 
 ## Self-Review
 
-- **Spec coverage:** Implements spec variant **V0** (state-serialization fix) and its §9 work-map line (`compiler_v0plus_qu.py` augmentation + regression test on `format_state_block`) and the §10 resolution (local helper, not global `@computed_field`). ✅
+- **Spec coverage:** Implements spec variant **V0** (state-serialization fix) and its §9 work-map line (`compiler_qu.py` augmentation + regression test on `format_state_block`) and the §10 resolution (local helper, not global `@computed_field`). ✅
 - **No placeholders:** every step has runnable code/commands. ✅
 - **Type consistency:** the helper is named `response_state_dict` in the source step (Task 1 Step 3), the import (Task 2 Step 3), and all test imports — consistent. The dict keys (`mentioned_entities`, `explicit_rejections`, `release_year_range`) match exactly what `format_state_block` reads (`response_context.py:80,93,97`). ✅
 - **Scope:** standalone, landable; produces tested working software on its own. ✅

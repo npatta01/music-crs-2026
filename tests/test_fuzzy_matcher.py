@@ -1,5 +1,5 @@
 from mcrs.qu_modules.fuzzy_matcher import RapidfuzzCatalogMatcher
-from tests.v0plus_fakes import DictCatalog
+from tests.qu_fakes import DictCatalog
 
 
 def test_track_match_prefers_full_title_over_short_subset_tie():

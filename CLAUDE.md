@@ -109,7 +109,7 @@ Results saved to `exp/inference/{split}/{tid}.json`.
 
 ## Architecture notes
 
-- v10 catalog source of truth is LanceDB (`mcrs/qu_modules/v0plus_catalog_lance.py`). The HF-backed `HFTalkPlayCatalog` is retained only for unit tests.
+- v10 catalog source of truth is LanceDB (`mcrs/qu_modules/catalog_lance.py`). The HF-backed `HFTalkPlayCatalog` is retained only for unit tests.
 - State extraction uses `prompt_version: v1` (ConversationStateV1 → projected to V0Plus) in all active configs. Use `prompt_version: v0plus` to switch to the old generous V0Plus extraction.
 - The LightGBM reranker (`mcrs/qu_modules/lgbm_reranker.py`) is config-driven via `qu_kwargs.ranking.mode: lgbm` and currently defaults to `models/reranker_v12_goalfree`. Set `ranking.mode: rrf` for the explicit candidate-fusion baseline.
 - `run_pipeline.py` is the faster iteration path: retrieval/state extraction can be saved once, then local LambdaMART replay/evaluation can be rerun from the saved trace. Model training stays outside the pipeline config.

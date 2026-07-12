@@ -1,7 +1,7 @@
 # Session / Conversation State
 
 > **What it is:** the structured, per-turn understanding of the conversation that drives retrieval. An LLM reads the multi-turn `session_memory` and emits a `ConversationStateV0Plus`; a resolver then grounds its surface-form names to catalog IDs.
-> **Source of truth:** `mcrs/conversation_state/schema.py` (the Pydantic models) + `mcrs/conversation_state/prompts/current.py` (production prompt) + `mcrs/qu_modules/resolver_v0plus.py` (resolution) + `mcrs/qu_modules/compiler_v0plus_qu.py` (extractor wiring).
+> **Source of truth:** `mcrs/conversation_state/schema.py` (the Pydantic models) + `mcrs/conversation_state/prompts/current.py` (production prompt) + `mcrs/qu_modules/resolver.py` (resolution) + `mcrs/qu_modules/compiler_qu.py` (extractor wiring).
 > Last verified: 2026-06-01 (code at `1a8aee5`).
 
 Session state is the contract between the **conversation** and the **retriever**. Everything the compiler does (which branches fire, how they're weighted, what's filtered or demoted — see [`v0plus_retrieval.md`](v0plus_retrieval.md)) is a function of this object. Get the state wrong and no amount of reranking recovers it — fix representation here first.
@@ -13,11 +13,11 @@ Session state is the contract between the **conversation** and the **retriever**
 ```
 session_memory  (list of {role, content} turns)
    │
-   1. EXTRACT   LiteLLMExtractor (compiler_v0plus_qu.py)
+   1. EXTRACT   LiteLLMExtractor (compiler_qu.py)
    │              LLM call, JSON-schema-constrained to the Pydantic model,
    │              prompt_version current/previous → ConversationStateV0Plus
    │
-   2. RESOLVE   V0PlusResolver (resolver_v0plus.py)
+   2. RESOLVE   V0PlusResolver (resolver.py)
    │              fuzzy-match surface names → catalog artist/track IDs;
    │              resolve rejections; collect played_track_ids
    │
@@ -68,7 +68,7 @@ The state grew from an original **7-field minimal schema** (iteration 1) to **11
 
 ## 3. `ResolvedConversationState` — what the compiler reads
 
-`V0PlusResolver.resolve()` wraps the raw state and adds the grounded fields (`resolver_v0plus.py`):
+`V0PlusResolver.resolve()` wraps the raw state and adds the grounded fields (`resolver.py`):
 
 | Added field | How it's produced |
 |---|---|
@@ -106,7 +106,7 @@ Extraction is hostile-input-aware — the LLM occasionally hallucinates malforme
 - Retrieval consumption: [`v0plus_retrieval.md`](v0plus_retrieval.md)
 - Schema source: `mcrs/conversation_state/schema.py`
 - Prompt source: `mcrs/conversation_state/prompts/current.py`; previous reference: `mcrs/conversation_state/prompts/previous.py`
-- Resolver: `mcrs/qu_modules/resolver_v0plus.py`; extractor: `mcrs/qu_modules/compiler_v0plus_qu.py`
+- Resolver: `mcrs/qu_modules/resolver.py`; extractor: `mcrs/qu_modules/compiler_qu.py`
 - Historical north-star schema notes were pruned from the working tree; use Git
   history if that design lineage is needed.
 - Per-module internals: [`docs/codebase/modules/qu_modules.md`](../codebase/modules/qu_modules.md)

@@ -847,9 +847,9 @@ def main():
     # (mcrs/qu_modules/lgbm_reranker.py). Routing both the trainer and the
     # server through one function makes train/serve feature parity
     # structural — there is no parallel offline schema that can drift.
-    # Imported lazily because features_v9 imports Catalog/EmbedMemo/... back
+    # Imported lazily because features imports Catalog/EmbedMemo/... back
     # from this module, so a module-level import would be circular.
-    from features_v9 import TurnContext, compute_turn_features
+    from features import TurnContext, compute_turn_features
     ctx = TurnContext(
         cat, sessions, user_cf, resolver, tag_vec, memo, msg_store,
         branch_names=branch_names, pool_k=args.pool_k, offline=args.offline,

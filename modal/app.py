@@ -932,12 +932,12 @@ _TRAIN_IMAGE = (
     .apt_install("libgomp1")
     # omegaconf: Modal imports the whole modal/app.py module in every container
     # (to locate the @app.function), and app.py's top-level imports include
-    # `from omegaconf import OmegaConf`. Training only shells out to train_v9.py
+    # `from omegaconf import OmegaConf`. Training only shells out to train_lgbm.py
     # (lightgbm/numpy/pandas/pyarrow), but the module-import still needs omegaconf.
     .pip_install("lightgbm>=4.6.0", "numpy", "pandas", "pyarrow>=16.0", "omegaconf")
     .add_local_file(
-        "scripts/rerank/train_v9.py",
-        "/app/train_v9.py",
+        "scripts/rerank/train_lgbm.py",
+        "/app/train_lgbm.py",
         copy=True,
     )
     # app.py reads modal/config.yaml at module-import time (OmegaConf.load via
@@ -985,7 +985,7 @@ def _train_cmd(stage: str, fold: int | None = None, lineage: str = "v9") -> list
     cmd = [
         # sys.executable, not a hardcoded path — the interpreter location varies
         # by base image.
-        sys.executable, "/app/train_v9.py",
+        sys.executable, "/app/train_lgbm.py",
         "--stage", stage,
         "--out-dir", paths["train_dir"],
         "--features-dir", paths["features_dir"],

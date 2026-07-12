@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from datasets import load_dataset
 
-from mcrs.qu_modules.compiler_v0plus_qu import build_v0plus_compiler_qu
+from mcrs.qu_modules.compiler_qu import build_v0plus_compiler_qu
 
 
 CONFIG = Path("configs/v0plus_compiler_bm25_image_audio_cfbpr_metadata_devset.yaml")
@@ -98,7 +98,7 @@ def main():
 
         # Extract state (also exercises the schema validation)
         conv, played = qu.extractor.extract.__wrapped__ if False else None, None
-        from mcrs.qu_modules.compiler_v0plus_qu import session_memory_to_conversation
+        from mcrs.qu_modules.compiler_qu import session_memory_to_conversation
         conv, played = session_memory_to_conversation(sm, qu.catalog)
         state = qu.extractor.extract(conv, played)
         if state is None:

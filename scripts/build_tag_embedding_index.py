@@ -28,7 +28,7 @@ from mcrs.qu_modules.tag_resolver import TagEmbeddingIndex, catalog_tag_key  # n
 
 
 def enumerate_tag_frequencies(db_uri: str, table_name: str) -> Counter:
-    from mcrs.qu_modules.v0plus_catalog_lance import LanceDbCatalog
+    from mcrs.qu_modules.catalog_lance import LanceDbCatalog
 
     catalog = LanceDbCatalog(db_uri=db_uri, table_name=table_name)
     counts: Counter = Counter()

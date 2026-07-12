@@ -19,8 +19,8 @@ from mcrs.qu_modules.compiled_state import (
     final_recommendation,
     ranking_stage,
 )
-from mcrs.qu_modules.compiler_v0plus import CompileResult
-from mcrs.qu_modules.compiler_v0plus_qu import (
+from mcrs.qu_modules.compiler import CompileResult
+from mcrs.qu_modules.compiler_qu import (
     V0PlusCompilerQU,
     _add_elapsed,
     aextract_with_cache_context,

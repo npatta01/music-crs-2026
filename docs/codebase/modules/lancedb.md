@@ -10,7 +10,7 @@ It owns two concerns:
    full-text search (FTS) indexes with tantivy.
 2. **Query path** — executing BM25/FTS and dense ANN searches against that table at
    CPU runtime, fusing ranked lists via weighted RRF, and exporting a clean
-   Retriever Protocol that the v0+ compiler (`mcrs/qu_modules/compiler_v0plus_qu.py`)
+   Retriever Protocol that the v0+ compiler (`mcrs/qu_modules/compiler_qu.py`)
    can call without knowing anything about LanceDB internals.
 
 The third file, `modal_client.py`, is a thin RPC wrapper that lets local (CPU) code
@@ -34,7 +34,7 @@ HuggingFace datasets
                                        │◀──── modal_client.py ─────────┘
                                        │      LanceDbModalClient
                                        ▼
-                        mcrs/qu_modules/compiler_v0plus_qu.py
+                        mcrs/qu_modules/compiler_qu.py
                         mcrs/retrieval_modules/lancedb.py (LANCEDB_MODEL)
                         mcrs/retrieval_modules/modal_lancedb.py (MODAL_LANCEDB_MODEL)
 ```
@@ -172,7 +172,7 @@ and the three qwen3 embedding columns.
 
 ### Query path — Retriever Protocol (`search` / `search_embedding`)
 
-Used by `compiler_v0plus_qu.py` directly instead of the declarative path above.
+Used by `compiler_qu.py` directly instead of the declarative path above.
 
 1. `search(clauses, topk)` builds one `BooleanQuery(SHOULD)` from all non-empty `FieldQuery` clauses, mapping each to a `MatchQuery(text, bm25_text_field_name(field), boost=boost)`. Issues a single tantivy FTS call. Returns `(track_id, score)` pairs. `retriever.py:469`
 2. `search_embedding(query_vector, vector_field, topk, distance_type, filter_missing)` runs an ANN query and converts the raw distance to a similarity score via `_distance_to_similarity`. Returns `(track_id, similarity)` pairs. `retriever.py:529`
@@ -217,8 +217,8 @@ Used by `compiler_v0plus_qu.py` directly instead of the declarative path above.
 
 4. **`fts_bm25s_compat` replicates bm25s offline scores exactly** by pre-tokenizing the corpus at index time and using a whitespace-only FTS index. The index-time tokenizer (`tokenize_bm25s_text`, `indexing.py:117`) and the query-time token counter (`_bm25s_query_object`, `retriever.py:288`) must stay in sync with the offline `bm25s` baseline; any bm25s version upgrade risks score drift.
 
-5. **`LANCEDB_VECTOR_FIELDS` is derived from `EMBEDDING_FIELDS`** at module load (`retriever.py:27`). `_NON_EMBEDDING_VECTOR_COLUMNS` in `v0plus_catalog_lance.py` (`cf_bpr`, `audio_laion_clap`, `image_siglip2`) are special-cased because their HF source names contain hyphens that `milvus_safe_field_name` converts to underscores — verify the sanitized names match if adding new columns.
+5. **`LANCEDB_VECTOR_FIELDS` is derived from `EMBEDDING_FIELDS`** at module load (`retriever.py:27`). `_NON_EMBEDDING_VECTOR_COLUMNS` in `catalog_lance.py` (`cf_bpr`, `audio_laion_clap`, `image_siglip2`) are special-cased because their HF source names contain hyphens that `milvus_safe_field_name` converts to underscores — verify the sanitized names match if adding new columns.
 
-6. **`LanceDbModalClient` is only needed for the legacy `MODAL_LANCEDB_MODEL` wrapper** (`mcrs/retrieval_modules/modal_lancedb.py`). The v0+ compiler's `compiler_v0plus_qu.py` uses `LanceDbRetriever` directly (local) or wraps it in a `RetrievalService`; it does not use `LanceDbModalClient`.
+6. **`LanceDbModalClient` is only needed for the legacy `MODAL_LANCEDB_MODEL` wrapper** (`mcrs/retrieval_modules/modal_lancedb.py`). The v0+ compiler's `compiler_qu.py` uses `LanceDbRetriever` directly (local) or wraps it in a `RetrievalService`; it does not use `LanceDbModalClient`.
 
 7. **`LANCEDB_MODEL` in `mcrs/retrieval_modules/lancedb.py`** silently ignores `dataset_name`, `split_types`, `corpus_types`, `cache_dir`, and `formatter` constructor arguments (`lancedb.py:21`). These are required by the CRS loader interface but meaningless for LanceDB — callers must pass `retrieval_config` instead.

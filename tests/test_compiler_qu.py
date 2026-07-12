@@ -23,16 +23,16 @@ from mcrs.conversation_state.schema import (
     TrackFeedback,
 )
 from mcrs.qu_modules import load_qu_module
-from mcrs.qu_modules.compiler_v0plus_qu import (
+from mcrs.qu_modules.compiler_qu import (
     LiteLLMExtractor,
     V0PlusCompilerQU,
     build_v0plus_compiler_qu,
     _content_from_litellm_response,
     session_memory_to_conversation,
 )
-from mcrs.qu_modules.compiler_v0plus import CompileResult
+from mcrs.qu_modules.compiler import CompileResult
 from mcrs.qu_modules.fuzzy_matcher import RapidfuzzCatalogMatcher
-from tests.v0plus_fakes import DictCatalog, FakeEmbeddingClient, FakeRetriever
+from tests.qu_fakes import DictCatalog, FakeEmbeddingClient, FakeRetriever
 
 
 def test_v0plus_qu_flush_caches_delegates_to_loaded_reranker():
@@ -843,7 +843,7 @@ def test_litellm_extractor_caches_retry_success_under_primary_key(monkeypatch):
 
 
 def test_litellm_extractor_does_not_apply_post_extraction_text_repair(monkeypatch):
-    import mcrs.qu_modules.compiler_v0plus_qu as qu_mod
+    import mcrs.qu_modules.compiler_qu as qu_mod
 
     def fail_if_called(*args, **kwargs):
         raise AssertionError("post-extraction text repair must not run in production")
@@ -1552,7 +1552,7 @@ def test_build_qu_constructs_lancedb_catalog_from_qu_kwargs(tmp_path, monkeypatc
     import lancedb
     from datetime import date
 
-    from mcrs.qu_modules.v0plus_catalog_lance import LanceDbCatalog
+    from mcrs.qu_modules.catalog_lance import LanceDbCatalog
 
     # Clear any inherited env-var URI so we exercise the qu_kwargs path.
     monkeypatch.delenv("MCRS_LANCEDB_URI", raising=False)
@@ -1611,7 +1611,7 @@ def test_build_qu_respects_mcrs_lancedb_uri_env_var(tmp_path, monkeypatch):
     import lancedb
     from datetime import date
 
-    from mcrs.qu_modules.v0plus_catalog_lance import LanceDbCatalog
+    from mcrs.qu_modules.catalog_lance import LanceDbCatalog
 
     db = lancedb.connect(str(tmp_path))
     db.create_table(
@@ -1698,7 +1698,7 @@ def test_trace_includes_routing_tags():
 def test_routing_boost_survives_yaml_allowlist():
     """Guards the disco-branch gotcha: a routing_boost in qu_kwargs.compiler must
     reach CompilerConfig, not be silently dropped by the allowlist filter."""
-    import tests.v0plus_fakes as fakes
+    import tests.qu_fakes as fakes
     catalog = _catalog()
     qu = build_v0plus_compiler_qu(
         qu_kwargs={"compiler": {"routing_boost": {"lyric_search": 4.0}}},
@@ -1851,7 +1851,7 @@ def test_build_qu_allows_missing_configured_vector_fields_for_branch_skip():
 
 
 def test_resolve_prompt_fns_uses_current_prompt():
-    from mcrs.qu_modules.compiler_v0plus_qu import _resolve_prompt_fns
+    from mcrs.qu_modules.compiler_qu import _resolve_prompt_fns
     from mcrs.conversation_state.prompts import current
 
     for alias in ("current", "v4", None):
@@ -1861,7 +1861,7 @@ def test_resolve_prompt_fns_uses_current_prompt():
 
 
 def test_resolve_prompt_fns_keeps_previous_reference_prompt():
-    from mcrs.qu_modules.compiler_v0plus_qu import _resolve_prompt_fns
+    from mcrs.qu_modules.compiler_qu import _resolve_prompt_fns
     from mcrs.conversation_state.prompts import previous
 
     for alias in ("previous", "reference", "v3"):
@@ -1871,7 +1871,7 @@ def test_resolve_prompt_fns_keeps_previous_reference_prompt():
 
 
 def test_resolve_prompt_fns_exposes_experimental_rubric_prompt():
-    from mcrs.qu_modules.compiler_v0plus_qu import _resolve_prompt_fns
+    from mcrs.qu_modules.compiler_qu import _resolve_prompt_fns
     from mcrs.conversation_state.prompts import rubric
 
     for alias in ("rubric", "decision_rubric", "v5"):
@@ -1881,7 +1881,7 @@ def test_resolve_prompt_fns_exposes_experimental_rubric_prompt():
 
 
 def test_resolve_prompt_fns_exposes_experimental_rejection_prompt():
-    from mcrs.qu_modules.compiler_v0plus_qu import _resolve_prompt_fns
+    from mcrs.qu_modules.compiler_qu import _resolve_prompt_fns
     from mcrs.conversation_state.prompts import rejection
 
     for alias in ("rejection", "rejection_fewshot", "v5_rejection"):
@@ -1891,7 +1891,7 @@ def test_resolve_prompt_fns_exposes_experimental_rejection_prompt():
 
 
 def test_litellm_encoder_forwards_extra_params():
-    from mcrs.qu_modules.compiler_v0plus_qu import _build_encoder
+    from mcrs.qu_modules.compiler_qu import _build_encoder
 
     enc = _build_encoder(
         {
@@ -1906,7 +1906,7 @@ def test_litellm_encoder_forwards_extra_params():
 
 
 def test_litellm_encoder_forwards_cache_and_query_instruct():
-    from mcrs.qu_modules.compiler_v0plus_qu import _build_encoder
+    from mcrs.qu_modules.compiler_qu import _build_encoder
 
     instruct = (
         "Instruct: Given a music recommendation conversation, retrieve relevant "
@@ -1933,7 +1933,7 @@ def test_litellm_encoder_uses_disk_cache_when_cache_dir_set(tmp_path, monkeypatc
     import sys
     from types import SimpleNamespace
 
-    from mcrs.qu_modules.compiler_v0plus_qu import _build_encoder
+    from mcrs.qu_modules.compiler_qu import _build_encoder
 
     calls = []
 
@@ -1965,7 +1965,7 @@ def test_openrouter_response_format_goes_in_extra_body_with_require_parameters()
     """litellm strips a top-level response_format for OpenRouter models, so it
     must ride in extra_body, with provider.require_parameters to force a
     schema-enforcing provider. Non-OpenRouter models keep it top-level."""
-    from mcrs.qu_modules.compiler_v0plus_qu import LiteLLMExtractor
+    from mcrs.qu_modules.compiler_qu import LiteLLMExtractor
     ex = LiteLLMExtractor(model_name="openrouter/google/gemma-4-26b-a4b-it", prompt_version="v4")
     kw = ex._build_kwargs(conversation=[{"role": "user", "turn": 1, "text": "hi"}], played_track_ids=[])
     assert "response_format" not in kw, "top-level response_format would be stripped by litellm"

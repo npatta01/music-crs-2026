@@ -23,7 +23,7 @@ to do that. **The visual gap is retrieval-quality-limited, not reranker-limited.
 
 ## What was built (all TDD-green on `claude/visual-route`)
 
-- `DenseBranch.gated_on` (mcrs/qu_modules/compiler_v0plus.py): a branch fires
+- `DenseBranch.gated_on` (mcrs/qu_modules/compiler.py): a branch fires
   only when a named `RoutingTags` flag is true; gate-skips **before** the encode
   (no wasted RPC, no candidate injection on non-matching turns); fail-fast
   validation for typo'd gate names. Config parser forwards `gated_on`.

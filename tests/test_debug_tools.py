@@ -371,7 +371,7 @@ def test_dense_search_preserves_configured_encoder_cache_by_default(monkeypatch)
 
     monkeypatch.setitem(
         sys.modules,
-        "mcrs.qu_modules.compiler_v0plus_qu",
+        "mcrs.qu_modules.compiler_qu",
         types.SimpleNamespace(_build_encoder=fake_build_encoder),
     )
     config = {

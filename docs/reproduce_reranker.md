@@ -19,11 +19,11 @@ inputs.
 | `mcrs/qu_modules/lgbm_reranker.py` | online in-pipeline reranker (config-driven) | — |
 | `scripts/rerank/replay_lgbm.py` | offline replay runner for applying a model bundle to saved retrieval traces | — |
 | `run_pipeline.py` | staged experiment runner for retrieval → rerank replay → explanation → evaluation | — |
-| `scripts/rerank/features_v9.py` | `compute_turn_features` — the single per-turn feature function called by **both** the offline builder and the online server (anti-drift) | — |
+| `scripts/rerank/features.py` | `compute_turn_features` — the single per-turn feature function called by **both** the offline builder and the online server (anti-drift) | — |
 | `scripts/rerank/build_features.py` | offline builder — loads the catalog/caches and writes the training parquet by calling `compute_turn_features` (same schema as serving) | — |
 | `scripts/rerank/build_constraint_features.py` | constraint sidecar (is_played, rejection flags) | — |
 | `scripts/rerank/build_label_weights.py` | train-time label-quality weights | — |
-| `scripts/rerank/train_v9.py` | LightGBM trainer — stages `build → fold ×5 → finalize → full_model` (`full_model` writes `model_full.txt`) | — |
+| `scripts/rerank/train_lgbm.py` | LightGBM trainer — stages `build → fold ×5 → finalize → full_model` (`full_model` writes `model_full.txt`) | — |
 | `scripts/build_tag_embedding_index.py` | builds the tag-embedding index (below) | — |
 | `configs/state_ranker_v10_rrf_devset.yaml` | devset candidate-fusion/RRF baseline | — |
 | `configs/state_ranker_v10_lgbm_devset.yaml` | devset goal-free reranker | — |
@@ -110,7 +110,7 @@ python run_pipeline.py \
 
 `run_pipeline.py` writes per-run artifacts under `exp/pipeline/runs/<run_id>/`.
 The retrieval stage delegates to `run_experiment.py`; the rerank stage calls
-`scripts/rerank/replay_lgbm.py` and uses the same `features_v9.compute_turn_features`
+`scripts/rerank/replay_lgbm.py` and uses the same `features.compute_turn_features`
 function as training/serving. Rerank replay can shard local workers and, for
 fast ranking/eval loops, can skip rerank trace output with `rerank.write_trace: false`.
 Training remains in the FULL path below.
@@ -136,7 +136,7 @@ python run_experiment.py --backend modal \
   --tid state_ranker_v10_rrf_devset --batch_size 64
 
 # 3. Build features per trace shard. Both paths call the SAME
-#    features_v9.compute_turn_features the server uses, so the parquet schema
+#    features.compute_turn_features the server uses, so the parquet schema
 #    matches the served model's meta.json by construction.
 #
 #  (a) Recommended — on Modal (no local catalog/caches needed; reads volumes):
@@ -194,7 +194,7 @@ cp exp/analysis/rerank/v10/train/cat_maps_v9.json models/reranker_v12_goalfree/c
 
 The server (`lgbm_reranker.py`), the offline builder (`build_features.py`),
 and staged replay (`scripts/rerank/replay_lgbm.py`) all produce features through
-the SAME `features_v9.compute_turn_features`, so
+the SAME `features.compute_turn_features`, so
 the feature **schema** is identical by construction — there is no parallel
 offline schema that can drift, and the regenerated parquet's columns match the
 served `meta.json` exactly.

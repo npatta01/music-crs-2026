@@ -159,7 +159,7 @@ def test_build_features_allows_embedding_fill_by_default_and_flushes_msg_store(m
 
     captured_offline: list[bool] = []
 
-    fake_features = types.ModuleType("features_v9")
+    fake_features = types.ModuleType("features")
 
     class FakeTurnContext:
         def __init__(self, *args, offline=True, **kwargs):
@@ -167,7 +167,7 @@ def test_build_features_allows_embedding_fill_by_default_and_flushes_msg_store(m
 
     fake_features.TurnContext = FakeTurnContext
     fake_features.compute_turn_features = lambda row, ctx, gt=None: ([], True)
-    monkeypatch.setitem(sys.modules, "features_v9", fake_features)
+    monkeypatch.setitem(sys.modules, "features", fake_features)
 
     class FakeMemo:
         def __init__(self, path):

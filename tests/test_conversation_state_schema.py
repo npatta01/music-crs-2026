@@ -43,7 +43,7 @@ class TestHardFilterBoundsTolerant:
     None on hard turns. Old behavior: schema raised → whole-state validation
     failed → turn returned 0 candidates. New behavior: schema accepts → the
     compiler treats the filter as a no-op and the rest of the state drives
-    retrieval. See `compiler_v0plus._release_date_mask` for the skip.
+    retrieval. See `compiler._release_date_mask` for the skip.
     """
 
     def test_lt_accepts_missing_end(self):

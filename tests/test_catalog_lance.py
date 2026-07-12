@@ -6,7 +6,7 @@ import pyarrow as pa
 import lancedb
 
 from mcrs.conversation_state.schema import HardFilter
-from mcrs.qu_modules.v0plus_catalog_lance import LanceDbCatalog
+from mcrs.qu_modules.catalog_lance import LanceDbCatalog
 
 
 def _build_fixture_table(path):

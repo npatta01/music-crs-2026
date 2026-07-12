@@ -57,8 +57,8 @@ from mcrs.conversation_state.schema import (
     FactType,
 )
 from mcrs.embeddings.base import EmbeddingClient
-from mcrs.qu_modules.resolver_v0plus import ResolvedConversationState
-from mcrs.qu_modules.v0plus_catalog import CompilerCatalog
+from mcrs.qu_modules.resolver import ResolvedConversationState
+from mcrs.qu_modules.catalog import CompilerCatalog
 from mcrs.retrieval_modules.base import FieldQuery, Retriever
 
 
