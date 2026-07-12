@@ -168,3 +168,25 @@ blanked. `cache/embedding`'s keys cover the exact set each real,
 network-fenced run actually touches (33,257 keys, zero slack, zero gaps),
 which is what makes this possible without Modal having ever needed to see
 these three splits' traffic again.
+
+## Verifying the reported result
+
+Getting a `prediction.json` is not the same as confirming it scores what was
+reported. How to check that depends on the split:
+
+- **Blind-A / Blind-B**: these are the actual blind evaluation sets — ground
+  truth isn't shipped to participants, so there's no local scorer to run.
+  The only verifiable claim is Path 1's: `verify_bundle.sh` checksums
+  `prediction.json` against `.repro/CRITICAL_SHA256SUMS`, which is the exact
+  file that was uploaded to CodaBench and scored there. A Path 2 live rerun
+  reproduces comparable quality but not the same bytes or score (see
+  ANN-nondeterminism above), so it can't independently confirm the reported
+  number — only the frozen file can.
+- **Devset**: ground truth *is* public (it's the challenge dataset's `test`
+  split), so a devset `prediction.json` — frozen or freshly reproduced — can
+  be scored locally with the evaluator (`evaluator/` git submodule; see
+  [`docs/evaluation.md`](evaluation.md) for setup and
+  `evaluate_devset.py`). Compare the result against
+  [`leaderboard.md`](../leaderboard.md) for the currently reported numbers
+  (not reproduced here since the leaderboard is a living document — check it
+  directly rather than trusting a copy that could go stale).
