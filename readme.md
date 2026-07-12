@@ -34,7 +34,7 @@ Full detail per stage:
 |---|---:|---:|---:|---:|---:|---|
 | Devset | 0.4562 | — | — | — | — | Local evaluator ([leaderboard.md](leaderboard.md)) |
 | Blind-A | 0.4380 | 0.0313 | 0.7670 | 4.2000 | **0.5389** | CodaBench submission `797598` |
-| Blind-B | 0.2537 | 0.0315 | 0.7862 | 3.3000 | **0.3811** | CodaBench final leaderboard (rank 29) |
+| Blind-B | 0.2537 | 0.0315 | 0.7862 | 3.3000 | **0.3811** | CodaBench submission `819863` (rank 29, final leaderboard) |
 
 Devset extras (no CodaBench equivalent): Hit@20 0.6138, MRR 0.4102 — see [leaderboard.md](leaderboard.md) for deep-cutoff diagnostics (@50–@1000) and per-stage recall breakdowns.
 
@@ -54,12 +54,12 @@ scripts/repro_setup.sh   # one-time: creates .venv, installs deps, downloads the
                           # from Hugging Face -- the catalog it downloads is also what
                           # training needs, so this is the right first step either way
 
-scripts/repro_run.sh                          # Blind-B (default)
-scripts/repro_run.sh --eval_dataset blindset_A
-scripts/repro_run.sh --eval_dataset devset
+scripts/repro_run.sh                          # Blind-B (default), 80 sessions
+scripts/repro_run.sh --eval_dataset blindset_A   # 80 sessions
+scripts/repro_run.sh --eval_dataset devset       # 1000 sessions, so proportionally longer
 ```
 
-Modal is never something you invoke to run the pipeline. Its only role anywhere in this repo is as a transparent, automatic fallback for specific embedding calls (e.g. the b1 bi-encoder) when local GPU weights aren't available — and this particular path is fully local: verified under a network fence (Modal genuinely unreachable) across all three splits.
+These commands never invoke Modal — this path is fully local, verified under a network fence (Modal genuinely unreachable) across all three splits. Within it, Modal is only ever a transparent, automatic fallback for specific embedding calls (e.g. the b1 bi-encoder and the CLAP/SigLIP-2 text encoders) when local GPU weights aren't available, and even that never fires here since the offline bundle pre-caches every query embedding these three splits touch. (Elsewhere in the repo — e.g. `docs/reproduce_reranker.md`'s FAST path, or CLAUDE.md's own command reference — Modal is also used to orchestrate live, credentialed runs at scale; that's a maintainer/retraining concern, not part of reproducing what we submitted.)
 
 See [docs/reproduce_offline_bundle.md](docs/reproduce_offline_bundle.md) for the byte-exact frozen-replay path vs. this live rerun, and how to check the reported score rather than just the prediction file. Predictions land in `exp/inference/{split}/{tid}.json`. See [CLAUDE.md](CLAUDE.md) for the full command reference (including `run_pipeline.py` for faster staged local iteration) and shared-cache setup for local worktrees.
 
@@ -67,22 +67,23 @@ See [docs/reproduce_offline_bundle.md](docs/reproduce_offline_bundle.md) for the
 
 ## Submission file
 
-Our current active configs (all use `models/reranker_v12_goalfree`, committed in-repo; all set `track_split_types: ["all_tracks"]`, so retrieval always searches the full 47k-track catalog — none subset it during inference):
+Our current active configs (all set `track_split_types: ["all_tracks"]`, so retrieval always searches the full 47k-track catalog — none subset it during inference):
 
 | Config | Role |
 |---|---|
-| `configs/state_ranker_v10_lgbm_blindset_A.yaml` | Blind-A submission |
-| `configs/state_ranker_v10_lgbm_blindset_B.yaml` | Blind-B submission |
-| `configs/state_ranker_v10_lgbm_devset.yaml` | Devset scoring |
-| `configs/state_ranker_v10_rrf_devset.yaml` | Explicit RRF/candidate-fusion baseline (no reranker) |
+| `configs/state_ranker_v10_lgbm_blindset_A.yaml` | Blind-A submission — `models/reranker_v12_goalfree` |
+| `configs/state_ranker_v10_lgbm_blindset_B.yaml` | Blind-B submission — `models/reranker_v12_goalfree` |
+| `configs/state_ranker_v10_lgbm_devset.yaml` | Devset scoring — `models/reranker_v12_goalfree` |
+| `configs/state_ranker_v10_rrf_devset.yaml` | Explicit RRF/candidate-fusion baseline — no reranker |
 
-`prediction.json` is packaged with:
+`prediction.json` is packaged with a `<tid> [split]` pair (split defaults to `blindset_A`):
 
 ```bash
-bash prepare_submission.sh state_ranker_v10_lgbm_blindset_B blindset_B
+bash prepare_submission.sh state_ranker_v10_lgbm_blindset_A                # Blind-A (default split)
+bash prepare_submission.sh state_ranker_v10_lgbm_blindset_B blindset_B     # Blind-B
 ```
 
-which copies `exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json` → `submission/prediction.json` and zips it. Previously submitted zips are kept in [`submission/`](submission/).
+which copies `exp/inference/{split}/{tid}.json` → `submission/prediction.json` and zips it. Previously submitted zips are kept in [`submission/`](submission/).
 
 ---
 
