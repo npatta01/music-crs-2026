@@ -16,6 +16,35 @@ need the first.
 
 Both paths run on `main`.
 
+## Quickest path — run inference yourself
+
+Two scripts do everything Path 2 below does by hand: check prerequisites,
+install the environment, download and verify the bundle, then run
+inference with zero credentials.
+
+```bash
+git clone --branch main https://github.com/npatta01/music-conversational-music-recomender-2026.git
+cd music-conversational-music-recomender-2026
+
+scripts/repro_setup.sh   # checks uv/hf are installed, sets up .venv, downloads
+                          # + extracts + verifies the bundle from Hugging Face
+scripts/repro_run.sh     # runs Blind-B end to end — no credentials, no Modal
+```
+
+`repro_run.sh` defaults to Blind-B. Other splits or configs:
+
+```bash
+scripts/repro_run.sh --eval_dataset blindset_A
+scripts/repro_run.sh --eval_dataset devset
+scripts/repro_run.sh --eval_dataset blindset_B --tid some_other_config
+scripts/repro_run.sh --help
+```
+
+Output lands at `exp/inference/<split>/<tid>.json`, same as the manual
+commands in Path 2 below. If you only need the frozen predictions (Path 1)
+without re-running anything, or want to understand what each step is
+actually doing, read on.
+
 ## What's in the bundle
 
 Folder layout mirrors the repo's own relative paths, so downloading into the
@@ -97,9 +126,15 @@ library builds. Confirmed empirically (network-fenced live reruns of the
 *exact* pruned bundle): ~5-10% of sessions match exactly, ~45% keep the same
 20-track set with reordering among near-ties, ~40% differ by 1-4 tracks right
 at the retrieval-pool boundary. Response text can differ too when the #1
-track itself changes. None of this is a bug — it's inherent ANN
-nondeterminism — but it means only `.repro/traces/` + `.repro/reference/`
-reproduce the exact submitted bytes.
+track itself changes — and occasionally, on Blind-A/B, that turn's
+explanation comes back blank rather than just different: `cache/litellm-repro`
+only has a cached explanation for whichever track was actually #1 in the
+canonical run, so if reordering promotes a different track to #1, generating
+its explanation needs a live (credential-requiring) call that a zero-credential
+rerun can't make. `scripts/repro_run.sh` flags this after a run if it
+happens — the recommended track IDs are unaffected either way. None of this
+is a bug — it's inherent ANN nondeterminism — but it means only
+`.repro/traces/` + `.repro/reference/` reproduce the exact submitted bytes.
 
 ## Path 2 — Live offline rerun
 

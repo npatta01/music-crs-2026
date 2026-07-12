@@ -116,14 +116,29 @@ class LITELLM_LM:
         outputs: list[str] = []
         for index, response in enumerate(responses):
             try:
+                # litellm.batch_completion puts the raw exception object in
+                # the results list on a per-item failure rather than raising.
+                if isinstance(response, BaseException):
+                    raise response
                 outputs.append(response.choices[0].message.content or "")
             except Exception as exc:
                 logger.warning(
-                    "batch_response_generation: item %d failed, returning blank "
-                    "response instead of raising: %s: %s",
+                    "batch_response_generation: item %d failed (%s: %s), "
+                    "retrying as a single completion",
                     index,
                     type(exc).__name__,
                     exc,
                 )
-                outputs.append("")
+                try:
+                    retry_response = litellm.completion(messages=batch_messages[index], **kwargs)
+                    outputs.append(retry_response.choices[0].message.content or "")
+                except Exception as retry_exc:
+                    logger.warning(
+                        "batch_response_generation: item %d retry also failed, "
+                        "returning blank response instead of raising: %s: %s",
+                        index,
+                        type(retry_exc).__name__,
+                        retry_exc,
+                    )
+                    outputs.append("")
         return outputs

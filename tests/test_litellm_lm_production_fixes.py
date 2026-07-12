@@ -34,3 +34,50 @@ def test_batch_response_generation_uses_self_max_tokens_by_default(monkeypatch):
     assert out == ["ok"]
     # default (no cap passed) must fall back to self.max_tokens, NOT 64
     assert sent[0]["max_tokens"] == 222
+
+
+def test_batch_response_generation_retries_per_item_failure(monkeypatch):
+    # litellm.batch_completion puts a bare exception object in the results
+    # list on a per-item failure instead of raising (observed empirically:
+    # one blank response out of 80 real cache-backed Blind-B sessions, with
+    # an identical rerun recovering the correct cached content). A single
+    # retry via plain litellm.completion should recover it.
+    def fake_batch_completion(**kwargs):
+        return [
+            SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content="fine"))]),
+            RuntimeError("transient cache read glitch"),
+        ]
+
+    def fake_completion(**kwargs):
+        assert kwargs["messages"][-1]["content"].startswith("Recommend the following track")
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content="recovered"))])
+
+    monkeypatch.setitem(
+        sys.modules, "litellm",
+        SimpleNamespace(batch_completion=fake_batch_completion, completion=fake_completion),
+    )
+    from mcrs.lm_modules.litellm_chat import LITELLM_LM
+    lm = LITELLM_LM(model_name="openrouter/x/y", api_key="k")
+    out = lm.batch_response_generation(
+        ["SYS", "SYS"],
+        [[{"role": "user", "content": "hi"}], [{"role": "user", "content": "hi"}]],
+        [{"t": 1}, {"t": 2}],
+    )
+    assert out == ["fine", "recovered"]
+
+
+def test_batch_response_generation_blank_only_if_retry_also_fails(monkeypatch):
+    def fake_batch_completion(**kwargs):
+        return [RuntimeError("first failure")]
+
+    def fake_completion(**kwargs):
+        raise RuntimeError("retry also fails")
+
+    monkeypatch.setitem(
+        sys.modules, "litellm",
+        SimpleNamespace(batch_completion=fake_batch_completion, completion=fake_completion),
+    )
+    from mcrs.lm_modules.litellm_chat import LITELLM_LM
+    lm = LITELLM_LM(model_name="openrouter/x/y", api_key="k")
+    out = lm.batch_response_generation(["SYS"], [[{"role": "user", "content": "hi"}]], [{"t": 1}])
+    assert out == [""]
