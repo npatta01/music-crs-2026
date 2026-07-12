@@ -44,38 +44,24 @@ Devset and Blind-A/B aren't directly comparable: devset is scored locally agains
 
 ---
 
-## Reproducing our results
+## Running inference
 
-Two independent things you can do, both documented for the organizers' code-review process.
-
-### Zero-credential reproduction (Blind-A/B)
-
-Self-contained — creates its own venv and installs its own deps, skipping the [Setup](#setup) section below entirely. No Modal, HF, or LLM credentials needed either way. Downloads a bundled cache (catalog, embeddings, extracted state, frozen LLM cache) from Hugging Face and runs Blind-B end to end:
+Runs locally, no live credentials needed. One-time setup, then run any split:
 
 ```bash
-scripts/repro_setup.sh   # downloads + verifies the offline bundle
-scripts/repro_run.sh     # runs Blind-B, no credentials, no Modal
+scripts/repro_setup.sh   # one-time: creates .venv, installs deps, downloads the offline
+                          # bundle (catalog, embeddings, extracted state, frozen LLM cache)
+                          # from Hugging Face -- the catalog it downloads is also what
+                          # training needs, so this is the right first step either way
+
+scripts/repro_run.sh                          # Blind-B (default)
+scripts/repro_run.sh --eval_dataset blindset_A
+scripts/repro_run.sh --eval_dataset devset
 ```
 
-Verified under a network fence (Modal genuinely unreachable) across all of devset/Blind-A/Blind-B. See [docs/reproduce_offline_bundle.md](docs/reproduce_offline_bundle.md) for the byte-exact frozen-replay path vs. this live rerun, and how to check the reported score rather than just the prediction file.
+Modal is never something you invoke to run the pipeline. Its only role anywhere in this repo is as a transparent, automatic fallback for specific embedding calls (e.g. the b1 bi-encoder) when local GPU weights aren't available — and this particular path is fully local: verified under a network fence (Modal genuinely unreachable) across all three splits.
 
-### Training the models from scratch
-
-Rebuilds the LightGBM reranker and/or the b1 bi-encoder — needs the [Setup](#setup) below plus Modal + the usual credentials:
-
-```bash
-# LightGBM reranker: rebuild retrieval traces/features, retrain on Modal.
-# See docs/reproduce_reranker.md for the full command sequence.
-
-# b1 bi-encoder (the fine-tuned Qwen3-Embedding conv->track retriever
-# behind the b1_cos reranker feature):
-modal run scripts/rerank/modal_train_biencoder.py
-modal volume get scout-models /biencoder_qwen06_eN ./models/   # N = 1,2,3 (one checkpoint/epoch)
-# See docs/architectures/biencoder.md for the training recipe (MNRL, MOVES-only
-# positives, known-for field dropout) and how the checkpoint gets promoted/served.
-```
-
-Offline bundle (catalog, caches, frozen traces, model weights): **https://huggingface.co/datasets/Npatta01/music-crs-repro-2026**
+See [docs/reproduce_offline_bundle.md](docs/reproduce_offline_bundle.md) for the byte-exact frozen-replay path vs. this live rerun, and how to check the reported score rather than just the prediction file. Predictions land in `exp/inference/{split}/{tid}.json`. See [CLAUDE.md](CLAUDE.md) for the full command reference (including `run_pipeline.py` for faster staged local iteration) and shared-cache setup for local worktrees.
 
 ---
 
@@ -100,46 +86,27 @@ which copies `exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json` �
 
 ---
 
-## Setup
+## Training the models from scratch
 
-Needed for the live/credentialed paths — [Running inference](#running-inference) below, and [Training the models from scratch](#training-the-models-from-scratch) above. `scripts/repro_setup.sh` in the zero-credential path above already creates its own venv and runs `uv pip install -e .` internally, so the overlap with the commands below is real — but it deliberately does **not** run `hf auth login` or `modal setup`, and it pulls down a multi-GB offline bundle you don't want for live work. That's what this section is actually for: credentials, not just a Python env.
-
-```bash
-uv venv .venv --python=3.12
-source .venv/bin/activate
-uv pip install -e .
-
-uvx hf auth login   # HF account with access to the TalkPlay Data Challenge collection
-```
-
-Cloud GPU runs (Modal):
+The one place real credentials are unavoidable — this is genuine GPU training work on Modal, not just running the shipped pipeline. Builds on the same venv `scripts/repro_setup.sh` above already creates; add credentials on top:
 
 ```bash
-uv run python -m modal setup
-uv run modal run other/modal_get_started.py   # smoke test
+uvx hf auth login                # HF account with access to the TalkPlay Data Challenge collection
+uv run python -m modal setup     # Modal auth
+# and set OPENROUTER_API_KEY / DEEPINFRA_API_KEY / VLLM_API_KEY in .env
+
+# LightGBM reranker: rebuild retrieval traces/features, retrain on Modal.
+# See docs/reproduce_reranker.md for the full command sequence.
+
+# b1 bi-encoder (the fine-tuned Qwen3-Embedding conv->track retriever
+# behind the b1_cos reranker feature):
+modal run scripts/rerank/modal_train_biencoder.py
+modal volume get scout-models /biencoder_qwen06_eN ./models/   # N = 1,2,3 (one checkpoint/epoch)
+# See docs/architectures/biencoder.md for the training recipe (MNRL, MOVES-only
+# positives, known-for field dropout) and how the checkpoint gets promoted/served.
 ```
 
----
-
-## Running inference
-
-This is for genuinely fresh runs — different from [zero-credential reproduction](#zero-credential-reproduction-blind-ab) above, which only replays the exact sessions already frozen into that bundle. Either `--backend` here needs real credentials (see [Setup](#setup)); `local` just means the orchestration runs on this machine instead of dispatching to Modal's workers, not that it's free.
-
-```bash
-# Blind-A / Blind-B submission paths — 80 sessions, practical locally (~10 min, no Modal account needed)
-python run_experiment.py --backend local --tid state_ranker_v10_lgbm_blindset_A --eval_dataset blindset_A --batch_size 8
-python run_experiment.py --backend local --tid state_ranker_v10_lgbm_blindset_B --eval_dataset blindset_B --batch_size 8
-
-# Devset — current goal-free LGBM reranker. 1000 sessions (~12x blindset); Modal's default
-# 50-way sharding keeps this practical. `--backend local` also works (CLAUDE.md), but expect
-# well over an hour single-shard -- pass --num_shards/--num_workers to parallelize locally.
-python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_devset --batch_size 8
-
-# Faster local iteration: retrieval once, LambdaMART replay/eval from the saved trace
-python run_pipeline.py --config configs/pipelines/state_ranker_v10_lgbm_devset.yaml
-```
-
-Predictions land in `exp/inference/{split}/{tid}.json`. See [CLAUDE.md](CLAUDE.md) for the full command reference and shared-cache setup for local worktrees.
+Offline bundle (catalog, caches, frozen traces, model weights): **https://huggingface.co/datasets/Npatta01/music-crs-repro-2026**
 
 ---
 
