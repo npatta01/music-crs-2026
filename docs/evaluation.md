@@ -10,7 +10,7 @@ cd evaluator
 python make_ground_truth.py                      # once
 # Predictions are read from ./exp/inference/devset/<tid>.json
 # (symlink or copy from the main repo's exp/inference/devset/).
-python evaluate_devset.py --tid v0plus_compiler_image_devset
+python evaluate_devset.py --tid state_ranker_v10_lgbm_devset
 ```
 
 This writes `evaluator/exp/scores/devset/<tid>.json` and prints a grouped

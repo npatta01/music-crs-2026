@@ -1,9 +1,9 @@
 # v0+ Retrieval Pipeline — Retrievers, Flow & Fusion
 
-> **Scope:** the canonical conversational-retrieval path used by every `v0plus_compiler_*` config.
-> **Source of truth:** `mcrs/qu_modules/compiler.py` (+ `resolver.py`, `post_fusion_features.py`, `cross_encoder_reranker.py`, `catalog_lance.py`).
+> **Scope:** the canonical conversational-retrieval path used by every active `state_ranker_v10_*` config (`qu_type: state_ranker`, which wraps this same compiler — see [`docs/codebase/modules/qu_modules.md`](../codebase/modules/qu_modules.md)). The historical `v0plus_compiler_*` config family this doc originally described has been pruned from the working tree; the compiler code itself is unchanged and still the retrieval engine underneath `state_ranker_v10_*`.
+> **Source of truth:** `mcrs/qu_modules/compiler.py` (+ `resolver.py`, `compiler_qu.py`, `post_fusion_features.py`, `cross_encoder_reranker.py`, `catalog_lance.py`).
 > **Reflects:** code at `1a8aee5` (#84), including the current extractor prompt + new retriever branches.
-> Last verified: 2026-06-01.
+> Last verified: 2026-07-12.
 
 This doc answers three things: **what the retrievers are**, **how a conversation flows through them**, and **how their results are fused and ranked**. For per-file responsibilities see [`docs/codebase/modules/qu_modules.md`](../codebase/modules/qu_modules.md); for the dataset/embedding columns see [`docs/data.md`](../data.md).
 
@@ -16,8 +16,14 @@ A multi-turn conversation becomes a ranked top-1000 track list through these ord
 ```
 multi-turn conversation (session_memory)
   │
-  1. EXTRACT   LiteLLMExtractor → ConversationStateV0Plus   (compiler_qu.py)
-  │              LLM (current prompt) emits structured intent/entities/constraints
+  1. EXTRACT   LiteLLMExtractor → ConversationStateV1        (compiler_qu.py)
+  │              LLM (prompt_version: v1, all active configs) emits fact-first
+  │              structured intent/entities/constraints as V1 JSON
+  │
+  1b. PROJECT  project_v1_to_v0plus() → ConversationStateV0Plus
+  │              (conversation_state/schema.py) — structural copy onto the
+  │              compiler's actual contract type; see docs/architectures/
+  │              session_state.md §1 for the full extract/project/fallback detail
   │
   2. RESOLVE   V0PlusResolver → ResolvedConversationState   (resolver.py)
   │              fuzzy-match surface names → catalog artist/track IDs;
