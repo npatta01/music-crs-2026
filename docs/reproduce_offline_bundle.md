@@ -66,6 +66,9 @@ hf download Npatta01/music-crs-repro-2026 --repo-type dataset --local-dir .
 tar --use-compress-program=unzstd -xf cache/embedding.tar.zst
 tar --use-compress-program=unzstd -xf cache/state_extraction.tar.zst
 
+# hf download doesn't preserve the executable bit — restore it once:
+chmod +x .repro/scripts/*.sh
+
 source .repro/scripts/activate_repro_env.sh
 .repro/scripts/verify_bundle.sh
 .repro/scripts/rebuild_submissions.sh
