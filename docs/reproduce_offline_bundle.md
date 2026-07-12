@@ -1,0 +1,133 @@
+# Reproducing devset / Blind-A / Blind-B from the offline bundle
+
+The `f519a83` offline reproduction bundle ships the ignored artifacts needed
+to reproduce the saved devset, Blind-A, and Blind-B results with **no paid
+LLM, embedding, Modal, or Hugging Face calls**. It's hosted on Hugging Face:
+
+**https://huggingface.co/datasets/Npatta01/music-crs-repro-2026**
+
+There are two reproduction paths. Pick the one you need — most people only
+need the first.
+
+| Path | What it proves | Needs |
+|---|---|---|
+| **Frozen replay** | The submitted `prediction.json` bytes are exactly what shipped | `main`, no code changes |
+| **Live offline rerun** | The pipeline itself, run fresh, reproduces the same tracks/quality without any credentials | the `offline-embedding-cache-repro` branch |
+
+## What's in the bundle
+
+Folder layout mirrors the repo's own relative paths, so downloading into the
+repo root drops everything in the right place directly.
+
+| Path | Size | What |
+|---|---:|---|
+| `cache/lancedb/` | 4.3 GB | Track catalog (47,071 tracks), compacted, pruned to columns real code reads |
+| `cache/embedding/` | 2.1 GB | Query embedding cache — exact verified minimal set for devset+Blind-A+Blind-B (33,257 files) |
+| `cache/state_extraction/` | 996 MB | File-per-turn extracted state: trainset (15,199 sessions), devset (1,000), Blind-A/B (80 each) |
+| `exp/analysis/rerank/` | 1.7 GB | q06/msg reranker feature memos (frozen; checksummed) |
+| `.repro/traces/` | 4.8 GB | Frozen retrieval traces — the canonical byte-exact reproduction boundary |
+| `.repro/hf_home/` | 426 MB | Cached HF dataset snapshots (offline `datasets.load_dataset`) |
+| `cache/tag_embedding_index/` | 69 MB | Tag vocabulary vectors |
+| `cache/litellm-repro/` | 18 MB | Frozen LLM response cache (Blind-B explanation generation) |
+| `.repro/reference/`, `.repro/submissions/`, `.repro/scripts/` | 8 MB | Frozen predictions, original submitted ZIPs, install/verify/rebuild scripts |
+
+`cache/state_extraction/trainset` is also independently available on the
+`state-extraction-cache-v1` GitHub release — it's duplicated here for
+one-stop access but isn't read by any current active script (reranker
+training uses devset only; the bi-encoder training pipeline reads the raw HF
+dataset + a Modal-hosted volume, not this cache).
+
+## Path 1 — Frozen replay (byte-exact, works on `main`)
+
+```bash
+git clone --branch main https://github.com/npatta01/music-conversational-music-recomender-2026.git
+cd music-conversational-music-recomender-2026
+git switch main && git pull --ff-only
+git merge-base --is-ancestor f519a83b0cb29ae60622116acc69b111aa20bc78 HEAD
+
+hf download Npatta01/music-crs-repro-2026 --repo-type dataset --local-dir .
+
+source .repro/scripts/activate_repro_env.sh
+.repro/scripts/verify_bundle.sh
+.repro/scripts/rebuild_submissions.sh
+```
+
+`verify_bundle.sh` checks 11 checksummed artifacts against
+`.repro/CRITICAL_SHA256SUMS`. `rebuild_submissions.sh` validates and installs
+the frozen prediction JSONs, then creates:
+
+- `submission/reproduced_v10_lgbm_A.zip`
+- `submission/reproduced_v10_lgbm_B_v1.zip`
+
+The regenerated ZIP container bytes can vary with local `zip` version/
+timestamp; the `prediction.json` bytes inside are byte-identical to what was
+submitted (verified against `.repro/CRITICAL_SHA256SUMS`).
+
+Only need one piece? Download just that folder:
+
+```bash
+hf download Npatta01/music-crs-repro-2026 --repo-type dataset --local-dir . \
+  --include "cache/embedding/*" --include "cache/lancedb/*" --include ".repro/*"
+```
+
+### Why frozen replay, not live rerun, is canonical
+
+Live ANN retrieval can reorder near-tied candidates across machines or
+library builds. Confirmed empirically (network-fenced live reruns of the
+*exact* pruned bundle): ~5-10% of sessions match exactly, ~45% keep the same
+20-track set with reordering among near-ties, ~40% differ by 1-4 tracks right
+at the retrieval-pool boundary. Response text can differ too when the #1
+track itself changes. None of this is a bug — it's inherent ANN
+nondeterminism — but it means only `.repro/traces/` + `.repro/reference/`
+reproduce the exact submitted bytes.
+
+## Path 2 — Live offline rerun (needs the branch)
+
+The frozen-prediction path above needs no code changes. Actually re-running
+inference with zero credentials needs the `offline-embedding-cache-repro`
+branch on top of `f519a83`. Without it, the retrieval encoder eagerly
+resolves a live Modal URL *before ever checking cache* (`modal/vllm_serve.py`
+via `run_inference_devset.py::_resolve_vllm_endpoints_if_needed`), so it
+needs Modal auth even on a pure cache hit. The branch adds:
+
+- A portable embedding cache key (`mcrs/embeddings/litellm_client.py`) that
+  no longer bakes in the resolved `api_base` URL, so a cache lookup never
+  needs a live endpoint resolved at all.
+- Lazy endpoint resolution, opt-in via `MCRS_LAZY_VLLM_ENDPOINT=1` (off by
+  default — existing Modal-backed runs keep today's fail-fast behavior).
+- A warning log (`mcrs/lm_modules/litellm_chat.py`) instead of a silently
+  blank response when an explanation completion fails.
+
+```bash
+git fetch origin offline-embedding-cache-repro
+git switch offline-embedding-cache-repro
+
+MCRS_LAZY_VLLM_ENDPOINT=1 \
+OPENROUTER_API_KEY= DEEPINFRA_API_KEY= VLLM_API_KEY= LITELLM_PROXY_KEY= \
+MODAL_TOKEN_ID= MODAL_TOKEN_SECRET= \
+MCRS_REQUIRE_LITELLM_CACHE=1 \
+python run_inference_blindset.py --tid state_ranker_v10_lgbm_blindset_A \
+  --eval_dataset blindset_A --batch_size 8 --require_litellm_cache
+
+# same pattern for blindset_B, and for devset via run_inference_devset.py
+```
+
+**Verified end-to-end**: Blind-A, Blind-B (all 80/80 sessions each), and
+devset (all 1,000 sessions) run to completion with zero errors under a hard
+network fence (`systemd-run -p 'RestrictAddressFamilies=AF_UNIX AF_NETLINK'`
+— Modal isn't just unauthenticated, it's *unreachable*) and every credential
+blanked. The embedding cache-key migration (old → new, verified against the
+exact set of keys each real, network-fenced run actually touches — 33,257
+keys, zero slack, zero gaps) is what makes this possible without Modal
+having ever needed to see these three splits' traffic again.
+
+## Cache-key migration reference
+
+If you're pointing this branch at an *older* copy of `cache/embedding` (e.g.
+one warmed under the pre-branch code), its entries are keyed the old way —
+including the resolved `api_base` URL — and won't be found by the new
+namespace. That's a one-time re-key, not a re-embed: for every text the old
+key already has an entry, copy it to the new key (no live call). See the
+migration approach in the branch's commit `01e0b86` message, or re-derive it
+from `mcrs/embeddings/litellm_client.py::cache_namespace_for_client`'s old
+vs. new payload shape. The bundle above already ships fully re-keyed.

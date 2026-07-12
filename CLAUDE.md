@@ -16,6 +16,7 @@ Challenge: https://nlp4musa.github.io/music-crs-challenge/
 - [State Extraction Cache](docs/state_extraction_cache.md) — file-per-turn cache layout, override precedence, GitHub Release packaging, and install/verify commands
 - [Evaluation](docs/evaluation.md) — metrics, devset leaderboard
 - [Reproduce the reranker](docs/reproduce_reranker.md) — LightGBM bundle, required vs optional artifacts, FAST (use model) + FULL (retrain) paths
+- [Reproduce devset/Blind-A/Blind-B from the offline bundle](docs/reproduce_offline_bundle.md) — the `f519a83` HF-hosted offline bundle, frozen-replay (byte-exact, `main`) vs. live-offline-rerun (`offline-embedding-cache-repro` branch) paths, and the cache-key migration behind it
 - [Mac / Local Dev](docs/mac_dev.md) — local testing on Apple Silicon
 - [Modal Setup](docs/modal_setup.md) — cloud GPU authentication and smoke test
 - [Codebase Map](docs/codebase/README.md) — **start here to understand the code**: per-module internals (`docs/codebase/modules/`) and the [verified-bugs audit](docs/codebase/bugs.md)
