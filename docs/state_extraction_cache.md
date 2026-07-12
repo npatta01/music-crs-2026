@@ -28,8 +28,13 @@ cache/state_extraction/<split>/<session_id>/turn_<turn_number>_override.json
 
 ## Standard Distribution
 
-Generated state files are release artifacts, not repo files. The standard
-package is a GitHub Release asset that unpacks into repo root:
+Generated state files are distributed artifacts, not repo files. The
+canonical copy — trainset, devset, blindset_A, blindset_B — ships as
+`cache/state_extraction.tar.zst` in the
+[`Npatta01/music-crs-repro-2026`](https://huggingface.co/datasets/Npatta01/music-crs-repro-2026)
+Hugging Face dataset (see [`docs/reproduce_offline_bundle.md`](reproduce_offline_bundle.md)
+for the full offline reproduction bundle this is part of). It unpacks into
+repo root as:
 
 ```text
 cache/state_extraction/blindset_A/...
@@ -41,10 +46,7 @@ cache/state_extraction/SHA256SUMS
 cache/state_extraction/RELEASE_NOTES.md
 ```
 
-Current release:
-[`state-extraction-cache-v1`](https://github.com/npatta01/music-conversational-music-recomender-2026/releases/tag/state-extraction-cache-v1)
-
-Build the release asset from the shared cache-owner checkout:
+Build a fresh archive from the shared cache-owner checkout:
 
 ```bash
 uv run python scripts/package_state_cache.py \
@@ -57,13 +59,12 @@ The archive is written to:
 cache/releases/state_extraction_cache_v1_2026-06-28.tar.zst
 ```
 
-Publish it as a GitHub Release asset, for example:
+Publish it to the HF dataset, for example:
 
 ```bash
-gh release create state-extraction-cache-v1 \
+hf upload Npatta01/music-crs-repro-2026 \
   cache/releases/state_extraction_cache_v1_2026-06-28.tar.zst \
-  --title "State extraction cache v1" \
-  --notes-file cache/state_extraction/RELEASE_NOTES.md
+  cache/state_extraction.tar.zst --repo-type dataset
 ```
 
 ## Install / Verify
@@ -71,11 +72,10 @@ gh release create state-extraction-cache-v1 \
 From repo root:
 
 ```bash
-gh release download state-extraction-cache-v1 \
-  --pattern 'state_extraction_cache_v1_2026-06-28.tar.zst' \
-  --dir cache/releases
+hf download Npatta01/music-crs-repro-2026 --repo-type dataset --local-dir . \
+  --include "cache/state_extraction.tar.zst"
 
-tar --zstd -xf cache/releases/state_extraction_cache_v1_2026-06-28.tar.zst
+tar --use-compress-program=unzstd -xf cache/state_extraction.tar.zst
 sha256sum -c cache/state_extraction/SHA256SUMS
 ```
 

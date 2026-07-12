@@ -13,8 +13,9 @@ listener asked for a *different* one).
 > to the synthetic reaction**. Net: 3,486 axis-split turns re-arbitrated, 1,591
 > moved out of `artist_anchoring`. See **`DATASET_CARD.md` → Revision history**.
 
-The data files are too large for the repo and live as **GitHub Release assets**
-on the [`anchor-labels-v1.1`](../../releases/tag/anchor-labels-v1.1) release:
+The data files are too large for the repo and live in the
+[`Npatta01/music-crs-repro-2026`](https://huggingface.co/datasets/Npatta01/music-crs-repro-2026)
+Hugging Face dataset, under `anchor_labels_v1.1/`:
 
 | Asset | Size | Contents |
 |---|---|---|
@@ -30,15 +31,19 @@ sha256 (uncompressed): train `64c82bc14208c76f…`, dev `cda599a7ec9df36f…`.
 
 ```bash
 # the datasets
-gh release download anchor-labels-v1.1 -p 'dev_labels_full.jsonl.gz'   && gunzip dev_labels_full.jsonl.gz
-gh release download anchor-labels-v1.1 -p 'train_labels_full.jsonl.gz' && gunzip train_labels_full.jsonl.gz
+hf download Npatta01/music-crs-repro-2026 --repo-type dataset --local-dir . \
+  --include "anchor_labels_v1.1/dev_labels_full.jsonl.gz" \
+  --include "anchor_labels_v1.1/train_labels_full.jsonl.gz"
+gunzip anchor_labels_v1.1/dev_labels_full.jsonl.gz anchor_labels_v1.1/train_labels_full.jsonl.gz
 
 # verify
-gh release download anchor-labels-v1.1 -p '*.sha256'
-sha256sum -c train_labels_full.jsonl.gz.sha256 dev_labels_full.jsonl.gz.sha256
+hf download Npatta01/music-crs-repro-2026 --repo-type dataset --local-dir . \
+  --include "anchor_labels_v1.1/*.sha256"
+sha256sum -c anchor_labels_v1.1/train_labels_full.jsonl.gz.sha256 anchor_labels_v1.1/dev_labels_full.jsonl.gz.sha256
 
 # (optional) full audit/provenance bundles
-gh release download anchor-labels-v1.1 -p '*_audit.tar.gz'
+hf download Npatta01/music-crs-repro-2026 --repo-type dataset --local-dir . \
+  --include "anchor_labels_v1.1/*_audit.tar.gz"
 ```
 
 ## What's in this folder

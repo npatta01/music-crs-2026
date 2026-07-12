@@ -9,10 +9,12 @@ LLM, embedding, Modal, or Hugging Face calls**. It's hosted on Hugging Face:
 There are two reproduction paths. Pick the one you need — most people only
 need the first.
 
-| Path | What it proves | Needs |
-|---|---|---|
-| **Frozen replay** | The submitted `prediction.json` bytes are exactly what shipped | `main`, no code changes |
-| **Live offline rerun** | The pipeline itself, run fresh, reproduces the same tracks/quality without any credentials | the `offline-embedding-cache-repro` branch |
+| Path | What it proves |
+|---|---|
+| **Frozen replay** | The submitted `prediction.json` bytes are exactly what shipped |
+| **Live offline rerun** | The pipeline itself, run fresh, reproduces the same tracks/quality without any credentials |
+
+Both paths run on `main`.
 
 ## What's in the bundle
 
@@ -111,27 +113,20 @@ track itself changes. None of this is a bug — it's inherent ANN
 nondeterminism — but it means only `.repro/traces/` + `.repro/reference/`
 reproduce the exact submitted bytes.
 
-## Path 2 — Live offline rerun (needs the branch)
+## Path 2 — Live offline rerun
 
 The frozen-prediction path above needs no code changes. Actually re-running
-inference with zero credentials needs the `offline-embedding-cache-repro`
-branch on top of `f519a83`. Without it, the retrieval encoder eagerly
-resolves a live Modal URL *before ever checking cache* (`modal/vllm_serve.py`
-via `run_inference_devset.py::_resolve_vllm_endpoints_if_needed`), so it
-needs Modal auth even on a pure cache hit. The branch adds:
+inference with zero credentials relies on two things in `mcrs/`:
 
 - A portable embedding cache key (`mcrs/embeddings/litellm_client.py`) that
-  no longer bakes in the resolved `api_base` URL, so a cache lookup never
-  needs a live endpoint resolved at all.
+  doesn't bake in a resolved `api_base` URL, so a cache lookup never needs a
+  live endpoint resolved at all.
 - Lazy endpoint resolution, opt-in via `MCRS_LAZY_VLLM_ENDPOINT=1` (off by
-  default — existing Modal-backed runs keep today's fail-fast behavior).
-- A warning log (`mcrs/lm_modules/litellm_chat.py`) instead of a silently
-  blank response when an explanation completion fails.
+  default — a run without this flag set eagerly resolves a live Modal URL
+  before ever checking cache, so it needs Modal auth even on a pure cache
+  hit).
 
 ```bash
-git fetch origin offline-embedding-cache-repro
-git switch offline-embedding-cache-repro
-
 MCRS_LAZY_VLLM_ENDPOINT=1 \
 OPENROUTER_API_KEY= DEEPINFRA_API_KEY= VLLM_API_KEY= LITELLM_PROXY_KEY= \
 MODAL_TOKEN_ID= MODAL_TOKEN_SECRET= \
@@ -146,18 +141,16 @@ python run_inference_blindset.py --tid state_ranker_v10_lgbm_blindset_A \
 devset (all 1,000 sessions) run to completion with zero errors under a hard
 network fence (`systemd-run -p 'RestrictAddressFamilies=AF_UNIX AF_NETLINK'`
 — Modal isn't just unauthenticated, it's *unreachable*) and every credential
-blanked. The embedding cache-key migration (old → new, verified against the
-exact set of keys each real, network-fenced run actually touches — 33,257
-keys, zero slack, zero gaps) is what makes this possible without Modal
-having ever needed to see these three splits' traffic again.
+blanked. `cache/embedding`'s keys cover the exact set each real,
+network-fenced run actually touches (33,257 keys, zero slack, zero gaps),
+which is what makes this possible without Modal having ever needed to see
+these three splits' traffic again.
 
-## Cache-key migration reference
-
-If you're pointing this branch at an *older* copy of `cache/embedding` (e.g.
-one warmed under the pre-branch code), its entries are keyed the old way —
+If you point this at an *older* copy of `cache/embedding` (e.g. one warmed
+before the portable cache key landed), its entries are keyed the old way —
 including the resolved `api_base` URL — and won't be found by the new
 namespace. That's a one-time re-key, not a re-embed: for every text the old
-key already has an entry, copy it to the new key (no live call). See the
-migration approach in the branch's commit `01e0b86` message, or re-derive it
-from `mcrs/embeddings/litellm_client.py::cache_namespace_for_client`'s old
-vs. new payload shape. The bundle above already ships fully re-keyed.
+key already has an entry, copy it to the new key (no live call), re-deriving
+the mapping from `mcrs/embeddings/litellm_client.py::cache_namespace_for_client`'s
+old vs. new payload shape. The bundle above already ships fully re-keyed, so
+this only matters if you're merging in your own older cache.
