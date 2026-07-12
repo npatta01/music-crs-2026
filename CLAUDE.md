@@ -57,7 +57,9 @@ root. It also accepts `--source /path/to/root` or `MCRS_SHARED_ROOT=/path/to/roo
 instead of git config. If a local run is requested and these paths are missing,
 run the setup script before trying to recompute artifacts. If a worktree already
 has throwaway local cache artifacts from a failed run, use `--force` to replace
-them with the shared links.
+them with the shared links. (This supersedes the older `.worktreeinclude`-only
+approach in [`docs/worktree-setup.md`](docs/worktree-setup.md), kept for its
+original problem statement/rationale only.)
 
 **LiteLLM disk cache is a single shared setting, not per-call-site.** Every
 `litellm.completion`/`batch_completion` call — state extraction *and* response

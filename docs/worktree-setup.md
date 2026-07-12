@@ -1,5 +1,14 @@
 # Worktree Resource Sharing
 
+> **Historical — superseded.** This `.worktreeinclude`-only approach only ever
+> copied small files (`data/`, `.env`). It's superseded by the shared
+> cache-owner mechanism in CLAUDE.md's "Shared local caches" section
+> (`git config mcrs.sharedRoot` + `scripts/setup_worktree_cache.py`), which
+> symlinks the large ignored artifacts (`cache/`, `exp/analysis/rerank/`,
+> `.env`) from a shared root instead of copying or rebuilding them per
+> worktree. Kept here for the original problem statement and rationale;
+> follow CLAUDE.md for the current setup steps.
+
 Tracked in [#10](https://github.com/npatta01/music-conversational-music-recomender-2026/issues/10).
 Implemented in f57fddc on `main`.
 
@@ -62,7 +71,7 @@ uv venv .venv
 uv pip install -e .
 
 # Run inference as normal
-python run_inference_devset.py --tid v0plus_compiler_image_devset --batch_size 16
+python run_inference_devset.py --tid state_ranker_v10_lgbm_devset --batch_size 16
 ```
 
 ## What Stays Per-Worktree

@@ -206,3 +206,12 @@ pool truncated to `pool_k`). To keep build and serve aligned, `build_features.py
 (`--pool-k`) and `run_build_features_for_ranker` (`--pool-k`) both default to
 **500**, matching the v10 serving configs (`qu_kwargs.ranking.pool_k: 500`). If
 you change the serving `pool_k`, rebuild features with a matching `--pool-k`.
+
+## Related work: why not a cross-encoder reranker?
+
+A zero-shot Qwen3-Reranker cross-encoder was evaluated as a serving-time
+reranker/filter on top of this LightGBM model and found net-negative on
+nDCG@20 in every fusion mode tested (replace, RRF-fusion, filter, promote) —
+see [`docs/research/cross_encoder_exploration.md`](research/cross_encoder_exploration.md)
+for the full experiment writeup. It does have offline value as a data
+labeler/teacher for bi-encoder training; it is not part of the serving path.

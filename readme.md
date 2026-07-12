@@ -125,3 +125,13 @@ Offline bundle (catalog, caches, frozen traces, model weights): **https://huggin
 ## Acknowledgments
 
 Built on the RecSys 2026 Music-CRS organizers' baseline evaluation framework and the [TalkPlayData-Challenge](https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge) datasets. Thanks to the organizing committee for the challenge and infrastructure.
+
+---
+
+## Authors / Feedback
+
+If you have feedback, please reach out to:
+
+- [Nidhin Pattaniyil](mailto:npatta01@gmail.com) ([LinkedIn](https://www.linkedin.com/in/nidhinpattaniyil/))
+- [Semih Yagli](mailto:semihyagli1@gmail.com) ([LinkedIn](https://www.linkedin.com/in/semihyagli/))
+- [Tanwir Zaman](mailto:zaman.tanwir@gmail.com) ([LinkedIn](https://www.linkedin.com/in/tanwirzaman/))
