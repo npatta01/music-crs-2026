@@ -1,7 +1,7 @@
 # Reproducing devset / Blind-A / Blind-B from the offline bundle
 
-The `f519a83` offline reproduction bundle ships the ignored artifacts needed
-to reproduce the saved devset, Blind-A, and Blind-B results with **no paid
+The offline reproduction bundle ships the ignored artifacts needed to
+reproduce the saved devset, Blind-A, and Blind-B results with **no paid
 LLM, embedding, Modal, or Hugging Face calls**. It's hosted on Hugging Face:
 
 **https://huggingface.co/datasets/Npatta01/music-crs-repro-2026**
