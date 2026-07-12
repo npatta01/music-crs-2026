@@ -237,7 +237,7 @@ bash prepare_submission.sh state_ranker_v10_lgbm_blindset_A
 
 4. **`--output_suffix` and `num_shards`/`shard_id` are read with `getattr` defaults** (`run_inference_devset.py:133–135`, `run_inference_devset.py:204–205`) — these arguments were added after the initial arg surface. Programmatic callers (tests, Modal) that pass a `SimpleNamespace` without these fields still work.
 
-5. **`prepare_submission.sh` hard-codes `blindset_A`** in the `BLINDSET_DIR` path (`prepare_submission.sh:12`). Running it for a different blindset split (`blindset_B`, etc.) would require editing the script or passing an additional argument; currently only one split is supported.
+5. ~~`prepare_submission.sh` hard-codes `blindset_A`~~ — **fixed**: it now takes an optional `[split]` argument (`bash prepare_submission.sh <tid> blindset_B`), defaulting to `blindset_A`.
 
 6. **`streamlit_app.py` uses hard-coded relative paths** (`exp/inference/devset`, `exp/inference/blindset`) via `glob` — it must be launched from the repo root. It also hard-codes the `blind_a` HF split name (`streamlit_app.py:66`), which differs from the inference output subdirectory name `blindset_A`.
 

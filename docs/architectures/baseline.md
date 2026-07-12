@@ -1,7 +1,5 @@
 # Legacy Baseline Architecture: BM25 / BERT + Llama-3.2-1B
 
-For a separate Milvus retrieval extension, see [Milvus Architecture](./milvus.md).
-
 Historical two-stage pipeline: retrieve candidate tracks, then generate a
 natural language response. Current competition configs use the v10 state-ranker
 full-pipeline QU instead; see [v10 State-Ranker Pipeline](./v0plus_retrieval.md).
