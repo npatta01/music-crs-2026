@@ -63,14 +63,18 @@ Modal number; rerun on Modal for an apples-to-apples current baseline before ran
 
 ## Blind-B (CodaBench)
 
-| Submission | File | Submitted | Status | composite |
-|---|---|---|---|---:|
-| `819863` | `v10_lgbm_B_v1.zip` | 2026-06-29 17:16 | Finished | **0.38** |
+| Submission | File | nDCG@20 | catalog_diversity | lexical_diversity | llm_judge | composite |
+|---|---|---:|---:|---:|---:|---:|
+| `819863` | `v10_lgbm_B_v1.zip` | 0.2537 | 0.0315 | 0.7862 | 3.3000 | **0.3811** |
 
 First Blind-B submission. Uses the goal-free `reranker_v12_goalfree` bundle and the
-qwen3-30b explanation LM (see `experiments/v10_lgbm_B_v1.md`). Per-axis composite
-breakdown not exposed by the leaderboard at capture time; label-free audit flagged
-ranking/ordering (ranking_gap dominant) as the main lever.
+qwen3-30b explanation LM (see `experiments/v10_lgbm_B_v1.md`). Rank 29 on the final
+leaderboard (2026-07-12 read). Per-axis breakdown wasn't exposed by the leaderboard
+at submission-capture time (2026-06-29); backfilled here from the final leaderboard.
+Label-free audit at capture time flagged ranking/ordering (ranking_gap dominant) as
+the main lever — consistent with the lower nDCG@20 relative to Blind-A (0.2537 vs
+0.4380) despite comparable lexical_diversity (0.7862 vs 0.7670) and llm_judge in the
+same range (3.30 vs 4.20).
 
 ## Blind-A (CodaBench)
 

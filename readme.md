@@ -7,8 +7,7 @@ Built on top of the organizers' official baseline/evaluation framework (task for
 - **Challenge site**: https://nlp4musa.github.io/music-crs-challenge/
 - **ACM RecSys Challenge**: https://www.recsyschallenge.com/2026
 - **Datasets**: [TalkPlayData-Challenge collection](https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge)
-- **Devset leaderboard (ours)**: [leaderboard.md](leaderboard.md) — NDCG@20 0.4562, Hit@20 0.6138
-- **Blind-B submission (CodaBench `819863`)**: composite score 0.38
+- **Scores**: see [below](#scores) — devset, Blind-A, and Blind-B across every reported facet
 
 ---
 
@@ -25,6 +24,22 @@ Full detail per stage:
 - [docs/reproduce_reranker.md](docs/reproduce_reranker.md) — LightGBM reranker: features, training, FAST vs FULL retrain
 - [docs/architectures/explanation_generation.md](docs/architectures/explanation_generation.md) — response generation
 - [docs/codebase/README.md](docs/codebase/README.md) — full module-by-module map + verified-bugs audit
+
+---
+
+## Scores
+
+| Split | NDCG@20 | Catalog Diversity | Lexical Diversity | LLM-as-a-Judge | Composite | Source |
+|---|---:|---:|---:|---:|---:|---|
+| Devset | 0.4562 | — | — | — | — | Local evaluator ([leaderboard.md](leaderboard.md)) |
+| Blind-A | 0.4380 | 0.0313 | 0.7670 | 4.2000 | **0.5389** | CodaBench submission `797598` |
+| Blind-B | 0.2537 | 0.0315 | 0.7862 | 3.3000 | **0.3811** | CodaBench final leaderboard (rank 29) |
+
+Devset extras (no CodaBench equivalent): Hit@20 0.6138, MRR 0.4102 — see [leaderboard.md](leaderboard.md) for deep-cutoff diagnostics (@50–@1000) and per-stage recall breakdowns.
+
+Devset and Blind-A/B aren't directly comparable: devset is scored locally against public ground truth with a different metric surface (no organizer-side Composite/Catalog Diversity/Lexical Diversity/LLM-as-a-Judge), while Blind-A/B are scored by CodaBench against held-out labels on the exact facets shown above.
+
+⚠️ The devset NDCG@20 above is the last full 50-shard Modal capture (2026-06-15); a later local recapture after subsequent reranker fixes showed a lower number (0.3844), not yet reconfirmed with a fresh full Modal run — see `leaderboard.md`'s discrepancy note before treating 0.4562 as current.
 
 ---
 
