@@ -23,7 +23,8 @@ Full detail per stage:
 - [docs/architectures/session_state.md](docs/architectures/session_state.md) — the state schema and extract→resolve pipeline
 - [docs/reproduce_reranker.md](docs/reproduce_reranker.md) — LightGBM reranker: features, training, FAST vs FULL retrain
 - [docs/architectures/explanation_generation.md](docs/architectures/explanation_generation.md) — response generation
-- [docs/codebase/README.md](docs/codebase/README.md) — full module-by-module map + verified-bugs audit
+
+(Full per-module map is in [Repo map](#repo-map) below.)
 
 ---
 
@@ -43,9 +44,44 @@ Devset and Blind-A/B aren't directly comparable: devset is scored locally agains
 
 ---
 
+## Reproducing our results
+
+Two independent things you can do, both documented for the organizers' code-review process.
+
+### Zero-credential reproduction (Blind-A/B)
+
+Self-contained — creates its own venv and installs its own deps, skipping the [Setup](#setup) section below entirely. No Modal, HF, or LLM credentials needed either way. Downloads a bundled cache (catalog, embeddings, extracted state, frozen LLM cache) from Hugging Face and runs Blind-B end to end:
+
+```bash
+scripts/repro_setup.sh   # downloads + verifies the offline bundle
+scripts/repro_run.sh     # runs Blind-B, no credentials, no Modal
+```
+
+Verified under a network fence (Modal genuinely unreachable) across all of devset/Blind-A/Blind-B. See [docs/reproduce_offline_bundle.md](docs/reproduce_offline_bundle.md) for the byte-exact frozen-replay path vs. this live rerun, and how to check the reported score rather than just the prediction file.
+
+### Training the models from scratch
+
+Rebuilds the LightGBM reranker and/or the b1 bi-encoder — needs the [Setup](#setup) below plus Modal + the usual credentials:
+
+```bash
+# LightGBM reranker: rebuild retrieval traces/features, retrain on Modal.
+# See docs/reproduce_reranker.md for the full command sequence.
+
+# b1 bi-encoder (the fine-tuned Qwen3-Embedding conv->track retriever
+# behind the b1_cos reranker feature):
+modal run scripts/rerank/modal_train_biencoder.py
+modal volume get scout-models /biencoder_qwen06_eN ./models/   # N = 1,2,3 (one checkpoint/epoch)
+# See docs/architectures/biencoder.md for the training recipe (MNRL, MOVES-only
+# positives, known-for field dropout) and how the checkpoint gets promoted/served.
+```
+
+Offline bundle (catalog, caches, frozen traces, model weights): **https://huggingface.co/datasets/Npatta01/music-crs-repro-2026**
+
+---
+
 ## Submission file
 
-Our current active configs (all use `models/reranker_v12_goalfree`, committed in-repo):
+Our current active configs (all use `models/reranker_v12_goalfree`, committed in-repo; all set `track_split_types: ["all_tracks"]`, so retrieval always searches the full 47k-track catalog — none subset it during inference):
 
 | Config | Role |
 |---|---|
@@ -66,7 +102,7 @@ which copies `exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json` �
 
 ## Setup
 
-Only needed for live/credentialed runs (below, and training). The zero-credential reproduction path further down is self-contained and skips this entirely.
+Needed for the live/credentialed paths — [Running inference](#running-inference) below, and [Training the models from scratch](#training-the-models-from-scratch) above. The zero-credential reproduction path above is self-contained and skips this entirely.
 
 ```bash
 uv venv .venv --python=3.12
@@ -82,8 +118,6 @@ Cloud GPU runs (Modal):
 uv run python -m modal setup
 uv run modal run other/modal_get_started.py   # smoke test
 ```
-
-⚠️ Retrieval must always search the **entire** track catalog — `track_split_types: ["all_tracks"]` in every config. Do not filter/subset the catalog during inference.
 
 ---
 
@@ -105,44 +139,13 @@ Predictions land in `exp/inference/{split}/{tid}.json`. See [CLAUDE.md](CLAUDE.m
 
 ---
 
-## Reproducing our results
-
-Two independent things you can do, both documented for the organizers' code-review process:
-
-**Running inference on Blind-A/B (zero-credential)** — self-contained; skips the Setup section above entirely (`repro_setup.sh` creates its own venv and installs its own deps). No Modal, HF, or LLM credentials needed either way. Downloads a bundled cache (catalog, embeddings, extracted state, frozen LLM cache) from Hugging Face and runs Blind-B end to end:
-
-```bash
-scripts/repro_setup.sh   # downloads + verifies the offline bundle
-scripts/repro_run.sh     # runs Blind-B, no credentials, no Modal
-```
-
-Verified under a network fence (Modal genuinely unreachable) across all of devset/Blind-A/Blind-B. See [docs/reproduce_offline_bundle.md](docs/reproduce_offline_bundle.md) for the byte-exact frozen-replay path vs. this live rerun, and how to check the reported score rather than just the prediction file.
-
-**Training the models from scratch (LightGBM reranker, b1 bi-encoder)** — needs Modal + the usual credentials:
-
-```bash
-# LightGBM reranker: rebuild retrieval traces/features, retrain on Modal.
-# See docs/reproduce_reranker.md for the full command sequence.
-
-# b1 bi-encoder (the fine-tuned Qwen3-Embedding conv->track retriever
-# behind the b1_cos reranker feature):
-modal run scripts/rerank/modal_train_biencoder.py
-modal volume get scout-models /biencoder_qwen06_eN ./models/   # N = 1,2,3 (one checkpoint/epoch)
-# See docs/architectures/biencoder.md for the training recipe (MNRL, MOVES-only
-# positives, known-for field dropout) and how the checkpoint gets promoted/served.
-```
-
-Offline bundle (catalog, caches, frozen traces, model weights): **https://huggingface.co/datasets/Npatta01/music-crs-repro-2026**
-
----
-
 ## Repo map
 
-- [docs/codebase/README.md](docs/codebase/README.md) — start here for per-module internals
+- [docs/codebase/README.md](docs/codebase/README.md) — start here for per-module internals and the verified-bugs audit
 - [docs/data.md](docs/data.md) — dataset schemas, splits, inference output format
 - [docs/evaluation.md](docs/evaluation.md) — metrics, devset leaderboard setup
 - [experiments/README.md](experiments/README.md) — current config/report index (pruned intentionally; see git history for older waves)
-- [leaderboard.md](leaderboard.md) / [changelog.md](changelog.md) — devset score table and PR-linked outcomes
+- [changelog.md](changelog.md) — PR-linked outcomes (score table is in [Scores](#scores) above)
 - [tips/](tips/) — extension ideas we didn't pursue (better item representations, generative retrieval, etc.)
 
 ---
