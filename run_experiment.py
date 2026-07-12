@@ -1,3 +1,10 @@
+"""Unified local/Modal experiment wrapper -- the preferred entry point for
+running a tid end to end: resolves the split from the tid/--eval_dataset,
+dispatches to run_inference_devset.py/run_inference_blindset.py (locally or
+via `modal run`), downloads Modal artifacts, and triggers the evaluator for
+devset runs. See CLAUDE.md's "Run" section for the full command reference.
+"""
+
 from __future__ import annotations
 
 import argparse

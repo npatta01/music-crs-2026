@@ -6,14 +6,17 @@ the feature builder kept its v9 module name across the v10 model bump),
 so train/serve drift is structurally impossible. Hooked by V0PlusCompilerQU
 right after trace assembly; replaces the RRF order over the branch-pool union.
 
-Config (qu_kwargs.reranker). The model bundle is committed under
-models/reranker_v10/ (ships in the repo + the Modal image); the large caches are
+Config (qu_kwargs.reranker). The model bundle is committed in-repo (ships with
+the repo + the Modal image) under a path set by `model_path` in each config --
+the current active bundle is models/reranker_v12_goalfree/ (see CLAUDE.md's
+"Architecture notes" for which bundle is actually live; `models/reranker_v10/`
+is retained only as a historical bundle). The large caches referenced below are
 not committed (see docs/reproduce_reranker.md):
   enabled: true
-  model_path:    models/reranker_v10/model.txt        (LightGBM booster)
-  meta_path:     models/reranker_v10/meta.json        ({cols, cat_idx})
-  cat_maps:      models/reranker_v10/cat_maps.json    (categorical value->code)
-  branch_names:  models/reranker_v10/branch_names.json (canonical 11)
+  model_path:    <bundle>/model.txt        (LightGBM booster)
+  meta_path:     <bundle>/meta.json        ({cols, cat_idx})
+  cat_maps:      <bundle>/cat_maps.json    (categorical value->code)
+  branch_names:  <bundle>/branch_names.json (canonical 11)
   tag_index:     .../tag_embedding_index/qwen_0_6b.npz
   embed_memo:    .../q06_memo.json         (query-text embedding cache; live
                                             DeepInfra fill for unseen strings)
@@ -578,6 +581,14 @@ def _apply_final_artist_guard(
     guard_top_k: int,
     current_turn: int | None,
 ) -> list[str]:
+    """Demote any track by an artist this turn just switched away from/rejected,
+    out of the top `guard_top_k` slots.
+
+    Last-resort safety net for the case the reranker's own artist features miss:
+    an unpinned track in the guarded window whose artist matches a same-turn
+    switch-away/rejection target gets pushed to the bottom of `ranked` (not
+    dropped outright) and logged as a `ranking_guard_actions` trace entry.
+    """
     if not enabled or guard_top_k <= 0:
         return ranked[:top_k_out]
     targets = _same_turn_artist_guard_targets(trace, current_turn=current_turn)
@@ -690,6 +701,15 @@ def _apply_branch_rescue(
     target_rank: int,
     require_lyric_phrase: bool = False,
 ) -> list[str]:
+    """Promote a top hit from one specific branch into the top `target_rank` slots.
+
+    Guards against the reranker burying a track a routing-tagged branch (visual
+    or lyric) surfaced strongly, when the turn's own signal (`routing_tag`, and
+    for lyrics an actual lyric-phrase-like request) says that branch should be
+    trusted. Only fires if `enabled` and the routing tag/phrase check pass; a
+    no-op copy-and-truncate otherwise. `guard_type` only labels the trace entry
+    this leaves behind, both calls below share this one implementation.
+    """
     if not enabled or top_n <= 0 or target_rank <= 0:
         return ranked[:top_k_out]
     if not _routing_tag_enabled(trace, routing_tag):
@@ -769,6 +789,13 @@ def _apply_exact_track_pins(
     min_confidence: float,
     current_turn: int | None = None,
 ) -> list[str]:
+    """Pin high-confidence exact-track resolver targets to the very top of `ranked`.
+
+    Guards against the reranker outranking a track the user named outright
+    (e.g. "play Yesterday by the Beatles") in favor of a merely similar one.
+    Up to `pin_limit` targets at or above `min_confidence` get pinned, skipping
+    ones already hard-dropped unless they were actually played and not rejected.
+    """
     if pin_limit <= 0:
         return ranked[:top_k_out]
     resolver = trace.get("resolver") or {}
@@ -978,7 +1005,13 @@ class LgbmOnlineReranker:
     def rerank(self, trace: dict, session_meta: dict | None,
                user_id: str | None, hard_drop: set[str],
                fallback: list[str]) -> list[str]:
-        """Re-order the branch-pool union and keep hard drops out of fallbacks."""
+        """Score+order the branch-pool union with the LightGBM booster, then run it
+        through `finalize()`'s post-score guard chain (see each guard's own
+        docstring): exact-track pins, then visual/lyric branch rescue, then the
+        final-artist demotion guard -- each a narrow, config-gated correction for
+        a failure mode the learned score alone doesn't reliably catch. Keeps hard
+        drops out of the RRF fallback path used on reranker failure.
+        """
         from features import compute_turn_features
         dropped = {str(track_id) for track_id in hard_drop}
         pin_limit = int(getattr(self, "exact_pin_top_n", 2))

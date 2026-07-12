@@ -31,9 +31,11 @@ from typing import Any, Iterable, Mapping
 DEFAULT_VECTOR_COLUMN = "metadata-qwen3_embedding_0.6b"
 
 # Default vector columns to load from the HF embeddings dataset. The v0+ compiler
-# currently uses metadata + attributes + lyrics as 3 separate dense branches; the
-# audio/image/cf columns aren't ANN-queryable in the current LanceDB index (see
-# docs/talkplay_embedding_specs.md), so we skip them at load time to save memory.
+# currently uses metadata + attributes + lyrics as 3 separate text-dense branches;
+# the audio/image/cf columns have no natural text query to encode against them
+# (see docs/architectures/v0plus_retrieval.md section 2 -- they're reached via
+# the separate centroid-only branch mechanism instead), so we skip them at load
+# time to save memory.
 DEFAULT_VECTOR_COLUMNS_FOR_V0PLUS = (
     "metadata-qwen3_embedding_0.6b",
     "attributes-qwen3_embedding_0.6b",

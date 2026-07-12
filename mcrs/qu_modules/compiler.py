@@ -261,8 +261,12 @@ class CompilerConfig:
 
     # Dense branches — one search_embedding call per entry. Default fans across
     # the three text-derived Qwen3 columns in the talkpl-ai catalog (metadata
-    # + attributes + lyrics). The audio/image/CF columns aren't ANN-queryable
-    # in the current LanceDB index, see docs/talkplay_embedding_specs.md.
+    # + attributes + lyrics). The audio/image/CF columns have no natural text
+    # query to encode against them, so they aren't reachable via this
+    # text-dense mechanism -- they're searched instead via the separate
+    # centroid_only_branches mechanism below (query = mean of anchor-track
+    # vectors, not encoded text). See docs/architectures/v0plus_retrieval.md
+    # section 2 for the full branch-family breakdown.
     dense_branches: list[DenseBranch] = field(
         default_factory=lambda: [
             DenseBranch(vector_field="metadata_qwen3_embedding_0_6b", weight=1.0),

@@ -1,3 +1,11 @@
+"""The one shared LiteLLM disk cache -- both state extraction and response
+generation read/write through whatever `setup_litellm_cache()` configures
+`litellm.cache` to, keyed by `MCRS_LITELLM_CACHE_DIR`/`MCRS_LITELLM_CACHE_BACKEND`.
+See CLAUDE.md's "Shared local caches" section for the dev-cache vs.
+zero-credential-repro-bundle distinction; there is no separate cache per call
+site.
+"""
+
 from __future__ import annotations
 
 import asyncio
