@@ -125,6 +125,27 @@ def test_long_prose_matrices_render_as_readable_team_cards(page, enhanced_report
         assert float(table.locator("tbody td").first.evaluate("node => parseFloat(getComputedStyle(node).fontSize)")) >= 13
 
 
+def test_story_pages_use_presentation_scale_and_canvas(page, enhanced_report: Path) -> None:
+    browser_page, _ = page
+    open_deck(browser_page, enhanced_report, "#outcome/gap-interpretation")
+    narrative = browser_page.locator(
+        "[id='outcome/gap-interpretation'] [data-artifact-block-id='gap_interpretation'] .portable-markdown"
+    )
+    assert float(narrative.evaluate("node => parseFloat(getComputedStyle(node).fontSize)")) >= 18
+    box = narrative.bounding_box()
+    assert box is not None and box["width"] >= 1000
+    paragraphs = narrative.locator("p")
+    assert float(paragraphs.first.evaluate("node => parseFloat(getComputedStyle(node).lineHeight)")) >= 28
+
+    browser_page.set_viewport_size({"width": 1202, "height": 659})
+    browser_page.reload()
+    browser_page.wait_for_function("document.documentElement.dataset.deckReady === 'true'")
+    narrative_box = narrative.bounding_box()
+    rail_box = browser_page.locator("[data-chapter='outcome'] .deck-vertical-rail").bounding_box()
+    assert narrative_box is not None and rail_box is not None
+    assert narrative_box["x"] + narrative_box["width"] <= rail_box["x"] - 12
+
+
 def test_progressive_disclosure_and_sources(page, enhanced_report: Path) -> None:
     browser_page, _ = page
     open_deck(browser_page, enhanced_report)
