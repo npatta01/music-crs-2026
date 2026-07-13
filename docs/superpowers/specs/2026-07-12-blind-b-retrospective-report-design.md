@@ -17,7 +17,7 @@ The report must answer four questions:
 1. What happened on the final leaderboard?
 2. Which decisions most likely caused the gap?
 3. What did the leading teams do better?
-4. What should be done differently in a future competition or follow-up system?
+4. Which lessons are worth carrying into future ML competitions?
 
 ## 2. Reader and tone
 
@@ -42,8 +42,9 @@ The HTML report will follow this reading path:
    diversity, the LLM judge, and the composite formula.
 3. **The final result** — exact metrics for this submission and the four leading
    public-code entries.
-4. **What the system actually built** — a concise explanation of state extraction,
-   retrieval branches, RRF, LightGBM reranking, and response generation.
+4. **What my system actually built** — a concise explanation of state extraction,
+   retrieval branches, RRF, LightGBM reranking, and response generation, paired
+   with a labeled end-to-end architecture visual.
 5. **What worked** — candidate coverage, traceability, multimodal breadth,
    reproducibility, and other strengths worth retaining.
 6. **The central evaluation mistake** — why training on all labeled dev turns and
@@ -55,12 +56,17 @@ The HTML report will follow this reading path:
 8. **Why response generation underperformed** — Blind-A template selection did
    not generalize, responses were under-grounded, and a single deterministic pass
    lacked the leaders' selection and critique stages.
-9. **What each leading team did better** — separate, comparable summaries for
-   volart, niwatori, swyoo, and team2_s2.
-10. **What to keep, change, and discard** — a decision table for the current
-    architecture.
-11. **Prioritized recovery plan** — evaluation first, then training data,
-    candidate lanes, ranker, and response quality.
+9. **Four competitor case studies** — separate, detailed sections for volart,
+   niwatori, swyoo, and team2_s2. Each case study will combine an architecture
+   visual, an accessible technical walkthrough, the team's distinctive choices,
+   and a clear comparison with my system.
+10. **Cross-team synthesis** — a side-by-side matrix showing which teams used
+    behavioral retrieval, learned retrieval, leakage-safe validation, rich
+    reranker features, generation sampling, factual grounding, and response
+    selection or critique.
+11. **What I would preserve and what I would reconsider** — retrospective
+    judgments about the current architecture, without turning them into an
+    implementation roadmap.
 12. **Lessons for future ML competitions** — reusable principles about clean
     validation, public-leaderboard overfitting, simple behavioral signals, and
     optimizing every scored component.
@@ -98,9 +104,45 @@ phones and through remote file access. It will include:
 - a stacked bar chart decomposing each competitor's composite lead into ranking,
   LLM-judge, lexical-diversity, and catalog-diversity contributions;
 - an exact leaderboard comparison table;
-- a simple pipeline diagram explaining retrieve → rerank → respond;
-- a team-comparison table using the same categories for all four systems;
-- a prioritized action table separating immediate, next, and later work.
+- a detailed visual of my own pipeline so the comparisons have a common baseline;
+- one detailed architecture visual for each of the four competitor systems;
+- a cross-team comparison matrix using the same categories for every system;
+- a retrospective table separating choices to preserve, reconsider, and avoid in
+  future competitions.
+
+The five architecture visuals will share one visual grammar so they can be read
+side by side. Each will show, where the public evidence permits:
+
+1. how the conversation is represented;
+2. the candidate-generation or retrieval lanes;
+3. candidate fusion and reranking;
+4. the training and validation strategy relevant to ranking;
+5. response generation, sampling, grounding, and selection;
+6. the design choice that most clearly distinguished that system.
+
+The competitor visuals will be detailed enough to explain the actual approach,
+but they will not imply that undocumented implementation details are known.
+Verified components will use solid styling, strong inferences will use dashed
+styling, and unknowns will be omitted or explicitly labeled. On narrow screens,
+each pipeline will stack vertically rather than require horizontal scrolling.
+
+The visual emphasis for each case study will be:
+
+- **My system:** state extraction, retrieval branches, RRF pool construction,
+  the 500-candidate reranker boundary, `b1_cos`, LightGBM, and the single-pass
+  response generator.
+- **volart:** five retrieval lanes, track co-occurrence and priors, 69-feature
+  LambdaMART, disjoint validation, and best-of-three generation followed by
+  critic/refine stages.
+- **niwatori:** fourteen candidate sources, out-of-fold two-tower retrieval,
+  history artist/album and transition signals, a 176-feature ranker, and ten
+  response candidates selected for diversity.
+- **swyoo:** five-fold QLoRA two-tower training, leakage-safe out-of-fold
+  features, regularized LightGBM, and the PAS response strategy with lexical
+  stabilization.
+- **team2_s2:** multiple BGE retrievers, collaborative and acoustic evidence,
+  routed LightGBM plus CatBoost, blind-like shift weighting, and two-pass
+  fact-grounded Gemini generation.
 
 Charts will use restrained colors, explicit units, direct labels where practical,
 and a semantic table fallback so the report remains understandable without
@@ -127,7 +169,8 @@ Before handoff, the report must pass these checks:
 - verified facts and inferences are visibly distinguishable;
 - the report acknowledges what the system did well;
 - each competitor is compared using the same dimensions;
-- recommendations follow from the evidence and are prioritized;
+- retrospective conclusions follow from the evidence and avoid prescribing new
+  implementation work;
 - the HTML is self-contained and passes the packaged artifact validator;
 - desktop and narrow-width verification passes when a compatible browser is
   available, with structural verification as the documented fallback.
@@ -137,6 +180,7 @@ Before handoff, the report must pass these checks:
 This report will not:
 
 - implement ranking or response-generation changes;
+- prescribe a recovery plan or post-competition implementation roadmap;
 - claim per-session Blind-B root causes without labels;
 - treat longer responses as automatically better;
 - present architectural differences as causal proof when only correlation is
