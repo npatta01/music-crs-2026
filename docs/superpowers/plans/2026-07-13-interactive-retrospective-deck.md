@@ -436,7 +436,7 @@ def page():
 
 def open_deck(page: Page, report: Path, suffix: str = "") -> None:
     page.goto(f"{report.as_uri()}{suffix}")
-    page.wait_for_selector('html[data-deck-ready="true"]')
+    page.wait_for_function("document.documentElement.dataset.deckReady === 'true'")
 
 
 def test_groups_every_block_once(page, enhanced_report: Path) -> None:
@@ -471,7 +471,7 @@ def test_linear_and_print_modes(page, enhanced_report: Path) -> None:
     assert browser_page.locator(".deck-chapter").first.is_visible()
     assert browser_page.locator("details.deck-disclosure:not([open])").count() == 0
     browser_page.goto(enhanced_report.as_uri())
-    browser_page.wait_for_selector('html[data-deck-ready="true"]')
+    browser_page.wait_for_function("document.documentElement.dataset.deckReady === 'true'")
     assert browser_page.locator("details.deck-disclosure:not([open])").count() > 0
     browser_page.emulate_media(media="print")
     browser_page.evaluate("dispatchEvent(new Event('beforeprint'))")
