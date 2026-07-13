@@ -1,234 +1,370 @@
-# Blind-B Retrospective Report — Design Spec
+# Blind-B Retrospective Report — Revised Design Spec
 
-**Date:** 2026-07-12
-**Status:** Approved in conversation; advisor corrections incorporated
-**Audience:** Personal retrospective
-**Delivery:** Private, self-contained HTML report
+**Original date:** 2026-07-12
+
+**Revised:** 2026-07-13
+
+**Status:** Approved in conversation; revised after rendered-report review
+
+**Audience:** The Music-CRS project team and the author's future self
+
+**Delivery:** One private, self-contained HTML report tracked at repository root as `retrospective.html`
 
 ## 1. Purpose
 
-Create a detailed but accessible retrospective explaining why the final Music-CRS
-Blind-B submission underperformed the leading public-code systems. The report is
-for the author's own future reference, so it should be candid about mistakes,
-preserve the technical evidence, and turn the comparison into reusable lessons.
+Create a detailed but accessible team retrospective explaining why the final
+Music-CRS Blind-B submission underperformed four leading public-code systems.
+The report must preserve enough technical detail for the team to reuse the
+public implementations' ideas without turning the retrospective into a recovery
+roadmap for a finished competition.
 
-The report must answer four questions:
+The report must answer seven questions:
 
-1. What happened on the final leaderboard?
-2. Which factors are the best-supported contributors to the gap?
-3. What did the leading teams do better?
-4. Which lessons are worth carrying into future ML competitions?
+1. What happened on the final leaderboard, and which scored terms made up the gap?
+2. What did our submitted system actually do from conversation to response?
+3. How did each team convert a conversation into one or more retrieval queries?
+4. Which challenge data, external data, generated data, and LLM world knowledge did each team use?
+5. Which retrieval, reranking, and response-generation mechanisms did the leading teams document?
+6. What did those teams do especially well, and what remains undocumented?
+7. Which principles and implementation patterns are worth carrying into future work?
 
-## 2. Reader and tone
+## 2. Reader, voice, and evidence stance
 
-The report will use plain language and define specialized terms before relying on
-them. It will be written as a constructive first-person retrospective rather than
-an external audit or blame-oriented postmortem.
+The report is for teammates who understand machine learning but may not know
+every recommender-system term. It will define specialized concepts before using
+them, explain feature families rather than merely listing counts, and preserve
+exact technical evidence behind progressive disclosure.
 
-The tone should be:
+The voice will be first-person plural where the work was a team effort and
+first-person singular only for personal judgment. It will be:
 
-- honest about methodological mistakes;
-- specific about verified evidence;
-- respectful toward the work that was done well;
-- clear about the difference between facts, inferences, and unknowns;
-- focused on transferable lessons rather than hindsight criticism.
+- candid about methodological and architectural weaknesses;
+- explicit about what the submitted system did well;
+- respectful and appreciative toward the released teams;
+- precise about Verified, Inferred, and Not documented claims;
+- careful not to convert architecture differences into hidden-set causal proof;
+- focused on reusable learning rather than blame or a post-competition recovery plan.
 
-## 3. Report structure
+The report will explicitly acknowledge that it depends on the openness of the
+four teams and the challenge organizers.
 
-The HTML report will follow this reading path:
+## 3. Delivery and repository placement
 
-1. **Title and Executive Summary** — the short answer and the two strongest
-   evidence-backed contributors.
-2. **How the challenge was scored** — an accessible explanation of nDCG,
-   diversity, the LLM judge, and the composite formula.
-3. **The final result** — exact metrics for this submission and the four leading
-   public-code entries.
-4. **What my system actually built** — a concise explanation of state extraction,
-   retrieval branches, RRF, LightGBM reranking, and response generation, paired
-   with a labeled end-to-end architecture visual.
-5. **What worked** — candidate coverage, traceability, multimodal breadth,
-   reproducibility, and other strengths worth retaining.
-6. **The central evaluation mistake** — why training on all labeled dev turns and
-   then reporting performance on those turns produced an in-sample number rather
-   than a generalization estimate. This section will explicitly distinguish an
-   unreliable estimate from a cause of the Blind-B score.
-7. **Best-supported ranking contributors** — limited ranker training population,
-   candidate truncation, missing sequential/co-occurrence lanes, and underuse of
-   the trained bi-encoder. These are plausible contributors supported by released
-   code and ablations, not proven per-session causes.
-8. **Best-supported response contributors** — the selected response strategy
-   scored 4.70 with the Blind-A judge but 3.30 on Blind-B, responses were
-   under-grounded, and a single deterministic pass lacked the leaders' selection
-   and critique stages. The report will separate measured response differences
-   from causal interpretation.
-9. **Four competitor case studies** — separate, detailed sections for volart,
-   niwatori, swyoo, and team2_s2. Each case study will combine an architecture
-   visual, an accessible technical walkthrough, the team's distinctive choices,
-   and a clear comparison with my system.
-10. **Cross-team synthesis** — a side-by-side matrix showing which teams used
-    behavioral retrieval, learned retrieval, leakage-safe validation, rich
-    reranker features, generation sampling, factual grounding, and response
-    selection or critique.
-11. **What I would preserve and what I would reconsider** — retrospective
-    judgments about the current architecture, without turning them into an
-    implementation roadmap.
-12. **Lessons for future ML competitions** — reusable principles about clean
-    validation, public-leaderboard overfitting, simple behavioral signals, and
-    optimizing every scored component.
-13. **Caveats and evidence** — the limits imposed by an 80-session hidden set and
-    the absence of per-session Blind-B labels.
+The finished report will be the single tracked file:
 
-For this report, the comparison set means the four highest-scoring final entries
-among the public repositories supplied by the user. The report will state both the
-repository/team name and the corresponding leaderboard entry name wherever those
-names differ, including `music-crs-team2` versus `team2_s2`.
+```text
+retrospective.html
+```
 
-## 4. Evidence and calculations
+It will live at repository root because the entire repository is the Music-CRS
+competition project. No additional `music-crs-2026/` folder will be created.
+The repository README will link to `retrospective.html` using a short
+"Competition retrospective" entry.
+
+The HTML must be self-contained: no local server, sibling assets, CDN, runtime
+sidecars, or network calls at view time. The editable canonical artifact and
+claim ledger may remain in the private visualization workspace; only the final
+HTML and the README link are added to the project repository.
+
+The report remains private/local unless the user separately authorizes
+publishing or sharing.
+
+## 4. Reader-facing information architecture
+
+The report will follow this order:
+
+1. **Title and Executive Summary** — the short answer and the strongest evidence-backed explanations.
+2. **How the challenge was scored** — plain-language definitions and the composite formula.
+3. **Final result and signed gap decomposition** — exact leaderboard values and the four-panel contribution visual.
+4. **The complete system lifecycle** — one compact map from conversation to query, candidates, ranking, and response.
+5. **From conversation to search query** — a systematic comparison of how all five systems represented and transformed dialogue.
+6. **Data, generated artifacts, and model knowledge** — challenge data, external sources, synthetic/LLM-generated data, verified facts, and latent LLM world knowledge.
+7. **Retrieval and candidate construction** — the actual retriever families, history signals, behavioral priors, and fusion boundaries.
+8. **What the rankers learned from** — concrete feature families, validation lineage, routing, late fusion, and ensembles.
+9. **Response generation was a full scored subsystem** — a team-by-team account of drafting, grounding, verification, selection, critique, rewriting, and lexical control.
+10. **What our system built, what worked, and what failed methodologically** — submitted architecture, strengths, evaluation error, and evidence-bounded contributors.
+11. **Four detailed public-team case studies** — volart, niwatori, swyoo, and team2_s2, using the same comparison template.
+12. **Cross-team synthesis** — matrices for query construction, data/knowledge, retrieval/ranking, and response generation.
+13. **What we would preserve, reconsider, and avoid** — retrospective judgments, not scheduled work.
+14. **Transferable lessons** — principles for future recommender and ML competition work.
+15. **Acknowledgements** — teams, repository authors, organizers, and the value of the released code.
+16. **Caveats and evidence boundary** — 80 hidden sessions, no per-session labels, and no controlled counterfactuals.
+
+The top of the report will include a compact section directory. The core story
+and conclusions remain visible. Exact prompts, source-file inventories,
+feature lists, model settings, and implementation details use expandable
+`details` sections so technical readers can go deeper without forcing every
+reader through one long wall of text.
+
+## 5. From conversation to query
+
+This will be a first-class technical chapter, not a detail hidden inside the
+retrieval diagrams. Every system will be described using the same trace:
+
+```text
+conversation history
+  -> interpretation or state extraction
+  -> query construction or rewriting
+  -> retriever-specific query representations
+  -> filters and constraints
+  -> candidate sources
+```
+
+For each team, the report will document:
+
+1. **Conversation window:** full history, latest turn, selected turns, summaries, or another documented subset.
+2. **Interpretation:** intent, entities, preferences, exclusions, satisfaction, pivots, novelty, and other state fields.
+3. **LLM involvement:** model, prompt purpose, query rewriting, expansion, labeling, description generation, or no documented LLM transformation.
+4. **Query representation:** raw text, structured JSON/state, field-specific text, multiple generated queries, learned query embeddings, or retriever-specific templates.
+5. **History handling:** how earlier artists/tracks, accepted items, rejected items, and current-turn requests affect the query.
+6. **Retriever handoff:** which representation goes to lexical, dense, collaborative, co-occurrence, transition, metadata, or lookup branches.
+7. **Constraints:** genre, mood, year, artist, album, popularity, novelty, exclusions, and whether enforcement is hard or soft.
+8. **Evidence boundary:** exact implementation, strong inference, or Not documented.
+
+The visible comparison table will contain:
+
+| Team | Conversation window | Interpreter/state | LLM query work | Query variants | Retriever-specific queries | History handling | Constraints |
+|---|---|---|---|---|---|---|---|
+
+Repository-provided prompt excerpts and examples may appear in expandable
+details. The report will not reconstruct undocumented prompts or imply that all
+teams used the same definition of a query.
+
+## 6. Data, generated artifacts, and LLM knowledge
+
+The report will not collapse all non-catalog information into "external data."
+It will use four distinct categories:
+
+1. **Challenge-provided data:** catalog, conversations, labels, and challenge training interactions.
+2. **External structured or public data:** third-party metadata, public corpora, APIs, or other sources explicitly documented by a repository.
+3. **Generated artifacts:** LLM-generated descriptions, rewritten queries, pseudo-labels, synthetic training examples, judgments, or summaries.
+4. **Latent LLM world knowledge:** facts, associations, genres, themes, or descriptive knowledge supplied implicitly by a model's parameters rather than a cited record.
+
+For each team and each pipeline stage, the report will state:
+
+- the source or model, where documented;
+- whether it entered training, query construction, retrieval, reranking, grounding, or response generation;
+- whether the output was verified against catalog/structured facts;
+- whether the source affects reproducibility, leakage risk, cost, or factual reliability;
+- Verified, Inferred, or Not documented status.
+
+The cross-team data/knowledge matrix will keep external structured data,
+LLM-generated artifacts, and latent world knowledge in separate columns.
+
+## 7. Retrieval and ranking feature inventory
+
+The report will explain features as signals available to the ranker, not as a
+feature-count contest. For each team, it will inventory documented feature
+families and show where they came from:
+
+- retriever rank, score, reciprocal rank, and presence indicators;
+- dense semantic similarities and learned-retriever scores;
+- collaborative-filtering and BPR signals;
+- track co-occurrence, transition, and sequential-history features;
+- artist, album, and listening-history affinity;
+- popularity, frequency, and train-prior features;
+- acoustic, genre, era, and metadata matches;
+- conversation-state and constraint-satisfaction features;
+- agreement, overlap, and consensus across retrievers;
+- routing, shift, or scenario indicators;
+- out-of-fold predictions and other leakage-safe feature lineage;
+- late-fusion and ensemble outputs.
+
+The feature chapter will include:
+
+1. a plain-language feature-family glossary;
+2. a team-by-feature-family matrix;
+3. a detailed expandable inventory for every team;
+4. the documented feature count only after the feature meanings are explained;
+5. a validation-lineage column showing whether a learned feature was OOF,
+   held out, in-sample, routed, or Not documented.
+
+Counts alone will never be treated as evidence of quality. The interpretation
+will emphasize signal diversity, behavioral relevance, clean validation, and
+how candidate/feature coverage interacted with the ranker boundary.
+
+## 8. Response generation as a scored subsystem
+
+Because the response judge contributes materially to the composite and every
+team used an LLM response path, response generation will receive a full chapter.
+Each system will be compared across the same stages:
+
+1. **Inputs:** conversation, latest state, selected track IDs, catalog metadata, external data, and generated descriptions.
+2. **Drafting:** model(s), prompt role, number of calls, seeds, candidates, or passes.
+3. **Grounding:** catalog facts, verified facts, citations, model world knowledge, or Not documented.
+4. **Fact checking and repair:** validation, contradiction/theme checks, citation checks, or second-pass correction.
+5. **Selection or critique:** independent critic, scoring, diversity selection, best-of-N selection, or no documented selector.
+6. **Rewriting and style control:** polishing, selective rewriting, length/style constraints, lexical-diversity controls, and repetition handling.
+7. **Recommendation-ID integrity:** how the pipeline prevented text editing from changing the selected track IDs.
+8. **Final handoff:** one final response, chosen candidate, or multi-stage output.
+
+The report will explicitly distinguish:
+
+- multiple independently generated drafts;
+- multiple seeds for the same prompt;
+- a draft-plus-critic workflow;
+- validation and repair of one draft;
+- a two-pass polish;
+- lexical post-processing.
+
+These are different mechanisms and must not be summarized as merely "multiple
+LLM calls." The chapter will include a stage-by-stage comparison table and an
+accessible walkthrough of what each stage buys, what it costs, and what remains
+unverified.
+
+## 9. Public-team case-study template
+
+Each of the four case studies will use the same visible template:
+
+1. **Acknowledged contribution:** what the team released and what was especially useful to learn from.
+2. **Verified final outcome:** exact official metrics.
+3. **Conversation-to-query path:** window, state/parser, LLM transformations, query variants, and constraints.
+4. **Data and knowledge:** challenge data, external sources, generated artifacts, latent world knowledge, and verification.
+5. **Retrieval and candidate construction:** actual lanes, behavioral/history signals, and union/fusion behavior.
+6. **Ranker and features:** model, feature families, count, OOF/validation lineage, routing, and late fusion.
+7. **Response subsystem:** drafting, grounding, checking, selection/critique, rewriting, and final handoff.
+8. **What they did better or differently:** evidence-supported comparison with our submitted path.
+9. **Transferable implementation patterns:** concrete ideas the team can study or reuse.
+10. **Limits:** per-session causality, missing ablations, and undocumented details.
+
+Every exact count or model/pipeline claim will have a commit-pinned source
+marker. Missing public evidence will remain Not documented rather than being
+filled with assumptions.
+
+## 10. Visual and interaction design
+
+The report will be a responsive single-column document. The current compressed
+architecture diagrams are rejected: placing two half-width rails side by side
+and then splitting one rail into five or six equal-width columns produces
+unreadable vertical word fragments at ordinary laptop widths.
+
+The replacement diagram contract is:
+
+- Offline and inference rails are stacked at full report width.
+- Each rail uses at most three stage cards per row on wide screens.
+- Stage cards have a practical minimum content width of approximately 220 px.
+- Four or more stages wrap into additional rows without changing reading order.
+- At narrow widths, all stages become one vertical timeline.
+- Stage headings are short; technical detail appears as two to four bullets.
+- Status and source markers occupy a separate footer area and never shrink the title.
+- Connectors show order without forcing text into narrow boxes.
+- Every diagram has a semantic ordered-list fallback.
+- Core diagram meaning is carried by text and structure, not color alone.
+
+The five system visuals will share this grammar while preserving different
+topologies. Each begins with conversation-to-query, then candidate construction,
+ranking, and response generation; the offline rail shows the training and
+validation lineage that produced the serving components.
+
+Quantitative visuals will include:
+
+- exact leaderboard table and compact comparison chart;
+- four-panel signed score-gap decomposition with centered zero baselines;
+- conversation-to-query comparison matrix;
+- data/knowledge-source matrix;
+- feature-family matrix;
+- response-generation stage matrix;
+- preserve/reconsider/avoid retrospective table.
+
+Every quantitative visual has adjacent prose. Exact values remain available in
+semantic tables. Negative signed contributions must remain visibly negative.
+
+## 11. Progressive disclosure
+
+The visible report must remain readable without opening anything. Progressive
+disclosure is reserved for audit detail:
+
+- exact prompt excerpts;
+- complete retriever and feature inventories;
+- model parameters and training settings;
+- external/generated data source detail;
+- source-marker maps and commit-pinned file lists;
+- additional implementation notes and documented unknowns.
+
+Each team section will show its outcome, architecture, strongest choices, and
+comparison by default. Expandable details will use clear labels such as
+"Conversation-to-query evidence," "Complete feature inventory," "Response
+pipeline details," and "Pinned sources." Core caveats and acknowledgements will
+not be hidden.
+
+## 12. Evidence and calculations
 
 The report will use:
 
 - the official final-results CSV;
-- `origin/main` at commit `2ecc45a` for the local system;
-- the deployed Blind-B config and reranker bundle metadata;
-- the reranker training protocol and documented OOF results;
-- the exact submitted Blind-B responses;
-- the four competitor repositories pinned to the exact commit SHAs reviewed for
-  the report, with those SHAs recorded in the HTML source notes.
+- the submitted system pinned at commit `2ecc45a7d5ea83535f0504b48352b009b3379139`;
+- the deployed Blind-B configuration and reranker bundle metadata;
+- documented OOF diagnostics and evaluation protocol;
+- the four public repositories pinned to their reviewed HEADs;
+- direct file-level sources for query construction, data sources, feature
+  definitions, validation, and response generation.
+
+At the time of the revised design review, all four public repository HEADs still
+matched the previously pinned commits:
+
+- volart: `781ca9942b7c233255ac4a68da12fe42ec340b3a`
+- niwatori: `5679a718c100aaf7779f122bb2eb65f702160f40`
+- swyoo: `33dfe44dd36515e14e74116a8d23d059856d2d04`
+- team2_s2: `e8ca96f67279a44aa38c614f51b4a015a65a2a90`
 
 The composite gap will be independently reconciled using:
 
 `0.50 × nDCG@20 + 0.10 × catalog diversity + 0.10 × lexical diversity + 0.30 × (judge − 1) / 4`
 
-Claims will be labeled using three evidence levels:
+Evidence labels are:
 
-- **Verified:** directly supported by leaderboard data, code, artifacts, or docs.
-- **Strong inference:** supported by architecture differences and released
-  ablations, but not provable per Blind-B session.
-- **Unknown:** requires hidden labels or experiments that are not available.
+- **Verified:** directly supported by official data, code, artifacts, or docs.
+- **Inferred:** supported by documented steps or architecture differences but not stated verbatim or provable per Blind-B session.
+- **Not documented:** the reviewed public sources do not establish the claim.
 
-Every exact architectural count—including retrieval-lane counts, feature counts,
-generation-candidate counts, and generation-pass counts—must have a nearby source
-reference to a commit-pinned repository location. Diagram components will carry
-compact source markers that resolve to a source key immediately below the visual.
+## 13. Acknowledgements
 
-## 5. Visual design
+The report will contain a dedicated acknowledgements section that:
 
-The report will be a responsive, single-column document that remains readable on
-phones and through remote file access. It will include:
+- credits volart / `artvolgin/music-crs-recsys2026`;
+- credits niwatori / `ryowk/recsys2026-niwatori`;
+- credits swyoo / `yoobros/music-crs-challenge`;
+- credits team2_s2 / `lopsandrea/music-crs-team2`;
+- credits the Music-CRS challenge organizers;
+- states that the depth of the retrospective is possible because these teams
+  released implementation details and code;
+- links to the commit-pinned repositories and highlights the specific ideas each
+  release made available to learn from.
 
-- a compact headline metric strip after the Executive Summary;
-- a four-panel signed contribution chart decomposing each competitor's composite
-  lead into ranking, LLM-judge, lexical-diversity, and catalog-diversity terms;
-- an exact leaderboard comparison table;
-- a detailed visual of my own pipeline so the comparisons have a common baseline;
-- one detailed architecture visual for each of the four competitor systems;
-- a cross-team comparison matrix using the same categories for every system;
-- a retrospective table separating choices to preserve, reconsider, and avoid in
-  future competitions.
+Acknowledgement language will be appreciative and specific, not ceremonial or
+competitive in tone.
 
-The five architecture visuals will share one visual grammar and the same review
-questions, without forcing genuinely different systems into an identical
-topology. Each will use two visibly separated rails:
+## 14. Quality and acceptance checks
 
-- **Offline rail:** training data, folds, validation, features, and learned
-  models.
-- **Inference rail:** conversation representation, candidate-generation lanes,
-  fusion, reranking, and response generation.
+Before handoff, the revised report must pass all of the following:
 
-Together, the rails will show, where the public evidence permits:
+- `retrospective.html` exists at repository root and the README links to it.
+- No extra competition-named report folder is created.
+- The opening directly answers what went wrong and what the team should learn.
+- The conversation-to-query chapter covers all five teams using the same fields.
+- External structured data, generated artifacts, and latent LLM world knowledge remain distinct.
+- The response chapter compares all five systems stage by stage and distinguishes drafts, seeds, passes, critique, repair, and lexical post-processing.
+- The ranking chapter explains actual feature families before showing feature counts.
+- Every exact count, model, external source, prompt behavior, and response-pass claim has a commit-pinned source marker.
+- Architecture stages remain readable without single-character vertical wrapping at laptop, tablet, and narrow widths.
+- Offline and inference rails are full-width, ordered, and semantically available as lists.
+- Core findings remain visible; expandable sections contain only deeper audit detail.
+- Every team receives a balanced acknowledgement, technical walkthrough, comparison, and limits section.
+- Official metrics and signed score contributions reconcile within disclosed published-value rounding.
+- Evaluation reuse is described as a measurement/confidence failure, not a direct cause of hidden performance.
+- Architecture differences remain contributor hypotheses rather than causal proof.
+- The HTML is self-contained, embeds the canonical reviewed artifact, and makes zero external requests at view time.
+- Packaged desktop and narrow-width verification passes with no overflow, zero-size blocks, browser errors, or payload mismatch.
+- The final repository diff includes only the intended report, README link, and approved design/plan documentation.
 
-1. how the conversation is represented;
-2. the candidate-generation or retrieval lanes;
-3. candidate fusion and reranking;
-4. the training and validation strategy relevant to ranking;
-5. response generation, sampling, grounding, and selection;
-6. the design choice that most clearly distinguished that system.
+## 15. Non-goals
 
-The competitor visuals will be detailed enough to explain the actual approach,
-but they will not imply that undocumented implementation details are known.
-Every material component will carry a visible **Verified**, **Inferred**, or
-**Not documented** label; color and line style will be secondary cues only. On
-narrow screens, each pipeline will stack vertically rather than require
-horizontal scrolling.
+This work will not:
 
-The visual emphasis for each case study will be:
-
-- **My system:** state extraction, retrieval branches, RRF pool construction,
-  the 500-candidate reranker boundary, `b1_cos`, LightGBM, and the single-pass
-  response generator.
-- **volart:** five retrieval lanes, track co-occurrence and priors, 69-feature
-  LambdaMART, disjoint validation, and best-of-three generation followed by
-  critic/refine stages.
-- **niwatori:** fourteen candidate sources, out-of-fold two-tower retrieval,
-  history artist/album and transition signals, a 176-feature ranker, and ten
-  response candidates selected for diversity.
-- **swyoo:** five-fold QLoRA two-tower training, leakage-safe out-of-fold
-  features, regularized LightGBM, and the PAS response strategy with lexical
-  stabilization.
-- **team2_s2:** multiple BGE retrievers, collaborative and acoustic evidence,
-  routed LightGBM plus CatBoost, blind-like shift weighting, and two-pass
-  fact-grounded Gemini generation.
-
-Charts will use restrained colors, explicit units, direct labels where practical,
-and a semantic table fallback so the report remains understandable without
-JavaScript. Every visual will have adjacent prose explaining what it shows and why
-it matters.
-
-The contribution chart will not use a conventional positive stack. Each of its
-four panels will center the component axis at zero, display positive and negative
-terms in opposite directions, show exact signed values, and reconcile them to the
-competitor's total composite lead. This prevents negative diversity contributions
-from being visually misrepresented.
-
-The architecture visuals will use the portable report workflow's native diagram
-primitive if it supports the required labels and source markers. Otherwise they
-will be embedded as static SVGs with meaningful text labels and an adjacent text
-fallback. The implementation must verify this capability before composing all
-five diagrams.
-
-The cross-team matrix will use the explicit states **Yes**, **Partial**, and
-**Not documented**. It will not turn absent public documentation into a claim that
-a team did not use a technique.
-
-## 6. Delivery and privacy
-
-The result will be one self-contained HTML file built through the Data Analytics
-portable-report workflow. It will embed its reviewed data and source metadata, make
-no network calls at viewing time, and require no local server. It will remain local
-and private; it will not be published, deployed, or given public sharing settings.
-
-The canonical report artifact will live outside the tracked project source unless
-the user later requests that the finished retrospective be checked into the repo.
-
-## 7. Quality checks
-
-Before handoff, the report must pass these checks:
-
-- the opening summary directly answers what went wrong;
-- uncommon terms are defined on first use;
-- every important number reconciles with the official formula;
-- verified facts and inferences are visibly distinguishable;
-- the report acknowledges what the system did well;
-- each competitor is compared using the same dimensions;
-- evaluation leakage is described as a measurement failure rather than a direct
-  cause of hidden-set performance;
-- all five architecture visuals separate offline training from online inference
-  and attach source markers to exact claims;
-- signed score contributions reconcile to the official composite gaps;
-- retrospective conclusions follow from the evidence and avoid prescribing new
-  implementation work;
-- the HTML is self-contained and passes the packaged artifact validator;
-- desktop and narrow-width verification passes when a compatible browser is
-  available, with structural verification as the documented fallback.
-
-## 8. Non-goals
-
-This report will not:
-
-- implement ranking or response-generation changes;
-- prescribe a recovery plan or post-competition implementation roadmap;
-- claim per-session Blind-B root causes without labels;
-- treat longer responses as automatically better;
-- present architectural differences as causal proof when only correlation is
-  available;
-- publish or share the report externally.
+- implement ranking, retrieval, query, or response-generation changes;
+- prescribe a recovery plan, owners, milestones, experiments, or delivery schedule;
+- claim per-session Blind-B root causes without hidden labels;
+- imply that more features, more LLM calls, more data, or longer responses are automatically better;
+- infer undocumented external data or prompts;
+- treat latent LLM knowledge as verified factual grounding;
+- publish, deploy, or change sharing permissions.
