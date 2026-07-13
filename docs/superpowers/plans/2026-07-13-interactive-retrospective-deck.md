@@ -737,7 +737,10 @@ def test_jump_palette_filters_and_restores_focus(page, enhanced_report: Path) ->
 def test_direct_and_invalid_hashes(page, enhanced_report: Path) -> None:
     browser_page, _ = page
     open_deck(browser_page, enhanced_report, "#response/matrix")
-    assert browser_page.locator('#response\\/matrix').get_attribute("aria-current") == "true"
+    target = browser_page.locator('#response\\/matrix')
+    assert target.get_attribute("aria-current") == "true"
+    box = target.bounding_box()
+    assert box is not None and abs(box["x"]) < 1
     browser_page.goto(f"{enhanced_report.as_uri()}#not/a-slide")
     browser_page.wait_for_url("**#outcome/summary")
 
@@ -819,11 +822,16 @@ Append this code inside `DECK_RUNTIME`, immediately before assigning `window.__r
     nextButton.textContent = nextItem ? `${nextItem.entry.title} →` : "End";
     if (announce) live.textContent = `${item.chapter.title}, ${item.entry.title}`;
   };
-  const goTo = (slug, { push = true, focus = true, announce = true } = {}) => {
+  const goTo = (slug, { push = true, focus = true, announce = true, behavior = null } = {}) => {
     const cleanSlug = slug.split("?")[0];
     const item = bySlug.get(cleanSlug) || slides[0];
     const target = document.getElementById(item.slug);
-    target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start", inline: "start" });
+    const scrollBehavior = behavior || (matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth");
+    const scrollContainers = [track, target.closest(".deck-vertical")];
+    const previousInlineBehavior = scrollContainers.map((node) => node.style.scrollBehavior);
+    if (scrollBehavior === "auto") scrollContainers.forEach((node) => { node.style.scrollBehavior = "auto"; });
+    target.scrollIntoView({ behavior: scrollBehavior, block: "start", inline: "start" });
+    if (scrollBehavior === "auto") scrollContainers.forEach((node, index) => { node.style.scrollBehavior = previousInlineBehavior[index]; });
     updateCurrent(item, announce);
     const nextHash = `#${item.slug}${slug.includes("?") ? `?${slug.split("?")[1]}` : ""}`;
     if (push) history.pushState({ slug: item.slug }, "", nextHash);
@@ -935,7 +943,7 @@ Append this code after the functions from Step 3:
     const destinations = { ArrowLeft: horizontal(-1), ArrowRight: horizontal(1), ArrowUp: verticalItem(-1), ArrowDown: verticalItem(1) };
     if (destinations[event.key]) { event.preventDefault(); goTo(destinations[event.key].slug); }
   });
-  addEventListener("popstate", () => goTo(location.hash.slice(1) || slides[0].slug, { push: false, focus: false, announce: true }));
+  addEventListener("popstate", () => goTo(location.hash.slice(1) || slides[0].slug, { push: false, focus: false, announce: true, behavior: "auto" }));
   addEventListener("beforeprint", () => document.querySelectorAll("details.deck-disclosure").forEach(details => {
     if (!("deckPrintOpen" in details.dataset)) details.dataset.deckPrintOpen = details.open ? "true" : "false";
     details.open = true;
@@ -948,8 +956,8 @@ Append this code after the functions from Step 3:
   }));
   const initial = location.hash.slice(1);
   const initialSlug = initial.split("?")[0];
-  if (!bySlug.has(initialSlug)) goTo(slides[0].slug, { push: false, focus: false, announce: false });
-  else goTo(initial, { push: false, focus: false, announce: false });
+  if (!bySlug.has(initialSlug)) goTo(slides[0].slug, { push: false, focus: false, announce: false, behavior: "auto" });
+  else goTo(initial, { push: false, focus: false, announce: false, behavior: "auto" });
   setLinear(new URL(location.href).searchParams.get("view") === "linear");
   window.__retrospectiveDeck = { CONFIG, app, track, live, goTo, setLinear, currentSlug: () => active.slug };
 ```
@@ -965,7 +973,7 @@ node --test tests/report/retrospective_deck.test.mjs
 uv run pytest -q tests/report/test_retrospective_deck_browser.py
 ```
 
-Expected: Node `5 passed`; pytest `11 passed`.
+Expected before advisor-review additions: Node `5 passed`; pytest `11 passed`.
 
 - [ ] **Step 6: Commit navigation and accessibility behavior**
 
@@ -979,6 +987,17 @@ git commit -m "feat: add retrospective deck navigation"
 Expected: one commit containing exactly those two modified files.
 
 ---
+
+## Advisor-review amendments
+
+These contracts supersede any narrower Task 2–3 snippets above:
+
+- Override the portable reader's inherited `.portable-sources{display:none!important}` rule so all ten source records are visible when their disclosure opens, in linear mode, in print, and in the JavaScript-disabled fallback.
+- Reorder `query/prompt-audit` before `query/data-knowledge` only in linear and print modes, restoring the exact canonical block order while retaining the approved deck order.
+- Treat gesture scrolling as a settled navigation: preserve the origin entry, push the settled destination, suppress duplicate history work during programmatic scrolling, make initial/popstate positioning immediate, and reconcile interrupted smooth navigation to the slide actually onscreen.
+- Add a seven-button desktop chapter rail, numbered vertical controls with visible focus/hover labels, and a persistent current-chapter label on mobile.
+- Search rendered slide text and iframe `srcdoc` content so the Jump palette supports real topics such as `BM25`, not only slide titles and slugs.
+- Verify all of the above in Chrome, including an exact 74-ID linear-order comparison, source visibility in every reader mode, gesture Back behavior, interrupted smooth-scroll recovery, mobile orientation, topic search, and JavaScript-disabled completeness.
 
 ### Task 4: Regenerate, Reconcile, and Deliver the Interactive Report
 
@@ -1076,8 +1095,8 @@ for repo in artvolgin/music-crs-recsys2026 ryowk/recsys2026-niwatori yoobros/mus
 Expected:
 
 - Node tests: 5 passed, 0 failed;
-- focused browser tests: 11 passed;
-- full project suite: 771 passed, 1 skipped, with only the two pre-existing Pydantic deprecation warnings;
+- focused browser tests: 15 passed;
+- full project suite: 775 passed, 1 skipped, with only the two pre-existing Pydantic deprecation warnings;
 - deck CLI: 74 blocks mapped into 7 chapters;
 - all remaining commands exit `0`.
 
@@ -1154,7 +1173,7 @@ Expected:
 
 Create an ignored task report at `.superpowers/sdd/interactive-deck-final-report.md` containing:
 
-- four implementation commit SHAs and subjects;
+- implementation commit SHAs and subjects;
 - final `retrospective.html` SHA-256 and size;
 - portable builder receipt;
 - Node, focused browser, and full pytest results;
