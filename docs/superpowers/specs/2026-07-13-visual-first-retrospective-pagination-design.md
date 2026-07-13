@@ -1,12 +1,12 @@
 # Visual-First Retrospective Pagination Design
 
-**Status:** Proposed for user review
+**Status:** Approved by user on 2026-07-13
 
 **Supersedes:** The page-density and embedded-content layout portions of `2026-07-13-interactive-retrospective-deck-design.md`. The seven horizontal chapters, canonical evidence, hashes, accessibility contract, linear fallback, and local-only delivery remain in force.
 
 ## Objective
 
-Turn the current retrospective into a visual-first, content-aware deck of at least 50 vertical pages, starting with the specified 50-page structure and adding pages only when evidence needs a cleaner split. Each page should communicate one idea without cropped content, nested vertical scrollbars, intimidating walls of prose, or unused canvas. The report must still preserve all 74 canonical blocks, ten source records, commit-pinned acknowledgements, calculations, and evidence boundaries.
+Turn the current retrospective into a visual-first, content-aware deck of at least 50 vertical pages. The 50-page map below is a baseline, not a ceiling: add vertical pages when a visual explanation and its comparison evidence need separate canvases. Each page should communicate one idea without cropped content, nested vertical scrollbars, intimidating walls of prose, or unused canvas. The report must still preserve all 74 canonical blocks, ten source records, commit-pinned acknowledgements, calculations, and evidence boundaries.
 
 ## Diagnosed layout failure
 
@@ -29,6 +29,19 @@ The redesign must correct the shared layout system rather than add per-screensho
 5. **Full canvas for evidence.** Tables and diagrams may use up to 1,520px on large screens. Narrative prose remains limited to about 78 characters per line.
 6. **No factual compression by omission.** Visual summaries never replace the exact evidence; they provide a faster entry point to it.
 7. **Images do not carry unique claims.** Every factual statement shown visually also appears in accessible HTML text, a chart data table, or the following evidence page.
+8. **Teach, then compare.** Dense cross-team subjects use a two-slide sequence: the first slide explains the shared mechanism visually; the second shows only the meaningful team differences. Exact wording, qualifications, and citations remain in a named disclosure or audit page.
+9. **Compress the overview, not the evidence.** The default view uses large type, short labels, meaningful color, and generous spacing. Dense matrices remain available on demand rather than dominating the initial slide.
+
+## Approved two-slide sequence
+
+The deck-wide default for dense technical comparisons is:
+
+1. **Mechanism slide.** A native diagram explains the shared pipeline or concept with one takeaway. It answers what the stage does and why it matters, using almost no paragraph prose.
+2. **Differences slide.** A color-coded team comparison names the few distinctions that materially change evidence or behavior. It ends with a short `Common` versus `Different` synthesis. The complete source-backed matrix is available through progressive disclosure or a following audit page.
+
+Apply this pattern to conversation-to-query construction, data and model knowledge, retrieval inputs and constraints, response generation, and other dense cross-team comparisons. For numerical results, use a compact ranked chart or small score table first and retain exact values behind disclosure. Preserve the existing volart-style architecture diagrams and expandable insight cards as the reference treatment for team case studies.
+
+Color is redundant with labels, icons, or position: teal marks shared/verified evidence, blue and violet distinguish processing stages, amber marks limitations or unverified model-world-knowledge exposure, and neutral gray marks evidence not documented in reviewed sources.
 
 ## Visual language
 
@@ -77,7 +90,7 @@ Used for an executive answer, evaluation lesson, or team comparison. It uses a s
 
 Long prompt or file evidence is split into meaningful pages. Desktop uses two balanced columns where reading order remains unambiguous; mobile uses one column. Each page expands naturally in the chapter scroller and never has an internal vertical scrollbar.
 
-## Exact 50-page structure
+## Baseline 50-page structure
 
 ### Chapter 1 — Outcome and score: 6 pages
 
@@ -142,7 +155,7 @@ Long prompt or file evidence is split into meaningful pages. Desktop uses two ba
 4. Transferable lessons and acknowledgements.
 5. Caveats, complete evidence notes, and complete source list.
 
-Total: **50 vertical pages**.
+Baseline total: **50 vertical pages**. Implementation may add pages to preserve the approved teach-then-compare sequence, large type, and readable evidence. It must not merge distinct ideas merely to retain the baseline count.
 
 ## Embedded-content strategy
 
@@ -203,7 +216,7 @@ Implementation must preserve iframe sandboxing or provide an equivalently isolat
 ### Structural
 
 - all 74 canonical blocks assigned exactly once;
-- exactly 50 deck pages across seven chapters;
+- at least 50 deck pages across seven chapters, with every added page justified by a distinct teaching or comparison purpose;
 - seven readable chapter maps plus mechanism-specific system and subsystem diagrams;
 - no factual URLs, source records, iframe source documents, or compressed payload lost;
 - deterministic enhancement and self-contained final HTML.

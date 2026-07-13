@@ -14,6 +14,7 @@ data/*
 !data/README.md
 exp/
 .claude/worktrees/
+.superpowers/
 logs/
 exp_*/
 .worktrees/
