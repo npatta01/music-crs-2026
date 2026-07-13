@@ -1,7 +1,7 @@
 # Blind-B Retrospective Report — Design Spec
 
 **Date:** 2026-07-12
-**Status:** Written design pending user review
+**Status:** Approved in conversation; advisor corrections incorporated
 **Audience:** Personal retrospective
 **Delivery:** Private, self-contained HTML report
 
@@ -15,7 +15,7 @@ preserve the technical evidence, and turn the comparison into reusable lessons.
 The report must answer four questions:
 
 1. What happened on the final leaderboard?
-2. Which decisions most likely caused the gap?
+2. Which factors are the best-supported contributors to the gap?
 3. What did the leading teams do better?
 4. Which lessons are worth carrying into future ML competitions?
 
@@ -37,7 +37,8 @@ The tone should be:
 
 The HTML report will follow this reading path:
 
-1. **Title and Executive Summary** — the short answer and the two main causes.
+1. **Title and Executive Summary** — the short answer and the two strongest
+   evidence-backed contributors.
 2. **How the challenge was scored** — an accessible explanation of nDCG,
    diversity, the LLM judge, and the composite formula.
 3. **The final result** — exact metrics for this submission and the four leading
@@ -49,13 +50,17 @@ The HTML report will follow this reading path:
    reproducibility, and other strengths worth retaining.
 6. **The central evaluation mistake** — why training on all labeled dev turns and
    then reporting performance on those turns produced an in-sample number rather
-   than a generalization estimate.
-7. **Why ranking underperformed** — limited ranker training population, candidate
-   truncation, missing sequential/co-occurrence lanes, and underuse of the trained
-   bi-encoder.
-8. **Why response generation underperformed** — Blind-A template selection did
-   not generalize, responses were under-grounded, and a single deterministic pass
-   lacked the leaders' selection and critique stages.
+   than a generalization estimate. This section will explicitly distinguish an
+   unreliable estimate from a cause of the Blind-B score.
+7. **Best-supported ranking contributors** — limited ranker training population,
+   candidate truncation, missing sequential/co-occurrence lanes, and underuse of
+   the trained bi-encoder. These are plausible contributors supported by released
+   code and ablations, not proven per-session causes.
+8. **Best-supported response contributors** — the selected response strategy
+   scored 4.70 with the Blind-A judge but 3.30 on Blind-B, responses were
+   under-grounded, and a single deterministic pass lacked the leaders' selection
+   and critique stages. The report will separate measured response differences
+   from causal interpretation.
 9. **Four competitor case studies** — separate, detailed sections for volart,
    niwatori, swyoo, and team2_s2. Each case study will combine an architecture
    visual, an accessible technical walkthrough, the team's distinctive choices,
@@ -73,6 +78,11 @@ The HTML report will follow this reading path:
 13. **Caveats and evidence** — the limits imposed by an 80-session hidden set and
     the absence of per-session Blind-B labels.
 
+For this report, the comparison set means the four highest-scoring final entries
+among the public repositories supplied by the user. The report will state both the
+repository/team name and the corresponding leaderboard entry name wherever those
+names differ, including `music-crs-team2` versus `team2_s2`.
+
 ## 4. Evidence and calculations
 
 The report will use:
@@ -82,7 +92,8 @@ The report will use:
 - the deployed Blind-B config and reranker bundle metadata;
 - the reranker training protocol and documented OOF results;
 - the exact submitted Blind-B responses;
-- the current public `main` branches of the four competitor repositories.
+- the four competitor repositories pinned to the exact commit SHAs reviewed for
+  the report, with those SHAs recorded in the HTML source notes.
 
 The composite gap will be independently reconciled using:
 
@@ -95,14 +106,19 @@ Claims will be labeled using three evidence levels:
   ablations, but not provable per Blind-B session.
 - **Unknown:** requires hidden labels or experiments that are not available.
 
+Every exact architectural count—including retrieval-lane counts, feature counts,
+generation-candidate counts, and generation-pass counts—must have a nearby source
+reference to a commit-pinned repository location. Diagram components will carry
+compact source markers that resolve to a source key immediately below the visual.
+
 ## 5. Visual design
 
 The report will be a responsive, single-column document that remains readable on
 phones and through remote file access. It will include:
 
 - a compact headline metric strip after the Executive Summary;
-- a stacked bar chart decomposing each competitor's composite lead into ranking,
-  LLM-judge, lexical-diversity, and catalog-diversity contributions;
+- a four-panel signed contribution chart decomposing each competitor's composite
+  lead into ranking, LLM-judge, lexical-diversity, and catalog-diversity terms;
 - an exact leaderboard comparison table;
 - a detailed visual of my own pipeline so the comparisons have a common baseline;
 - one detailed architecture visual for each of the four competitor systems;
@@ -110,8 +126,16 @@ phones and through remote file access. It will include:
 - a retrospective table separating choices to preserve, reconsider, and avoid in
   future competitions.
 
-The five architecture visuals will share one visual grammar so they can be read
-side by side. Each will show, where the public evidence permits:
+The five architecture visuals will share one visual grammar and the same review
+questions, without forcing genuinely different systems into an identical
+topology. Each will use two visibly separated rails:
+
+- **Offline rail:** training data, folds, validation, features, and learned
+  models.
+- **Inference rail:** conversation representation, candidate-generation lanes,
+  fusion, reranking, and response generation.
+
+Together, the rails will show, where the public evidence permits:
 
 1. how the conversation is represented;
 2. the candidate-generation or retrieval lanes;
@@ -122,9 +146,10 @@ side by side. Each will show, where the public evidence permits:
 
 The competitor visuals will be detailed enough to explain the actual approach,
 but they will not imply that undocumented implementation details are known.
-Verified components will use solid styling, strong inferences will use dashed
-styling, and unknowns will be omitted or explicitly labeled. On narrow screens,
-each pipeline will stack vertically rather than require horizontal scrolling.
+Every material component will carry a visible **Verified**, **Inferred**, or
+**Not documented** label; color and line style will be secondary cues only. On
+narrow screens, each pipeline will stack vertically rather than require
+horizontal scrolling.
 
 The visual emphasis for each case study will be:
 
@@ -149,6 +174,22 @@ and a semantic table fallback so the report remains understandable without
 JavaScript. Every visual will have adjacent prose explaining what it shows and why
 it matters.
 
+The contribution chart will not use a conventional positive stack. Each of its
+four panels will center the component axis at zero, display positive and negative
+terms in opposite directions, show exact signed values, and reconcile them to the
+competitor's total composite lead. This prevents negative diversity contributions
+from being visually misrepresented.
+
+The architecture visuals will use the portable report workflow's native diagram
+primitive if it supports the required labels and source markers. Otherwise they
+will be embedded as static SVGs with meaningful text labels and an adjacent text
+fallback. The implementation must verify this capability before composing all
+five diagrams.
+
+The cross-team matrix will use the explicit states **Yes**, **Partial**, and
+**Not documented**. It will not turn absent public documentation into a claim that
+a team did not use a technique.
+
 ## 6. Delivery and privacy
 
 The result will be one self-contained HTML file built through the Data Analytics
@@ -169,6 +210,11 @@ Before handoff, the report must pass these checks:
 - verified facts and inferences are visibly distinguishable;
 - the report acknowledges what the system did well;
 - each competitor is compared using the same dimensions;
+- evaluation leakage is described as a measurement failure rather than a direct
+  cause of hidden-set performance;
+- all five architecture visuals separate offline training from online inference
+  and attach source markers to exact claims;
+- signed score contributions reconcile to the official composite gaps;
 - retrospective conclusions follow from the evidence and avoid prescribing new
   implementation work;
 - the HTML is self-contained and passes the packaged artifact validator;
