@@ -6,7 +6,7 @@
 
 ## Objective
 
-Turn the current retrospective into a visual-first, content-aware deck of exactly 50 vertical pages. Each page should communicate one idea without cropped content, nested vertical scrollbars, intimidating walls of prose, or unused canvas. The report must still preserve all 74 canonical blocks, ten source records, commit-pinned acknowledgements, calculations, and evidence boundaries.
+Turn the current retrospective into a visual-first, content-aware deck of at least 50 vertical pages, starting with the specified 50-page structure and adding pages only when evidence needs a cleaner split. Each page should communicate one idea without cropped content, nested vertical scrollbars, intimidating walls of prose, or unused canvas. The report must still preserve all 74 canonical blocks, ten source records, commit-pinned acknowledgements, calculations, and evidence boundaries.
 
 ## Diagnosed layout failure
 
@@ -32,18 +32,17 @@ The redesign must correct the shared layout system rather than add per-screensho
 
 ## Visual language
 
-### Custom imagery
+### Explanatory visual systems
 
-Create 8–10 custom raster images with one coherent editorial style:
+Visuals exist to explain what each system does—not to add abstract atmosphere. Prefer deterministic, report-native diagrams with exact HTML labels:
 
-- seven chapter-cover images;
-- one conversation-to-query concept image;
-- one retrieval-and-ranking concept image;
-- optionally one grounded-response concept image if it materially reduces prose.
+- chapter covers use a compact map of the chapter's evidence pages;
+- conversation-to-query pages show the inputs, interpretation step, query variants, and downstream candidate boundary;
+- retrieval-and-ranking pages distinguish candidate sources, union or fusion, features, ranking, and selected track IDs;
+- response pages show candidate generation, verification or critique, repair or polishing, selection, and the final response;
+- the submitted system and each leading team receive readable, mechanism-specific architecture diagrams.
 
-The images use the report's existing violet, teal, amber, and neutral palette. They should feel analytical and musical rather than decorative: layered signals, pathways, catalogs, ranked stacks, and verified evidence. Do not place small factual labels, scores, repository names, or long text inside generated images.
-
-Images are compressed to WebP, embedded into the self-contained HTML, and given concise alt text. The total image payload target is at most 3 MB.
+Use the report's violet, teal, amber, and neutral palette to distinguish stages and evidence types. Decorative raster artwork is out of scope. A visual may summarize exact evidence, but every mechanism and qualification remains available as accessible HTML text or in the following evidence page.
 
 ### Precise technical visuals
 
@@ -60,7 +59,7 @@ Score charts, system pipelines, comparison matrices, and evidence statuses remai
 
 ### 1. Chapter cover
 
-A full-width custom image occupies roughly 55–65% of the usable canvas. The chapter title, question, and three reading cues occupy the remainder. This page is an orientation device, not decorative filler.
+A full-width evidence map occupies roughly 55–65% of the usable canvas. The chapter title, question, and reading cues occupy the remainder. This page previews the actual mechanisms and evidence sequence rather than adding decoration.
 
 ### 2. Visual evidence page
 
@@ -82,7 +81,7 @@ Long prompt or file evidence is split into meaningful pages. Desktop uses two ba
 
 ### Chapter 1 — Outcome and score: 6 pages
 
-1. Visual cover and executive orientation.
+1. Explanatory chapter map and executive orientation.
 2. Executive answer and headline metrics.
 3. Composite formula plus official leaderboard chart.
 4. Exact leaderboard table.
@@ -91,7 +90,7 @@ Long prompt or file evidence is split into meaningful pages. Desktop uses two ba
 
 ### Chapter 2 — Conversation to query: 7 pages
 
-1. Visual cover: dialogue becoming structured search evidence.
+1. Explanatory chapter map: dialogue becoming structured search evidence.
 2. Shared query lifecycle diagram and takeaway.
 3. Query concepts and glossary.
 4. Full five-team query matrix.
@@ -101,7 +100,7 @@ Long prompt or file evidence is split into meaningful pages. Desktop uses two ba
 
 ### Chapter 3 — Retrieval and ranking: 5 pages
 
-1. Visual cover: many signals becoming a ranked list.
+1. Explanatory chapter map: many signals becoming a ranked list.
 2. Retriever glossary and five-team retrieval matrix.
 3. Feature-family glossary.
 4. Feature-family matrix.
@@ -109,7 +108,7 @@ Long prompt or file evidence is split into meaningful pages. Desktop uses two ba
 
 ### Chapter 4 — Response generation: 7 pages
 
-1. Visual cover: selected track becoming checked prose.
+1. Explanatory chapter map: selected track becoming checked prose.
 2. Response subsystem overview.
 3. Complete five-team response matrix.
 4. Author and volart generation/selection paths.
@@ -119,7 +118,7 @@ Long prompt or file evidence is split into meaningful pages. Desktop uses two ba
 
 ### Chapter 5 — Our submission: 7 pages
 
-1. Visual cover and submitted-system thesis.
+1. Explanatory chapter map and submitted-system thesis.
 2. Offline evidence rail.
 3. Inference rail.
 4. Complete walkthrough and ranking handoff.
@@ -129,7 +128,7 @@ Long prompt or file evidence is split into meaningful pages. Desktop uses two ba
 
 ### Chapter 6 — Leading teams: 13 pages
 
-1. Visual cover and acknowledged case-study index.
+1. Explanatory chapter map and acknowledged case-study index.
 2–4. volart: outcome/query/data; retrieval/ranking diagram; response/comparison/limits.
 5–7. niwatori: outcome/query/data; retrieval/ranking diagram; response/comparison/limits.
 8–10. swyoo: outcome/query/data; retrieval/ranking diagram; response/comparison/limits.
@@ -137,7 +136,7 @@ Long prompt or file evidence is split into meaningful pages. Desktop uses two ba
 
 ### Chapter 7 — Synthesis and evidence: 5 pages
 
-1. Visual cover and cross-team thesis.
+1. Explanatory chapter map and cross-team thesis.
 2. Cross-team synthesis matrix.
 3. Preserve, reconsider, and avoid.
 4. Transferable lessons and acknowledgements.
@@ -186,13 +185,13 @@ Implementation must preserve iframe sandboxing or provide an equivalently isolat
 - one-column layout;
 - no vertical rail;
 - tables become cards when semantic integrity allows;
-- custom images crop only decoratively and never hide essential content;
+- explanatory diagrams stack into their DOM reading order and never hide essential content;
 - all controls remain at least 44px.
 
 ## Accessibility and evidence integrity
 
-- Generated images receive alt text describing their conceptual purpose.
-- No essential text is baked solely into an image.
+- Explanatory diagrams use native headings and ordered lists with accessible names.
+- No essential text is baked into a raster image.
 - Exact data remains available in native tables or accessible disclosures.
 - Visual and DOM reading order match.
 - Page focus moves to the new page heading after navigation.
@@ -205,7 +204,7 @@ Implementation must preserve iframe sandboxing or provide an equivalently isolat
 
 - all 74 canonical blocks assigned exactly once;
 - exactly 50 deck pages across seven chapters;
-- seven chapter-cover images and no more than ten generated images total;
+- seven readable chapter maps plus mechanism-specific system and subsystem diagrams;
 - no factual URLs, source records, iframe source documents, or compressed payload lost;
 - deterministic enhancement and self-contained final HTML.
 
@@ -228,4 +227,4 @@ For the four supplied failure states, capture same-viewport before/after compari
 - No recovery plan or new competition strategy section.
 - No rewrite of factual conclusions or evidence boundaries.
 - No public deployment or sharing-permission change.
-- No image used as a substitute for the exact leaderboard, source list, prompt excerpt, or repository acknowledgement.
+- No summary visual used as a substitute for the exact leaderboard, source list, prompt excerpt, or repository acknowledgement.

@@ -51,9 +51,12 @@ def test_groups_every_block_once(page, enhanced_report: Path) -> None:
     browser_page, errors = page
     open_deck(browser_page, enhanced_report)
     assert browser_page.locator(".deck-chapter").count() == 7
-    assert browser_page.locator(".deck-slide").count() == 29
+    assert browser_page.locator(".deck-slide").count() == 50
+    assert browser_page.locator(".deck-chapter").evaluate_all(
+        "nodes => nodes.map(node => node.querySelectorAll('.deck-slide').length)"
+    ) == [6, 7, 5, 7, 7, 13, 5]
     assert browser_page.locator(".deck-vertical-rail").count() == 7
-    assert browser_page.locator(".deck-rail-button").count() == 29
+    assert browser_page.locator(".deck-rail-button").count() == 50
     assigned = browser_page.locator(".deck-slide [data-artifact-block-id]")
     assert assigned.count() == 74
     ids = assigned.evaluate_all("nodes => nodes.map(node => node.dataset.artifactBlockId)")
@@ -61,16 +64,60 @@ def test_groups_every_block_once(page, enhanced_report: Path) -> None:
     assert errors == []
 
 
+def test_content_aware_archetypes_and_visual_canvas(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    open_deck(browser_page, enhanced_report)
+    for archetype in ("cover", "story", "visual", "matrix", "audit"):
+        assert browser_page.locator(f".deck-slide--{archetype}").count() > 0
+    covers = browser_page.locator(".deck-slide--cover")
+    assert covers.count() == 7
+    assert covers.locator(".deck-chapter-map").count() == 7
+    assert browser_page.locator(".deck-flow-lane").count() >= 7
+    assert browser_page.locator(".deck-flow-step").count() >= 20
+    assert browser_page.locator("figure.deck-visual img").count() == 0
+    cover_box = covers.first.locator(".deck-slide-inner").bounding_box()
+    assert cover_box is not None and cover_box["width"] > 1180
+    assert browser_page.locator(".deck-slide--story .portable-markdown").first.evaluate(
+        "node => getComputedStyle(node).maxWidth"
+    ) != "none"
+    assert errors == []
+
+
+def test_supplied_failure_pages_promote_embeds_without_nested_scroll(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    open_deck(browser_page, enhanced_report)
+    failure_pages = (
+        "outcome/gap-chart",
+        "query/query-matrix",
+        "query/data-matrix",
+        "query/prompt-audit",
+    )
+    for slug in failure_pages:
+        browser_page.evaluate("slug => window.__retrospectiveDeck.goTo(slug, {behavior: 'auto'})", slug)
+        target = browser_page.locator(f"[id='{slug}']")
+        if target.locator("iframe").count():
+            assert target.locator(".deck-embedded-document").count() > 0
+            assert target.locator(".deck-embedded-document").first.is_visible()
+        assert target.locator("iframe:visible").count() == 0
+        overflow = target.evaluate(
+            "node => ({client: node.clientWidth, scroll: node.scrollWidth, embeds: [...node.querySelectorAll('.deck-embedded-document')].map(embed => ({client: embed.clientWidth, scroll: embed.scrollWidth}))})"
+        )
+        assert overflow["scroll"] <= overflow["client"] + 2
+        assert all(embed["scroll"] <= embed["client"] + 2 for embed in overflow["embeds"])
+    audit = browser_page.locator("[id='query/prompt-audit'] .deck-embedded-document").first
+    assert audit.evaluate("node => [...node.shadowRoot.querySelectorAll('details')].every(item => item.open)")
+    assert errors == []
+
+
 def test_progressive_disclosure_and_sources(page, enhanced_report: Path) -> None:
     browser_page, _ = page
     open_deck(browser_page, enhanced_report)
-    exact_table = browser_page.locator('details[data-disclosure-for="leaderboard_table"]')
-    assert exact_table.locator("summary").inner_text() == "Open the exact leaderboard table"
-    assert not exact_table.get_attribute("open")
+    exact_table = browser_page.locator('#outcome\\/leaderboard-table [data-artifact-block-id="leaderboard_table"]')
+    assert exact_table.is_visible()
     assert browser_page.locator(".deck-source-list .portable-sources").count() == 1
     assert browser_page.locator(".deck-source-list .portable-sources > ol > li").count() == 10
     assert browser_page.locator(".retrospective-deck a[href^='https://']").count() >= 27
-    browser_page.goto(f"{enhanced_report.as_uri()}#synthesis/caveats-evidence")
+    browser_page.goto(f"{enhanced_report.as_uri()}#synthesis/evidence")
     browser_page.wait_for_function("document.documentElement.dataset.deckReady === 'true'")
     source_details = browser_page.locator(".deck-source-list")
     source_details.evaluate("node => node.open = true")
@@ -91,15 +138,15 @@ def test_linear_and_print_modes(page, enhanced_report: Path) -> None:
     assert browser_page.locator(".deck-source-list .portable-sources").is_visible()
     browser_page.goto(enhanced_report.as_uri())
     browser_page.wait_for_function("document.documentElement.dataset.deckReady === 'true'")
-    assert browser_page.locator("details.deck-disclosure:not([open])").count() > 0
+    assert browser_page.locator(".deck-source-list").count() == 1
     browser_page.emulate_media(media="print")
     browser_page.evaluate("dispatchEvent(new Event('beforeprint'))")
     assert browser_page.locator("details.deck-disclosure:not([open])").count() == 0
     assert browser_page.locator(".deck-chrome").first.evaluate("node => getComputedStyle(node).display") == "none"
-    assert browser_page.locator(".deck-slide").nth(28).is_visible()
+    assert browser_page.locator(".deck-slide").nth(49).is_visible()
     assert browser_page.locator(".deck-source-list .portable-sources").is_visible()
     browser_page.evaluate("dispatchEvent(new Event('afterprint'))")
-    assert browser_page.locator("details.deck-disclosure:not([open])").count() > 0
+    assert browser_page.locator(".deck-source-list").count() == 1
 
 
 def test_mobile_has_bounded_content_and_touch_targets(enhanced_report: Path) -> None:
@@ -130,17 +177,17 @@ def test_buttons_keys_hash_and_history(page, enhanced_report: Path) -> None:
     previous_button = browser_page.locator('[data-action="previous"]')
     next_button = browser_page.locator('[data-action="next"]')
     assert previous_button.is_disabled()
-    assert next_button.inner_text() == "Official result →"
+    assert next_button.inner_text() == "Executive answer →"
     next_button.click()
-    browser_page.wait_for_url("**#outcome/official-result")
+    browser_page.wait_for_url("**#outcome/executive-answer")
     browser_page.keyboard.press("ArrowRight")
-    browser_page.wait_for_url("**#query/lifecycle")
+    browser_page.wait_for_url("**#query/cover")
     browser_page.keyboard.press("ArrowRight")
-    browser_page.wait_for_url("**#retrieval/retrievers")
+    browser_page.wait_for_url("**#retrieval/cover")
     browser_page.keyboard.press("ArrowDown")
-    browser_page.wait_for_url("**#retrieval/features")
+    browser_page.wait_for_url("**#retrieval/retriever-matrix")
     browser_page.go_back()
-    browser_page.wait_for_url("**#retrieval/retrievers")
+    browser_page.wait_for_url("**#retrieval/cover")
     assert errors == []
 
 
@@ -153,8 +200,8 @@ def test_jump_palette_filters_and_restores_focus(page, enhanced_report: Path) ->
     palette = browser_page.get_by_role("dialog", name="Jump anywhere")
     assert palette.is_visible()
     palette.get_by_role("searchbox").fill("volart")
-    palette.get_by_role("button", name="Leading teams — volart").click()
-    browser_page.wait_for_url("**#leaders/volart")
+    palette.get_by_role("button", name="Leading teams — volart · outcome, query, and data").click()
+    browser_page.wait_for_url("**#leaders/volart-outcome")
     opener.focus()
     browser_page.keyboard.press("Control+K")
     browser_page.keyboard.press("Escape")
@@ -169,14 +216,13 @@ def test_direct_and_invalid_hashes(page, enhanced_report: Path) -> None:
     box = target.bounding_box()
     assert box is not None and abs(box["x"]) < 1
     browser_page.goto(f"{enhanced_report.as_uri()}#not/a-slide")
-    browser_page.wait_for_url("**#outcome/summary")
+    browser_page.wait_for_url("**#outcome/cover")
 
 
 def test_direct_hash_opens_disclosure(page, enhanced_report: Path) -> None:
     browser_page, _ = page
-    open_deck(browser_page, enhanced_report, "#retrieval/features?open=feature_matrix")
-    details = browser_page.locator('details[data-disclosure-for="feature_matrix"]')
-    assert details.get_attribute("open") is not None
+    open_deck(browser_page, enhanced_report, "#retrieval/feature-matrix?open=feature_matrix")
+    assert browser_page.locator('.retrospective-deck [data-artifact-block-id="feature_matrix"]').is_visible()
 
 
 def test_reduced_motion_and_passive_scroll_do_not_steal_focus(enhanced_report: Path) -> None:
@@ -209,11 +255,11 @@ def test_gesture_navigation_creates_history_entry(page, enhanced_report: Path) -
     browser_page.locator(".deck-track").evaluate(
         "node => { node.style.scrollBehavior = 'auto'; node.scrollLeft = node.clientWidth; node.style.scrollBehavior = ''; }"
     )
-    browser_page.wait_for_url("**#query/lifecycle")
+    browser_page.wait_for_url("**#query/cover")
     assert browser_page.evaluate("history.length") == initial_length + 1
     browser_page.go_back()
-    browser_page.wait_for_url("**#outcome/summary")
-    box = browser_page.locator('#outcome\\/summary').bounding_box()
+    browser_page.wait_for_url("**#outcome/cover")
+    box = browser_page.locator('#outcome\\/cover').bounding_box()
     assert box is not None and abs(box["x"]) < 1
 
 
@@ -223,26 +269,26 @@ def test_interrupted_programmatic_scroll_reconciles_and_unblocks_gestures(page, 
     browser_page.evaluate(
         "() => { window.__deckPushCalls = 0; const push = history.pushState.bind(history); history.pushState = (...args) => { window.__deckPushCalls += 1; return push(...args); }; }"
     )
-    browser_page.evaluate("window.__retrospectiveDeck.goTo('synthesis/cross-team').slug")
+    browser_page.evaluate("window.__retrospectiveDeck.goTo('synthesis/cover').slug")
     assert browser_page.evaluate("window.__deckPushCalls") == 1
     browser_page.locator(".deck-track").evaluate(
         "node => { node.style.scrollBehavior = 'auto'; node.scrollLeft = node.clientWidth; node.style.scrollBehavior = ''; }"
     )
     browser_page.wait_for_timeout(150)
-    assert browser_page.evaluate("window.__retrospectiveDeck.currentSlug()") == "query/lifecycle"
-    assert browser_page.evaluate("location.hash") == "#query/lifecycle"
+    assert browser_page.evaluate("window.__retrospectiveDeck.currentSlug()") == "query/cover"
+    assert browser_page.evaluate("location.hash") == "#query/cover"
     assert browser_page.evaluate("window.__deckPushCalls") == 1
 
     browser_page.locator(".deck-track").evaluate(
         "node => { node.style.scrollBehavior = 'auto'; node.scrollLeft = node.clientWidth * 2; node.style.scrollBehavior = ''; }"
     )
-    browser_page.wait_for_url("**#retrieval/retrievers")
+    browser_page.wait_for_url("**#retrieval/cover")
     assert browser_page.evaluate("window.__deckPushCalls") == 2
 
 
 def test_orientation_controls_and_topic_search(page, enhanced_report: Path) -> None:
     browser_page, _ = page
-    open_deck(browser_page, enhanced_report, "#leaders/volart")
+    open_deck(browser_page, enhanced_report, "#leaders/volart-outcome")
     assert browser_page.locator(".deck-chapter-button").count() == 7
     current_chapter = browser_page.locator('.deck-chapter-button[aria-current="true"]')
     assert current_chapter.get_attribute("aria-label") == "Leading teams"
