@@ -6,6 +6,57 @@ const slide = (slug, title, archetype, blocks, visual = null) => ({ slug, title,
 
 export const PAGE_ARCHETYPES = new Set(["cover", "story", "visual", "matrix", "audit"]);
 
+export const VISUALS = {
+  "outcome-cover": {
+    path: "assets/retrospective/outcome-cover.webp",
+    alt: "Recommendation signals converge through an evaluation prism and separate into metric contributions.",
+  },
+  "query-cover": {
+    path: "assets/retrospective/query-cover.webp",
+    alt: "Conversation and listening-history signals pass through an interpretive lens into several query representations.",
+  },
+  "retrieval-cover": {
+    path: "assets/retrospective/retrieval-cover.webp",
+    alt: "Several behavioral and semantic signals enter a ranking engine and emerge as an ordered track stack.",
+  },
+  "response-cover": {
+    path: "assets/retrospective/response-cover.webp",
+    alt: "A selected track moves through fact evidence, candidate responses, verification, and final prose.",
+  },
+  "ours-cover": {
+    path: "assets/retrospective/ours-cover.webp",
+    alt: "Separate offline-evidence and live-inference rails show the two parts of the submitted system.",
+  },
+  "leaders-cover": {
+    path: "assets/retrospective/leaders-cover.webp",
+    alt: "Four distinct recommendation instruments draw from one shared music catalog and produce ranked results.",
+  },
+  "synthesis-cover": {
+    path: "assets/retrospective/synthesis-cover.webp",
+    alt: "Technical evidence converges into a layered synthesis map and three reflective learning paths.",
+  },
+  "conversation-to-query": {
+    path: "assets/retrospective/conversation-to-query.webp",
+    alt: "Current request, dialogue memory, and listening history become lexical, semantic, structured, and rewritten queries.",
+  },
+  "retrieval-ranking": {
+    path: "assets/retrospective/retrieval-ranking.webp",
+    alt: "Distinct candidate pools merge before feature scoring produces one ranked list.",
+  },
+  "grounded-response": {
+    path: "assets/retrospective/grounded-response.webp",
+    alt: "Verified track facts fan into response candidates that are checked, repaired, and selected.",
+  },
+};
+
+export async function loadVisualDataUrls(baseUrl = new URL("../../", import.meta.url)) {
+  const entries = await Promise.all(Object.entries(VISUALS).map(async ([key, visual]) => {
+    const bytes = await readFile(new URL(visual.path, baseUrl));
+    return [key, `data:image/webp;base64,${bytes.toString("base64")}`];
+  }));
+  return Object.fromEntries(entries);
+}
+
 export const CHAPTERS = [
   {
     slug: "outcome",
@@ -585,10 +636,14 @@ function runtimeMain(CONFIG) {
 
 export const DECK_RUNTIME = `(${runtimeMain.toString()})(__CONFIG__);`;
 
-export function enhanceHtml(input) {
+export function enhanceHtml(input, visualDataUrls = {}) {
   const html = stripDeckInjection(input);
   validateChapterMap(CHAPTERS, html);
-  const config = JSON.stringify({ chapters: CHAPTERS, disclosures: DISCLOSURES }).replaceAll("<", "\\u003c");
+  const visuals = Object.fromEntries(Object.entries(VISUALS).map(([key, visual]) => [key, {
+    alt: visual.alt,
+    src: visualDataUrls[key] || "",
+  }]));
+  const config = JSON.stringify({ chapters: CHAPTERS, disclosures: DISCLOSURES, visuals, aliases: Object.fromEntries(LEGACY_ALIASES) }).replaceAll("<", "\\u003c");
   const style = `${STYLE_START}\n<style data-retrospective-deck-style>${DECK_STYLE}</style>\n${STYLE_END}`;
   const runtime = DECK_RUNTIME.replace("__CONFIG__", config);
   const script = `${SCRIPT_START}\n<script data-retrospective-deck-script>${runtime}</script>\n${SCRIPT_END}`;
@@ -612,7 +667,8 @@ async function main(argv) {
   const args = parseArgs(argv);
   const inputPath = args.check || args.input;
   const source = await readFile(inputPath, "utf8");
-  const enhanced = enhanceHtml(source);
+  const visualDataUrls = await loadVisualDataUrls();
+  const enhanced = enhanceHtml(source, visualDataUrls);
   if (args.check) {
     process.stdout.write(`PASS: ${validateChapterMap(CHAPTERS, stripDeckInjection(source)).reportIds.length} blocks mapped into ${CHAPTERS.length} chapters\n`);
     return;
