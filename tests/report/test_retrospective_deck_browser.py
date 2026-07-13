@@ -109,6 +109,22 @@ def test_supplied_failure_pages_promote_embeds_without_nested_scroll(page, enhan
     assert errors == []
 
 
+def test_long_prose_matrices_render_as_readable_team_cards(page, enhanced_report: Path) -> None:
+    browser_page, _ = page
+    open_deck(browser_page, enhanced_report)
+    for slug in ("query/query-matrix", "query/data-matrix"):
+        browser_page.evaluate("slug => window.__retrospectiveDeck.goTo(slug, {behavior: 'auto'})", slug)
+        table = browser_page.locator(f"[id='{slug}'] table.deck-prose-matrix")
+        assert table.count() == 1
+        assert table.locator("tbody").evaluate("node => getComputedStyle(node).display") == "grid"
+        assert table.locator("tbody tr").count() == 5
+        labels = table.locator("tbody tr").first.locator("td").evaluate_all(
+            "nodes => nodes.map(node => node.dataset.columnLabel)"
+        )
+        assert all(labels)
+        assert float(table.locator("tbody td").first.evaluate("node => parseFloat(getComputedStyle(node).fontSize)")) >= 13
+
+
 def test_progressive_disclosure_and_sources(page, enhanced_report: Path) -> None:
     browser_page, _ = page
     open_deck(browser_page, enhanced_report)
