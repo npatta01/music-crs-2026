@@ -1,7 +1,7 @@
 # Interactive Retrospective Deck Design
 
 **Date:** 2026-07-13
-**Status:** Approved interaction direction; written specification pending final review
+**Status:** Approved for implementation
 **Target:** repository-root `retrospective.html` on `codex/retrospective-report`
 
 ## Purpose
