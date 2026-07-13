@@ -151,6 +151,7 @@ html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;ove
 .deck-topbar,.deck-footer{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px clamp(12px,2.5vw,32px);border-color:var(--portable-border)}
 .deck-topbar{border-bottom:1px solid var(--portable-border)}
 .deck-footer{justify-content:space-between;border-top:1px solid var(--portable-border)}
+.deck-footer .deck-button{max-width:min(38vw,360px);padding:6px 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .deck-title{margin-right:auto;font-weight:750}.deck-breadcrumb{color:var(--portable-muted)}
 .deck-button{min-width:44px;min-height:44px;border:1px solid var(--portable-border);border-radius:10px;background:var(--portable-surface);color:var(--portable-ink);cursor:pointer}
 .deck-button:focus-visible,.deck-jump-item:focus-visible,.deck-slide:focus-visible,.deck-rail-button:focus-visible,summary:focus-visible{outline:3px solid var(--portable-accent);outline-offset:3px}
@@ -158,8 +159,9 @@ html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;ove
 .deck-chapter{position:relative;flex:0 0 100%;min-width:0;height:100%;scroll-snap-align:start}
 .deck-vertical{height:100%;overflow-y:auto;overflow-x:hidden;scroll-snap-type:y proximity;overscroll-behavior-y:contain}
 .deck-vertical-rail{position:absolute;z-index:10;right:12px;top:50%;transform:translateY(-50%);display:grid;gap:7px;padding:9px;border:1px solid var(--portable-border);border-radius:999px;background:color-mix(in srgb,var(--portable-surface) 88%,transparent)}
-.deck-rail-button{width:12px;height:12px;padding:0;border:1px solid var(--portable-muted);border-radius:999px;background:transparent;cursor:pointer}
-.deck-rail-button[aria-current="true"]{border-color:var(--portable-accent);background:var(--portable-accent)}
+.deck-rail-button{display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:999px;background:transparent;cursor:pointer}
+.deck-rail-button::before{width:10px;height:10px;border:1px solid var(--portable-muted);border-radius:999px;background:transparent;content:""}
+.deck-rail-button[aria-current="true"]::before{border-color:var(--portable-accent);background:var(--portable-accent)}
 .deck-slide{min-height:100%;padding:clamp(18px,3vw,42px) clamp(16px,5vw,72px);scroll-snap-align:start;scroll-margin-top:12px}
 .deck-slide-inner{width:min(1180px,100%);margin:0 auto;display:grid;gap:18px}
 .deck-slide-heading{margin:0;font-size:clamp(22px,3vw,38px);line-height:1.12}.deck-question{margin:0;color:var(--portable-muted)}
@@ -281,13 +283,199 @@ function runtimeMain(CONFIG) {
       delete details.dataset[stateKey];
     }
   });
-  html.dataset.deckView = new URL(location.href).searchParams.get("view") === "linear" ? "linear" : "deck";
-  if (html.dataset.deckView === "linear") setAllOpen("deckLinearOpen");
+
+  const slides = CONFIG.chapters.flatMap((chapter, chapterIndex) => chapter.slides.map((entry, slideIndex) => ({
+    chapter,
+    entry,
+    chapterIndex,
+    slideIndex,
+    slug: `${chapter.slug}/${entry.slug}`,
+  })));
+  const bySlug = new Map(slides.map((item) => [item.slug, item]));
+  const breadcrumb = topbar.querySelector(".deck-breadcrumb");
+  const progress = topbar.querySelector(".deck-progress");
+  let active = slides[0];
+  let scrollTimer = 0;
+
+  const openRequestedDisclosure = () => {
+    const params = new URLSearchParams(location.hash.split("?")[1] || "");
+    const id = params.get("open");
+    if (id) document.querySelector(`details[data-disclosure-for="${CSS.escape(id)}"]`)?.setAttribute("open", "");
+  };
+  const chapterSlidesFor = (item) => slides.filter((candidate) => candidate.chapterIndex === item.chapterIndex);
+  const horizontal = (delta) => {
+    const chapterIndex = active.chapterIndex + delta;
+    if (chapterIndex < 0 || chapterIndex >= CONFIG.chapters.length) return active;
+    return slides.find((item) => item.chapterIndex === chapterIndex && item.slideIndex === 0) || active;
+  };
+  const verticalItem = (delta) => {
+    const chapterSlides = chapterSlidesFor(active);
+    return chapterSlides[Math.max(0, Math.min(chapterSlides.length - 1, active.slideIndex + delta))];
+  };
+  const updateCurrent = (item, announce = false) => {
+    active = item;
+    document.querySelectorAll('.deck-slide[aria-current="true"],.deck-rail-button[aria-current="true"]').forEach((node) => node.removeAttribute("aria-current"));
+    const target = document.getElementById(item.slug);
+    target.setAttribute("aria-current", "true");
+    document.querySelector(`.deck-rail-button[data-go="${CSS.escape(item.slug)}"]`)?.setAttribute("aria-current", "true");
+    breadcrumb.textContent = `${item.chapter.title} / ${item.entry.title}`;
+    progress.textContent = `Chapter ${item.chapterIndex + 1}/${CONFIG.chapters.length} · slide ${item.slideIndex + 1}/${CONFIG.chapters[item.chapterIndex].slides.length}`;
+    skip.href = `#${item.slug}`;
+    const chapterSlides = chapterSlidesFor(item);
+    const previousItem = item.slideIndex > 0
+      ? chapterSlides[item.slideIndex - 1]
+      : slides.find((candidate) => candidate.chapterIndex === item.chapterIndex - 1 && candidate.slideIndex === 0);
+    const nextItem = item.slideIndex < chapterSlides.length - 1
+      ? chapterSlides[item.slideIndex + 1]
+      : slides.find((candidate) => candidate.chapterIndex === item.chapterIndex + 1 && candidate.slideIndex === 0);
+    const previousButton = footer.querySelector('[data-action="previous"]');
+    const nextButton = footer.querySelector('[data-action="next"]');
+    previousButton.disabled = !previousItem;
+    previousButton.textContent = previousItem ? `← ${previousItem.entry.title}` : "← Start";
+    nextButton.disabled = !nextItem;
+    nextButton.textContent = nextItem ? `${nextItem.entry.title} →` : "End";
+    if (announce) live.textContent = `${item.chapter.title}, ${item.entry.title}`;
+  };
+  const goTo = (slug, { push = true, focus = true, announce = true } = {}) => {
+    const cleanSlug = slug.split("?")[0];
+    const item = bySlug.get(cleanSlug) || slides[0];
+    const target = document.getElementById(item.slug);
+    target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start", inline: "start" });
+    updateCurrent(item, announce);
+    const nextHash = `#${item.slug}${slug.includes("?") ? `?${slug.split("?")[1]}` : ""}`;
+    if (push) history.pushState({ slug: item.slug }, "", nextHash);
+    else history.replaceState({ slug: item.slug }, "", nextHash);
+    openRequestedDisclosure();
+    if (focus) target.focus({ preventScroll: true });
+    return item;
+  };
+  const setLinear = (enabled) => {
+    if (enabled) setAllOpen("deckLinearOpen"); else restoreOpen("deckLinearOpen");
+    html.dataset.deckView = enabled ? "linear" : "deck";
+    const url = new URL(location.href);
+    if (enabled) url.searchParams.set("view", "linear"); else url.searchParams.delete("view");
+    history.replaceState(history.state, "", url.href);
+    topbar.querySelector('[data-action="linear"]').textContent = enabled ? "Deck view" : "Linear view";
+  };
+  const nearest = (nodes, axis) => [...nodes].reduce((best, node) => (
+    Math.abs(node.getBoundingClientRect()[axis]) < Math.abs(best.getBoundingClientRect()[axis]) ? node : best
+  ));
+  const syncFromScroll = () => {
+    if (html.dataset.deckView === "linear") return;
+    const chapterNode = nearest(track.querySelectorAll(".deck-chapter"), "left");
+    const slideNode = nearest(chapterNode.querySelectorAll(".deck-slide"), "top");
+    const item = bySlug.get(slideNode.dataset.slug);
+    if (item && item.slug !== active.slug) {
+      updateCurrent(item, false);
+      history.replaceState({ slug: item.slug }, "", `#${item.slug}`);
+    }
+  };
+  track.addEventListener("scroll", () => {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(syncFromScroll, 80);
+  }, { passive: true });
+  track.querySelectorAll(".deck-vertical").forEach((node) => node.addEventListener("scroll", () => {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(syncFromScroll, 80);
+  }, { passive: true }));
+
+  const jump = document.createElement("div");
+  jump.className = "deck-jump";
+  jump.dataset.open = "false";
+  jump.setAttribute("role", "dialog");
+  jump.setAttribute("aria-modal", "true");
+  jump.setAttribute("aria-label", "Jump anywhere");
+  jump.innerHTML = '<div class="deck-jump-panel"><label>Search chapters, teams, or topics<input class="deck-jump-input" type="search" role="searchbox"></label><div class="deck-jump-list"></div></div>';
+  app.append(jump);
+  const input = jump.querySelector(".deck-jump-input");
+  const list = jump.querySelector(".deck-jump-list");
+  let jumpOpener = null;
+  const renderJump = (query = "") => {
+    list.replaceChildren();
+    const normalized = query.trim().toLowerCase();
+    for (const item of slides.filter((candidate) => `${candidate.chapter.title} ${candidate.entry.title} ${candidate.slug}`.toLowerCase().includes(normalized))) {
+      const button = document.createElement("button");
+      button.className = "deck-jump-item";
+      button.type = "button";
+      button.textContent = `${item.chapter.title} — ${item.entry.title}`;
+      button.addEventListener("click", () => {
+        closeJump(false);
+        goTo(item.slug);
+      });
+      list.append(button);
+    }
+  };
+  const setBackgroundInert = (inert) => [topbar, track, footer].forEach((node) => { node.inert = inert; });
+  const openJump = (opener = document.activeElement) => {
+    jumpOpener = opener instanceof HTMLElement ? opener : topbar.querySelector('[data-action="jump"]');
+    jump.dataset.open = "true";
+    setBackgroundInert(true);
+    renderJump();
+    input.value = "";
+    input.focus();
+  };
+  const closeJump = (restore = true) => {
+    jump.dataset.open = "false";
+    setBackgroundInert(false);
+    if (restore) jumpOpener?.focus();
+  };
+  input.addEventListener("input", () => renderJump(input.value));
+  const interactive = (target) => target instanceof Element && target.closest("input,textarea,select,button,a,summary,details,[contenteditable=true],iframe,.portable-table-scroll");
+  app.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const destination = target?.closest("[data-go]")?.dataset.go;
+    if (destination) {
+      goTo(destination);
+      return;
+    }
+    const action = target?.closest("[data-action]")?.dataset.action;
+    if (action === "jump") openJump(target);
+    if (action === "linear") setLinear(html.dataset.deckView !== "linear");
+    if (action === "previous") goTo(active.slideIndex ? verticalItem(-1).slug : horizontal(-1).slug);
+    if (action === "next") {
+      const chapterSlides = chapterSlidesFor(active);
+      goTo(active.slideIndex < chapterSlides.length - 1 ? verticalItem(1).slug : horizontal(1).slug);
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && jump.dataset.open === "true") {
+      event.preventDefault();
+      closeJump();
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      jump.dataset.open === "true" ? closeJump() : openJump();
+      return;
+    }
+    if (!event.ctrlKey && !event.metaKey && event.key.toLowerCase() === "j" && !interactive(event.target)) {
+      event.preventDefault();
+      openJump();
+      return;
+    }
+    if (jump.dataset.open === "true" || interactive(event.target) || html.dataset.deckView === "linear") return;
+    const destinations = {
+      ArrowLeft: horizontal(-1),
+      ArrowRight: horizontal(1),
+      ArrowUp: verticalItem(-1),
+      ArrowDown: verticalItem(1),
+    };
+    if (destinations[event.key]) {
+      event.preventDefault();
+      goTo(destinations[event.key].slug);
+    }
+  });
+  addEventListener("popstate", () => goTo(location.hash.slice(1) || slides[0].slug, { push: false, focus: false, announce: true }));
   addEventListener("beforeprint", () => setAllOpen("deckPrintOpen"));
   addEventListener("afterprint", () => restoreOpen("deckPrintOpen"));
+  const initial = location.hash.slice(1);
+  const initialSlug = initial.split("?")[0];
+  if (!bySlug.has(initialSlug)) goTo(slides[0].slug, { push: false, focus: false, announce: false });
+  else goTo(initial, { push: false, focus: false, announce: false });
+  setLinear(new URL(location.href).searchParams.get("view") === "linear");
   html.classList.add("retrospective-deck-ready");
   html.dataset.deckReady = "true";
-  window.__retrospectiveDeck = { CONFIG, app, track, live };
+  window.__retrospectiveDeck = { CONFIG, app, track, live, goTo, setLinear, currentSlug: () => active.slug };
 }
 
 export const DECK_RUNTIME = `(${runtimeMain.toString()})(__CONFIG__);`;

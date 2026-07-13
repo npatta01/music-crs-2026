@@ -109,3 +109,78 @@ def test_enhancer_does_not_change_embedded_payload(enhanced_report: Path) -> Non
     source_payload = source[source.index(marker):source.index("</template>", source.index(marker))]
     enhanced_payload = enhanced[enhanced.index(marker):enhanced.index("</template>", enhanced.index(marker))]
     assert hashlib.sha256(source_payload.encode()).digest() == hashlib.sha256(enhanced_payload.encode()).digest()
+
+
+def test_buttons_keys_hash_and_history(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    open_deck(browser_page, enhanced_report)
+    previous_button = browser_page.locator('[data-action="previous"]')
+    next_button = browser_page.locator('[data-action="next"]')
+    assert previous_button.is_disabled()
+    assert next_button.inner_text() == "Official result →"
+    next_button.click()
+    browser_page.wait_for_url("**#outcome/official-result")
+    browser_page.keyboard.press("ArrowRight")
+    browser_page.wait_for_url("**#query/lifecycle")
+    browser_page.keyboard.press("ArrowRight")
+    browser_page.wait_for_url("**#retrieval/retrievers")
+    browser_page.keyboard.press("ArrowDown")
+    browser_page.wait_for_url("**#retrieval/features")
+    browser_page.go_back()
+    browser_page.wait_for_url("**#retrieval/retrievers")
+    assert errors == []
+
+
+def test_jump_palette_filters_and_restores_focus(page, enhanced_report: Path) -> None:
+    browser_page, _ = page
+    open_deck(browser_page, enhanced_report)
+    opener = browser_page.get_by_role("button", name="Jump")
+    opener.focus()
+    browser_page.keyboard.press("Control+K")
+    palette = browser_page.get_by_role("dialog", name="Jump anywhere")
+    assert palette.is_visible()
+    palette.get_by_role("searchbox").fill("volart")
+    palette.get_by_role("button", name="Leading teams — volart").click()
+    browser_page.wait_for_url("**#leaders/volart")
+    opener.focus()
+    browser_page.keyboard.press("Control+K")
+    browser_page.keyboard.press("Escape")
+    assert opener.evaluate("node => document.activeElement === node")
+
+
+def test_direct_and_invalid_hashes(page, enhanced_report: Path) -> None:
+    browser_page, _ = page
+    open_deck(browser_page, enhanced_report, "#response/matrix")
+    assert browser_page.locator('#response\\/matrix').get_attribute("aria-current") == "true"
+    browser_page.goto(f"{enhanced_report.as_uri()}#not/a-slide")
+    browser_page.wait_for_url("**#outcome/summary")
+
+
+def test_direct_hash_opens_disclosure(page, enhanced_report: Path) -> None:
+    browser_page, _ = page
+    open_deck(browser_page, enhanced_report, "#retrieval/features?open=feature_matrix")
+    details = browser_page.locator('details[data-disclosure-for="feature_matrix"]')
+    assert details.get_attribute("open") is not None
+
+
+def test_reduced_motion_and_passive_scroll_do_not_steal_focus(enhanced_report: Path) -> None:
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True, executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
+        page = browser.new_page(viewport={"width": 1280, "height": 800}, reduced_motion="reduce")
+        open_deck(page, enhanced_report)
+        assert page.locator(".deck-track").evaluate("node => getComputedStyle(node).scrollBehavior") == "auto"
+        page.get_by_role("button", name="Jump").focus()
+        page.locator(".deck-track").evaluate("node => node.scrollLeft = node.clientWidth")
+        page.wait_for_timeout(120)
+        assert page.get_by_role("button", name="Jump").evaluate("node => document.activeElement === node")
+        browser.close()
+
+
+def test_no_external_requests_or_browser_errors(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    requests: list[str] = []
+    browser_page.on("request", lambda request: requests.append(request.url))
+    open_deck(browser_page, enhanced_report)
+    external = [url for url in requests if not url.startswith(("file:", "data:", "blob:"))]
+    assert external == []
+    assert errors == []
