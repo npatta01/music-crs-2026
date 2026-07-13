@@ -83,6 +83,20 @@ def test_content_aware_archetypes_and_visual_canvas(page, enhanced_report: Path)
     assert errors == []
 
 
+def test_wide_short_chapter_covers_do_not_collide(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    browser_page.set_viewport_size({"width": 1828, "height": 536})
+    open_deck(browser_page, enhanced_report, "#query/cover")
+    for cover in browser_page.locator(".deck-slide--cover").all():
+        copy_box = cover.locator(".deck-page-copy").bounding_box()
+        map_box = cover.locator(".deck-chapter-map").bounding_box()
+        assert copy_box is not None and map_box is not None
+        assert copy_box["x"] + copy_box["width"] <= map_box["x"] - 12
+        heading = cover.locator(".deck-slide-heading")
+        assert heading.evaluate("node => node.scrollWidth <= node.clientWidth + 1")
+    assert errors == []
+
+
 def test_supplied_failure_pages_promote_embeds_without_nested_scroll(page, enhanced_report: Path) -> None:
     browser_page, errors = page
     open_deck(browser_page, enhanced_report)
@@ -123,6 +137,58 @@ def test_long_prose_matrices_render_as_readable_team_cards(page, enhanced_report
         )
         assert all(labels)
         assert float(table.locator("tbody td").first.evaluate("node => parseFloat(getComputedStyle(node).fontSize)")) >= 13
+
+
+def test_dense_walkthroughs_use_progressive_visual_cards(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    open_deck(browser_page, enhanced_report, "#ours/walkthrough")
+    for slug, minimum in (("ours/walkthrough", 5), ("leaders/volart-response", 5)):
+        browser_page.evaluate("slug => window.__retrospectiveDeck.goTo(slug, {behavior: 'auto'})", slug)
+        cards = browser_page.locator(f"[id='{slug}'] .deck-insight-card")
+        assert cards.count() >= minimum
+        assert browser_page.locator(f"[id='{slug}'] details.deck-insight-card:not([open])").count() >= 1
+        cards.first.evaluate("node => node.open = true")
+        assert cards.first.locator(".deck-insight-detail").is_visible()
+    assert errors == []
+
+
+def test_synthesis_matrix_fills_canvas_and_encodes_status(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    open_deck(browser_page, enhanced_report, "#synthesis/matrix")
+    slide = browser_page.locator("[id='synthesis/matrix'] .deck-slide-inner")
+    table = browser_page.locator("[id='synthesis/matrix'] table")
+    slide_box = slide.bounding_box()
+    table_box = table.bounding_box()
+    assert slide_box is not None and table_box is not None
+    assert table_box["width"] >= min(1120, slide_box["width"] * .82)
+    assert browser_page.locator("[id='synthesis/matrix'] td.deck-status--yes").count() > 0
+    assert browser_page.locator("[id='synthesis/matrix'] td.deck-status--partial").count() > 0
+    assert browser_page.locator("[id='synthesis/matrix'] td.deck-status--missing").count() > 0
+    assert errors == []
+
+
+def test_prompt_audit_names_the_active_state_contract(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    open_deck(browser_page, enhanced_report, "#query/prompt-audit")
+    audit = browser_page.locator("[id='query/prompt-audit'] .deck-embedded-document").first
+    text = audit.evaluate("node => node.shadowRoot.textContent")
+    for phrase in ("Current request", "Facts", "Played-track feedback", "Explicit played-track references", "After extraction", "V0Plus"):
+        assert phrase in text
+    assert audit.evaluate(
+        "node => getComputedStyle(node.shadowRoot.querySelector('.state-contract ul')).display"
+    ) == "grid"
+    assert errors == []
+
+
+def test_lane_only_diagrams_use_the_vertical_canvas(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    open_deck(browser_page, enhanced_report, "#ours/inference-rail")
+    slide = browser_page.locator("[id='ours/inference-rail']")
+    assert slide.get_attribute("class") and "deck-flow-only" in slide.get_attribute("class")
+    step_box = slide.locator(".deck-flow-step").first.bounding_box()
+    assert step_box is not None and step_box["height"] >= 120
+    assert float(slide.locator(".deck-flow-step").first.evaluate("node => parseFloat(getComputedStyle(node).fontSize)")) >= 15
+    assert errors == []
 
 
 def test_story_pages_use_presentation_scale_and_canvas(page, enhanced_report: Path) -> None:
@@ -173,6 +239,9 @@ def test_linear_and_print_modes(page, enhanced_report: Path) -> None:
     )
     assert actual == expected
     assert browser_page.locator(".deck-source-list .portable-sources").is_visible()
+    linear_card = browser_page.locator("details.deck-insight-card").first
+    assert linear_card.locator("summary").evaluate("node => getComputedStyle(node).display") == "none"
+    assert linear_card.locator(".deck-insight-detail strong").first.evaluate("node => getComputedStyle(node).display") != "none"
     browser_page.goto(enhanced_report.as_uri())
     browser_page.wait_for_function("document.documentElement.dataset.deckReady === 'true'")
     assert browser_page.locator(".deck-source-list").count() == 1
@@ -182,6 +251,9 @@ def test_linear_and_print_modes(page, enhanced_report: Path) -> None:
     assert browser_page.locator(".deck-chrome").first.evaluate("node => getComputedStyle(node).display") == "none"
     assert browser_page.locator(".deck-slide").nth(49).is_visible()
     assert browser_page.locator(".deck-source-list .portable-sources").is_visible()
+    print_card = browser_page.locator("details.deck-insight-card").first
+    assert print_card.locator("summary").evaluate("node => getComputedStyle(node).display") == "none"
+    assert print_card.locator(".deck-insight-detail strong").first.evaluate("node => getComputedStyle(node).display") != "none"
     browser_page.evaluate("dispatchEvent(new Event('afterprint'))")
     assert browser_page.locator(".deck-source-list").count() == 1
 

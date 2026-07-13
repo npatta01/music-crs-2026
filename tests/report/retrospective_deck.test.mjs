@@ -59,6 +59,14 @@ test("enhancement uses structured explanatory flows instead of decorative raster
   assert.ok(flowPages.every((entry) => entry.lanes.every((lane) => lane.steps.length >= 2)));
 });
 
+test("submitted inference lane distinguishes candidate assembly from LightGBM ranking", () => {
+  const lane = CHAPTERS.find((chapter) => chapter.slug === "ours")
+    .slides.find((entry) => entry.slug === "inference-rail").lanes[0];
+  assert.equal(lane.steps.some((step) => /RRF/i.test(step)), false);
+  assert.ok(lane.steps.some((step) => /branch-pool union/i.test(step)));
+  assert.ok(lane.steps.some((step) => /LightGBM|LambdaMART/i.test(step)));
+});
+
 test("enhancement is deterministic and idempotent", async () => {
   const html = await readFile(REPORT, "utf8");
   const once = enhanceHtml(html);
