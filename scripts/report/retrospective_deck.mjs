@@ -2,7 +2,9 @@
 import { readFile, rename, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
-const slide = (slug, title, blocks) => ({ slug, title, blocks });
+const slide = (slug, title, archetype, blocks, visual = null) => ({ slug, title, archetype, blocks, visual });
+
+export const PAGE_ARCHETYPES = new Set(["cover", "story", "visual", "matrix", "audit"]);
 
 export const CHAPTERS = [
   {
@@ -10,9 +12,12 @@ export const CHAPTERS = [
     title: "Outcome & score",
     question: "What happened, and which metric terms made the gap?",
     slides: [
-      slide("summary", "Executive answer", ["title", "executive_summary", "headline_metrics", "section_directory"]),
-      slide("official-result", "Official result", ["how_scoring_works", "final_result_heading", "leaderboard_chart", "leaderboard_table"]),
-      slide("gap", "Gap decomposition", ["gap_contribution_chart", "gap_interpretation"]),
+      slide("cover", "Outcome & score", "cover", [], "outcome-cover"),
+      slide("executive-answer", "Executive answer", "story", ["title", "executive_summary", "headline_metrics", "section_directory"]),
+      slide("leaderboard-chart", "How the result was scored", "visual", ["how_scoring_works", "final_result_heading", "leaderboard_chart"]),
+      slide("leaderboard-table", "Exact leaderboard", "matrix", ["leaderboard_table"]),
+      slide("gap-chart", "Gap decomposition", "visual", ["gap_contribution_chart"]),
+      slide("gap-interpretation", "What the score gap does—and does not—show", "story", ["gap_interpretation"]),
     ],
   },
   {
@@ -20,10 +25,13 @@ export const CHAPTERS = [
     title: "Conversation → query",
     question: "How did each system turn dialogue into retriever inputs?",
     slides: [
-      slide("lifecycle", "Shared lifecycle", ["lifecycle_heading", "lifecycle_map", "lifecycle_takeaway"]),
-      slide("comparison", "Query comparison", ["query_heading", "query_explainer", "query_matrix"]),
-      slide("data-knowledge", "Data and model knowledge", ["data_knowledge_heading", "data_knowledge_glossary", "data_knowledge_matrix", "data_knowledge_interpretation"]),
-      slide("prompt-audit", "Prompt and file audit", ["query_evidence_details"]),
+      slide("cover", "Conversation → query", "cover", [], "query-cover"),
+      slide("lifecycle", "Shared query lifecycle", "visual", ["lifecycle_heading", "lifecycle_map", "lifecycle_takeaway"], "conversation-to-query"),
+      slide("query-glossary", "What counts as a query representation?", "story", ["query_heading", "query_explainer"]),
+      slide("query-matrix", "Five-team query matrix", "matrix", ["query_matrix"]),
+      slide("data-glossary", "Where system knowledge came from", "story", ["data_knowledge_heading", "data_knowledge_glossary"]),
+      slide("data-matrix", "Data and model-knowledge matrix", "matrix", ["data_knowledge_matrix", "data_knowledge_interpretation"]),
+      slide("prompt-audit", "Prompt and file audit", "audit", ["query_evidence_details"]),
     ],
   },
   {
@@ -31,9 +39,11 @@ export const CHAPTERS = [
     title: "Retrieval & ranking",
     question: "What candidates and features could the rankers actually see?",
     slides: [
-      slide("retrievers", "Retriever inputs and constraints", ["retrieval_heading", "retrieval_glossary", "retrieval_matrix"]),
-      slide("features", "Feature families and validation lineage", ["features_heading", "feature_glossary", "feature_matrix"]),
-      slide("feature-audit", "Complete feature inventories", ["feature_details"]),
+      slide("cover", "Retrieval & ranking", "cover", [], "retrieval-cover"),
+      slide("retriever-matrix", "Retriever inputs and constraints", "matrix", ["retrieval_heading", "retrieval_glossary", "retrieval_matrix"], "retrieval-ranking"),
+      slide("feature-glossary", "Feature-family glossary", "story", ["features_heading", "feature_glossary"]),
+      slide("feature-matrix", "Feature families and validation lineage", "matrix", ["feature_matrix"]),
+      slide("feature-inventories", "Complete feature inventories", "audit", ["feature_details"]),
     ],
   },
   {
@@ -41,10 +51,13 @@ export const CHAPTERS = [
     title: "Response generation",
     question: "How did a selected track become grounded, checked prose?",
     slides: [
-      slide("overview", "Response subsystem overview", ["response_heading", "response_explainer"]),
-      slide("matrix", "Five-team response matrix", ["response_matrix"]),
-      slide("pipelines", "Generation, selection, and repair pipelines", ["response_walkthroughs"]),
-      slide("tradeoffs", "Trade-offs and source boundary", ["response_tradeoffs"]),
+      slide("cover", "Response generation", "cover", [], "response-cover"),
+      slide("overview", "Response subsystem overview", "visual", ["response_heading", "response_explainer"], "grounded-response"),
+      slide("matrix", "Five-team response matrix", "matrix", ["response_matrix"]),
+      slide("author-volart", "Author and volart paths", "visual", []),
+      slide("niwatori-swyoo", "niwatori and swyoo paths", "visual", []),
+      slide("team2", "team2_s2 path", "visual", []),
+      slide("tradeoffs", "Generation, selection, repair, and trade-offs", "audit", ["response_walkthroughs", "response_tradeoffs"]),
     ],
   },
   {
@@ -52,11 +65,13 @@ export const CHAPTERS = [
     title: "Our submission",
     question: "What did we build, what worked, and where did confidence fail?",
     slides: [
-      slide("system", "System diagram", ["own_system_heading", "own_system_diagram"]),
-      slide("walkthrough", "Complete walkthrough", ["own_system_walkthrough"]),
-      slide("strengths", "What worked", ["what_worked"]),
-      slide("evaluation-mistake", "Evaluation mistake", ["evaluation_mistake"]),
-      slide("contributors", "Best-supported contributors", ["ranking_contributors", "response_contributors"]),
+      slide("cover", "Our submission", "cover", ["own_system_heading"], "ours-cover"),
+      slide("offline-rail", "Offline evidence rail", "visual", ["own_system_diagram"]),
+      slide("inference-rail", "Inference rail", "visual", []),
+      slide("walkthrough", "Complete walkthrough and ranking handoff", "audit", ["own_system_walkthrough"]),
+      slide("what-worked", "What worked", "story", ["what_worked"]),
+      slide("evaluation-mistake", "Evaluation mistake and confidence boundary", "story", ["evaluation_mistake"]),
+      slide("contributors", "Ranking and response contributors", "story", ["ranking_contributors", "response_contributors"]),
     ],
   },
   {
@@ -64,11 +79,19 @@ export const CHAPTERS = [
     title: "Leading teams",
     question: "What did the leading public systems document differently?",
     slides: [
-      slide("index", "Case-study index", ["competitor_case_studies_heading"]),
-      slide("volart", "volart", ["volart_heading", "volart_outcome", "volart_diagram", "volart_walkthrough", "volart_comparison", "volart_limits"]),
-      slide("niwatori", "niwatori", ["niwatori_heading", "niwatori_outcome", "niwatori_diagram", "niwatori_walkthrough", "niwatori_comparison", "niwatori_limits"]),
-      slide("swyoo", "swyoo", ["swyoo_heading", "swyoo_outcome", "swyoo_diagram", "swyoo_walkthrough", "swyoo_comparison", "swyoo_limits"]),
-      slide("team2", "team2_s2", ["team2_s2_heading", "team2_s2_outcome", "team2_s2_diagram", "team2_s2_walkthrough", "team2_s2_comparison", "team2_s2_limits"]),
+      slide("cover", "Leading teams", "cover", ["competitor_case_studies_heading"], "leaders-cover"),
+      slide("volart-outcome", "volart · outcome, query, and data", "story", ["volart_heading", "volart_outcome"]),
+      slide("volart-retrieval", "volart · retrieval and ranking", "visual", ["volart_diagram"]),
+      slide("volart-response", "volart · response, comparison, and limits", "audit", ["volart_walkthrough", "volart_comparison", "volart_limits"]),
+      slide("niwatori-outcome", "niwatori · outcome, query, and data", "story", ["niwatori_heading", "niwatori_outcome"]),
+      slide("niwatori-retrieval", "niwatori · retrieval and ranking", "visual", ["niwatori_diagram"]),
+      slide("niwatori-response", "niwatori · response, comparison, and limits", "audit", ["niwatori_walkthrough", "niwatori_comparison", "niwatori_limits"]),
+      slide("swyoo-outcome", "swyoo · outcome, query, and data", "story", ["swyoo_heading", "swyoo_outcome"]),
+      slide("swyoo-retrieval", "swyoo · retrieval and ranking", "visual", ["swyoo_diagram"]),
+      slide("swyoo-response", "swyoo · response, comparison, and limits", "audit", ["swyoo_walkthrough", "swyoo_comparison", "swyoo_limits"]),
+      slide("team2-outcome", "team2_s2 · outcome, query, and data", "story", ["team2_s2_heading", "team2_s2_outcome"]),
+      slide("team2-retrieval", "team2_s2 · retrieval and ranking", "visual", ["team2_s2_diagram"]),
+      slide("team2-response", "team2_s2 · response, comparison, and limits", "audit", ["team2_s2_walkthrough", "team2_s2_comparison", "team2_s2_limits"]),
     ],
   },
   {
@@ -76,14 +99,27 @@ export const CHAPTERS = [
     title: "Synthesis & evidence",
     question: "What should the team preserve, reconsider, avoid, and credit?",
     slides: [
-      slide("cross-team", "Cross-team synthesis", ["cross_team_heading", "cross_team_matrix"]),
-      slide("choices", "Retrospective choices", ["preserve_reconsider_avoid", "retrospective_choices_table"]),
-      slide("lessons", "Transferable lessons", ["future_competition_lessons"]),
-      slide("acknowledgements", "Acknowledgements", ["acknowledgements_heading", "acknowledgements"]),
-      slide("caveats-evidence", "Caveats and complete evidence", ["caveats", "evidence_notes"]),
+      slide("cover", "Synthesis & evidence", "cover", ["cross_team_heading"], "synthesis-cover"),
+      slide("matrix", "Cross-team synthesis", "matrix", ["cross_team_matrix"]),
+      slide("choices", "Preserve, reconsider, and avoid", "story", ["preserve_reconsider_avoid", "retrospective_choices_table"]),
+      slide("lessons", "Transferable lessons and acknowledgements", "story", ["future_competition_lessons", "acknowledgements_heading", "acknowledgements"]),
+      slide("evidence", "Caveats and complete evidence", "audit", ["caveats", "evidence_notes"]),
     ],
   },
 ];
+
+export const LEGACY_ALIASES = new Map([
+  ["outcome/summary", "outcome/cover"], ["outcome/official-result", "outcome/leaderboard-chart"], ["outcome/gap", "outcome/gap-chart"],
+  ["query/comparison", "query/query-matrix"], ["query/data-knowledge", "query/data-matrix"],
+  ["retrieval/retrievers", "retrieval/retriever-matrix"], ["retrieval/features", "retrieval/feature-glossary"], ["retrieval/feature-audit", "retrieval/feature-inventories"],
+  ["response/pipelines", "response/author-volart"],
+  ["ours/system", "ours/cover"], ["ours/strengths", "ours/what-worked"],
+  ["leaders/index", "leaders/cover"], ["leaders/volart", "leaders/volart-outcome"], ["leaders/niwatori", "leaders/niwatori-outcome"], ["leaders/swyoo", "leaders/swyoo-outcome"], ["leaders/team2", "leaders/team2-outcome"],
+  ["synthesis/cross-team", "synthesis/cover"], ["synthesis/acknowledgements", "synthesis/lessons"], ["synthesis/caveats-evidence", "synthesis/evidence"],
+  ["response/matrix", "response/matrix"], ["response/overview", "response/overview"], ["response/tradeoffs", "response/tradeoffs"], ["query/prompt-audit", "query/prompt-audit"], ["ours/walkthrough", "ours/walkthrough"], ["ours/evaluation-mistake", "ours/evaluation-mistake"], ["ours/contributors", "ours/contributors"], ["synthesis/choices", "synthesis/choices"], ["synthesis/lessons", "synthesis/lessons"],
+]);
+
+export const resolveSlug = (slug) => LEGACY_ALIASES.get(slug) || slug;
 
 export const DISCLOSURES = {
   section_directory: "Open the original chapter outline",
@@ -135,11 +171,18 @@ export function validateChapterMap(chapters, html) {
   if (!html.includes('id="data-analytics-portable-artifact-payload-source"')) throw new Error("missing artifact payload template");
   const slugs = new Set();
   for (const chapter of chapters) for (const entry of chapter.slides) {
+    if (!PAGE_ARCHETYPES.has(entry.archetype)) throw new Error(`unknown page archetype: ${entry.archetype}`);
     const slug = `${chapter.slug}/${entry.slug}`;
     if (slugs.has(slug)) throw new Error(`duplicate slide slug: ${slug}`);
     slugs.add(slug);
   }
-  return { mappedIds, reportIds, slugs: [...slugs] };
+  return {
+    mappedIds,
+    reportIds,
+    slugs: [...slugs],
+    pageCount: slugs.size,
+    chapterCounts: chapters.map((chapter) => chapter.slides.length),
+  };
 }
 
 export const DECK_STYLE = `

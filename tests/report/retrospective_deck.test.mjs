@@ -4,7 +4,10 @@ import test from "node:test";
 
 import {
   CHAPTERS,
+  LEGACY_ALIASES,
+  PAGE_ARCHETYPES,
   enhanceHtml,
+  resolveSlug,
   stripDeckInjection,
   validateChapterMap,
 } from "../../scripts/report/retrospective_deck.mjs";
@@ -24,6 +27,27 @@ test("chapter map assigns all 74 report blocks exactly once", async () => {
   const result = validateChapterMap(CHAPTERS, stripDeckInjection(html));
   assert.equal(result.reportIds.length, 74);
   assert.deepEqual(result.mappedIds.sort(), result.reportIds.sort());
+});
+
+test("visual-first manifest has fifty content-aware pages", async () => {
+  const html = await readFile(REPORT, "utf8");
+  const result = validateChapterMap(CHAPTERS, stripDeckInjection(html));
+  assert.equal(CHAPTERS.length, 7);
+  assert.equal(result.pageCount, 50);
+  assert.deepEqual(result.chapterCounts, [6, 7, 5, 7, 7, 13, 5]);
+  for (const chapter of CHAPTERS) {
+    for (const entry of chapter.slides) {
+      assert.ok(PAGE_ARCHETYPES.has(entry.archetype), `${chapter.slug}/${entry.slug} has a known archetype`);
+    }
+  }
+});
+
+test("legacy slide hashes resolve to canonical split pages", () => {
+  assert.ok(LEGACY_ALIASES.size >= 20);
+  assert.equal(resolveSlug("outcome/summary"), "outcome/cover");
+  assert.equal(resolveSlug("leaders/volart"), "leaders/volart-outcome");
+  assert.equal(resolveSlug("response/matrix"), "response/matrix");
+  assert.equal(resolveSlug("unknown/page"), "unknown/page");
 });
 
 test("enhancement is deterministic and idempotent", async () => {
