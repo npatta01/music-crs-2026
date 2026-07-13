@@ -144,11 +144,150 @@ export function validateChapterMap(chapters, html) {
 
 export const DECK_STYLE = `
 #data-analytics-portable-reader{display:none!important}
-#data-analytics-portable-fallback{display:block!important;visibility:visible!important;position:relative!important}
+#data-analytics-portable-fallback{display:block!important;visibility:visible!important;position:relative!important;width:100%!important;max-width:none!important;padding:0!important}
+html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;overflow:hidden}
+.retrospective-deck{height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--portable-canvas);color:var(--portable-ink)}
+.deck-chrome{position:relative;z-index:20;background:color-mix(in srgb,var(--portable-canvas) 92%,transparent);backdrop-filter:blur(12px)}
+.deck-topbar,.deck-footer{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px clamp(12px,2.5vw,32px);border-color:var(--portable-border)}
+.deck-topbar{border-bottom:1px solid var(--portable-border)}
+.deck-footer{justify-content:space-between;border-top:1px solid var(--portable-border)}
+.deck-title{margin-right:auto;font-weight:750}.deck-breadcrumb{color:var(--portable-muted)}
+.deck-button{min-width:44px;min-height:44px;border:1px solid var(--portable-border);border-radius:10px;background:var(--portable-surface);color:var(--portable-ink);cursor:pointer}
+.deck-button:focus-visible,.deck-jump-item:focus-visible,.deck-slide:focus-visible,.deck-rail-button:focus-visible,summary:focus-visible{outline:3px solid var(--portable-accent);outline-offset:3px}
+.deck-track{display:flex;min-width:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-behavior:smooth;overscroll-behavior-x:contain;scrollbar-width:none}
+.deck-chapter{position:relative;flex:0 0 100%;min-width:0;height:100%;scroll-snap-align:start}
+.deck-vertical{height:100%;overflow-y:auto;overflow-x:hidden;scroll-snap-type:y proximity;overscroll-behavior-y:contain}
+.deck-vertical-rail{position:absolute;z-index:10;right:12px;top:50%;transform:translateY(-50%);display:grid;gap:7px;padding:9px;border:1px solid var(--portable-border);border-radius:999px;background:color-mix(in srgb,var(--portable-surface) 88%,transparent)}
+.deck-rail-button{width:12px;height:12px;padding:0;border:1px solid var(--portable-muted);border-radius:999px;background:transparent;cursor:pointer}
+.deck-rail-button[aria-current="true"]{border-color:var(--portable-accent);background:var(--portable-accent)}
+.deck-slide{min-height:100%;padding:clamp(18px,3vw,42px) clamp(16px,5vw,72px);scroll-snap-align:start;scroll-margin-top:12px}
+.deck-slide-inner{width:min(1180px,100%);margin:0 auto;display:grid;gap:18px}
+.deck-slide-heading{margin:0;font-size:clamp(22px,3vw,38px);line-height:1.12}.deck-question{margin:0;color:var(--portable-muted)}
+.deck-slide .portable-page-header{position:static;width:auto;height:auto;min-height:0;margin:0;padding:0;border:0;background:transparent}
+.deck-slide .portable-block-stack{display:contents}.deck-slide .portable-markdown{max-width:900px}
+.deck-slide .portable-content-card,.deck-slide .portable-metric-card{box-shadow:none}
+.deck-disclosure{border:1px solid var(--portable-border);border-radius:12px;background:var(--portable-surface);overflow:clip}
+.deck-disclosure>summary{min-height:48px;padding:14px 18px;cursor:pointer;color:var(--portable-accent);font-weight:700}
+.deck-disclosure>[data-artifact-block-id]{border:0;border-radius:0}
+.deck-source-list{margin-top:18px}.deck-source-list>.deck-disclosure{width:100%}
+.deck-jump{position:fixed;inset:0;z-index:50;display:none;place-items:center;padding:20px;background:rgba(15,23,42,.72)}
+.deck-jump[data-open="true"]{display:grid}.deck-jump-panel{width:min(720px,100%);max-height:min(720px,88dvh);overflow:auto;padding:18px;border:1px solid var(--portable-border);border-radius:16px;background:var(--portable-surface)}
+.deck-jump-input{width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--portable-border);border-radius:9px;background:var(--portable-canvas);color:var(--portable-ink)}
+.deck-jump-list{display:grid;gap:8px;margin-top:12px}.deck-jump-item{width:100%;min-height:48px;padding:10px 12px;border:0;border-radius:9px;background:var(--portable-surface-subtle);color:var(--portable-ink);text-align:left;cursor:pointer}
+.deck-live,.deck-skip{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.deck-skip:focus{position:fixed;top:8px;left:8px;z-index:80;width:auto;height:auto;clip:auto;padding:10px;background:var(--portable-surface)}
+html[data-deck-view="linear"],html[data-deck-view="linear"] body{height:auto;overflow:auto}
+html[data-deck-view="linear"] .retrospective-deck{height:auto;display:block}html[data-deck-view="linear"] .deck-track{display:block;overflow:visible}html[data-deck-view="linear"] .deck-chapter,html[data-deck-view="linear"] .deck-slide{height:auto;min-height:0}html[data-deck-view="linear"] .deck-vertical{height:auto;overflow:visible}html[data-deck-view="linear"] .deck-vertical-rail{display:none}html[data-deck-view="linear"] .deck-disclosure>summary{display:none}html[data-deck-view="linear"] .deck-disclosure>[data-artifact-block-id]{display:block!important}
+@media(max-width:700px){.deck-breadcrumb,.deck-axis-help{display:none}.deck-topbar,.deck-footer{min-height:60px;padding:8px 10px}.deck-slide{padding:18px 12px}.deck-vertical-rail{display:none}.portable-table-scroll{max-width:calc(100vw - 24px)}.deck-button{min-width:48px;min-height:48px}}
+@media(prefers-reduced-motion:reduce){.deck-track,.deck-vertical{scroll-behavior:auto!important}}
+@media(forced-colors:active){.deck-button,.deck-disclosure,.deck-jump-panel{border:1px solid CanvasText}}
+@media print{html,body{height:auto!important;overflow:visible!important}.deck-chrome,.deck-jump,.deck-skip,.deck-live,.deck-vertical-rail{display:none!important}.retrospective-deck,.deck-track,.deck-chapter,.deck-vertical,.deck-slide{display:block!important;height:auto!important;min-height:0!important;overflow:visible!important;scroll-snap-type:none!important}.deck-disclosure>summary{display:none!important}.deck-disclosure>[data-artifact-block-id],.deck-disclosure:not([open])>*:not(summary){display:block!important}}
 `;
 
 function runtimeMain(CONFIG) {
-  window.__RETROSPECTIVE_DECK_CONFIG__ = CONFIG;
+  const html = document.documentElement;
+  const fallback = document.getElementById("data-analytics-portable-fallback");
+  const stack = fallback?.querySelector(".portable-block-stack");
+  const sources = fallback?.querySelector(".portable-sources");
+  const pageHeader = fallback?.querySelector(":scope > .portable-page-header");
+  if (!fallback || !stack || !sources || !pageHeader) return;
+  const blocks = new Map([...stack.querySelectorAll(":scope > [data-artifact-block-id]")].map((node) => [node.dataset.artifactBlockId, node]));
+  pageHeader.dataset.artifactBlockId = "title";
+  blocks.set("title", pageHeader);
+
+  const app = document.createElement("main");
+  app.className = "retrospective-deck";
+  app.setAttribute("aria-label", "Music-CRS retrospective deck");
+  const skip = Object.assign(document.createElement("a"), { className: "deck-skip", href: "#outcome/summary", textContent: "Skip to current slide" });
+  const live = Object.assign(document.createElement("div"), { className: "deck-live" });
+  live.setAttribute("aria-live", "polite");
+  live.setAttribute("aria-atomic", "true");
+  const topbar = document.createElement("header");
+  topbar.className = "deck-topbar deck-chrome";
+  topbar.innerHTML = '<strong class="deck-title">Music-CRS retrospective</strong><span class="deck-breadcrumb"></span><span class="deck-progress"></span><button class="deck-button" type="button" data-action="linear">Linear view</button><button class="deck-button" type="button" data-action="jump">Jump</button>';
+  const track = document.createElement("div");
+  track.className = "deck-track";
+  const footer = document.createElement("footer");
+  footer.className = "deck-footer deck-chrome";
+  footer.innerHTML = '<button class="deck-button" type="button" data-action="previous">← Previous</button><span class="deck-axis-help">←/→ chapters · ↑/↓ depth</span><button class="deck-button" type="button" data-action="next">Next →</button>';
+  const disclosure = (node, label) => {
+    if (!label) return node;
+    const details = document.createElement("details");
+    details.className = "deck-disclosure";
+    details.dataset.disclosureFor = node.dataset.artifactBlockId;
+    const summary = document.createElement("summary");
+    summary.textContent = label;
+    details.append(summary, node);
+    return details;
+  };
+
+  for (const chapter of CONFIG.chapters) {
+    const chapterNode = document.createElement("section");
+    chapterNode.className = "deck-chapter";
+    chapterNode.dataset.chapter = chapter.slug;
+    chapterNode.setAttribute("aria-label", chapter.title);
+    const vertical = document.createElement("div");
+    vertical.className = "deck-vertical";
+    const rail = document.createElement("nav");
+    rail.className = "deck-vertical-rail";
+    rail.setAttribute("aria-label", `${chapter.title} slides`);
+    for (const entry of chapter.slides) {
+      const slideNode = document.createElement("section");
+      slideNode.className = "deck-slide";
+      slideNode.id = `${chapter.slug}/${entry.slug}`;
+      slideNode.dataset.slug = slideNode.id;
+      slideNode.tabIndex = -1;
+      slideNode.setAttribute("aria-labelledby", `${chapter.slug}-${entry.slug}-title`);
+      const inner = document.createElement("div");
+      inner.className = "deck-slide-inner";
+      const heading = document.createElement("h2");
+      heading.className = "deck-slide-heading";
+      heading.id = `${chapter.slug}-${entry.slug}-title`;
+      heading.textContent = entry.title;
+      const question = document.createElement("p");
+      question.className = "deck-question";
+      question.textContent = chapter.question;
+      inner.append(heading, question);
+      for (const blockId of entry.blocks) inner.append(disclosure(blocks.get(blockId), CONFIG.disclosures[blockId]));
+      slideNode.append(inner);
+      vertical.append(slideNode);
+      const railButton = document.createElement("button");
+      railButton.className = "deck-rail-button";
+      railButton.type = "button";
+      railButton.dataset.go = slideNode.id;
+      railButton.setAttribute("aria-label", `Go to ${entry.title}`);
+      rail.append(railButton);
+    }
+    chapterNode.append(vertical, rail);
+    track.append(chapterNode);
+  }
+
+  const finalSlide = track.querySelector('[id="synthesis/caveats-evidence"] .deck-slide-inner');
+  const sourceDetails = document.createElement("details");
+  sourceDetails.className = "deck-disclosure deck-source-list";
+  sourceDetails.innerHTML = "<summary>Open the complete source list</summary>";
+  sourceDetails.append(sources);
+  finalSlide.append(sourceDetails);
+  app.append(skip, topbar, track, footer, live);
+  stack.replaceWith(app);
+
+  const disclosures = () => document.querySelectorAll("details.deck-disclosure");
+  const setAllOpen = (stateKey) => disclosures().forEach((details) => {
+    if (!(stateKey in details.dataset)) details.dataset[stateKey] = details.open ? "true" : "false";
+    details.open = true;
+  });
+  const restoreOpen = (stateKey) => disclosures().forEach((details) => {
+    if (stateKey in details.dataset) {
+      details.open = details.dataset[stateKey] === "true";
+      delete details.dataset[stateKey];
+    }
+  });
+  html.dataset.deckView = new URL(location.href).searchParams.get("view") === "linear" ? "linear" : "deck";
+  if (html.dataset.deckView === "linear") setAllOpen("deckLinearOpen");
+  addEventListener("beforeprint", () => setAllOpen("deckPrintOpen"));
+  addEventListener("afterprint", () => restoreOpen("deckPrintOpen"));
+  html.classList.add("retrospective-deck-ready");
+  html.dataset.deckReady = "true";
+  window.__retrospectiveDeck = { CONFIG, app, track, live };
 }
 
 export const DECK_RUNTIME = `(${runtimeMain.toString()})(__CONFIG__);`;
