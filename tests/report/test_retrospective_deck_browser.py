@@ -97,6 +97,30 @@ def _assert_slide_has_no_unintended_overflow(slide: Locator, tolerance: int = 2)
     assert audit["nestedVerticalOverflow"] == [], audit
 
 
+def _contrast_ratio(locator: Locator) -> float:
+    return locator.evaluate(
+        """node => {
+          const parse = value => {
+            const channels = value.match(/[\\d.]+/g).slice(0, 3).map(Number);
+            return value.startsWith('color(srgb') ? channels.map(channel => channel * 255) : channels;
+          };
+          const luminance = value => {
+            const channels = parse(value).map(channel => {
+              const normalized = channel / 255;
+              return normalized <= .04045
+                ? normalized / 12.92
+                : Math.pow((normalized + .055) / 1.055, 2.4);
+            });
+            return .2126 * channels[0] + .7152 * channels[1] + .0722 * channels[2];
+          };
+          const style = getComputedStyle(node);
+          const foreground = luminance(style.color);
+          const background = luminance(style.backgroundColor);
+          return (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05);
+        }"""
+    )
+
+
 def test_groups_every_block_once(page, enhanced_report: Path) -> None:
     browser_page, errors = page
     open_deck(browser_page, enhanced_report)
@@ -729,15 +753,71 @@ def test_synthesis_decoder_defines_terms_and_concrete_gaps(page, enhanced_report
     assert errors == []
 
 
-@pytest.mark.parametrize("viewport", [(1533, 903), (1024, 768), (390, 844)])
-def test_synthesis_decoder_has_no_horizontal_overflow(page, enhanced_report: Path, viewport) -> None:
+@pytest.mark.parametrize("viewport", [(1533, 903), (1280, 800), (1024, 768), (390, 844)])
+def test_synthesis_decoder_has_no_unintended_overflow(page, enhanced_report: Path, viewport) -> None:
     browser_page, errors = page
     browser_page.set_viewport_size({"width": viewport[0], "height": viewport[1]})
     open_deck(browser_page, enhanced_report, "#synthesis/decoder")
-    overflow = browser_page.locator("[id='synthesis/decoder'] .deck-slide-inner").evaluate(
-        "node => node.scrollWidth - node.clientWidth"
+    _assert_slide_has_no_unintended_overflow(browser_page.locator("[id='synthesis/decoder']"))
+    assert errors == []
+
+
+@pytest.mark.parametrize("viewport", [(1533, 903), (1024, 768), (390, 844)])
+def test_synthesis_decoder_essential_copy_is_legible(page, enhanced_report: Path, viewport) -> None:
+    browser_page, errors = page
+    browser_page.set_viewport_size({"width": viewport[0], "height": viewport[1]})
+    open_deck(browser_page, enhanced_report, "#synthesis/decoder")
+    essential_copy = browser_page.locator(
+        "[id='synthesis/decoder'] .deck-decoder-definition, "
+        "[id='synthesis/decoder'] .deck-decoder-flow li, "
+        "[id='synthesis/decoder'] .deck-decoder-evidence li, "
+        "[id='synthesis/decoder'] .deck-decoder-boundary, "
+        "[id='synthesis/decoder'] .deck-decoder-why"
     )
-    assert overflow <= 1
+    assert essential_copy.count() > 0
+    sizes = essential_copy.evaluate_all(
+        "nodes => nodes.map(node => parseFloat(getComputedStyle(node).fontSize))"
+    )
+    assert min(sizes) >= 13, sizes
+    assert errors == []
+
+
+@pytest.mark.parametrize("color_scheme", ["light", "dark"])
+def test_semantic_status_text_meets_contrast_in_both_themes(
+    page, enhanced_report: Path, color_scheme: str
+) -> None:
+    browser_page, errors = page
+    browser_page.emulate_media(color_scheme=color_scheme)
+    open_deck(browser_page, enhanced_report, "#synthesis/decoder")
+    selectors = (
+        "[id='synthesis/decoder'] .deck-decoder-had",
+        "[id='synthesis/decoder'] .deck-decoder-lacked",
+        ".deck-evidence-heatmap [data-status='present']",
+        ".deck-evidence-heatmap [data-status='partial']",
+        ".deck-provenance-layer[data-status='present']",
+        ".deck-provenance-layer[data-status='partial']",
+    )
+    ratios = {selector: _contrast_ratio(browser_page.locator(selector).first) for selector in selectors}
+    assert min(ratios.values()) >= 4.5, ratios
+    assert errors == []
+
+
+def test_synthesis_decoder_uses_tablet_space_before_mobile_stack(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    browser_page.set_viewport_size({"width": 1024, "height": 768})
+    open_deck(browser_page, enhanced_report, "#synthesis/decoder")
+    cards = browser_page.locator("[id='synthesis/decoder'] .deck-decoder-card")
+    first = cards.nth(0).bounding_box()
+    second = cards.nth(1).bounding_box()
+    assert first is not None and second is not None
+    assert abs(first["y"] - second["y"]) <= 1
+    assert second["x"] > first["x"] + first["width"]
+
+    browser_page.set_viewport_size({"width": 390, "height": 844})
+    first = cards.nth(0).bounding_box()
+    second = cards.nth(1).bounding_box()
+    assert first is not None and second is not None
+    assert second["y"] >= first["y"] + first["height"]
     assert errors == []
 
 
