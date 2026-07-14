@@ -1005,9 +1005,10 @@ function runtimeMain(CONFIG) {
         mark.setAttribute("aria-hidden", "true");
         const shortLabel = document.createElement("span");
         shortLabel.className = "deck-grid-cell-label";
-        shortLabel.textContent = value.short;
-        content.append(mark);
-        if (className !== "deck-evidence-heatmap") content.append(shortLabel);
+        shortLabel.textContent = className === "deck-evidence-heatmap"
+          ? `${statusText[value.status]} · ${value.short}`
+          : value.short;
+        content.append(mark, shortLabel);
         cellNode.append(content);
         row.append(cellNode);
       });

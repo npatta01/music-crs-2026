@@ -112,15 +112,52 @@ def test_diagnosis_confidence_and_unknown_boundaries_are_explicit(page, enhanced
 
 def test_reusable_visual_grammars_compare_all_five_teams(page, enhanced_report: Path) -> None:
     browser_page, errors = page
-    for slug, selector in (
-        ("query/provenance-stacks", ".deck-provenance-stack"),
-        ("retrieval/evidence-heatmap", ".deck-evidence-heatmap"),
-        ("response/control-heatmap", ".deck-control-lanes"),
+    expected_teams = ["npatta01", "volart", "niwatori", "swyoo", "team2_s2"]
+    valid_statuses = {"present", "partial", "not-documented"}
+    for slug, selector, row_selector, cell_selector, expected_cells in (
+        (
+            "query/provenance-stacks",
+            ".deck-provenance-stack",
+            ".deck-provenance-team",
+            ".deck-provenance-layer[data-status]",
+            5,
+        ),
+        ("retrieval/evidence-heatmap", ".deck-evidence-heatmap", "tr[data-team]", "td[data-status]", 11),
+        ("response/control-heatmap", ".deck-control-lanes", "tr[data-team]", "td[data-status]", 6),
     ):
         open_deck(browser_page, enhanced_report, f"#{slug}")
         escaped_slug = slug.replace("/", r"\/")
-        assert browser_page.locator(f"#{escaped_slug} {selector}").count() == 1
-        assert browser_page.locator(f"#{escaped_slug} [data-team]").count() == 5
+        visual = browser_page.locator(f"#{escaped_slug} {selector}")
+        assert visual.count() == 1
+        rows = visual.locator(row_selector)
+        assert rows.evaluate_all("nodes => nodes.map(node => node.dataset.team)") == expected_teams
+        assert rows.evaluate_all(
+            "(nodes, cellSelector) => nodes.map(node => node.querySelectorAll(cellSelector).length)",
+            cell_selector,
+        ) == [expected_cells] * len(expected_teams)
+        assert set(visual.locator("[data-status]").evaluate_all("nodes => nodes.map(node => node.dataset.status)")) <= valid_statuses
+    assert errors == []
+
+
+def test_mobile_evidence_heatmap_shows_status_and_short_qualifier(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    browser_page.set_viewport_size({"width": 390, "height": 844})
+    open_deck(browser_page, enhanced_report, "#retrieval/evidence-heatmap")
+    labels = browser_page.locator("#retrieval\\/evidence-heatmap td[data-status] .deck-grid-cell-label")
+    assert labels.count() == 55
+    audit = labels.evaluate_all(
+        """nodes => nodes.map(node => ({
+          text: node.textContent.trim(),
+          display: getComputedStyle(node).display,
+          visibility: getComputedStyle(node).visibility,
+          width: node.getBoundingClientRect().width,
+          height: node.getBoundingClientRect().height,
+        }))"""
+    )
+    assert all(item["display"] != "none" and item["visibility"] != "hidden" for item in audit)
+    assert all(item["width"] > 0 and item["height"] > 0 for item in audit)
+    assert all(re.match(r"^(Present|Partial|Not documented) · .+", item["text"]) for item in audit)
+    assert {item["text"].split(" · ", 1)[0] for item in audit} == {"Present", "Partial", "Not documented"}
     assert errors == []
 
 
@@ -129,7 +166,26 @@ def test_reusable_visual_grammars_keep_primary_copy_bounded(page, enhanced_repor
     for slug in ("query/provenance-stacks", "retrieval/evidence-heatmap", "response/control-heatmap"):
         open_deck(browser_page, enhanced_report, f"#{slug}")
         words = browser_page.locator(f"[id='{slug}']").evaluate(
-            "node => node.innerText.split(/\\s+/).filter(Boolean).length"
+            """node => {
+              const isHidden = element => {
+                for (let current = element; current && current !== node.parentElement; current = current.parentElement) {
+                  const style = getComputedStyle(current);
+                  if (style.display === 'none' || style.visibility === 'hidden') return true;
+                  const rect = current.getBoundingClientRect();
+                  const clipped = style.overflow === 'hidden'
+                    && rect.width <= 1 && rect.height <= 1
+                    && (style.clip !== 'auto' || style.clipPath !== 'none');
+                  if (clipped) return true;
+                }
+                return false;
+              };
+              const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+              const visibleText = [];
+              while (walker.nextNode()) {
+                if (!isHidden(walker.currentNode.parentElement)) visibleText.push(walker.currentNode.nodeValue);
+              }
+              return visibleText.join(' ').split(/\\s+/).filter(Boolean).length;
+            }"""
         )
         assert words <= 120
     assert errors == []
