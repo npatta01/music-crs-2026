@@ -6,6 +6,59 @@ const slide = (slug, title, archetype, blocks, options = {}) => ({ slug, title, 
 
 export const PAGE_ARCHETYPES = new Set(["cover", "story", "visual", "matrix", "audit"]);
 
+export const CONFIDENCE_LEVELS = new Set(["verified", "likely", "unknown"]);
+
+export const DIAGNOSIS_SLIDES = [
+  slide("score-location", "Where the score gap appeared", "visual", [], {
+    diagnosisKind: "score",
+    takeaway: "Ranking and judge terms explain most of the arithmetic gap; the chart does not prove which mechanism caused it.",
+  }),
+  slide("information-loss", "Where information was lost", "visual", [], {
+    diagnosisKind: "bottleneck",
+    stages: ["Conversation", "Extracted state", "Retriever actions", "Candidate sources", "Candidate union", "LightGBM", "Top-1 track", "Grounded context", "One draft", "Final response"],
+    losses: [
+      { after: "Extracted state", label: "Some facts remained soft or lacked a dedicated source action", confidence: "verified" },
+      { after: "Candidate sources", label: "No direct co-occurrence or transition lane", confidence: "verified" },
+      { after: "Candidate union", label: "Absent tracks were irrecoverable downstream", confidence: "verified" },
+      { after: "One draft", label: "No independent selection, checking, or repair", confidence: "verified" },
+    ],
+  }),
+  slide("constraint-wiring", "Extracted constraints versus operationalized constraints", "visual", [], {
+    diagnosisKind: "wiring",
+    connections: [
+      { from: "Explicit rejections", to: "Hard track exclusion, tag demotion, and artist veto", confidence: "verified" },
+      { from: "Era preference", to: "Soft preference and era lookup", confidence: "verified" },
+      { from: "Played-track history", to: "Anchors and reranker features, without a direct track co-occurrence source", confidence: "verified" },
+      { from: "Other soft state facts", to: "No dedicated source action documented for every field", confidence: "verified" },
+    ],
+    takeaway: "Rich extraction, uneven execution: not every fact became a filter, source-specific query, or dedicated candidate signal.",
+  }),
+  slide("features-seen", "What the 142-feature reranker saw", "visual", [], {
+    diagnosisKind: "feature-map",
+    featureFamilies: ["Retriever evidence", "Semantic and multimodal", "Behavioral and lookup", "Catalog", "Conversation and state", "Agreement and interactions"],
+    takeaway: "The ranker was substantial; column count alone does not establish liveness, importance, robustness, or held-out benefit.",
+  }),
+  slide("evidence-missed", "Evidence the ranker could not see or recover", "visual", [], {
+    diagnosisKind: "boundaries",
+    boundaries: ["Missing upstream source", "Consequent missing feature", "Not missing"],
+    takeaway: "Adding LightGBM columns cannot recreate a track or source signal that never entered the pipeline.",
+  }),
+  slide("confidence", "Response weakness and confidence-ranked diagnosis", "visual", [], {
+    diagnosisKind: "confidence",
+    confidence: {
+      verified: ["Ranking and judge dominate the score gap", "Constraint execution was uneven", "Behavioral evidence was partial", "b1_cos was a reranker feature only", "Blind-B used one response call with echo_retries=0"],
+      likely: ["Evidence diversity mattered more than feature count", "LLM knowledge was not consistently grounded and reused", "Distribution shift or objective mismatch contributed", "Response quality control was too thin"],
+      unknown: ["Blind-B candidate recall", "Present-but-misranked frequency", "Per-session failure archetypes", "Causal effect of any one mechanism"],
+    },
+  }),
+];
+
+export const CURATED_PATH = [
+  "outcome/executive-answer", "outcome/gap-chart",
+  ...DIAGNOSIS_SLIDES.map(({ slug }) => `diagnosis/${slug}`),
+  "ours/inference-rail", "retrieval/evidence-heatmap", "response/control-heatmap",
+  "leaders/volart-retrieval", "synthesis/lessons",
+];
 
 export const CHAPTERS = [
   {
@@ -22,12 +75,34 @@ export const CHAPTERS = [
     ],
   },
   {
+    slug: "diagnosis",
+    title: "Diagnosis",
+    question: "Where did information and control weaken, and how confident is that diagnosis?",
+    slides: DIAGNOSIS_SLIDES,
+  },
+  {
+    slug: "ours",
+    title: "Our submission",
+    question: "What did we build, what worked, and where did confidence fail?",
+    slides: [
+      slide("cover", "Our submission", "cover", ["own_system_heading"]),
+      slide("offline-rail", "Offline evidence rail", "visual", ["own_system_diagram"]),
+      slide("inference-rail", "Inference rail", "visual", [], { lanes: [
+        { label: "Deployed Blind-B path", steps: ["DeepSeek state extraction", "BM25, multimodal ANN, and lookup branches", "Top 500 from each branch → candidate union", "LightGBM LambdaMART reorders the union", "Top-1 selected track", "Single-pass response"] },
+      ] }),
+      slide("walkthrough", "Complete walkthrough and ranking handoff", "audit", ["own_system_walkthrough"]),
+      slide("what-worked", "What worked", "story", ["what_worked"]),
+      slide("evaluation-mistake", "Evaluation mistake and confidence boundary", "story", ["evaluation_mistake"]),
+      slide("contributors", "Ranking and response contributors", "story", ["ranking_contributors", "response_contributors"]),
+    ],
+  },
+  {
     slug: "query",
     title: "Conversation → query",
     question: "How did each system turn dialogue into retriever inputs?",
     slides: [
       slide("cover", "Conversation → query", "cover", []),
-      slide("lifecycle", "Dialogue becomes several search signals", "visual", ["lifecycle_heading", "lifecycle_map", "lifecycle_takeaway"], {
+      slide("lifecycle", "Dialogue becomes several search signals", "visual", ["lifecycle_heading", "lifecycle_map", "lifecycle_takeaway", "query_heading", "query_explainer"], {
         visualKind: "mechanism",
         takeaway: "The important choice is not one perfect query. It is which conversation evidence becomes useful input for each retrieval lane.",
         stages: [
@@ -35,16 +110,6 @@ export const CHAPTERS = [
           { label: "Interpretation", detail: "State, rewrite, entities, summary, or learned encoding" },
           { label: "Query variants", detail: "Lexical, dense, history, transition, and constraint signals" },
           { label: "Retriever inputs", detail: "Each source receives the representation suited to its evidence" },
-        ],
-      }),
-      slide("query-glossary", "Four ways dialogue becomes retriever input", "visual", ["query_heading", "query_explainer"], {
-        visualKind: "mechanism",
-        takeaway: "A query representation is any structured or learned form that a candidate source can actually consume—not only a rewritten sentence.",
-        stages: [
-          { label: "Text rewrite", detail: "Compress the request into search-ready language" },
-          { label: "Structured state", detail: "Extract intent, entities, constraints, and feedback" },
-          { label: "Learned encoding", detail: "Map conversation evidence into a dense vector" },
-          { label: "History key", detail: "Use played tracks, artists, albums, or transitions directly" },
         ],
       }),
       slide("query-matrix", "Same stages, different query evidence", "matrix", ["query_matrix"], {
@@ -69,6 +134,16 @@ export const CHAPTERS = [
           { label: "Generated artifacts", detail: "States, rewrites, descriptions, candidates, critiques, and repairs" },
           { label: "LLM world knowledge", detail: "Uncited associations available only inside model generation" },
           { label: "Verification boundary", detail: "What another record can independently reproduce or check" },
+        ],
+      }),
+      slide("provenance-stacks", "How evidence provenance stacks up", "visual", [], {
+        visualKind: "mechanism",
+        takeaway: "Recorded, generated, latent, and verified evidence have different reproducibility boundaries.",
+        stages: [
+          { label: "Recorded", detail: "Challenge records and external structured data" },
+          { label: "Generated", detail: "States, rewrites, descriptions, and critiques" },
+          { label: "Latent", detail: "Associations available only inside model generation" },
+          { label: "Verified", detail: "Claims another record can independently check" },
         ],
       }),
       slide("data-matrix", "Common records, different knowledge boundaries", "matrix", ["data_knowledge_matrix", "data_knowledge_interpretation"], {
@@ -117,6 +192,10 @@ export const CHAPTERS = [
           { name: "team2_s2", values: ["BM25 conversation, live text, CF/BPR, and item branches", "Last one, three, or all played tracks depending on source", "Played-track exclusion enforced; explicit rejection, era, popularity, and novelty rules not documented"], status: "verified" },
         ],
       }),
+      slide("evidence-heatmap", "Which retrieval evidence each system could use", "visual", [], {
+        visualKind: "comparison",
+        takeaway: "Candidate-source coverage determines which evidence can become a ranking feature downstream.",
+      }),
       slide("feature-glossary", "Feature-family glossary", "story", ["features_heading", "feature_glossary"]),
       slide("feature-matrix", "Feature families and validation lineage", "matrix", ["feature_matrix"]),
       slide("feature-inventories", "Complete feature inventories", "audit", ["feature_details"]),
@@ -139,8 +218,9 @@ export const CHAPTERS = [
           { label: "Final response", detail: "Grounded explanation with the selected track preserved" },
         ],
       }),
-      slide("matrix", "Same track, different response quality controls", "matrix", ["response_matrix"], {
+      slide("grounding-heatmap", "What grounded each response", "visual", ["response_matrix"], {
         visualKind: "comparison",
+        takeaway: "Grounding strength depended on which facts reached generation and which claims were independently checkable.",
         columns: ["Candidates", "Grounding", "Selection / repair"],
         common: "All five systems generated response prose after recommendation IDs were selected.",
         different: "Candidate count alone was not the distinction; independent checking, selection, and repair determined whether alternatives added control.",
@@ -152,34 +232,11 @@ export const CHAPTERS = [
           { name: "team2_s2", values: ["First-pass response then refinement", "Verified track-fact bundle", "Second Gemini Pro polishing pass"], status: "verified" },
         ],
       }),
-      slide("author-volart", "Author and volart paths", "visual", [], { lanes: [
-        { label: "Our submitted path", steps: ["Latest state and selected track metadata", "Single LLM pass", "One top-1 response"] },
-        { label: "volart", steps: ["Selected track ID held fixed", "Generate response candidates", "Independent quality critic", "Selective rewrite and hardening", "Lexical-diversity pass"] },
-      ] }),
-      slide("niwatori-swyoo", "niwatori and swyoo paths", "visual", [], { lanes: [
-        { label: "niwatori", steps: ["Selected track and conversation", "Ten seeded response candidates", "Candidate selector", "Final response"] },
-        { label: "swyoo", steps: ["Selected track and response theme", "Generate candidates", "Validate themes and citations", "Repair unsupported content", "Final response"] },
-      ] }),
-      slide("team2", "team2_s2 path", "visual", [], { lanes: [
-        { label: "team2_s2", steps: ["Selected track", "Verified track-fact bundle", "First-pass Gemini response", "Gemini Pro refinement", "Polished final response"] },
-      ] }),
+      slide("control-heatmap", "How each response was selected, checked, or repaired", "visual", [], {
+        visualKind: "comparison",
+        takeaway: "Multiple drafts add control only when a documented selector, verifier, critic, or repair pass decides what survives.",
+      }),
       slide("tradeoffs", "Generation, selection, repair, and trade-offs", "audit", ["response_walkthroughs", "response_tradeoffs"]),
-    ],
-  },
-  {
-    slug: "ours",
-    title: "Our submission",
-    question: "What did we build, what worked, and where did confidence fail?",
-    slides: [
-      slide("cover", "Our submission", "cover", ["own_system_heading"]),
-      slide("offline-rail", "Offline evidence rail", "visual", ["own_system_diagram"]),
-      slide("inference-rail", "Inference rail", "visual", [], { lanes: [
-        { label: "Deployed Blind-B path", steps: ["DeepSeek state extraction", "BM25, multimodal ANN, and lookup branches", "Top 500 from each branch → candidate union", "LightGBM LambdaMART reorders the union", "Top-1 selected track", "Single-pass response"] },
-      ] }),
-      slide("walkthrough", "Complete walkthrough and ranking handoff", "audit", ["own_system_walkthrough"]),
-      slide("what-worked", "What worked", "story", ["what_worked"]),
-      slide("evaluation-mistake", "Evaluation mistake and confidence boundary", "story", ["evaluation_mistake"]),
-      slide("contributors", "Ranking and response contributors", "story", ["ranking_contributors", "response_contributors"]),
     ],
   },
   {
@@ -218,13 +275,13 @@ export const CHAPTERS = [
 
 export const LEGACY_ALIASES = new Map([
   ["outcome/summary", "outcome/cover"], ["outcome/official-result", "outcome/leaderboard-chart"], ["outcome/gap", "outcome/gap-chart"],
-  ["query/comparison", "query/query-matrix"], ["query/data-knowledge", "query/data-matrix"],
+  ["query/comparison", "query/query-matrix"], ["query/data-knowledge", "query/data-matrix"], ["query/query-glossary", "query/lifecycle"],
   ["retrieval/retrievers", "retrieval/retriever-matrix"], ["retrieval/features", "retrieval/feature-glossary"], ["retrieval/feature-audit", "retrieval/feature-inventories"],
-  ["response/pipelines", "response/author-volart"],
+  ["response/pipelines", "response/overview"], ["response/author-volart", "response/tradeoffs"], ["response/niwatori-swyoo", "response/tradeoffs"], ["response/team2", "response/tradeoffs"],
   ["ours/system", "ours/cover"], ["ours/strengths", "ours/what-worked"],
   ["leaders/index", "leaders/cover"], ["leaders/volart", "leaders/volart-outcome"], ["leaders/niwatori", "leaders/niwatori-outcome"], ["leaders/swyoo", "leaders/swyoo-outcome"], ["leaders/team2", "leaders/team2-outcome"],
   ["synthesis/cross-team", "synthesis/cover"], ["synthesis/acknowledgements", "synthesis/lessons"], ["synthesis/caveats-evidence", "synthesis/evidence"],
-  ["response/matrix", "response/matrix"], ["response/overview", "response/overview"], ["response/tradeoffs", "response/tradeoffs"], ["query/prompt-audit", "query/prompt-audit"], ["ours/walkthrough", "ours/walkthrough"], ["ours/evaluation-mistake", "ours/evaluation-mistake"], ["ours/contributors", "ours/contributors"], ["synthesis/choices", "synthesis/choices"], ["synthesis/lessons", "synthesis/lessons"],
+  ["response/matrix", "response/grounding-heatmap"], ["response/overview", "response/overview"], ["response/tradeoffs", "response/tradeoffs"], ["query/prompt-audit", "query/prompt-audit"], ["ours/walkthrough", "ours/walkthrough"], ["ours/evaluation-mistake", "ours/evaluation-mistake"], ["ours/contributors", "ours/contributors"], ["synthesis/choices", "synthesis/choices"], ["synthesis/lessons", "synthesis/lessons"],
 ]);
 
 export const resolveSlug = (slug) => LEGACY_ALIASES.get(slug) || slug;

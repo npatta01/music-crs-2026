@@ -4,6 +4,9 @@ import test from "node:test";
 
 import {
   CHAPTERS,
+  CONFIDENCE_LEVELS,
+  CURATED_PATH,
+  DIAGNOSIS_SLIDES,
   LEGACY_ALIASES,
   PAGE_ARCHETYPES,
   enhanceHtml,
@@ -29,12 +32,54 @@ test("chapter map assigns all 74 report blocks exactly once", async () => {
   assert.deepEqual(result.mappedIds.sort(), result.reportIds.sort());
 });
 
+test("answer-first order puts diagnosis directly after outcome", () => {
+  assert.deepEqual(CHAPTERS.slice(0, 3).map(({ slug }) => slug), ["outcome", "diagnosis", "ours"]);
+  assert.equal(CHAPTERS.find(({ slug }) => slug === "diagnosis").slides.length, 6);
+  assert.deepEqual(
+    DIAGNOSIS_SLIDES.map(({ slug }) => slug),
+    ["score-location", "information-loss", "constraint-wiring", "features-seen", "evidence-missed", "confidence"],
+  );
+});
+
+test("answer-first deck keeps a complete content-aware chapter map", async () => {
+  const html = await readFile(REPORT, "utf8");
+  const result = validateChapterMap(CHAPTERS, stripDeckInjection(html));
+  assert.equal(CHAPTERS.length, 8);
+  assert.equal(result.pageCount, 56);
+  assert.deepEqual(result.chapterCounts, [6, 6, 7, 7, 7, 5, 13, 5]);
+  assert.equal(result.mappedIds.length, 74);
+});
+
+test("diagnosis copy preserves evidence boundaries", () => {
+  const copy = JSON.stringify(DIAGNOSIS_SLIDES);
+  const connections = DIAGNOSIS_SLIDES.find(({ slug }) => slug === "constraint-wiring").connections;
+  assert.match(copy, /rich extraction, uneven execution/i);
+  assert.match(copy, /grounded and reused/i);
+  assert.match(copy, /direct track co-occurrence/i);
+  assert.match(copy, /sequential|Markov|transition/i);
+  assert.match(copy, /b1_cos.*feature/i);
+  assert.doesNotMatch(copy, /did not convert conversation into constraints/i);
+  assert.doesNotMatch(copy, /did not use LLM world knowledge/i);
+  assert.ok(connections.length >= 3);
+  assert.ok(connections.every(({ from, to, confidence }) => from && to && CONFIDENCE_LEVELS.has(confidence)));
+  assert.deepEqual([...CONFIDENCE_LEVELS], ["verified", "likely", "unknown"]);
+});
+
+test("curated path is short, answer-first, and references canonical slides", () => {
+  const allSlugs = new Set(CHAPTERS.flatMap((chapter) => chapter.slides.map((entry) => `${chapter.slug}/${entry.slug}`)));
+  assert.ok(CURATED_PATH.length >= 12 && CURATED_PATH.length <= 15);
+  assert.equal(CURATED_PATH[0], "outcome/executive-answer");
+  assert.equal(CURATED_PATH[1], "outcome/gap-chart");
+  assert.equal(CURATED_PATH[2], "diagnosis/score-location");
+  assert.ok(CURATED_PATH.every((slug) => allSlugs.has(slug)));
+});
+
 test("visual-first manifest has at least fifty content-aware pages", async () => {
   const html = await readFile(REPORT, "utf8");
   const result = validateChapterMap(CHAPTERS, stripDeckInjection(html));
-  assert.equal(CHAPTERS.length, 7);
-  assert.equal(result.pageCount, 51);
-  assert.deepEqual(result.chapterCounts, [6, 7, 6, 7, 7, 13, 5]);
+  assert.equal(CHAPTERS.length, 8);
+  assert.equal(result.pageCount, 56);
+  assert.deepEqual(result.chapterCounts, [6, 6, 7, 7, 7, 5, 13, 5]);
   for (const chapter of CHAPTERS) {
     for (const entry of chapter.slides) {
       assert.ok(PAGE_ARCHETYPES.has(entry.archetype), `${chapter.slug}/${entry.slug} has a known archetype`);
@@ -46,7 +91,11 @@ test("legacy slide hashes resolve to canonical split pages", () => {
   assert.ok(LEGACY_ALIASES.size >= 20);
   assert.equal(resolveSlug("outcome/summary"), "outcome/cover");
   assert.equal(resolveSlug("leaders/volart"), "leaders/volart-outcome");
-  assert.equal(resolveSlug("response/matrix"), "response/matrix");
+  assert.equal(resolveSlug("query/query-glossary"), "query/lifecycle");
+  assert.equal(resolveSlug("response/matrix"), "response/grounding-heatmap");
+  assert.equal(resolveSlug("response/author-volart"), "response/tradeoffs");
+  assert.equal(resolveSlug("response/niwatori-swyoo"), "response/tradeoffs");
+  assert.equal(resolveSlug("response/team2"), "response/tradeoffs");
   assert.equal(resolveSlug("unknown/page"), "unknown/page");
 });
 
@@ -74,7 +123,7 @@ test("dense comparison topics use teach-then-compare pairs", () => {
     ["query/lifecycle", "query/query-matrix"],
     ["query/data-glossary", "query/data-matrix"],
     ["retrieval/retriever-mechanism", "retrieval/retriever-matrix"],
-    ["response/overview", "response/matrix"],
+    ["response/overview", "response/grounding-heatmap"],
   ];
   const pages = new Map(CHAPTERS.flatMap((chapter) => (
     chapter.slides.map((entry) => [`${chapter.slug}/${entry.slug}`, entry])
@@ -102,8 +151,8 @@ test("visual summaries preserve documented evidence boundaries", () => {
   assert.doesNotMatch(team("query/data-matrix", "niwatori"), /generated query\/description/i);
   assert.match(team("retrieval/retriever-matrix", "swyoo"), /already-seen tracks.*no general hard rejection/i);
   assert.match(team("retrieval/retriever-matrix", "team2_s2"), /played-track exclusion.*explicit rejection.*not documented/i);
-  assert.match(team("response/matrix", "niwatori"), /lexical-diversity selector.*not a factual critic/i);
-  assert.match(team("response/matrix", "swyoo"), /one PAS prediction.*no best-of-N critic/i);
+  assert.match(team("response/grounding-heatmap", "niwatori"), /lexical-diversity selector.*not a factual critic/i);
+  assert.match(team("response/grounding-heatmap", "swyoo"), /one PAS prediction.*no best-of-N critic/i);
 });
 
 test("enhancement is deterministic and idempotent", async () => {

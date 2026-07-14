@@ -50,13 +50,13 @@ def open_deck(page: Page, report: Path, suffix: str = "") -> None:
 def test_groups_every_block_once(page, enhanced_report: Path) -> None:
     browser_page, errors = page
     open_deck(browser_page, enhanced_report)
-    assert browser_page.locator(".deck-chapter").count() == 7
-    assert browser_page.locator(".deck-slide").count() == 51
+    assert browser_page.locator(".deck-chapter").count() == 8
+    assert browser_page.locator(".deck-slide").count() == 56
     assert browser_page.locator(".deck-chapter").evaluate_all(
         "nodes => nodes.map(node => node.querySelectorAll('.deck-slide').length)"
-    ) == [6, 7, 6, 7, 7, 13, 5]
-    assert browser_page.locator(".deck-vertical-rail").count() == 7
-    assert browser_page.locator(".deck-rail-button").count() == 51
+    ) == [6, 6, 7, 7, 7, 5, 13, 5]
+    assert browser_page.locator(".deck-vertical-rail").count() == 8
+    assert browser_page.locator(".deck-rail-button").count() == 56
     assigned = browser_page.locator(".deck-slide [data-artifact-block-id]")
     assert assigned.count() == 74
     ids = assigned.evaluate_all("nodes => nodes.map(node => node.dataset.artifactBlockId)")
@@ -286,10 +286,10 @@ def test_visual_first_default_has_bounded_visible_prose(page, enhanced_report: P
     browser_page, _ = page
     open_deck(browser_page, enhanced_report)
     for slug in (
-        "query/query-glossary",
+        "query/lifecycle",
         "query/data-matrix",
         "retrieval/retriever-matrix",
-        "response/matrix",
+        "response/grounding-heatmap",
     ):
         text = browser_page.locator(f"[id='{slug}']").evaluate(
             "node => [...node.querySelectorAll('p')].filter(p => p.offsetParent !== null).map(p => p.textContent).join(' ')"
