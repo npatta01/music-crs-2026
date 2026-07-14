@@ -160,6 +160,26 @@ def test_diagnosis_confidence_and_unknown_boundaries_are_explicit(page, enhanced
     assert "sole cause" not in text.lower()
 
 
+def test_curated_and_canonical_submitted_copy_share_candidate_boundary(page, enhanced_report: Path) -> None:
+    browser_page, _ = page
+    open_deck(browser_page, enhanced_report, "?path=curated#ours/inference-rail")
+    curated = browser_page.locator("[id='ours/inference-rail']").inner_text()
+    assert "Up to 500 hits from each traced branch" in curated
+    assert "LightGBM LambdaMART reorders the union" in curated
+    browser_page.evaluate("window.__retrospectiveDeck.goTo('ours/offline-rail', {behavior: 'auto'})")
+    canonical = browser_page.locator("[id='ours/offline-rail'] .deck-embedded-document").evaluate(
+        "node => node.shadowRoot.textContent"
+    )
+    browser_page.evaluate("window.__retrospectiveDeck.goTo('ours/walkthrough', {behavior: 'auto'})")
+    walkthrough = browser_page.locator("[id='ours/walkthrough']").inner_text()
+    submitted = f"{canonical}\n{walkthrough}"
+    assert "up to 500 hits from each traced branch" in submitted.lower()
+    assert "LightGBM" in submitted
+    assert not re.search(r"up to 500 candidates from (?:that|the|a|each)? ?union", submitted, re.I)
+    assert "top-500 fused pool" not in submitted.lower()
+    assert "fused top 500" not in submitted.lower()
+
+
 def test_reusable_visual_grammars_compare_all_five_teams(page, enhanced_report: Path) -> None:
     browser_page, errors = page
     expected_teams = ["npatta01", "volart", "niwatori", "swyoo", "team2_s2"]
@@ -439,6 +459,74 @@ def test_supplied_failure_pages_promote_embeds_without_nested_scroll(page, enhan
     audit = browser_page.locator("[id='query/prompt-audit'] .deck-embedded-document").first
     assert audit.evaluate("node => [...node.shadowRoot.querySelectorAll('details')].every(item => item.open)")
     assert errors == []
+
+
+def test_promoted_embeds_are_allowlist_sanitized_and_make_no_requests(enhanced_report: Path) -> None:
+    malicious = """<!doctype html><html><head>
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; font-src data:; connect-src 'none'; script-src 'none'; media-src data: blob:; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+      <style>
+      @import 'https://attacker.invalid/import.css';
+      .bad{background:url(https://attacker.invalid/css.png);behavior:url(x);-moz-binding:url(x);}
+      .ok{color:rgb(1,2,3)}
+    </style></head><body>
+      <section class="ok" onclick="fetch('https://attacker.invalid/click')"><p>Evidence survives</p></section>
+      <script>fetch('https://attacker.invalid/script')</script>
+      <iframe src="https://attacker.invalid/frame"></iframe><object data="https://attacker.invalid/object"></object>
+      <embed src="https://attacker.invalid/embed"><form action="https://attacker.invalid/form"><button formaction="javascript:alert(1)">x</button></form>
+      <video poster="https://attacker.invalid/poster"><source src="https://attacker.invalid/media"></video>
+      <img src="https://attacker.invalid/image" srcset="https://attacker.invalid/2x 2x" onerror="alert(1)">
+      <a href="javascript:alert(1)" ping="https://attacker.invalid/ping">unsafe</a>
+      <a href="https://example.com/safe">safe</a>
+      <svg><a xlink:href="javascript:alert(1)"><animate attributeName="href" values="javascript:alert(1)"/></a></svg>
+      <math><annotation-xml encoding="text/html"><script>alert(1)</script></annotation-xml></math>
+      <div style="background:url(https://attacker.invalid/inline);color:red">inline</div>
+    </body></html>"""
+    requests: list[str] = []
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True, executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
+        context = browser.new_context(viewport={"width": 1024, "height": 768})
+        page = context.new_page()
+        page.on("request", lambda request: requests.append(request.url) if request.url.startswith(("http://", "https://")) else None)
+        open_deck(page, enhanced_report)
+        requests.clear()
+        page.evaluate("""source => {
+          const host = window.__retrospectiveDeck.promoteEmbeddedDocument(source);
+          host.classList.add('deck-adversarial-host');
+          document.body.append(host);
+        }""", malicious)
+        host = page.locator(".deck-adversarial-host")
+        assert host.is_visible()
+        audit = host.evaluate(r"""node => {
+          const root = node.shadowRoot;
+          const elements = [...root.querySelectorAll('*')];
+          const attrs = elements.flatMap(element => [...element.attributes].map(attr => `${attr.name}=${attr.value}`));
+          return {
+            text: root.textContent,
+            forbidden: root.querySelectorAll('script,iframe,object,embed,form,input,button,video,audio,source,track,svg,math').length,
+            handlers: attrs.filter(value => /^on/i.test(value)),
+            fetchAttrs: attrs.filter(value => /^(?:srcset|xlink:href|action|formaction|ping|poster|background)=/i.test(value)),
+            executable: attrs.filter(value => /(?:javascript:|vbscript:|data:text\/html)/i.test(value)),
+            externalFetch: attrs.filter(value => /^(?:src|srcset|data|action|formaction|ping|poster|background)=.*https?:\/\//i.test(value)),
+            inlineStyle: elements.filter(element => element.hasAttribute('style')).length,
+            css: [...root.querySelectorAll('style')].map(style => style.textContent).join('\n'),
+            links: [...root.querySelectorAll('a')].map(link => link.href),
+          };
+        }""")
+        assert "Evidence survives" in audit["text"]
+        assert audit["forbidden"] == 0
+        assert audit["handlers"] == []
+        assert audit["fetchAttrs"] == []
+        assert audit["executable"] == []
+        assert audit["externalFetch"] == []
+        assert audit["inlineStyle"] == 0
+        assert "@import" not in audit["css"].lower()
+        assert "url(" not in audit["css"].lower()
+        assert "behavior" not in audit["css"].lower()
+        assert "binding" not in audit["css"].lower()
+        assert audit["links"] == ["https://example.com/safe"]
+        assert requests == []
+        context.close()
+        browser.close()
 
 
 def test_long_prose_matrices_render_as_readable_team_cards(page, enhanced_report: Path) -> None:
@@ -756,6 +844,23 @@ def test_mobile_has_bounded_content_and_touch_targets(enhanced_report: Path) -> 
             "nodes => nodes.filter(node => node.offsetParent !== null).map(node => ({width: node.getBoundingClientRect().width, height: node.getBoundingClientRect().height}))"
         )
         assert all(size["width"] >= 44 and size["height"] >= 44 for size in sizes)
+        browser.close()
+
+
+def test_tablet_coarse_pointer_navigation_has_44px_targets_and_no_overflow(enhanced_report: Path) -> None:
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True, executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
+        context = browser.new_context(viewport={"width": 1024, "height": 768}, has_touch=True)
+        page = context.new_page()
+        open_deck(page, enhanced_report)
+        controls = page.locator(".deck-chapter-button:visible, .deck-rail-button:visible")
+        assert controls.count() > 8
+        sizes = controls.evaluate_all(
+            "nodes => nodes.map(node => ({label: node.getAttribute('aria-label'), width: node.getBoundingClientRect().width, height: node.getBoundingClientRect().height}))"
+        )
+        assert all(size["width"] >= 44 and size["height"] >= 44 for size in sizes), sizes
+        assert page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
+        context.close()
         browser.close()
 
 

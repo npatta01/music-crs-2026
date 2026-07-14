@@ -176,6 +176,21 @@ test("submitted inference preserves the deployed candidate boundary and final or
   assert.ok(finalOrderIndex > unionIndex, "LightGBM remains the final-order stage after candidate union");
 });
 
+test("submitted-system copy uses the per-branch candidate boundary everywhere", async () => {
+  const html = stripDeckInjection(await readFile(REPORT, "utf8"));
+  const submitted = [
+    JSON.stringify(CHAPTERS.find(({ slug }) => slug === "ours")),
+    html.match(/data-artifact-block-id="own_system_diagram"[\s\S]*?data-artifact-block-id="own_system_walkthrough"/)?.[0] ?? "",
+    html.match(/data-artifact-block-id="own_system_walkthrough"[\s\S]*?data-artifact-block-id="what_worked"/)?.[0] ?? "",
+    html.match(/data-artifact-block-id="ranking_contributors"[\s\S]*?data-artifact-block-id="response_contributors"/)?.[0] ?? "",
+    html.match(/data-artifact-block-id="retrospective_choices_table"[\s\S]*?data-artifact-block-id="future_competition_lessons"/)?.[0] ?? "",
+  ].join("\n");
+  assert.match(submitted, /up to (?:<strong>)?500(?:<\/strong>)? hits from each traced branch/i);
+  assert.doesNotMatch(submitted, /up to (?:<strong>)?500(?:<\/strong>)? candidates from (?:that|the|a|each)? ?union/i);
+  assert.doesNotMatch(submitted, /top-500 fused pool/i);
+  assert.doesNotMatch(submitted, /fused top (?:<strong>)?500/i);
+});
+
 test("visual summaries preserve documented evidence boundaries", () => {
   const pages = new Map(CHAPTERS.flatMap((chapter) => (
     chapter.slides.map((entry) => [`${chapter.slug}/${entry.slug}`, entry])

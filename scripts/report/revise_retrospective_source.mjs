@@ -19,6 +19,13 @@ const replaceExact = (id, from, to) => {
   if (!target.body.includes(from)) throw new Error(`${id}: missing expected source text: ${from}`);
   target.body = target.body.replace(from, to);
 };
+const replaceOneOf = (id, alternatives, to) => {
+  const target = block(id);
+  if (target.body.includes(to)) return;
+  const from = alternatives.find((value) => target.body.includes(value));
+  if (!from) throw new Error(`${id}: missing every expected source alternative`);
+  target.body = target.body.replace(from, to);
+};
 
 replaceExact(
   "query_evidence_details",
@@ -36,7 +43,10 @@ if (artifactQueryRow.interpretation !== newInterpretation) {
 }
 
 replaceExact("own_system_diagram", "<li>Fuse branch ranks into one RRF pool.</li>", "<li>Assemble one filtered branch-pool union.</li><li>Compiler ordering remains fallback evidence; it is not the submitted final ranker.</li>");
-replaceExact("own_system_diagram", "<li>Truncate the fused pool to 500 candidates.</li>", "<li>Take up to 500 candidates from the branch-pool union.</li>");
+replaceOneOf("own_system_diagram", [
+  "<li>Truncate the fused pool to 500 candidates.</li>",
+  "<li>Take up to 500 candidates from the branch-pool union.</li>",
+], "<li>Union up to 500 hits from each traced branch.</li>");
 replaceExact(
   "own_system_walkthrough",
   "DeepSeek read the multi-turn session memory and emitted fact-first V1 state for the current request, entities, feedback, explicit rejections, exploration policy, routing, lyrical theme, and era.",
@@ -47,11 +57,31 @@ replaceExact(
   "entered RRF. Explicit track rejection",
   "formed the filtered candidate union. The compiler recorded a weighted fusion order for trace and fallback purposes, but LightGBM—not RRF—produced the submitted final ordering. Explicit track rejection",
 );
-replaceExact("own_system_walkthrough", "Only the fused top **500** reached LightGBM;", "Up to **500** candidates from that union reached LightGBM;");
+replaceOneOf("own_system_walkthrough", [
+  "Only the fused top **500** reached LightGBM;",
+  "Up to **500** candidates from that union reached LightGBM;",
+], "The union contained up to **500** hits from each traced branch; LightGBM scored that union;");
+replaceExact("ranking_contributors", "Any relevant track outside the fused top 500 was irrecoverable.", "Any relevant track outside the union of up to 500 hits from each traced branch was irrecoverable.");
+const retrospectiveTable = artifact.manifest.tables.find(({ id }) => id === "retrospective-choices");
+if (!retrospectiveTable?.source?.query?.sql) throw new Error("missing retrospective choices SQL");
+retrospectiveTable.source.query.sql = retrospectiveTable.source.query.sql
+  .replace("Using a top-500 fused pool as the learned ranker''s hard boundary", "Using the union of up to 500 hits from each traced branch as the learned ranker''s hard boundary")
+  .replace("Relevant tracks outside the pool were unrecoverable", "Relevant tracks outside the candidate union were unrecoverable");
+const retrospectiveChoice = artifact.snapshot.datasets.retrospective_choices.find(({ category, choice }) => (
+  category === "Reconsider" && /learned ranker.*hard boundary/i.test(choice)
+));
+if (!retrospectiveChoice) throw new Error("missing candidate-boundary retrospective choice");
+retrospectiveChoice.choice = "Using the union of up to 500 hits from each traced branch as the learned ranker's hard boundary";
+retrospectiveChoice.reason = retrospectiveChoice.reason.replace("outside the pool", "outside the candidate union");
 replaceExact(
   "volart_comparison",
   "Both systems used hybrid retrieval, RRF, a top-500 learned-ranker boundary, and a separate response step.",
   "Both systems used hybrid retrieval, a top-500 learned-ranker boundary, and a separate response step. volart explicitly used RRF to fuse its lanes; our submitted final ordering came from LightGBM over the compiler’s candidate union.",
+);
+replaceExact(
+  "volart_comparison",
+  "Both systems used hybrid retrieval, a top-500 learned-ranker boundary, and a separate response step. volart explicitly used RRF to fuse its lanes; our submitted final ordering came from LightGBM over the compiler’s candidate union.",
+  "Both systems used hybrid retrieval, a learned ranker, and a separate response step. volart explicitly used RRF to fuse a top-500 pool before LambdaMART; our system unioned up to 500 hits from each traced branch, then LightGBM produced the submitted final ordering.",
 );
 
 await writeFile(sourcePath, `${JSON.stringify(artifact, null, 2)}\n`);
