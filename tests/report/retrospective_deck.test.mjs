@@ -65,6 +65,29 @@ test("diagnosis copy preserves evidence boundaries", () => {
   assert.deepEqual([...CONFIDENCE_LEVELS], ["verified", "likely", "unknown"]);
 });
 
+test("every diagnosis claim-bearing field carries confidence metadata", () => {
+  for (const entry of DIAGNOSIS_SLIDES) {
+    if (entry.takeaway) {
+      assert.equal(typeof entry.takeaway.text, "string", `${entry.slug} takeaway has text`);
+      assert.ok(CONFIDENCE_LEVELS.has(entry.takeaway.confidence), `${entry.slug} takeaway has confidence`);
+    }
+
+    for (const field of ["losses", "connections"]) {
+      for (const claim of entry[field] ?? []) {
+        assert.ok(CONFIDENCE_LEVELS.has(claim.confidence), `${entry.slug} ${field} claim has confidence`);
+      }
+    }
+
+    if (entry.confidence) {
+      assert.deepEqual(Object.keys(entry.confidence).sort(), [...CONFIDENCE_LEVELS].sort());
+      for (const [confidence, claims] of Object.entries(entry.confidence)) {
+        assert.ok(CONFIDENCE_LEVELS.has(confidence));
+        assert.ok(claims.length > 0 && claims.every((claim) => typeof claim === "string" && claim.length > 0));
+      }
+    }
+  }
+});
+
 test("curated path is short, answer-first, and references canonical slides", () => {
   const allSlugs = new Set(CHAPTERS.flatMap((chapter) => chapter.slides.map((entry) => `${chapter.slug}/${entry.slug}`)));
   assert.ok(CURATED_PATH.length >= 12 && CURATED_PATH.length <= 15);
@@ -114,7 +137,7 @@ test("submitted inference lane distinguishes candidate assembly from LightGBM ra
   const lane = CHAPTERS.find((chapter) => chapter.slug === "ours")
     .slides.find((entry) => entry.slug === "inference-rail").lanes[0];
   assert.equal(lane.steps.some((step) => /RRF/i.test(step)), false);
-  assert.ok(lane.steps.some((step) => /each branch.*candidate union/i.test(step)));
+  assert.ok(lane.steps.some((step) => /each traced branch.*candidate union/i.test(step)));
   assert.ok(lane.steps.some((step) => /LightGBM|LambdaMART/i.test(step)));
 });
 
@@ -135,11 +158,13 @@ test("dense comparison topics use teach-then-compare pairs", () => {
   }
 });
 
-test("submitted inference takes five hundred candidates from every branch", () => {
+test("submitted inference preserves the deployed candidate boundary and final ordering stage", () => {
   const lane = CHAPTERS.find((chapter) => chapter.slug === "ours")
     .slides.find((entry) => entry.slug === "inference-rail").lanes[0];
-  assert.ok(lane.steps.includes("Top 500 from each branch → candidate union"));
-  assert.equal(lane.steps.some((step) => /union \(up to 500\)/i.test(step)), false);
+  const unionIndex = lane.steps.indexOf("Up to 500 hits from each traced branch → candidate union");
+  const finalOrderIndex = lane.steps.findIndex((step) => /LightGBM.*reorders the union/i.test(step));
+  assert.notEqual(unionIndex, -1);
+  assert.ok(finalOrderIndex > unionIndex, "LightGBM remains the final-order stage after candidate union");
 });
 
 test("visual summaries preserve documented evidence boundaries", () => {

@@ -11,7 +11,10 @@ export const CONFIDENCE_LEVELS = new Set(["verified", "likely", "unknown"]);
 export const DIAGNOSIS_SLIDES = [
   slide("score-location", "Where the score gap appeared", "visual", [], {
     diagnosisKind: "score",
-    takeaway: "Ranking and judge terms explain most of the arithmetic gap; the chart does not prove which mechanism caused it.",
+    takeaway: {
+      text: "Ranking and judge terms explain most of the arithmetic gap; the chart does not prove which mechanism caused it.",
+      confidence: "verified",
+    },
   }),
   slide("information-loss", "Where information was lost", "visual", [], {
     diagnosisKind: "bottleneck",
@@ -31,17 +34,26 @@ export const DIAGNOSIS_SLIDES = [
       { from: "Played-track history", to: "Anchors and reranker features, without a direct track co-occurrence source", confidence: "verified" },
       { from: "Other soft state facts", to: "No dedicated source action documented for every field", confidence: "verified" },
     ],
-    takeaway: "Rich extraction, uneven execution: not every fact became a filter, source-specific query, or dedicated candidate signal.",
+    takeaway: {
+      text: "Rich extraction, uneven execution: not every fact became a filter, source-specific query, or dedicated candidate signal.",
+      confidence: "verified",
+    },
   }),
   slide("features-seen", "What the 142-feature reranker saw", "visual", [], {
     diagnosisKind: "feature-map",
     featureFamilies: ["Retriever evidence", "Semantic and multimodal", "Behavioral and lookup", "Catalog", "Conversation and state", "Agreement and interactions"],
-    takeaway: "The ranker was substantial; column count alone does not establish liveness, importance, robustness, or held-out benefit.",
+    takeaway: {
+      text: "The ranker was substantial; column count alone does not establish liveness, importance, robustness, or held-out benefit.",
+      confidence: "verified",
+    },
   }),
   slide("evidence-missed", "Evidence the ranker could not see or recover", "visual", [], {
     diagnosisKind: "boundaries",
     boundaries: ["Missing upstream source", "Consequent missing feature", "Not missing"],
-    takeaway: "Adding LightGBM columns cannot recreate a track or source signal that never entered the pipeline.",
+    takeaway: {
+      text: "Adding LightGBM columns cannot recreate a track or source signal that never entered the pipeline.",
+      confidence: "verified",
+    },
   }),
   slide("confidence", "Response weakness and confidence-ranked diagnosis", "visual", [], {
     diagnosisKind: "confidence",
@@ -88,7 +100,7 @@ export const CHAPTERS = [
       slide("cover", "Our submission", "cover", ["own_system_heading"]),
       slide("offline-rail", "Offline evidence rail", "visual", ["own_system_diagram"]),
       slide("inference-rail", "Inference rail", "visual", [], { lanes: [
-        { label: "Deployed Blind-B path", steps: ["DeepSeek state extraction", "BM25, multimodal ANN, and lookup branches", "Top 500 from each branch → candidate union", "LightGBM LambdaMART reorders the union", "Top-1 selected track", "Single-pass response"] },
+        { label: "Deployed Blind-B path", steps: ["DeepSeek state extraction", "BM25, multimodal ANN, and lookup branches", "Up to 500 hits from each traced branch → candidate union", "LightGBM LambdaMART reorders the union", "Top-1 selected track", "Single-pass response"] },
       ] }),
       slide("walkthrough", "Complete walkthrough and ranking handoff", "audit", ["own_system_walkthrough"]),
       slide("what-worked", "What worked", "story", ["what_worked"]),
@@ -503,7 +515,8 @@ function runtimeMain(CONFIG) {
     takeaway.className = "deck-takeaway";
     const label = document.createElement("strong");
     label.textContent = "Takeaway";
-    takeaway.append(label, document.createTextNode(entry.takeaway));
+    const takeawayText = typeof entry.takeaway === "string" ? entry.takeaway : entry.takeaway.text;
+    takeaway.append(label, document.createTextNode(takeawayText));
     section.append(stages, takeaway);
     return section;
   };
