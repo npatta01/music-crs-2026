@@ -69,7 +69,7 @@ export const CURATED_PATH = [
   "outcome/executive-answer", "outcome/gap-chart",
   ...DIAGNOSIS_SLIDES.map(({ slug }) => `diagnosis/${slug}`),
   "ours/inference-rail", "retrieval/evidence-heatmap", "response/control-heatmap",
-  "leaders/volart-retrieval", "synthesis/decoder", "synthesis/lessons",
+  "leaders/volart-retrieval", "synthesis/matrix", "synthesis/decoder", "synthesis/lessons",
 ];
 
 const provenanceLayers = ["Official challenge data", "External structured data", "Generated artifacts", "Latent LLM knowledge", "Verification boundary"];
@@ -400,6 +400,7 @@ export const CHAPTERS = [
             stages: ["Candidate in union", "Feature evidence", "LightGBM score"],
             had: ["142 documented features", "Branch ranks/scores and agreement", "Dense, multimodal, CF/BPR centroid, state, and catalog evidence"],
             lacked: ["Direct track co-occurrence sum/max/probability or lane membership", "Markov transition probability", "Candidate-producing learned-retriever rank/score", "Grounded generated-description similarity", "Stronger explicit behavior-derived priors"],
+            boundary: "Not documented in the reviewed deployed path.",
             why: "A reranker cannot use source evidence that was never generated or attached to a candidate.",
           },
           {
@@ -408,6 +409,7 @@ export const CHAPTERS = [
             stages: ["Up to 500 hits from each traced branch", "Filtered candidate union", "LightGBM final ordering"],
             had: ["Multiple deployed retrieval branches", "Per-branch candidate evidence", "LightGBM final ordering of the union"],
             lacked: ["Tracks never emitted by a deployed branch", "Tracks removed before the union", "A candidate-producing lane from the trained two-tower"],
+            boundary: "Not documented in the reviewed deployed path.",
             why: "Anything outside the ranker's union was unrecoverable, regardless of downstream model quality.",
           },
           {
@@ -416,6 +418,7 @@ export const CHAPTERS = [
             stages: ["Selected track", "Verified fact bundle", "Allowed claims", "Checker or repair", "Final response"],
             had: ["Selected track", "Latest conversation state", "Track and catalog metadata"],
             lacked: ["Independent structured fact checker", "Theme or citation validation", "Repair pass for unsupported claims", "Selection among multiple grounded drafts"],
+            boundary: "Not documented in the reviewed deployed path.",
             why: "Our response had grounded inputs, so coverage is Partial; it lacked independent verification and repair controls.",
           },
         ],

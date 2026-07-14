@@ -95,6 +95,8 @@ test("curated path is short, answer-first, and references canonical slides", () 
   assert.equal(CURATED_PATH[1], "outcome/gap-chart");
   assert.equal(CURATED_PATH[2], "diagnosis/score-location");
   assert.ok(CURATED_PATH.every((slug) => allSlugs.has(slug)));
+  const decoderIndex = CURATED_PATH.indexOf("synthesis/decoder");
+  assert.equal(CURATED_PATH[decoderIndex - 1], "synthesis/matrix");
 });
 
 test("synthesis decoder makes compressed matrix terms concrete", () => {
@@ -104,6 +106,14 @@ test("synthesis decoder makes compressed matrix terms concrete", () => {
   assert.equal(decoder.slug, "decoder");
   assert.equal(decoder.visualKind, "matrix-decoder");
   assert.equal(decoder.concepts.length, 3);
+  for (const concept of decoder.concepts) {
+    assert.ok(typeof concept.definition === "string" && concept.definition.length > 0, `${concept.term} has a definition`);
+    for (const field of ["stages", "had", "lacked"]) {
+      assert.ok(Array.isArray(concept[field]) && concept[field].length > 0, `${concept.term} has nonempty ${field}`);
+    }
+    assert.ok(typeof concept.why === "string" && concept.why.length > 0, `${concept.term} has a why`);
+    assert.match(concept.boundary ?? "", /not documented in the reviewed deployed path/i, `${concept.term} qualifies its evidence boundary`);
+  }
   const copy = JSON.stringify(decoder);
   for (const phrase of [
     "direct track co-occurrence",
