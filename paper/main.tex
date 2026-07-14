@@ -2,7 +2,11 @@
 \settopmatter{printacmref=false}
 \setcopyright{none}
 \renewcommand\footnotetextcopyrightpermission[1]{}
-\pagestyle{plain}
+% Camera-ready (ICPS): the ACM eRights form supplies \setcopyright, \acmDOI,
+% and \acmISBN; drop printacmref=false and the footnote override then.
+\acmConference[RecSysChallenge '26]{Recommender Systems Challenge 2026}{September 2026}{Minneapolis, MN, USA}
+\acmYear{2026}
+\copyrightyear{2026}
 
 \usepackage{booktabs}
 \usepackage{tikz}
@@ -30,6 +34,32 @@
 We describe team npatta01's submission to the RecSys Challenge 2026 conversational music recommendation task: given a multi-turn dialog, retrieve 20 tracks from a 47,071-track catalog and generate a natural-language response. The pipeline extracts a typed conversation state with an LLM, gathers candidates from eleven retrieval branches over a single LanceDB collection, re-ranks the pooled candidates with a LightGBM LambdaMART model whose dominant feature is a fine-tuned conversational bi-encoder cosine, and generates a state-conditioned response. On the final Blind-B leaderboard the submission scored 0.3811 composite (nDCG@20 0.2537, LLM-judge 3.30), ranking 29th of 39 teams. We report the system in full, and then examine our own result: an in-sample development estimate (nDCG@20 0.38--0.46) created misplaced confidence while leakage-safe out-of-fold evidence (0.197--0.203) had already predicted the blind outcome; the benchmark's single-ground-truth labels carry a quantified \emph{anchoring bias} that teaches rankers to copy the just-played artist; and concrete failure cases from the submitted run show extracted constraints that the pipeline could not enforce. Code, models, and a zero-credential reproduction bundle: \url{https://github.com/npatta01/music-crs-2026}.
 \end{abstract}
 
+\begin{CCSXML}
+<ccs2012>
+<concept>
+<concept_id>10002951.10003317.10003347.10003350</concept_id>
+<concept_desc>Information systems~Recommender systems</concept_desc>
+<concept_significance>500</concept_significance>
+</concept>
+<concept>
+<concept_id>10002951.10003317.10003338</concept_id>
+<concept_desc>Information systems~Retrieval models and ranking</concept_desc>
+<concept_significance>300</concept_significance>
+</concept>
+<concept>
+<concept_id>10002951.10003317.10003371.10003386.10003390</concept_id>
+<concept_desc>Information systems~Music retrieval</concept_desc>
+<concept_significance>300</concept_significance>
+</concept>
+</ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Information systems~Recommender systems}
+\ccsdesc[300]{Information systems~Retrieval models and ranking}
+\ccsdesc[300]{Information systems~Music retrieval}
+
+\keywords{conversational recommender systems, music recommendation, learning to rank, reciprocal rank fusion, label noise, RecSys Challenge}
+
 \maketitle
 
 \section{Introduction}
@@ -48,7 +78,7 @@ Our system is a retrieve-then-rerank pipeline conditioned on an explicitly compi
 \item A quantified analysis of ground-truth anchoring bias, with concrete failure cases from our submitted run and a cleaned, LLM-re-judged label set released alongside our code.
 \end{enumerate}
 
-Related work in brief: the design follows the retrieve-then-rerank pattern standard in large-catalog recommendation, with reciprocal-rank fusion~\cite{rrf} for multi-source pooling, LambdaMART~\cite{lightgbm,lambdamart} for learned ranking, and LLM-based dialog state tracking; the organizers' framework provided the evaluation harness.
+Related work in brief: the design follows the retrieve-then-rerank pattern standard in large-catalog recommendation, with reciprocal-rank fusion~\cite{rrf} for multi-source pooling, LambdaMART~\cite{lightgbm,lambdamart} for learned ranking, and LLM-based dialog state tracking.
 
 \section{Approach}
 \label{sec:approach}
@@ -113,7 +143,7 @@ At each turn we prompt \texttt{deepseek-v4-flash} (via OpenRouter, JSON-schema c
   \texttt{facets: mood=subdued; lyrical\_theme=sense of place;}\\
   \texttt{\phantom{facets: }sonic=stark almost a cappella}\\[2pt]
   \textbf{Top-1:} Neko Case --- ``Bracing For Sunday''\\[2pt]
-  \textbf{Submitted response:} ``You're looking for something subdued with a strong sense of place and a stark, almost a cappella delivery---and \emph{Bracing For Sunday} fits that mood perfectly. Neko Case's haunting, intimate vocals carry the weight of a quiet, specific moment\ldots''
+  \textbf{Submitted response:} ``You're looking for something subdued with a strong sense of place and a stark, almost a cappella delivery---and \emph{Bracing For Sunday} fits that mood perfectly.\,\ldots''
   \end{minipage}}
   \caption{A real Blind-B turn (session \texttt{024a2738\ldots}): extracted state and submitted output for a hidden-target request.}
   \label{fig:example}
@@ -237,7 +267,7 @@ Blind-A (dev) & 0.4380 & 0.0313 & 0.7670 & 4.20 & 0.5389 & --- \\
 \end{tabular}
 \end{table}
 
-Read honestly, Table~\ref{tab:devset} says two things. Learned re-ranking over the pooled candidates does beat static fusion --- but by the leakage-safe estimate ($0.149 \rightarrow 0.197$--$0.203$), not by the in-sample replay ($\rightarrow 0.384$) that we watched during development. And the blind result (0.2537) is consistent with the out-of-fold evidence that was available before submission. Feature attribution is strikingly concentrated (Table~\ref{tab:families}): one learned similarity carries 59\% of gain, and classic signals (artist affinity, popularity) outweigh most hand-engineered lexical features.
+Read honestly, Table~\ref{tab:devset} says two things. Learned re-ranking over the pooled candidates does beat static fusion --- but by the leakage-safe estimate ($0.149 \rightarrow 0.197$--$0.203$), not by the in-sample replay ($\rightarrow 0.384$) that we watched during development. And the blind result (0.2537) is consistent with the out-of-fold evidence that was available before submission. Feature attribution is strikingly concentrated (Table~\ref{tab:families}): one learned similarity carries 59\% of gain.
 
 \section{Retrospective: Where It Went Wrong}
 \label{sec:discussion}
@@ -245,7 +275,7 @@ Read honestly, Table~\ref{tab:devset} says two things. Learned re-ranking over t
 \subsection{Our development estimate was in-sample}
 \label{sec:insample}
 
-The deployed reranker was fit on all of its feature data (the CV folds informed early stopping, then a full-data model shipped), and our headline development numbers came from \emph{replaying splits the model had seen}. The resulting 0.38--0.46 development estimates drove selection confidence; the leakage-safe out-of-fold numbers (0.197--0.203), which we had, predicted the blind outcome (0.2537) far better. We flag this as a measurement-and-confidence failure rather than a proven cause of the final ranking --- but it shaped every decision late in the competition, including which ideas looked ``already good enough'' to skip. The lesson is old but evidently worth restating: \emph{report and act on the out-of-fold number, even when the in-sample number is the one on the dashboard}.
+The deployed reranker was fit on all of its feature data (the CV folds informed early stopping, then a full-data model shipped), and our headline development numbers came from \emph{replaying splits the model had seen}. The resulting 0.38--0.46 development estimates drove selection confidence; the leakage-safe out-of-fold numbers (0.197--0.203), which we had, predicted the blind outcome (0.2537) far better. We flag this as a measurement-and-confidence failure rather than a proven cause of the final ranking --- but it shaped every decision late in the competition, including which ideas looked ``already good enough'' to skip. The old lesson stands: \emph{report and act on the out-of-fold number, even when the in-sample number is the one on the dashboard}.
 
 \subsection{The ground truth contradicts itself}
 \label{sec:groundtruth}
@@ -291,7 +321,7 @@ A label-free LLM-judge audit of our 80 submitted Blind-B turns rated 68\% weak-o
 
 \section{Conclusion}
 
-We documented a state-compiled retrieve-then-rerank conversational music recommender in full, and audited our own mid-pack result honestly: an in-sample development estimate inflated confidence that leakage-safe evidence had already contradicted; the benchmark's single-label ground truth carries a quantified anchoring bias that our own submission reproduced at serving time; and several extracted constraints had no catalog fields or identity resolution to act on. We release the pipeline, models, a zero-credential replay bundle, and a cleaned relabeling of the training turns for future iterations.
+We documented a state-compiled retrieve-then-rerank conversational music recommender in full and audited our mid-pack result honestly: an in-sample development estimate inflated confidence that leakage-safe evidence had already contradicted; the ground truth carries a quantified anchoring bias our own submission reproduced at serving time; and several extracted constraints had nothing in the catalog to act on. We release the pipeline, models, a zero-credential replay bundle, and a cleaned relabeling for future iterations.
 
 \begin{thebibliography}{14}
 \bibitem{musiccrs} NLP4MusA organizers. 2026. Music-CRS Challenge 2026. \url{https://nlp4musa.github.io/music-crs-challenge/}

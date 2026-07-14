@@ -25,7 +25,7 @@ Our system is a retrieve-then-rerank pipeline conditioned on an explicitly compi
 3. A fine-tuned conversational bi-encoder whose single cosine feature carries 59% of the reranker's decision weight and replaces a label-noise-induced "artist-copy" shortcut.
 4. A quantified analysis of ground-truth anchoring bias, with concrete failure cases from our submitted run and a cleaned, LLM-re-judged label set released alongside our code.
 
-Related work in brief: the design follows the retrieve-then-rerank pattern standard in large-catalog recommendation, with reciprocal-rank fusion [4] for multi-source pooling, LambdaMART [5, 6] for learned ranking, and LLM-based dialog state tracking; the organizers' framework provided the evaluation harness.
+Related work in brief: the design follows the retrieve-then-rerank pattern standard in large-catalog recommendation, with reciprocal-rank fusion [4] for multi-source pooling, LambdaMART [5, 6] for learned ranking, and LLM-based dialog state tracking.
 
 ## 2 Approach
 
@@ -102,13 +102,13 @@ Table 3 — official CodaBench results (composite = 0.50·nDCG@20 + 0.10·catalo
 | Blind-A (dev phase) | 0.4380 | 0.0313 | 0.7670 | 4.20 | 0.5389 | — |
 | Blind-B (final) | 0.2537 | 0.0315 | 0.7862 | 3.30 | 0.3811 | 29/39 |
 
-Read honestly, Table 2 says two things. Learned re-ranking over the pooled candidates does beat static fusion — but by the leakage-safe estimate (0.149 → 0.197–0.203), not by the in-sample replay (→ 0.384) that we watched during development. And the blind result (0.2537) is consistent with the out-of-fold evidence that was available before submission. Feature attribution is strikingly concentrated (Table 1): one learned similarity carries 59% of gain, and classic signals (artist affinity, popularity) outweigh most hand-engineered lexical features.
+Read honestly, Table 2 says two things. Learned re-ranking over the pooled candidates does beat static fusion — but by the leakage-safe estimate (0.149 → 0.197–0.203), not by the in-sample replay (→ 0.384) that we watched during development. And the blind result (0.2537) is consistent with the out-of-fold evidence that was available before submission. Feature attribution is strikingly concentrated (Table 1): one learned similarity carries 59% of gain.
 
 ## 4 Retrospective: Where It Went Wrong
 
 ### 4.1 Our development estimate was in-sample
 
-The deployed reranker was fit on all of its feature data (the CV folds informed early stopping, then a full-data model shipped), and our headline development numbers came from *replaying splits the model had seen*. The resulting 0.38–0.46 development estimates drove selection confidence; the leakage-safe out-of-fold numbers (0.197–0.203), which we had, predicted the blind outcome (0.2537) far better. We flag this as a measurement-and-confidence failure rather than a proven cause of the final ranking — but it shaped every decision late in the competition, including which ideas looked "already good enough" to skip. The lesson is old but evidently worth restating: *report and act on the out-of-fold number, even when the in-sample number is the one on the dashboard*.
+The deployed reranker was fit on all of its feature data (the CV folds informed early stopping, then a full-data model shipped), and our headline development numbers came from *replaying splits the model had seen*. The resulting 0.38–0.46 development estimates drove selection confidence; the leakage-safe out-of-fold numbers (0.197–0.203), which we had, predicted the blind outcome (0.2537) far better. We flag this as a measurement-and-confidence failure rather than a proven cause of the final ranking — but it shaped every decision late in the competition, including which ideas looked "already good enough" to skip. The old lesson stands: *report and act on the out-of-fold number, even when the in-sample number is the one on the dashboard*.
 
 ### 4.2 The ground truth contradicts itself
 
@@ -139,7 +139,7 @@ A label-free LLM-judge audit of our 80 submitted Blind-B turns rated 68% weak-or
 
 ## 5 Conclusion
 
-We documented a state-compiled retrieve-then-rerank conversational music recommender in full, and audited our own mid-pack result honestly: an in-sample development estimate inflated confidence that leakage-safe evidence had already contradicted; the benchmark's single-label ground truth carries a quantified anchoring bias that our own submission reproduced at serving time; and several extracted constraints had no catalog fields or identity resolution to act on. We release the pipeline, models, a zero-credential replay bundle, and a cleaned relabeling of the training turns for future iterations.
+We documented a state-compiled retrieve-then-rerank conversational music recommender in full and audited our mid-pack result honestly: an in-sample development estimate inflated confidence that leakage-safe evidence had already contradicted; the ground truth carries a quantified anchoring bias our own submission reproduced at serving time; and several extracted constraints had nothing in the catalog to act on. We release the pipeline, models, a zero-credential replay bundle, and a cleaned relabeling for future iterations.
 
 ---
 
