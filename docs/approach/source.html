@@ -611,8 +611,8 @@
             <span class="evidence-badge">Submitted response context</span>
             <h3>What crosses the handoff</h3>
             <ul class="state-facts">
-              <li><strong>Latest conversation state</strong><span>The current request, three visual facts, request class, routing context, and empty constraints/feedback.</span></li>
-              <li><strong>Selected item block</strong><span>Rank-one track ID; title “Pink + White”; artist Frank Ocean; album <em>Blonde</em>; release date, duration, and at most ten catalog tags, rendered as delimited XML.</span></li>
+              <li><strong>Latest conversation state</strong><span>The latest user request, the derived current request, and the three positive mentioned entities rendered as <code>Liked / wants</code>. Optional <code>Disliked / avoid</code>, explicit-rejection, year-range, and lyrical-theme lines are appended only when populated; none were rendered for this turn.</span></li>
+              <li><strong>Selected item block</strong><span>The rank-one track’s title “Pink + White,” artist Frank Ocean, album <em>Blonde</em>, and at most ten catalog tags, rendered as delimited XML.</span></li>
               <li><strong>Style contract</strong><span>One or two concise sentences, prioritize the latest ask, explain one supported reason, and avoid overselling a clear mismatch.</span></li>
             </ul>
           </article>
@@ -632,7 +632,7 @@
           <article class="story-card">
             <span class="evidence-badge">Grounding boundary</span>
             <h3>Where the evidence ends</h3>
-            <p>The item context contains catalog identity, metadata, and tags—not an independently verified prose description of the cover. Although the prompt says to invent nothing, the saved response’s claims about gradients, blurred shapes, and a “perfect” match are not established by the visible trace or catalog row. They therefore remain unverified generation claims.</p>
+            <p>The item context contains only title, artist, album, and capped tags—not an independently verified prose description of the cover. Although the prompt says to invent nothing, the saved response’s claims about gradients, blurred shapes, and a “perfect” match are not established by the visible trace or catalog row. They therefore remain unverified generation claims.</p>
             <p class="boundary-note"><strong>Submitted control path:</strong> top-1, single-pass generation. We found no independently documented fact checker and no selector/critic that compares alternative responses or chooses another track after prose generation. The generator explains the ranker’s first choice; it does not audit or revise that choice.</p>
           </article>
         </div>
