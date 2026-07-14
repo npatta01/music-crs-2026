@@ -411,10 +411,11 @@ html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;ove
 .deck-flow-only .deck-slide-inner{min-height:calc(100dvh - 190px);grid-template-rows:auto minmax(0,1fr)}.deck-flow-only .deck-flow{align-self:center}.deck-flow-only .deck-flow-step{display:grid;min-height:128px;align-content:center;font-size:clamp(15px,1.2vw,18px);line-height:1.4}
 .deck-mechanism{display:grid;gap:22px;align-self:center}.deck-mechanism-stages{display:grid;grid-template-columns:repeat(var(--stage-count),minmax(0,1fr));gap:26px;margin:0;padding:0;list-style:none;counter-reset:mechanism-stage}.deck-mechanism-stage{position:relative;display:grid;align-content:center;min-height:150px;padding:18px;border:1px solid var(--portable-border);border-top:5px solid var(--stage-color);border-radius:14px;background:var(--portable-surface);counter-increment:mechanism-stage}.deck-mechanism-stage::before{content:counter(mechanism-stage);margin-bottom:10px;color:var(--stage-color);font-size:13px;font-weight:900}.deck-mechanism-stage:not(:last-child)::after{content:"→";position:absolute;top:50%;right:-21px;color:var(--portable-accent);font-size:22px;font-weight:900;transform:translateY(-50%)}.deck-mechanism-stage h3{margin:0 0 8px;font-size:clamp(16px,1.35vw,20px)}.deck-mechanism-stage p{margin:0;color:var(--portable-muted);font-size:14px;line-height:1.5}.deck-takeaway{margin:0;padding:14px 18px;border-left:5px solid #d89a2b;border-radius:10px;background:color-mix(in srgb,#d89a2b 10%,var(--portable-surface));font-size:clamp(15px,1.15vw,18px);line-height:1.5}.deck-takeaway strong{display:block;margin-bottom:3px;color:#a96f09;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
 .deck-diagnosis{display:grid;gap:18px;min-width:0}.deck-diagnosis ol,.deck-diagnosis ul{margin:0;padding:0;list-style:none}.deck-diagnosis h3,.deck-diagnosis h4{margin:0}.deck-diagnosis li{min-width:0;overflow-wrap:anywhere}
+.deck-confidence-label{display:inline-flex!important;width:max-content;margin-bottom:7px;padding:3px 7px;border:1px solid currentColor;border-radius:999px;color:var(--portable-muted);font-size:9px!important;font-weight:900;line-height:1.1!important;letter-spacing:.06em;text-transform:uppercase}.deck-confidence-label[data-confidence="verified"]{color:#15945b!important}.deck-confidence-label[data-confidence="likely"]{color:#a66b08!important}.deck-confidence-label[data-confidence="unknown"]{color:var(--portable-muted)!important}
 .deck-score-findings{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.deck-score-finding{display:grid;gap:9px;min-height:120px;align-content:center;padding:16px;border:1px solid var(--portable-border);border-top:5px solid var(--portable-accent);border-radius:14px;background:var(--portable-surface)}.deck-score-finding h3{font-size:18px}.deck-score-finding span{color:var(--portable-muted)}
 .deck-bottleneck{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;counter-reset:bottleneck}.deck-bottleneck-stage,.deck-feature-family,.deck-boundary-column,.deck-confidence-column{min-width:0;padding:16px;border:1px solid var(--portable-border);border-radius:14px;background:var(--portable-surface)}.deck-bottleneck-stage{display:grid;gap:10px;align-content:start;counter-increment:bottleneck}.deck-bottleneck-stage::before{content:counter(bottleneck);color:var(--portable-accent);font-size:12px;font-weight:900}.deck-bottleneck-stage h3{font-size:15px}.deck-loss{padding:9px 11px;border-left:5px solid #c98612;border-radius:9px;background:color-mix(in srgb,#c98612 12%,var(--portable-surface));font-size:12px;line-height:1.35}
 .deck-wiring{display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,.5fr) minmax(0,1fr);gap:16px}.deck-wiring>section{display:grid;gap:9px;align-content:start}.deck-wiring>section>ol{display:grid;gap:7px}.deck-wiring-source li,.deck-wiring-target li{padding:8px 10px;border:1px solid var(--portable-border);border-radius:9px;background:var(--portable-surface);font-size:12px}.deck-wiring-link{padding:7px 9px;border:2px solid var(--portable-border);border-radius:9px;background:var(--portable-surface);font-size:11px;line-height:1.3}.deck-wiring-link[data-link-kind="direct"]{border-color:#15945b}.deck-wiring-link[data-link-kind="soft"]{border-style:dashed;border-color:#c98612}.deck-wiring-link[data-link-kind="feature-only"]{border-style:dotted;border-color:#6f54c7}
-.deck-feature-map{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.deck-feature-family{display:grid;grid-template-columns:1fr auto;gap:9px}.deck-feature-family h3{font-size:16px}.deck-feature-family>span:last-child{grid-column:1/-1;color:var(--portable-muted);font-size:13px;line-height:1.4}.deck-feature-badge{align-self:start;padding:3px 7px;border:1px solid var(--portable-accent);border-radius:999px;color:var(--portable-accent);font-size:10px;font-weight:800}
+.deck-feature-map{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.deck-feature-family{display:grid;grid-template-columns:1fr auto;gap:9px}.deck-feature-family>.deck-confidence-label{grid-column:1/-1}.deck-feature-family h3{font-size:16px}.deck-feature-family>span:last-child{grid-column:1/-1;color:var(--portable-muted);font-size:13px;line-height:1.4}.deck-feature-badge{align-self:start;padding:3px 7px;border:1px solid var(--portable-accent);border-radius:999px;color:var(--portable-accent);font-size:10px;font-weight:800}
 .deck-boundary-map,.deck-confidence-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.deck-boundary-column,.deck-confidence-column{display:grid;gap:11px}.deck-boundary-column>ul,.deck-confidence-column>ul{display:grid;gap:7px}.deck-boundary-column li,.deck-confidence-column li{position:relative;padding-left:15px;color:var(--portable-muted);font-size:12px;line-height:1.35}.deck-boundary-column li::before,.deck-confidence-column li::before{position:absolute;left:0;content:"•";color:var(--portable-accent)}.deck-boundary-column[data-boundary="limited"]{border-top:5px solid #c98612}.deck-boundary-column[data-boundary="present"]{border-top:5px solid #15945b}
 .deck-confidence{display:grid;gap:14px}.deck-confidence-column[data-confidence="verified"]{border-top:5px solid #15945b}.deck-confidence-column[data-confidence="likely"]{border-top:5px solid #c98612}.deck-confidence-column[data-confidence="unknown"]{border-top:5px solid var(--portable-muted)}.deck-response-control{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}.deck-response-control>li{position:relative;padding:12px;border:1px solid var(--portable-border);border-radius:12px;background:var(--portable-surface)}.deck-response-control>li:not(:last-child)::after{position:absolute;top:50%;right:-15px;content:"→";color:var(--portable-accent);font-weight:900;transform:translateY(-50%)}.deck-response-control h3{margin-bottom:6px;font-size:14px}.deck-response-control span{color:var(--portable-muted);font-size:11px;line-height:1.35}
 .deck-belief-timeline,.deck-failure-taxonomy{display:grid;gap:9px}.deck-belief-timeline>ol,.deck-failure-taxonomy>ol{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.deck-belief-timeline li,.deck-failure-taxonomy li{padding:10px 12px;border:1px solid var(--portable-border);border-radius:11px;background:var(--portable-surface)}.deck-belief-timeline h4,.deck-failure-taxonomy h4{margin-bottom:5px;font-size:12px}.deck-belief-timeline span,.deck-failure-taxonomy span{color:var(--portable-muted);font-size:10px;line-height:1.3}.deck-failure-taxonomy span{display:inline-block;margin-top:4px;padding:2px 6px;border:1px solid currentColor;border-radius:999px}
@@ -504,11 +505,27 @@ function runtimeMain(CONFIG) {
   const stageColors = ["#58aaf7", "#8570e6", "#24a88b", "#d89a2b", "#df7aa9"];
   const teamColors = ["#58aaf7", "#8570e6", "#24a88b", "#df7aa9", "#e28d43"];
   const confidenceLabels = { verified: "Verified", likely: "Likely contributor", unknown: "Unknown" };
+  const labelDiagnosisClaim = (node, confidence) => {
+    if (!confidenceLabels[confidence]) throw new Error(`Unknown diagnosis confidence: ${confidence}`);
+    node.dataset.diagnosisClaim = "";
+    node.dataset.confidence = confidence;
+    const badge = document.createElement("span");
+    badge.className = "deck-confidence-label";
+    badge.dataset.confidence = confidence;
+    badge.textContent = confidenceLabels[confidence];
+    node.prepend(badge);
+    return node;
+  };
+  const diagnosisClaim = (tagName, className, confidence) => {
+    const node = document.createElement(tagName);
+    if (className) node.className = className;
+    return labelDiagnosisClaim(node, confidence);
+  };
   const renderTakeaway = (takeaway) => {
-    const note = document.createElement("aside");
-    note.className = "deck-takeaway";
+    const confidence = typeof takeaway === "string" ? "unknown" : takeaway.confidence;
+    const note = diagnosisClaim("aside", "deck-takeaway", confidence);
     const label = document.createElement("strong");
-    label.textContent = takeaway.confidence ? `${confidenceLabels[takeaway.confidence]} takeaway` : "Takeaway";
+    label.textContent = "Takeaway";
     note.append(label, document.createTextNode(typeof takeaway === "string" ? takeaway : takeaway.text));
     return note;
   };
@@ -523,8 +540,7 @@ function runtimeMain(CONFIG) {
     list.className = "deck-score-findings";
     list.setAttribute("aria-label", "Score-gap findings");
     findings.forEach(([title, detail]) => {
-      const item = document.createElement("li");
-      item.className = "deck-score-finding";
+      const item = diagnosisClaim("li", "deck-score-finding", "verified");
       const heading = document.createElement("h3");
       heading.textContent = title;
       const text = document.createElement("span");
@@ -539,16 +555,13 @@ function runtimeMain(CONFIG) {
     list.className = "deck-bottleneck";
     list.setAttribute("aria-label", "End-to-end information bottlenecks");
     entry.stages.forEach((stage) => {
-      const item = document.createElement("li");
-      item.className = "deck-bottleneck-stage";
+      const item = diagnosisClaim("li", "deck-bottleneck-stage", "verified");
       const heading = document.createElement("h3");
       heading.textContent = stage;
       item.append(heading);
       entry.losses.filter(({ after }) => after === stage).forEach((loss) => {
-        const note = document.createElement("span");
-        note.className = "deck-loss";
-        note.dataset.confidence = loss.confidence;
-        note.textContent = `${confidenceLabels[loss.confidence]} · ${loss.label}`;
+        const note = diagnosisClaim("span", "deck-loss", loss.confidence);
+        note.append(document.createTextNode(loss.label));
         item.append(note);
       });
       list.append(item);
@@ -560,7 +573,11 @@ function runtimeMain(CONFIG) {
       "Current request",
       "Artist, album, track, and attribute facts",
       "Hard and soft exclusions",
-      "Played-track sentiment and pinned references",
+      "Played-track acceptance",
+      "Played-track rejection",
+      "Played-track contrast",
+      "Played-track sentiment",
+      "Pinned played-track references",
       "Temporal and lyrical-theme constraints",
       "Resolved IDs and routing/profile fields",
     ];
@@ -590,8 +607,8 @@ function runtimeMain(CONFIG) {
       heading.textContent = title;
       const list = document.createElement("ol");
       values.forEach((value) => {
-        const item = document.createElement("li");
-        item.textContent = value;
+        const item = diagnosisClaim("li", "", "verified");
+        item.append(document.createTextNode(value));
         list.append(item);
       });
       section.append(heading, list);
@@ -606,10 +623,9 @@ function runtimeMain(CONFIG) {
     linkHeading.textContent = "Verified connections";
     const linkList = document.createElement("ol");
     links.forEach(([from, to, kind]) => {
-      const item = document.createElement("li");
-      item.className = "deck-wiring-link";
+      const item = diagnosisClaim("li", "deck-wiring-link", "verified");
       item.dataset.linkKind = kind;
-      item.textContent = `${from} → ${to}`;
+      item.append(document.createTextNode(`${from} → ${to}`));
       linkList.append(item);
     });
     linkGroup.append(linkHeading, linkList);
@@ -629,8 +645,7 @@ function runtimeMain(CONFIG) {
     list.className = "deck-feature-map";
     list.setAttribute("aria-label", "Six feature families in the 142-feature reranker");
     families.forEach((family, index) => {
-      const item = document.createElement("li");
-      item.className = "deck-feature-family";
+      const item = diagnosisClaim("li", "deck-feature-family", "verified");
       const heading = document.createElement("h3");
       heading.textContent = family;
       const badge = document.createElement("span");
@@ -660,8 +675,8 @@ function runtimeMain(CONFIG) {
       heading.textContent = title;
       const evidence = document.createElement("ul");
       values.forEach((value) => {
-        const row = document.createElement("li");
-        row.textContent = value;
+        const row = diagnosisClaim("li", "", "verified");
+        row.append(document.createTextNode(value));
         evidence.append(row);
       });
       item.append(heading, evidence);
@@ -679,7 +694,7 @@ function runtimeMain(CONFIG) {
       ["One Qwen call", "Temperature zero · echo_retries=0"],
       ["Final response", "No independent selector, checker, critic, or repair"],
     ].forEach(([title, detail]) => {
-      const item = document.createElement("li");
+      const item = diagnosisClaim("li", "", "verified");
       const heading = document.createElement("h3");
       heading.textContent = title;
       const text = document.createElement("span");
@@ -704,8 +719,8 @@ function runtimeMain(CONFIG) {
       heading.textContent = confidenceLabels[level];
       const list = document.createElement("ul");
       claims.forEach((claim) => {
-        const row = document.createElement("li");
-        row.textContent = claim;
+        const row = diagnosisClaim("li", "", level);
+        row.append(document.createTextNode(claim));
         list.append(row);
       });
       item.append(heading, list);
@@ -726,7 +741,7 @@ function runtimeMain(CONFIG) {
       ["Blind-B result", "0.2537 nDCG@20 and 3.30/5 judge score"],
       ["Post-competition review", "Candidate, constraint-execution, behavioral-evidence, and response-control gaps emerged"],
     ].forEach(([headingText, detail]) => {
-      const item = document.createElement("li");
+      const item = diagnosisClaim("li", "", "verified");
       const heading = document.createElement("h4");
       heading.textContent = headingText;
       const text = document.createElement("span");
@@ -749,7 +764,7 @@ function runtimeMain(CONFIG) {
       "Selected track was reasonable but its explanation was weak",
       "Recommendation and explanation were both weak",
     ].forEach((label) => {
-      const item = document.createElement("li");
+      const item = diagnosisClaim("li", "", "unknown");
       const heading = document.createElement("h4");
       heading.textContent = label;
       const status = document.createElement("span");

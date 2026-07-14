@@ -110,6 +110,79 @@ def test_diagnosis_confidence_and_unknown_boundaries_are_explicit(page, enhanced
     assert "sole cause" not in text.lower()
 
 
+def test_every_diagnosis_claim_has_a_visible_explicit_confidence(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    open_deck(browser_page, enhanced_report, "#diagnosis/score-location")
+    audit = browser_page.locator("[data-chapter='diagnosis']").evaluate(
+        """root => {
+          const selectors = [
+            '.deck-score-finding',
+            '.deck-bottleneck-stage',
+            '.deck-loss',
+            '.deck-wiring-source li',
+            '.deck-wiring-link',
+            '.deck-wiring-target li',
+            '.deck-feature-family',
+            '.deck-boundary-column > ul > li',
+            '.deck-response-control > li',
+            '.deck-confidence-column > ul > li',
+            '.deck-belief-timeline > ol > li',
+            '.deck-failure-taxonomy > ol > li',
+            '.deck-takeaway',
+          ];
+          const expected = [...root.querySelectorAll(selectors.join(','))];
+          const declared = [...root.querySelectorAll('[data-diagnosis-claim]')];
+          const valid = new Set(['verified', 'likely', 'unknown']);
+          const labels = {
+            verified: 'Verified',
+            likely: 'Likely contributor',
+            unknown: 'Unknown',
+          };
+          return {
+            expectedCount: expected.length,
+            declaredCount: declared.length,
+            missingDeclarations: expected
+              .filter(node => !node.hasAttribute('data-diagnosis-claim'))
+              .map(node => node.textContent.trim()),
+            invalidConfidence: declared
+              .filter(node => !valid.has(node.dataset.confidence))
+              .map(node => node.textContent.trim()),
+            missingVisibleLabels: declared.filter(node => {
+              const badge = node.querySelector(':scope > .deck-confidence-label');
+              return !badge
+                || badge.textContent.trim() !== labels[node.dataset.confidence]
+                || getComputedStyle(badge).display === 'none'
+                || getComputedStyle(badge).visibility === 'hidden'
+                || badge.offsetParent === null;
+            }).map(node => node.textContent.trim()),
+          };
+        }"""
+    )
+    assert audit["expectedCount"] >= 70
+    assert audit["declaredCount"] == audit["expectedCount"]
+    assert audit["missingDeclarations"] == []
+    assert audit["invalidConfidence"] == []
+    assert audit["missingVisibleLabels"] == []
+    assert errors == []
+
+
+def test_constraint_wiring_keeps_played_track_feedback_distinctions(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    open_deck(browser_page, enhanced_report, "#diagnosis/constraint-wiring")
+    extracted = browser_page.locator(
+        "#diagnosis\\/constraint-wiring .deck-wiring-source li"
+    )
+    for distinction in (
+        "Played-track acceptance",
+        "Played-track rejection",
+        "Played-track contrast",
+        "Played-track sentiment",
+        "Pinned played-track references",
+    ):
+        assert extracted.filter(has_text=distinction).count() == 1
+    assert errors == []
+
+
 def test_dense_topics_teach_then_compare(page, enhanced_report: Path) -> None:
     browser_page, errors = page
     open_deck(browser_page, enhanced_report, "#query/lifecycle")
