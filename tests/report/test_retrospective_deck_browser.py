@@ -101,12 +101,12 @@ def test_groups_every_block_once(page, enhanced_report: Path) -> None:
     browser_page, errors = page
     open_deck(browser_page, enhanced_report)
     assert browser_page.locator(".deck-chapter").count() == 8
-    assert browser_page.locator(".deck-slide").count() == 56
+    assert browser_page.locator(".deck-slide").count() == 57
     assert browser_page.locator(".deck-chapter").evaluate_all(
         "nodes => nodes.map(node => node.querySelectorAll('.deck-slide').length)"
-    ) == [6, 6, 7, 7, 7, 5, 13, 5]
+    ) == [6, 6, 7, 7, 7, 5, 13, 6]
     assert browser_page.locator(".deck-vertical-rail").count() == 8
-    assert browser_page.locator(".deck-rail-button").count() == 56
+    assert browser_page.locator(".deck-rail-button").count() == 57
     assigned = browser_page.locator(".deck-slide [data-artifact-block-id]")
     assert assigned.count() == 74
     ids = assigned.evaluate_all("nodes => nodes.map(node => node.dataset.artifactBlockId)")
@@ -694,6 +694,50 @@ def test_synthesis_matrix_fills_canvas_and_encodes_status(page, enhanced_report:
     assert browser_page.locator("[id='synthesis/matrix'] td.deck-status--yes").count() > 0
     assert browser_page.locator("[id='synthesis/matrix'] td.deck-status--partial").count() > 0
     assert browser_page.locator("[id='synthesis/matrix'] td.deck-status--missing").count() > 0
+    assert errors == []
+
+
+def test_synthesis_decoder_defines_terms_and_concrete_gaps(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    open_deck(browser_page, enhanced_report, "?path=curated#synthesis/decoder")
+    slide = browser_page.locator("[id='synthesis/decoder']")
+    assert slide.is_visible()
+    assert slide.locator(".deck-decoder-card").count() == 3
+    boundaries = slide.locator(".deck-decoder-boundary")
+    assert boundaries.count() == 3
+    for index in range(boundaries.count()):
+        assert boundaries.nth(index).is_visible()
+        assert boundaries.nth(index).inner_text() == "Not documented in the reviewed deployed path."
+    text = slide.inner_text()
+    for phrase in (
+        "Reranker evidence breadth",
+        "Direct track co-occurrence",
+        "Markov transition probability",
+        "candidate-producing learned-retriever",
+        "Full candidate union / late fusion",
+        "Up to 500 hits from each traced branch",
+        "LightGBM final ordering",
+        "Factual grounding",
+        "Verified fact bundle",
+        "Checker or repair",
+        "We had",
+        "We lacked",
+        "Why it matters",
+    ):
+        assert phrase.lower() in text.lower()
+    assert "RRF" not in text
+    assert errors == []
+
+
+@pytest.mark.parametrize("viewport", [(1533, 903), (1024, 768), (390, 844)])
+def test_synthesis_decoder_has_no_horizontal_overflow(page, enhanced_report: Path, viewport) -> None:
+    browser_page, errors = page
+    browser_page.set_viewport_size({"width": viewport[0], "height": viewport[1]})
+    open_deck(browser_page, enhanced_report, "#synthesis/decoder")
+    overflow = browser_page.locator("[id='synthesis/decoder'] .deck-slide-inner").evaluate(
+        "node => node.scrollWidth - node.clientWidth"
+    )
+    assert overflow <= 1
     assert errors == []
 
 
