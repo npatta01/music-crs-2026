@@ -8,6 +8,7 @@ Built on top of the organizers' official baseline/evaluation framework (task for
 - **ACM RecSys Challenge**: https://www.recsyschallenge.com/2026
 - **Datasets**: [TalkPlayData-Challenge collection](https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge)
 - **Scores**: see [below](#scores) — devset, Blind-A, and Blind-B across every reported facet
+- **Competition retrospective**: [what we built, where we fell short, and what the leading public teams did differently](docs/retrospective.html)
 
 ---
 
