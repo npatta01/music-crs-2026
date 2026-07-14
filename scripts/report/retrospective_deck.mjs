@@ -319,6 +319,8 @@ html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;ove
 .deck-chapter-map li::before{content:counter(chapter-page);display:grid;place-items:center;width:28px;height:28px;border-radius:999px;background:var(--portable-accent);color:#fff;font-size:12px;font-weight:800}.deck-chapter-map span{font-weight:700;line-height:1.3}
 .deck-flow{display:grid;gap:18px}.deck-flow-lane{display:grid;gap:10px;padding:16px;border:1px solid var(--portable-border);border-radius:16px;background:var(--portable-surface)}.deck-flow-lane h3{margin:0;font-size:16px}.deck-flow-lane ol{display:grid;grid-template-columns:repeat(var(--flow-count),minmax(0,1fr));gap:24px;margin:0;padding:0;list-style:none;counter-reset:flow-step}.deck-flow-step{position:relative;min-width:0;padding:13px;border:1px solid color-mix(in srgb,var(--portable-accent) 38%,var(--portable-border));border-radius:12px;background:color-mix(in srgb,var(--portable-accent) 7%,var(--portable-surface));overflow-wrap:anywhere;counter-increment:flow-step}.deck-flow-step::before{content:counter(flow-step);display:block;margin-bottom:6px;color:var(--portable-accent);font-size:12px;font-weight:850}.deck-flow-step:not(:last-child)::after{content:"→";position:absolute;top:50%;right:-19px;color:var(--portable-accent);font-size:20px;font-weight:900;transform:translateY(-50%)}
 .deck-flow-only .deck-slide-inner{min-height:calc(100dvh - 190px);grid-template-rows:auto minmax(0,1fr)}.deck-flow-only .deck-flow{align-self:center}.deck-flow-only .deck-flow-step{display:grid;min-height:128px;align-content:center;font-size:clamp(15px,1.2vw,18px);line-height:1.4}
+.deck-mechanism{display:grid;gap:22px;align-self:center}.deck-mechanism-stages{display:grid;grid-template-columns:repeat(var(--stage-count),minmax(0,1fr));gap:26px;margin:0;padding:0;list-style:none;counter-reset:mechanism-stage}.deck-mechanism-stage{position:relative;display:grid;align-content:center;min-height:150px;padding:18px;border:1px solid var(--portable-border);border-top:5px solid var(--stage-color);border-radius:14px;background:var(--portable-surface);counter-increment:mechanism-stage}.deck-mechanism-stage::before{content:counter(mechanism-stage);margin-bottom:10px;color:var(--stage-color);font-size:13px;font-weight:900}.deck-mechanism-stage:not(:last-child)::after{content:"→";position:absolute;top:50%;right:-21px;color:var(--portable-accent);font-size:22px;font-weight:900;transform:translateY(-50%)}.deck-mechanism-stage h3{margin:0 0 8px;font-size:clamp(16px,1.35vw,20px)}.deck-mechanism-stage p{margin:0;color:var(--portable-muted);font-size:14px;line-height:1.5}.deck-takeaway{margin:0;padding:14px 18px;border-left:5px solid #d89a2b;border-radius:10px;background:color-mix(in srgb,#d89a2b 10%,var(--portable-surface));font-size:clamp(15px,1.15vw,18px);line-height:1.5}.deck-takeaway strong{display:block;margin-bottom:3px;color:#a96f09;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+.deck-comparison{display:grid;gap:10px}.deck-comparison-columns,.deck-team-row{display:grid;grid-template-columns:minmax(115px,.55fr) repeat(3,minmax(0,1fr));gap:14px}.deck-comparison-columns{padding:0 16px;color:var(--portable-muted);font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.deck-team-row{padding:14px 16px;border:1px solid var(--portable-border);border-left:5px solid var(--team-color);border-radius:12px;background:var(--portable-surface)}.deck-team-row h3{margin:0;font-size:16px}.deck-team-value{display:grid;gap:4px;color:var(--portable-muted);font-size:13px;line-height:1.42}.deck-team-value::before{content:attr(data-label);display:none;color:var(--portable-ink);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.deck-team-status{display:inline-flex;width:max-content;margin-top:7px;padding:3px 8px;border:1px solid currentColor;border-radius:999px;color:var(--portable-muted);font-size:10px;font-weight:800;text-transform:uppercase}.deck-team-status--verified{color:#19724d}.deck-team-status--external{color:#176e9e}.deck-team-status--limit{color:#9a6810}.deck-common-different{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}.deck-synthesis-card{padding:14px 16px;border-left:5px solid var(--synthesis-color);border-radius:11px;background:var(--portable-surface);font-size:14px;line-height:1.5}.deck-synthesis-card strong{display:block;margin-bottom:4px;color:var(--portable-ink)}
 .deck-slide--story .deck-slide-inner{gap:clamp(24px,3vw,40px)}.deck-slide.deck-slide--story .portable-markdown{width:100%;max-width:1120px;font-size:clamp(17px,1.35vw,20px);line-height:1.65}.deck-slide--story .portable-markdown p{margin-block:0 1.15em}.deck-slide--story .portable-markdown a{font-weight:650}.deck-slide--story .portable-page-header,.deck-slide--story .portable-content-card{width:100%;max-width:1120px}.deck-slide--story .deck-question{font-size:clamp(15px,1.15vw,18px)}
 .deck-slide--visual .deck-visual{max-width:1100px}.deck-slide--matrix .portable-content-card,.deck-slide--audit .portable-content-card{width:100%;max-width:none}
 .deck-slide--matrix table{width:100%;table-layout:auto}.deck-slide--matrix th,.deck-slide--matrix td{white-space:normal;overflow-wrap:anywhere;vertical-align:top}
@@ -340,8 +342,8 @@ html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;ove
 .deck-live,.deck-skip{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.deck-skip:focus{position:fixed;top:8px;left:8px;z-index:80;width:auto;height:auto;clip:auto;padding:10px;background:var(--portable-surface)}
 html[data-deck-view="linear"],html[data-deck-view="linear"] body{height:auto;overflow:auto}
 html[data-deck-view="linear"] .retrospective-deck{height:auto;display:block}html[data-deck-view="linear"] .deck-track{display:block;overflow:visible}html[data-deck-view="linear"] .deck-chapter,html[data-deck-view="linear"] .deck-slide{height:auto;min-height:0}html[data-deck-view="linear"] .deck-vertical{height:auto;overflow:visible}html[data-deck-view="linear"] .deck-vertical-rail{display:none}html[data-deck-view="linear"] .deck-disclosure>summary{display:none}html[data-deck-view="linear"] .deck-disclosure>[data-artifact-block-id]{display:block!important}html[data-deck-view="linear"] .deck-insight-grid{display:block}html[data-deck-view="linear"] .deck-insight-card{border:0;background:transparent;overflow:visible}html[data-deck-view="linear"] .deck-insight-card>summary{display:none}html[data-deck-view="linear"] .deck-insight-detail{display:block!important;margin:0 0 1em;padding:0;border:0}html[data-deck-view="linear"] .deck-insight-detail strong:first-child{display:inline}
-@media(max-width:1100px){.deck-slide--cover .deck-slide-inner{grid-template-columns:1fr;min-height:0}.deck-slide--cover .deck-page-copy,.deck-chapter-map{grid-column:1;grid-row:auto}.deck-flow-lane ol{grid-template-columns:1fr;gap:22px}.deck-flow-step:not(:last-child)::after{content:"↓";top:auto;right:auto;bottom:-21px;left:50%;transform:translateX(-50%)}.deck-prose-matrix tbody,.deck-insight-grid{grid-template-columns:1fr}.deck-flow-only .deck-slide-inner{min-height:0}}
-@media(max-width:700px){.deck-title,.deck-breadcrumb,.deck-progress,.deck-axis-help,.deck-chapter-rail{display:none}.deck-mobile-orientation{display:block;min-width:0;margin-right:auto;overflow:hidden;font-weight:650;text-overflow:ellipsis;white-space:nowrap}.deck-topbar,.deck-footer{min-height:60px;padding:8px 10px}.deck-slide{padding:18px 12px}.deck-vertical-rail{display:none}.portable-table-scroll{max-width:calc(100vw - 24px)}.deck-button{min-width:48px;min-height:48px}.deck-slide--cover .deck-slide-heading{font-size:clamp(36px,13vw,58px)}.deck-slide--matrix .portable-table-scroll{overflow-x:auto}.deck-slide--matrix .portable-table-scroll:has(.deck-prose-matrix){overflow:visible}.deck-prose-matrix tbody td{grid-template-columns:1fr;gap:4px}.deck-slide--audit .portable-markdown{columns:1}}
+@media(max-width:1100px){.deck-slide--cover .deck-slide-inner{grid-template-columns:1fr;min-height:0}.deck-slide--cover .deck-page-copy,.deck-chapter-map{grid-column:1;grid-row:auto}.deck-flow-lane ol,.deck-mechanism-stages{grid-template-columns:1fr;gap:22px}.deck-flow-step:not(:last-child)::after,.deck-mechanism-stage:not(:last-child)::after{content:"↓";top:auto;right:auto;bottom:-22px;left:50%;transform:translateX(-50%)}.deck-mechanism-stage{min-height:112px}.deck-comparison-columns{display:none}.deck-team-row{grid-template-columns:minmax(110px,.45fr) repeat(3,minmax(0,1fr))}.deck-prose-matrix tbody,.deck-insight-grid{grid-template-columns:1fr}.deck-flow-only .deck-slide-inner{min-height:0}}
+@media(max-width:700px){.deck-title,.deck-breadcrumb,.deck-progress,.deck-axis-help,.deck-chapter-rail{display:none}.deck-mobile-orientation{display:block;min-width:0;margin-right:auto;overflow:hidden;font-weight:650;text-overflow:ellipsis;white-space:nowrap}.deck-topbar,.deck-footer{min-height:60px;padding:8px 10px}.deck-slide{padding:18px 12px}.deck-vertical-rail{display:none}.portable-table-scroll{max-width:calc(100vw - 24px)}.deck-button{min-width:48px;min-height:48px}.deck-slide--cover .deck-slide-heading{font-size:clamp(36px,13vw,58px)}.deck-team-row,.deck-common-different{grid-template-columns:1fr}.deck-team-value::before{display:block}.deck-slide--matrix .portable-table-scroll{overflow-x:auto}.deck-slide--matrix .portable-table-scroll:has(.deck-prose-matrix){overflow:visible}.deck-prose-matrix tbody td{grid-template-columns:1fr;gap:4px}.deck-slide--audit .portable-markdown{columns:1}}
 @media(prefers-reduced-motion:reduce){.deck-track,.deck-vertical{scroll-behavior:auto!important}}
 @media(forced-colors:active){.deck-button,.deck-chapter-button,.deck-rail-button,.deck-disclosure,.deck-jump-panel{border:1px solid CanvasText}}
 @media print{html,body{height:auto!important;overflow:visible!important}.deck-chrome,.deck-jump,.deck-skip,.deck-live,.deck-vertical-rail{display:none!important}.retrospective-deck,.deck-track,.deck-chapter,.deck-vertical,.deck-slide{display:block!important;height:auto!important;min-height:0!important;overflow:visible!important;scroll-snap-type:none!important}.deck-disclosure>summary{display:none!important}.deck-disclosure>[data-artifact-block-id],.deck-disclosure:not([open])>*:not(summary){display:block!important}.deck-insight-grid{display:block!important}.deck-insight-card{display:block!important;border:0!important;background:transparent!important;overflow:visible!important}.deck-insight-card>summary{display:none!important}.deck-insight-detail{display:block!important;margin:0 0 1em!important;padding:0!important;border:0!important}.deck-insight-detail strong:first-child{display:inline!important}}
@@ -387,7 +389,95 @@ function runtimeMain(CONFIG) {
   const footer = document.createElement("footer");
   footer.className = "deck-footer deck-chrome";
   footer.innerHTML = '<button class="deck-button" type="button" data-action="previous">← Previous</button><span class="deck-axis-help">←/→ chapters · ↑/↓ depth</span><button class="deck-button" type="button" data-action="next">Next →</button>';
-  const disclosure = (node) => node;
+  const disclosure = (node, label) => {
+    if (!label) return node;
+    const details = document.createElement("details");
+    details.className = "deck-disclosure";
+    details.dataset.disclosureFor = node.dataset.artifactBlockId;
+    const summary = document.createElement("summary");
+    summary.textContent = label;
+    details.append(summary, node);
+    return details;
+  };
+  const stageColors = ["#58aaf7", "#8570e6", "#24a88b", "#d89a2b", "#df7aa9"];
+  const teamColors = ["#58aaf7", "#8570e6", "#24a88b", "#df7aa9", "#e28d43"];
+  const renderMechanism = (entry) => {
+    const section = document.createElement("section");
+    section.className = "deck-mechanism";
+    section.setAttribute("aria-label", `${entry.title} mechanism`);
+    const stages = document.createElement("ol");
+    stages.className = "deck-mechanism-stages";
+    stages.style.setProperty("--stage-count", String(entry.stages.length));
+    entry.stages.forEach((stage, index) => {
+      const item = document.createElement("li");
+      item.className = "deck-mechanism-stage";
+      item.style.setProperty("--stage-color", stageColors[index % stageColors.length]);
+      const title = document.createElement("h3");
+      title.textContent = stage.label;
+      const detail = document.createElement("p");
+      detail.textContent = stage.detail;
+      item.append(title, detail);
+      stages.append(item);
+    });
+    const takeaway = document.createElement("p");
+    takeaway.className = "deck-takeaway";
+    const label = document.createElement("strong");
+    label.textContent = "Takeaway";
+    takeaway.append(label, document.createTextNode(entry.takeaway));
+    section.append(stages, takeaway);
+    return section;
+  };
+  const renderComparison = (entry) => {
+    const section = document.createElement("section");
+    section.className = "deck-comparison";
+    section.setAttribute("aria-label", `${entry.title} team comparison`);
+    const columns = document.createElement("div");
+    columns.className = "deck-comparison-columns";
+    columns.append(document.createElement("span"));
+    entry.columns.forEach((column) => {
+      const label = document.createElement("span");
+      label.textContent = column;
+      columns.append(label);
+    });
+    section.append(columns);
+    entry.teams.forEach((team, index) => {
+      const row = document.createElement("article");
+      row.className = "deck-team-row";
+      row.style.setProperty("--team-color", teamColors[index % teamColors.length]);
+      const identity = document.createElement("div");
+      const name = document.createElement("h3");
+      name.textContent = team.name;
+      identity.append(name);
+      if (team.status) {
+        const status = document.createElement("span");
+        status.className = `deck-team-status deck-team-status--${team.status}`;
+        status.textContent = team.status === "limit" ? "Limit" : team.status === "external" ? "External data" : "Verified path";
+        identity.append(status);
+      }
+      row.append(identity);
+      team.values.forEach((value, valueIndex) => {
+        const cell = document.createElement("span");
+        cell.className = "deck-team-value";
+        cell.dataset.label = entry.columns[valueIndex];
+        cell.textContent = value;
+        row.append(cell);
+      });
+      section.append(row);
+    });
+    const synthesis = document.createElement("div");
+    synthesis.className = "deck-common-different";
+    [["Common", entry.common, "#24a88b"], ["Different", entry.different, "#d89a2b"]].forEach(([title, text, color]) => {
+      const card = document.createElement("div");
+      card.className = "deck-synthesis-card";
+      card.style.setProperty("--synthesis-color", color);
+      const heading = document.createElement("strong");
+      heading.textContent = title;
+      card.append(heading, document.createTextNode(text));
+      synthesis.append(card);
+    });
+    section.append(synthesis);
+    return section;
+  };
 
   for (const chapter of CONFIG.chapters) {
     const chapterNode = document.createElement("section");
@@ -421,6 +511,8 @@ function runtimeMain(CONFIG) {
       question.textContent = chapter.question;
       pageCopy.append(heading, question);
       inner.append(pageCopy);
+      if (entry.visualKind === "mechanism") inner.append(renderMechanism(entry));
+      if (entry.visualKind === "comparison") inner.append(renderComparison(entry));
       if (entry.archetype === "cover") {
         const map = document.createElement("ol");
         map.className = "deck-chapter-map";
@@ -529,7 +621,10 @@ function runtimeMain(CONFIG) {
       card.append(summary, paragraph);
       grid.append(card);
     });
-    inner.insertBefore(grid, inner.querySelector("[data-artifact-block-id]"));
+    const evidenceAnchor = [...inner.children].find((child) => (
+      child.matches("[data-artifact-block-id]") || child.querySelector("[data-artifact-block-id]")
+    ));
+    inner.insertBefore(grid, evidenceAnchor || null);
   });
 
   document.querySelectorAll("#synthesis\\/matrix tbody td").forEach((cell) => {

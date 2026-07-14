@@ -51,12 +51,12 @@ def test_groups_every_block_once(page, enhanced_report: Path) -> None:
     browser_page, errors = page
     open_deck(browser_page, enhanced_report)
     assert browser_page.locator(".deck-chapter").count() == 7
-    assert browser_page.locator(".deck-slide").count() == 50
+    assert browser_page.locator(".deck-slide").count() == 51
     assert browser_page.locator(".deck-chapter").evaluate_all(
         "nodes => nodes.map(node => node.querySelectorAll('.deck-slide').length)"
-    ) == [6, 7, 5, 7, 7, 13, 5]
+    ) == [6, 7, 6, 7, 7, 13, 5]
     assert browser_page.locator(".deck-vertical-rail").count() == 7
-    assert browser_page.locator(".deck-rail-button").count() == 50
+    assert browser_page.locator(".deck-rail-button").count() == 51
     assigned = browser_page.locator(".deck-slide [data-artifact-block-id]")
     assert assigned.count() == 74
     ids = assigned.evaluate_all("nodes => nodes.map(node => node.dataset.artifactBlockId)")
@@ -72,8 +72,9 @@ def test_content_aware_archetypes_and_visual_canvas(page, enhanced_report: Path)
     covers = browser_page.locator(".deck-slide--cover")
     assert covers.count() == 7
     assert covers.locator(".deck-chapter-map").count() == 7
-    assert browser_page.locator(".deck-flow-lane").count() >= 7
-    assert browser_page.locator(".deck-flow-step").count() >= 20
+    assert browser_page.locator(".deck-flow-lane").count() >= 6
+    assert browser_page.locator(".deck-mechanism").count() >= 4
+    assert browser_page.locator(".deck-flow-step, .deck-mechanism-stage").count() >= 20
     assert browser_page.locator("figure.deck-visual img").count() == 0
     cover_box = covers.first.locator(".deck-slide-inner").bounding_box()
     assert cover_box is not None and cover_box["width"] > 1180
@@ -81,6 +82,36 @@ def test_content_aware_archetypes_and_visual_canvas(page, enhanced_report: Path)
         "node => getComputedStyle(node).maxWidth"
     ) != "none"
     assert errors == []
+
+
+def test_dense_topics_teach_then_compare(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    open_deck(browser_page, enhanced_report, "#query/lifecycle")
+    for mechanism, comparison in (
+        ("query/lifecycle", "query/query-matrix"),
+        ("query/data-glossary", "query/data-matrix"),
+        ("retrieval/retriever-mechanism", "retrieval/retriever-matrix"),
+        ("response/overview", "response/matrix"),
+    ):
+        assert browser_page.locator(f"[id='{mechanism}'] .deck-mechanism").count() == 1
+        assert browser_page.locator(f"[id='{comparison}'] .deck-comparison").count() == 1
+        assert browser_page.locator(f"[id='{comparison}'] .deck-team-row").count() >= 4
+        assert browser_page.locator(f"[id='{comparison}'] .deck-common-different").count() == 1
+    assert errors == []
+
+
+def test_exact_dense_evidence_is_progressively_disclosed(page, enhanced_report: Path) -> None:
+    browser_page, _ = page
+    open_deck(browser_page, enhanced_report, "#query/query-matrix")
+    details = browser_page.locator(
+        "[id='query/query-matrix'] details[data-disclosure-for='query_matrix']"
+    )
+    assert details.count() == 1
+    assert details.get_attribute("open") is None
+    evidence = details.locator("[data-artifact-block-id='query_matrix']")
+    assert not evidence.is_visible()
+    details.locator("summary").click()
+    assert evidence.is_visible()
 
 
 def test_wide_short_chapter_covers_do_not_collide(page, enhanced_report: Path) -> None:
@@ -111,6 +142,9 @@ def test_supplied_failure_pages_promote_embeds_without_nested_scroll(page, enhan
         target = browser_page.locator(f"[id='{slug}']")
         if target.locator("iframe").count():
             assert target.locator(".deck-embedded-document").count() > 0
+            disclosure = target.locator("details.deck-disclosure")
+            if disclosure.count():
+                disclosure.first.evaluate("node => node.open = true")
             assert target.locator(".deck-embedded-document").first.is_visible()
         assert target.locator("iframe:visible").count() == 0
         overflow = target.evaluate(
@@ -216,6 +250,12 @@ def test_progressive_disclosure_and_sources(page, enhanced_report: Path) -> None
     browser_page, _ = page
     open_deck(browser_page, enhanced_report)
     exact_table = browser_page.locator('#outcome\\/leaderboard-table [data-artifact-block-id="leaderboard_table"]')
+    assert not exact_table.is_visible()
+    exact_details = browser_page.locator(
+        '#outcome\\/leaderboard-table details[data-disclosure-for="leaderboard_table"]'
+    )
+    assert exact_details.count() == 1
+    exact_details.locator("summary").click()
     assert exact_table.is_visible()
     assert browser_page.locator(".deck-source-list .portable-sources").count() == 1
     assert browser_page.locator(".deck-source-list .portable-sources > ol > li").count() == 10
@@ -294,7 +334,7 @@ def test_buttons_keys_hash_and_history(page, enhanced_report: Path) -> None:
     browser_page.keyboard.press("ArrowRight")
     browser_page.wait_for_url("**#retrieval/cover")
     browser_page.keyboard.press("ArrowDown")
-    browser_page.wait_for_url("**#retrieval/retriever-matrix")
+    browser_page.wait_for_url("**#retrieval/retriever-mechanism")
     browser_page.go_back()
     browser_page.wait_for_url("**#retrieval/cover")
     assert errors == []
