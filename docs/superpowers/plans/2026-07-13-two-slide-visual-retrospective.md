@@ -1,6 +1,6 @@
 # Two-Slide Visual Retrospective Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Replace dense paragraph- and matrix-first retrospective pages with an approved two-slide teaching sequence while preserving every canonical fact, source, link, and audit block.
 
@@ -39,7 +39,7 @@
 - Consumes: existing `CHAPTERS`, `DISCLOSURES`, `validateChapterMap()`, and the 74 canonical block IDs.
 - Produces: slide options `visualKind`, `takeaway`, `common`, `different`, and `teams`; at least 51 pages; corrected inference wording `Top 500 from each branch → candidate union`.
 
-- [ ] **Step 1: Write failing manifest tests**
+- [x] **Step 1: Write failing manifest tests**
 
 Add tests equivalent to:
 
@@ -67,13 +67,13 @@ test("submitted inference takes five hundred candidates from every branch", () =
 });
 ```
 
-- [ ] **Step 2: Run the tests and confirm the intended failures**
+- [x] **Step 2: Run the tests and confirm the intended failures**
 
 Run: `node --test tests/report/retrospective_deck.test.mjs`
 
 Expected: FAIL because the visual metadata, retrieval mechanism page, and corrected branch wording do not exist.
 
-- [ ] **Step 3: Update the manifest with complete visual data**
+- [x] **Step 3: Update the manifest with complete visual data**
 
 In `CHAPTERS`:
 
@@ -95,13 +95,13 @@ In `CHAPTERS`:
 ]
 ```
 
-- [ ] **Step 4: Run the manifest tests**
+- [x] **Step 4: Run the manifest tests**
 
 Run: `node --test tests/report/retrospective_deck.test.mjs`
 
 Expected: PASS with 74 blocks assigned exactly once and 51 pages.
 
-- [ ] **Step 5: Commit the manifest contract**
+- [x] **Step 5: Commit the manifest contract**
 
 ```bash
 git add scripts/report/retrospective_deck.mjs tests/report/retrospective_deck.test.mjs
@@ -118,7 +118,7 @@ git commit -m "test: define two-slide retrospective structure"
 - Consumes: slide options from Task 1 and the existing `.deck-flow`, `.deck-disclosure`, and `.deck-slide-inner` containers.
 - Produces: `.deck-mechanism`, `.deck-comparison`, `.deck-team-row`, `.deck-common-different`, and accessible disclosure DOM; `renderMechanism(entry)` and `renderComparison(entry)` local runtime helpers.
 
-- [ ] **Step 1: Write failing browser tests for the two-slide components**
+- [x] **Step 1: Write failing browser tests for the two-slide components**
 
 Add tests equivalent to:
 
@@ -149,13 +149,13 @@ def test_exact_dense_evidence_is_progressively_disclosed(page, enhanced_report: 
     assert details.locator("[data-artifact-block-id='query_matrix']").is_visible()
 ```
 
-- [ ] **Step 2: Run the focused browser tests and confirm failure**
+- [x] **Step 2: Run the focused browser tests and confirm failure**
 
 Run: `uv run pytest -q tests/report/test_retrospective_deck_browser.py -k 'teach_then_compare or progressively_disclosed'`
 
 Expected: FAIL because the components and actual disclosure wrappers do not exist.
 
-- [ ] **Step 3: Implement accessible DOM renderers and disclosure wrapping**
+- [x] **Step 3: Implement accessible DOM renderers and disclosure wrapping**
 
 In `runtimeMain(CONFIG)`:
 
@@ -176,7 +176,7 @@ Implement `renderMechanism(entry)` as a semantic `<section>` with an ordered sta
 
 Call these renderers after the page heading and before canonical blocks. Replace the identity `disclosure` helper with `wrapDisclosure`.
 
-- [ ] **Step 4: Add responsive, color-redundant presentation styles**
+- [x] **Step 4: Add responsive, color-redundant presentation styles**
 
 Add scoped CSS with these behaviors:
 
@@ -191,7 +191,7 @@ Add scoped CSS with these behaviors:
 
 Use text headings (`Shared`, `Difference`, `Limit`, `Not documented`) so meaning does not depend on color.
 
-- [ ] **Step 5: Run focused and full browser tests**
+- [x] **Step 5: Run focused and full browser tests**
 
 Run:
 
@@ -202,7 +202,7 @@ uv run pytest -q tests/report/test_retrospective_deck_browser.py
 
 Expected: all browser tests PASS with no page errors.
 
-- [ ] **Step 6: Commit the reusable visual layer**
+- [x] **Step 6: Commit the reusable visual layer**
 
 ```bash
 git add scripts/report/retrospective_deck.mjs tests/report/test_retrospective_deck_browser.py
@@ -219,7 +219,7 @@ git commit -m "feat: add layered visual comparison slides"
 - Consumes: canonical leaderboard table, existing progressive insight cards, and reusable disclosure styles from Task 2.
 - Produces: `.deck-scoreboard`, `.deck-score-row`, compact exact-table disclosure, and presentation-scale summaries for the reported dense pages.
 
-- [ ] **Step 1: Write failing compact-layout tests**
+- [x] **Step 1: Write failing compact-layout tests**
 
 Add tests equivalent to:
 
@@ -245,26 +245,26 @@ def test_visual_first_default_has_bounded_visible_prose(page, enhanced_report: P
         assert len(text.split()) <= 120
 ```
 
-- [ ] **Step 2: Run focused tests and confirm failure**
+- [x] **Step 2: Run focused tests and confirm failure**
 
 Run: `uv run pytest -q tests/report/test_retrospective_deck_browser.py -k 'leaderboard_uses_compact or bounded_visible_prose'`
 
 Expected: FAIL because the scoreboard does not exist and dense blocks remain visible by default.
 
-- [ ] **Step 3: Render the numeric leaderboard as compact native rows**
+- [x] **Step 3: Render the numeric leaderboard as compact native rows**
 
 Build `.deck-scoreboard` from the five canonical table rows at runtime. Each row displays rank, team, composite, nDCG@20, catalog diversity, lexical diversity, and LLM judge in one horizontal band; composite gets a proportional bar. Keep the original table inside `details[data-disclosure-for="leaderboard_table"]` and label it `Open exact values and repository links`.
 
 Do not duplicate or hard-code score values: read cell text and headers from the canonical table before moving it into the disclosure.
 
-- [ ] **Step 4: Reduce visible prose without deleting evidence**
+- [x] **Step 4: Reduce visible prose without deleting evidence**
 
 - put `query_heading`, `query_explainer`, `data_knowledge_heading`, `data_knowledge_glossary`, `retrieval_heading`, `retrieval_glossary`, `response_heading`, and `response_explainer` behind named disclosures;
 - preserve volart-style architecture diagrams unchanged;
 - preserve progressive insight cards on the submitted-system and leader response pages;
 - remove only redundant visible orientation sentences generated by the deck enhancer, never canonical evidence.
 
-- [ ] **Step 5: Run the compact-layout and regression tests**
+- [x] **Step 5: Run the compact-layout and regression tests**
 
 Run:
 
@@ -275,7 +275,7 @@ uv run pytest -q tests/report/test_retrospective_deck_browser.py
 
 Expected: all tests PASS.
 
-- [ ] **Step 6: Commit the compact default view**
+- [x] **Step 6: Commit the compact default view**
 
 ```bash
 git add scripts/report/retrospective_deck.mjs tests/report/test_retrospective_deck_browser.py
@@ -294,7 +294,7 @@ git commit -m "style: compact retrospective evidence overviews"
 - Consumes: completed enhancer and the existing self-contained portable report.
 - Produces: updated `retrospective.html`, unchanged embedded artifact payload, passing browser suite, and a working private LAN viewer.
 
-- [ ] **Step 1: Regenerate the self-contained HTML idempotently**
+- [x] **Step 1: Regenerate the self-contained HTML idempotently**
 
 Run twice:
 
@@ -305,7 +305,7 @@ node scripts/report/retrospective_deck.mjs --input retrospective.html --output r
 
 Expected: both commands print `wrote retrospective.html`; the second run produces no additional structural changes.
 
-- [ ] **Step 2: Run structural, browser, and repository checks**
+- [x] **Step 2: Run structural, browser, and repository checks**
 
 Run:
 
@@ -318,7 +318,7 @@ git diff --check
 
 Expected: Node tests PASS, browser tests PASS, enhancer check reports 74 mapped blocks across seven chapters, and `git diff --check` exits 0.
 
-- [ ] **Step 3: Inspect target viewports and supplied failure pages**
+- [x] **Step 3: Inspect target viewports and supplied failure pages**
 
 Capture or inspect these hashes at 1,533×903, 1,280×800, 1,024×768, and 390×844:
 
@@ -338,7 +338,7 @@ Capture or inspect these hashes at 1,533×903, 1,280×800, 1,024×768, and 390×
 
 Confirm large type, intentional canvas use, no nested scrolling, readable mobile stacking, visible `Common`/`Different` summaries, exact evidence disclosures, and the phrase `Top 500 from each branch → candidate union`.
 
-- [ ] **Step 4: Verify the private viewer serves the latest file**
+- [x] **Step 4: Verify the private viewer serves the latest file**
 
 Run:
 
@@ -350,13 +350,13 @@ sha256sum retrospective.html
 
 Expected: HTTP 200 and identical SHA-256 values. If the viewer is not running, restart the existing private no-store Node viewer on port 8766 without publishing it externally.
 
-- [ ] **Step 5: Commit the generated artifact**
+- [x] **Step 5: Commit the generated artifact**
 
 ```bash
 git add retrospective.html
 git commit -m "feat: render visual-first retrospective deck"
 ```
 
-- [ ] **Step 6: Final evidence-based handoff**
+- [x] **Step 6: Final evidence-based handoff**
 
 Report the exact test counts, the final page count, the corrected branch-pool wording, the LAN URL, and links to `retrospective.html`, the approved spec, and this plan. Do not claim completion until all commands above pass.
