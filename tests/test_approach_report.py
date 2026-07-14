@@ -72,6 +72,46 @@ class ApproachReportBuildTests(unittest.TestCase):
             self.assertIn('href="https://example.test/citation"', packaged)
             self.assertIn('href="data:text/plain,source"', packaged)
 
+    def test_rebased_href_preserves_query_and_fragment_and_validates(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "docs" / "approach" / "source.html"
+            output = root / "docs" / "approach.html"
+            target = root / "configs" / "active.yaml"
+            source.parent.mkdir(parents=True)
+            target.parent.mkdir(parents=True)
+            target.write_text("active: true\n", encoding="utf-8")
+            hero = root / "hero.png"
+            alignment = root / "alignment.png"
+            hero.write_bytes(validate_approach_report.PNG_SIGNATURE + b"hero")
+            alignment.write_bytes(validate_approach_report.PNG_SIGNATURE + b"alignment")
+            fixture = valid_report(
+                extra_body=(
+                    '<a href="../../configs/active.yaml?mode=full&amp;stage=ranking#ranking">'
+                    "config</a>"
+                )
+            )
+            fixture = fixture.replace(PNG_DATA, "{{HERO_DATA_URI}}", 1)
+            fixture = fixture.replace(PNG_DATA, "{{ALIGNMENT_DATA_URI}}", 1)
+            source.write_text(fixture, encoding="utf-8")
+
+            with patch.object(
+                build_approach_report,
+                "ASSETS",
+                (
+                    ("{{HERO_DATA_URI}}", hero),
+                    ("{{ALIGNMENT_DATA_URI}}", alignment),
+                ),
+            ):
+                build_approach_report.build(source, output)
+
+            packaged = output.read_text(encoding="utf-8")
+            self.assertIn(
+                'href="../configs/active.yaml?mode=full&amp;stage=ranking#ranking"',
+                packaged,
+            )
+            self.assertEqual(validate_approach_report.validate(output), [])
+
 
 class ApproachReportValidationTests(unittest.TestCase):
     def validate_fixture(self, html: str) -> list[str]:

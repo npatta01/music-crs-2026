@@ -67,58 +67,84 @@
     }
   ],
   "primaryTrace": {
-    "id": "blind-b-visual-cover-search",
-    "status": "Illustrative",
-    "sessionId": "ff76b679-7d7a-4796-8f6c-929efef45428",
-    "turn": 1,
-    "request": "An album with striking, abstract cover art featuring bold colors and shapes, like a modern painting.",
-    "mechanics": {
-      "extraction": {
-        "requestType": "attribute_search",
-        "intentMode": "open_explore",
-        "retrievalProfile": "feature_search",
-        "routingTags": [
-          "feature_articulation",
-          "image_or_visual_search"
-        ],
-        "positiveTags": [
-          "striking abstract cover art",
-          "bold colors and shapes",
-          "like a modern painting"
-        ]
+    "id": "paired-multiturn-spines",
+    "status": "Verified",
+    "scope": "A labelled frozen-baseline success establishes retrieval outcome quality; a separate Blind-B submitted-system trace establishes final mechanics and an observed completion-handling failure. They are not presented as one aligned run.",
+    "alignedGood": {
+      "systemScope": "Frozen 2026-06-06 labelled devset baseline, not the final submitted V1/LGBM system",
+      "sessionId": "a61b366c-8cf5-48ad-a13f-181c033b9d89",
+      "turn": 2,
+      "conversation": [
+        "Turn 1 requested energetic indie rock for long drives; Let's Dance to Joy Division by The Wombats was played.",
+        "Turn 2 asked for something else: a popular track with a memorable whistle or strong bassline, perhaps by Foster The People or Cage The Elephant."
+      ],
+      "state": {
+        "turnIntent": "I'm looking for an energetic indie rock track, popular, with a memorable whistle or a really strong bassline, maybe by a band like Foster The People or Cage The Elephant.",
+        "intentMode": "refinement",
+        "policy": "diversify_artists",
+        "routing": ["feature_articulation"],
+        "positiveEntities": ["Foster The People", "Cage The Elephant"],
+        "positiveTags": ["energetic", "indie rock", "rock", "popular", "whistle", "strong bassline", "bass", "long drives", "driving"],
+        "staleEntities": [],
+        "hardFilterCount": 0,
+        "explicitRejectionCount": 0
       },
-      "resolution": "No track or artist anchor resolved; the visual attributes remained query facets.",
-      "retrieval": {
-        "firedBranches": [
-          "bm25",
-          "dense.qwen_8b.metadata.metadata_qwen3_embedding_8b",
-          "dense.qwen_8b.attributes.attributes_qwen3_embedding_8b",
-          "dense.clap_text.sonic_nl.audio_laion_clap",
-          "dense.siglip2_text.visual_nl.image_siglip2"
-        ],
-        "rawUnionSize": 4640,
-        "eligibleUnionSize": 4640,
-        "skippedExamples": {
-          "lyrics": "no_query",
-          "anchorCentroids": "no_anchors",
-          "userCF": "missing_user_vector",
-          "discography": "no_query"
-        }
+      "candidateEvidence": {
+        "bestBranch": "bm25",
+        "labelledTargetBestBranchRank": 1,
+        "labelledTargetFusedRank": 1,
+        "branchQueriesAndCounts": "Not retained in the compact positive-control record"
       },
       "ranking": {
-        "candidateFusion": "weighted_rrf",
-        "finalStage": "lgbm_v10",
-        "servedModelBundle": "models/reranker_v12_goalfree",
-        "primaryTrackId": "cbd247bd-0a87-4c5b-82da-9319c1e8ee0c",
-        "outputCount": 20
-      }
+        "labelledTarget": "Pumped Up Kicks — Foster The People",
+        "labelledTargetId": "3b08891f-8ba3-4d9b-b0ab-4f9afa5b58dd",
+        "finalRank": 1,
+        "finalTopFive": ["Pumped Up Kicks", "Ruby", "Helena Beat", "Warrant", "(If You're Wondering If I Want You To) I Want You To"]
+      },
+      "responseProvenance": {
+        "retrievalHandoff": "The labelled target Pumped Up Kicks was rank 1, so it aligns with a top-1 response handoff.",
+        "datasetReferenceAssistant": "The dataset row contains assistant prose recommending Pumped Up Kicks and citing popularity, whistle, and bassline, but this is reference conversation text, not a stored response generated from the frozen ranking run.",
+        "generatedResponse": "Unknown"
+      },
+      "reconstructionStatus": "Conversation, state summary, branch rank, fusion rank, final ranks, and dataset assistant text are recorded. The vertical stage layout is reconstructed; exact branch query payloads, branch counts, and generated handoff messages are unavailable."
     },
-    "interpretation": "This is a compact end-to-end illustration of routing a visual request into lexical, semantic, audio, and cover-image branches, followed by fusion and learned reranking. It is not evidence that the selected track is relevant because Blind-B labels are hidden.",
+    "submittedFailure": {
+      "systemScope": "Final Blind-B submitted V1 extractor and goal-free LightGBM bundle; relevance labels remain hidden",
+      "sessionId": "156cac0f-c16b-4bd2-8f4f-cc1691adef79",
+      "turn": 8,
+      "conversation": "After seven search turns, the listener explicitly confirms Pumped Up Kicks and says the search is complete.",
+      "state": "The saved state remains hidden_target/open_explore with six older facets and the identified track as positive satisfied feedback.",
+      "retrieval": {
+        "resolverAnchorTrackIds": [],
+        "resolverExactTrackTargetIds": [],
+        "centroidSourceTrackIds": [
+          "3b08891f-8ba3-4d9b-b0ab-4f9afa5b58dd",
+          "a3b6fca1-9195-4973-a163-00c365f4b69e",
+          "e9deaf34-02e2-46ad-83b0-a84a9e72f305"
+        ],
+        "centroidExplanation": "Pumped Up Kicks enters all three compiler centroids through positive satisfied track_feedback; Sit Next to Me and Houdini are representative Foster The People tracks added by similar-artist anchoring.",
+        "discographyExplanation": "The discography query has no targets because it accepts exact_target artists; Foster The People was resolved but was ineligible under the satisfied-prior/style-reference role policy.",
+        "firedBranchCount": 8,
+        "rawUnionSize": 5970,
+        "eligibleUnionSize": 5969
+      },
+      "ranking": {
+        "tracePrimaryTrack": "Tongue Tied — GROUPLOVE",
+        "predictionPrimaryTrack": "Tongue Tied — GROUPLOVE",
+        "outputCount": 20,
+        "artifactMismatch": "Trace and saved prediction agree through rank 14 and at ranks 17-19, but swap ranks 15/16 and contain different rank-20 IDs. Delivered top-20 claims use the saved prediction artifact."
+      },
+      "responseProvenance": "Listener-facing Tongue Tied prose is verbatim from the saved prediction. Formatter messages are reconstructed from the trace, dataset row, catalog, and submitted code because outbound messages were not persisted.",
+      "reconstructionStatus": "Conversation, state, branch status/counts, ranking IDs, and saved response are recorded. Catalog labels and formatted response-model inputs are reconstructed; Blind-B relevance and causal impact remain unknown."
+    },
     "sourcePaths": [
+      "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json",
       "configs/state_ranker_v10_lgbm_blindset_B.yaml",
-      "exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B_trace.jsonl"
+      "exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B_trace.jsonl",
+      "exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json",
+      "mcrs/qu_modules/compiler.py"
     ],
-    "sourceNote": "First JSONL record (idx 0), cross-checked against the active Blind-B config."
+    "sourceNote": "Good spine: POS_clean_final_hit_control sample a61b366c-8cf5-48ad-a13f-181c033b9d89::t2. Submitted failure spine: Blind-B trace and prediction record 71 (zero-based 70), cross-checked against compiler role gates."
   },
   "goodExamples": [
     {

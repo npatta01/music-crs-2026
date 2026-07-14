@@ -472,9 +472,28 @@
     <section class="chapter" id="walkthrough" aria-labelledby="walkthrough-title">
       <div class="wrap">
         <div class="chapter-head">
-          <p class="eyebrow"><span class="chapter-number">03</span> · One conversation, end to end</p>
-          <h2 id="walkthrough-title">Follow an eight-turn search through every handoff</h2>
-          <p>This is a real Blind-B conversation in which a listener gradually identifies “Pumped Up Kicks.” The final-turn trace records extraction, retrieval, ranking, and output; the stage-by-stage layout is reconstructed from those artifacts and submitted code. Hidden organizer labels mean the delivered recommendations are not labelled relevant.</p>
+          <p class="eyebrow"><span class="chapter-number">03</span> · Two conversations, two evidence scopes</p>
+          <h2 id="walkthrough-title">A labelled retrieval success beside a submitted completion failure</h2>
+          <p>No single retained artifact proves both outcome quality and every final-system handoff. The first spine is a labelled three-turn devset success from the frozen 2026-06-06 baseline. The second is a final submitted-system Blind-B trace with complete mechanics but hidden relevance labels. They are intentionally separate.</p>
+        </div>
+        <article class="story-card" id="aligned-good-spine">
+          <span class="evidence-badge">Primary good trace · verified frozen baseline</span>
+          <h3>A second-turn pivot lands “Pumped Up Kicks” at every rank-one boundary</h3>
+          <ol class="trace" aria-label="Full positive-control trace for Pumped Up Kicks">
+            <li><span class="trace-step">1</span><strong>Conversation</strong><p>Turn 1 asks for energetic indie rock for long drives; “Let’s Dance to Joy Division” by The Wombats is played. Turn 2 says that track is fun but asks for something else: a popular track with a memorable whistle or strong bassline, perhaps by Foster The People or Cage The Elephant.</p></li>
+            <li><span class="trace-step">2</span><strong>Saved state</strong><p>The compact snapshot records <code>intent_mode: refinement</code>, <code>policy: diversify_artists</code>, <code>feature_articulation</code> routing, positive entities Foster The People and Cage The Elephant, no stale entities, and tags for energetic indie rock, popularity, whistle, bassline, and driving. It records no hard filters or explicit rejections.</p></li>
+            <li><span class="trace-step">3</span><strong>Candidate evidence</strong><p>BM25 places the labelled target “Pumped Up Kicks” at branch rank 1; weighted fusion preserves it at rank 1. The compact control does not retain exact branch query payloads, raw branch counts, or a full candidate union, so those details remain unknown.</p></li>
+            <li><span class="trace-step">4</span><strong>Final ranking</strong><p>The target remains rank 1. The next four are “Ruby,” “Helena Beat,” “Warrant,” and “(If You’re Wondering If I Want You To) I Want You To.” This aligns extracted intent, the strongest recorded branch, fusion, final top pick, and the labelled target.</p></li>
+            <li><span class="trace-step">5</span><strong>Response handoff boundary</strong><p>A top-1 handoff would therefore present “Pumped Up Kicks.” The dataset row contains assistant prose naming the same track and citing popularity, whistle, and bassline, but it is reference conversation text—not a persisted generator message from the frozen ranking run. The alignment is verified; generated response quality is not.</p></li>
+            <li><span class="trace-step">6</span><strong>Outcome</strong><p>Verified aligned retrieval success: the labelled target is branch rank 1, fused rank 1, and final rank 1. This does not prove BM25 caused the outcome or that the final submitted system behaves identically.</p></li>
+          </ol>
+          <p class="boundary-note"><strong>Reconstruction status:</strong> conversation messages, state summary, target branch/fusion/final ranks, final top five, and reference assistant text are recorded. This vertical layout and response-handoff interpretation are reconstructed from the compact positive-control record; missing branch payloads and a persisted generated response are not invented.</p>
+          <details><summary>Good-trace identity and source</summary><div><p>Session <code>a61b366c-8cf5-48ad-a13f-181c033b9d89</code> · turn 2 · labelled target <code>3b08891f-8ba3-4d9b-b0ab-4f9afa5b58dd</code> (“Pumped Up Kicks” — Foster The People) · <a href="../../experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json">POS_clean_final_hit_control snapshot</a>.</p></div></details>
+        </article>
+        <div class="chapter-head" style="margin-top:3rem">
+          <p class="eyebrow">Submitted failure spine · final Blind-B system</p>
+          <h3>After the listener says “that’s the one,” the pipeline recommends again</h3>
+          <p>This real eight-turn trace records extraction, retrieval, ranking, and saved output. Its failure is conversational completion handling: the listener explicitly ends the search, yet the system continues recommendation mode. Hidden organizer labels still prevent a relevance judgment about the returned tracks.</p>
         </div>
         <div class="story-flow">
           <article class="story-card">
@@ -499,9 +518,9 @@
           </article>
           <div class="flow-arrow" aria-hidden="true">↓</div>
           <article class="story-card">
-            <span class="evidence-badge reconstructed">Reconstructed walkthrough · recorded outcomes</span>
+            <span class="evidence-badge reconstructed">Submitted failure walkthrough · recorded mechanics</span>
             <h3>Resolve, fan out, reconverge, rerank, speak</h3>
-            <p>The trace resolves the named track and artist at 100% confidence, but policy does not use them as exact targets or anchors. Seven retrieval branches plus the era lookup fire, producing 5,969 eligible unique candidates after one played item is removed. Weighted RRF orders the union; LightGBM promotes “Tongue Tied” to rank one; the response model explains that one track.</p>
+            <p>The trace resolves the named track and artist at 100% confidence. Exact-target and resolver-anchor arrays remain empty under role policy, yet compiler feedback anchoring still seeds three centroids. Seven 1,000-hit branches plus the 200-hit era lookup fire, producing 5,969 eligible unique candidates after one played item is removed. Weighted RRF orders the union; LightGBM promotes “Tongue Tied” to rank one; the response model explains that one track.</p>
             <p class="boundary-note"><strong>Reading rule:</strong> conversation text, state, branch status, counts, IDs, rank orders, and response are recorded. Human-readable catalog labels and the separation of the combined trace into stage cards are reconstructed. Blind-B relevance and causal quality claims remain unknown.</p>
           </article>
         </div>
@@ -566,7 +585,7 @@
           <article class="story-card">
             <span class="evidence-badge">Projection · deterministic</span>
             <h3>2. Derive compiler compatibility</h3>
-            <p>The bridge maps the six older facets—indie pop/rock, whistling melody, upbeat, summery, massive, and male vocals—into positive tag entities; derives <code>open_explore</code>, <code>hidden_target_search</code>, and the 2010–2012 soft range; and keeps the found track out of retrieval seeding. This stage separation is reconstructed from the submitted projection code because the trace stores the V1 and compatibility fields together.</p>
+            <p>The bridge maps the six older facets—indie pop/rock, whistling melody, upbeat, summery, massive, and male vocals—into positive tag entities; derives <code>open_explore</code>, <code>hidden_target_search</code>, and the 2010–2012 soft range; and keeps the found track out of exact-target/resolver-anchor fields. A separate compiler rule still treats positive <code>satisfied</code> feedback as centroid input. This stage separation is reconstructed from submitted code because the trace stores V1 and compatibility fields together.</p>
           </article>
           <div class="flow-arrow" aria-hidden="true">↓</div>
           <article class="story-card">
@@ -621,7 +640,7 @@
           <article class="story-card">
             <span class="evidence-badge">Resolver output</span>
             <h3>Surface names → catalog IDs</h3>
-            <p><strong>This turn:</strong> “Pumped Up Kicks” resolves to <code>3b08891f…</code> and Foster The People to <code>a65d6a96…</code>, both at 100% confidence. Because both are marked satisfied prior / do not use, the resolver records no exact target or anchor. It preserves six descriptive phrases as positive tags and all seven played IDs for filtering.</p>
+            <p><strong>This turn:</strong> “Pumped Up Kicks” resolves to <code>3b08891f…</code> and Foster The People to <code>a65d6a96…</code>, both at 100% confidence. Because the facts are satisfied prior / do not use, the resolver records no exact track target and no resolver anchor. That does <em>not</em> mean the compiler has no centroid seeds: the positive <code>satisfied</code> track-feedback entry is eligible for compiler anchoring. Six descriptive phrases and all seven played IDs also survive downstream.</p>
           </article>
           <div class="flow-arrow" aria-hidden="true">↓ fan out</div>
           <ol class="branch-list" aria-label="Retrieval branch inputs and outputs">
@@ -631,8 +650,8 @@
             <li class="skipped"><strong>Lyrics · skipped: no query</strong><span class="io"><b>Input:</b> a lyrical theme or clue, if present. <b>Output:</b> lyric-embedding neighbors. No lyric evidence existed here.</span></li>
             <li><strong>Sonic / CLAP · fired → 1,000 raw hits</strong><span class="io"><b>Input:</b> “A song with indie pop/rock, whistling melody, upbeat, summery, massive, male vocals sound, similar to Foster The People.” <b>Output:</b> audio embeddings near the CLAP text vector.</span></li>
             <li class="skipped"><strong>Visual / SigLIP2 · skipped: gated off</strong><span class="io"><b>Input if routed:</b> an album-cover rendering of the facets. <b>Output:</b> cover-image neighbors. The state did not request a visual search.</span></li>
-            <li><strong>Three anchor centroids · fired → 1,000 hits each</strong><span class="io"><b>Definition:</b> a centroid is the average of several embedding vectors, used as one compact taste point. <b>Input:</b> three source tracks in image, audio, and collaborative spaces. <b>Output:</b> neighbors around each mean vector. The user collaborative centroid was separately skipped because its vector was missing.</span></li>
-            <li class="skipped"><strong>Resolved-artist discography · skipped: no query</strong><span class="io"><b>Input:</b> high-confidence resolved artist IDs. <b>Output:</b> tracks from those artists. No artist was named.</span></li>
+            <li><strong>Three compiler centroids · fired → 1,000 hits each</strong><span class="io"><b>Definition:</b> a centroid is the average of several embedding vectors, used as one compact taste point. <b>Input:</b> “Pumped Up Kicks” enters through positive satisfied feedback; similar-artist anchoring adds representative Foster The People tracks “Sit Next to Me” and “Houdini.” The same three IDs seed image, audio, and collaborative spaces. <b>Output:</b> neighbors around each mean vector. The user collaborative centroid was separately skipped because its vector was missing.</span></li>
+            <li class="skipped"><strong>Resolved-artist discography · skipped: no eligible target</strong><span class="io"><b>Input:</b> high-confidence resolved artists whose resolution role is <code>exact_target</code>. <b>Output:</b> tracks from those artists. Foster The People was named and resolved, but its satisfied-prior/style-reference role was ineligible for this branch, so the recorded target list is empty and status is <code>no_query</code>.</span></li>
             <li><strong>Era / popularity lookup · fired → 200 raw hits</strong><span class="io"><b>Input:</b> the soft 2010–2012 range. <b>Output:</b> popularity-ordered catalog tracks within that era.</span></li>
           </ol>
           <div class="flow-arrow" aria-hidden="true">↓ reconverge</div>
@@ -645,7 +664,7 @@
         </div>
         <details>
           <summary>Exact trace status for all configured branches</summary>
-          <div><p>Fired with 1,000 raw hits each: <code>bm25</code>, <code>dense.qwen_8b.metadata</code>, <code>dense.qwen_8b.attributes</code>, <code>dense.clap_text.sonic_nl</code>, and image/audio/CF anchor centroids. Era/popularity fired with 200. Skipped: lyrics (<code>no_query</code>), SigLIP2 text (<code>gated_off</code>), user CF (<code>missing_user_vector</code>), and resolved-artist discography (<code>no_query</code>).</p></div>
+          <div><p>Fired with 1,000 raw hits each: <code>bm25</code>, <code>dense.qwen_8b.metadata</code>, <code>dense.qwen_8b.attributes</code>, <code>dense.clap_text.sonic_nl</code>, and image/audio/CF compiler centroids. Each centroid records source IDs for “Pumped Up Kicks,” “Sit Next to Me,” and “Houdini.” Era/popularity fired with 200. Skipped: lyrics (<code>no_query</code>), SigLIP2 text (<code>gated_off</code>), user CF (<code>missing_user_vector</code>), and resolved-artist discography (<code>no_query</code>; resolved artist present but role-ineligible).</p></div>
         </details>
       </div>
     </section>
@@ -666,7 +685,7 @@
             <p class="source-links">See <a href="../architectures/biencoder.md">b1 bi-encoder architecture</a> and the served model’s <a href="../../models/reranker_v12_goalfree/model.txt">feature manifest</a>.</p>
           </article>
           <article class="story-card">
-            <span class="evidence-badge reconstructed">Reconstructed labels · recorded orders</span>
+            <span class="evidence-badge reconstructed">Trace-stage order · catalog labels reconstructed</span>
             <h3>Before: weighted-RRF top five</h3>
             <ol class="rank-list">
               <li>“Houdini” — Foster The People</li>
@@ -679,7 +698,7 @@
           </article>
           <div class="flow-arrow" aria-hidden="true">↓ LambdaMART rerank</div>
           <article class="story-card">
-            <span class="evidence-badge reconstructed">Reconstructed labels · recorded orders</span>
+            <span class="evidence-badge reconstructed">Trace-stage order · catalog labels reconstructed</span>
             <h3>After: LightGBM top five</h3>
             <ol class="rank-list">
               <li class="top-pick">Selected top track: “Tongue Tied” — GROUPLOVE, from <em>Never Trust A Happy Song</em></li>
@@ -694,11 +713,11 @@
         <details>
           <summary>Show the complete delivered top 20</summary>
           <div>
-            <span class="evidence-badge reconstructed">Catalog labels reconstructed from recorded IDs</span>
+            <span class="evidence-badge reconstructed">Saved prediction order · catalog labels reconstructed</span>
             <ol class="rank-list">
-              <li class="top-pick">Tongue Tied — GROUPLOVE</li><li>Call It What You Want — Foster The People</li><li>Don't Stop (Color on the Walls) — Foster The People</li><li>Houdini — Foster The People</li><li>I Would Do Anything for You — Foster The People</li><li>Helena Beat — Foster The People</li><li>Little Talks — Of Monsters and Men</li><li>Warrant — Foster The People</li><li>Young Folks — Peter Bjorn and John</li><li>Sweet Disposition — The Temper Trap</li><li>Young Blood — The Naked And Famous</li><li>Waste — Foster The People</li><li>Midnight City — M83</li><li>Life on the Nickel — Foster The People</li><li>Shuffle — Bombay Bicycle Club</li><li>Sit Next to Me — Foster The People</li><li>Sleepyhead — Passion Pit</li><li>Cool Kids — Echosmith</li><li>Dog Days Are Over — Florence + The Machine</li><li>Dancing Song — Little Comets</li>
+              <li class="top-pick">Tongue Tied — GROUPLOVE</li><li>Call It What You Want — Foster The People</li><li>Don't Stop (Color on the Walls) — Foster The People</li><li>Houdini — Foster The People</li><li>I Would Do Anything for You — Foster The People</li><li>Helena Beat — Foster The People</li><li>Little Talks — Of Monsters and Men</li><li>Warrant — Foster The People</li><li>Young Folks — Peter Bjorn and John</li><li>Sweet Disposition — The Temper Trap</li><li>Young Blood — The Naked And Famous</li><li>Waste — Foster The People</li><li>Midnight City — M83</li><li>Life on the Nickel — Foster The People</li><li>Sit Next to Me — Foster The People</li><li>Shuffle — Bombay Bicycle Club</li><li>Sleepyhead — Passion Pit</li><li>Cool Kids — Echosmith</li><li>Dog Days Are Over — Florence + The Machine</li><li>The High Road — Broken Bells</li>
             </ol>
-            <p>Blind-B ground truth is hidden. This list documents what was delivered, not which items were relevant.</p>
+            <p><strong>Artifact rule:</strong> “delivered” means the saved prediction JSON above. The trace-stage <code>final_recommendation</code> list swaps “Shuffle” / “Sit Next to Me” at ranks 15–16 and records “Dancing Song” instead of “The High Road” at rank 20. Both agree on rank one and the response. Blind-B ground truth is hidden, so neither list establishes relevance.</p>
           </div>
         </details>
       </div>
@@ -812,9 +831,9 @@ Response style: Write 1-2 concise sentences about only the selected track. Prior
         </div>
 
         <article class="story-card">
-          <span class="evidence-badge">Primary good trace · verified labelled devset</span>
+          <span class="evidence-badge">Secondary exact-entity control · verified labelled devset</span>
           <h3>Exact identity survives the full ranking boundary</h3>
-          <ol class="trace" aria-label="Primary good trace for Numb by Linkin Park">
+          <ol class="trace" aria-label="Exact-entity control for Numb by Linkin Park">
             <li><span class="trace-step">1</span><strong>User signal</strong><p>“I’m looking for the original 2003 release of ‘Numb’ by Linkin Park from the ‘Meteora’ album.”</p></li>
             <li><span class="trace-step">2</span><strong>Extracted belief</strong><p>The request supplies four mutually reinforcing identity clues: track, artist, album, and year. The compact evidence record does not include the serialized state, so its exact fields are not reconstructed here.</p></li>
             <li><span class="trace-step">3</span><strong>Branches activated</strong><p>Branch-level records are not included for this positive control. The example therefore establishes outcome strength for an exact-entity request, not which retriever caused it.</p></li>
@@ -837,15 +856,15 @@ Response style: Write 1-2 concise sentences about only the selected track. Prior
             <span class="status-pill">Verified · labelled devset</span>
             <h3>Refinement · keep Gorillaz, add synth energy</h3>
             <p>The listener retained the artist while refining toward electronic and synth attributes. “DARE” by Gorillaz ranked fourth.</p>
-            <p class="example-path"><b>User signal</b> more Gorillaz + electronic/synth → <b>belief</b> artist continuation with new facets → <b>branches</b> not present in compact record → <b>top pick boundary</b> target at rank 4 → <b>outcome</b> top-20 hit.</p>
-            <details><summary>State, query, and candidate detail</summary><div><p>Session <code>737a65cf-9c45-4b1d-910d-2f1f1ef5eab7</code>, turn 3. The request says features are optional; the evidence supports artist retention, attribute refinement, and final rank 4, but not a specific branch cause.</p></div></details>
+            <p class="example-path"><b>User signal</b> more Gorillaz + electronic/synth → <b>belief</b> artist continuation with new facets → <b>candidate evidence</b> BM25 rank 1, fused rank 15 → <b>final boundary</b> target at rank 4 → <b>outcome</b> top-20 hit.</p>
+            <details><summary>State, query, and candidate detail</summary><div><p>Session <code>737a65cf-9c45-4b1d-910d-2f1f1ef5eab7</code>, turn 3. The request says features are optional; the compact record supports artist retention, attribute refinement, target ranks, and the best-branch identity, but not exact branch queries, raw counts, a causal branch claim, or generated reply.</p></div></details>
           </article>
           <article class="example-card strong">
             <span class="status-pill">Verified · labelled devset</span>
             <h3>Pivot / new artist · “Pumped Up Kicks”</h3>
             <p>An energetic indie-rock request explicitly floated Foster The People and Cage The Elephant after a pivot. “Pumped Up Kicks” ranked first.</p>
             <p class="example-path"><b>User signal</b> pivot + genre + whistle/bassline + new artists → <b>belief</b> fresh artist anchors → <b>branches</b> BM25 best at rank 1 → <b>top pick</b> target at rank 1 → <b>outcome</b> hit.</p>
-            <details><summary>State, query, and candidate detail</summary><div><p>Session <code>a61b366c-8cf5-48ad-a13f-181c033b9d89</code>, turn 2. Cohort labels include <code>midconv_new_artist</code> and <code>novelty_cue</code>; the extracted intent preserves both named artists, and BM25 is the recorded best branch.</p></div></details>
+            <details><summary>State, query, and candidate detail</summary><div><p>Session <code>a61b366c-8cf5-48ad-a13f-181c033b9d89</code>, turn 2. Cohort labels include <code>midconv_new_artist</code> and <code>novelty_cue</code>; the extracted intent preserves both named artists, and BM25 is the recorded best branch. <a href="#aligned-good-spine">Read the full vertical trace.</a></p></div></details>
           </article>
           <article class="example-card strong">
             <span class="status-pill">Verified · labelled devset</span>
