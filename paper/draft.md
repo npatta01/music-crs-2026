@@ -2,13 +2,13 @@
 
 **Nidhin Pattaniyil, Semih Yagli, Tanwir Zaman** — Independent Researchers
 
-*Draft v2 for co-author review — mirrors paper/main.tex (which compiles to 4 pages incl. references in ACM format, one page under the 4+1 limit). Figures 1–4 are real in the PDF. Every number is verified against the repo or the official leaderboard CSV.*
+*Draft v3 for co-author review — mirrors paper/main.tex after an external (Antigravity) review pass. Body fills exactly 4 pages, references on page 5 — precisely the ACM 4+1 limit. Figures 1–4 are real in the PDF. Every number is verified against the repo or the official leaderboard CSV.*
 
 ---
 
 ## Abstract
 
-We describe team npatta01's submission to the RecSys Challenge 2026 conversational music recommendation task: given a multi-turn dialog, retrieve 20 tracks from a 47,071-track catalog and generate a natural-language response. The pipeline extracts a typed conversation state with an LLM, gathers candidates from eleven retrieval branches over a single LanceDB collection, re-ranks the pooled candidates with a LightGBM LambdaMART model whose dominant feature is a fine-tuned conversational bi-encoder cosine, and generates a state-conditioned response. On the final Blind-B leaderboard the submission scored 0.3811 composite (nDCG@20 0.2537, LLM-judge 3.30), ranking 29th of 39 teams. We report the system in full, and then examine our own result: an in-sample development estimate (NDCG@20 0.38–0.46) created misplaced confidence while leakage-safe out-of-fold evidence (0.197–0.203) had already predicted the blind outcome; the benchmark's single-ground-truth labels carry a quantified *anchoring bias* that teaches rankers to copy the just-played artist; and concrete failure cases from the submitted run show extracted constraints the pipeline could not enforce. Code, models, and a zero-credential reproduction bundle: https://github.com/npatta01/music-conversational-music-recomender-2026.
+We describe team npatta01's submission to the RecSys Challenge 2026 conversational music recommendation task: given a multi-turn dialog, retrieve 20 tracks from a 47,071-track catalog and generate a natural-language response. The pipeline extracts a typed conversation state with an LLM, gathers candidates from eleven retrieval branches over a single LanceDB collection, re-ranks the pooled candidates with a LightGBM LambdaMART model whose dominant feature is a fine-tuned conversational bi-encoder cosine, and generates a state-conditioned response. On the final Blind-B leaderboard the submission scored 0.3811 composite (nDCG@20 0.2537, LLM-judge 3.30), ranking 29th of 39 teams. We report the system in full, and then examine our own result: an in-sample development estimate (nDCG@20 0.38–0.46) created misplaced confidence while leakage-safe out-of-fold evidence (0.197–0.203) had already predicted the blind outcome; the benchmark's single-ground-truth labels carry a quantified *anchoring bias* that teaches rankers to copy the just-played artist; and concrete failure cases from the submitted run show extracted constraints the pipeline could not enforce. Code, models, and a zero-credential reproduction bundle: https://github.com/npatta01/music-conversational-music-recomender-2026.
 
 ## 1 Introduction
 
@@ -21,7 +21,7 @@ where "judge" is a 1–5 LLM-as-a-judge rating of the generated response. A 1,00
 Our system is a retrieve-then-rerank pipeline conditioned on an explicitly compiled conversation state. Per the challenge's participant-paper mandate we document the full pipeline (Section 2) and results (Section 3); because we finished mid-pack, Section 4 is an unusually frank retrospective. Contributions:
 
 1. A complete, reproducible pipeline: LLM state extraction → eleven-branch retrieval over one LanceDB collection → LambdaMART re-ranking → state-conditioned response generation.
-2. An evaluation-lineage lesson: our in-sample development replay (NDCG@20 0.38–0.46) drove selection confidence, while leakage-safe out-of-fold estimates (0.197–0.203) already anticipated the blind result (0.2537).
+2. An evaluation-lineage lesson: our in-sample development replay (nDCG@20 0.38–0.46) drove selection confidence, while leakage-safe out-of-fold estimates (0.197–0.203) already anticipated the blind result (0.2537).
 3. A fine-tuned conversational bi-encoder whose single cosine feature carries 59% of the reranker's decision weight and replaces a label-noise-induced "artist-copy" shortcut.
 4. A quantified analysis of ground-truth anchoring bias, with concrete failure cases from our submitted run and a cleaned, LLM-re-judged label set released alongside our code.
 
@@ -60,19 +60,23 @@ Table 1 — reranker feature families (share of total gain, deployed model).
 | Tag / lexical overlap | 10 | 2.0% | IDF tag overlap |
 | Constraints / rejections | 13 | 0.7% | rejected-artist flag |
 
-Training uses the per-turn ground-truth track as a binary label (lambdarank, NDCG@20, learning rate 0.025, 127 leaves, truncation 200, 5-fold user-grouped CV, ~20.6M rows). Because the ground truth is noisy (Section 4.2), labels are down-weighted when the *next* turn contradicts them: ×0.3 if goal progress says the recommendation did not move toward the goal, ×0.3 if the user rejects the ground-truth track, ×0.6 if they reject its artist. The deployed bundle is *goal-free*: trained without the conversation-goal fields Blind-B removes. Cost shaped the training set: state extraction and per-turn retrieval tracing run through a paid LLM API, so the model trains on a 30,000-turn subset (~25% of the ~121.6k-turn split); the data-scaling curve had not flattened at that size.
+Training uses the per-turn ground-truth track as a binary label (LambdaRank objective optimizing nDCG@20; learning rate 0.025; 127 leaves; truncation 200; 5-fold user-grouped cross-validation; ~20.6M rows). Because the ground truth is noisy (Section 4.2), labels are down-weighted when the *next* turn contradicts them: ×0.3 if goal progress says the recommendation did not move toward the goal, ×0.3 if the user rejects the ground-truth track, ×0.6 if they reject its artist. The deployed bundle is *goal-free*: trained without the conversation-goal fields Blind-B removes. Cost shaped the training set: state extraction and per-turn retrieval tracing run through a paid LLM API, so the model trains on a 30,000-turn subset (~25% of the ~121.6k-turn split); the data-scaling curve had not flattened at that size.
 
 ### 2.4 The conversational bi-encoder behind b1_cos
 
 [Figure 3 — two-tower diagram, real in the PDF.] Conversation rendering ([prev] user turn t−1 / [now] user turn t / [prev_track] artist — title) and track card (artist — title (year) | tags ≤5 | known for: LLM line) → shared fine-tuned Qwen3-Embedding-4B encoder (last-token pool, L2-norm) → 2560-d unit vectors → cosine → b1_cos reranker feature.
 
-The reranker's dominant feature comes from a two-tower bi-encoder fine-tuned from Qwen3-Embedding-4B [7] (Figure 3). The query tower renders the conversation compactly behind an instruction prefix; the document tower renders a track card whose one-line LLM-written "known for" artist description imports static world knowledge from larger models into the embedding space. One shared encoder serves both towers, trained with in-batch contrastive loss (MNRL, scale 20) plus four mined hard negatives per positive. Positives are conservative: the 53,885 (turn, track) pairs whose next-turn goal-progress annotation says the recommendation *moved the session forward*. Document vectors for all 47,071 tracks are precomputed into the collection; the conversation vector is encoded live with caching.
+The reranker's dominant feature comes from a two-tower bi-encoder fine-tuned from Qwen3-Embedding-4B [7] (Figure 3). The query tower renders the conversation compactly behind a retrieval instruction prefix — `[prev] <user turn t−1> [now] <user turn t> [prev_track] <artist — title>` — and the document tower renders a track card — `Music track: artist — title (year) | tags: ≤5 | known for: <LLM line>` — whose one-line LLM-written "known for" artist description imports static world knowledge from larger models into the embedding space. One shared encoder E_θ serves both towers; with v_x = E_θ(x)/‖E_θ(x)‖₂ (last-token pooling, 2560-d), the feature is the cosine b1_cos(q,d) = v_qᵀv_d. Training minimizes the in-batch contrastive (MNRL) loss with temperature τ = 1/20 over batches of positive pairs, each with four mined hard negatives (the softmax denominator ranges over in-batch documents plus the hard negatives). Positives are conservative: the 53,885 (turn, track) pairs whose next-turn goal-progress annotation says the recommendation *moved the session forward*. Document vectors for all 47,071 tracks are precomputed into the collection; the conversation vector is encoded live with caching.
 
-We deploy the bi-encoder *scout-only*: as a retrieval branch it added little coverage, but as a feature its cosine became the top signal (Table 1) — and a *generalizing replacement* for a shortcut learned from biased labels (Section 4.2): in leakage-safe out-of-fold ablations, deleting the artist-consensus shortcut features costs −0.0070 NDCG@20, and adding b1_cos more than recovers it (+0.0091) with the shortcut absent.
+We deploy the bi-encoder *scout-only*: as a retrieval branch it added little coverage, but as a feature its cosine became the top signal (Table 1) — and a *generalizing replacement* for a shortcut learned from biased labels (Section 4.2): in leakage-safe out-of-fold ablations, removing the artist-consensus shortcut features reduces nDCG@20 by 0.0070, while adding b1_cos more than recovers the loss (+0.0091) with the shortcut absent.
 
 ### 2.5 Writing the response
 
-The response generator is qwen3-30b-a3b-instruct-2507 at temperature 0: a single pass over the top-1 track rendered as XML (≤10 tags) plus the *latest* extracted state, under a constraint-aware template instructing one to two concise sentences that stay honest about unmet constraints. Template choice matters: over a frozen Blind-A retrieval output, a sweep of eight templates moved the judge score from 3.95 to 4.70 without touching the recommendations. There is no multi-draft sampling, selection, fact-checking, or repair pass. On the development split we score retrieval only; both blind submissions use live generation.
+The response generator is Qwen3-30B-A3B-Instruct-2507 [12] at temperature 0: a single pass over the top-1 track rendered as a delimited XML block (≤10 tags; the delimiting stops the model from echoing raw metadata) plus the *latest* extracted state. The deployed template's full style instruction is:
+
+> *"Write 1–2 concise sentences about only the selected track. Prioritize the latest user request and extracted state over older conversation history. If the track is reasonably aligned, explain the fit with one specific supported reason. If it clearly conflicts with an explicit avoid/new-artist constraint, do not oversell it or blame the system; briefly frame the limitation and the closest supported reason."*
+
+Template choice matters: over a frozen Blind-A retrieval output, a sweep of eight templates moved the judge score from 3.95 to 4.70 without touching the recommendations. There is no multi-draft sampling, selection, fact-checking, or repair pass. On the development split we score retrieval only; both blind submissions use live generation.
 
 Code, configs, trained models, cached extraction states, and a frozen-LLM-cache reproduction bundle that replays our submissions without API credentials are public: https://github.com/npatta01/music-conversational-music-recomender-2026 (models and data: https://huggingface.co/datasets/Npatta01/music-crs-repro-2026).
 
@@ -82,14 +86,14 @@ The development split (1,000 sessions × 8 turns) has one ground-truth track per
 
 Table 2 — development split, with evaluation lineage. The in-sample row replays turns the deployed (full-data) model saw during training; the out-of-fold rows are leakage-safe cross-validation estimates.
 
-| System (lineage) | NDCG@20 | Hit@20 |
+| System (lineage) | nDCG@20 | Hit@20 |
 |---|---|---|
 | Weighted RRF fusion (no training) | 0.1492 | 0.3183 |
 | LambdaMART, out-of-fold CV | 0.1970 | — |
 | + b1_cos (deployed feature set) | 0.2032 | — |
 | LambdaMART, *in-sample replay* | 0.3844 | 0.5610 |
 
-Footnote: an earlier full-cluster in-sample capture of the v10-era bundle read 0.4562. Official Blind-B nDCG@20: 0.2537 — between the OOF estimates and far below the in-sample replay.
+Footnote: an earlier in-sample capture of the predecessor reranker model read 0.4562. Official Blind-B nDCG@20: 0.2537 — between the out-of-fold estimates and far below the in-sample replay.
 
 Table 3 — official CodaBench results (composite = 0.50·nDCG@20 + 0.10·catalog div. + 0.10·lexical div. + 0.30·(judge−1)/4).
 
