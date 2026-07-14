@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-10
 **Branch:** `claude/response-gen-bakeoff`
-**Related:** [Issue #96](https://github.com/npatta01/music-conversational-music-recomender-2026/issues/96)
+**Related:** [Issue #96](https://github.com/npatta01/music-crs-2026/issues/96)
 
 ## 1. Problem
 
