@@ -281,7 +281,7 @@
     .trace-step { position: absolute; top: 1rem; left: 1rem; display: grid; width: 1.7rem; height: 1.7rem; place-items: center; border-radius: 50%; background: var(--teal); color: white; font-size: .7rem; font-weight: 900; }
     .trace strong { display: block; }
     .trace p { margin: .25rem 0 0; color: var(--ink-soft); }
-    .trace.failure-trace .trace-step { background: var(--coral); }
+    .trace.failure-trace .trace-step { background: var(--coral-text); }
     .trace .boundary { border-left: .45rem solid var(--coral); background: var(--coral-soft); }
     .recoverability { margin: 1rem 0 0; padding: 1rem 1.15rem; border-radius: .9rem; background: var(--teal-soft); color: var(--teal-text); }
 
@@ -707,7 +707,7 @@
         <ul class="metric-list" aria-label="Challenge metric definitions">
           <li><strong>nDCG@20 · 50%</strong><span>Measures whether relevant tracks appear near the top of the delivered twenty, discounting useful items more heavily as they move down the list. In the project’s single-target devset diagnostics, a missing target has zero gain and a top-ranked target has the strongest gain.</span></li>
           <li><strong>Catalog diversity · 10%</strong><span>Measures catalog coverage: the number of unique tracks recommended across turns divided by the 47,071-track catalog. It asks whether the system uses more than a narrow, repetitive slice.</span></li>
-          <li><strong>Lexical diversity · 10%</strong><span>Measures variation in generated response language using distinct tokens and phrases. The local evaluator reports Distinct-1 and Distinct-2; retrieval-only dummy responses score zero by construction.</span></li>
+          <li><strong>Lexical diversity · 10% · official Distinct-2</strong><span>The challenge term measures variation in generated response language through distinct bigrams. The local evaluator additionally reports Distinct-1 as a diagnostic alongside Distinct-2; retrieval-only dummy responses score zero by construction.</span></li>
           <li><strong>Normalized response judge · 30%</strong><span>The challenge LLM judge assigns the listener-facing reply a score from 1 to 5. The formula maps that value with <code>(judge − 1) / 4</code>, so 1 becomes 0 and 5 becomes 1 before applying the 30% weight.</span></li>
         </ul>
         <div class="judge-split" aria-label="Two different uses of language-model judgment">
@@ -863,9 +863,9 @@
             <dl><dt>Expected capability</dt><dd>Attribute final top-20 and response quality to individual Blind-B turns.</dd><dt>Submitted behavior</dt><dd>The trace records mechanics and outputs, while hidden Blind-B labels and per-turn judge results prevent local outcome classification.</dd><dt>Evidence</dt><dd>The saved trace has no ground-truth target or relevance field.</dd><dt>User consequence</dt><dd>An individual Blind-B trace cannot honestly be called a recommendation success or failure, and score differences cannot be assigned to architecture changes from this evidence alone.</dd><dt>Recoverability</dt><dd>Wait for organizer labels or evaluation; use labelled devset traces for boundary claims in the meantime.</dd></dl>
           </article>
           <article class="gap-card">
-            <span class="status-pill">Verified · preserved capability</span>
+            <span class="status-pill unknown">Unknown impact</span>
             <h3>Infrastructure and reproducibility</h3>
-            <dl><dt>Expected capability</dt><dd>Replay costly retrieval and ranking work with traceable inputs, outputs, and cache behavior.</dd><dt>Submitted behavior</dt><dd>Run-scoped predictions, traces, manifests, committed ranker artifacts, staged replay, and a frozen offline-cache mode are documented.</dd><dt>Evidence</dt><dd>The staged runner persists retrieval for local reranking; the offline reproduction environment hard-fails cache misses instead of silently making paid calls.</dd><dt>User consequence</dt><dd>Most stage-local diagnostics can be repeated without conflating retrieval and reranking changes.</dd><dt>Recoverability</dt><dd>No evidence-backed infrastructure gap is asserted here. Online cache misses still require the documented hosted services, so offline claims apply only to the curated bundle.</dd></dl>
+            <dl><dt>Expected capability</dt><dd>Replay costly retrieval and ranking work with traceable inputs, outputs, and cache behavior across environments.</dd><dt>Submitted behavior</dt><dd>Run-scoped predictions, traces, manifests, committed ranker artifacts, staged replay, and a frozen offline-cache mode are documented; online cache misses still depend on configured hosted services.</dd><dt>Evidence</dt><dd>The staged runner persists retrieval for local reranking, and the curated offline reproduction environment hard-fails cache misses instead of silently making paid calls. The available evidence does not quantify portability outside that bundle.</dd><dt>User consequence</dt><dd>Stage-local diagnostics are replayable in the documented environment, while the impact of service availability, cache completeness, or environment drift on other reruns is unknown.</dd><dt>Recoverability</dt><dd>Preserve the committed artifacts and strict-cache mode; verify any new environment against the curated bundle before treating its output as comparable.</dd></dl>
           </article>
         </div>
       </div>
