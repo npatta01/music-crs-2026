@@ -69,7 +69,7 @@ export const CURATED_PATH = [
   "outcome/executive-answer", "outcome/gap-chart",
   ...DIAGNOSIS_SLIDES.map(({ slug }) => `diagnosis/${slug}`),
   "ours/inference-rail", "retrieval/evidence-heatmap", "response/control-heatmap",
-  "leaders/volart-retrieval", "synthesis/lessons",
+  "leaders/volart-retrieval", "synthesis/decoder", "synthesis/lessons",
 ];
 
 const provenanceLayers = ["Official challenge data", "External structured data", "Generated artifacts", "Latent LLM knowledge", "Verification boundary"];
@@ -391,6 +391,35 @@ export const CHAPTERS = [
     slides: [
       slide("cover", "Synthesis & evidence", "cover", ["cross_team_heading"]),
       slide("matrix", "Cross-team synthesis", "matrix", ["cross_team_matrix"]),
+      slide("decoder", "Decode three important rows", "visual", [], {
+        visualKind: "matrix-decoder",
+        concepts: [
+          {
+            term: "Reranker evidence breadth",
+            definition: "Signals LightGBM can inspect for candidates that already reached it; richness means diverse decision evidence, not just more columns.",
+            stages: ["Candidate in union", "Feature evidence", "LightGBM score"],
+            had: ["142 documented features", "Branch ranks/scores and agreement", "Dense, multimodal, CF/BPR centroid, state, and catalog evidence"],
+            lacked: ["Direct track co-occurrence sum/max/probability or lane membership", "Markov transition probability", "Candidate-producing learned-retriever rank/score", "Grounded generated-description similarity", "Stronger explicit behavior-derived priors"],
+            why: "A reranker cannot use source evidence that was never generated or attached to a candidate.",
+          },
+          {
+            term: "Full candidate union / late fusion",
+            definition: "A full union keeps every deduplicated source candidate; late fusion keeps source evidence separate until a later scorer combines it.",
+            stages: ["Up to 500 hits from each traced branch", "Filtered candidate union", "LightGBM final ordering"],
+            had: ["Multiple deployed retrieval branches", "Per-branch candidate evidence", "LightGBM final ordering of the union"],
+            lacked: ["Tracks never emitted by a deployed branch", "Tracks removed before the union", "A candidate-producing lane from the trained two-tower"],
+            why: "Anything outside the ranker's union was unrecoverable, regardless of downstream model quality.",
+          },
+          {
+            term: "Factual grounding",
+            definition: "Response claims are constrained to facts traceable to the selected track, conversation state, catalog, or another verified record.",
+            stages: ["Selected track", "Verified fact bundle", "Allowed claims", "Checker or repair", "Final response"],
+            had: ["Selected track", "Latest conversation state", "Track and catalog metadata"],
+            lacked: ["Independent structured fact checker", "Theme or citation validation", "Repair pass for unsupported claims", "Selection among multiple grounded drafts"],
+            why: "Our response had grounded inputs, so coverage is Partial; it lacked independent verification and repair controls.",
+          },
+        ],
+      }),
       slide("choices", "Preserve, reconsider, and avoid", "story", ["preserve_reconsider_avoid", "retrospective_choices_table"]),
       slide("lessons", "Transferable lessons and acknowledgements", "story", ["future_competition_lessons", "acknowledgements_heading", "acknowledgements"]),
       slide("evidence", "Caveats and complete evidence", "audit", ["caveats", "evidence_notes"]),

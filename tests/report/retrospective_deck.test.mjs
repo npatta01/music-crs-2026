@@ -45,8 +45,8 @@ test("answer-first deck keeps a complete content-aware chapter map", async () =>
   const html = await readFile(REPORT, "utf8");
   const result = validateChapterMap(CHAPTERS, stripDeckInjection(html));
   assert.equal(CHAPTERS.length, 8);
-  assert.equal(result.pageCount, 56);
-  assert.deepEqual(result.chapterCounts, [6, 6, 7, 7, 7, 5, 13, 5]);
+  assert.equal(result.pageCount, 57);
+  assert.deepEqual(result.chapterCounts, [6, 6, 7, 7, 7, 5, 13, 6]);
   assert.equal(result.mappedIds.length, 74);
 });
 
@@ -97,6 +97,29 @@ test("curated path is short, answer-first, and references canonical slides", () 
   assert.ok(CURATED_PATH.every((slug) => allSlugs.has(slug)));
 });
 
+test("synthesis decoder makes compressed matrix terms concrete", () => {
+  const synthesis = CHAPTERS.find(({ slug }) => slug === "synthesis");
+  const matrixIndex = synthesis.slides.findIndex(({ slug }) => slug === "matrix");
+  const decoder = synthesis.slides[matrixIndex + 1];
+  assert.equal(decoder.slug, "decoder");
+  assert.equal(decoder.visualKind, "matrix-decoder");
+  assert.equal(decoder.concepts.length, 3);
+  const copy = JSON.stringify(decoder);
+  for (const phrase of [
+    "direct track co-occurrence",
+    "Markov transition probability",
+    "learned-retriever",
+    "generated-description similarity",
+    "up to 500 hits from each traced branch",
+    "LightGBM",
+    "verified fact bundle",
+    "checker or repair",
+  ]) assert.match(copy, new RegExp(phrase, "i"));
+  assert.doesNotMatch(copy, /RRF.{0,80}LightGBM|LightGBM.{0,80}RRF/i);
+  assert.ok(CURATED_PATH.includes("synthesis/decoder"));
+  assert.ok(CURATED_PATH.indexOf("synthesis/decoder") < CURATED_PATH.indexOf("synthesis/lessons"));
+});
+
 test("enhancement injects the curated path as navigation metadata", async () => {
   const html = stripDeckInjection(await readFile(REPORT, "utf8"));
   const enhanced = enhanceHtml(html);
@@ -110,8 +133,8 @@ test("visual-first manifest has at least fifty content-aware pages", async () =>
   const html = await readFile(REPORT, "utf8");
   const result = validateChapterMap(CHAPTERS, stripDeckInjection(html));
   assert.equal(CHAPTERS.length, 8);
-  assert.equal(result.pageCount, 56);
-  assert.deepEqual(result.chapterCounts, [6, 6, 7, 7, 7, 5, 13, 5]);
+  assert.equal(result.pageCount, 57);
+  assert.deepEqual(result.chapterCounts, [6, 6, 7, 7, 7, 5, 13, 6]);
   for (const chapter of CHAPTERS) {
     for (const entry of chapter.slides) {
       assert.ok(PAGE_ARCHETYPES.has(entry.archetype), `${chapter.slug}/${entry.slug} has a known archetype`);
