@@ -140,6 +140,7 @@ def test_opening_contains_complete_submitted_architecture(self) -> None:
     for label in (
         "Conversation",
         "LLM state",
+        "V1 → V0Plus projection",
         "Entity resolution",
         "Query compiler",
         "Retrieval mesh",
@@ -189,7 +190,7 @@ Use this semantic structure in `section#overview`:
   </div>
   <ol class="online-path" aria-label="Online recommendation path">
     <li class="architecture-node">Conversation</li>
-    <li class="architecture-node state-node">LLM state and entity resolution</li>
+    <li class="architecture-node state-node">LLM state → V1 → V0Plus projection → Entity resolution</li>
     <li class="architecture-node">Query compiler</li>
     <li class="architecture-node retrieval-mesh">Retrieval mesh</li>
     <li class="architecture-node">Candidate pool assembly</li>
@@ -594,4 +595,3 @@ curl -L -sS -o /dev/null -w 'preview_status=%{http_code} preview_bytes=%{size_do
 ```
 
 Expected: PR #201 remains open, the head OID matches `HEAD`, and the immutable preview returns HTTP 200 with non-zero bytes.
-
