@@ -77,6 +77,41 @@ const evidenceColumns = ["Lexical", "Dense", "Collaborative", "Co-occurrence", "
 const responseColumns = ["Grounding", "Drafts", "Selection", "Verification", "Repair", "Lexical control"];
 const cell = (status, label, short = label) => ({ status, label, short });
 
+export const LEADER_SYSTEM_CARDS = {
+  volart: {
+    result: "0.5866 composite · 0.3965 nDCG@20 · 4.90/5 judge",
+    query: "GPT-4o-mini produced one cached retrieval rewrite plus positive entity and era JSON.",
+    knowledge: "Official records, train co-occurrence and frequency/MOVES priors, plus generated track descriptions.",
+    retrieval: "Five lanes fed a top-500 LambdaMART boundary with direct co-occurrence features.",
+    response: "Three drafts, independent critique, selective rewrite, hardening, and lexical control.",
+    limit: "Structured musical-fact verification was not documented.",
+  },
+  niwatori: {
+    result: "0.5859 composite · 0.4934 nDCG@20 · 4.45/5 judge",
+    query: "Source-specific safe text, full played history, and last-track transition keys; no LLM retrieval rewrite documented.",
+    knowledge: "Official records plus mapped TalkPlayData-1 co-occurrence and transition statistics.",
+    retrieval: "Fourteen-source union, direct co-occurrence, Markov transition, and 176 documented features with OOF artifacts.",
+    response: "Ten seeded drafts selected for lexical diversity.",
+    limit: "The selector was not a factual critic; response fact checking was not documented.",
+  },
+  swyoo: {
+    result: "0.5784 composite · 0.3829 nDCG@20 · 4.85/5 judge",
+    query: "Separate BM25, QEmb, and two-tower representations with an optional cached session summary.",
+    knowledge: "LRCLIB, Genius, and MusicBrainz enriched lyrics, identifiers, tags, labels, countries, and dates.",
+    retrieval: "Three independently rendered pools with group-aware OOF routing for learned sources.",
+    response: "PAS generation with theme/citation validation and repair.",
+    limit: "One PAS prediction was used; no best-of-N independent critic was documented.",
+  },
+  team2_s2: {
+    result: "0.5759 composite · 0.4452 nDCG@20 · 4.65/5 judge",
+    query: "Conversation BM25, live text, recent item vectors, ALS history, and cached structured lists.",
+    knowledge: "Official catalog, conversations, users, labels, and embeddings; no external music dataset documented.",
+    retrieval: "Live and structured sources fed routed rankers with covariate-shift weighting and 37 documented features.",
+    response: "Verified catalog facts grounded a first draft followed by Gemini Pro refinement.",
+    limit: "No independent structured fact or recommendation-ID integrity check was documented.",
+  },
+};
+
 export const CHAPTERS = [
   {
     slug: "outcome",
@@ -88,7 +123,7 @@ export const CHAPTERS = [
       slide("leaderboard-chart", "How the result was scored", "visual", ["how_scoring_works", "final_result_heading", "leaderboard_chart"]),
       slide("leaderboard-table", "Exact leaderboard", "matrix", ["leaderboard_table"]),
       slide("gap-chart", "Gap decomposition", "visual", ["gap_contribution_chart"]),
-      slide("gap-interpretation", "What the score gap does—and does not—show", "story", ["gap_interpretation"]),
+      slide("gap-interpretation", "What the score gap does—and does not—show", "story", ["gap_interpretation"], { scoreFindings: true }),
     ],
   },
   {
@@ -335,16 +370,16 @@ export const CHAPTERS = [
     question: "What did the leading public systems document differently?",
     slides: [
       slide("cover", "Leading teams", "cover", ["competitor_case_studies_heading"]),
-      slide("volart-outcome", "volart · outcome, query, and data", "story", ["volart_heading", "volart_outcome"]),
+      slide("volart-outcome", "volart · outcome, query, and data", "story", ["volart_heading", "volart_outcome"], { systemCard: LEADER_SYSTEM_CARDS.volart }),
       slide("volart-retrieval", "volart · retrieval and ranking", "visual", ["volart_diagram"]),
       slide("volart-response", "volart · response, comparison, and limits", "audit", ["volart_walkthrough", "volart_comparison", "volart_limits"]),
-      slide("niwatori-outcome", "niwatori · outcome, query, and data", "story", ["niwatori_heading", "niwatori_outcome"]),
+      slide("niwatori-outcome", "niwatori · outcome, query, and data", "story", ["niwatori_heading", "niwatori_outcome"], { systemCard: LEADER_SYSTEM_CARDS.niwatori }),
       slide("niwatori-retrieval", "niwatori · retrieval and ranking", "visual", ["niwatori_diagram"]),
       slide("niwatori-response", "niwatori · response, comparison, and limits", "audit", ["niwatori_walkthrough", "niwatori_comparison", "niwatori_limits"]),
-      slide("swyoo-outcome", "swyoo · outcome, query, and data", "story", ["swyoo_heading", "swyoo_outcome"]),
+      slide("swyoo-outcome", "swyoo · outcome, query, and data", "story", ["swyoo_heading", "swyoo_outcome"], { systemCard: LEADER_SYSTEM_CARDS.swyoo }),
       slide("swyoo-retrieval", "swyoo · retrieval and ranking", "visual", ["swyoo_diagram"]),
       slide("swyoo-response", "swyoo · response, comparison, and limits", "audit", ["swyoo_walkthrough", "swyoo_comparison", "swyoo_limits"]),
-      slide("team2-outcome", "team2_s2 · outcome, query, and data", "story", ["team2_s2_heading", "team2_s2_outcome"]),
+      slide("team2-outcome", "team2_s2 · outcome, query, and data", "story", ["team2_s2_heading", "team2_s2_outcome"], { systemCard: LEADER_SYSTEM_CARDS.team2_s2 }),
       slide("team2-retrieval", "team2_s2 · retrieval and ranking", "visual", ["team2_s2_diagram"]),
       slide("team2-response", "team2_s2 · response, comparison, and limits", "audit", ["team2_s2_walkthrough", "team2_s2_comparison", "team2_s2_limits"]),
     ],
@@ -380,6 +415,7 @@ export const DISCLOSURES = {
   section_directory: "Open the original chapter outline",
   how_scoring_works: "Open the composite-score formula",
   leaderboard_table: "Open exact values and repository links",
+  gap_interpretation: "Open the exact score arithmetic and evidence boundary",
   lifecycle_heading: "Open the source-backed lifecycle introduction",
   lifecycle_map: "Open the complete lifecycle map",
   lifecycle_takeaway: "Open the original lifecycle takeaway",
@@ -400,6 +436,10 @@ export const DISCLOSURES = {
   response_explainer: "Open the complete response-system explanation",
   response_matrix: "Open the complete response-generation matrix",
   own_system_walkthrough: "Open the complete submitted-system walkthrough",
+  volart_outcome: "Open the reviewed volart evidence and sources",
+  niwatori_outcome: "Open the reviewed niwatori evidence and sources",
+  swyoo_outcome: "Open the reviewed swyoo evidence and sources",
+  team2_s2_outcome: "Open the reviewed team2_s2 evidence and sources",
   evidence_notes: "Open the complete evidence notes",
 };
 
@@ -489,8 +529,10 @@ html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;ove
 .deck-flow-only .deck-slide-inner{min-height:calc(100dvh - 190px);grid-template-rows:auto minmax(0,1fr)}.deck-flow-only .deck-flow{align-self:center}.deck-flow-only .deck-flow-step{display:grid;min-height:128px;align-content:center;font-size:clamp(15px,1.2vw,18px);line-height:1.4}
 .deck-mechanism{display:grid;gap:22px;align-self:center}.deck-mechanism-stages{display:grid;grid-template-columns:repeat(var(--stage-count),minmax(0,1fr));gap:26px;margin:0;padding:0;list-style:none;counter-reset:mechanism-stage}.deck-mechanism-stage{position:relative;display:grid;align-content:center;min-height:150px;padding:18px;border:1px solid var(--portable-border);border-top:5px solid var(--stage-color);border-radius:14px;background:var(--portable-surface);counter-increment:mechanism-stage}.deck-mechanism-stage::before{content:counter(mechanism-stage);margin-bottom:10px;color:var(--stage-color);font-size:13px;font-weight:900}.deck-mechanism-stage:not(:last-child)::after{content:"→";position:absolute;top:50%;right:-21px;color:var(--portable-accent);font-size:22px;font-weight:900;transform:translateY(-50%)}.deck-mechanism-stage h3{margin:0 0 8px;font-size:clamp(16px,1.35vw,20px)}.deck-mechanism-stage p{margin:0;color:var(--portable-muted);font-size:14px;line-height:1.5}.deck-takeaway{margin:0;padding:14px 18px;border-left:5px solid #d89a2b;border-radius:10px;background:color-mix(in srgb,#d89a2b 10%,var(--portable-surface));font-size:clamp(15px,1.15vw,18px);line-height:1.5}.deck-takeaway strong{display:block;margin-bottom:3px;color:#a96f09;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
 .deck-diagnosis{display:grid;gap:18px;min-width:0}.deck-diagnosis ol,.deck-diagnosis ul{margin:0;padding:0;list-style:none}.deck-diagnosis h3,.deck-diagnosis h4{margin:0}.deck-diagnosis li{min-width:0;overflow-wrap:anywhere}
+.deck-evidence-boundary{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 12px;border:1px solid var(--portable-border);border-radius:12px;background:color-mix(in srgb,var(--portable-accent) 7%,var(--portable-surface));color:var(--portable-muted);font-size:12px;line-height:1.4}.deck-pinned-badge{display:inline-flex;width:max-content;padding:4px 9px;border:1px solid var(--portable-accent);border-radius:999px;color:var(--portable-accent);font-size:10px;font-weight:900;letter-spacing:.035em}
 .deck-confidence-label{display:inline-flex!important;width:max-content;margin-bottom:7px;padding:3px 7px;border:1px solid currentColor;border-radius:999px;color:var(--portable-muted);font-size:9px!important;font-weight:900;line-height:1.1!important;letter-spacing:.06em;text-transform:uppercase}.deck-confidence-label[data-confidence="verified"]{color:#15945b!important}.deck-confidence-label[data-confidence="likely"]{color:#a66b08!important}.deck-confidence-label[data-confidence="unknown"]{color:var(--portable-muted)!important}
-.deck-score-findings{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.deck-score-finding{display:grid;gap:9px;min-height:120px;align-content:center;padding:16px;border:1px solid var(--portable-border);border-top:5px solid var(--portable-accent);border-radius:14px;background:var(--portable-surface)}.deck-score-finding h3{font-size:18px}.deck-score-finding span{color:var(--portable-muted)}
+.deck-score-findings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0;padding:0;list-style:none}.deck-score-finding{display:grid;gap:9px;min-height:120px;align-content:center;padding:16px;border:1px solid var(--portable-border);border-top:5px solid var(--portable-accent);border-radius:14px;background:var(--portable-surface)}.deck-score-finding h3{margin:0;font-size:18px}.deck-score-finding span{color:var(--portable-muted)}
+.deck-system-card{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0}.deck-system-field{min-width:0;padding:14px;border:1px solid var(--portable-border);border-top:4px solid var(--portable-accent);border-radius:12px;background:var(--portable-surface);overflow-wrap:anywhere}.deck-system-field[data-system-field="limit"]{border-top-color:#c98612}.deck-system-field dt{margin:0 0 6px;color:var(--portable-accent);font-size:10px;font-weight:900;letter-spacing:.05em;text-transform:uppercase}.deck-system-field[data-system-field="limit"] dt{color:#95600a}.deck-system-field dd{margin:0;color:var(--portable-muted);font-size:13px;line-height:1.4}.deck-system-field[data-system-field="result"] dd{color:var(--portable-ink);font-weight:800;font-variant-numeric:tabular-nums}
 .deck-bottleneck{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;counter-reset:bottleneck}.deck-bottleneck-stage,.deck-feature-family,.deck-boundary-column,.deck-confidence-column{min-width:0;padding:16px;border:1px solid var(--portable-border);border-radius:14px;background:var(--portable-surface)}.deck-bottleneck-stage{display:grid;gap:10px;align-content:start;counter-increment:bottleneck}.deck-bottleneck-stage::before{content:counter(bottleneck);color:var(--portable-accent);font-size:12px;font-weight:900}.deck-bottleneck-stage h3{font-size:15px}.deck-loss{padding:9px 11px;border-left:5px solid #c98612;border-radius:9px;background:color-mix(in srgb,#c98612 12%,var(--portable-surface));font-size:12px;line-height:1.35}
 .deck-wiring{display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,.5fr) minmax(0,1fr);gap:16px}.deck-wiring>section{display:grid;gap:9px;align-content:start}.deck-wiring>section>ol{display:grid;gap:7px}.deck-wiring-source li,.deck-wiring-target li{padding:8px 10px;border:1px solid var(--portable-border);border-radius:9px;background:var(--portable-surface);font-size:12px}.deck-wiring-link{padding:7px 9px;border:2px solid var(--portable-border);border-radius:9px;background:var(--portable-surface);font-size:11px;line-height:1.3}.deck-wiring-link[data-link-kind="direct"]{border-color:#15945b}.deck-wiring-link[data-link-kind="soft"]{border-style:dashed;border-color:#c98612}.deck-wiring-link[data-link-kind="feature-only"]{border-style:dotted;border-color:#6f54c7}
 .deck-feature-map{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.deck-feature-family{display:grid;grid-template-columns:1fr auto;gap:9px}.deck-feature-family>.deck-confidence-label{grid-column:1/-1}.deck-feature-family h3{font-size:16px}.deck-feature-family>span:last-child{grid-column:1/-1;color:var(--portable-muted);font-size:13px;line-height:1.4}.deck-feature-badge{align-self:start;padding:3px 7px;border:1px solid var(--portable-accent);border-radius:999px;color:var(--portable-accent);font-size:10px;font-weight:800}
@@ -524,8 +566,8 @@ html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;ove
 html[data-deck-view="linear"],html[data-deck-view="linear"] body{height:auto;overflow:auto}
 html[data-deck-view="linear"] .retrospective-deck{height:auto;display:block}html[data-deck-view="linear"] .deck-track{display:block;overflow:visible}html[data-deck-view="linear"] .deck-chapter,html[data-deck-view="linear"] .deck-slide{height:auto;min-height:0}html[data-deck-view="linear"] .deck-vertical{height:auto;overflow:visible}html[data-deck-view="linear"] .deck-vertical-rail{display:none}html[data-deck-view="linear"] .deck-disclosure>summary{display:none}html[data-deck-view="linear"] .deck-disclosure>[data-artifact-block-id]{display:block!important}html[data-deck-view="linear"] .deck-insight-grid{display:block}html[data-deck-view="linear"] .deck-insight-card{border:0;background:transparent;overflow:visible}html[data-deck-view="linear"] .deck-insight-card>summary{display:none}html[data-deck-view="linear"] .deck-insight-detail{display:block!important;margin:0 0 1em;padding:0;border:0}html[data-deck-view="linear"] .deck-insight-detail strong:first-child{display:inline}
 @media(max-width:1100px){.deck-slide--cover .deck-slide-inner{grid-template-columns:1fr;min-height:0}.deck-slide--cover .deck-page-copy,.deck-chapter-map{grid-column:1;grid-row:auto}.deck-flow-lane ol,.deck-mechanism-stages{grid-template-columns:1fr;gap:22px}.deck-flow-step:not(:last-child)::after,.deck-mechanism-stage:not(:last-child)::after{content:"↓";top:auto;right:auto;bottom:-22px;left:50%;transform:translateX(-50%)}.deck-mechanism-stage{min-height:112px}.deck-comparison-columns{display:none}.deck-team-row{grid-template-columns:minmax(110px,.45fr) repeat(3,minmax(0,1fr))}.deck-prose-matrix tbody,.deck-insight-grid{grid-template-columns:1fr}.deck-flow-only .deck-slide-inner{min-height:0}}
-@media(max-width:900px){.deck-bottleneck,.deck-feature-map{grid-template-columns:repeat(2,minmax(0,1fr))}.deck-wiring,.deck-boundary-map,.deck-confidence-grid{grid-template-columns:1fr}.deck-score-findings,.deck-response-control,.deck-belief-timeline>ol,.deck-failure-taxonomy>ol{grid-template-columns:repeat(2,minmax(0,1fr))}.deck-response-control>li::after{display:none}.deck-team-grid table,.deck-team-grid tbody{display:block}.deck-team-grid thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.deck-team-grid tbody{display:grid;gap:12px}.deck-team-grid tr[data-team]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:12px;border:1px solid var(--portable-border);border-left:5px solid var(--team-color);border-radius:13px;background:var(--portable-surface)}.deck-team-grid tbody th{grid-column:1/-1;padding:0 0 7px;border:0;border-bottom:1px solid var(--portable-border);border-radius:0;background:transparent}.deck-team-grid td{display:grid;grid-template-columns:minmax(80px,.6fr) minmax(0,1fr);gap:7px;align-items:center;height:auto;min-height:58px;text-align:left}.deck-team-grid td::before{content:attr(data-column);color:var(--portable-ink);font-size:9px;font-weight:850;letter-spacing:.025em;text-transform:uppercase}.deck-team-grid .deck-grid-cell{grid-template-columns:auto minmax(0,1fr);justify-items:start}.deck-evidence-heatmap .deck-grid-cell-label{position:static;width:auto;height:auto;overflow:visible;clip:auto;white-space:normal}.deck-provenance-head{display:none}.deck-provenance-team{padding:13px}.deck-provenance-team ol{grid-template-columns:1fr}.deck-provenance-layer{display:grid;grid-template-columns:minmax(105px,.45fr) minmax(0,1fr);gap:8px;align-items:center;min-height:52px}.deck-provenance-layer strong{display:block;margin:0}}
-@media(max-width:600px){.deck-bottleneck,.deck-feature-map,.deck-score-findings,.deck-response-control,.deck-belief-timeline>ol,.deck-failure-taxonomy>ol{grid-template-columns:1fr}}
+@media(max-width:900px){.deck-bottleneck,.deck-feature-map,.deck-system-card{grid-template-columns:repeat(2,minmax(0,1fr))}.deck-wiring,.deck-boundary-map,.deck-confidence-grid{grid-template-columns:1fr}.deck-score-findings,.deck-response-control,.deck-belief-timeline>ol,.deck-failure-taxonomy>ol{grid-template-columns:repeat(2,minmax(0,1fr))}.deck-response-control>li::after{display:none}.deck-team-grid table,.deck-team-grid tbody{display:block}.deck-team-grid thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.deck-team-grid tbody{display:grid;gap:12px}.deck-team-grid tr[data-team]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:12px;border:1px solid var(--portable-border);border-left:5px solid var(--team-color);border-radius:13px;background:var(--portable-surface)}.deck-team-grid tbody th{grid-column:1/-1;padding:0 0 7px;border:0;border-bottom:1px solid var(--portable-border);border-radius:0;background:transparent}.deck-team-grid td{display:grid;grid-template-columns:minmax(80px,.6fr) minmax(0,1fr);gap:7px;align-items:center;height:auto;min-height:58px;text-align:left}.deck-team-grid td::before{content:attr(data-column);color:var(--portable-ink);font-size:9px;font-weight:850;letter-spacing:.025em;text-transform:uppercase}.deck-team-grid .deck-grid-cell{grid-template-columns:auto minmax(0,1fr);justify-items:start}.deck-evidence-heatmap .deck-grid-cell-label{position:static;width:auto;height:auto;overflow:visible;clip:auto;white-space:normal}.deck-provenance-head{display:none}.deck-provenance-team{padding:13px}.deck-provenance-team ol{grid-template-columns:1fr}.deck-provenance-layer{display:grid;grid-template-columns:minmax(105px,.45fr) minmax(0,1fr);gap:8px;align-items:center;min-height:52px}.deck-provenance-layer strong{display:block;margin:0}}
+@media(max-width:600px){.deck-bottleneck,.deck-feature-map,.deck-score-findings,.deck-system-card,.deck-response-control,.deck-belief-timeline>ol,.deck-failure-taxonomy>ol{grid-template-columns:1fr}}
 @media(max-width:700px){.deck-title,.deck-breadcrumb,.deck-progress,.deck-axis-help,.deck-chapter-rail{display:none}.deck-mobile-orientation{display:block;min-width:0;margin-right:auto;overflow:hidden;font-weight:650;text-overflow:ellipsis;white-space:nowrap}.deck-topbar,.deck-footer{min-height:60px;padding:8px 10px}.deck-slide{padding:18px 12px}.deck-vertical-rail{display:none}.portable-table-scroll{max-width:calc(100vw - 24px)}.deck-button{min-width:48px;min-height:48px}.deck-slide--cover .deck-slide-heading{font-size:clamp(36px,13vw,58px)}.deck-team-row,.deck-common-different{grid-template-columns:1fr}.deck-team-value::before{display:block}.deck-slide--matrix .portable-table-scroll{overflow-x:auto}.deck-slide--matrix .portable-table-scroll:has(.deck-prose-matrix){overflow:visible}.deck-prose-matrix tbody td{grid-template-columns:1fr;gap:4px}.deck-slide--audit .portable-markdown{columns:1}}
 @media(prefers-reduced-motion:reduce){.deck-track,.deck-vertical{scroll-behavior:auto!important}}
 @media(forced-colors:active){.deck-button,.deck-chapter-button,.deck-rail-button,.deck-disclosure,.deck-jump-panel{border:1px solid CanvasText}}
@@ -572,14 +614,15 @@ function runtimeMain(CONFIG) {
   const footer = document.createElement("footer");
   footer.className = "deck-footer deck-chrome";
   footer.innerHTML = '<button class="deck-button" type="button" data-action="previous" aria-label="Previous">← Previous</button><span class="deck-axis-help">←/→ chapters · ↑/↓ depth</span><button class="deck-button" type="button" data-action="next" aria-label="Next">Next →</button>';
-  const disclosure = (node, label) => {
-    if (!label) return node;
+  const disclosure = (nodeOrNodes, label, disclosureFor) => {
+    const nodes = Array.isArray(nodeOrNodes) ? nodeOrNodes : [nodeOrNodes];
+    if (!label) return nodes[0];
     const details = document.createElement("details");
     details.className = "deck-disclosure";
-    details.dataset.disclosureFor = node.dataset.artifactBlockId;
+    details.dataset.disclosureFor = disclosureFor || nodes[0].dataset.artifactBlockId;
     const summary = document.createElement("summary");
     summary.textContent = label;
-    details.append(summary, node);
+    details.append(summary, ...nodes);
     return details;
   };
   const stageColors = ["#58aaf7", "#8570e6", "#24a88b", "#d89a2b", "#df7aa9"];
@@ -629,6 +672,56 @@ function runtimeMain(CONFIG) {
       list.append(item);
     });
     return list;
+  };
+  const renderGapFindings = () => {
+    const findings = [
+      ["Ranking + judge", "These terms dominate each leader's arithmetic advantage."],
+      ["Catalog diversity", "The contribution is nearly neutral."],
+      ["Evidence boundary", "The decomposition is arithmetic, not causal."],
+    ];
+    const list = document.createElement("ol");
+    list.className = "deck-score-findings";
+    list.setAttribute("aria-label", "Concise score-gap interpretation");
+    findings.forEach(([title, detail]) => {
+      const item = document.createElement("li");
+      item.className = "deck-score-finding";
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      const text = document.createElement("span");
+      text.textContent = detail;
+      item.append(heading, text);
+      list.append(item);
+    });
+    return list;
+  };
+  const renderSystemCard = (fields) => {
+    const card = document.createElement("dl");
+    card.className = "deck-system-card";
+    card.setAttribute("aria-label", "System summary");
+    const labels = { result: "Result", query: "Query", knowledge: "Knowledge", retrieval: "Retrieval", response: "Response", limit: "Limit" };
+    Object.entries(fields).forEach(([field, value]) => {
+      const item = document.createElement("div");
+      item.className = "deck-system-field";
+      item.dataset.systemField = field;
+      const term = document.createElement("dt");
+      term.textContent = labels[field] || field;
+      const description = document.createElement("dd");
+      description.textContent = value;
+      item.append(term, description);
+      card.append(item);
+    });
+    return card;
+  };
+  const renderEvidenceBoundary = () => {
+    const note = document.createElement("aside");
+    note.className = "deck-evidence-boundary";
+    const badge = document.createElement("span");
+    badge.className = "deck-pinned-badge";
+    badge.textContent = "Blind-B deployed evidence · 2ecc45a7";
+    const caveat = document.createElement("span");
+    caveat.textContent = "Repository documentation depth can bias “Not documented” comparisons; absence from reviewed sources is not proof of absence.";
+    note.append(badge, caveat);
+    return note;
   };
   const renderBottleneck = (entry) => {
     const list = document.createElement("ol");
@@ -859,6 +952,7 @@ function runtimeMain(CONFIG) {
     const root = document.createElement("section");
     root.className = `deck-diagnosis deck-diagnosis--${entry.diagnosisKind}`;
     root.setAttribute("aria-label", entry.title);
+    root.append(renderEvidenceBoundary());
     if (entry.diagnosisKind === "bottleneck") root.append(renderBottleneck(entry));
     if (entry.diagnosisKind === "wiring") root.append(renderConstraintWiring());
     if (entry.diagnosisKind === "feature-map") root.append(renderFeatureMap(entry.featureFamilies));
@@ -1094,6 +1188,8 @@ function runtimeMain(CONFIG) {
       pageCopy.append(heading, question);
       inner.append(pageCopy);
       if (entry.diagnosisKind) renderDiagnosis(inner, entry);
+      if (entry.scoreFindings) inner.append(renderGapFindings());
+      if (entry.systemCard) inner.append(renderSystemCard(entry.systemCard));
       if (entry.visualKind === "mechanism") inner.append(renderMechanism(entry));
       if (entry.visualKind === "comparison" && entry.teams) inner.append(renderComparison(entry));
       if (entry.visualKind === "heatmap") inner.append(renderHeatmap(entry));
@@ -1134,7 +1230,12 @@ function runtimeMain(CONFIG) {
         });
         inner.append(flow);
       }
-      for (const blockId of entry.blocks) inner.append(disclosure(blocks.get(blockId), CONFIG.disclosures[blockId]));
+      if (entry.systemCard) {
+        const disclosureFor = entry.blocks.at(-1);
+        inner.append(disclosure(entry.blocks.map((blockId) => blocks.get(blockId)), CONFIG.disclosures[disclosureFor], disclosureFor));
+      } else {
+        for (const blockId of entry.blocks) inner.append(disclosure(blocks.get(blockId), CONFIG.disclosures[blockId]));
+      }
       slideNode.append(inner);
       vertical.append(slideNode);
       const railButton = document.createElement("button");

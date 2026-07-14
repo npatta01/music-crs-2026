@@ -366,6 +366,55 @@ def test_dense_walkthroughs_use_progressive_visual_cards(page, enhanced_report: 
     assert errors == []
 
 
+def test_leader_introductions_are_compact_system_cards(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    exact_results = {
+        "volart-outcome": "0.5866 composite · 0.3965 nDCG@20 · 4.90/5 judge",
+        "niwatori-outcome": "0.5859 composite · 0.4934 nDCG@20 · 4.45/5 judge",
+        "swyoo-outcome": "0.5784 composite · 0.3829 nDCG@20 · 4.85/5 judge",
+        "team2-outcome": "0.5759 composite · 0.4452 nDCG@20 · 4.65/5 judge",
+    }
+    for slug, result in exact_results.items():
+        open_deck(browser_page, enhanced_report, f"#leaders/{slug}")
+        card = browser_page.locator(f"#leaders\\/{slug} .deck-system-card")
+        assert card.count() == 1
+        assert card.locator("[data-system-field]").evaluate_all(
+            "nodes => nodes.map(node => node.dataset.systemField)"
+        ) == ["result", "query", "knowledge", "retrieval", "response", "limit"]
+        assert card.locator("[data-system-field='result'] dd").inner_text() == result
+    assert errors == []
+
+
+def test_score_interpretation_is_three_findings_with_exact_math_disclosed(page, enhanced_report: Path) -> None:
+    browser_page, _ = page
+    open_deck(browser_page, enhanced_report, "#outcome/gap-interpretation")
+    assert browser_page.locator("#outcome\\/gap-interpretation .deck-score-finding").count() == 3
+    text = browser_page.locator("#outcome\\/gap-interpretation").inner_text()
+    assert "arithmetic, not causal" in text.lower()
+    assert browser_page.locator(
+        "#outcome\\/gap-interpretation details[data-disclosure-for='gap_interpretation']"
+    ).count() == 1
+    details = browser_page.locator(
+        "#outcome\\/gap-interpretation details[data-disclosure-for='gap_interpretation']"
+    )
+    details.evaluate("node => node.open = true")
+    exact_text = details.inner_text()
+    assert "0.000000001" in exact_text
+    assert "arithmetic decomposition, not a causal decomposition" in exact_text.lower()
+
+
+def test_diagnosis_slides_show_pinned_submission_and_documentation_boundary(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    for slug in ("score-location", "information-loss", "constraint-wiring", "features-seen", "evidence-missed", "confidence"):
+        open_deck(browser_page, enhanced_report, f"#diagnosis/{slug}")
+        boundary = browser_page.locator(f"#diagnosis\\/{slug} .deck-evidence-boundary")
+        assert boundary.is_visible()
+        assert boundary.locator(".deck-pinned-badge").inner_text() == "Blind-B deployed evidence · 2ecc45a7"
+        assert "documentation depth can bias" in boundary.inner_text().lower()
+        assert "absence from reviewed sources is not proof of absence" in boundary.inner_text().lower()
+    assert errors == []
+
+
 def test_synthesis_matrix_fills_canvas_and_encodes_status(page, enhanced_report: Path) -> None:
     browser_page, errors = page
     open_deck(browser_page, enhanced_report, "#synthesis/matrix")
@@ -408,22 +457,24 @@ def test_lane_only_diagrams_use_the_vertical_canvas(page, enhanced_report: Path)
 def test_story_pages_use_presentation_scale_and_canvas(page, enhanced_report: Path) -> None:
     browser_page, _ = page
     open_deck(browser_page, enhanced_report, "#outcome/gap-interpretation")
-    narrative = browser_page.locator(
+    findings = browser_page.locator("[id='outcome/gap-interpretation'] .deck-score-findings")
+    exact_narrative = browser_page.locator(
         "[id='outcome/gap-interpretation'] [data-artifact-block-id='gap_interpretation'] .portable-markdown"
     )
-    assert float(narrative.evaluate("node => parseFloat(getComputedStyle(node).fontSize)")) >= 18
-    box = narrative.bounding_box()
+    assert not exact_narrative.is_visible()
+    assert float(findings.locator(".deck-score-finding h3").first.evaluate(
+        "node => parseFloat(getComputedStyle(node).fontSize)"
+    )) >= 18
+    box = findings.bounding_box()
     assert box is not None and box["width"] >= 1000
-    paragraphs = narrative.locator("p")
-    assert float(paragraphs.first.evaluate("node => parseFloat(getComputedStyle(node).lineHeight)")) >= 28
 
     browser_page.set_viewport_size({"width": 1202, "height": 659})
     browser_page.reload()
     browser_page.wait_for_function("document.documentElement.dataset.deckReady === 'true'")
-    narrative_box = narrative.bounding_box()
+    findings_box = findings.bounding_box()
     rail_box = browser_page.locator("[data-chapter='outcome'] .deck-vertical-rail").bounding_box()
-    assert narrative_box is not None and rail_box is not None
-    assert narrative_box["x"] + narrative_box["width"] <= rail_box["x"] - 12
+    assert findings_box is not None and rail_box is not None
+    assert findings_box["x"] + findings_box["width"] <= rail_box["x"] - 12
 
 
 def test_progressive_disclosure_and_sources(page, enhanced_report: Path) -> None:
