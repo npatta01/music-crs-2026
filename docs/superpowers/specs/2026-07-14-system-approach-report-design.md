@@ -25,8 +25,9 @@ The report must answer:
 5. How did the ranker choose the top track?
 6. What did the response model see and what was it allowed to claim?
 7. How did the LLM judge affect the competition objective?
-8. Where did the pipeline work well, and where did it fail or remain fragile?
-9. How can another participant inspect or reproduce the implementation?
+8. Where did the pipeline work well across several representative cases?
+9. What capability gaps, observed failures, and uncertain boundaries remained?
+10. How can another participant inspect or reproduce the implementation?
 
 ## 2. Scope and evidence stance
 
@@ -224,21 +225,26 @@ The report must not describe all of these as the same “LLM-as-judge” mechani
 
 ### 4.10 Example gallery
 
-The gallery remains in the single vertical flow and contains:
+The gallery remains in the single vertical flow and contains several strong
+examples as well as failure cases:
 
-1. **Full good trace:** a strong end-to-end case where state, candidate recall,
-   ranking, and response align.
-2. **Full bad trace:** a verified weak case where the first broken boundary is
+1. **Primary full good trace:** the report's end-to-end spine, where state,
+   candidate recall, ranking, and response align.
+2. **Strong exact-entity trace:** a named track, album, or artist is grounded
+   correctly and reaches an appropriate top pick.
+3. **Strong refinement trace:** the system keeps useful qualities from a prior
+   track while honoring the user's new constraints.
+4. **Strong pivot/new-artist trace:** a liked prior item informs taste without
+   becoming an overbearing anchor after the user asks for someone different.
+5. **Strong lyrical-theme trace:** lyrics or meaning, rather than generic
+   metadata, drives the relevant retrieval branch.
+6. **Strong hidden-target trace:** half-remembered constraints persist across
+   turns and narrow the search coherently.
+7. **Full bad trace:** a verified weak case where the first broken boundary is
    identified and downstream recoverability is explained.
-3. **Exact entity:** a short trace for a named track, album, or artist request.
-4. **Refinement:** a prior-track case where the user keeps some qualities and
-   changes others.
-5. **Pivot/new artist:** a case where a liked prior item must not become an
-   overbearing anchor.
-6. **Lyrical theme:** a case where lyrics, rather than generic metadata, should
-   drive retrieval.
-7. **Hidden target:** a half-remembered song where constraints must persist
-   across turns.
+8. **Additional failure traces:** compact examples of distinct state,
+   candidate-recall, ranking, or response failures when verified evidence is
+   available.
 
 Each compact trace card uses the same grammar:
 
@@ -246,10 +252,45 @@ Each compact trace card uses the same grammar:
 user signal -> extracted belief -> branches activated -> top pick -> outcome
 ```
 
-The good and bad examples receive full stage-by-stage treatment. The other
-examples remain concise and link to expandable state/query detail.
+The primary good and bad examples receive full stage-by-stage treatment. The
+other five strong examples remain concise but substantive, and link to
+expandable state/query/candidate detail. Additional failure examples must not
+repeat the same failure boundary merely to increase the example count.
 
-### 4.11 What worked, what failed, and what remains uncertain
+### 4.11 Gap map: where the submitted system remained incomplete
+
+Add an explicit vertical gap map after the example gallery. It compares the
+intended capability with the submitted implementation and the available
+evidence at each boundary:
+
+```text
+reader intent
+  -> state understanding gap
+  -> entity/constraint grounding gap
+  -> candidate coverage gap
+  -> ranking/feature gap
+  -> response grounding/selection gap
+  -> evaluation and model-selection gap
+  -> infrastructure/reproducibility gap
+```
+
+Each gap card must contain:
+
+- **Expected capability:** what a robust conversational recommender should do;
+- **Submitted behavior:** what the final code and config actually did;
+- **Evidence:** trace, metric, source file, experiment result, or documented
+  absence;
+- **User-visible consequence:** how the gap can affect recommendations or prose;
+- **Downstream recoverability:** whether later stages could realistically fix it;
+- **Status:** Observed failure, Architectural limitation, Measurement gap, or
+  Unknown impact.
+
+The gap map must cover at least candidate recall, ranking, and response quality,
+plus state extraction or anchoring where supported. It must distinguish “the
+system lacks this mechanism” from “this missing mechanism caused the Blind-B
+score.” Hidden-set causality remains unknown without labels or counterfactuals.
+
+### 4.12 What worked, what failed, and what remains uncertain
 
 Use three labelled groups:
 
@@ -261,9 +302,10 @@ Use three labelled groups:
 - **Unknown:** effects that cannot be isolated without hidden per-session labels
   or controlled counterfactuals.
 
-This is a retrospective engineering assessment, not a roadmap.
+This section synthesizes the example gallery and gap map into a retrospective
+engineering assessment, not a roadmap.
 
-### 4.12 Reproduce and inspect
+### 4.13 Reproduce and inspect
 
 End with a source map linking active configs, prompts, state schema, compiler,
 retrievers, ranker, response generation, cache documentation, and reproduction
@@ -297,6 +339,7 @@ searchable, responsive, and accessible:
 - response grounding boundary;
 - evaluation formula and metric contribution diagram;
 - good/bad boundary comparison.
+- vertical capability-gap map with evidence and recoverability labels.
 
 No diagram may depend on color alone. Every diagram must retain reading order
 and a usable semantic fallback at narrow widths.
@@ -359,6 +402,9 @@ The report is successful when a competition participant can:
 3. inspect meaningful prompt, state, query, ranking, and response details;
 4. understand why and where Modal was used;
 5. distinguish the challenge LLM judge from development-time LLM judgments;
-6. compare strong and weak traces at the first failing boundary;
-7. reproduce or inspect the implementation from linked local sources;
-8. read the report comfortably on a phone or laptop.
+6. inspect several strong examples spanning distinct conversational intents;
+7. compare strong and weak traces at the first failing boundary;
+8. distinguish observed failures from architectural, measurement, and unknown
+   gaps;
+9. reproduce or inspect the implementation from linked local sources;
+10. read the report comfortably on a phone or laptop.
