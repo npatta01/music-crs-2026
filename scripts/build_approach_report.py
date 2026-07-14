@@ -5,8 +5,11 @@ from __future__ import annotations
 
 import argparse
 import base64
+import html
+import os
 import re
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -41,6 +44,32 @@ def png_data_uri(path: Path) -> str:
     return f"data:image/png;base64,{encoded}"
 
 
+HREF_ATTRIBUTE = re.compile(
+    r"(?P<prefix>\bhref\s*=\s*)(?P<quote>['\"])(?P<value>.*?)(?P=quote)",
+    flags=re.IGNORECASE,
+)
+
+
+def rebase_local_hrefs(source: str, source_path: Path, output_path: Path) -> str:
+    """Preserve local link targets when source and packaged HTML live apart."""
+
+    def replace(match: re.Match[str]) -> str:
+        raw_value = html.unescape(match.group("value"))
+        parsed = urlsplit(raw_value)
+        if parsed.scheme or parsed.netloc or not parsed.path or raw_value.startswith("#"):
+            return match.group(0)
+        target = (source_path.parent / parsed.path).resolve()
+        rebased_path = Path(os.path.relpath(target, output_path.parent.resolve())).as_posix()
+        rebased = urlunsplit(("", "", rebased_path, parsed.query, parsed.fragment))
+        quote = match.group("quote")
+        escaped = html.escape(rebased, quote=True)
+        if quote == "'":
+            escaped = escaped.replace("&#x27;", "&#39;")
+        return f'{match.group("prefix")}{quote}{escaped}{quote}'
+
+    return HREF_ATTRIBUTE.sub(replace, source)
+
+
 def build(source_path: Path, output_path: Path) -> int:
     source = source_path.read_text(encoding="utf-8")
     packaged = source
@@ -57,6 +86,7 @@ def build(source_path: Path, output_path: Path) -> int:
         detail = ", ".join(remaining) if remaining else "malformed template token"
         raise ValueError(f"unreplaced template token: {detail}")
 
+    packaged = rebase_local_hrefs(packaged, source_path, output_path)
     output = packaged.encode("utf-8")
     output_path.write_bytes(output)
     print(f"source: {source_path}")

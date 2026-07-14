@@ -419,7 +419,7 @@
           <li><article class="lifecycle-card"><h3>Persist and evaluate</h3><p>Write predictions and traces; where labels exist, score ranking quality and diagnose stage boundaries.</p><span class="badge">Labelled devset</span></article></li>
         </ol>
         <figure class="alignment">
-          <img src="{{ALIGNMENT_DATA_URI}}" alt="The report chapters aligned with the recommender's extraction, retrieval, ranking, response, and evaluation stages.">
+          <img src="{{ALIGNMENT_DATA_URI}}" alt="Two musical signal paths: one stays aligned through each transformation and reaches a harmonious record, while the other progressively bends, loses cues, and ends at a mismatched record.">
           <figcaption>The report follows the same direction as the data: from what the listener says to what the system can verify.</figcaption>
         </figure>
       </div>
@@ -430,22 +430,25 @@
         <div class="chapter-head">
           <p class="eyebrow"><span class="chapter-number">02</span> · Workload placement</p>
           <h2 id="infrastructure-title">Local control, selective remote compute</h2>
-          <p>“Local” describes the runner, not necessarily every model call. The active online configuration keeps orchestration and catalog search local, calls hosted APIs for extraction and Qwen embeddings on cache misses, and uses Modal for CLAP and SigLIP2 text encoders.</p>
+          <p>“Local” describes the runner, not every model call. The competition workflow lacked a suitable local discrete GPU, so targeted remote GPU capacity handled the model-specific work below while orchestration, caches, catalog search, reranking, and evaluation stayed local.</p>
         </div>
 
         <ol class="infra-flow" aria-label="Infrastructure flow">
           <li><article class="infra-card"><span class="workload local">Local</span><h3>Orchestration, caches, and catalog</h3><p>The Python runner loads YAML, checks file-per-turn state and embedding caches, resolves entities, and searches the local LanceDB catalog. The active staged devset pipeline also shards retrieval locally.</p></article></li>
           <li>
             <div class="remote-workloads" aria-label="Selective remote workloads">
-              <article class="infra-card split-card"><span class="workload hosted">Hosted API</span><h3>Language and Qwen embedding calls</h3><p>On a genuine cache miss, DeepSeek V4 Flash extracts state through LiteLLM; Qwen3 0.6B and 8B query embeddings use configured OpenAI-compatible endpoints.</p></article>
-              <article class="infra-card split-card"><span class="workload modal">Modal</span><h3>Audio and cover-art query encoders</h3><p>Eligible sonic and visual routes invoke the deployed <code>MultimodalTextEncoder</code> methods for CLAP and SigLIP2 text embeddings. Modal can alternatively host an entire retrieval run when the runner backend is switched.</p></article>
+              <article class="infra-card split-card"><span class="workload hosted">Hosted API · OpenRouter</span><h3>DeepSeek state extraction</h3><p>On a genuine state-cache miss, LiteLLM routes <code>deepseek-v4-flash</code> through OpenRouter to produce the V1 conversation state.</p></article>
+              <article class="infra-card split-card"><span class="workload hosted">Hosted API · DeepInfra</span><h3>Qwen3-Embedding-0.6B</h3><p>Lyrics queries and tag-resolution embeddings use the config’s OpenAI-compatible DeepInfra endpoint, behind the shared disk cache.</p></article>
+              <article class="infra-card split-card"><span class="workload modal">Modal · vLLM</span><h3>Qwen3-Embedding-8B</h3><p>The logical <code>qwen3-embedding-8b</code> endpoint resolves to the private Modal vLLM service for metadata and attribute query embeddings.</p></article>
+              <article class="infra-card split-card"><span class="workload modal">Modal</span><h3>CLAP and SigLIP2</h3><p>Sonic and cover-art routes invoke the private <code>MultimodalTextEncoder</code> methods for CLAP-text and SigLIP2-text embeddings.</p></article>
+              <article class="infra-card split-card"><span class="workload hosted">Hosted API · OpenRouter</span><h3>Qwen response generation</h3><p>After ranking, LiteLLM sends the top-one explanation handoff to <code>qwen3-30b-a3b-instruct-2507</code> through OpenRouter.</p></article>
             </div>
           </li>
           <li><article class="infra-card"><span class="workload artifact">Persisted artifact</span><h3>Predictions, traces, and a manifest</h3><p>Run-scoped JSON, JSONL, logs, scores, and manifest metadata make the expensive retrieval result reusable instead of ephemeral.</p></article></li>
           <li><article class="infra-card"><span class="workload local">Local</span><h3>Replay and evaluation</h3><p>The staged runner replays the committed LightGBM bundle over a saved trace, merges shards, writes the top 20, and evaluates devset output locally. Staged explanation replay is intentionally dummy-only.</p></article></li>
         </ol>
 
-        <p class="boundary-note"><strong>Boundary check:</strong> the canonical staged devset YAML currently sets both retrieval and rerank to <code>local</code>. A mixed run may set only retrieval to <code>modal</code>; LightGBM replay remains local. Hosted API and Modal calls inside an online retrieval configuration are separate from the runner’s backend label.</p>
+        <p class="boundary-note"><strong>Boundary check:</strong> the submitted Blind-B YAML and endpoint-resolution code establish this placement. A cache hit can avoid a remote call, and a runner labelled <code>local</code> can still invoke these private hosted services; the runner backend and individual model placement are separate controls.</p>
 
         <details>
           <summary>Configuration map: what controls placement?</summary>
@@ -469,41 +472,60 @@
     <section class="chapter" id="walkthrough" aria-labelledby="walkthrough-title">
       <div class="wrap">
         <div class="chapter-head">
-          <p class="eyebrow"><span class="chapter-number">03</span> · One turn, end to end</p>
-          <h2 id="walkthrough-title">Follow a visual request through every handoff</h2>
-          <p>This saved Blind-B turn is a mechanics-only walkthrough. It proves what the submitted system executed; hidden organizer labels mean it cannot prove that any returned track satisfied the request.</p>
+          <p class="eyebrow"><span class="chapter-number">03</span> · One conversation, end to end</p>
+          <h2 id="walkthrough-title">Follow an eight-turn search through every handoff</h2>
+          <p>This is a real Blind-B conversation in which a listener gradually identifies “Pumped Up Kicks.” The final-turn trace records extraction, retrieval, ranking, and output; the stage-by-stage layout is reconstructed from those artifacts and submitted code. Hidden organizer labels mean the delivered recommendations are not labelled relevant.</p>
         </div>
         <div class="story-flow">
           <article class="story-card">
-            <span class="evidence-badge illustrative">Illustrative · Blind-B mechanics</span>
-            <p class="mini-label">Conversation · turn 1</p>
-            <div class="turn listener"><span class="speaker">Listener</span>“An album with striking, abstract cover art featuring bold colors and shapes, like a modern painting.”</div>
-            <p>The trace contains one listener turn and no earlier played track. That makes the active request—not prior taste—the sole conversational evidence for this example.</p>
+            <span class="evidence-badge">Verified · Blind-B conversation</span>
+            <p class="mini-label">Turns 1–8 · selected turning points</p>
+            <div class="turn listener"><span class="speaker">Turn 1 · Listener</span>“Trying to place a tune from like a decade ago. Was proper catchy, on the radio all the time.”</div>
+            <div class="turn listener"><span class="speaker">Turn 2 · Listener</span>“The song I'm trying to place had a really distinct hook – think it might've been whistling or a dead catchy synth line. Felt like a big summer anthem around 2010-2012.”</div>
+            <div class="turn listener"><span class="speaker">Turn 7 · Listener</span>“I'm picturing something like Foster The People … a really iconic, almost haunting whistling melody throughout.”</div>
+            <div class="turn listener"><span class="speaker">Turn 8 · Listener</span>“Yes! ‘Pumped Up Kicks’ by Foster The People! The whistling is exactly what I was thinking of. That's the one!”</div>
+            <p>Across seven earlier recommendation cycles, the listener rejects or contrasts suggestions while accumulating era, genre, vocal, popularity, mood, and hook clues. The final message explicitly says the hidden target has been found.</p>
           </article>
           <div class="flow-arrow" aria-hidden="true">↓</div>
           <article class="story-card">
-            <span class="evidence-badge">Saved extracted state</span>
-            <h3>The request becomes typed facts</h3>
+            <span class="evidence-badge">Verified · saved extracted state</span>
+            <h3>The final message still becomes a search state</h3>
             <ul class="state-facts">
-              <li><strong>Current request</strong><span><code>attribute_search</code> · open exploration for an album whose cover art matches the description.</span></li>
-              <li><strong>Facts</strong><span>Three visual query facets: “striking abstract cover art,” “bold colors and shapes,” and “like a modern painting.”</span></li>
-              <li><strong>Exclusions</strong><span>None. No artist, track, date, or style was ruled out.</span></li>
-              <li><strong>Feedback and history</strong><span>None. There are no played or referenced track IDs and no positive or negative track feedback.</span></li>
+              <li><strong>Current request</strong><span><code>hidden_target</code> · “Find the specific catchy indie pop/rock track from around 2010–2012…” even though the latest utterance confirms discovery.</span></li>
+              <li><strong>Facts</strong><span>“Pumped Up Kicks” and Foster The People become satisfied-prior facts; six older clues remain current-target query facets.</span></li>
+              <li><strong>Temporal context</strong><span>A soft 2010–2012 release range survives from earlier turns.</span></li>
+              <li><strong>Feedback and history</strong><span>Seven played IDs are retained: six contrast items and the identified track as satisfied feedback.</span></li>
             </ul>
           </article>
           <div class="flow-arrow" aria-hidden="true">↓</div>
           <article class="story-card">
-            <span class="evidence-badge">Recorded handoffs</span>
+            <span class="evidence-badge reconstructed">Reconstructed walkthrough · recorded outcomes</span>
             <h3>Resolve, fan out, reconverge, rerank, speak</h3>
-            <p>No surface-form artist or track could—or needed to—resolve. The three visual phrases became branch queries; five retrieval branches fired, their lists reconverged into 4,640 eligible unique candidates, weighted RRF ordered the union, and the goal-free LightGBM bundle produced 20 tracks. The first track alone was handed to the response model.</p>
-            <p class="boundary-note"><strong>Reading rule:</strong> track names shown later are reconstructed from recorded IDs plus the catalog for legibility. Orders, branch status, counts, IDs, and the final response are recorded artifacts. No relevance judgment is inferred.</p>
+            <p>The trace resolves the named track and artist at 100% confidence, but policy does not use them as exact targets or anchors. Seven retrieval branches plus the era lookup fire, producing 5,969 eligible unique candidates after one played item is removed. Weighted RRF orders the union; LightGBM promotes “Tongue Tied” to rank one; the response model explains that one track.</p>
+            <p class="boundary-note"><strong>Reading rule:</strong> conversation text, state, branch status, counts, IDs, rank orders, and response are recorded. Human-readable catalog labels and the separation of the combined trace into stage cards are reconstructed. Blind-B relevance and causal quality claims remain unknown.</p>
           </article>
         </div>
         <details>
           <summary>Audit identity and sources</summary>
           <div>
-            <p>Trace <code>blind-b-visual-cover-search</code> · session <code>ff76b679-7d7a-4796-8f6c-929efef45428</code> · turn 1 · first JSONL record (<code>idx: 0</code>).</p>
-            <p><a href="../../configs/state_ranker_v10_lgbm_blindset_B.yaml">Submitted Blind-B config</a> · <a href="../../exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B_trace.jsonl">saved trace</a> · <a href="evidence.json">curated evidence snapshot</a>.</p>
+            <p>Session <code>156cac0f-c16b-4bd2-8f4f-cc1691adef79</code> · turn 8 · trace JSONL record 71 (zero-based index 70; trace <code>idx: 6</code>).</p>
+            <p><a href="https://huggingface.co/datasets/talkpl-ai/TalkPlayData-Challenge-Blind-B">Blind-B dataset citation</a> · <a href="../../configs/state_ranker_v10_lgbm_blindset_B.yaml">submitted config</a> · <a href="../../exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B_trace.jsonl">saved trace</a>.</p>
+          </div>
+        </details>
+        <details>
+          <summary>All eight listener turns</summary>
+          <div>
+            <ol class="rank-list">
+              <li>“Trying to place a tune from like a decade ago. Was proper catchy, on the radio all the time. What you reckon?”</li>
+              <li>“Nah, not quite… a really distinct hook – think it might've been whistling or a dead catchy synth line… a big summer anthem around 2010-2012.”</li>
+              <li>“Bit too ambient and downtempo… way more upbeat… male vocals too… more indie pop or alternative.”</li>
+              <li>“Still not it… a really bright, summery feel and a proper iconic instrumental bit – kinda leaning towards it being a whistle.”</li>
+              <li>“Cool track but still not it… a very specific hook… an absolute earworm… around 2010-2012.”</li>
+              <li>“Nah, this ain't it either… prominent male vocals… very specific upbeat whistle or synth melody… absolutely all over the radio.”</li>
+              <li>“Still not landing. I'm picturing something like Foster The People… a really iconic, almost haunting whistling melody throughout.”</li>
+              <li>“Yes! ‘Pumped Up Kicks’ by Foster The People! The whistling is exactly what I was thinking of. That's the one! … Cheers for helping me find it!”</li>
+            </ol>
+            <p>The punctuation above is lightly normalized for HTML typography; the wording comes from the dataset row. Music IDs and assistant messages are omitted here to keep the listener’s evolving constraint chain legible.</p>
           </div>
         </details>
       </div>
@@ -527,67 +549,62 @@
           <div class="flow-arrow" aria-hidden="true">↓</div>
           <article class="story-card">
             <span class="evidence-badge">V1 · model-facing</span>
-            <h3>1. Extract literal evidence</h3>
+          <h3>1. Extract literal evidence from the final turn and history</h3>
             <pre class="code-block" aria-label="Compact V1 state excerpt">{
-  "current_request": {"request_type": "attribute_search", "source_turn": 1},
+  "current_request": {"request_type": "hidden_target", "source_turn": 8},
   "facts": [
-    {"facet": "visual", "value": "striking abstract cover art", "role": "current_target", "anchor_use": "query_facet"},
-    {"facet": "visual", "value": "bold colors and shapes", "role": "current_target", "anchor_use": "query_facet"},
-    {"facet": "visual", "value": "like a modern painting", "role": "current_target", "anchor_use": "query_facet"}
+    {"type": "track", "value": "Pumped Up Kicks", "role": "satisfied_prior", "anchor_use": "do_not_use"},
+    {"type": "artist", "value": "Foster The People", "role": "satisfied_prior", "anchor_use": "do_not_use"},
+    {"facet": "sonic", "value": "whistling melody", "role": "current_target", "anchor_use": "query_facet"},
+    {"facet": "mood", "value": "summery", "role": "current_target", "anchor_use": "query_facet"}
   ],
-  "exclusions": [], "track_feedback": [], "referenced_track_ids": []
+  "temporal_constraint": {"start_year": 2010, "end_year": 2012, "strength": "soft"},
+  "track_feedback": ["six contrast items", "Pumped Up Kicks: satisfied"]
 }</pre>
           </article>
           <div class="flow-arrow" aria-hidden="true">↓</div>
           <article class="story-card">
             <span class="evidence-badge">Projection · deterministic</span>
             <h3>2. Derive compiler compatibility</h3>
-            <p>The bridge maps <code>attribute_search</code> to <code>feature_search</code>, converts the three current-target query facets into positive tag entities, derives <code>open_explore</code> and the visual routing flag, and leaves exact-target, rejection, and temporal fields empty. This is code-derived policy, not another model guess.</p>
+            <p>The bridge maps the six older facets—indie pop/rock, whistling melody, upbeat, summery, massive, and male vocals—into positive tag entities; derives <code>open_explore</code>, <code>hidden_target_search</code>, and the 2010–2012 soft range; and keeps the found track out of retrieval seeding. This stage separation is reconstructed from the submitted projection code because the trace stores the V1 and compatibility fields together.</p>
           </article>
           <div class="flow-arrow" aria-hidden="true">↓</div>
           <article class="story-card">
             <span class="evidence-badge">Resolved V0Plus · saved trace</span>
             <h3>3. Hand a stable contract downstream</h3>
-            <p>The visible compatibility state is <code>intent_mode: open_explore</code>, <code>retrieval_profile: feature_search</code>, <code>target_artist_mode: unknown</code>, and routing tags <code>feature_articulation: true</code> plus <code>image_or_visual_search: true</code>. It carries three positive tags and zero hard filters, explicit rejections, anchors, or played tracks.</p>
+            <p>The compatibility state is <code>intent_mode: open_explore</code>, <code>retrieval_profile: hidden_target_search</code>, <code>target_artist_mode: unknown</code>, and <code>hidden_target_search: true</code>. It carries six positive tags, seven played tracks, and no hard filters or explicit rejections.</p>
+            <p class="boundary-note"><strong>Observed state boundary:</strong> the final utterance is satisfaction, not a request for another recommendation, yet the stored <code>current_request</code> remains “Find the specific…” from the completed search. This is a verified trace fact; whether it hurt the hidden Blind-B score is unknown.</p>
           </article>
         </div>
         <details>
-          <summary>Full saved snapshot state</summary>
+          <summary>Selected fields from the full saved snapshot</summary>
           <div>
             <pre class="code-block" aria-label="Full saved state snapshot">{
-  "current_request": {
-    "request_type": "attribute_search",
-    "summary": "An album with striking, abstract cover art featuring bold colors and shapes, like a modern painting.",
-    "source_turn": 1,
-    "evidence_text": "striking, abstract cover art with bold colors and shapes",
-    "candidate_types": [{"request_type": "attribute_search", "confidence": 0.95, "evidence_text": "striking, abstract cover art with bold colors and shapes"}]
-  },
+  "current_request": {"request_type":"hidden_target","summary":"Find the specific catchy indie pop/rock track from around 2010-2012 with a whistling hook, male vocals, and a bright summery feel.","source_turn":8,"evidence_text":"The whistling is exactly what I was thinking of"},
   "facts": [
-    {"type":"attribute","facet":"visual","value":"striking abstract cover art","role":"current_target","anchor_use":"query_facet","relation":"query_facet","reuse":"not_applicable","source_turn":1,"mentioned_current_turn":true,"evidence_text":"striking, abstract cover art"},
-    {"type":"attribute","facet":"visual","value":"bold colors and shapes","role":"current_target","anchor_use":"query_facet","relation":"query_facet","reuse":"not_applicable","source_turn":1,"mentioned_current_turn":true,"evidence_text":"bold colors and shapes"},
-    {"type":"attribute","facet":"visual","value":"like a modern painting","role":"current_target","anchor_use":"query_facet","relation":"query_facet","reuse":"not_applicable","source_turn":1,"mentioned_current_turn":true,"evidence_text":"like a modern painting"}
+    {"type":"track","value":"Pumped Up Kicks","role":"satisfied_prior","anchor_use":"do_not_use","reuse":"avoid_exact","source_turn":8},
+    {"type":"artist","value":"Foster The People","role":"satisfied_prior","anchor_use":"do_not_use","reuse":"avoid_exact","source_turn":8},
+    {"type":"attribute","facet":"genre","value":"indie pop/rock","role":"current_target","anchor_use":"query_facet","source_turn":7},
+    {"type":"attribute","facet":"sonic","value":"whistling melody","role":"current_target","anchor_use":"query_facet","source_turn":7},
+    {"type":"attribute","facet":"energy","value":"upbeat","role":"current_target","anchor_use":"query_facet","source_turn":7},
+    {"type":"attribute","facet":"mood","value":"summery","role":"current_target","anchor_use":"query_facet","source_turn":7},
+    {"type":"attribute","facet":"popularity","value":"massive","role":"current_target","anchor_use":"query_facet","source_turn":7},
+    {"type":"attribute","facet":"performer","value":"male vocals","role":"current_target","anchor_use":"query_facet","source_turn":7}
   ],
-  "exclusions": [], "track_feedback": [], "referenced_track_ids": [],
-  "turn_intent": "An album with striking, abstract cover art featuring bold colors and shapes, like a modern painting.",
-  "entities": [
-    {"type":"tag","value":"striking abstract cover art","role":"current_target","source_turn":1,"mentioned_current_turn":true,"use_as_retrieval_seed":true,"evidence_text":"striking, abstract cover art"},
-    {"type":"tag","value":"bold colors and shapes","role":"current_target","source_turn":1,"mentioned_current_turn":true,"use_as_retrieval_seed":true,"evidence_text":"bold colors and shapes"},
-    {"type":"tag","value":"like a modern painting","role":"current_target","source_turn":1,"mentioned_current_turn":true,"use_as_retrieval_seed":true,"evidence_text":"like a modern painting"}
+  "track_feedback": [
+    {"track_id":"80c81dab-199c-4804-a9d0-671597ddb93a","role":"contrast"},
+    {"track_id":"… five more contrast IDs …","role":"contrast"},
+    {"track_id":"3b08891f-8ba3-4d9b-b0ab-4f9afa5b58dd","role":"satisfied"}
   ],
+  "turn_intent": "Find the specific catchy indie pop/rock track from around 2010-2012 with a whistling hook, male vocals, and a bright summery feel.",
   "intent_mode": "open_explore", "target_artist_mode": "unknown",
-  "retrieval_profile": "feature_search",
-  "rejections": [],
-  "mentioned_entities": [
-    {"type":"tag","value":"striking abstract cover art","sentiment":1},
-    {"type":"tag","value":"bold colors and shapes","sentiment":1},
-    {"type":"tag","value":"like a modern painting","sentiment":1}
-  ],
-  "routing_tags": {"exact_entity_probe":false,"lyric_search":false,"feature_articulation":true,"image_or_visual_search":true,"hidden_target_search":false},
+  "retrieval_profile": "hidden_target_search",
+  "routing_tags": {"exact_entity_probe":false,"lyric_search":false,"feature_articulation":false,"image_or_visual_search":false,"hidden_target_search":true},
+  "release_year_range": {"start":2010,"end":2012},
   "process_constraints": {"exploration_policy":"balanced"},
-  "explicit_rejections": [], "hard_filters": [], "release_year_range": null,
-  "temporal_constraint": null, "lyrical_theme": null
+  "explicit_rejections": [], "hard_filters": [], "lyrical_theme": null
 }</pre>
-            <p>This is the complete <code>extracted_state</code> object stored in the trace, including both V1 facts and the bridge-derived compatibility fields.</p>
+            <p>The disclosure intentionally elides five repetitive contrast IDs. The complete <code>extracted_state</code> object remains in the linked JSONL trace.</p>
           </div>
         </details>
       </div>
@@ -604,31 +621,31 @@
           <article class="story-card">
             <span class="evidence-badge">Resolver output</span>
             <h3>Surface names → catalog IDs</h3>
-            <p><strong>This turn:</strong> there were no artist, album, or track surface names, so the resolver returned no anchor or exact-target IDs. It preserved all three visual phrases as positive tags. In other turns, named surfaces are matched to stable catalog IDs before discography, centroid, protection, or exclusion logic runs.</p>
+            <p><strong>This turn:</strong> “Pumped Up Kicks” resolves to <code>3b08891f…</code> and Foster The People to <code>a65d6a96…</code>, both at 100% confidence. Because both are marked satisfied prior / do not use, the resolver records no exact target or anchor. It preserves six descriptive phrases as positive tags and all seven played IDs for filtering.</p>
           </article>
           <div class="flow-arrow" aria-hidden="true">↓ fan out</div>
           <ol class="branch-list" aria-label="Retrieval branch inputs and outputs">
-            <li><strong>BM25 · fired → 1,000 raw hits</strong><span class="io"><b>Input:</b> tokenized visual facets plus the full request over tags and track names. <b>Output:</b> lexical matches such as titles or tags containing “abstract,” “painting,” “colors,” and “art.”</span></li>
-            <li><strong>Metadata embeddings · fired → 1,000 raw hits</strong><span class="io"><b>Input:</b> the full request encoded by Qwen3-Embedding-8B. <b>Output:</b> tracks whose title/artist/album metadata is semantically close.</span></li>
-            <li><strong>Attribute embeddings · fired → 1,000 raw hits</strong><span class="io"><b>Input:</b> “music attributes, tags” plus the three visual facets. <b>Output:</b> tracks close in the catalog’s attribute-vector space.</span></li>
+            <li><strong>BM25 · fired → 1,000 raw hits</strong><span class="io"><b>Definition:</b> BM25 is lexical ranking that balances term matches, term rarity, and document length. <b>Input:</b> tag clauses including “indie pop rock,” “whistling,” “summery,” and “male vocals,” the full request, <code>release_decade: 2010s</code>, and a boosted track-name clause. <b>Output:</b> token-matched catalog rows.</span></li>
+            <li><strong>Metadata embeddings · fired → 1,000 raw hits</strong><span class="io"><b>Input:</b> the full reconstructed request encoded by Qwen3-Embedding-8B. <b>Output:</b> semantically nearby title/artist/album metadata.</span></li>
+            <li><strong>Attribute embeddings · fired → 1,000 raw hits</strong><span class="io"><b>Input:</b> “music attributes, tags” plus all six retained facets. <b>Output:</b> neighbors in the catalog attribute-vector space.</span></li>
             <li class="skipped"><strong>Lyrics · skipped: no query</strong><span class="io"><b>Input:</b> a lyrical theme or clue, if present. <b>Output:</b> lyric-embedding neighbors. No lyric evidence existed here.</span></li>
-            <li><strong>Sonic / CLAP · fired → 1,000 raw hits</strong><span class="io"><b>Input:</b> a natural-language “song with … sound” rendering of the facets. <b>Output:</b> catalog audio embeddings close to the CLAP text vector.</span></li>
-            <li><strong>Visual / SigLIP2 · fired → 1,000 raw hits</strong><span class="io"><b>Input:</b> “an album cover with striking abstract, bold colors and shapes, like a modern painting artwork.” <b>Output:</b> cover-image embeddings close to that text vector.</span></li>
-            <li class="skipped"><strong>Anchor and user centroids · skipped</strong><span class="io"><b>Input:</b> image, audio, and collaborative vectors from resolved anchor tracks or a known user vector. <b>Output:</b> neighbors around those taste centroids. This turn had no anchors and no usable user vector.</span></li>
+            <li><strong>Sonic / CLAP · fired → 1,000 raw hits</strong><span class="io"><b>Input:</b> “A song with indie pop/rock, whistling melody, upbeat, summery, massive, male vocals sound, similar to Foster The People.” <b>Output:</b> audio embeddings near the CLAP text vector.</span></li>
+            <li class="skipped"><strong>Visual / SigLIP2 · skipped: gated off</strong><span class="io"><b>Input if routed:</b> an album-cover rendering of the facets. <b>Output:</b> cover-image neighbors. The state did not request a visual search.</span></li>
+            <li><strong>Three anchor centroids · fired → 1,000 hits each</strong><span class="io"><b>Definition:</b> a centroid is the average of several embedding vectors, used as one compact taste point. <b>Input:</b> three source tracks in image, audio, and collaborative spaces. <b>Output:</b> neighbors around each mean vector. The user collaborative centroid was separately skipped because its vector was missing.</span></li>
             <li class="skipped"><strong>Resolved-artist discography · skipped: no query</strong><span class="io"><b>Input:</b> high-confidence resolved artist IDs. <b>Output:</b> tracks from those artists. No artist was named.</span></li>
-            <li class="skipped"><strong>Era / popularity lookup · skipped: no query</strong><span class="io"><b>Input:</b> a release-year range or era constraint. <b>Output:</b> popularity-ordered tracks inside that period. No temporal constraint was extracted.</span></li>
+            <li><strong>Era / popularity lookup · fired → 200 raw hits</strong><span class="io"><b>Input:</b> the soft 2010–2012 range. <b>Output:</b> popularity-ordered catalog tracks within that era.</span></li>
           </ol>
           <div class="flow-arrow" aria-hidden="true">↓ reconverge</div>
           <article class="story-card">
             <span class="evidence-badge">Saved candidate union</span>
             <h3>One union for one ranker</h3>
-            <p>The five fired lists contained up to 5,000 branch positions. Deduplication produced <strong>4,640 unique candidates</strong>; all 4,640 remained eligible because no release-date, played-track, rejection, or artist-policy filter dropped an item. Weighted reciprocal-rank fusion then produced one 1,000-item ordered candidate stage for learned reranking.</p>
+            <p>Seven 1,000-hit retrieval lists plus the 200-hit era lookup deduplicated to <strong>5,970 unique candidates</strong>. Played-track filtering removed one item, leaving <strong>5,969 eligible candidates</strong>; no release-date, explicit-rejection, or artist-policy drop fired. Weighted reciprocal-rank fusion then produced one 1,000-item ordered candidate stage for learned reranking.</p>
             <p class="boundary-note"><strong>Structural invariant:</strong> the fan-out ends here. Every retrieval path—whether lexical, semantic, audio, image, centroid, or lookup—must reconverge before the final ranker and response handoff.</p>
           </article>
         </div>
         <details>
           <summary>Exact trace status for all configured branches</summary>
-          <div><p>Fired: <code>bm25</code>, <code>dense.qwen_8b.metadata</code>, <code>dense.qwen_8b.attributes</code>, <code>dense.clap_text.sonic_nl</code>, <code>dense.siglip2_text.visual_nl</code>—1,000 raw hits each. Skipped: lyrics (<code>no_query</code>); three anchor centroids (<code>no_anchors</code>); user CF (<code>missing_user_vector</code>); discography and era/popularity (<code>no_query</code>).</p></div>
+          <div><p>Fired with 1,000 raw hits each: <code>bm25</code>, <code>dense.qwen_8b.metadata</code>, <code>dense.qwen_8b.attributes</code>, <code>dense.clap_text.sonic_nl</code>, and image/audio/CF anchor centroids. Era/popularity fired with 200. Skipped: lyrics (<code>no_query</code>), SigLIP2 text (<code>gated_off</code>), user CF (<code>missing_user_vector</code>), and resolved-artist discography (<code>no_query</code>).</p></div>
         </details>
       </div>
     </section>
@@ -652,26 +669,26 @@
             <span class="evidence-badge reconstructed">Reconstructed labels · recorded orders</span>
             <h3>Before: weighted-RRF top five</h3>
             <ol class="rank-list">
-              <li>“Abstract Art” — Born of Osiris</li>
-              <li>“Painted Sun in Abstract” — Trent Reznor and Atticus Ross</li>
-              <li>“The Colorful Stabwound” — múm</li>
-              <li>“Postcard of a Painting” — Maxïmo Park</li>
-              <li>“Colors” — Crossfade</li>
+              <li>“Houdini” — Foster The People</li>
+              <li>“Waste” — Foster The People</li>
+              <li>“I Would Do Anything for You” — Foster The People</li>
+              <li>“Whistle” — Flo Rida</li>
+              <li>“Dancing Song” — Little Comets</li>
             </ol>
-            <p>The trace records IDs and order; titles and artists above are catalog lookups added for readability. The lexical surface match visible in several titles is an observation, not a relevance label.</p>
+            <p>The trace records IDs and order; titles and artists are catalog lookups added for readability. The concentration of Foster The People tracks is observable, but Blind-B provides no item-level relevance labels for this turn.</p>
           </article>
           <div class="flow-arrow" aria-hidden="true">↓ LambdaMART rerank</div>
           <article class="story-card">
             <span class="evidence-badge reconstructed">Reconstructed labels · recorded orders</span>
             <h3>After: LightGBM top five</h3>
             <ol class="rank-list">
-              <li class="top-pick">Selected top track: “Pink + White” — Frank Ocean, from <em>Blonde</em></li>
-              <li>“Painted” — MS MR</li>
-              <li>“Colouring of Pigeons” — Mt Sims</li>
-              <li>“Art Deco” — Lana Del Rey</li>
-              <li>“Postcard of a Painting” — Maxïmo Park</li>
+              <li class="top-pick">Selected top track: “Tongue Tied” — GROUPLOVE, from <em>Never Trust A Happy Song</em></li>
+              <li>“Call It What You Want” — Foster The People</li>
+              <li>“Don't Stop (Color on the Walls)” — Foster The People</li>
+              <li>“Houdini” — Foster The People</li>
+              <li>“I Would Do Anything for You” — Foster The People</li>
             </ol>
-            <p>The first fused item moved out of the visible top five, while “Pink + White” moved to rank one. The trace records the movement but not a human-readable per-feature explanation for why the tree ensemble made it.</p>
+            <p>“Tongue Tied” was outside the fused top 20 and moved to rank one. The trace records that movement but not a human-readable per-feature explanation for the tree ensemble’s decision—and it does not label the move as good or bad.</p>
           </article>
         </div>
         <details>
@@ -679,7 +696,7 @@
           <div>
             <span class="evidence-badge reconstructed">Catalog labels reconstructed from recorded IDs</span>
             <ol class="rank-list">
-              <li class="top-pick">Pink + White — Frank Ocean</li><li>Painted — MS MR</li><li>Colouring of Pigeons — Mt Sims</li><li>Art Deco — Lana Del Rey</li><li>Postcard of a Painting — Maxïmo Park</li><li>We Can’t Stop — Scott Bradlee’s Postmodern Jukebox</li><li>Dark Horse — Scott Bradlee’s Postmodern Jukebox</li><li>Feel It Still — Portugal. The Man</li><li>Shape of You — Ed Sheeran</li><li>Painted Sun in Abstract — Trent Reznor and Atticus Ross</li><li>Shapeshifter — Elephant</li><li>Seven Nation Army — Scott Bradlee’s Postmodern Jukebox</li><li>Thrift Shop — Scott Bradlee’s Postmodern Jukebox</li><li>All About That Bass (2015 European Cast) — Scott Bradlee’s Postmodern Jukebox</li><li>Sleepyhead — Passion Pit</li><li>Rebel Rebel (2016 Remastered Version) — David Bowie</li><li>Livin’ on a Prayer — Scott Bradlee’s Postmodern Jukebox</li><li>Rhinestone Eyes — Gorillaz</li><li>Young Blood — The Naked and Famous</li><li>Coloris — she</li>
+              <li class="top-pick">Tongue Tied — GROUPLOVE</li><li>Call It What You Want — Foster The People</li><li>Don't Stop (Color on the Walls) — Foster The People</li><li>Houdini — Foster The People</li><li>I Would Do Anything for You — Foster The People</li><li>Helena Beat — Foster The People</li><li>Little Talks — Of Monsters and Men</li><li>Warrant — Foster The People</li><li>Young Folks — Peter Bjorn and John</li><li>Sweet Disposition — The Temper Trap</li><li>Young Blood — The Naked And Famous</li><li>Waste — Foster The People</li><li>Midnight City — M83</li><li>Life on the Nickel — Foster The People</li><li>Shuffle — Bombay Bicycle Club</li><li>Sit Next to Me — Foster The People</li><li>Sleepyhead — Passion Pit</li><li>Cool Kids — Echosmith</li><li>Dog Days Are Over — Florence + The Machine</li><li>Dancing Song — Little Comets</li>
             </ol>
             <p>Blind-B ground truth is hidden. This list documents what was delivered, not which items were relevant.</p>
           </div>
@@ -699,28 +716,53 @@
             <span class="evidence-badge">Submitted response context</span>
             <h3>What crosses the handoff</h3>
             <ul class="state-facts">
-              <li><strong>Latest conversation state</strong><span>The latest user request, the derived current request, and the three positive mentioned entities rendered as <code>Liked / wants</code>. Optional <code>Disliked / avoid</code>, explicit-rejection, year-range, and lyrical-theme lines are appended only when populated; none were rendered for this turn.</span></li>
-              <li><strong>Selected item block</strong><span>The rank-one track’s title “Pink + White,” artist Frank Ocean, album <em>Blonde</em>, and at most ten catalog tags, rendered as delimited XML.</span></li>
+              <li><strong>Latest conversation state</strong><span>The final satisfaction message, the still-active derived hidden-target request, six positive facets rendered as <code>Liked / wants</code>, preferred language, and the 2010–2012 range.</span></li>
+              <li><strong>Selected item block</strong><span>The rank-one track’s title “Tongue Tied,” artist GROUPLOVE, album <em>Never Trust A Happy Song</em>, and exactly the first ten available catalog tags, rendered as delimited XML.</span></li>
               <li><strong>Style contract</strong><span>One or two concise sentences, prioritize the latest ask, explain one supported reason, and avoid overselling a clear mismatch.</span></li>
             </ul>
           </article>
           <article class="story-card">
             <span class="evidence-badge">Production response prompt</span>
             <h3>Explain; do not select</h3>
-            <blockquote class="prompt-quote">“A separate recommendation system has ALREADY selected one track to play next.” The model’s job is to acknowledge the request and explain why that track fits. It must use only supported facts, avoid dumping tags or XML, match the listener’s language and tone, and respond in 1–3 sentences.</blockquote>
+            <blockquote class="prompt-quote">“A separate recommendation system has ALREADY selected one track to play next. Your only job is to write the short listener-facing message that presents that track: acknowledge what the listener just asked, then naturally explain why this track fits their request and taste.” The same prompt says: “Use only facts supported by the provided track; invent nothing.”</blockquote>
             <p class="source-links">Excerpted from <a href="../../mcrs/system_prompts/response_generation.txt">the production response-generation prompt</a>; packaging defaults are documented in <a href="../../mcrs/response_context.py">response_context.py</a>.</p>
+          </article>
+          <article class="story-card">
+            <span class="evidence-badge reconstructed">Reconstructed exactly from trace + production formatter</span>
+            <h3>Listener-context and style message</h3>
+            <pre class="code-block" aria-label="Exact reconstructed listener context and style message">[LISTENER CONTEXT]
+Preferred language: English
+Latest user request: Yes! "Pumped Up Kicks" by Foster The People! The whistling is exactly what I was thinking of. That's the one! You got it! That's the catchy, massive track I was trying to remember. Cheers for helping me find it!
+[LISTENER CONTEXT]
+Current request: Find the specific catchy indie pop/rock track from around 2010-2012 with a whistling hook, male vocals, and a bright summery feel.
+Liked / wants: indie pop/rock, whistling melody, upbeat, summery, massive, male vocals
+Release year range: 2010-2012
+Response style: Write 1-2 concise sentences about only the selected track. Prioritize the latest user request and extracted state over older conversation history. If the track is reasonably aligned, explain the fit with one specific supported reason. If it clearly conflicts with an explicit avoid/new-artist constraint, do not oversell it or blame the system; briefly frame the limitation and the closest supported reason.</pre>
+            <p>The saved artifact does not persist the outbound message array. This block is therefore a precise reconstruction: <code>format_latest_state_context</code> and the <code>phase2_best_qwen</code> style constant applied to the saved trace and dataset row.</p>
+          </article>
+          <article class="story-card">
+            <span class="evidence-badge reconstructed">Exact production wrapper · reconstructed selected item</span>
+            <h3>Final user message sent after the context</h3>
+            <pre class="code-block" aria-label="Exact final response-model user wrapper">Recommend the following track and write a natural assistant response that introduces it:
+&lt;recommended_track&gt;
+  &lt;title&gt;Tongue Tied&lt;/title&gt;
+  &lt;artist&gt;GROUPLOVE&lt;/artist&gt;
+  &lt;album&gt;Never Trust A Happy Song&lt;/album&gt;
+  &lt;tags&gt;loved, happy song, killer song, alternative rock, impulsive, makes me wanna dance, gossip girl, very good, 2010s, everything&lt;/tags&gt;
+&lt;/recommended_track&gt;</pre>
+            <p>The opening sentence is literal code from <code>_build_messages</code>; the XML is the deterministic <code>xml_track_item</code> rendering of recorded rank one plus its catalog row. Together with the system prompt and prior context message, this is the response-model handoff.</p>
           </article>
           <div class="flow-arrow" aria-hidden="true">↓ single pass</div>
           <article class="story-card">
             <span class="evidence-badge illustrative">Saved Blind-B response · outcome unlabelled</span>
             <h3>The final listener-facing prose</h3>
-            <p class="response-prose">The cover of Frank Ocean’s <em>Blonde</em> is a striking, abstract piece—soft pink and white gradients layered with blurred, painterly shapes that feel like a modern art canvas. It matches your vibe perfectly, with its bold yet dreamy visual style that’s as evocative as the music.</p>
+            <p class="response-prose">You're in luck — &quot;Tongue Tied&quot; by GROUPLOVE is a perfect match for that bright, whistling indie pop energy you're after. It’s got that infectious, summery vibe and an impulsive, danceable groove that feels like a sunlit rush.</p>
             <p>This text is reproduced verbatim from the saved prediction artifact. It proves that generation ran; it does not prove the track or description was relevant or factually correct.</p>
           </article>
           <article class="story-card">
             <span class="evidence-badge">Grounding boundary</span>
             <h3>Where the evidence ends</h3>
-            <p>The item context contains only title, artist, album, and capped tags—not an independently verified prose description of the cover. Although the prompt says to invent nothing, the saved response’s claims about gradients, blurred shapes, and a “perfect” match are not established by the visible trace or catalog row. They therefore remain unverified generation claims.</p>
+            <p>The item context supports alternative rock, a happy song, 2010s, and dance impulse, but it does not state that “Tongue Tied” contains whistling. More importantly, the latest user message celebrates finding a different track; the reply resumes recommendation mode instead of acknowledging completion. “Perfect match,” “whistling,” “infectious,” “summery,” and “sunlit rush” remain unverified generation claims, and there is no hidden-set response-judge label for this turn.</p>
             <p class="boundary-note"><strong>Submitted control path:</strong> top-1, single-pass generation. We found no independently documented fact checker and no selector/critic that compares alternative responses or chooses another track after prose generation. The generator explains the ranker’s first choice; it does not audit or revise that choice.</p>
           </article>
         </div>

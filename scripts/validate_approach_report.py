@@ -10,6 +10,7 @@ import re
 import sys
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 
 SECTION_IDS = (
@@ -45,6 +46,7 @@ class ReportParser(HTMLParser):
         self.ids: list[str] = []
         self.section_ids: list[str] = []
         self.internal_links: list[str] = []
+        self.local_hrefs: list[str] = []
         self.details_count = 0
         self.png_data_uris: list[str] = []
         self.evidence_statuses: set[str] = set()
@@ -69,6 +71,10 @@ class ReportParser(HTMLParser):
 
         if tag == "a" and (href := attributes.get("href", "")).startswith("#"):
             self.internal_links.append(href[1:])
+        elif tag == "a" and (href := attributes.get("href", "")):
+            parsed = urlsplit(href)
+            if not parsed.scheme and not parsed.netloc:
+                self.local_hrefs.append(href)
         if tag == "details":
             self.details_count += 1
         if tag == "img" and (src := attributes.get("src", "")).startswith(PNG_PREFIX):
@@ -77,8 +83,24 @@ class ReportParser(HTMLParser):
         src = attributes.get("src")
         if src and not src.startswith("data:"):
             self.errors.append(f"runtime-loaded src on <{tag}>: {src}")
-        if tag == "link" and "stylesheet" in attributes.get("rel", "").lower().split():
-            self.errors.append("runtime-loaded stylesheet is not allowed")
+        if srcset := attributes.get("srcset"):
+            candidates = re.findall(r"(?:^|,\s*)(\S+)", srcset)
+            for candidate in candidates:
+                if not candidate.startswith("data:"):
+                    self.errors.append(
+                        f"runtime-loaded srcset on <{tag}>: {candidate}"
+                    )
+        if poster := attributes.get("poster"):
+            if not poster.startswith("data:"):
+                self.errors.append(f"runtime-loaded poster on <{tag}>: {poster}")
+        if tag == "object" and (data := attributes.get("data")):
+            if not data.startswith("data:"):
+                self.errors.append(f"runtime-loaded data on <object>: {data}")
+        if tag != "a" and (href := attributes.get("href")):
+            if not href.startswith(("data:", "#")):
+                self.errors.append(f"runtime-loaded href on <{tag}>: {href}")
+        if tag == "link" and attributes.get("href"):
+            self.errors.append("runtime-loaded link is not allowed")
         if tag == "script":
             self.errors.append("script is not allowed")
 
@@ -157,6 +179,12 @@ def validate(report: Path) -> list[str]:
     )
     if invalid_anchors:
         errors.append("invalid internal anchors: " + ", ".join(invalid_anchors))
+    for href in parser.local_hrefs:
+        parsed = urlsplit(href)
+        local_path = unquote(parsed.path)
+        target = report if not local_path else report.parent / local_path
+        if not target.exists():
+            errors.append(f"missing local href target: {href} -> {target}")
     if parser.details_count < 8:
         errors.append(f"expected at least 8 disclosures; found {parser.details_count}")
     if len(parser.png_data_uris) != 2:
