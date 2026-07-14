@@ -29,12 +29,12 @@ test("chapter map assigns all 74 report blocks exactly once", async () => {
   assert.deepEqual(result.mappedIds.sort(), result.reportIds.sort());
 });
 
-test("visual-first manifest has fifty content-aware pages", async () => {
+test("visual-first manifest has at least fifty content-aware pages", async () => {
   const html = await readFile(REPORT, "utf8");
   const result = validateChapterMap(CHAPTERS, stripDeckInjection(html));
   assert.equal(CHAPTERS.length, 7);
-  assert.equal(result.pageCount, 50);
-  assert.deepEqual(result.chapterCounts, [6, 7, 5, 7, 7, 13, 5]);
+  assert.equal(result.pageCount, 51);
+  assert.deepEqual(result.chapterCounts, [6, 7, 6, 7, 7, 13, 5]);
   for (const chapter of CHAPTERS) {
     for (const entry of chapter.slides) {
       assert.ok(PAGE_ARCHETYPES.has(entry.archetype), `${chapter.slug}/${entry.slug} has a known archetype`);
@@ -54,17 +54,43 @@ test("enhancement uses structured explanatory flows instead of decorative raster
   const html = stripDeckInjection(await readFile(REPORT, "utf8"));
   const enhanced = enhanceHtml(html);
   assert.equal((enhanced.match(/data:image\/webp;base64,/g) ?? []).length, 0);
-  const flowPages = CHAPTERS.flatMap((chapter) => chapter.slides).filter((entry) => entry.lanes?.length);
+  const flowPages = CHAPTERS.flatMap((chapter) => chapter.slides).filter((entry) => entry.lanes?.length || entry.visualKind === "mechanism");
   assert.ok(flowPages.length >= 5);
-  assert.ok(flowPages.every((entry) => entry.lanes.every((lane) => lane.steps.length >= 2)));
+  assert.ok(flowPages.every((entry) => (
+    entry.lanes?.every((lane) => lane.steps.length >= 2) ?? entry.stages.length >= 2
+  )));
 });
 
 test("submitted inference lane distinguishes candidate assembly from LightGBM ranking", () => {
   const lane = CHAPTERS.find((chapter) => chapter.slug === "ours")
     .slides.find((entry) => entry.slug === "inference-rail").lanes[0];
   assert.equal(lane.steps.some((step) => /RRF/i.test(step)), false);
-  assert.ok(lane.steps.some((step) => /branch-pool union/i.test(step)));
+  assert.ok(lane.steps.some((step) => /each branch.*candidate union/i.test(step)));
   assert.ok(lane.steps.some((step) => /LightGBM|LambdaMART/i.test(step)));
+});
+
+test("dense comparison topics use teach-then-compare pairs", () => {
+  const pairs = [
+    ["query/lifecycle", "query/query-matrix"],
+    ["query/data-glossary", "query/data-matrix"],
+    ["retrieval/retriever-mechanism", "retrieval/retriever-matrix"],
+    ["response/overview", "response/matrix"],
+  ];
+  const pages = new Map(CHAPTERS.flatMap((chapter) => (
+    chapter.slides.map((entry) => [`${chapter.slug}/${entry.slug}`, entry])
+  )));
+  for (const [mechanismSlug, comparisonSlug] of pairs) {
+    assert.equal(pages.get(mechanismSlug)?.visualKind, "mechanism");
+    assert.equal(pages.get(comparisonSlug)?.visualKind, "comparison");
+    assert.ok(pages.get(comparisonSlug)?.teams?.length >= 4);
+  }
+});
+
+test("submitted inference takes five hundred candidates from every branch", () => {
+  const lane = CHAPTERS.find((chapter) => chapter.slug === "ours")
+    .slides.find((entry) => entry.slug === "inference-rail").lanes[0];
+  assert.ok(lane.steps.includes("Top 500 from each branch → candidate union"));
+  assert.equal(lane.steps.some((step) => /union \(up to 500\)/i.test(step)), false);
 });
 
 test("enhancement is deterministic and idempotent", async () => {
