@@ -254,6 +254,57 @@
     .response-prose { margin: .85rem 0 0; padding: 1.15rem; border-radius: 1rem; background: var(--teal-soft); color: var(--ink); font-size: 1.08rem; }
     .mini-label { margin: 0 0 .35rem; color: var(--coral-text); font-size: .7rem; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
 
+    .formula {
+      margin: 0 0 1.25rem;
+      padding: clamp(1.2rem, 3vw, 2rem);
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-left: .45rem solid var(--coral);
+      border-radius: 1rem;
+      background: var(--paper);
+      color: var(--ink);
+      font: 700 clamp(.95rem, 2.2vw, 1.35rem)/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .metric-list, .lesson-list { display: flex; flex-direction: column; gap: .85rem; margin: 0; padding: 0; list-style: none; }
+    .metric-list li, .lesson-list li { padding: 1.1rem 1.2rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--paper); }
+    .metric-list strong, .lesson-list strong { display: block; margin-bottom: .25rem; }
+    .metric-list span, .lesson-list span { color: var(--ink-soft); }
+    .judge-split { display: flex; flex-direction: column; gap: .85rem; margin-top: 1.25rem; }
+    .judge-card { padding: 1.2rem; border-radius: 1rem; }
+    .judge-card.challenge { border: 2px solid var(--teal); background: var(--teal-soft); }
+    .judge-card.development { border: 2px solid var(--gold); background: var(--gold-soft); }
+    .judge-card p { margin: .45rem 0 0; }
+
+    .trace { display: flex; flex-direction: column; gap: .75rem; margin: 0; padding: 0; list-style: none; }
+    .trace li { position: relative; padding: 1rem 1.15rem 1rem 3.5rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--paper); }
+    .trace li:not(:last-child)::after { content: "↓"; position: absolute; bottom: -1.35rem; left: 1.45rem; z-index: 2; color: var(--coral-text); font-size: 1rem; font-weight: 900; }
+    .trace-step { position: absolute; top: 1rem; left: 1rem; display: grid; width: 1.7rem; height: 1.7rem; place-items: center; border-radius: 50%; background: var(--teal); color: white; font-size: .7rem; font-weight: 900; }
+    .trace strong { display: block; }
+    .trace p { margin: .25rem 0 0; color: var(--ink-soft); }
+    .trace.failure-trace .trace-step { background: var(--coral); }
+    .trace .boundary { border-left: .45rem solid var(--coral); background: var(--coral-soft); }
+    .recoverability { margin: 1rem 0 0; padding: 1rem 1.15rem; border-radius: .9rem; background: var(--teal-soft); color: var(--teal-text); }
+
+    .example-stack, .gap-map { display: flex; flex-direction: column; gap: 1rem; }
+    .example-card, .gap-card { padding: 1.25rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--paper); }
+    .example-card.strong { border-left: .45rem solid var(--teal); }
+    .example-card.failure { border-left: .45rem solid var(--coral); }
+    .example-card p, .gap-card p { margin: .55rem 0 0; color: var(--ink-soft); }
+    .example-path { margin-top: .9rem; color: var(--ink); font-size: .92rem; }
+    .example-path b { color: var(--coral-text); }
+    .status-pill { display: inline-block; margin-bottom: .65rem; padding: .25rem .6rem; border-radius: 999px; background: var(--status-soft); color: var(--status); font-size: .68rem; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
+    .status-pill.failure { background: var(--coral-soft); color: var(--coral-text); }
+    .status-pill.limitation, .status-pill.measurement { background: var(--gold-soft); color: #705205; }
+    .status-pill.unknown { background: var(--cream-deep); color: #514c44; }
+    .gap-map { position: relative; }
+    .gap-map::before { content: ""; position: absolute; top: 1.8rem; bottom: 1.8rem; left: 1.45rem; width: 2px; background: var(--line); }
+    .gap-card { position: relative; margin-left: 3.2rem; }
+    .gap-card::before { content: ""; position: absolute; top: 1.4rem; left: -2.45rem; width: 1rem; height: 1rem; border: .3rem solid var(--cream); border-radius: 50%; background: var(--teal); }
+    .gap-card.problem::before { background: var(--coral); }
+    .gap-card dl { margin: 1rem 0 0; }
+    .gap-card dt { margin-top: .75rem; color: var(--ink); font-weight: 800; }
+    .gap-card dd { margin: .15rem 0 0; color: var(--ink-soft); }
+
     .future { min-height: 1px; padding: 0; scroll-margin-top: 7rem; }
     footer { padding: 3rem 0; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: .85rem; }
 
@@ -645,10 +696,195 @@
         </details>
       </div>
     </section>
-    <section class="future" id="evaluation" aria-label="Evaluation"></section>
-    <section class="future" id="examples" aria-label="Examples"></section>
-    <section class="future" id="gaps" aria-label="Gaps"></section>
-    <section class="future" id="lessons" aria-label="Lessons"></section>
+    <section class="chapter" id="evaluation" aria-labelledby="evaluation-title">
+      <div class="wrap">
+        <div class="chapter-head">
+          <p class="eyebrow"><span class="chapter-number">08</span> · Challenge evaluation</p>
+          <h2 id="evaluation-title">Four signals become one score</h2>
+          <p>The official composite rewards retrieval relevance most, but it also rewards breadth and the quality of the listener-facing reply. Each term is normalized to a zero-to-one scale before weighting.</p>
+        </div>
+        <div class="formula" aria-label="Challenge composite score formula">0.50 × nDCG@20 + 0.10 × catalog diversity + 0.10 × lexical diversity + 0.30 × (response judge − 1) / 4</div>
+        <ul class="metric-list" aria-label="Challenge metric definitions">
+          <li><strong>nDCG@20 · 50%</strong><span>Measures whether relevant tracks appear near the top of the delivered twenty, discounting useful items more heavily as they move down the list. In the project’s single-target devset diagnostics, a missing target has zero gain and a top-ranked target has the strongest gain.</span></li>
+          <li><strong>Catalog diversity · 10%</strong><span>Measures catalog coverage: the number of unique tracks recommended across turns divided by the 47,071-track catalog. It asks whether the system uses more than a narrow, repetitive slice.</span></li>
+          <li><strong>Lexical diversity · 10%</strong><span>Measures variation in generated response language using distinct tokens and phrases. The local evaluator reports Distinct-1 and Distinct-2; retrieval-only dummy responses score zero by construction.</span></li>
+          <li><strong>Normalized response judge · 30%</strong><span>The challenge LLM judge assigns the listener-facing reply a score from 1 to 5. The formula maps that value with <code>(judge − 1) / 4</code>, so 1 becomes 0 and 5 becomes 1 before applying the 30% weight.</span></li>
+        </ul>
+        <div class="judge-split" aria-label="Two different uses of language-model judgment">
+          <article class="judge-card challenge">
+            <h3>Challenge LLM judge · official response outcome</h3>
+            <p>This organizer-side score evaluates the submitted natural-language response and directly contributes 30% of the composite. Its prompt is undisclosed. A saved response or local trace does not reveal this score.</p>
+          </article>
+          <article class="judge-card development">
+            <h3>Development-time LLM labels and judgments · analysis inputs</h3>
+            <p>Separate proxy judges and LLM-generated relevance labels helped compare response variants or build training evidence. They are development tools, not the challenge LLM judge, and the eight-session English proxy was explicitly treated as a coarse ranker rather than an official outcome measure.</p>
+          </article>
+        </div>
+        <p class="boundary-note"><strong>Scope boundary:</strong> labelled devset traces below support success and failure claims. Blind-B traces show the final system’s mechanics, while organizer scores summarize the submission as a whole; hidden per-turn Blind-B relevance prevents attributing its result to any architecture difference or declaring an individual Blind-B example good or bad.</p>
+      </div>
+    </section>
+
+    <section class="chapter" id="examples" aria-labelledby="examples-title">
+      <div class="wrap">
+        <div class="chapter-head">
+          <p class="eyebrow"><span class="chapter-number">09</span> · Evidence gallery</p>
+          <h2 id="examples-title">What held together—and where the chain first broke</h2>
+          <p>Every trace uses the same vertical grammar. “Verified” means the labelled devset snapshot contains the target and final rank; missing state, branch, or response fields remain explicitly unknown.</p>
+        </div>
+
+        <article class="story-card">
+          <span class="evidence-badge">Primary good trace · verified labelled devset</span>
+          <h3>Exact identity survives the full ranking boundary</h3>
+          <ol class="trace" aria-label="Primary good trace for Numb by Linkin Park">
+            <li><span class="trace-step">1</span><strong>User signal</strong><p>“I’m looking for the original 2003 release of ‘Numb’ by Linkin Park from the ‘Meteora’ album.”</p></li>
+            <li><span class="trace-step">2</span><strong>Extracted belief</strong><p>The request supplies four mutually reinforcing identity clues: track, artist, album, and year. The compact evidence record does not include the serialized state, so its exact fields are not reconstructed here.</p></li>
+            <li><span class="trace-step">3</span><strong>Branches activated</strong><p>Branch-level records are not included for this positive control. The example therefore establishes outcome strength for an exact-entity request, not which retriever caused it.</p></li>
+            <li><span class="trace-step">4</span><strong>Candidate boundary</strong><p>The labelled target, “Numb” by Linkin Park, necessarily survived candidate generation and ranking because it appears at final rank one.</p></li>
+            <li><span class="trace-step">5</span><strong>Top pick and response</strong><p>Top pick: “Numb” by Linkin Park. No generated response is stored in this evidence record, so response quality is unknown.</p></li>
+            <li><span class="trace-step">6</span><strong>Outcome</strong><p>Verified retrieval success: the labelled target ranked first. Across the same snapshot, all ten exact-entity positive controls landed in the final top two.</p></li>
+          </ol>
+          <p class="recoverability"><strong>Recoverability:</strong> every recorded ranking boundary preserved the target. The only unmeasured boundary is response quality; this trace cannot validate the language generator.</p>
+        </article>
+
+        <div class="example-stack" aria-label="Strong labelled devset examples">
+          <article class="example-card strong">
+            <span class="status-pill">Verified · labelled devset</span>
+            <h3>Exact entity · “Numb”</h3>
+            <p>Track, artist, album, and year converge on “Numb” by Linkin Park, which ranked first.</p>
+            <p class="example-path"><b>User signal</b> exact title + artist + album + year → <b>belief</b> exact identity → <b>branches</b> not present in compact record → <b>top pick</b> target at rank 1 → <b>outcome</b> hit.</p>
+            <details><summary>State, query, and candidate detail</summary><div><p>Session <code>0681d55b-98a0-4773-a9df-075a8050d805</code>, turn 1. The evidence snapshot verifies final rank 1 but does not store the exact state object, branch queries, or generated reply; no causal branch claim is made.</p></div></details>
+          </article>
+          <article class="example-card strong">
+            <span class="status-pill">Verified · labelled devset</span>
+            <h3>Refinement · keep Gorillaz, add synth energy</h3>
+            <p>The listener retained the artist while refining toward electronic and synth attributes. “DARE” by Gorillaz ranked fourth.</p>
+            <p class="example-path"><b>User signal</b> more Gorillaz + electronic/synth → <b>belief</b> artist continuation with new facets → <b>branches</b> not present in compact record → <b>top pick boundary</b> target at rank 4 → <b>outcome</b> top-20 hit.</p>
+            <details><summary>State, query, and candidate detail</summary><div><p>Session <code>737a65cf-9c45-4b1d-910d-2f1f1ef5eab7</code>, turn 3. The request says features are optional; the evidence supports artist retention, attribute refinement, and final rank 4, but not a specific branch cause.</p></div></details>
+          </article>
+          <article class="example-card strong">
+            <span class="status-pill">Verified · labelled devset</span>
+            <h3>Pivot / new artist · “Pumped Up Kicks”</h3>
+            <p>An energetic indie-rock request explicitly floated Foster The People and Cage The Elephant after a pivot. “Pumped Up Kicks” ranked first.</p>
+            <p class="example-path"><b>User signal</b> pivot + genre + whistle/bassline + new artists → <b>belief</b> fresh artist anchors → <b>branches</b> BM25 best at rank 1 → <b>top pick</b> target at rank 1 → <b>outcome</b> hit.</p>
+            <details><summary>State, query, and candidate detail</summary><div><p>Session <code>a61b366c-8cf5-48ad-a13f-181c033b9d89</code>, turn 2. Cohort labels include <code>midconv_new_artist</code> and <code>novelty_cue</code>; the extracted intent preserves both named artists, and BM25 is the recorded best branch.</p></div></details>
+          </article>
+          <article class="example-card strong">
+            <span class="status-pill">Verified · labelled devset</span>
+            <h3>Lyrical clue · “It Was A Good Day”</h3>
+            <p>The user supplied Ice Cube, the 1990s, and an opening lyric. The target ranked second.</p>
+            <p class="example-path"><b>User signal</b> artist + era + quoted lyric → <b>belief</b> exact probe + lyric search → <b>branches</b> lyric route fired; discography best at rank 1 → <b>top pick boundary</b> target at rank 2 → <b>outcome</b> hit.</p>
+            <details><summary>State, query, and candidate detail</summary><div><p>Session <code>a9b423bf-d05c-418d-98af-2a3b1e1d7917</code>, turn 1. The lyric branch fired, but resolved-artist discography was the best branch at rank 1. This trace does not establish that lyric retrieval caused the final placement.</p></div></details>
+          </article>
+          <article class="example-card strong">
+            <span class="status-pill">Verified · labelled devset</span>
+            <h3>Hidden target · an underspecified Post Malone memory</h3>
+            <p>With almost no descriptive clue beyond the artist and a remembered “hook,” “Congratulations” remained inside the delivered list at rank 13.</p>
+            <p class="example-path"><b>User signal</b> Post Malone + vague remembered appeal → <b>belief</b> hidden-target search → <b>branches</b> not present in compact record → <b>top pick boundary</b> target at rank 13 → <b>outcome</b> top-20 hit.</p>
+            <details><summary>State, query, and candidate detail</summary><div><p>Session <code>13552d56-f3d8-443a-9272-11ec16c80fa1</code>, turn 1. The evidence verifies the deliberately underspecified request, labelled target, and final rank 13; exact state and branch records are unavailable.</p></div></details>
+          </article>
+        </div>
+
+        <article class="story-card">
+          <span class="evidence-badge reconstructed">Primary bad trace · verified frozen devset baseline</span>
+          <h3>A satisfied artist remained a live anchor</h3>
+          <ol class="trace failure-trace" aria-label="Primary failure trace for stale artist anchoring">
+            <li><span class="trace-step">1</span><strong>User signal</strong><p>After praising “Can You Feel the Force,” the listener asks for <em>other</em> high-energy classic disco or funk from the late 1970s to early 1980s.</p></li>
+            <li class="boundary"><span class="trace-step">2</span><strong>Extracted belief · first broken boundary</strong><p>The frozen roleless baseline kept the prior artist The Real Thing as a positive anchor. The ideal state marks it satisfied/history rather than a current target.</p></li>
+            <li><span class="trace-step">3</span><strong>Branches activated</strong><p>The strongest recorded branch was Qwen-8B attribute retrieval, but the labelled target “Give It To Me Baby” by Rick James appeared only at branch rank 101.</p></li>
+            <li><span class="trace-step">4</span><strong>Candidate boundary</strong><p>The target missed union@100 and entered fusion at rank 218, outside the practical region where final ranking could expose it.</p></li>
+            <li><span class="trace-step">5</span><strong>Top pick and response</strong><p>The labelled target finished at rank 158, so it was absent from the delivered top 20. The compact record does not include the selected top track or response.</p></li>
+            <li><span class="trace-step">6</span><strong>Outcome</strong><p>Verified failure in the frozen 2026-06-06 baseline: state role assignment broke first, then candidate placement made the error unrecoverable downstream.</p></li>
+          </ol>
+          <p class="recoverability"><strong>Recoverability:</strong> reranking alone could not repair a target outside union@100. Re-test this cohort on the submitted V1 extractor; the evidence does not prove that the newer submitted path retains the same failure.</p>
+        </article>
+
+        <div class="example-stack" aria-label="Distinct verified failure examples">
+          <article class="example-card failure">
+            <span class="status-pill failure">Verified · candidate generation</span>
+            <h3>No branch retrieved “Perpetual”</h3>
+            <p>“An electronic band with a powerful, anthemic sound” routed as feature articulation and hidden-target search, yet no branch placed VNV Nation’s “Perpetual” in its top 1,000.</p>
+            <p class="example-path"><b>User signal</b> electronic + powerful + anthemic → <b>belief</b> three positive tags → <b>branches</b> no target rank → <b>candidate boundary</b> absent → <b>outcome</b> unrecoverable miss.</p>
+            <details><summary>First broken boundary and recoverability</summary><div><p>Candidate generation broke first. Fusion and final ranking never received the labelled target, so only query translation, retrieval branches, depth, or catalog/index improvements could recover it.</p></div></details>
+          </article>
+          <article class="example-card failure">
+            <span class="status-pill failure">Verified · candidate fusion</span>
+            <h3>A specialist’s rank 6 became fused rank 60</h3>
+            <p>For “80s American hardcore punk bands,” metadata retrieval placed “Hard Times” by Cro-Mags at rank 6, but fusion demoted it to 60 and final ranking to 134.</p>
+            <p class="example-path"><b>User signal</b> era + region + subgenre → <b>belief</b> raw, short, intense hardcore → <b>branch</b> rank 6 → <b>fusion boundary</b> rank 60 → <b>outcome</b> top-20 miss.</p>
+            <details><summary>First broken boundary and recoverability</summary><div><p>Fusion broke first by diluting a strong specialist result. This boundary is replayable with calibrated weights or learned fusion features; exact-entity controls are needed to detect regressions.</p></div></details>
+          </article>
+          <article class="example-card failure">
+            <span class="status-pill failure">Verified · final learned ranking</span>
+            <h3>A fused top-20 target fell to rank 74</h3>
+            <p>“Too Drunk to Fuck” by Dead Kennedys was branch rank 4 and fused rank 13, then the learned ranker moved it to 74.</p>
+            <p class="example-path"><b>User signal</b> melodic/metallic hardcore refinement → <b>belief</b> same scene with new facets → <b>branch</b> rank 4 → <b>candidate boundary</b> fused rank 13 → <b>outcome</b> final-ranker loss.</p>
+            <details><summary>First broken boundary and recoverability</summary><div><p>Final learned ranking broke first; candidate generation and fusion had preserved the target. Saved candidate replay can isolate feature or training-label changes without rerunning retrieval.</p></div></details>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="chapter" id="gaps" aria-labelledby="gaps-title">
+      <div class="wrap">
+        <div class="chapter-head">
+          <p class="eyebrow"><span class="chapter-number">10</span> · Boundary gap map</p>
+          <h2 id="gaps-title">A failure is useful only when its boundary is named</h2>
+          <p>The map separates observed failures from architectural limits, missing measurements, and unknown impact. Frozen-devset findings are not silently promoted to claims about the final submitted V1 path.</p>
+        </div>
+        <div class="gap-map">
+          <article class="gap-card problem">
+            <span class="status-pill failure">Observed failure · frozen baseline</span>
+            <h3>State understanding</h3>
+            <dl><dt>Expected capability</dt><dd>Type entities as current, accepted, satisfied, rejected, or historical across turns.</dd><dt>Submitted behavior</dt><dd>The submitted config uses the newer V1 extractor. A frozen roleless devset baseline sometimes kept satisfied artists as positive anchors; this does not prove the same behavior in V1.</dd><dt>Evidence</dt><dd>The Real Thing remained active on the Rick James target turn in <code>P0_roleless_stale_entity_failure</code>.</dd><dt>User consequence</dt><dd>The observed baseline followed a prior answer more strongly than the listener’s request for “other” music.</dd><dt>Recoverability</dt><dd>Re-evaluate the stale-entity cohort with V1 traces; if it persists, tighten role, source-turn, recency, and seed semantics.</dd></dl>
+          </article>
+          <article class="gap-card problem">
+            <span class="status-pill limitation">Architectural limitation</span>
+            <h3>Entity and response grounding</h3>
+            <dl><dt>Expected capability</dt><dd>Ground identity and descriptive claims in catalog evidence that crosses the response handoff.</dd><dt>Submitted behavior</dt><dd>The response receives title, artist, album, and capped tags for one selected track—not an independently verified cover description or a post-generation fact check.</dd><dt>Evidence</dt><dd>The saved Blind-B prose asserts gradients, blurred shapes, and a “perfect” match that are not established by the visible trace or item context.</dd><dt>User consequence</dt><dd>Fluent language can sound more certain and specific than its supplied evidence supports.</dd><dt>Recoverability</dt><dd>Within this submitted control path, generation cannot switch tracks; only richer verified context or a separate checker could repair unsupported prose claims.</dd></dl>
+          </article>
+          <article class="gap-card problem">
+            <span class="status-pill failure">Observed failure · frozen devset</span>
+            <h3>Candidate coverage</h3>
+            <dl><dt>Expected capability</dt><dd>Place the relevant track in at least one deep branch pool.</dd><dt>Submitted behavior</dt><dd>In the frozen 8,000-turn baseline, 757 targets (9.46%) were absent from every branch top 1,000.</dd><dt>Evidence</dt><dd>The VNV Nation example has no branch, fused, or final rank.</dd><dt>User consequence</dt><dd>No downstream ranker can recommend a target it never receives.</dd><dt>Recoverability</dt><dd>Improve state-to-query translation, retrieval branches, depth, or catalog/index coverage; reranking alone cannot help.</dd></dl>
+          </article>
+          <article class="gap-card problem">
+            <span class="status-pill failure">Observed failure · frozen devset</span>
+            <h3>Fusion and ranking features</h3>
+            <dl><dt>Expected capability</dt><dd>Preserve strong specialist candidates and keep relevant fused candidates in the final top 20.</dd><dt>Submitted behavior</dt><dd>The baseline lost 1,046 targets (13.08%) that were in a branch top 20 but not fused top 20; it also contains final-ranker demotions.</dd><dt>Evidence</dt><dd>“Hard Times” moved 6 → 60 → 134; “Too Drunk to Fuck” moved 4 → 13 → 74.</dd><dt>User consequence</dt><dd>The right track can be retrieved yet disappear before delivery.</dd><dt>Recoverability</dt><dd>Replay fusion weights and learned-ranker features separately over saved candidates, with success controls guarding regressions.</dd></dl>
+          </article>
+          <article class="gap-card problem">
+            <span class="status-pill unknown">Unknown impact</span>
+            <h3>Response generalization and selection</h3>
+            <dl><dt>Expected capability</dt><dd>Produce concise, personalized explanations across the multilingual challenge distribution.</dd><dt>Submitted behavior</dt><dd>Qwen with state conditioning was chosen from an eight-session English proxy slice, validated on Blind-A, and then enabled in Blind-B; the path explains rank one in a single pass.</dd><dt>Evidence</dt><dd>The bake-off reports a 4.2 Blind-A judge score but calls the local proxy coarse and requests broader non-English evaluation.</dd><dt>User consequence</dt><dd>Quality may vary for languages and conversational styles outside the small selection slice.</dd><dt>Recoverability</dt><dd>Measure a broader labelled multilingual replay set, keeping response quality separate from retrieval quality.</dd></dl>
+          </article>
+          <article class="gap-card problem">
+            <span class="status-pill measurement">Measurement gap</span>
+            <h3>Evaluation and model selection</h3>
+            <dl><dt>Expected capability</dt><dd>Attribute final top-20 and response quality to individual Blind-B turns.</dd><dt>Submitted behavior</dt><dd>The trace records mechanics and outputs, while hidden Blind-B labels and per-turn judge results prevent local outcome classification.</dd><dt>Evidence</dt><dd>The saved trace has no ground-truth target or relevance field.</dd><dt>User consequence</dt><dd>An individual Blind-B trace cannot honestly be called a recommendation success or failure, and score differences cannot be assigned to architecture changes from this evidence alone.</dd><dt>Recoverability</dt><dd>Wait for organizer labels or evaluation; use labelled devset traces for boundary claims in the meantime.</dd></dl>
+          </article>
+          <article class="gap-card">
+            <span class="status-pill">Verified · preserved capability</span>
+            <h3>Infrastructure and reproducibility</h3>
+            <dl><dt>Expected capability</dt><dd>Replay costly retrieval and ranking work with traceable inputs, outputs, and cache behavior.</dd><dt>Submitted behavior</dt><dd>Run-scoped predictions, traces, manifests, committed ranker artifacts, staged replay, and a frozen offline-cache mode are documented.</dd><dt>Evidence</dt><dd>The staged runner persists retrieval for local reranking; the offline reproduction environment hard-fails cache misses instead of silently making paid calls.</dd><dt>User consequence</dt><dd>Most stage-local diagnostics can be repeated without conflating retrieval and reranking changes.</dd><dt>Recoverability</dt><dd>No evidence-backed infrastructure gap is asserted here. Online cache misses still require the documented hosted services, so offline claims apply only to the curated bundle.</dd></dl>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="chapter" id="lessons" aria-labelledby="lessons-title">
+      <div class="wrap">
+        <div class="chapter-head">
+          <p class="eyebrow"><span class="chapter-number">11</span> · Evidence synthesis</p>
+          <h2 id="lessons-title">Preserve the contracts; name the uncertainty</h2>
+          <p>This is a retrospective synthesis, not a roadmap. It records what the evidence says to preserve, what proved fragile or failed, and what remains unknown.</p>
+        </div>
+        <ul class="lesson-list">
+          <li><strong>Preserve</strong><span>Typed state and explicit routing contracts; multimodal specialist fan-out with one reconvergence boundary; saved candidate/ranking stages; exact-entity controls; top-1 response handoff clarity; and cache-first, replayable artifacts.</span></li>
+          <li><strong>Fragile or failed</strong><span>Entity-role assignment in the frozen roleless baseline, deep candidate recall, fusion preservation, learned final ordering, and response claims that extend beyond supplied item evidence.</span></li>
+          <li><strong>Unknown</strong><span>Per-turn Blind-B relevance, whether the submitted V1 extractor retains the frozen stale-anchor failure, multilingual response generalization, and the causal contribution of branches absent from compact positive-control records.</span></li>
+        </ul>
+      </div>
+    </section>
     <section class="future" id="reproduce" aria-label="Reproduce"></section>
   </main>
 
