@@ -37,7 +37,16 @@ export const CHAPTERS = [
           { label: "Retriever inputs", detail: "Each source receives the representation suited to its evidence" },
         ],
       }),
-      slide("query-glossary", "What counts as a query representation?", "story", ["query_heading", "query_explainer"]),
+      slide("query-glossary", "Four ways dialogue becomes retriever input", "visual", ["query_heading", "query_explainer"], {
+        visualKind: "mechanism",
+        takeaway: "A query representation is any structured or learned form that a candidate source can actually consume—not only a rewritten sentence.",
+        stages: [
+          { label: "Text rewrite", detail: "Compress the request into search-ready language" },
+          { label: "Structured state", detail: "Extract intent, entities, constraints, and feedback" },
+          { label: "Learned encoding", detail: "Map conversation evidence into a dense vector" },
+          { label: "History key", detail: "Use played tracks, artists, albums, or transitions directly" },
+        ],
+      }),
       slide("query-matrix", "Same stages, different query evidence", "matrix", ["query_matrix"], {
         visualKind: "comparison",
         columns: ["Interpretation", "Query forms", "History boundary"],
@@ -223,13 +232,25 @@ export const resolveSlug = (slug) => LEGACY_ALIASES.get(slug) || slug;
 export const DISCLOSURES = {
   section_directory: "Open the original chapter outline",
   how_scoring_works: "Open the composite-score formula",
-  leaderboard_table: "Open the exact leaderboard table",
+  leaderboard_table: "Open exact values and repository links",
+  lifecycle_heading: "Open the source-backed lifecycle introduction",
+  lifecycle_map: "Open the complete lifecycle map",
+  lifecycle_takeaway: "Open the original lifecycle takeaway",
+  query_heading: "Open the query-audit heading",
+  query_explainer: "Open definitions, qualifications, and sources",
   query_matrix: "Open the complete five-team query matrix",
   query_evidence_details: "Open prompt excerpts and the reviewed file inventory",
+  data_knowledge_heading: "Open the data-provenance heading",
+  data_knowledge_glossary: "Open definitions and evidence boundaries",
   data_knowledge_matrix: "Open the complete data and model-knowledge matrix",
+  data_knowledge_interpretation: "Open the complete provenance interpretation",
+  retrieval_heading: "Open the retrieval-audit heading",
+  retrieval_glossary: "Open definitions and the candidate-set boundary",
   retrieval_matrix: "Open the complete retrieval matrix",
   feature_matrix: "Open the complete feature-family matrix",
   feature_details: "Open the per-team feature inventories",
+  response_heading: "Open the response-audit heading",
+  response_explainer: "Open the complete response-system explanation",
   response_matrix: "Open the complete response-generation matrix",
   own_system_walkthrough: "Open the complete submitted-system walkthrough",
   evidence_notes: "Open the complete evidence notes",
@@ -321,6 +342,7 @@ html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;ove
 .deck-flow-only .deck-slide-inner{min-height:calc(100dvh - 190px);grid-template-rows:auto minmax(0,1fr)}.deck-flow-only .deck-flow{align-self:center}.deck-flow-only .deck-flow-step{display:grid;min-height:128px;align-content:center;font-size:clamp(15px,1.2vw,18px);line-height:1.4}
 .deck-mechanism{display:grid;gap:22px;align-self:center}.deck-mechanism-stages{display:grid;grid-template-columns:repeat(var(--stage-count),minmax(0,1fr));gap:26px;margin:0;padding:0;list-style:none;counter-reset:mechanism-stage}.deck-mechanism-stage{position:relative;display:grid;align-content:center;min-height:150px;padding:18px;border:1px solid var(--portable-border);border-top:5px solid var(--stage-color);border-radius:14px;background:var(--portable-surface);counter-increment:mechanism-stage}.deck-mechanism-stage::before{content:counter(mechanism-stage);margin-bottom:10px;color:var(--stage-color);font-size:13px;font-weight:900}.deck-mechanism-stage:not(:last-child)::after{content:"→";position:absolute;top:50%;right:-21px;color:var(--portable-accent);font-size:22px;font-weight:900;transform:translateY(-50%)}.deck-mechanism-stage h3{margin:0 0 8px;font-size:clamp(16px,1.35vw,20px)}.deck-mechanism-stage p{margin:0;color:var(--portable-muted);font-size:14px;line-height:1.5}.deck-takeaway{margin:0;padding:14px 18px;border-left:5px solid #d89a2b;border-radius:10px;background:color-mix(in srgb,#d89a2b 10%,var(--portable-surface));font-size:clamp(15px,1.15vw,18px);line-height:1.5}.deck-takeaway strong{display:block;margin-bottom:3px;color:#a96f09;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
 .deck-comparison{display:grid;gap:10px}.deck-comparison-columns,.deck-team-row{display:grid;grid-template-columns:minmax(115px,.55fr) repeat(3,minmax(0,1fr));gap:14px}.deck-comparison-columns{padding:0 16px;color:var(--portable-muted);font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.deck-team-row{padding:14px 16px;border:1px solid var(--portable-border);border-left:5px solid var(--team-color);border-radius:12px;background:var(--portable-surface)}.deck-team-row h3{margin:0;font-size:16px}.deck-team-value{display:grid;gap:4px;color:var(--portable-muted);font-size:13px;line-height:1.42}.deck-team-value::before{content:attr(data-label);display:none;color:var(--portable-ink);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.deck-team-status{display:inline-flex;width:max-content;margin-top:7px;padding:3px 8px;border:1px solid currentColor;border-radius:999px;color:var(--portable-muted);font-size:10px;font-weight:800;text-transform:uppercase}.deck-team-status--verified{color:#19724d}.deck-team-status--external{color:#176e9e}.deck-team-status--limit{color:#9a6810}.deck-common-different{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}.deck-synthesis-card{padding:14px 16px;border-left:5px solid var(--synthesis-color);border-radius:11px;background:var(--portable-surface);font-size:14px;line-height:1.5}.deck-synthesis-card strong{display:block;margin-bottom:4px;color:var(--portable-ink)}
+.deck-scoreboard{display:grid;align-self:start;grid-auto-rows:max-content;gap:6px;overflow-x:auto}.deck-score-header,.deck-score-row{display:grid;grid-template-columns:34px minmax(125px,1.25fr) minmax(130px,1fr) repeat(4,minmax(76px,.62fr));gap:12px;align-items:center;min-width:820px}.deck-score-header{padding:0 14px 5px;color:var(--portable-muted);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.deck-score-row{min-height:58px;padding:9px 14px;border:1px solid var(--portable-border);border-left:5px solid var(--score-color);border-radius:11px;background:var(--portable-surface)}.deck-score-rank{font-size:12px;font-weight:900}.deck-score-team{font-size:16px;font-weight:850}.deck-score-value{font-variant-numeric:tabular-nums;text-align:right}.deck-score-composite{position:relative;isolation:isolate;padding:7px 9px;border-radius:7px;overflow:hidden;text-align:right}.deck-score-composite::before{position:absolute;z-index:-1;inset:0 auto 0 0;width:var(--score-width);background:color-mix(in srgb,var(--score-color) 28%,transparent);content:""}
 .deck-slide--story .deck-slide-inner{gap:clamp(24px,3vw,40px)}.deck-slide.deck-slide--story .portable-markdown{width:100%;max-width:1120px;font-size:clamp(17px,1.35vw,20px);line-height:1.65}.deck-slide--story .portable-markdown p{margin-block:0 1.15em}.deck-slide--story .portable-markdown a{font-weight:650}.deck-slide--story .portable-page-header,.deck-slide--story .portable-content-card{width:100%;max-width:1120px}.deck-slide--story .deck-question{font-size:clamp(15px,1.15vw,18px)}
 .deck-slide--visual .deck-visual{max-width:1100px}.deck-slide--matrix .portable-content-card,.deck-slide--audit .portable-content-card{width:100%;max-width:none}
 .deck-slide--matrix table{width:100%;table-layout:auto}.deck-slide--matrix th,.deck-slide--matrix td{white-space:normal;overflow-wrap:anywhere;vertical-align:top}
@@ -333,6 +355,7 @@ html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;ove
 .deck-progressive .deck-slide-inner{grid-template-columns:1fr}.deck-progressive [data-artifact-block-id]{display:contents}.deck-insight-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%}.deck-insight-card{min-width:0;border:1px solid var(--portable-border);border-radius:14px;background:var(--portable-surface);overflow:clip}.deck-insight-card>summary{display:grid;gap:7px;min-height:118px;padding:16px 18px;cursor:pointer;list-style:none}.deck-insight-card>summary::-webkit-details-marker{display:none}.deck-insight-title{color:var(--portable-accent);font-size:clamp(16px,1.25vw,19px);font-weight:850}.deck-insight-lede{color:var(--portable-muted);font-size:14px;line-height:1.45}.deck-insight-card>summary::after{content:"Open detail +";align-self:end;color:var(--portable-accent);font-size:12px;font-weight:800}.deck-insight-card[open]>summary::after{content:"Close detail −"}.deck-insight-detail{margin:0;padding:0 18px 18px;border-top:1px solid var(--portable-border);font-size:14px;line-height:1.55}.deck-insight-detail strong:first-child{display:none}.deck-progressive .portable-markdown{display:contents}.deck-progressive .portable-content-card{display:contents}.deck-status{font-weight:800;text-align:center}.deck-status::before{display:inline-block;min-width:112px;padding:5px 10px;border:1px solid currentColor;border-radius:999px}.deck-status--yes{color:#19724d}.deck-status--yes::before{content:"Yes";background:color-mix(in srgb,#15945b 16%,transparent)}.deck-status--partial{color:#8b5b08}.deck-status--partial::before{content:"Partial";background:color-mix(in srgb,#c98612 16%,transparent)}.deck-status--missing{color:var(--portable-muted)}.deck-status--missing::before{content:"Not documented";background:color-mix(in srgb,var(--portable-muted) 10%,transparent)}.deck-status-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .deck-disclosure{border:1px solid var(--portable-border);border-radius:12px;background:var(--portable-surface);overflow:clip}
 .deck-disclosure>summary{min-height:48px;padding:14px 18px;cursor:pointer;color:var(--portable-accent);font-weight:700}
+.deck-disclosure:not([open])>:not(summary){display:none!important}
 .deck-disclosure>[data-artifact-block-id]{border:0;border-radius:0}
 .deck-source-list{margin-top:18px}.deck-source-list>.deck-disclosure{width:100%}#data-analytics-portable-fallback>.portable-sources,.deck-source-list>.portable-sources{display:block!important}
 .deck-jump{position:fixed;inset:0;z-index:50;display:none;place-items:center;padding:20px;background:rgba(15,23,42,.72)}
@@ -583,6 +606,54 @@ function runtimeMain(CONFIG) {
       [...row.children].forEach((cell, index) => { cell.dataset.columnLabel = headers[index] || `Column ${index + 1}`; });
     });
   });
+
+  const leaderboardDetails = document.querySelector('[id="outcome/leaderboard-table"] details[data-disclosure-for="leaderboard_table"]');
+  const leaderboardTable = leaderboardDetails?.querySelector("table");
+  if (leaderboardDetails && leaderboardTable) {
+    const numericText = (cell) => cell.textContent.trim().match(/^-?\d+(?:\.\d+)?/)?.[0] || "—";
+    const rows = [...leaderboardTable.querySelectorAll("tbody tr")].map((row) => {
+      const cells = [...row.cells];
+      return [cells[0].textContent.trim(), cells[1].textContent.trim(), ...cells.slice(2, 7).map(numericText)];
+    });
+    const composites = rows.map((row) => Number.parseFloat(row[2])).filter(Number.isFinite);
+    const maximum = Math.max(...composites, 1);
+    const scoreboard = document.createElement("section");
+    scoreboard.className = "deck-scoreboard";
+    scoreboard.setAttribute("aria-label", "Compact official leaderboard");
+    const header = document.createElement("div");
+    header.className = "deck-score-header";
+    ["Rank", "Team", "Composite", "nDCG@20", "Catalog", "Lexical", "LLM /5"].forEach((text) => {
+      const label = document.createElement("span");
+      label.textContent = text;
+      header.append(label);
+    });
+    scoreboard.append(header);
+    rows.forEach((values, index) => {
+      const row = document.createElement("article");
+      row.className = "deck-score-row";
+      row.style.setProperty("--score-color", teamColors[index % teamColors.length]);
+      row.setAttribute("aria-label", `${index + 1}. ${values[0]}, composite ${values[2]}`);
+      const rank = document.createElement("span");
+      rank.className = "deck-score-rank";
+      rank.textContent = String(index + 1);
+      const team = document.createElement("span");
+      team.className = "deck-score-team";
+      team.textContent = values[0];
+      const composite = document.createElement("span");
+      composite.className = "deck-score-value deck-score-composite";
+      composite.style.setProperty("--score-width", `${(Number.parseFloat(values[2]) / maximum) * 100}%`);
+      composite.textContent = values[2];
+      row.append(rank, team, composite);
+      values.slice(3, 7).forEach((value) => {
+        const metric = document.createElement("span");
+        metric.className = "deck-score-value";
+        metric.textContent = value;
+        row.append(metric);
+      });
+      scoreboard.append(row);
+    });
+    leaderboardDetails.before(scoreboard);
+  }
 
   const progressiveSlides = [
     "ours/walkthrough",

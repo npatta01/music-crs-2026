@@ -267,6 +267,36 @@ def test_progressive_disclosure_and_sources(page, enhanced_report: Path) -> None
     assert source_details.locator(".portable-sources").is_visible()
 
 
+def test_leaderboard_uses_compact_ranked_rows(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    open_deck(browser_page, enhanced_report, "#outcome/leaderboard-table")
+    rows = browser_page.locator("[id='outcome/leaderboard-table'] .deck-score-row")
+    assert rows.count() == 5
+    scoreboard = browser_page.locator("[id='outcome/leaderboard-table'] .deck-scoreboard")
+    assert scoreboard.count() == 1
+    box = scoreboard.bounding_box()
+    assert box is not None and box["height"] < 430
+    assert browser_page.locator(
+        "[id='outcome/leaderboard-table'] details[data-disclosure-for='leaderboard_table']"
+    ).count() == 1
+    assert errors == []
+
+
+def test_visual_first_default_has_bounded_visible_prose(page, enhanced_report: Path) -> None:
+    browser_page, _ = page
+    open_deck(browser_page, enhanced_report)
+    for slug in (
+        "query/query-glossary",
+        "query/data-matrix",
+        "retrieval/retriever-matrix",
+        "response/matrix",
+    ):
+        text = browser_page.locator(f"[id='{slug}']").evaluate(
+            "node => [...node.querySelectorAll('p')].filter(p => p.offsetParent !== null).map(p => p.textContent).join(' ')"
+        )
+        assert len(text.split()) <= 120
+
+
 def test_linear_and_print_modes(page, enhanced_report: Path) -> None:
     browser_page, _ = page
     open_deck(browser_page, enhanced_report, "?view=linear")
