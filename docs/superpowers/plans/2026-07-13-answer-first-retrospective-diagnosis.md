@@ -47,7 +47,7 @@
 - Consumes: existing `slide()` helper, canonical block IDs, `validateChapterMap()`, and `LEGACY_ALIASES`.
 - Later tasks rely on diagnosis slide options named `diagnosisKind`, `confidence`, `stages`, `connections`, `featureFamilies`, and `boundaries`.
 
-- [ ] **Step 1: Write failing structural tests for order, content, and evidence language**
+- [x] **Step 1: Write failing structural tests for order, content, and evidence language**
 
 Add imports and tests to `tests/report/retrospective_deck.test.mjs`:
 
@@ -105,7 +105,7 @@ test("curated path is short, answer-first, and references canonical slides", () 
 });
 ```
 
-- [ ] **Step 2: Run the structural tests and confirm the new exports are missing**
+- [x] **Step 2: Run the structural tests and confirm the new exports are missing**
 
 Run:
 
@@ -115,7 +115,7 @@ node --test tests/report/retrospective_deck.test.mjs
 
 Expected: FAIL with an import/export error for `CONFIDENCE_LEVELS`, `CURATED_PATH`, or `DIAGNOSIS_SLIDES`.
 
-- [ ] **Step 3: Add the diagnosis data model and reorder chapters**
+- [x] **Step 3: Add the diagnosis data model and reorder chapters**
 
 In `scripts/report/retrospective_deck.mjs`, define the exported constants before `CHAPTERS`:
 
@@ -180,7 +180,7 @@ Lock in the final 56-slide structure during this task so later renderer work doe
 
 Update the pre-existing exact-count assertions in both report test files from seven chapters/51 slides to eight chapters/56 slides and `[6, 6, 7, 7, 7, 5, 13, 5]`.
 
-- [ ] **Step 4: Run the structural tests and chapter-map check**
+- [x] **Step 4: Run the structural tests and chapter-map check**
 
 Run:
 
@@ -191,7 +191,7 @@ node scripts/report/retrospective_deck.mjs --check retrospective.html
 
 Expected: all Node tests PASS and the check reports `PASS: 74 blocks mapped into 8 chapters`.
 
-- [ ] **Step 5: Commit the answer-first structure**
+- [x] **Step 5: Commit the answer-first structure**
 
 ```bash
 git add scripts/report/retrospective_deck.mjs tests/report/retrospective_deck.test.mjs
@@ -210,7 +210,7 @@ git commit -m "feat: add answer-first diagnosis structure"
 - Consumes: `entry.diagnosisKind` and the diagnosis option shapes from Task 1.
 - Produces: `.deck-diagnosis`, `.deck-bottleneck`, `.deck-wiring`, `.deck-feature-map`, `.deck-boundary-map`, `.deck-confidence-grid`, `.deck-belief-timeline`, and `.deck-failure-taxonomy` DOM structures.
 
-- [ ] **Step 1: Add failing browser tests for all diagnosis visual forms**
+- [x] **Step 1: Add failing browser tests for all diagnosis visual forms**
 
 Add to `tests/report/test_retrospective_deck_browser.py`:
 
@@ -241,7 +241,7 @@ def test_diagnosis_confidence_and_unknown_boundaries_are_explicit(page, enhanced
     assert "sole cause" not in text.lower()
 ```
 
-- [ ] **Step 2: Run the browser tests and confirm the visual classes are absent**
+- [x] **Step 2: Run the browser tests and confirm the visual classes are absent**
 
 Run:
 
@@ -251,7 +251,7 @@ TMPDIR=/var/tmp/mcrs-playwright-tmp pytest -q tests/report/test_retrospective_de
 
 Expected: FAIL because `.deck-bottleneck-stage` and the other diagnosis structures do not exist.
 
-- [ ] **Step 3: Add deterministic diagnosis renderers**
+- [x] **Step 3: Add deterministic diagnosis renderers**
 
 In `runtimeMain()`, add a renderer called from the existing slide construction loop:
 
@@ -273,7 +273,7 @@ const renderDiagnosis = (inner, entry) => {
 
 Use native ordered lists and headings for every stage. `renderConstraintWiring()` must include the verified extraction and consumer labels from the spec, with `data-link-kind="direct|soft|feature-only"`. `renderEvidenceBoundaries()` must show direct co-occurrence, transition probability, generated-description similarity, and frequency priors as missing/limited while explicitly listing dense similarity, CF/BPR centroids, state, rejection, temporal, metadata, and agreement evidence as present.
 
-- [ ] **Step 4: Add accessible technical styling**
+- [x] **Step 4: Add accessible technical styling**
 
 Extend `DECK_STYLE` with component classes using the existing palette:
 
@@ -293,7 +293,7 @@ Extend `DECK_STYLE` with component classes using the existing palette:
 
 Do not use color without text labels or line styles.
 
-- [ ] **Step 5: Run focused browser and structural tests**
+- [x] **Step 5: Run focused browser and structural tests**
 
 ```bash
 node --test tests/report/retrospective_deck.test.mjs
@@ -302,7 +302,7 @@ TMPDIR=/var/tmp/mcrs-playwright-tmp pytest -q tests/report/test_retrospective_de
 
 Expected: all selected tests PASS with no browser errors.
 
-- [ ] **Step 6: Commit the diagnosis visuals**
+- [x] **Step 6: Commit the diagnosis visuals**
 
 ```bash
 git add scripts/report/retrospective_deck.mjs tests/report/test_retrospective_deck_browser.py
@@ -322,7 +322,7 @@ git commit -m "feat: visualize retrospective diagnosis"
 - Consumes: `CURATED_PATH`, `bySlug`, `goTo()`, `updateCurrent()`, and existing linear/deck modes.
 - Produces: `setReadingPath(mode: "curated" | "audit")`, `currentReadingPath(): string`, topbar `[data-action="reading-path"]`, and `?path=curated|audit` URL state.
 
-- [ ] **Step 1: Add failing runtime navigation tests**
+- [x] **Step 1: Add failing runtime navigation tests**
 
 Add to `tests/report/test_retrospective_deck_browser.py`:
 
@@ -351,7 +351,7 @@ def test_curated_path_does_not_hide_audit_from_jump_or_direct_links(page, enhanc
     assert browser_page.locator("html").get_attribute("data-reading-path") == "audit"
 ```
 
-- [ ] **Step 2: Run the focused tests and verify the reading-path control is absent**
+- [x] **Step 2: Run the focused tests and verify the reading-path control is absent**
 
 ```bash
 TMPDIR=/var/tmp/mcrs-playwright-tmp pytest -q tests/report/test_retrospective_deck_browser.py -k curated_path
@@ -359,7 +359,7 @@ TMPDIR=/var/tmp/mcrs-playwright-tmp pytest -q tests/report/test_retrospective_de
 
 Expected: FAIL because `[data-reading-path]` and the reading-path button do not exist.
 
-- [ ] **Step 3: Implement curated/audit navigation state**
+- [x] **Step 3: Implement curated/audit navigation state**
 
 Pass `curatedPath: CURATED_PATH` in the injected config. Add the topbar control:
 
@@ -385,7 +385,7 @@ const setReadingPath = (mode) => {
 
 When `previous` or `next` is clicked in curated mode, navigate within `navigationItems()`. Horizontal/vertical arrows retain spatial chapter navigation. Direct navigation or Jump to a non-curated slide switches to audit mode so the selected evidence remains reachable. Expose `setReadingPath` and `currentReadingPath` on `window.__retrospectiveDeck`.
 
-- [ ] **Step 4: Run navigation, history, keyboard, and print tests**
+- [x] **Step 4: Run navigation, history, keyboard, and print tests**
 
 ```bash
 TMPDIR=/var/tmp/mcrs-playwright-tmp pytest -q tests/report/test_retrospective_deck_browser.py -k 'curated_path or buttons_keys_hash_and_history or direct_and_invalid_hashes or linear_and_print_modes or gesture_navigation'
@@ -393,7 +393,7 @@ TMPDIR=/var/tmp/mcrs-playwright-tmp pytest -q tests/report/test_retrospective_de
 
 Expected: all selected tests PASS. Existing arrow-key and direct-hash semantics remain unchanged.
 
-- [ ] **Step 5: Commit the two reading paths**
+- [x] **Step 5: Commit the two reading paths**
 
 ```bash
 git add scripts/report/retrospective_deck.mjs tests/report/retrospective_deck.test.mjs tests/report/test_retrospective_deck_browser.py
@@ -413,7 +413,7 @@ git commit -m "feat: add curated retrospective reading path"
 - Produces: `visualKind: "heatmap" | "provenance" | "control-lanes"`, `.deck-evidence-heatmap`, `.deck-provenance-stack`, and `.deck-control-lanes`.
 - Consumes: existing normalized team comparison data already encoded in `CHAPTERS`; complete canonical matrices remain attached through `DISCLOSURES`.
 
-- [ ] **Step 1: Add failing structural and browser tests for the three visual grammars**
+- [x] **Step 1: Add failing structural and browser tests for the three visual grammars**
 
 Add to `tests/report/retrospective_deck.test.mjs`:
 
@@ -442,7 +442,7 @@ def test_reusable_visual_grammars_compare_all_five_teams(page, enhanced_report: 
     assert errors == []
 ```
 
-- [ ] **Step 2: Run the focused tests and verify the new slides/renderers are missing**
+- [x] **Step 2: Run the focused tests and verify the new slides/renderers are missing**
 
 ```bash
 node --test tests/report/retrospective_deck.test.mjs
@@ -451,7 +451,7 @@ TMPDIR=/var/tmp/mcrs-playwright-tmp pytest -q tests/report/test_retrospective_de
 
 Expected: FAIL because the new slugs and visual classes do not exist.
 
-- [ ] **Step 3: Merge overlapping query explainers and add provenance stacks**
+- [x] **Step 3: Merge overlapping query explainers and add provenance stacks**
 
 Keep one shared query mechanism slide. Move `query_heading`, `query_explainer`, and `lifecycle_*` blocks into named disclosures on that slide without duplicating IDs. Add `query/provenance-stacks` with five team rows and these layers:
 
@@ -461,7 +461,7 @@ const provenanceLayers = ["Official challenge data", "External structured data",
 
 Populate team-specific labels from the existing `data-matrix` evidence, including TalkPlayData-1 for niwatori and LRCLIB/Genius/MusicBrainz for swyoo. Do not imply those resources were used by every leader.
 
-- [ ] **Step 4: Replace the visible feature taxonomy with a differentiating-evidence heatmap**
+- [x] **Step 4: Replace the visible feature taxonomy with a differentiating-evidence heatmap**
 
 Add `retrieval/evidence-heatmap` with columns:
 
@@ -471,7 +471,7 @@ const evidenceColumns = ["Lexical", "Dense", "Collaborative", "Co-occurrence", "
 
 Each cell uses `present`, `partial`, or `not-documented` plus a short accessible label. Keep `feature_matrix` and `feature_details` in named disclosures or audit slides. Feature-count badges are secondary: npatta01 142, volart 69, niwatori 176, team2_s2 37, and swyoo exact submitted count not established.
 
-- [ ] **Step 5: Compress response comparisons into lifecycle and control lanes**
+- [x] **Step 5: Compress response comparisons into lifecycle and control lanes**
 
 Keep one shared lifecycle. Add two visual slides:
 
@@ -489,7 +489,7 @@ Represent the five systems precisely:
 
 Move exact matrices, walkthroughs, and pass-count qualifications behind disclosure.
 
-- [ ] **Step 6: Add generic renderers and responsive styling**
+- [x] **Step 6: Add generic renderers and responsive styling**
 
 Implement one renderer per grammar:
 
@@ -501,7 +501,7 @@ const renderControlLanes = ({ columns, teams }) => renderTeamGrid("deck-control-
 
 Use native table/grid semantics and `data-status` labels. At widths below 900px, each team becomes a labeled card. Do not create horizontal document overflow or nested vertical scrolling.
 
-- [ ] **Step 7: Run comparison, disclosure, and bounded-prose tests**
+- [x] **Step 7: Run comparison, disclosure, and bounded-prose tests**
 
 ```bash
 node --test tests/report/retrospective_deck.test.mjs
@@ -510,7 +510,7 @@ TMPDIR=/var/tmp/mcrs-playwright-tmp pytest -q tests/report/test_retrospective_de
 
 Expected: all selected tests PASS. Complete evidence remains reachable and primary visible prose remains within 120 words per slide.
 
-- [ ] **Step 8: Commit the visual comparison grammar**
+- [x] **Step 8: Commit the visual comparison grammar**
 
 ```bash
 git add scripts/report/retrospective_deck.mjs tests/report/retrospective_deck.test.mjs tests/report/test_retrospective_deck_browser.py
@@ -529,7 +529,7 @@ git commit -m "feat: compress evidence into reusable visual comparisons"
 - Produces: `.deck-system-card`, `.deck-score-findings`, compact leader summary options, and visible pinned-commit/evidence-boundary labels.
 - Consumes: existing leader blocks, retrieval diagrams, insight-card transformer, official score chart, and source disclosures.
 
-- [ ] **Step 1: Add failing browser tests for team cards and concise score interpretation**
+- [x] **Step 1: Add failing browser tests for team cards and concise score interpretation**
 
 ```python
 def test_leader_introductions_are_compact_system_cards(page, enhanced_report: Path) -> None:
@@ -551,7 +551,7 @@ def test_score_interpretation_is_three_findings_with_exact_math_disclosed(page, 
     assert browser_page.locator("#outcome\\/gap-interpretation details[data-disclosure-for='gap_interpretation']").count() == 1
 ```
 
-- [ ] **Step 2: Run focused tests and verify the cards are absent**
+- [x] **Step 2: Run focused tests and verify the cards are absent**
 
 ```bash
 TMPDIR=/var/tmp/mcrs-playwright-tmp pytest -q tests/report/test_retrospective_deck_browser.py -k 'leader_introductions or score_interpretation'
@@ -559,7 +559,7 @@ TMPDIR=/var/tmp/mcrs-playwright-tmp pytest -q tests/report/test_retrospective_de
 
 Expected: FAIL because `.deck-system-card` and `.deck-score-finding` do not exist.
 
-- [ ] **Step 3: Render compact system cards while preserving detailed blocks**
+- [x] **Step 3: Render compact system cards while preserving detailed blocks**
 
 For each leader outcome slide, add configuration fields populated with the reviewed evidence:
 
@@ -602,7 +602,7 @@ const LEADER_SYSTEM_CARDS = {
 
 Render the card before the canonical block disclosure. Keep the mechanism-specific retrieval diagrams unchanged because they are the approved reference treatment.
 
-- [ ] **Step 4: Replace gap prose with three findings and expose the pinned submission boundary**
+- [x] **Step 4: Replace gap prose with three findings and expose the pinned submission boundary**
 
 Render:
 
@@ -616,7 +616,7 @@ const findings = [
 
 Put `gap_interpretation` behind its named disclosure. Add a visible badge on diagnosis slides reading `Blind-B deployed evidence · 2ecc45a7`, plus a short note that repository documentation depth can bias `Not documented` comparisons.
 
-- [ ] **Step 5: Run leader, score, insight-card, and source tests**
+- [x] **Step 5: Run leader, score, insight-card, and source tests**
 
 ```bash
 TMPDIR=/var/tmp/mcrs-playwright-tmp pytest -q tests/report/test_retrospective_deck_browser.py -k 'leader_introductions or score_interpretation or dense_walkthroughs or progressive_disclosure_and_sources'
@@ -624,7 +624,7 @@ TMPDIR=/var/tmp/mcrs-playwright-tmp pytest -q tests/report/test_retrospective_de
 
 Expected: all selected tests PASS and the ten-source list remains complete.
 
-- [ ] **Step 6: Commit concise team and score cards**
+- [x] **Step 6: Commit concise team and score cards**
 
 ```bash
 git add scripts/report/retrospective_deck.mjs tests/report/test_retrospective_deck_browser.py
@@ -645,7 +645,7 @@ git commit -m "style: make leader and score evidence answer-first"
 - Consumes: the completed enhancer and unchanged portable evidence layer.
 - Produces: the final self-contained `retrospective.html` and a completed implementation checklist.
 
-- [ ] **Step 1: Regenerate the committed HTML deterministically**
+- [x] **Step 1: Regenerate the committed HTML deterministically**
 
 ```bash
 node scripts/report/retrospective_deck.mjs --input retrospective.html --output retrospective.html
@@ -659,7 +659,7 @@ wrote retrospective.html
 PASS: 74 blocks mapped into 8 chapters
 ```
 
-- [ ] **Step 2: Run Node structural tests**
+- [x] **Step 2: Run Node structural tests**
 
 ```bash
 node --test tests/report/retrospective_deck.test.mjs
@@ -667,7 +667,7 @@ node --test tests/report/retrospective_deck.test.mjs
 
 Expected: all tests PASS; no skipped or failing tests.
 
-- [ ] **Step 3: Run the complete report browser suite with the stable Playwright temp directory**
+- [x] **Step 3: Run the complete report browser suite with the stable Playwright temp directory**
 
 ```bash
 mkdir -p /var/tmp/mcrs-playwright-tmp
@@ -676,7 +676,7 @@ TMPDIR=/var/tmp/mcrs-playwright-tmp pytest -q tests/report/test_retrospective_de
 
 Expected: all report browser tests PASS with no page errors or external requests.
 
-- [ ] **Step 4: Run responsive overflow checks at every required viewport**
+- [x] **Step 4: Run responsive overflow checks at every required viewport**
 
 Add this parametrized browser test so every diagnosis and reusable-visual slide is covered:
 
@@ -709,7 +709,7 @@ TMPDIR=/var/tmp/mcrs-playwright-tmp pytest -q tests/report/test_retrospective_de
 
 Expected: four viewport cases PASS.
 
-- [ ] **Step 5: Verify payload, canonical blocks, links, iframes, and deterministic regeneration**
+- [x] **Step 5: Verify payload, canonical blocks, links, iframes, and deterministic regeneration**
 
 ```bash
 node --test tests/report/retrospective_deck.test.mjs --test-name-pattern 'deterministic|preserves payload|assigns all'
@@ -719,7 +719,7 @@ git diff --check
 
 Expected: all selected tests PASS and `git diff --check` emits no output.
 
-- [ ] **Step 6: Run the repository test suite**
+- [x] **Step 6: Run the repository test suite**
 
 ```bash
 uv run pytest -q
@@ -727,7 +727,7 @@ uv run pytest -q
 
 Expected: no failures; at least the prior baseline of 788 passed and one skipped test, with only the two pre-existing Pydantic deprecation warnings plus any explicitly explained environment warning.
 
-- [ ] **Step 7: Mark plan checkboxes complete and commit the final artifact**
+- [x] **Step 7: Mark plan checkboxes complete and commit the final artifact**
 
 Use `apply_patch` to change completed plan steps from `- [ ]` to `- [x]`, then run:
 
@@ -736,7 +736,7 @@ git add retrospective.html scripts/report/retrospective_deck.mjs tests/report/re
 git commit -m "feat: deliver answer-first retrospective report"
 ```
 
-- [ ] **Step 8: Verify clean worktree and served artifact parity**
+- [x] **Step 8: Verify clean worktree and served artifact parity**
 
 ```bash
 git status --short

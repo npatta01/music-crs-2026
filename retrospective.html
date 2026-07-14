@@ -39,7 +39,7 @@ html:not([data-portable-source-tooltips-ready]) .portable-chart-summary>.portabl
 html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;overflow:hidden}
 .retrospective-deck{height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--portable-canvas);color:var(--portable-ink)}
 .deck-chrome{position:relative;z-index:20;background:color-mix(in srgb,var(--portable-canvas) 92%,transparent);backdrop-filter:blur(12px)}
-.deck-topbar,.deck-footer{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px clamp(12px,2.5vw,32px);border-color:var(--portable-border)}
+.deck-topbar,.deck-footer{display:flex;min-width:0;align-items:center;gap:12px;min-height:56px;padding:8px clamp(12px,2.5vw,32px);border-color:var(--portable-border)}
 .deck-topbar{border-bottom:1px solid var(--portable-border)}
 .deck-footer{justify-content:space-between;border-top:1px solid var(--portable-border)}
 .deck-footer .deck-button{max-width:min(38vw,360px);padding:6px 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -69,7 +69,20 @@ html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;ove
 .deck-flow{display:grid;gap:18px}.deck-flow-lane{display:grid;gap:10px;padding:16px;border:1px solid var(--portable-border);border-radius:16px;background:var(--portable-surface)}.deck-flow-lane h3{margin:0;font-size:16px}.deck-flow-lane ol{display:grid;grid-template-columns:repeat(var(--flow-count),minmax(0,1fr));gap:24px;margin:0;padding:0;list-style:none;counter-reset:flow-step}.deck-flow-step{position:relative;min-width:0;padding:13px;border:1px solid color-mix(in srgb,var(--portable-accent) 38%,var(--portable-border));border-radius:12px;background:color-mix(in srgb,var(--portable-accent) 7%,var(--portable-surface));overflow-wrap:anywhere;counter-increment:flow-step}.deck-flow-step::before{content:counter(flow-step);display:block;margin-bottom:6px;color:var(--portable-accent);font-size:12px;font-weight:850}.deck-flow-step:not(:last-child)::after{content:"→";position:absolute;top:50%;right:-19px;color:var(--portable-accent);font-size:20px;font-weight:900;transform:translateY(-50%)}
 .deck-flow-only .deck-slide-inner{min-height:calc(100dvh - 190px);grid-template-rows:auto minmax(0,1fr)}.deck-flow-only .deck-flow{align-self:center}.deck-flow-only .deck-flow-step{display:grid;min-height:128px;align-content:center;font-size:clamp(15px,1.2vw,18px);line-height:1.4}
 .deck-mechanism{display:grid;gap:22px;align-self:center}.deck-mechanism-stages{display:grid;grid-template-columns:repeat(var(--stage-count),minmax(0,1fr));gap:26px;margin:0;padding:0;list-style:none;counter-reset:mechanism-stage}.deck-mechanism-stage{position:relative;display:grid;align-content:center;min-height:150px;padding:18px;border:1px solid var(--portable-border);border-top:5px solid var(--stage-color);border-radius:14px;background:var(--portable-surface);counter-increment:mechanism-stage}.deck-mechanism-stage::before{content:counter(mechanism-stage);margin-bottom:10px;color:var(--stage-color);font-size:13px;font-weight:900}.deck-mechanism-stage:not(:last-child)::after{content:"→";position:absolute;top:50%;right:-21px;color:var(--portable-accent);font-size:22px;font-weight:900;transform:translateY(-50%)}.deck-mechanism-stage h3{margin:0 0 8px;font-size:clamp(16px,1.35vw,20px)}.deck-mechanism-stage p{margin:0;color:var(--portable-muted);font-size:14px;line-height:1.5}.deck-takeaway{margin:0;padding:14px 18px;border-left:5px solid #d89a2b;border-radius:10px;background:color-mix(in srgb,#d89a2b 10%,var(--portable-surface));font-size:clamp(15px,1.15vw,18px);line-height:1.5}.deck-takeaway strong{display:block;margin-bottom:3px;color:#a96f09;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+.deck-diagnosis{display:grid;gap:18px;min-width:0}.deck-diagnosis ol,.deck-diagnosis ul{margin:0;padding:0;list-style:none}.deck-diagnosis h3,.deck-diagnosis h4{margin:0}.deck-diagnosis li{min-width:0;overflow-wrap:anywhere}
+.deck-evidence-boundary{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 12px;border:1px solid var(--portable-border);border-radius:12px;background:color-mix(in srgb,var(--portable-accent) 7%,var(--portable-surface));color:var(--portable-muted);font-size:12px;line-height:1.4}.deck-pinned-badge{display:inline-flex;width:max-content;padding:4px 9px;border:1px solid var(--portable-accent);border-radius:999px;color:var(--portable-accent);font-size:10px;font-weight:900;letter-spacing:.035em}
+.deck-confidence-label{display:inline-flex!important;width:max-content;margin-bottom:7px;padding:3px 7px;border:1px solid currentColor;border-radius:999px;color:var(--portable-muted);font-size:9px!important;font-weight:900;line-height:1.1!important;letter-spacing:.06em;text-transform:uppercase}.deck-confidence-label[data-confidence="verified"]{color:#15945b!important}.deck-confidence-label[data-confidence="likely"]{color:#a66b08!important}.deck-confidence-label[data-confidence="unknown"]{color:var(--portable-muted)!important}
+.deck-score-findings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0;padding:0;list-style:none}.deck-score-finding{display:grid;gap:9px;min-height:120px;align-content:center;padding:16px;border:1px solid var(--portable-border);border-top:5px solid var(--portable-accent);border-radius:14px;background:var(--portable-surface)}.deck-score-finding h3{margin:0;font-size:18px}.deck-score-finding span{color:var(--portable-muted)}
+.deck-system-card{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0}.deck-system-field{min-width:0;padding:14px;border:1px solid var(--portable-border);border-top:4px solid var(--portable-accent);border-radius:12px;background:var(--portable-surface);overflow-wrap:anywhere}.deck-system-field[data-system-field="limit"]{border-top-color:#c98612}.deck-system-field dt{margin:0 0 6px;color:var(--portable-accent);font-size:10px;font-weight:900;letter-spacing:.05em;text-transform:uppercase}.deck-system-field[data-system-field="limit"] dt{color:#95600a}.deck-system-field dd{margin:0;color:var(--portable-muted);font-size:13px;line-height:1.4}.deck-system-field[data-system-field="result"] dd{color:var(--portable-ink);font-weight:800;font-variant-numeric:tabular-nums}
+.deck-bottleneck{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;counter-reset:bottleneck}.deck-bottleneck-stage,.deck-feature-family,.deck-boundary-column,.deck-confidence-column{min-width:0;padding:16px;border:1px solid var(--portable-border);border-radius:14px;background:var(--portable-surface)}.deck-bottleneck-stage{display:grid;gap:10px;align-content:start;counter-increment:bottleneck}.deck-bottleneck-stage::before{content:counter(bottleneck);color:var(--portable-accent);font-size:12px;font-weight:900}.deck-bottleneck-stage h3{font-size:15px}.deck-loss{padding:9px 11px;border-left:5px solid #c98612;border-radius:9px;background:color-mix(in srgb,#c98612 12%,var(--portable-surface));font-size:12px;line-height:1.35}
+.deck-wiring{display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,.5fr) minmax(0,1fr);gap:16px}.deck-wiring>section{display:grid;gap:9px;align-content:start}.deck-wiring>section>ol{display:grid;gap:7px}.deck-wiring-source li,.deck-wiring-target li{padding:8px 10px;border:1px solid var(--portable-border);border-radius:9px;background:var(--portable-surface);font-size:12px}.deck-wiring-link{padding:7px 9px;border:2px solid var(--portable-border);border-radius:9px;background:var(--portable-surface);font-size:11px;line-height:1.3}.deck-wiring-link[data-link-kind="direct"]{border-color:#15945b}.deck-wiring-link[data-link-kind="soft"]{border-style:dashed;border-color:#c98612}.deck-wiring-link[data-link-kind="feature-only"]{border-style:dotted;border-color:#6f54c7}
+.deck-feature-map{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.deck-feature-family{display:grid;grid-template-columns:1fr auto;gap:9px}.deck-feature-family>.deck-confidence-label{grid-column:1/-1}.deck-feature-family h3{font-size:16px}.deck-feature-family>span:last-child{grid-column:1/-1;color:var(--portable-muted);font-size:13px;line-height:1.4}.deck-feature-badge{align-self:start;padding:3px 7px;border:1px solid var(--portable-accent);border-radius:999px;color:var(--portable-accent);font-size:10px;font-weight:800}
+.deck-boundary-map,.deck-confidence-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.deck-boundary-column,.deck-confidence-column{display:grid;gap:11px}.deck-boundary-column>ul,.deck-confidence-column>ul{display:grid;gap:7px}.deck-boundary-column li,.deck-confidence-column li{position:relative;padding-left:15px;color:var(--portable-muted);font-size:12px;line-height:1.35}.deck-boundary-column li::before,.deck-confidence-column li::before{position:absolute;left:0;content:"•";color:var(--portable-accent)}.deck-boundary-column[data-boundary="limited"]{border-top:5px solid #c98612}.deck-boundary-column[data-boundary="present"]{border-top:5px solid #15945b}
+.deck-confidence{display:grid;gap:14px}.deck-confidence-column[data-confidence="verified"]{border-top:5px solid #15945b}.deck-confidence-column[data-confidence="likely"]{border-top:5px solid #c98612}.deck-confidence-column[data-confidence="unknown"]{border-top:5px solid var(--portable-muted)}.deck-response-control{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}.deck-response-control>li{position:relative;padding:12px;border:1px solid var(--portable-border);border-radius:12px;background:var(--portable-surface)}.deck-response-control>li:not(:last-child)::after{position:absolute;top:50%;right:-15px;content:"→";color:var(--portable-accent);font-weight:900;transform:translateY(-50%)}.deck-response-control h3{margin-bottom:6px;font-size:14px}.deck-response-control span{color:var(--portable-muted);font-size:11px;line-height:1.35}
+.deck-belief-timeline,.deck-failure-taxonomy{display:grid;gap:9px}.deck-belief-timeline>ol,.deck-failure-taxonomy>ol{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.deck-belief-timeline li,.deck-failure-taxonomy li{padding:10px 12px;border:1px solid var(--portable-border);border-radius:11px;background:var(--portable-surface)}.deck-belief-timeline h4,.deck-failure-taxonomy h4{margin-bottom:5px;font-size:12px}.deck-belief-timeline span,.deck-failure-taxonomy span{color:var(--portable-muted);font-size:10px;line-height:1.3}.deck-failure-taxonomy span{display:inline-block;margin-top:4px;padding:2px 6px;border:1px solid currentColor;border-radius:999px}
 .deck-comparison{display:grid;gap:10px}.deck-comparison-columns,.deck-team-row{display:grid;grid-template-columns:minmax(115px,.55fr) repeat(3,minmax(0,1fr));gap:14px}.deck-comparison-columns{padding:0 16px;color:var(--portable-muted);font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.deck-team-row{padding:14px 16px;border:1px solid var(--portable-border);border-left:5px solid var(--team-color);border-radius:12px;background:var(--portable-surface)}.deck-team-row h3{margin:0;font-size:16px}.deck-team-value{display:grid;gap:4px;color:var(--portable-muted);font-size:13px;line-height:1.42}.deck-team-value::before{content:attr(data-label);display:none;color:var(--portable-ink);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.deck-team-status{display:inline-flex;width:max-content;margin-top:7px;padding:3px 8px;border:1px solid currentColor;border-radius:999px;color:var(--portable-muted);font-size:10px;font-weight:800;text-transform:uppercase}.deck-team-status--verified{color:#19724d}.deck-team-status--external{color:#176e9e}.deck-team-status--limit{color:#9a6810}.deck-common-different{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}.deck-synthesis-card{padding:14px 16px;border-left:5px solid var(--synthesis-color);border-radius:11px;background:var(--portable-surface);font-size:14px;line-height:1.5}.deck-synthesis-card strong{display:block;margin-bottom:4px;color:var(--portable-ink)}
+.deck-team-grid{display:grid;gap:12px;min-width:0}.deck-team-grid table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:5px}.deck-team-grid caption{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.deck-team-grid th,.deck-team-grid td{min-width:0;overflow-wrap:anywhere}.deck-team-grid thead th{padding:0 4px 5px;color:var(--portable-muted);font-size:9px;line-height:1.18;letter-spacing:.025em;text-align:center;text-transform:uppercase}.deck-team-grid thead th:first-child{width:128px;text-align:left}.deck-team-grid tbody th{padding:10px;border-left:5px solid var(--team-color);border-radius:10px;background:var(--portable-surface);font-size:14px;text-align:left}.deck-team-grid td{height:52px;padding:6px;border:1px solid var(--portable-border);border-radius:9px;background:var(--portable-surface);color:var(--portable-muted);font-size:10px;line-height:1.25;text-align:center;vertical-align:middle}.deck-grid-cell{display:grid;place-items:center;gap:4px}.deck-status-mark{display:inline-grid;place-items:center;width:24px;height:24px;border:2px solid currentColor;border-radius:7px;font-size:12px;font-weight:900}.deck-team-grid [data-status="present"]{color:#147a50;background:color-mix(in srgb,#15945b 14%,var(--portable-surface))}.deck-team-grid [data-status="partial"]{color:#95600a;background:color-mix(in srgb,#c98612 14%,var(--portable-surface))}.deck-team-grid [data-status="not-documented"]{color:var(--portable-muted);background:color-mix(in srgb,var(--portable-muted) 8%,var(--portable-surface))}.deck-team-grid [data-status="present"] .deck-status-mark::before{content:"✓"}.deck-team-grid [data-status="partial"] .deck-status-mark::before{content:"◐"}.deck-team-grid [data-status="not-documented"] .deck-status-mark::before{content:"—"}.deck-grid-cell-label{font-weight:700}.deck-evidence-heatmap .deck-grid-cell-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.deck-feature-count{display:block;margin-top:4px;color:var(--portable-muted);font-size:9px;font-weight:750;line-height:1.2}.deck-control-lanes thead th:first-child{width:132px}.deck-control-lanes td{height:68px}.deck-control-lanes .deck-status-mark{width:20px;height:20px;font-size:10px}
+.deck-provenance-stack{display:grid;gap:9px}.deck-provenance-head{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;padding:0 13px 0 18px;color:var(--portable-muted);font-size:9px;font-weight:850;line-height:1.15;letter-spacing:.025em;text-align:center;text-transform:uppercase}.deck-provenance-team{padding:11px 13px;border:1px solid var(--portable-border);border-left:5px solid var(--team-color);border-radius:12px;background:var(--portable-surface)}.deck-provenance-team h3{margin:0 0 8px;font-size:15px}.deck-provenance-team ol{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:0;padding:0;list-style:none}.deck-provenance-layer{min-width:0;padding:8px;border:1px solid currentColor;border-radius:9px;font-size:10px;line-height:1.3}.deck-provenance-layer[data-status="present"]{color:#147a50;background:color-mix(in srgb,#15945b 12%,var(--portable-surface))}.deck-provenance-layer[data-status="partial"]{color:#95600a;background:color-mix(in srgb,#c98612 12%,var(--portable-surface))}.deck-provenance-layer[data-status="not-documented"]{color:var(--portable-muted);background:color-mix(in srgb,var(--portable-muted) 7%,var(--portable-surface))}.deck-provenance-layer strong{display:none;margin-bottom:4px;color:var(--portable-ink);font-size:9px;line-height:1.15;text-transform:uppercase}.deck-provenance-layer span{font-weight:650}
 .deck-scoreboard{display:grid;align-self:start;grid-auto-rows:max-content;gap:6px;overflow-x:auto}.deck-score-header,.deck-score-row{display:grid;grid-template-columns:34px minmax(125px,1.25fr) minmax(130px,1fr) repeat(4,minmax(76px,.62fr));gap:12px;align-items:center;min-width:820px}.deck-score-header{padding:0 14px 5px;color:var(--portable-muted);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.deck-score-row{min-height:58px;padding:9px 14px;border:1px solid var(--portable-border);border-left:5px solid var(--score-color);border-radius:11px;background:var(--portable-surface)}.deck-score-rank{font-size:12px;font-weight:900}.deck-score-team{font-size:16px;font-weight:850}.deck-score-value{font-variant-numeric:tabular-nums;text-align:right}.deck-score-composite{position:relative;isolation:isolate;padding:7px 9px;border-radius:7px;overflow:hidden;text-align:right}.deck-score-composite::before{position:absolute;z-index:-1;inset:0 auto 0 0;width:var(--score-width);background:color-mix(in srgb,var(--score-color) 28%,transparent);content:""}
 .deck-slide--story .deck-slide-inner{gap:clamp(24px,3vw,40px)}.deck-slide.deck-slide--story .portable-markdown{width:100%;max-width:1120px;font-size:clamp(17px,1.35vw,20px);line-height:1.65}.deck-slide--story .portable-markdown p{margin-block:0 1.15em}.deck-slide--story .portable-markdown a{font-weight:650}.deck-slide--story .portable-page-header,.deck-slide--story .portable-content-card{width:100%;max-width:1120px}.deck-slide--story .deck-question{font-size:clamp(15px,1.15vw,18px)}
 .deck-slide--visual .deck-visual{max-width:1100px}.deck-slide--matrix .portable-content-card,.deck-slide--audit .portable-content-card{width:100%;max-width:none}
@@ -94,6 +107,8 @@ html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;ove
 html[data-deck-view="linear"],html[data-deck-view="linear"] body{height:auto;overflow:auto}
 html[data-deck-view="linear"] .retrospective-deck{height:auto;display:block}html[data-deck-view="linear"] .deck-track{display:block;overflow:visible}html[data-deck-view="linear"] .deck-chapter,html[data-deck-view="linear"] .deck-slide{height:auto;min-height:0}html[data-deck-view="linear"] .deck-vertical{height:auto;overflow:visible}html[data-deck-view="linear"] .deck-vertical-rail{display:none}html[data-deck-view="linear"] .deck-disclosure>summary{display:none}html[data-deck-view="linear"] .deck-disclosure>[data-artifact-block-id]{display:block!important}html[data-deck-view="linear"] .deck-insight-grid{display:block}html[data-deck-view="linear"] .deck-insight-card{border:0;background:transparent;overflow:visible}html[data-deck-view="linear"] .deck-insight-card>summary{display:none}html[data-deck-view="linear"] .deck-insight-detail{display:block!important;margin:0 0 1em;padding:0;border:0}html[data-deck-view="linear"] .deck-insight-detail strong:first-child{display:inline}
 @media(max-width:1100px){.deck-slide--cover .deck-slide-inner{grid-template-columns:1fr;min-height:0}.deck-slide--cover .deck-page-copy,.deck-chapter-map{grid-column:1;grid-row:auto}.deck-flow-lane ol,.deck-mechanism-stages{grid-template-columns:1fr;gap:22px}.deck-flow-step:not(:last-child)::after,.deck-mechanism-stage:not(:last-child)::after{content:"↓";top:auto;right:auto;bottom:-22px;left:50%;transform:translateX(-50%)}.deck-mechanism-stage{min-height:112px}.deck-comparison-columns{display:none}.deck-team-row{grid-template-columns:minmax(110px,.45fr) repeat(3,minmax(0,1fr))}.deck-prose-matrix tbody,.deck-insight-grid{grid-template-columns:1fr}.deck-flow-only .deck-slide-inner{min-height:0}}
+@media(max-width:900px){.deck-bottleneck,.deck-feature-map,.deck-system-card{grid-template-columns:repeat(2,minmax(0,1fr))}.deck-wiring,.deck-boundary-map,.deck-confidence-grid{grid-template-columns:1fr}.deck-score-findings,.deck-response-control,.deck-belief-timeline>ol,.deck-failure-taxonomy>ol{grid-template-columns:repeat(2,minmax(0,1fr))}.deck-response-control>li::after{display:none}.deck-team-grid table,.deck-team-grid tbody{display:block}.deck-team-grid thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.deck-team-grid tbody{display:grid;gap:12px}.deck-team-grid tr[data-team]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:12px;border:1px solid var(--portable-border);border-left:5px solid var(--team-color);border-radius:13px;background:var(--portable-surface)}.deck-team-grid tbody th{grid-column:1/-1;padding:0 0 7px;border:0;border-bottom:1px solid var(--portable-border);border-radius:0;background:transparent}.deck-team-grid td{display:grid;grid-template-columns:minmax(80px,.6fr) minmax(0,1fr);gap:7px;align-items:center;height:auto;min-height:58px;text-align:left}.deck-team-grid td::before{content:attr(data-column);color:var(--portable-ink);font-size:9px;font-weight:850;letter-spacing:.025em;text-transform:uppercase}.deck-team-grid .deck-grid-cell{grid-template-columns:auto minmax(0,1fr);justify-items:start}.deck-evidence-heatmap .deck-grid-cell-label{position:static;width:auto;height:auto;overflow:visible;clip:auto;white-space:normal}.deck-provenance-head{display:none}.deck-provenance-team{padding:13px}.deck-provenance-team ol{grid-template-columns:1fr}.deck-provenance-layer{display:grid;grid-template-columns:minmax(105px,.45fr) minmax(0,1fr);gap:8px;align-items:center;min-height:52px}.deck-provenance-layer strong{display:block;margin:0}}
+@media(max-width:600px){.deck-bottleneck,.deck-feature-map,.deck-score-findings,.deck-system-card,.deck-response-control,.deck-belief-timeline>ol,.deck-failure-taxonomy>ol{grid-template-columns:1fr}}
 @media(max-width:700px){.deck-title,.deck-breadcrumb,.deck-progress,.deck-axis-help,.deck-chapter-rail{display:none}.deck-mobile-orientation{display:block;min-width:0;margin-right:auto;overflow:hidden;font-weight:650;text-overflow:ellipsis;white-space:nowrap}.deck-topbar,.deck-footer{min-height:60px;padding:8px 10px}.deck-slide{padding:18px 12px}.deck-vertical-rail{display:none}.portable-table-scroll{max-width:calc(100vw - 24px)}.deck-button{min-width:48px;min-height:48px}.deck-slide--cover .deck-slide-heading{font-size:clamp(36px,13vw,58px)}.deck-team-row,.deck-common-different{grid-template-columns:1fr}.deck-team-value::before{display:block}.deck-slide--matrix .portable-table-scroll{overflow-x:auto}.deck-slide--matrix .portable-table-scroll:has(.deck-prose-matrix){overflow:visible}.deck-prose-matrix tbody td{grid-template-columns:1fr;gap:4px}.deck-slide--audit .portable-markdown{columns:1}}
 @media(prefers-reduced-motion:reduce){.deck-track,.deck-vertical{scroll-behavior:auto!important}}
 @media(forced-colors:active){.deck-button,.deck-chapter-button,.deck-rail-button,.deck-disclosure,.deck-jump-panel{border:1px solid CanvasText}}
@@ -6661,7 +6676,7 @@ IFn9/O7/AOW7dD3+ow0A
   live.setAttribute("aria-atomic", "true");
   const topbar = document.createElement("header");
   topbar.className = "deck-topbar deck-chrome";
-  topbar.innerHTML = '<strong class="deck-title">Music-CRS retrospective</strong><span class="deck-mobile-orientation"></span><span class="deck-breadcrumb"></span><span class="deck-progress"></span><button class="deck-button" type="button" data-action="linear">Linear view</button><button class="deck-button" type="button" data-action="jump">Jump</button>';
+  topbar.innerHTML = '<strong class="deck-title">Music-CRS retrospective</strong><span class="deck-mobile-orientation"></span><span class="deck-breadcrumb"></span><span class="deck-progress"></span><button class="deck-button" type="button" data-action="reading-path">Read retrospective</button><button class="deck-button" type="button" data-action="linear">Linear view</button><button class="deck-button" type="button" data-action="jump">Jump</button>';
   const chapterRail = document.createElement("nav");
   chapterRail.className = "deck-chapter-rail";
   chapterRail.setAttribute("aria-label", "Chapters");
@@ -6680,19 +6695,355 @@ IFn9/O7/AOW7dD3+ow0A
   track.className = "deck-track";
   const footer = document.createElement("footer");
   footer.className = "deck-footer deck-chrome";
-  footer.innerHTML = '<button class="deck-button" type="button" data-action="previous">← Previous</button><span class="deck-axis-help">←/→ chapters · ↑/↓ depth</span><button class="deck-button" type="button" data-action="next">Next →</button>';
-  const disclosure = (node, label) => {
-    if (!label) return node;
+  footer.innerHTML = '<button class="deck-button" type="button" data-action="previous" aria-label="Previous">← Previous</button><span class="deck-axis-help">←/→ chapters · ↑/↓ depth</span><button class="deck-button" type="button" data-action="next" aria-label="Next">Next →</button>';
+  const disclosure = (nodeOrNodes, label, disclosureFor) => {
+    const nodes = Array.isArray(nodeOrNodes) ? nodeOrNodes : [nodeOrNodes];
+    if (!label) return nodes[0];
     const details = document.createElement("details");
     details.className = "deck-disclosure";
-    details.dataset.disclosureFor = node.dataset.artifactBlockId;
+    details.dataset.disclosureFor = disclosureFor || nodes[0].dataset.artifactBlockId;
     const summary = document.createElement("summary");
     summary.textContent = label;
-    details.append(summary, node);
+    details.append(summary, ...nodes);
     return details;
   };
   const stageColors = ["#58aaf7", "#8570e6", "#24a88b", "#d89a2b", "#df7aa9"];
   const teamColors = ["#58aaf7", "#8570e6", "#24a88b", "#df7aa9", "#e28d43"];
+  const confidenceLabels = { verified: "Verified", likely: "Likely contributor", unknown: "Unknown" };
+  const labelDiagnosisClaim = (node, confidence) => {
+    if (!confidenceLabels[confidence]) throw new Error(`Unknown diagnosis confidence: ${confidence}`);
+    node.dataset.diagnosisClaim = "";
+    node.dataset.confidence = confidence;
+    const badge = document.createElement("span");
+    badge.className = "deck-confidence-label";
+    badge.dataset.confidence = confidence;
+    badge.textContent = confidenceLabels[confidence];
+    node.prepend(badge);
+    return node;
+  };
+  const diagnosisClaim = (tagName, className, confidence) => {
+    const node = document.createElement(tagName);
+    if (className) node.className = className;
+    return labelDiagnosisClaim(node, confidence);
+  };
+  const renderTakeaway = (takeaway) => {
+    const confidence = typeof takeaway === "string" ? "unknown" : takeaway.confidence;
+    const note = diagnosisClaim("aside", "deck-takeaway", confidence);
+    const label = document.createElement("strong");
+    label.textContent = "Takeaway";
+    note.append(label, document.createTextNode(typeof takeaway === "string" ? takeaway : takeaway.text));
+    return note;
+  };
+  const renderScoreFindings = () => {
+    const findings = [
+      ["Ranking / nDCG", "Most of the arithmetic gap"],
+      ["LLM judge", "Another major share of the gap"],
+      ["Catalog diversity", "Nearly neutral"],
+      ["Lexical diversity", "Varied by team"],
+    ];
+    const list = document.createElement("ol");
+    list.className = "deck-score-findings";
+    list.setAttribute("aria-label", "Score-gap findings");
+    findings.forEach(([title, detail]) => {
+      const item = diagnosisClaim("li", "deck-score-finding", "verified");
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      const text = document.createElement("span");
+      text.textContent = detail;
+      item.append(heading, text);
+      list.append(item);
+    });
+    return list;
+  };
+  const renderGapFindings = () => {
+    const findings = [
+      ["Ranking + judge", "These terms dominate each leader's arithmetic advantage."],
+      ["Catalog diversity", "The contribution is nearly neutral."],
+      ["Evidence boundary", "The decomposition is arithmetic, not causal."],
+    ];
+    const list = document.createElement("ol");
+    list.className = "deck-score-findings";
+    list.setAttribute("aria-label", "Concise score-gap interpretation");
+    findings.forEach(([title, detail]) => {
+      const item = document.createElement("li");
+      item.className = "deck-score-finding";
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      const text = document.createElement("span");
+      text.textContent = detail;
+      item.append(heading, text);
+      list.append(item);
+    });
+    return list;
+  };
+  const renderSystemCard = (fields) => {
+    const card = document.createElement("dl");
+    card.className = "deck-system-card";
+    card.setAttribute("aria-label", "System summary");
+    const labels = { result: "Result", query: "Query", knowledge: "Knowledge", retrieval: "Retrieval", response: "Response", limit: "Limit" };
+    Object.entries(fields).forEach(([field, value]) => {
+      const item = document.createElement("div");
+      item.className = "deck-system-field";
+      item.dataset.systemField = field;
+      const term = document.createElement("dt");
+      term.textContent = labels[field] || field;
+      const description = document.createElement("dd");
+      description.textContent = value;
+      item.append(term, description);
+      card.append(item);
+    });
+    return card;
+  };
+  const renderEvidenceBoundary = () => {
+    const note = document.createElement("aside");
+    note.className = "deck-evidence-boundary";
+    const badge = document.createElement("span");
+    badge.className = "deck-pinned-badge";
+    badge.textContent = "Blind-B deployed evidence · 2ecc45a7";
+    const caveat = document.createElement("span");
+    caveat.textContent = "Repository documentation depth can bias “Not documented” comparisons; absence from reviewed sources is not proof of absence.";
+    note.append(badge, caveat);
+    return note;
+  };
+  const renderBottleneck = (entry) => {
+    const list = document.createElement("ol");
+    list.className = "deck-bottleneck";
+    list.setAttribute("aria-label", "End-to-end information bottlenecks");
+    entry.stages.forEach((stage) => {
+      const item = diagnosisClaim("li", "deck-bottleneck-stage", "verified");
+      const heading = document.createElement("h3");
+      heading.textContent = stage;
+      item.append(heading);
+      entry.losses.filter(({ after }) => after === stage).forEach((loss) => {
+        const note = diagnosisClaim("span", "deck-loss", loss.confidence);
+        note.append(document.createTextNode(loss.label));
+        item.append(note);
+      });
+      list.append(item);
+    });
+    return list;
+  };
+  const renderConstraintWiring = () => {
+    const extracted = [
+      "Current request",
+      "Artist, album, track, and attribute facts",
+      "Hard and soft exclusions",
+      "Played-track acceptance",
+      "Played-track rejection",
+      "Played-track contrast",
+      "Played-track sentiment",
+      "Pinned played-track references",
+      "Temporal and lyrical-theme constraints",
+      "Resolved IDs and routing/profile fields",
+    ];
+    const consumers = [
+      "Weighted BM25 clauses",
+      "Field-aligned dense strings",
+      "Audio and visual queries",
+      "Anchor and user centroids",
+      "Discography and era lookups",
+      "Hard rejection, demotion, veto, and soft era handling",
+      "LightGBM state, history, routing, rejection, and interaction features",
+    ];
+    const links = [
+      ["Current request", "Weighted BM25 clauses", "direct"],
+      ["Artist and attribute facts", "Field-aligned dense strings", "direct"],
+      ["Attribute facts", "Audio and visual queries", "soft"],
+      ["Played-track sentiment", "Anchor and user centroids", "soft"],
+      ["Resolved artist and era", "Discography and era lookups", "direct"],
+      ["Hard exclusions", "Hard rejection and artist veto", "direct"],
+      ["Soft exclusions", "Tag demotion and soft era handling", "soft"],
+      ["State and routing fields", "LightGBM features", "feature-only"],
+    ];
+    const group = (title, values, className) => {
+      const section = document.createElement("section");
+      section.className = className;
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      const list = document.createElement("ol");
+      values.forEach((value) => {
+        const item = diagnosisClaim("li", "", "verified");
+        item.append(document.createTextNode(value));
+        list.append(item);
+      });
+      section.append(heading, list);
+      return section;
+    };
+    const wiring = document.createElement("section");
+    wiring.className = "deck-wiring";
+    wiring.setAttribute("aria-label", "Extracted evidence wired to operational consumers");
+    const linkGroup = document.createElement("section");
+    linkGroup.className = "deck-wiring-links";
+    const linkHeading = document.createElement("h3");
+    linkHeading.textContent = "Verified connections";
+    const linkList = document.createElement("ol");
+    links.forEach(([from, to, kind]) => {
+      const item = diagnosisClaim("li", "deck-wiring-link", "verified");
+      item.dataset.linkKind = kind;
+      item.append(document.createTextNode(`${from} → ${to}`));
+      linkList.append(item);
+    });
+    linkGroup.append(linkHeading, linkList);
+    wiring.append(group("Extracted state", extracted, "deck-wiring-source"), linkGroup, group("Actual consumers", consumers, "deck-wiring-target"));
+    return wiring;
+  };
+  const renderFeatureMap = (families) => {
+    const details = {
+      "Retriever evidence": "Rank, score, presence, margin, ratio, percentile, z-score, source",
+      "Semantic and multimodal": "b1_cos, Qwen metadata/lyrics, tags, CLAP audio, SigLIP visual",
+      "Behavioral and lookup": "Anchor/user CF-BPR centroids, CF similarities, discography, era-popularity",
+      Catalog: "Popularity, year, era, tags, artist, album, duration, culture, age affinity",
+      "Conversation and state": "Request, intent, routing, rejection, temporal constraints, history, overlap",
+      "Agreement and interactions": "Branch presence, best ranks, z-scores, percentiles, artist counts, cross-features",
+    };
+    const list = document.createElement("ol");
+    list.className = "deck-feature-map";
+    list.setAttribute("aria-label", "Six feature families in the 142-feature reranker");
+    families.forEach((family, index) => {
+      const item = diagnosisClaim("li", "deck-feature-family", "verified");
+      const heading = document.createElement("h3");
+      heading.textContent = family;
+      const badge = document.createElement("span");
+      badge.className = "deck-feature-badge";
+      badge.textContent = index === 0 ? "142 total" : `Family ${index + 1}`;
+      const detail = document.createElement("span");
+      detail.textContent = details[family];
+      item.append(heading, badge, detail);
+      list.append(item);
+    });
+    return list;
+  };
+  const renderEvidenceBoundaries = () => {
+    const columns = [
+      ["Missing upstream source", ["Direct track co-occurrence lane", "Markov / sequential-transition lane", "Candidate-producing b1 lane", "Grounded generated-description retrieval"]],
+      ["Consequent missing or limited feature", ["Direct co-occurrence probability and membership", "Transition probability", "Generated-description similarity", "Deliberate frequency priors"]],
+      ["Present evidence", ["Dense similarity", "CF/BPR centroids", "Conversation state", "Rejection and temporal signals", "Metadata, popularity, and era", "Cross-source agreement"]],
+    ];
+    const list = document.createElement("ol");
+    list.className = "deck-boundary-map";
+    list.setAttribute("aria-label", "Upstream and downstream evidence boundaries");
+    columns.forEach(([title, values], index) => {
+      const item = document.createElement("li");
+      item.className = "deck-boundary-column";
+      item.dataset.boundary = index === 2 ? "present" : "limited";
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      const evidence = document.createElement("ul");
+      values.forEach((value) => {
+        const row = diagnosisClaim("li", "", "verified");
+        row.append(document.createTextNode(value));
+        evidence.append(row);
+      });
+      item.append(heading, evidence);
+      list.append(item);
+    });
+    return list;
+  };
+  const renderResponseControl = () => {
+    const list = document.createElement("ol");
+    list.className = "deck-response-control";
+    list.setAttribute("aria-label", "Verified Blind-B response-control path");
+    [
+      ["Top-1 ID fixed", "Recommendation identity"],
+      ["Grounded context", "Latest state plus XML-delimited catalog metadata"],
+      ["One Qwen call", "Temperature zero · echo_retries=0"],
+      ["Final response", "No independent selector, checker, critic, or repair"],
+    ].forEach(([title, detail]) => {
+      const item = diagnosisClaim("li", "", "verified");
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      const text = document.createElement("span");
+      text.textContent = detail;
+      item.append(heading, text);
+      list.append(item);
+    });
+    return list;
+  };
+  const renderConfidence = (confidence) => {
+    const section = document.createElement("section");
+    section.className = "deck-confidence";
+    section.append(renderResponseControl());
+    const grid = document.createElement("ol");
+    grid.className = "deck-confidence-grid";
+    grid.setAttribute("aria-label", "Confidence-ranked diagnosis");
+    Object.entries(confidence).forEach(([level, claims]) => {
+      const item = document.createElement("li");
+      item.className = "deck-confidence-column";
+      item.dataset.confidence = level;
+      const heading = document.createElement("h3");
+      heading.textContent = confidenceLabels[level];
+      const list = document.createElement("ul");
+      claims.forEach((claim) => {
+        const row = diagnosisClaim("li", "", level);
+        row.append(document.createTextNode(claim));
+        list.append(row);
+      });
+      item.append(heading, list);
+      grid.append(item);
+    });
+    section.append(grid);
+    return section;
+  };
+  const renderBeliefTimeline = () => {
+    const section = document.createElement("section");
+    section.className = "deck-belief-timeline";
+    const title = document.createElement("h3");
+    title.textContent = "Belief update";
+    const list = document.createElement("ol");
+    [
+      ["Before submission", "0.3844–0.4562 in-sample diagnostics encouraged confidence"],
+      ["Evidence already available", "0.1970–0.2032 leakage-safe OOF results indicated weaker generalization"],
+      ["Blind-B result", "0.2537 nDCG@20 and 3.30/5 judge score"],
+      ["Post-competition review", "Candidate, constraint-execution, behavioral-evidence, and response-control gaps emerged"],
+    ].forEach(([headingText, detail]) => {
+      const item = diagnosisClaim("li", "", "verified");
+      const heading = document.createElement("h4");
+      heading.textContent = headingText;
+      const text = document.createElement("span");
+      text.textContent = detail;
+      item.append(heading, text);
+      list.append(item);
+    });
+    section.append(title, list);
+    return section;
+  };
+  const renderFailureTaxonomy = () => {
+    const section = document.createElement("section");
+    section.className = "deck-failure-taxonomy";
+    const title = document.createElement("h3");
+    title.textContent = "Failure attribution · frequencies unknown";
+    const list = document.createElement("ol");
+    [
+      "Relevant track never entered the candidate union",
+      "Relevant track entered but was misranked",
+      "Selected track was reasonable but its explanation was weak",
+      "Recommendation and explanation were both weak",
+    ].forEach((label) => {
+      const item = diagnosisClaim("li", "", "unknown");
+      const heading = document.createElement("h4");
+      heading.textContent = label;
+      const status = document.createElement("span");
+      status.textContent = "Unknown frequency";
+      item.append(heading, status);
+      list.append(item);
+    });
+    section.append(title, list);
+    return section;
+  };
+  const renderDiagnosis = (inner, entry) => {
+    const root = document.createElement("section");
+    root.className = `deck-diagnosis deck-diagnosis--${entry.diagnosisKind}`;
+    root.setAttribute("aria-label", entry.title);
+    root.append(renderEvidenceBoundary());
+    if (entry.diagnosisKind === "bottleneck") root.append(renderBottleneck(entry));
+    if (entry.diagnosisKind === "wiring") root.append(renderConstraintWiring());
+    if (entry.diagnosisKind === "feature-map") root.append(renderFeatureMap(entry.featureFamilies));
+    if (entry.diagnosisKind === "boundaries") root.append(renderEvidenceBoundaries());
+    if (entry.diagnosisKind === "confidence") root.append(renderConfidence(entry.confidence), renderBeliefTimeline(), renderFailureTaxonomy());
+    if (entry.diagnosisKind === "score") root.append(renderScoreFindings());
+    if (entry.takeaway) root.append(renderTakeaway(entry.takeaway));
+    inner.append(root);
+  };
   const renderMechanism = (entry) => {
     const section = document.createElement("section");
     section.className = "deck-mechanism";
@@ -6715,7 +7066,8 @@ IFn9/O7/AOW7dD3+ow0A
     takeaway.className = "deck-takeaway";
     const label = document.createElement("strong");
     label.textContent = "Takeaway";
-    takeaway.append(label, document.createTextNode(entry.takeaway));
+    const takeawayText = typeof entry.takeaway === "string" ? entry.takeaway : entry.takeaway.text;
+    takeaway.append(label, document.createTextNode(takeawayText));
     section.append(stages, takeaway);
     return section;
   };
@@ -6770,6 +7122,120 @@ IFn9/O7/AOW7dD3+ow0A
     section.append(synthesis);
     return section;
   };
+  const statusText = { present: "Present", partial: "Partial", "not-documented": "Not documented" };
+  const appendComparisonTakeaway = (section, takeaway) => {
+    if (!takeaway) return section;
+    const note = document.createElement("p");
+    note.className = "deck-takeaway";
+    const label = document.createElement("strong");
+    label.textContent = "Takeaway";
+    note.append(label, document.createTextNode(takeaway));
+    section.append(note);
+    return section;
+  };
+  const renderTeamGrid = (className, columns, teams, title) => {
+    const section = document.createElement("section");
+    section.className = `deck-team-grid ${className}`;
+    const table = document.createElement("table");
+    const caption = document.createElement("caption");
+    caption.textContent = `${title} team comparison`;
+    const head = document.createElement("thead");
+    const headingRow = document.createElement("tr");
+    const teamHeading = document.createElement("th");
+    teamHeading.scope = "col";
+    teamHeading.textContent = "Team";
+    headingRow.append(teamHeading);
+    columns.forEach((column) => {
+      const heading = document.createElement("th");
+      heading.scope = "col";
+      heading.textContent = column;
+      headingRow.append(heading);
+    });
+    head.append(headingRow);
+    const body = document.createElement("tbody");
+    teams.forEach((team, index) => {
+      const row = document.createElement("tr");
+      row.dataset.team = team.name;
+      row.style.setProperty("--team-color", teamColors[index % teamColors.length]);
+      const identity = document.createElement("th");
+      identity.scope = "row";
+      identity.textContent = team.name;
+      if (team.badge) {
+        const badge = document.createElement("span");
+        badge.className = "deck-feature-count";
+        badge.textContent = team.badge;
+        identity.append(badge);
+      }
+      row.append(identity);
+      team.cells.forEach((value, valueIndex) => {
+        const cellNode = document.createElement("td");
+        const column = columns[valueIndex];
+        cellNode.dataset.column = column;
+        cellNode.dataset.status = value.status;
+        cellNode.setAttribute("aria-label", `${column}: ${statusText[value.status]}. ${value.label}`);
+        cellNode.title = value.label;
+        const content = document.createElement("span");
+        content.className = "deck-grid-cell";
+        const mark = document.createElement("span");
+        mark.className = "deck-status-mark";
+        mark.setAttribute("aria-hidden", "true");
+        const shortLabel = document.createElement("span");
+        shortLabel.className = "deck-grid-cell-label";
+        shortLabel.textContent = className === "deck-evidence-heatmap"
+          ? `${statusText[value.status]} · ${value.short}`
+          : value.short;
+        content.append(mark, shortLabel);
+        cellNode.append(content);
+        row.append(cellNode);
+      });
+      body.append(row);
+    });
+    table.append(caption, head, body);
+    section.append(table);
+    return section;
+  };
+  const renderTeamStacks = (className, layers, teams, title) => {
+    const section = document.createElement("section");
+    section.className = className;
+    section.setAttribute("aria-label", `${title} team comparison`);
+    const layerHeadings = document.createElement("div");
+    layerHeadings.className = "deck-provenance-head";
+    layerHeadings.setAttribute("aria-hidden", "true");
+    layers.forEach((layer) => {
+      const heading = document.createElement("span");
+      heading.textContent = layer;
+      layerHeadings.append(heading);
+    });
+    section.append(layerHeadings);
+    teams.forEach((team, index) => {
+      const card = document.createElement("article");
+      card.className = "deck-provenance-team";
+      card.dataset.team = team.name;
+      card.style.setProperty("--team-color", teamColors[index % teamColors.length]);
+      const heading = document.createElement("h3");
+      heading.textContent = team.name;
+      const stack = document.createElement("ol");
+      team.cells.forEach((value, valueIndex) => {
+        const layer = document.createElement("li");
+        layer.className = "deck-provenance-layer";
+        layer.dataset.status = value.status;
+        layer.setAttribute("aria-label", `${layers[valueIndex]}: ${statusText[value.status]}. ${value.label}`);
+        layer.title = value.label;
+        const label = document.createElement("strong");
+        label.textContent = layers[valueIndex];
+        const shortLabel = document.createElement("span");
+        shortLabel.textContent = value.short;
+        layer.append(label, shortLabel);
+        stack.append(layer);
+      });
+      card.append(heading, stack);
+      section.append(card);
+    });
+    return section;
+  };
+  const renderHeatmap = ({ columns, teams, title, takeaway }) => appendComparisonTakeaway(renderTeamGrid("deck-evidence-heatmap", columns, teams, title), takeaway);
+  const renderProvenance = ({ layers, teams, title, takeaway }) => appendComparisonTakeaway(renderTeamStacks("deck-provenance-stack", layers, teams, title), takeaway);
+  const renderControlLanes = ({ columns, teams, title, takeaway }) => appendComparisonTakeaway(renderTeamGrid("deck-control-lanes", columns, teams, title), takeaway);
 
   for (const chapter of CONFIG.chapters) {
     const chapterNode = document.createElement("section");
@@ -6803,8 +7269,14 @@ IFn9/O7/AOW7dD3+ow0A
       question.textContent = chapter.question;
       pageCopy.append(heading, question);
       inner.append(pageCopy);
+      if (entry.diagnosisKind) renderDiagnosis(inner, entry);
+      if (entry.scoreFindings) inner.append(renderGapFindings());
+      if (entry.systemCard) inner.append(renderSystemCard(entry.systemCard));
       if (entry.visualKind === "mechanism") inner.append(renderMechanism(entry));
-      if (entry.visualKind === "comparison") inner.append(renderComparison(entry));
+      if (entry.visualKind === "comparison" && entry.teams) inner.append(renderComparison(entry));
+      if (entry.visualKind === "heatmap") inner.append(renderHeatmap(entry));
+      if (entry.visualKind === "provenance") inner.append(renderProvenance(entry));
+      if (entry.visualKind === "control-lanes") inner.append(renderControlLanes(entry));
       if (entry.archetype === "cover") {
         const map = document.createElement("ol");
         map.className = "deck-chapter-map";
@@ -6840,7 +7312,12 @@ IFn9/O7/AOW7dD3+ow0A
         });
         inner.append(flow);
       }
-      for (const blockId of entry.blocks) inner.append(disclosure(blocks.get(blockId), CONFIG.disclosures[blockId]));
+      if (entry.systemCard) {
+        const disclosureFor = entry.blocks.at(-1);
+        inner.append(disclosure(entry.blocks.map((blockId) => blocks.get(blockId)), CONFIG.disclosures[disclosureFor], disclosureFor));
+      } else {
+        for (const blockId of entry.blocks) inner.append(disclosure(blocks.get(blockId), CONFIG.disclosures[blockId]));
+      }
       slideNode.append(inner);
       vertical.append(slideNode);
       const railButton = document.createElement("button");
@@ -7032,6 +7509,14 @@ IFn9/O7/AOW7dD3+ow0A
     }
   });
   const setCanonicalOrder = (enabled) => {
+    const deckOrder = CONFIG.chapters.map(({ slug }) => slug);
+    const canonicalOrder = ["outcome", "diagnosis", "query", "retrieval", "response", "ours", "leaders", "synthesis"];
+    const order = enabled ? canonicalOrder : deckOrder;
+    const chaptersBySlug = new Map([...track.querySelectorAll(":scope > .deck-chapter")].map((node) => [node.dataset.chapter, node]));
+    order.forEach((slug) => {
+      const chapter = chaptersBySlug.get(slug);
+      if (chapter) track.append(chapter);
+    });
     const dataKnowledge = document.getElementById("query/data-glossary");
     const dataMatrix = document.getElementById("query/data-matrix");
     const promptAudit = document.getElementById("query/prompt-audit");
@@ -7054,6 +7539,7 @@ IFn9/O7/AOW7dD3+ow0A
   const progress = topbar.querySelector(".deck-progress");
   const mobileOrientation = topbar.querySelector(".deck-mobile-orientation");
   let active = slides[0];
+  let readingPath = new URL(location.href).searchParams.get("path") === "curated" ? "curated" : "audit";
   let scrollTimer = 0;
   let programmaticTarget = null;
   let gestureOrigin = null;
@@ -7073,6 +7559,9 @@ IFn9/O7/AOW7dD3+ow0A
     const chapterSlides = chapterSlidesFor(active);
     return chapterSlides[Math.max(0, Math.min(chapterSlides.length - 1, active.slideIndex + delta))];
   };
+  const navigationItems = () => readingPath === "curated"
+    ? CONFIG.curatedPath.map((slug) => bySlug.get(slug)).filter(Boolean)
+    : slides;
   const updateCurrent = (item, announce = false) => {
     active = item;
     document.querySelectorAll('.deck-slide[aria-current="true"],.deck-rail-button[aria-current="true"],.deck-chapter-button[aria-current="true"]').forEach((node) => node.removeAttribute("aria-current"));
@@ -7085,12 +7574,18 @@ IFn9/O7/AOW7dD3+ow0A
     mobileOrientation.textContent = `${item.chapter.title} · ${item.slideIndex + 1}/${CONFIG.chapters[item.chapterIndex].slides.length}`;
     skip.href = `#${item.slug}`;
     const chapterSlides = chapterSlidesFor(item);
-    const previousItem = item.slideIndex > 0
-      ? chapterSlides[item.slideIndex - 1]
-      : slides.find((candidate) => candidate.chapterIndex === item.chapterIndex - 1 && candidate.slideIndex === 0);
-    const nextItem = item.slideIndex < chapterSlides.length - 1
-      ? chapterSlides[item.slideIndex + 1]
-      : slides.find((candidate) => candidate.chapterIndex === item.chapterIndex + 1 && candidate.slideIndex === 0);
+    const pathItems = navigationItems();
+    const pathIndex = pathItems.indexOf(item);
+    const previousItem = readingPath === "curated"
+      ? pathItems[pathIndex - 1]
+      : item.slideIndex > 0
+        ? chapterSlides[item.slideIndex - 1]
+        : slides.find((candidate) => candidate.chapterIndex === item.chapterIndex - 1 && candidate.slideIndex === 0);
+    const nextItem = readingPath === "curated"
+      ? pathItems[pathIndex + 1]
+      : item.slideIndex < chapterSlides.length - 1
+        ? chapterSlides[item.slideIndex + 1]
+        : slides.find((candidate) => candidate.chapterIndex === item.chapterIndex + 1 && candidate.slideIndex === 0);
     const previousButton = footer.querySelector('[data-action="previous"]');
     const nextButton = footer.querySelector('[data-action="next"]');
     previousButton.disabled = !previousItem;
@@ -7099,10 +7594,20 @@ IFn9/O7/AOW7dD3+ow0A
     nextButton.textContent = nextItem ? `${nextItem.entry.title} →` : "End";
     if (announce) live.textContent = `${item.chapter.title}, ${item.entry.title}`;
   };
+  const setReadingPath = (mode) => {
+    readingPath = mode === "curated" ? "curated" : "audit";
+    html.dataset.readingPath = readingPath;
+    const url = new URL(location.href);
+    url.searchParams.set("path", readingPath);
+    history.replaceState(history.state, "", url.href);
+    topbar.querySelector('[data-action="reading-path"]').textContent = readingPath === "curated" ? "Explore evidence audit" : "Read retrospective";
+    updateCurrent(active, false);
+  };
   const goTo = (slug, { push = true, focus = true, announce = true, behavior = null } = {}) => {
     const requestedSlug = slug.split("?")[0];
     const cleanSlug = resolveSlug(requestedSlug);
     const item = bySlug.get(cleanSlug) || slides[0];
+    if (readingPath === "curated" && !CONFIG.curatedPath.includes(item.slug)) setReadingPath("audit");
     const target = document.getElementById(item.slug);
     const scrollBehavior = behavior || (matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth");
     programmaticTarget = scrollBehavior === "smooth" ? item.slug : null;
@@ -7138,6 +7643,7 @@ IFn9/O7/AOW7dD3+ow0A
     const slideNode = nearest(chapterNode.querySelectorAll(".deck-slide"), "top");
     const item = bySlug.get(slideNode.dataset.slug);
     if (!item) return;
+    if (readingPath === "curated" && !CONFIG.curatedPath.includes(item.slug)) setReadingPath("audit");
     if (programmaticTarget) {
       const reachedTarget = item.slug === programmaticTarget;
       programmaticTarget = null;
@@ -7220,11 +7726,18 @@ IFn9/O7/AOW7dD3+ow0A
     }
     const action = target?.closest("[data-action]")?.dataset.action;
     if (action === "jump") openJump(target);
+    if (action === "reading-path") setReadingPath(readingPath === "curated" ? "audit" : "curated");
     if (action === "linear") setLinear(html.dataset.deckView !== "linear");
-    if (action === "previous") goTo(active.slideIndex ? verticalItem(-1).slug : horizontal(-1).slug);
+    if (action === "previous") {
+      const pathItems = navigationItems();
+      const destination = readingPath === "curated" ? pathItems[pathItems.indexOf(active) - 1] : active.slideIndex ? verticalItem(-1) : horizontal(-1);
+      if (destination) goTo(destination.slug);
+    }
     if (action === "next") {
+      const pathItems = navigationItems();
       const chapterSlides = chapterSlidesFor(active);
-      goTo(active.slideIndex < chapterSlides.length - 1 ? verticalItem(1).slug : horizontal(1).slug);
+      const destination = readingPath === "curated" ? pathItems[pathItems.indexOf(active) + 1] : active.slideIndex < chapterSlides.length - 1 ? verticalItem(1) : horizontal(1);
+      if (destination) goTo(destination.slug);
     }
   });
   document.addEventListener("keydown", (event) => {
@@ -7255,7 +7768,10 @@ IFn9/O7/AOW7dD3+ow0A
       goTo(destinations[event.key].slug);
     }
   });
-  addEventListener("popstate", () => goTo(location.hash.slice(1) || slides[0].slug, { push: false, focus: false, announce: true, behavior: "auto" }));
+  addEventListener("popstate", () => {
+    setReadingPath(new URL(location.href).searchParams.get("path"));
+    goTo(location.hash.slice(1) || slides[0].slug, { push: false, focus: false, announce: true, behavior: "auto" });
+  });
   addEventListener("beforeprint", () => {
     setAllOpen("deckPrintOpen");
     setCanonicalOrder(true);
@@ -7264,6 +7780,7 @@ IFn9/O7/AOW7dD3+ow0A
     restoreOpen("deckPrintOpen");
     if (html.dataset.deckView !== "linear") setCanonicalOrder(false);
   });
+  setReadingPath(readingPath);
   const initial = location.hash.slice(1);
   const initialSlug = resolveSlug(initial.split("?")[0]);
   if (!bySlug.has(initialSlug)) goTo(slides[0].slug, { push: false, focus: false, announce: false, behavior: "auto" });
@@ -7271,8 +7788,8 @@ IFn9/O7/AOW7dD3+ow0A
   setLinear(new URL(location.href).searchParams.get("view") === "linear");
   html.classList.add("retrospective-deck-ready");
   html.dataset.deckReady = "true";
-  window.__retrospectiveDeck = { CONFIG, app, track, live, goTo, setLinear, currentSlug: () => active.slug };
-})({"chapters":[{"slug":"outcome","title":"Outcome & score","question":"What happened, and which metric terms made the gap?","slides":[{"slug":"cover","title":"Outcome & score","archetype":"cover","blocks":[]},{"slug":"executive-answer","title":"Executive answer","archetype":"story","blocks":["title","executive_summary","headline_metrics","section_directory"]},{"slug":"leaderboard-chart","title":"How the result was scored","archetype":"visual","blocks":["how_scoring_works","final_result_heading","leaderboard_chart"]},{"slug":"leaderboard-table","title":"Exact leaderboard","archetype":"matrix","blocks":["leaderboard_table"]},{"slug":"gap-chart","title":"Gap decomposition","archetype":"visual","blocks":["gap_contribution_chart"]},{"slug":"gap-interpretation","title":"What the score gap does—and does not—show","archetype":"story","blocks":["gap_interpretation"]}]},{"slug":"query","title":"Conversation → query","question":"How did each system turn dialogue into retriever inputs?","slides":[{"slug":"cover","title":"Conversation → query","archetype":"cover","blocks":[]},{"slug":"lifecycle","title":"Dialogue becomes several search signals","archetype":"visual","blocks":["lifecycle_heading","lifecycle_map","lifecycle_takeaway"],"visualKind":"mechanism","takeaway":"The important choice is not one perfect query. It is which conversation evidence becomes useful input for each retrieval lane.","stages":[{"label":"Conversation window","detail":"Recent turns, longer history, and played tracks"},{"label":"Interpretation","detail":"State, rewrite, entities, summary, or learned encoding"},{"label":"Query variants","detail":"Lexical, dense, history, transition, and constraint signals"},{"label":"Retriever inputs","detail":"Each source receives the representation suited to its evidence"}]},{"slug":"query-glossary","title":"Four ways dialogue becomes retriever input","archetype":"visual","blocks":["query_heading","query_explainer"],"visualKind":"mechanism","takeaway":"A query representation is any structured or learned form that a candidate source can actually consume—not only a rewritten sentence.","stages":[{"label":"Text rewrite","detail":"Compress the request into search-ready language"},{"label":"Structured state","detail":"Extract intent, entities, constraints, and feedback"},{"label":"Learned encoding","detail":"Map conversation evidence into a dense vector"},{"label":"History key","detail":"Use played tracks, artists, albums, or transitions directly"}]},{"slug":"query-matrix","title":"Same stages, different query evidence","archetype":"matrix","blocks":["query_matrix"],"visualKind":"comparison","columns":["Interpretation","Query forms","History boundary"],"common":"All five systems transformed dialogue into more than one retriever input.","different":"They differed in conversation window, explicit structure, and whether history became text, entities, co-occurrence, or transitions.","teams":[{"name":"npatta01","values":["DeepSeek V1 structured state","Weighted BM25, field-aligned dense strings, deterministic b1_cos","Multi-turn memory, current request, played-track facts"]},{"name":"volart","values":["Concise rewrite plus JSON entities","Rewrite for lexical/dense; entities and played IDs for separate lanes","Goal, latest request, and available history"]},{"name":"niwatori","values":["Source-specific safe text and learned encodings","Lexical, dense, history/co-occurrence, and transition forms","Recent text, full played IDs, and last track by source"]},{"name":"swyoo","values":["Current request, music context, and cached summary","BM25, QEmb, and two-tower representations","Recent listens and chat-derived aggregates"]},{"name":"team2_s2","values":["Conversation text plus source-specific item context","BM25 conversation, live text, and item/CF branches","Prior turns and last one, three, or all played tracks"]}]},{"slug":"data-glossary","title":"Four places system knowledge can come from","archetype":"visual","blocks":["data_knowledge_heading","data_knowledge_glossary"],"visualKind":"mechanism","takeaway":"Reproducibility depends on separating recorded facts from generated artifacts and latent model associations.","stages":[{"label":"Challenge records","detail":"Catalog, conversations, users, labels, and played history"},{"label":"External structured data","detail":"Lyrics, identifiers, credits, or outside interaction records"},{"label":"Generated artifacts","detail":"States, rewrites, descriptions, candidates, critiques, and repairs"},{"label":"LLM world knowledge","detail":"Uncited associations available only inside model generation"},{"label":"Verification boundary","detail":"What another record can independently reproduce or check"}]},{"slug":"data-matrix","title":"Common records, different knowledge boundaries","archetype":"matrix","blocks":["data_knowledge_matrix","data_knowledge_interpretation"],"visualKind":"comparison","columns":["Recorded data","Generated or latent knowledge","Grounding boundary"],"common":"Every reviewed system used official challenge data and persisted some model-generated artifacts.","different":"External datasets and the checks placed around model-authored musical claims varied substantially.","teams":[{"name":"npatta01","values":["Official catalog, embeddings, conversations/users, public labels","Cached state and artist known-for text; response-model associations","Catalog-resolved IDs; no independent response fact checker documented"],"status":"limit"},{"name":"volart","values":["Official records plus train co-occurrence and frequency/MOVES priors","Rewrites, descriptions, response candidates, critiques, and edits","Track IDs held fixed; structured musical-fact verification not documented"],"status":"limit"},{"name":"niwatori","values":["Official records plus TalkPlayData-1 statistics","No LLM retrieval rewrite documented; ten response drafts","Mapped external IDs, duplicate audits, and OOF training; response fact checking not documented"],"status":"external"},{"name":"swyoo","values":["Official records plus LRCLIB, Genius, and MusicBrainz","Summaries, themes, candidates, and repaired responses","Broadest documented external fact path with field-level checks"],"status":"verified"},{"name":"team2_s2","values":["Official catalog, conversations, users, labels, and embeddings","Fact bundles, first-pass responses, and refinements","Verified track facts supplied to generation; no external music dataset documented"],"status":"verified"}]},{"slug":"prompt-audit","title":"Prompt and file audit","archetype":"audit","blocks":["query_evidence_details"]}]},{"slug":"retrieval","title":"Retrieval & ranking","question":"What candidates and features could the rankers actually see?","slides":[{"slug":"cover","title":"Retrieval & ranking","archetype":"cover","blocks":[]},{"slug":"retriever-mechanism","title":"Many evidence lanes become one candidate boundary","archetype":"visual","blocks":[],"visualKind":"mechanism","takeaway":"A ranker can only rescue tracks that entered its candidate set; source diversity matters before feature richness does.","stages":[{"label":"Query variants","detail":"Text, dense vectors, entities, history, and constraints"},{"label":"Parallel sources","detail":"Lexical, semantic, collaborative, lookup, and transition lanes"},{"label":"Candidate assembly","detail":"Union, late fusion, dedicated slots, or routing"},{"label":"Feature computation","detail":"Per-source evidence, metadata, history, and agreement"},{"label":"Final ordering","detail":"Learned ranker, selector, or deterministic fusion"}]},{"slug":"retriever-matrix","title":"Same boundary, different retrieval evidence","archetype":"matrix","blocks":["retrieval_heading","retrieval_glossary","retrieval_matrix"],"visualKind":"comparison","columns":["Candidate sources","History use","Constraints"],"common":"Every reviewed path combined multiple evidence sources before choosing final track IDs.","different":"Direct co-occurrence and transition lanes, history seeding, candidate union rules, and hard filters were not shared equally.","teams":[{"name":"npatta01","values":["BM25, multimodal ANN, CF/BPR centroids, discography, era lookup","Accepted/referenced tracks anchor; rejected items demote or drop","Hard track rejection, tag demotion, artist veto, soft era preference"],"status":"limit"},{"name":"volart","values":["BM25, metadata dense, LLM-description dense, entities, train co-occurrence","Played tracks seed co-occurrence and are excluded","Dedicated entity/era slots and already-played exclusion"],"status":"verified"},{"name":"niwatori","values":["Lexical, dense, co-occurrence/history, transition, and prior sources","Full played history for co-occurrence; last track for transitions","Source-specific safety and candidate handling"],"status":"external"},{"name":"swyoo","values":["BM25, QEmb, two-tower, and metadata/demographic evidence","Recent listens accompany current and summarized context","Already-seen tracks excluded; cues stay soft; no general hard rejection documented"],"status":"verified"},{"name":"team2_s2","values":["BM25 conversation, live text, CF/BPR, and item branches","Last one, three, or all played tracks depending on source","Played-track exclusion enforced; explicit rejection, era, popularity, and novelty rules not documented"],"status":"verified"}]},{"slug":"feature-glossary","title":"Feature-family glossary","archetype":"story","blocks":["features_heading","feature_glossary"]},{"slug":"feature-matrix","title":"Feature families and validation lineage","archetype":"matrix","blocks":["feature_matrix"]},{"slug":"feature-inventories","title":"Complete feature inventories","archetype":"audit","blocks":["feature_details"]}]},{"slug":"response","title":"Response generation","question":"How did a selected track become grounded, checked prose?","slides":[{"slug":"cover","title":"Response generation","archetype":"cover","blocks":[]},{"slug":"overview","title":"A selected track still needs a response pipeline","archetype":"visual","blocks":["response_heading","response_explainer"],"visualKind":"mechanism","takeaway":"Multiple drafts help only when a documented selector, verifier, critic, or repair pass decides what survives.","stages":[{"label":"Selected track ID","detail":"Recommendation identity is fixed before prose work"},{"label":"Grounding bundle","detail":"Dialogue state, catalog facts, and verified external facts when available"},{"label":"Candidate generation","detail":"One response or several sampled alternatives"},{"label":"Quality control","detail":"Selection, verification, critique, repair, or polishing"},{"label":"Final response","detail":"Grounded explanation with the selected track preserved"}]},{"slug":"matrix","title":"Same track, different response quality controls","archetype":"matrix","blocks":["response_matrix"],"visualKind":"comparison","columns":["Candidates","Grounding","Selection / repair"],"common":"All five systems generated response prose after recommendation IDs were selected.","different":"Candidate count alone was not the distinction; independent checking, selection, and repair determined whether alternatives added control.","teams":[{"name":"npatta01","values":["One response","Latest state and selected-track metadata","No independent selector, critic, or fact checker documented"],"status":"limit"},{"name":"volart","values":["Three temperature-diverse candidates","Selected IDs remain fixed","Independent critic, selective rewrite, hardening, lexical pass"],"status":"verified"},{"name":"niwatori","values":["Ten seeded candidates","Selected track and conversation context","Lexical-diversity selector chooses a whole record; not a factual critic"],"status":"verified"},{"name":"swyoo","values":["Deterministic PAS proposals plus one PAS prediction","Catalog/crawl facts and legal title pool","Validate and repair themes/citations; no best-of-N critic"],"status":"verified"},{"name":"team2_s2","values":["First-pass response then refinement","Verified track-fact bundle","Second Gemini Pro polishing pass"],"status":"verified"}]},{"slug":"author-volart","title":"Author and volart paths","archetype":"visual","blocks":[],"lanes":[{"label":"Our submitted path","steps":["Latest state and selected track metadata","Single LLM pass","One top-1 response"]},{"label":"volart","steps":["Selected track ID held fixed","Generate response candidates","Independent quality critic","Selective rewrite and hardening","Lexical-diversity pass"]}]},{"slug":"niwatori-swyoo","title":"niwatori and swyoo paths","archetype":"visual","blocks":[],"lanes":[{"label":"niwatori","steps":["Selected track and conversation","Ten seeded response candidates","Candidate selector","Final response"]},{"label":"swyoo","steps":["Selected track and response theme","Generate candidates","Validate themes and citations","Repair unsupported content","Final response"]}]},{"slug":"team2","title":"team2_s2 path","archetype":"visual","blocks":[],"lanes":[{"label":"team2_s2","steps":["Selected track","Verified track-fact bundle","First-pass Gemini response","Gemini Pro refinement","Polished final response"]}]},{"slug":"tradeoffs","title":"Generation, selection, repair, and trade-offs","archetype":"audit","blocks":["response_walkthroughs","response_tradeoffs"]}]},{"slug":"ours","title":"Our submission","question":"What did we build, what worked, and where did confidence fail?","slides":[{"slug":"cover","title":"Our submission","archetype":"cover","blocks":["own_system_heading"]},{"slug":"offline-rail","title":"Offline evidence rail","archetype":"visual","blocks":["own_system_diagram"]},{"slug":"inference-rail","title":"Inference rail","archetype":"visual","blocks":[],"lanes":[{"label":"Deployed Blind-B path","steps":["DeepSeek state extraction","BM25, multimodal ANN, and lookup branches","Top 500 from each branch → candidate union","LightGBM LambdaMART reorders the union","Top-1 selected track","Single-pass response"]}]},{"slug":"walkthrough","title":"Complete walkthrough and ranking handoff","archetype":"audit","blocks":["own_system_walkthrough"]},{"slug":"what-worked","title":"What worked","archetype":"story","blocks":["what_worked"]},{"slug":"evaluation-mistake","title":"Evaluation mistake and confidence boundary","archetype":"story","blocks":["evaluation_mistake"]},{"slug":"contributors","title":"Ranking and response contributors","archetype":"story","blocks":["ranking_contributors","response_contributors"]}]},{"slug":"leaders","title":"Leading teams","question":"What did the leading public systems document differently?","slides":[{"slug":"cover","title":"Leading teams","archetype":"cover","blocks":["competitor_case_studies_heading"]},{"slug":"volart-outcome","title":"volart · outcome, query, and data","archetype":"story","blocks":["volart_heading","volart_outcome"]},{"slug":"volart-retrieval","title":"volart · retrieval and ranking","archetype":"visual","blocks":["volart_diagram"]},{"slug":"volart-response","title":"volart · response, comparison, and limits","archetype":"audit","blocks":["volart_walkthrough","volart_comparison","volart_limits"]},{"slug":"niwatori-outcome","title":"niwatori · outcome, query, and data","archetype":"story","blocks":["niwatori_heading","niwatori_outcome"]},{"slug":"niwatori-retrieval","title":"niwatori · retrieval and ranking","archetype":"visual","blocks":["niwatori_diagram"]},{"slug":"niwatori-response","title":"niwatori · response, comparison, and limits","archetype":"audit","blocks":["niwatori_walkthrough","niwatori_comparison","niwatori_limits"]},{"slug":"swyoo-outcome","title":"swyoo · outcome, query, and data","archetype":"story","blocks":["swyoo_heading","swyoo_outcome"]},{"slug":"swyoo-retrieval","title":"swyoo · retrieval and ranking","archetype":"visual","blocks":["swyoo_diagram"]},{"slug":"swyoo-response","title":"swyoo · response, comparison, and limits","archetype":"audit","blocks":["swyoo_walkthrough","swyoo_comparison","swyoo_limits"]},{"slug":"team2-outcome","title":"team2_s2 · outcome, query, and data","archetype":"story","blocks":["team2_s2_heading","team2_s2_outcome"]},{"slug":"team2-retrieval","title":"team2_s2 · retrieval and ranking","archetype":"visual","blocks":["team2_s2_diagram"]},{"slug":"team2-response","title":"team2_s2 · response, comparison, and limits","archetype":"audit","blocks":["team2_s2_walkthrough","team2_s2_comparison","team2_s2_limits"]}]},{"slug":"synthesis","title":"Synthesis & evidence","question":"What should the team preserve, reconsider, avoid, and credit?","slides":[{"slug":"cover","title":"Synthesis & evidence","archetype":"cover","blocks":["cross_team_heading"]},{"slug":"matrix","title":"Cross-team synthesis","archetype":"matrix","blocks":["cross_team_matrix"]},{"slug":"choices","title":"Preserve, reconsider, and avoid","archetype":"story","blocks":["preserve_reconsider_avoid","retrospective_choices_table"]},{"slug":"lessons","title":"Transferable lessons and acknowledgements","archetype":"story","blocks":["future_competition_lessons","acknowledgements_heading","acknowledgements"]},{"slug":"evidence","title":"Caveats and complete evidence","archetype":"audit","blocks":["caveats","evidence_notes"]}]}],"disclosures":{"section_directory":"Open the original chapter outline","how_scoring_works":"Open the composite-score formula","leaderboard_table":"Open exact values and repository links","lifecycle_heading":"Open the source-backed lifecycle introduction","lifecycle_map":"Open the complete lifecycle map","lifecycle_takeaway":"Open the original lifecycle takeaway","query_heading":"Open the query-audit heading","query_explainer":"Open definitions, qualifications, and sources","query_matrix":"Open the complete five-team query matrix","query_evidence_details":"Open prompt excerpts and the reviewed file inventory","data_knowledge_heading":"Open the data-provenance heading","data_knowledge_glossary":"Open definitions and evidence boundaries","data_knowledge_matrix":"Open the complete data and model-knowledge matrix","data_knowledge_interpretation":"Open the complete provenance interpretation","retrieval_heading":"Open the retrieval-audit heading","retrieval_glossary":"Open definitions and the candidate-set boundary","retrieval_matrix":"Open the complete retrieval matrix","feature_matrix":"Open the complete feature-family matrix","feature_details":"Open the per-team feature inventories","response_heading":"Open the response-audit heading","response_explainer":"Open the complete response-system explanation","response_matrix":"Open the complete response-generation matrix","own_system_walkthrough":"Open the complete submitted-system walkthrough","evidence_notes":"Open the complete evidence notes"},"aliases":{"outcome/summary":"outcome/cover","outcome/official-result":"outcome/leaderboard-chart","outcome/gap":"outcome/gap-chart","query/comparison":"query/query-matrix","query/data-knowledge":"query/data-matrix","retrieval/retrievers":"retrieval/retriever-matrix","retrieval/features":"retrieval/feature-glossary","retrieval/feature-audit":"retrieval/feature-inventories","response/pipelines":"response/author-volart","ours/system":"ours/cover","ours/strengths":"ours/what-worked","leaders/index":"leaders/cover","leaders/volart":"leaders/volart-outcome","leaders/niwatori":"leaders/niwatori-outcome","leaders/swyoo":"leaders/swyoo-outcome","leaders/team2":"leaders/team2-outcome","synthesis/cross-team":"synthesis/cover","synthesis/acknowledgements":"synthesis/lessons","synthesis/caveats-evidence":"synthesis/evidence","response/matrix":"response/matrix","response/overview":"response/overview","response/tradeoffs":"response/tradeoffs","query/prompt-audit":"query/prompt-audit","ours/walkthrough":"ours/walkthrough","ours/evaluation-mistake":"ours/evaluation-mistake","ours/contributors":"ours/contributors","synthesis/choices":"synthesis/choices","synthesis/lessons":"synthesis/lessons"}});</script>
+  window.__retrospectiveDeck = { CONFIG, app, track, live, goTo, setLinear, setReadingPath, currentReadingPath: () => readingPath, currentSlug: () => active.slug };
+})({"chapters":[{"slug":"outcome","title":"Outcome & score","question":"What happened, and which metric terms made the gap?","slides":[{"slug":"cover","title":"Outcome & score","archetype":"cover","blocks":[]},{"slug":"executive-answer","title":"Executive answer","archetype":"story","blocks":["title","executive_summary","headline_metrics","section_directory"]},{"slug":"leaderboard-chart","title":"How the result was scored","archetype":"visual","blocks":["how_scoring_works","final_result_heading","leaderboard_chart"]},{"slug":"leaderboard-table","title":"Exact leaderboard","archetype":"matrix","blocks":["leaderboard_table"]},{"slug":"gap-chart","title":"Gap decomposition","archetype":"visual","blocks":["gap_contribution_chart"]},{"slug":"gap-interpretation","title":"What the score gap does—and does not—show","archetype":"story","blocks":["gap_interpretation"],"scoreFindings":true}]},{"slug":"diagnosis","title":"Diagnosis","question":"Where did information and control weaken, and how confident is that diagnosis?","slides":[{"slug":"score-location","title":"Where the score gap appeared","archetype":"visual","blocks":[],"diagnosisKind":"score","takeaway":{"text":"Ranking and judge terms explain most of the arithmetic gap; the chart does not prove which mechanism caused it.","confidence":"verified"}},{"slug":"information-loss","title":"Where information was lost","archetype":"visual","blocks":[],"diagnosisKind":"bottleneck","stages":["Conversation","Extracted state","Retriever actions","Candidate sources","Candidate union","LightGBM","Top-1 track","Grounded context","One draft","Final response"],"losses":[{"after":"Extracted state","label":"Some facts remained soft or lacked a dedicated source action","confidence":"verified"},{"after":"Candidate sources","label":"No direct co-occurrence or transition lane","confidence":"verified"},{"after":"Candidate union","label":"Absent tracks were irrecoverable downstream","confidence":"verified"},{"after":"One draft","label":"No independent selection, checking, or repair","confidence":"verified"}]},{"slug":"constraint-wiring","title":"Extracted constraints versus operationalized constraints","archetype":"visual","blocks":[],"diagnosisKind":"wiring","connections":[{"from":"Explicit rejections","to":"Hard track exclusion, tag demotion, and artist veto","confidence":"verified"},{"from":"Era preference","to":"Soft preference and era lookup","confidence":"verified"},{"from":"Played-track history","to":"Anchors and reranker features, without a direct track co-occurrence source","confidence":"verified"},{"from":"Other soft state facts","to":"No dedicated source action documented for every field","confidence":"verified"}],"takeaway":{"text":"Rich extraction, uneven execution: not every fact became a filter, source-specific query, or dedicated candidate signal.","confidence":"verified"}},{"slug":"features-seen","title":"What the 142-feature reranker saw","archetype":"visual","blocks":[],"diagnosisKind":"feature-map","featureFamilies":["Retriever evidence","Semantic and multimodal","Behavioral and lookup","Catalog","Conversation and state","Agreement and interactions"],"takeaway":{"text":"The ranker was substantial; column count alone does not establish liveness, importance, robustness, or held-out benefit.","confidence":"verified"}},{"slug":"evidence-missed","title":"Evidence the ranker could not see or recover","archetype":"visual","blocks":[],"diagnosisKind":"boundaries","boundaries":["Missing upstream source","Consequent missing feature","Not missing"],"takeaway":{"text":"Adding LightGBM columns cannot recreate a track or source signal that never entered the pipeline.","confidence":"verified"}},{"slug":"confidence","title":"Response weakness and confidence-ranked diagnosis","archetype":"visual","blocks":[],"diagnosisKind":"confidence","confidence":{"verified":["Ranking and judge dominate the score gap","Constraint execution was uneven","Behavioral evidence was partial","b1_cos was a reranker feature only","Blind-B used one response call with echo_retries=0"],"likely":["Evidence diversity mattered more than feature count","LLM knowledge was not consistently grounded and reused","Distribution shift or objective mismatch contributed","Response quality control was too thin"],"unknown":["Blind-B candidate recall","Present-but-misranked frequency","Per-session failure archetypes","Causal effect of any one mechanism"]}}]},{"slug":"ours","title":"Our submission","question":"What did we build, what worked, and where did confidence fail?","slides":[{"slug":"cover","title":"Our submission","archetype":"cover","blocks":["own_system_heading"]},{"slug":"offline-rail","title":"Offline evidence rail","archetype":"visual","blocks":["own_system_diagram"]},{"slug":"inference-rail","title":"Inference rail","archetype":"visual","blocks":[],"lanes":[{"label":"Deployed Blind-B path","steps":["DeepSeek state extraction","BM25, multimodal ANN, and lookup branches","Up to 500 hits from each traced branch → candidate union","LightGBM LambdaMART reorders the union","Top-1 selected track","Single-pass response"]}]},{"slug":"walkthrough","title":"Complete walkthrough and ranking handoff","archetype":"audit","blocks":["own_system_walkthrough"]},{"slug":"what-worked","title":"What worked","archetype":"story","blocks":["what_worked"]},{"slug":"evaluation-mistake","title":"Evaluation mistake and confidence boundary","archetype":"story","blocks":["evaluation_mistake"]},{"slug":"contributors","title":"Ranking and response contributors","archetype":"story","blocks":["ranking_contributors","response_contributors"]}]},{"slug":"query","title":"Conversation → query","question":"How did each system turn dialogue into retriever inputs?","slides":[{"slug":"cover","title":"Conversation → query","archetype":"cover","blocks":[]},{"slug":"lifecycle","title":"Dialogue becomes several search signals","archetype":"visual","blocks":["lifecycle_heading","lifecycle_map","lifecycle_takeaway","query_heading","query_explainer"],"visualKind":"mechanism","takeaway":"The important choice is not one perfect query. It is which conversation evidence becomes useful input for each retrieval lane.","stages":[{"label":"Conversation window","detail":"Recent turns, longer history, and played tracks"},{"label":"Interpretation","detail":"State, rewrite, entities, summary, or learned encoding"},{"label":"Query variants","detail":"Lexical, dense, history, transition, and constraint signals"},{"label":"Retriever inputs","detail":"Each source receives the representation suited to its evidence"}]},{"slug":"query-matrix","title":"Same stages, different query evidence","archetype":"matrix","blocks":["query_matrix"],"visualKind":"comparison","columns":["Interpretation","Query forms","History boundary"],"common":"All five systems transformed dialogue into more than one retriever input.","different":"They differed in conversation window, explicit structure, and whether history became text, entities, co-occurrence, or transitions.","teams":[{"name":"npatta01","values":["DeepSeek V1 structured state","Weighted BM25, field-aligned dense strings, deterministic b1_cos","Multi-turn memory, current request, played-track facts"]},{"name":"volart","values":["Concise rewrite plus JSON entities","Rewrite for lexical/dense; entities and played IDs for separate lanes","Goal, latest request, and available history"]},{"name":"niwatori","values":["Source-specific safe text and learned encodings","Lexical, dense, history/co-occurrence, and transition forms","Recent text, full played IDs, and last track by source"]},{"name":"swyoo","values":["Current request, music context, and cached summary","BM25, QEmb, and two-tower representations","Recent listens and chat-derived aggregates"]},{"name":"team2_s2","values":["Conversation text plus source-specific item context","BM25 conversation, live text, and item/CF branches","Prior turns and last one, three, or all played tracks"]}]},{"slug":"data-glossary","title":"Four places system knowledge can come from","archetype":"visual","blocks":["data_knowledge_heading","data_knowledge_glossary"],"visualKind":"mechanism","takeaway":"Reproducibility depends on separating recorded facts from generated artifacts and latent model associations.","stages":[{"label":"Challenge records","detail":"Catalog, conversations, users, labels, and played history"},{"label":"External structured data","detail":"Lyrics, identifiers, credits, or outside interaction records"},{"label":"Generated artifacts","detail":"States, rewrites, descriptions, candidates, critiques, and repairs"},{"label":"LLM world knowledge","detail":"Uncited associations available only inside model generation"},{"label":"Verification boundary","detail":"What another record can independently reproduce or check"}]},{"slug":"provenance-stacks","title":"How evidence provenance stacks up","archetype":"visual","blocks":[],"visualKind":"provenance","takeaway":"Recorded, generated, latent, and verified evidence have different reproducibility boundaries.","layers":["Official challenge data","External structured data","Generated artifacts","Latent LLM knowledge","Verification boundary"],"teams":[{"name":"npatta01","cells":[{"status":"present","label":"Official catalog, embeddings, conversations, users, and public labels","short":"Catalog + conversations"},{"status":"not-documented","label":"No external structured music dataset documented","short":"None"},{"status":"present","label":"Cached conversation state and artist known-for text","short":"State + known-for"},{"status":"partial","label":"Response-model associations were available but not independently recorded","short":"Response-model associations"},{"status":"partial","label":"Catalog IDs were resolved; no independent response fact checker was documented","short":"IDs only; no checker"}]},{"name":"volart","cells":[{"status":"present","label":"Official records, train co-occurrence, frequency, and MOVES priors","short":"Records + priors"},{"status":"not-documented","label":"No external structured music dataset documented","short":"None"},{"status":"present","label":"Rewrites, descriptions, response candidates, critiques, and edits","short":"Rewrites + critiques"},{"status":"partial","label":"Model associations could enter generated descriptions and drafts","short":"Model associations"},{"status":"partial","label":"Track IDs stayed fixed; structured musical-fact verification was not documented","short":"IDs fixed; facts unchecked"}]},{"name":"niwatori","cells":[{"status":"present","label":"Official challenge records","short":"Challenge records"},{"status":"present","label":"TalkPlayData-1 statistics","short":"TalkPlayData-1"},{"status":"partial","label":"Ten response drafts; no LLM retrieval rewrite documented","short":"10 drafts; no query rewrite"},{"status":"partial","label":"Response-model associations could enter the drafts","short":"Response-model associations"},{"status":"partial","label":"Mapped external IDs, duplicate audits, and OOF training; response fact checking not documented","short":"ID audits; response unchecked"}]},{"name":"swyoo","cells":[{"status":"present","label":"Official challenge records","short":"Challenge records"},{"status":"present","label":"LRCLIB, Genius, and MusicBrainz","short":"LRCLIB · Genius · MusicBrainz"},{"status":"present","label":"Summaries, themes, candidates, and repaired responses","short":"Summaries + repairs"},{"status":"partial","label":"Model predictions supplemented recorded facts","short":"Model predictions"},{"status":"present","label":"Theme, citation, and field-level validation with repair","short":"Checks + repair"}]},{"name":"team2_s2","cells":[{"status":"present","label":"Official catalog, conversations, users, labels, and embeddings","short":"Catalog + conversations"},{"status":"not-documented","label":"No external structured music dataset documented","short":"None"},{"status":"present","label":"Fact bundles, first-pass responses, and refinements","short":"Facts + responses"},{"status":"partial","label":"Gemini generation could add associations beyond the supplied facts","short":"Gemini associations"},{"status":"present","label":"Verified track facts were supplied to generation","short":"Verified facts"}]}]},{"slug":"data-matrix","title":"Common records, different knowledge boundaries","archetype":"matrix","blocks":["data_knowledge_matrix","data_knowledge_interpretation"],"visualKind":"comparison","columns":["Recorded data","Generated or latent knowledge","Grounding boundary"],"common":"Every reviewed system used official challenge data and persisted some model-generated artifacts.","different":"External datasets and the checks placed around model-authored musical claims varied substantially.","teams":[{"name":"npatta01","values":["Official catalog, embeddings, conversations/users, public labels","Cached state and artist known-for text; response-model associations","Catalog-resolved IDs; no independent response fact checker documented"],"status":"limit"},{"name":"volart","values":["Official records plus train co-occurrence and frequency/MOVES priors","Rewrites, descriptions, response candidates, critiques, and edits","Track IDs held fixed; structured musical-fact verification not documented"],"status":"limit"},{"name":"niwatori","values":["Official records plus TalkPlayData-1 statistics","No LLM retrieval rewrite documented; ten response drafts","Mapped external IDs, duplicate audits, and OOF training; response fact checking not documented"],"status":"external"},{"name":"swyoo","values":["Official records plus LRCLIB, Genius, and MusicBrainz","Summaries, themes, candidates, and repaired responses","Broadest documented external fact path with field-level checks"],"status":"verified"},{"name":"team2_s2","values":["Official catalog, conversations, users, labels, and embeddings","Fact bundles, first-pass responses, and refinements","Verified track facts supplied to generation; no external music dataset documented"],"status":"verified"}]},{"slug":"prompt-audit","title":"Prompt and file audit","archetype":"audit","blocks":["query_evidence_details"]}]},{"slug":"retrieval","title":"Retrieval & ranking","question":"What candidates and features could the rankers actually see?","slides":[{"slug":"cover","title":"Retrieval & ranking","archetype":"cover","blocks":[]},{"slug":"retriever-mechanism","title":"Many evidence lanes become one candidate boundary","archetype":"visual","blocks":[],"visualKind":"mechanism","takeaway":"A ranker can only rescue tracks that entered its candidate set; source diversity matters before feature richness does.","stages":[{"label":"Query variants","detail":"Text, dense vectors, entities, history, and constraints"},{"label":"Parallel sources","detail":"Lexical, semantic, collaborative, lookup, and transition lanes"},{"label":"Candidate assembly","detail":"Union, late fusion, dedicated slots, or routing"},{"label":"Feature computation","detail":"Per-source evidence, metadata, history, and agreement"},{"label":"Final ordering","detail":"Learned ranker, selector, or deterministic fusion"}]},{"slug":"retriever-matrix","title":"Same boundary, different retrieval evidence","archetype":"matrix","blocks":["retrieval_heading","retrieval_glossary","retrieval_matrix"],"visualKind":"comparison","columns":["Candidate sources","History use","Constraints"],"common":"Every reviewed path combined multiple evidence sources before choosing final track IDs.","different":"Direct co-occurrence and transition lanes, history seeding, candidate union rules, and hard filters were not shared equally.","teams":[{"name":"npatta01","values":["BM25, multimodal ANN, CF/BPR centroids, discography, era lookup","Accepted/referenced tracks anchor; rejected items demote or drop","Hard track rejection, tag demotion, artist veto, soft era preference"],"status":"limit"},{"name":"volart","values":["BM25, metadata dense, LLM-description dense, entities, train co-occurrence","Played tracks seed co-occurrence and are excluded","Dedicated entity/era slots and already-played exclusion"],"status":"verified"},{"name":"niwatori","values":["Lexical, dense, co-occurrence/history, transition, and prior sources","Full played history for co-occurrence; last track for transitions","Source-specific safety and candidate handling"],"status":"external"},{"name":"swyoo","values":["BM25, QEmb, two-tower, and metadata/demographic evidence","Recent listens accompany current and summarized context","Already-seen tracks excluded; cues stay soft; no general hard rejection documented"],"status":"verified"},{"name":"team2_s2","values":["BM25 conversation, live text, CF/BPR, and item branches","Last one, three, or all played tracks depending on source","Played-track exclusion enforced; explicit rejection, era, popularity, and novelty rules not documented"],"status":"verified"}]},{"slug":"evidence-heatmap","title":"Which retrieval evidence each system could use","archetype":"visual","blocks":[],"visualKind":"heatmap","takeaway":"Candidate-source coverage determines which evidence can become a ranking feature downstream.","columns":["Lexical","Dense","Collaborative","Co-occurrence","Transition","Lookup","Generated description","Metadata","Conversation/state","Agreement/routing","Priors"],"teams":[{"name":"npatta01","badge":"142 features","cells":[{"status":"present","label":"BM25 lexical retrieval","short":"BM25 lexical retrieval"},{"status":"present","label":"Multimodal and metadata ANN retrieval","short":"Multimodal and metadata ANN retrieval"},{"status":"present","label":"CF/BPR centroid retrieval","short":"CF/BPR centroid retrieval"},{"status":"not-documented","label":"No direct track co-occurrence source documented","short":"No direct track co-occurrence source documented"},{"status":"not-documented","label":"No transition source documented","short":"No transition source documented"},{"status":"present","label":"Discography and era lookup branches","short":"Discography and era lookup branches"},{"status":"partial","label":"Artist known-for text, not a general generated-description lane","short":"Artist known-for text, not a general generated-description lane"},{"status":"present","label":"Catalog and media metadata features","short":"Catalog and media metadata features"},{"status":"present","label":"Conversation-state and feedback features","short":"Conversation-state and feedback features"},{"status":"present","label":"Cross-source agreement and routing features","short":"Cross-source agreement and routing features"},{"status":"partial","label":"Popularity and frequency evidence, without a dedicated prior source","short":"Popularity and frequency evidence, without a dedicated prior source"}]},{"name":"volart","badge":"69 features","cells":[{"status":"present","label":"BM25 lexical retrieval","short":"BM25 lexical retrieval"},{"status":"present","label":"Metadata dense retrieval","short":"Metadata dense retrieval"},{"status":"partial","label":"Played-track co-occurrence rather than a learned collaborative model","short":"Played-track co-occurrence rather than a learned collaborative model"},{"status":"present","label":"Train co-occurrence source","short":"Train co-occurrence source"},{"status":"not-documented","label":"No transition source documented","short":"No transition source documented"},{"status":"present","label":"Entity and era lookup slots","short":"Entity and era lookup slots"},{"status":"present","label":"LLM-generated track descriptions","short":"LLM-generated track descriptions"},{"status":"present","label":"Metadata features","short":"Metadata features"},{"status":"present","label":"Rewrite, entities, and played-history evidence","short":"Rewrite, entities, and played-history evidence"},{"status":"present","label":"RRF, source ranks, and agreement evidence","short":"RRF, source ranks, and agreement evidence"},{"status":"present","label":"Frequency and MOVES priors","short":"Frequency and MOVES priors"}]},{"name":"niwatori","badge":"176 features","cells":[{"status":"present","label":"Lexical retrieval sources","short":"Lexical retrieval sources"},{"status":"present","label":"Dense learned retrieval sources","short":"Dense learned retrieval sources"},{"status":"present","label":"History and collaborative evidence","short":"History and collaborative evidence"},{"status":"present","label":"Full-history co-occurrence sources","short":"Full-history co-occurrence sources"},{"status":"present","label":"Last-track transition sources","short":"Last-track transition sources"},{"status":"partial","label":"Source-specific lookup evidence","short":"Source-specific lookup evidence"},{"status":"not-documented","label":"No generated-description retrieval lane documented","short":"No generated-description retrieval lane documented"},{"status":"present","label":"Track and source metadata","short":"Track and source metadata"},{"status":"present","label":"Recent text and played-history signals","short":"Recent text and played-history signals"},{"status":"present","label":"Ordered-union, source, and agreement features","short":"Ordered-union, source, and agreement features"},{"status":"present","label":"Prior sources including TalkPlayData-1 statistics","short":"Prior sources including TalkPlayData-1 statistics"}]},{"name":"swyoo","badge":"Count not established","cells":[{"status":"present","label":"BM25 lexical retrieval","short":"BM25 lexical retrieval"},{"status":"present","label":"QEmb and two-tower dense retrieval","short":"QEmb and two-tower dense retrieval"},{"status":"present","label":"Two-tower interaction evidence","short":"Two-tower interaction evidence"},{"status":"partial","label":"Chat-derived aggregate behavior, not a dedicated co-occurrence lane","short":"Chat-derived aggregate behavior, not a dedicated co-occurrence lane"},{"status":"not-documented","label":"No direct transition source documented","short":"No direct transition source documented"},{"status":"partial","label":"External metadata and identifier lookups","short":"External metadata and identifier lookups"},{"status":"partial","label":"Generated summaries and themes, not a documented generated track-description retriever","short":"Generated summaries and themes, not a documented generated track-description retriever"},{"status":"present","label":"Catalog, demographic, lyrics, and credit metadata","short":"Catalog, demographic, lyrics, and credit metadata"},{"status":"present","label":"Current request, summary, and recent-listen evidence","short":"Current request, summary, and recent-listen evidence"},{"status":"present","label":"Multi-source fusion and compatibility evidence","short":"Multi-source fusion and compatibility evidence"},{"status":"partial","label":"Popularity or demographic priors were available but exact submitted usage is bounded","short":"Popularity or demographic priors were available but exact submitted usage is bounded"}]},{"name":"team2_s2","badge":"37 features","cells":[{"status":"present","label":"BM25 conversation and live-text retrieval","short":"BM25 conversation and live-text retrieval"},{"status":"present","label":"Dense text and item branches","short":"Dense text and item branches"},{"status":"present","label":"CF/BPR branches","short":"CF/BPR branches"},{"status":"partial","label":"Collaborative item evidence without a separately documented co-occurrence source","short":"Collaborative item evidence without a separately documented co-occurrence source"},{"status":"not-documented","label":"No transition source documented","short":"No transition source documented"},{"status":"partial","label":"Item and catalog lookup evidence","short":"Item and catalog lookup evidence"},{"status":"not-documented","label":"No generated-description retrieval lane documented","short":"No generated-description retrieval lane documented"},{"status":"present","label":"Catalog and item metadata","short":"Catalog and item metadata"},{"status":"present","label":"Conversation and played-track windows","short":"Conversation and played-track windows"},{"status":"present","label":"Source and fusion features","short":"Source and fusion features"},{"status":"partial","label":"Some popularity evidence; explicit popularity and novelty rules not documented","short":"Some popularity evidence; explicit popularity and novelty rules not documented"}]}]},{"slug":"feature-glossary","title":"Feature-family glossary","archetype":"story","blocks":["features_heading","feature_glossary"]},{"slug":"feature-matrix","title":"Feature families and validation lineage","archetype":"matrix","blocks":["feature_matrix"]},{"slug":"feature-inventories","title":"Complete feature inventories","archetype":"audit","blocks":["feature_details"]}]},{"slug":"response","title":"Response generation","question":"How did a selected track become grounded, checked prose?","slides":[{"slug":"cover","title":"Response generation","archetype":"cover","blocks":[]},{"slug":"overview","title":"A selected track still needs a response pipeline","archetype":"visual","blocks":["response_heading","response_explainer"],"visualKind":"mechanism","takeaway":"Multiple drafts help only when a documented selector, verifier, critic, or repair pass decides what survives.","stages":[{"label":"Selected track ID","detail":"Recommendation identity is fixed before prose work"},{"label":"Grounding bundle","detail":"Dialogue state, catalog facts, and verified external facts when available"},{"label":"Candidate generation","detail":"One response or several sampled alternatives"},{"label":"Quality control","detail":"Selection, verification, critique, repair, or polishing"},{"label":"Final response","detail":"Grounded explanation with the selected track preserved"}]},{"slug":"grounding-heatmap","title":"What grounded each response","archetype":"visual","blocks":["response_matrix"],"visualKind":"comparison","takeaway":"Grounding strength depended on which facts reached generation and which claims were independently checkable.","columns":["Candidates","Grounding","Selection / repair"],"common":"All five systems generated response prose after recommendation IDs were selected.","different":"Candidate count alone was not the distinction; independent checking, selection, and repair determined whether alternatives added control.","teams":[{"name":"npatta01","values":["One response","Latest state and selected-track metadata","No independent selector, critic, or fact checker documented"],"status":"limit"},{"name":"volart","values":["Three temperature-diverse candidates","Selected IDs remain fixed","Independent critic, selective rewrite, hardening, lexical pass"],"status":"verified"},{"name":"niwatori","values":["Ten seeded candidates","Selected track and conversation context","Lexical-diversity selector chooses a whole record; not a factual critic"],"status":"verified"},{"name":"swyoo","values":["Deterministic PAS proposals plus one PAS prediction","Catalog/crawl facts and legal title pool","Validate and repair themes/citations; no best-of-N critic"],"status":"verified"},{"name":"team2_s2","values":["First-pass response then refinement","Verified track-fact bundle","Second Gemini Pro polishing pass"],"status":"verified"}]},{"slug":"control-heatmap","title":"How each response was selected, checked, or repaired","archetype":"visual","blocks":[],"visualKind":"control-lanes","takeaway":"Multiple drafts add control only when a documented selector, verifier, critic, or repair pass decides what survives.","columns":["Grounding","Drafts","Selection","Verification","Repair","Lexical control"],"teams":[{"name":"npatta01","cells":[{"status":"present","label":"Latest state and selected-track catalog metadata","short":"State + catalog"},{"status":"present","label":"One response draft","short":"1 draft"},{"status":"not-documented","label":"No independent selector documented","short":"None"},{"status":"not-documented","label":"No independent checker documented","short":"None"},{"status":"not-documented","label":"No repair pass documented","short":"None"},{"status":"not-documented","label":"No lexical-control pass documented","short":"None"}]},{"name":"volart","cells":[{"status":"present","label":"Selected recommendation IDs stayed fixed","short":"IDs fixed"},{"status":"present","label":"Three temperature-diverse candidates","short":"3 varied drafts"},{"status":"present","label":"Independent critic selected or rejected candidates","short":"Critic"},{"status":"partial","label":"Quality hardening, not a documented structured musical-fact verifier","short":"Quality hardening"},{"status":"present","label":"Selective rewrite and hardening","short":"Selective rewrite"},{"status":"present","label":"Lexical-diversity pass","short":"Lexical pass"}]},{"name":"niwatori","cells":[{"status":"present","label":"Selected track and conversation context","short":"Track + conversation"},{"status":"present","label":"Ten seeded candidates","short":"10 seeded drafts"},{"status":"present","label":"Lexical-diversity selection of a whole record","short":"Diversity selector"},{"status":"not-documented","label":"Selector was not a factual critic","short":"Not a factual critic"},{"status":"not-documented","label":"No repair pass documented","short":"None"},{"status":"present","label":"Lexical diversity was the selection objective","short":"Diversity objective"}]},{"name":"swyoo","cells":[{"status":"present","label":"Catalog and crawled facts with a legal title pool","short":"Catalog + crawls"},{"status":"present","label":"Deterministic PAS proposals plus one PAS prediction","short":"PAS set"},{"status":"partial","label":"Deterministic proposal path, not best-of-N critique","short":"No critic"},{"status":"present","label":"Theme and citation validation","short":"Theme-citation checks"},{"status":"present","label":"Unsupported content was repaired","short":"Evidence repair"},{"status":"partial","label":"Legal-title controls, not a lexical-diversity selector","short":"Legal-title control"}]},{"name":"team2_s2","cells":[{"status":"present","label":"Verified track-fact bundle","short":"Verified facts"},{"status":"present","label":"First response followed by refinement","short":"Draft + refinement"},{"status":"partial","label":"Gemini Pro refined the first response rather than independently selecting drafts","short":"Refinement, not selector"},{"status":"present","label":"Verified facts supplied before generation","short":"Verified bundle"},{"status":"partial","label":"Gemini Pro polished the first response; factual repair was not separately documented","short":"Polishing pass"},{"status":"not-documented","label":"No lexical-control pass documented","short":"None"}]}]},{"slug":"tradeoffs","title":"Generation, selection, repair, and trade-offs","archetype":"audit","blocks":["response_walkthroughs","response_tradeoffs"]}]},{"slug":"leaders","title":"Leading teams","question":"What did the leading public systems document differently?","slides":[{"slug":"cover","title":"Leading teams","archetype":"cover","blocks":["competitor_case_studies_heading"]},{"slug":"volart-outcome","title":"volart · outcome, query, and data","archetype":"story","blocks":["volart_heading","volart_outcome"],"systemCard":{"result":"0.5866 composite · 0.3965 nDCG@20 · 4.90/5 judge","query":"GPT-4o-mini produced one cached retrieval rewrite plus positive entity and era JSON.","knowledge":"Official records, train co-occurrence and frequency/MOVES priors, plus generated track descriptions.","retrieval":"Five lanes fed a top-500 LambdaMART boundary with direct co-occurrence features.","response":"Three drafts, independent critique, selective rewrite, hardening, and lexical control.","limit":"Structured musical-fact verification was not documented."}},{"slug":"volart-retrieval","title":"volart · retrieval and ranking","archetype":"visual","blocks":["volart_diagram"]},{"slug":"volart-response","title":"volart · response, comparison, and limits","archetype":"audit","blocks":["volart_walkthrough","volart_comparison","volart_limits"]},{"slug":"niwatori-outcome","title":"niwatori · outcome, query, and data","archetype":"story","blocks":["niwatori_heading","niwatori_outcome"],"systemCard":{"result":"0.5859 composite · 0.4934 nDCG@20 · 4.45/5 judge","query":"Source-specific safe text, full played history, and last-track transition keys; no LLM retrieval rewrite documented.","knowledge":"Official records plus mapped TalkPlayData-1 co-occurrence and transition statistics.","retrieval":"Fourteen-source union, direct co-occurrence, Markov transition, and 176 documented features with OOF artifacts.","response":"Ten seeded drafts selected for lexical diversity.","limit":"The selector was not a factual critic; response fact checking was not documented."}},{"slug":"niwatori-retrieval","title":"niwatori · retrieval and ranking","archetype":"visual","blocks":["niwatori_diagram"]},{"slug":"niwatori-response","title":"niwatori · response, comparison, and limits","archetype":"audit","blocks":["niwatori_walkthrough","niwatori_comparison","niwatori_limits"]},{"slug":"swyoo-outcome","title":"swyoo · outcome, query, and data","archetype":"story","blocks":["swyoo_heading","swyoo_outcome"],"systemCard":{"result":"0.5784 composite · 0.3829 nDCG@20 · 4.85/5 judge","query":"Separate BM25, QEmb, and two-tower representations with an optional cached session summary.","knowledge":"LRCLIB, Genius, and MusicBrainz enriched lyrics, identifiers, tags, labels, countries, and dates.","retrieval":"Three independently rendered pools with group-aware OOF routing for learned sources.","response":"PAS generation with theme/citation validation and repair.","limit":"One PAS prediction was used; no best-of-N independent critic was documented."}},{"slug":"swyoo-retrieval","title":"swyoo · retrieval and ranking","archetype":"visual","blocks":["swyoo_diagram"]},{"slug":"swyoo-response","title":"swyoo · response, comparison, and limits","archetype":"audit","blocks":["swyoo_walkthrough","swyoo_comparison","swyoo_limits"]},{"slug":"team2-outcome","title":"team2_s2 · outcome, query, and data","archetype":"story","blocks":["team2_s2_heading","team2_s2_outcome"],"systemCard":{"result":"0.5759 composite · 0.4452 nDCG@20 · 4.65/5 judge","query":"Conversation BM25, live text, recent item vectors, ALS history, and cached structured lists.","knowledge":"Official catalog, conversations, users, labels, and embeddings; no external music dataset documented.","retrieval":"Live and structured sources fed routed rankers with covariate-shift weighting and 37 documented features.","response":"Verified catalog facts grounded a first draft followed by Gemini Pro refinement.","limit":"No independent structured fact or recommendation-ID integrity check was documented."}},{"slug":"team2-retrieval","title":"team2_s2 · retrieval and ranking","archetype":"visual","blocks":["team2_s2_diagram"]},{"slug":"team2-response","title":"team2_s2 · response, comparison, and limits","archetype":"audit","blocks":["team2_s2_walkthrough","team2_s2_comparison","team2_s2_limits"]}]},{"slug":"synthesis","title":"Synthesis & evidence","question":"What should the team preserve, reconsider, avoid, and credit?","slides":[{"slug":"cover","title":"Synthesis & evidence","archetype":"cover","blocks":["cross_team_heading"]},{"slug":"matrix","title":"Cross-team synthesis","archetype":"matrix","blocks":["cross_team_matrix"]},{"slug":"choices","title":"Preserve, reconsider, and avoid","archetype":"story","blocks":["preserve_reconsider_avoid","retrospective_choices_table"]},{"slug":"lessons","title":"Transferable lessons and acknowledgements","archetype":"story","blocks":["future_competition_lessons","acknowledgements_heading","acknowledgements"]},{"slug":"evidence","title":"Caveats and complete evidence","archetype":"audit","blocks":["caveats","evidence_notes"]}]}],"curatedPath":["outcome/executive-answer","outcome/gap-chart","diagnosis/score-location","diagnosis/information-loss","diagnosis/constraint-wiring","diagnosis/features-seen","diagnosis/evidence-missed","diagnosis/confidence","ours/inference-rail","retrieval/evidence-heatmap","response/control-heatmap","leaders/volart-retrieval","synthesis/lessons"],"disclosures":{"section_directory":"Open the original chapter outline","how_scoring_works":"Open the composite-score formula","leaderboard_table":"Open exact values and repository links","gap_interpretation":"Open the exact score arithmetic and evidence boundary","lifecycle_heading":"Open the source-backed lifecycle introduction","lifecycle_map":"Open the complete lifecycle map","lifecycle_takeaway":"Open the original lifecycle takeaway","query_heading":"Open the query-audit heading","query_explainer":"Open definitions, qualifications, and sources","query_matrix":"Open the complete five-team query matrix","query_evidence_details":"Open prompt excerpts and the reviewed file inventory","data_knowledge_heading":"Open the data-provenance heading","data_knowledge_glossary":"Open definitions and evidence boundaries","data_knowledge_matrix":"Open the complete data and model-knowledge matrix","data_knowledge_interpretation":"Open the complete provenance interpretation","retrieval_heading":"Open the retrieval-audit heading","retrieval_glossary":"Open definitions and the candidate-set boundary","retrieval_matrix":"Open the complete retrieval matrix","feature_matrix":"Open the complete feature-family matrix","feature_details":"Open the per-team feature inventories","response_heading":"Open the response-audit heading","response_explainer":"Open the complete response-system explanation","response_matrix":"Open the complete response-generation matrix","own_system_walkthrough":"Open the complete submitted-system walkthrough","volart_outcome":"Open the reviewed volart evidence and sources","niwatori_outcome":"Open the reviewed niwatori evidence and sources","swyoo_outcome":"Open the reviewed swyoo evidence and sources","team2_s2_outcome":"Open the reviewed team2_s2 evidence and sources","evidence_notes":"Open the complete evidence notes"},"aliases":{"outcome/summary":"outcome/cover","outcome/official-result":"outcome/leaderboard-chart","outcome/gap":"outcome/gap-chart","query/comparison":"query/query-matrix","query/data-knowledge":"query/data-matrix","query/query-glossary":"query/lifecycle","retrieval/retrievers":"retrieval/retriever-matrix","retrieval/features":"retrieval/feature-glossary","retrieval/feature-audit":"retrieval/feature-inventories","response/pipelines":"response/overview","response/author-volart":"response/tradeoffs","response/niwatori-swyoo":"response/tradeoffs","response/team2":"response/tradeoffs","ours/system":"ours/cover","ours/strengths":"ours/what-worked","leaders/index":"leaders/cover","leaders/volart":"leaders/volart-outcome","leaders/niwatori":"leaders/niwatori-outcome","leaders/swyoo":"leaders/swyoo-outcome","leaders/team2":"leaders/team2-outcome","synthesis/cross-team":"synthesis/cover","synthesis/acknowledgements":"synthesis/lessons","synthesis/caveats-evidence":"synthesis/evidence","response/matrix":"response/grounding-heatmap","response/overview":"response/overview","response/tradeoffs":"response/tradeoffs","query/prompt-audit":"query/prompt-audit","ours/walkthrough":"ours/walkthrough","ours/evaluation-mistake":"ours/evaluation-mistake","ours/contributors":"ours/contributors","synthesis/choices":"synthesis/choices","synthesis/lessons":"synthesis/lessons"}});</script>
 <!-- retrospective-deck-script:end -->
 </body>
 </html>

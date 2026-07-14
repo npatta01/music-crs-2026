@@ -161,6 +161,27 @@ def test_mobile_evidence_heatmap_shows_status_and_short_qualifier(page, enhanced
     assert errors == []
 
 
+@pytest.mark.parametrize("viewport", [(1533, 903), (1280, 800), (1024, 768), (390, 844)])
+def test_answer_first_slides_have_no_overflow(viewport, enhanced_report: Path) -> None:
+    width, height = viewport
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True, executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
+        page = browser.new_page(viewport={"width": width, "height": height})
+        for slug in (
+            "diagnosis/score-location", "diagnosis/information-loss", "diagnosis/constraint-wiring",
+            "diagnosis/features-seen", "diagnosis/evidence-missed", "diagnosis/confidence",
+            "query/provenance-stacks", "retrieval/evidence-heatmap", "response/control-heatmap",
+        ):
+            open_deck(page, enhanced_report, f"#{slug}")
+            slide = page.locator(f"#{slug.replace('/', r'\/')}")
+            assert slide.evaluate("node => node.clientWidth <= document.documentElement.clientWidth + 2")
+            assert slide.evaluate("node => node.scrollWidth <= node.clientWidth + 2")
+            assert slide.locator("*:visible").evaluate_all(
+                "nodes => nodes.every(node => getComputedStyle(node).overflowY !== 'scroll' || node.scrollHeight <= node.clientHeight + 2)"
+            )
+        browser.close()
+
+
 def test_reusable_visual_grammars_keep_primary_copy_bounded(page, enhanced_report: Path) -> None:
     browser_page, errors = page
     for slug in ("query/provenance-stacks", "retrieval/evidence-heatmap", "response/control-heatmap"):

@@ -498,7 +498,7 @@ export const DECK_STYLE = `
 html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;overflow:hidden}
 .retrospective-deck{height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--portable-canvas);color:var(--portable-ink)}
 .deck-chrome{position:relative;z-index:20;background:color-mix(in srgb,var(--portable-canvas) 92%,transparent);backdrop-filter:blur(12px)}
-.deck-topbar,.deck-footer{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px clamp(12px,2.5vw,32px);border-color:var(--portable-border)}
+.deck-topbar,.deck-footer{display:flex;min-width:0;align-items:center;gap:12px;min-height:56px;padding:8px clamp(12px,2.5vw,32px);border-color:var(--portable-border)}
 .deck-topbar{border-bottom:1px solid var(--portable-border)}
 .deck-footer{justify-content:space-between;border-top:1px solid var(--portable-border)}
 .deck-footer .deck-button{max-width:min(38vw,360px);padding:6px 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
