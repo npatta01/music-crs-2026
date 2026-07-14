@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A source-backed, vertical tour of the Music-CRS conversational recommender.">
+  <title>Inside Our Music-CRS Recommender</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --cream: #f7f0e4;
+      --cream-deep: #eadfce;
+      --paper: #fffaf1;
+      --ink: #252320;
+      --ink-soft: #625e56;
+      --coral: #df654e;
+      --coral-soft: #f7d9d0;
+      --teal: #167b78;
+      --teal-soft: #d7ebe6;
+      --gold: #d6a22c;
+      --gold-soft: #f6e8bc;
+      --status: #267051;
+      --status-soft: #d8eadc;
+      --line: #cfc2af;
+      --shadow: 0 18px 55px rgba(62, 48, 31, .10);
+      --radius: 1.25rem;
+      --content: 70rem;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--cream);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+    img { display: block; max-width: 100%; }
+    a { color: inherit; text-underline-offset: .2em; }
+    a:focus-visible, summary:focus-visible {
+      outline: .2rem solid var(--gold);
+      outline-offset: .2rem;
+    }
+    .skip-link {
+      position: fixed;
+      z-index: 100;
+      top: .75rem;
+      left: .75rem;
+      padding: .65rem 1rem;
+      border-radius: 999px;
+      background: var(--ink);
+      color: white;
+      transform: translateY(-180%);
+    }
+    .skip-link:focus { transform: translateY(0); }
+    .wrap { width: min(calc(100% - 2rem), var(--content)); margin-inline: auto; }
+
+    .hero { padding: clamp(3rem, 8vw, 7.5rem) 0 2rem; }
+    .eyebrow {
+      margin: 0 0 .75rem;
+      color: var(--teal);
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3 { line-height: 1.08; letter-spacing: -.035em; text-wrap: balance; }
+    h1 { max-width: 14ch; margin: 0; font-family: Georgia, serif; font-size: clamp(3rem, 9vw, 6.8rem); font-weight: 600; }
+    h2 { margin: 0; font-family: Georgia, serif; font-size: clamp(2.1rem, 5vw, 4.25rem); font-weight: 600; }
+    h3 { margin: 0; font-size: clamp(1.15rem, 2.2vw, 1.45rem); }
+    .hero-intro { max-width: 47rem; margin: 1.4rem 0 0; color: var(--ink-soft); font-size: clamp(1.05rem, 2vw, 1.3rem); }
+    .hero-figure { position: relative; margin: clamp(2rem, 5vw, 4.5rem) 0 0; }
+    .hero-figure::before {
+      content: "";
+      position: absolute;
+      inset: 8% -1.25% -5% 3%;
+      z-index: -1;
+      border-radius: var(--radius);
+      background: var(--coral);
+      transform: rotate(-1.2deg);
+    }
+    .hero-figure img { width: 100%; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .facts {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      margin: 3rem 0 0;
+      padding: 1px;
+      overflow: hidden;
+      border-radius: var(--radius);
+      background: var(--line);
+      list-style: none;
+    }
+    .facts li { min-width: 0; padding: 1.1rem; background: var(--paper); }
+    .facts strong { display: block; color: var(--coral); font-family: Georgia, serif; font-size: clamp(1.3rem, 3vw, 2rem); font-weight: 600; }
+    .facts span { display: block; color: var(--ink-soft); font-size: .82rem; line-height: 1.35; }
+
+    .directory-shell { padding: 1rem 0; }
+    .directory {
+      padding: .9rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      background: rgba(255, 250, 241, .96);
+      box-shadow: 0 8px 30px rgba(62, 48, 31, .07);
+    }
+    .directory p { margin: 0 0 .45rem; color: var(--ink-soft); font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .directory ul { display: flex; flex-wrap: wrap; gap: .35rem .85rem; margin: 0; padding: 0; list-style: none; }
+    .directory a { color: var(--ink-soft); font-size: .83rem; font-weight: 700; text-decoration: none; }
+    .directory a:hover { color: var(--coral); text-decoration: underline; }
+
+    main { display: block; }
+    .chapter { padding: clamp(4.5rem, 9vw, 8rem) 0; scroll-margin-top: 7rem; }
+    .chapter + .chapter { border-top: 1px solid var(--line); }
+    .chapter-head { max-width: 49rem; margin-bottom: clamp(2.25rem, 5vw, 4rem); }
+    .chapter-head p:last-child { margin: 1rem 0 0; color: var(--ink-soft); font-size: 1.08rem; }
+    .chapter-number { color: var(--coral); }
+
+    .lifecycle { position: relative; margin: 0; padding: 0; list-style: none; counter-reset: lifecycle; }
+    .lifecycle::before { content: ""; position: absolute; top: 1.35rem; bottom: 1.35rem; left: 1.32rem; width: 2px; background: var(--line); }
+    .lifecycle li { position: relative; counter-increment: lifecycle; padding: 0 0 2rem 4.25rem; }
+    .lifecycle li:last-child { padding-bottom: 0; }
+    .lifecycle li::before {
+      content: counter(lifecycle, decimal-leading-zero);
+      position: absolute;
+      top: -.15rem;
+      left: 0;
+      z-index: 1;
+      display: grid;
+      width: 2.75rem;
+      height: 2.75rem;
+      place-items: center;
+      border: 2px solid var(--cream);
+      border-radius: 50%;
+      background: var(--teal);
+      color: white;
+      font-size: .7rem;
+      font-weight: 900;
+      letter-spacing: .05em;
+    }
+    .lifecycle-card { padding: 1.2rem 1.25rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--paper); }
+    .lifecycle-card p { margin: .55rem 0 0; color: var(--ink-soft); }
+    .badge {
+      display: inline-block;
+      margin-top: .8rem;
+      padding: .25rem .6rem;
+      border-radius: 999px;
+      background: var(--status-soft);
+      color: var(--status);
+      font-size: .68rem;
+      font-weight: 900;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+
+    .alignment { margin: 3.5rem 0 0; }
+    .alignment img { width: 100%; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow); }
+    figcaption { max-width: 55rem; margin-top: .8rem; color: var(--ink-soft); font-size: .85rem; }
+
+    .infra-flow { display: flex; flex-direction: column; gap: .85rem; margin: 0; padding: 0; list-style: none; }
+    .infra-flow li { position: relative; padding-bottom: 2.25rem; }
+    .infra-flow li:not(:last-child)::after {
+      content: "↓";
+      position: absolute;
+      bottom: .3rem;
+      left: 50%;
+      color: var(--coral);
+      font-size: 1.35rem;
+      font-weight: 900;
+      transform: translateX(-50%);
+    }
+    .infra-card { padding: 1.35rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--paper); }
+    .infra-card p { margin: .6rem 0 0; color: var(--ink-soft); }
+    .remote-workloads { display: flex; flex-direction: column; gap: .85rem; }
+    .workload {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      margin-bottom: .65rem;
+      padding: .28rem .6rem;
+      border-radius: 999px;
+      font-size: .68rem;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .workload::before { content: ""; width: .48rem; height: .48rem; border-radius: 50%; background: currentColor; }
+    .local { background: var(--teal-soft); color: var(--teal); }
+    .hosted { background: var(--gold-soft); color: #805d07; }
+    .modal { background: var(--coral-soft); color: #a6402d; }
+    .artifact { background: var(--status-soft); color: var(--status); }
+    .split-card { border-left: .35rem solid var(--gold); }
+    .boundary-note { margin: 1.5rem 0 0; padding: 1rem 1.15rem; border-radius: .9rem; background: var(--gold-soft); color: #5a460f; font-size: .92rem; }
+
+    details { margin-top: 1rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--paper); }
+    summary { padding: 1rem 1.2rem; cursor: pointer; font-weight: 800; }
+    details > div { padding: 0 1.2rem 1.2rem; color: var(--ink-soft); }
+    details p { margin: 0 0 .8rem; }
+    details p:last-child { margin-bottom: 0; }
+    code { padding: .1em .3em; border-radius: .25rem; background: var(--cream-deep); color: var(--ink); font-size: .88em; overflow-wrap: anywhere; }
+
+    .future { min-height: 1px; padding: 0; scroll-margin-top: 7rem; }
+    footer { padding: 3rem 0; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: .85rem; }
+
+    @media (min-width: 56rem) {
+      .directory-shell { position: sticky; z-index: 20; top: 0; }
+      .lifecycle li { padding-left: 5rem; }
+      .lifecycle::before { left: 1.43rem; }
+      .lifecycle li::before { width: 3rem; height: 3rem; }
+    }
+    @media (max-width: 47.99rem) {
+      .facts { grid-template-columns: repeat(2, 1fr); }
+      .directory-shell { position: static; }
+      .directory { box-shadow: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to report</a>
+
+  <header class="hero">
+    <div class="wrap">
+      <p class="eyebrow">RecSys Challenge 2026 · System approach</p>
+      <h1>Inside Our Music-CRS Recommender</h1>
+      <p class="hero-intro">A source-backed tour from an open-ended conversation to a ranked listening queue—and the machinery that makes each handoff inspectable.</p>
+      <figure class="hero-figure">
+        <img src="{{HERO_DATA_URI}}" alt="A listener's conversation flowing through a structured music recommendation system into a final playlist.">
+      </figure>
+      <ul class="facts" aria-label="System at a glance">
+        <li><strong>47k</strong><span>tracks in the catalog</span></li>
+        <li><strong>Top 20</strong><span>tracks returned per turn</span></li>
+        <li><strong>Structured</strong><span>state carries intent and constraints</span></li>
+        <li><strong>Top-1</strong><span>track grounds the explanation</span></li>
+      </ul>
+    </div>
+  </header>
+
+  <div class="directory-shell">
+    <nav class="directory wrap" aria-label="Report directory">
+      <p>Directory</p>
+      <ul>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#infrastructure">Infrastructure</a></li>
+        <li><a href="#walkthrough">Walkthrough</a></li>
+        <li><a href="#state">State</a></li>
+        <li><a href="#compile">Compile</a></li>
+        <li><a href="#ranking">Ranking</a></li>
+        <li><a href="#response">Response</a></li>
+        <li><a href="#evaluation">Evaluation</a></li>
+        <li><a href="#examples">Examples</a></li>
+        <li><a href="#gaps">Gaps</a></li>
+        <li><a href="#lessons">Lessons</a></li>
+        <li><a href="#reproduce">Reproduce</a></li>
+      </ul>
+    </nav>
+  </div>
+
+  <main id="main-content">
+    <section class="chapter" id="overview" aria-labelledby="overview-title">
+      <div class="wrap">
+        <div class="chapter-head">
+          <p class="eyebrow"><span class="chapter-number">01</span> · The 60-second lifecycle</p>
+          <h2 id="overview-title">One conversation, nine explicit handoffs</h2>
+          <p>The system turns fuzzy language into a traceable recommendation through small contracts. Every stage leaves evidence that the next stage can consume—and that we can later inspect.</p>
+        </div>
+        <ol class="lifecycle">
+          <li><article class="lifecycle-card"><h3>Hear the conversation</h3><p>Read the current request in the context of the listener’s earlier turns.</p><span class="badge">Input schema</span></article></li>
+          <li><article class="lifecycle-card"><h3>Extract typed state</h3><p>Translate natural language into intent, anchors, preferences, constraints, and routing tags.</p><span class="badge">Active config</span></article></li>
+          <li><article class="lifecycle-card"><h3>Resolve catalog entities</h3><p>Match mentioned tracks and artists to catalog identities while preserving unresolved descriptive clues.</p><span class="badge">Saved trace</span></article></li>
+          <li><article class="lifecycle-card"><h3>Compile retrieval work</h3><p>Turn the resolved state into branch-specific lexical, semantic, audio, visual, and lookup queries.</p><span class="badge">Compiler code</span></article></li>
+          <li><article class="lifecycle-card"><h3>Retrieve candidates</h3><p>Let each eligible specialist search deeply, producing ranked candidate pools rather than a premature answer.</p><span class="badge">Saved trace</span></article></li>
+          <li><article class="lifecycle-card"><h3>Fuse branch signals</h3><p>Combine heterogeneous ranked lists with weighted reciprocal-rank fusion into a shared candidate union.</p><span class="badge">Verified mechanics</span></article></li>
+          <li><article class="lifecycle-card"><h3>Rerank the shortlist</h3><p>Apply the goal-free LightGBM bundle and final guards, then select the twenty tracks to return.</p><span class="badge">Active model</span></article></li>
+          <li><article class="lifecycle-card"><h3>Explain the first choice</h3><p>Condition a concise natural-language reply on the latest state and the primary recommended track.</p><span class="badge">Submission config</span></article></li>
+          <li><article class="lifecycle-card"><h3>Persist and evaluate</h3><p>Write predictions and traces; where labels exist, score ranking quality and diagnose stage boundaries.</p><span class="badge">Labelled devset</span></article></li>
+        </ol>
+        <figure class="alignment">
+          <img src="{{ALIGNMENT_DATA_URI}}" alt="The report chapters aligned with the recommender's extraction, retrieval, ranking, response, and evaluation stages.">
+          <figcaption>The report follows the same direction as the data: from what the listener says to what the system can verify.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="chapter" id="infrastructure" aria-labelledby="infrastructure-title">
+      <div class="wrap">
+        <div class="chapter-head">
+          <p class="eyebrow"><span class="chapter-number">02</span> · Workload placement</p>
+          <h2 id="infrastructure-title">Local control, selective remote compute</h2>
+          <p>“Local” describes the runner, not necessarily every model call. The active online configuration keeps orchestration and catalog search local, calls hosted APIs for extraction and Qwen embeddings on cache misses, and uses Modal for CLAP and SigLIP2 text encoders.</p>
+        </div>
+
+        <ol class="infra-flow" aria-label="Infrastructure flow">
+          <li><article class="infra-card"><span class="workload local">Local</span><h3>Orchestration, caches, and catalog</h3><p>The Python runner loads YAML, checks file-per-turn state and embedding caches, resolves entities, and searches the local LanceDB catalog. The active staged devset pipeline also shards retrieval locally.</p></article></li>
+          <li>
+            <div class="remote-workloads" aria-label="Selective remote workloads">
+              <article class="infra-card split-card"><span class="workload hosted">Hosted API</span><h3>Language and Qwen embedding calls</h3><p>On a genuine cache miss, DeepSeek V4 Flash extracts state through LiteLLM; Qwen3 0.6B and 8B query embeddings use configured OpenAI-compatible endpoints.</p></article>
+              <article class="infra-card split-card"><span class="workload modal">Modal</span><h3>Audio and cover-art query encoders</h3><p>Eligible sonic and visual routes invoke the deployed <code>MultimodalTextEncoder</code> methods for CLAP and SigLIP2 text embeddings. Modal can alternatively host an entire retrieval run when the runner backend is switched.</p></article>
+            </div>
+          </li>
+          <li><article class="infra-card"><span class="workload artifact">Persisted artifact</span><h3>Predictions, traces, and a manifest</h3><p>Run-scoped JSON, JSONL, logs, scores, and manifest metadata make the expensive retrieval result reusable instead of ephemeral.</p></article></li>
+          <li><article class="infra-card"><span class="workload local">Local</span><h3>Replay and evaluation</h3><p>The staged runner replays the committed LightGBM bundle over a saved trace, merges shards, writes the top 20, and evaluates devset output locally. Staged explanation replay is intentionally dummy-only.</p></article></li>
+        </ol>
+
+        <p class="boundary-note"><strong>Boundary check:</strong> the canonical staged devset YAML currently sets both retrieval and rerank to <code>local</code>. A mixed run may set only retrieval to <code>modal</code>; LightGBM replay remains local. Hosted API and Modal calls inside an online retrieval configuration are separate from the runner’s backend label.</p>
+
+        <details>
+          <summary>Configuration map: what controls placement?</summary>
+          <div>
+            <p><code>configs/pipelines/state_ranker_v10_lgbm_devset.yaml</code> sets the staged runner, retrieval, and rerank backends to local and points replay at <code>models/reranker_v12_goalfree</code>.</p>
+            <p><code>configs/state_ranker_v10_lgbm_devset.yaml</code> sets the extractor and Qwen encoder endpoints, Modal multimodal methods, LanceDB path, candidate depths, fusion, and final LightGBM paths.</p>
+            <p><code>run_pipeline.py</code> enforces local-only rerank replay, persists run roots under <code>exp/pipeline/runs</code>, and invokes the devset evaluator after merge.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Zero-cost offline reproduction</summary>
+          <div>
+            <p>The offline bundle can replay the shipped splits with credentials blanked and the network fenced. Its activation script points state, embedding, and LiteLLM lookups at curated caches and enables <code>MCRS_REQUIRE_LITELLM_CACHE=1</code>, so a miss fails instead of spending money.</p>
+            <p>Frozen predictions can be byte-verified. A fresh offline ANN run can reproduce comparable recommendations but is not promised to be byte-identical because approximate-nearest-neighbor ordering can vary; blind-set relevance still cannot be scored locally because organizer labels are hidden.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section class="future" id="walkthrough" aria-label="Walkthrough"></section>
+    <section class="future" id="state" aria-label="State"></section>
+    <section class="future" id="compile" aria-label="Compile"></section>
+    <section class="future" id="ranking" aria-label="Ranking"></section>
+    <section class="future" id="response" aria-label="Response"></section>
+    <section class="future" id="evaluation" aria-label="Evaluation"></section>
+    <section class="future" id="examples" aria-label="Examples"></section>
+    <section class="future" id="gaps" aria-label="Gaps"></section>
+    <section class="future" id="lessons" aria-label="Lessons"></section>
+    <section class="future" id="reproduce" aria-label="Reproduce"></section>
+  </main>
+
+  <footer>
+    <div class="wrap">Music-CRS · A source-backed system approach report · 2026</div>
+  </footer>
+</body>
+</html>
