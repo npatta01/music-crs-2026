@@ -85,6 +85,7 @@
       transform: rotate(-1.2deg);
     }
     .hero-figure img { width: 100%; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .hero-figure figcaption { padding-inline: .45rem; color: var(--paper); }
     .facts {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -120,30 +121,73 @@
     .chapter-head p:last-child { margin: 1rem 0 0; color: var(--ink-soft); font-size: 1.08rem; }
     .chapter-number { color: var(--coral-text); }
 
-    .lifecycle { position: relative; margin: 0; padding: 0; list-style: none; counter-reset: lifecycle; }
-    .lifecycle::before { content: ""; position: absolute; top: 1.35rem; bottom: 1.35rem; left: 1.32rem; width: 2px; background: var(--line); }
-    .lifecycle li { position: relative; counter-increment: lifecycle; padding: 0 0 2rem 4.25rem; }
-    .lifecycle li:last-child { padding-bottom: 0; }
-    .lifecycle li::before {
-      content: counter(lifecycle, decimal-leading-zero);
-      position: absolute;
-      top: -.15rem;
-      left: 0;
-      z-index: 1;
+    .quick-summary { padding-top: clamp(3rem, 6vw, 5rem); }
+    .quick-summary .chapter-head { margin-bottom: 2rem; }
+    .quick-flow {
       display: grid;
-      width: 2.75rem;
-      height: 2.75rem;
-      place-items: center;
-      border: 2px solid var(--cream);
-      border-radius: 50%;
-      background: var(--teal);
-      color: white;
-      font-size: .7rem;
-      font-weight: 900;
-      letter-spacing: .05em;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: .7rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
     }
-    .lifecycle-card { padding: 1.2rem 1.25rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--paper); }
-    .lifecycle-card p { margin: .55rem 0 0; color: var(--ink-soft); }
+    .quick-stage {
+      position: relative;
+      min-width: 0;
+      padding: 1.1rem .8rem;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      background: var(--paper);
+      text-align: center;
+    }
+    .quick-stage:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      top: 2rem;
+      right: -.72rem;
+      z-index: 2;
+      display: grid;
+      width: 1.4rem;
+      height: 1.4rem;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--coral);
+      color: white;
+      font-weight: 900;
+    }
+    .quick-icon {
+      display: grid;
+      width: 3.4rem;
+      height: 3.4rem;
+      margin: 0 auto .75rem;
+      place-items: center;
+      border-radius: 1rem;
+      background: var(--teal-soft);
+      color: var(--teal-text);
+      font-size: 1.65rem;
+    }
+    .quick-stage:nth-child(even) .quick-icon { background: var(--coral-soft); color: var(--coral-text); }
+    .quick-stage h3 { font-size: 1rem; letter-spacing: -.02em; }
+    .quick-stage p { margin: .35rem 0 0; color: var(--ink-soft); font-size: .78rem; line-height: 1.35; }
+    .quick-example {
+      display: grid;
+      grid-template-columns: 1.35fr 1fr 1fr .85fr 1.15fr;
+      gap: 1px;
+      margin-top: 1rem;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--line);
+    }
+    .quick-example > div { position: relative; min-width: 0; padding: 1rem; background: var(--paper); }
+    .quick-example > div:not(:last-child)::after { content: "›"; position: absolute; top: 50%; right: -.42rem; z-index: 2; color: var(--coral); font-size: 1.5rem; font-weight: 900; transform: translateY(-50%); }
+    .quick-example .mini-label { display: block; margin-bottom: .4rem; color: var(--coral-text); font-size: .65rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    .quick-example p { margin: 0; font-size: .86rem; line-height: 1.45; }
+    .quick-example strong { color: var(--teal-text); }
+    .quick-example-note { margin: .7rem 0 0; color: var(--ink-soft); font-size: .78rem; }
+    .deep-dive-boundary { padding: 1.25rem 0; border-block: 1px solid var(--line); background: var(--teal); color: white; text-align: center; }
+    .deep-dive-boundary strong { display: block; font-family: Georgia, serif; font-size: 1.45rem; font-weight: 600; }
+    .deep-dive-boundary span { display: block; margin-top: .2rem; color: rgba(255,255,255,.78); font-size: .82rem; }
     .badge {
       display: inline-block;
       margin-top: .8rem;
@@ -320,13 +364,21 @@
     footer { padding: 3rem 0; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: .85rem; }
 
     @media (min-width: 56rem) {
+      .hero > .wrap { display: grid; grid-template-columns: minmax(18rem, .8fr) minmax(0, 1.2fr); gap: 2.5rem 4rem; align-items: center; }
+      .hero-copy { grid-column: 1; }
+      .hero-figure { grid-column: 2; margin: 0; }
+      .hero .facts { grid-column: 1 / -1; margin-top: 0; }
+      .hero h1 { font-size: clamp(3.6rem, 5vw, 5.2rem); }
       .directory-shell { position: sticky; z-index: 20; top: 0; }
-      .lifecycle li { padding-left: 5rem; }
-      .lifecycle::before { left: 1.43rem; }
-      .lifecycle li::before { width: 3rem; height: 3rem; }
     }
     @media (max-width: 719px) {
       .facts { grid-template-columns: repeat(2, 1fr); }
+      .quick-flow { grid-template-columns: 1fr; }
+      .quick-stage { display: grid; grid-template-columns: 3.2rem 1fr; column-gap: .85rem; text-align: left; }
+      .quick-icon { grid-row: 1 / span 2; width: 3.2rem; height: 3.2rem; margin: 0; }
+      .quick-stage:not(:last-child)::after { content: "↓"; top: auto; right: 50%; bottom: -.72rem; transform: translateX(50%); }
+      .quick-example { grid-template-columns: 1fr; }
+      .quick-example > div:not(:last-child)::after { content: "↓"; top: auto; right: 50%; bottom: -.75rem; transform: translateX(50%); }
       .directory-shell { position: static; }
       .directory { box-shadow: none; }
       .chapter, .future { padding-block: 4rem; }
@@ -363,9 +415,11 @@
 
   <header class="hero">
     <div class="wrap">
-      <p class="eyebrow">RecSys Challenge 2026 · System approach</p>
-      <h1>Inside Our Music-CRS Recommender</h1>
-      <p class="hero-intro">A source-backed tour from an open-ended conversation to a ranked listening queue—and the machinery that makes each handoff inspectable.</p>
+      <div class="hero-copy">
+        <p class="eyebrow">RecSys Challenge 2026 · System approach</p>
+        <h1>Inside Our Music-CRS Recommender</h1>
+        <p class="hero-intro">A source-backed tour from an open-ended conversation to a ranked listening queue—and the machinery that makes each handoff inspectable.</p>
+      </div>
       <figure class="hero-figure">
         <img src="{{HERO_DATA_URI}}" alt="A listener's conversation flowing through a structured music recommendation system into a final playlist.">
         <figcaption>A visual summary of the report’s one-column path: conversation, structured state, retrieval, ranking, and the final listening queue.</figcaption>
@@ -379,51 +433,55 @@
     </div>
   </header>
 
-  <div class="directory-shell">
-    <nav class="directory wrap" aria-label="Report directory">
-      <p>Directory</p>
-      <ul>
-        <li><a href="#overview">Overview</a></li>
-        <li><a href="#infrastructure">Infrastructure</a></li>
-        <li><a href="#walkthrough">Walkthrough</a></li>
-        <li><a href="#state">State</a></li>
-        <li><a href="#compile">Compile</a></li>
-        <li><a href="#ranking">Ranking</a></li>
-        <li><a href="#response">Response</a></li>
-        <li><a href="#evaluation">Evaluation</a></li>
-        <li><a href="#examples">Examples</a></li>
-        <li><a href="#gaps">Gaps</a></li>
-        <li><a href="#lessons">Lessons</a></li>
-        <li><a href="#reproduce">Reproduce</a></li>
-      </ul>
-    </nav>
-  </div>
-
   <main id="main-content">
-    <section class="chapter" id="overview" aria-labelledby="overview-title">
+    <section class="chapter quick-summary" id="overview" aria-labelledby="overview-title">
       <div class="wrap">
         <div class="chapter-head">
-          <p class="eyebrow"><span class="chapter-number">01</span> · The 60-second lifecycle</p>
-          <h2 id="overview-title">One conversation, nine explicit handoffs</h2>
-          <p>The system turns fuzzy language into a traceable recommendation through small contracts. Every stage leaves evidence that the next stage can consume—and that we can later inspect.</p>
+          <p class="eyebrow"><span class="chapter-number">01</span> · The 30-second picture</p>
+          <h2 id="overview-title">From conversation to one grounded recommendation</h2>
+          <p>Five inspectable handoffs turn fuzzy language into a ranked queue and a short explanation.</p>
         </div>
-        <ol class="lifecycle">
-          <li><article class="lifecycle-card"><h3>Hear the conversation</h3><p>Read the current request in the context of the listener’s earlier turns.</p><span class="badge">Input schema</span></article></li>
-          <li><article class="lifecycle-card"><h3>Extract typed state</h3><p>Translate natural language into intent, anchors, preferences, constraints, and routing tags.</p><span class="badge">Active config</span></article></li>
-          <li><article class="lifecycle-card"><h3>Resolve catalog entities</h3><p>Match mentioned tracks and artists to catalog identities while preserving unresolved descriptive clues.</p><span class="badge">Saved trace</span></article></li>
-          <li><article class="lifecycle-card"><h3>Compile retrieval work</h3><p>Turn the resolved state into branch-specific lexical, semantic, audio, visual, and lookup queries.</p><span class="badge">Compiler code</span></article></li>
-          <li><article class="lifecycle-card"><h3>Retrieve candidates</h3><p>Let each eligible specialist search deeply, producing ranked candidate pools rather than a premature answer.</p><span class="badge">Saved trace</span></article></li>
-          <li><article class="lifecycle-card"><h3>Fuse branch signals</h3><p>Combine heterogeneous ranked lists with weighted reciprocal-rank fusion into a shared candidate union.</p><span class="badge">Verified mechanics</span></article></li>
-          <li><article class="lifecycle-card"><h3>Rerank the shortlist</h3><p>Apply the goal-free LightGBM bundle and final guards, then select the twenty tracks to return.</p><span class="badge">Active model</span></article></li>
-          <li><article class="lifecycle-card"><h3>Explain the first choice</h3><p>Condition a concise natural-language reply on the latest state and the primary recommended track.</p><span class="badge">Submission config</span></article></li>
-          <li><article class="lifecycle-card"><h3>Persist and evaluate</h3><p>Write predictions and traces; where labels exist, score ranking quality and diagnose stage boundaries.</p><span class="badge">Labelled devset</span></article></li>
+        <ol class="quick-flow" aria-label="Five-stage recommendation flow">
+          <li class="quick-stage"><span class="quick-icon" aria-hidden="true">💬</span><h3>Conversation</h3><p>Hear the latest ask in context.</p></li>
+          <li class="quick-stage"><span class="quick-icon" aria-hidden="true">◇</span><h3>State</h3><p>Capture intent, cues, and constraints.</p></li>
+          <li class="quick-stage"><span class="quick-icon" aria-hidden="true">⌕</span><h3>Search</h3><p>Compile specialist retrieval routes.</p></li>
+          <li class="quick-stage"><span class="quick-icon" aria-hidden="true">↕</span><h3>Rank</h3><p>Fuse candidates; judge the order.</p></li>
+          <li class="quick-stage"><span class="quick-icon" aria-hidden="true">♪</span><h3>Response</h3><p>Explain the selected top track.</p></li>
         </ol>
-        <figure class="alignment">
-          <img src="{{ALIGNMENT_DATA_URI}}" alt="Two musical signal paths: one stays aligned through each transformation and reaches a harmonious record, while the other progressively bends, loses cues, and ends at a mismatched record.">
-          <figcaption>The report follows the same direction as the data: from what the listener says to what the system can verify.</figcaption>
-        </figure>
+        <div class="quick-example" aria-label="Verified devset example from request to response">
+          <div><span class="mini-label">Listener</span><p>Energetic indie rock, popular, with a memorable whistle or strong bassline—maybe Foster The People.</p></div>
+          <div><span class="mini-label">State</span><p><strong>energetic · indie rock · whistle · bass</strong></p></div>
+          <div><span class="mini-label">Compile + search</span><p>Feature route; BM25 finds the target at rank 1.</p></div>
+          <div><span class="mini-label">Top pick</span><p><strong>Pumped Up Kicks</strong><br>Foster The People</p></div>
+          <div><span class="mini-label">Reply</span><p>The dataset reference presents the pick using its popularity, whistle, and bassline.</p></div>
+        </div>
+        <p class="quick-example-note"><span class="evidence-badge">Verified devset example</span> The ranking is saved; the displayed reply is reference conversation text, not a stored generated response.</p>
       </div>
     </section>
+
+    <div class="deep-dive-boundary">
+      <div class="wrap"><strong>Deep dive starts here</strong><span>Infrastructure, prompts, traces, good examples, failures, and gaps.</span></div>
+    </div>
+
+    <div class="directory-shell">
+      <nav class="directory wrap" aria-label="Report directory">
+        <p>Directory</p>
+        <ul>
+          <li><a href="#overview">Overview</a></li>
+          <li><a href="#infrastructure">Infrastructure</a></li>
+          <li><a href="#walkthrough">Walkthrough</a></li>
+          <li><a href="#state">State</a></li>
+          <li><a href="#compile">Compile</a></li>
+          <li><a href="#ranking">Ranking</a></li>
+          <li><a href="#response">Response</a></li>
+          <li><a href="#evaluation">Evaluation</a></li>
+          <li><a href="#examples">Examples</a></li>
+          <li><a href="#gaps">Gaps</a></li>
+          <li><a href="#lessons">Lessons</a></li>
+          <li><a href="#reproduce">Reproduce</a></li>
+        </ul>
+      </nav>
+    </div>
 
     <section class="chapter" id="infrastructure" aria-labelledby="infrastructure-title">
       <div class="wrap">
@@ -929,6 +987,10 @@ Response style: Write 1-2 concise sentences about only the selected track. Prior
           <h2 id="gaps-title">A failure is useful only when its boundary is named</h2>
           <p>The map separates observed failures from architectural limits, missing measurements, and unknown impact. Frozen-devset findings are not silently promoted to claims about the final submitted V1 path.</p>
         </div>
+        <figure class="alignment">
+          <img src="{{ALIGNMENT_DATA_URI}}" alt="Two musical signal paths: one stays aligned through each transformation and reaches a harmonious record, while the other progressively bends, loses cues, and ends at a mismatched record.">
+          <figcaption>Success keeps the listener’s signal aligned across every boundary; failure can begin at state, search, fusion, ranking, or response grounding.</figcaption>
+        </figure>
         <div class="gap-map">
           <article class="gap-card problem">
             <span class="status-pill failure">Observed failure · frozen baseline</span>

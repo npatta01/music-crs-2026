@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+import html
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,6 +14,7 @@ from scripts import build_approach_report, validate_approach_report
 PNG_DATA = "data:image/png;base64," + base64.b64encode(
     validate_approach_report.PNG_SIGNATURE + b"fixture"
 ).decode("ascii")
+REPORT_SOURCE = Path(__file__).resolve().parents[1] / "docs" / "approach" / "source.html"
 
 
 def valid_report(extra_head: str = "", extra_body: str = "") -> str:
@@ -34,6 +37,38 @@ def valid_report(extra_head: str = "", extra_body: str = "") -> str:
 
 
 class ApproachReportBuildTests(unittest.TestCase):
+    def test_source_opens_with_a_five_stage_visual_summary(self) -> None:
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        summary = re.search(
+            r'<section class="chapter quick-summary".*?</section>', source, re.S
+        )
+        self.assertIsNotNone(summary)
+        markup = summary.group(0)
+
+        self.assertEqual(markup.count('class="quick-stage"'), 5)
+        labels = ["Conversation", "State", "Search", "Rank", "Response"]
+        positions = [markup.index(f"<h3>{label}</h3>") for label in labels]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("Pumped Up Kicks", markup)
+        self.assertIn("Verified devset example", markup)
+
+    def test_quick_opening_stays_under_250_visible_words(self) -> None:
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        opening = source[source.index('<header class="hero">') : source.index(
+            '<div class="deep-dive-boundary"'
+        )]
+        visible = re.sub(r"<(style|script).*?</\1>", " ", opening, flags=re.S)
+        visible = re.sub(r"<[^>]+>", " ", visible)
+        words = re.findall(r"\b[\w’'-]+\b", html.unescape(visible))
+        self.assertLessEqual(len(words), 250)
+
+    def test_directory_begins_after_the_deep_dive_boundary(self) -> None:
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        self.assertLess(
+            source.index('<div class="deep-dive-boundary"'),
+            source.index('<div class="directory-shell">'),
+        )
+
     def test_rebases_relative_local_hrefs_from_source_to_output_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

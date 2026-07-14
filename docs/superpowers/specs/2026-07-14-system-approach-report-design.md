@@ -68,6 +68,24 @@ The report uses progressive disclosure:
 Specialized terms such as BM25, ANN, centroid, reciprocal-rank fusion,
 LambdaMART, bi-encoder, nDCG, and LLM judge are defined on first use.
 
+### 3.1 Visual executive summary revision
+
+The opening must convey the approach before asking the reader to enter the
+technical chapters. Before the deep-dive boundary it contains, in order:
+
+1. the hero illustration and four compact system facts;
+2. one five-stage visual flow: Conversation → State → Search → Rank → Response;
+3. one compact, real example showing the user signal, extracted cues, selected
+   track, and listener-facing reply;
+4. a clearly labelled transition into the deep technical material.
+
+The quick-summary region must stay under 250 visible prose words, excluding
+navigation labels and accessibility-only text. The report directory and the
+infrastructure chapter move below this region. The five-stage summary uses
+native HTML/CSS with pictorial symbols and short labels so it remains legible,
+searchable, responsive, and accessible; it does not replace accurate technical
+diagrams later in the report.
+
 ## 4. Information architecture
 
 ### 4.1 Hero and orientation
