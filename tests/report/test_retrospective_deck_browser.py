@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import Page, sync_playwright
+from playwright.sync_api import Locator, Page, sync_playwright
 
 ROOT = Path(__file__).resolve().parents[2]
 REPORT = ROOT / "retrospective.html"
@@ -45,6 +45,56 @@ def page():
 def open_deck(page: Page, report: Path, suffix: str = "") -> None:
     page.goto(f"{report.as_uri()}{suffix}")
     page.locator("html[data-deck-ready='true']").wait_for()
+
+
+def _slide_overflow_audit(slide: Locator, tolerance: int = 2) -> dict:
+    return slide.evaluate(
+        """(node, tolerance) => {
+          const rect = node.getBoundingClientRect();
+          const viewportWidth = document.documentElement.clientWidth;
+          const owner = node.closest('.deck-vertical');
+          const visible = element => {
+            const style = getComputedStyle(element);
+            const box = element.getBoundingClientRect();
+            return style.display !== 'none'
+              && style.visibility !== 'hidden'
+              && box.width > 0
+              && box.height > 0;
+          };
+          const nestedVerticalOverflow = [node, ...node.querySelectorAll('*')]
+            .filter(element => element !== owner && visible(element))
+            .filter(element => ['auto', 'scroll'].includes(getComputedStyle(element).overflowY))
+            .filter(element => element.scrollHeight > element.clientHeight + tolerance)
+            .map(element => ({
+              tag: element.tagName.toLowerCase(),
+              id: element.id,
+              classes: element.className,
+              overflowY: getComputedStyle(element).overflowY,
+              clientHeight: element.clientHeight,
+              scrollHeight: element.scrollHeight,
+            }));
+          return {
+            rect: {left: rect.left, right: rect.right},
+            viewportWidth,
+            clientWidth: node.clientWidth,
+            scrollWidth: node.scrollWidth,
+            chapterScrollerCount: (owner ? 1 : 0) + node.querySelectorAll('.deck-vertical').length,
+            chapterScrollerOverflowY: owner ? getComputedStyle(owner).overflowY : null,
+            nestedVerticalOverflow,
+          };
+        }""",
+        tolerance,
+    )
+
+
+def _assert_slide_has_no_unintended_overflow(slide: Locator, tolerance: int = 2) -> None:
+    audit = _slide_overflow_audit(slide, tolerance)
+    assert audit["rect"]["left"] >= -tolerance, audit
+    assert audit["rect"]["right"] <= audit["viewportWidth"] + tolerance, audit
+    assert audit["scrollWidth"] <= audit["clientWidth"] + tolerance, audit
+    assert audit["chapterScrollerCount"] == 1, audit
+    assert audit["chapterScrollerOverflowY"] in {"auto", "scroll"}, audit
+    assert audit["nestedVerticalOverflow"] == [], audit
 
 
 def test_groups_every_block_once(page, enhanced_report: Path) -> None:
@@ -174,12 +224,38 @@ def test_answer_first_slides_have_no_overflow(viewport, enhanced_report: Path) -
         ):
             open_deck(page, enhanced_report, f"#{slug}")
             slide = page.locator(f"#{slug.replace('/', r'\/')}")
-            assert slide.evaluate("node => node.clientWidth <= document.documentElement.clientWidth + 2")
-            assert slide.evaluate("node => node.scrollWidth <= node.clientWidth + 2")
-            assert slide.locator("*:visible").evaluate_all(
-                "nodes => nodes.every(node => getComputedStyle(node).overflowY !== 'scroll' || node.scrollHeight <= node.clientHeight + 2)"
-            )
+            _assert_slide_has_no_unintended_overflow(slide)
         browser.close()
+
+
+def test_slide_overflow_audit_detects_offscreen_translation_and_nested_auto_scroll(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    open_deck(browser_page, enhanced_report, "#diagnosis/score-location")
+    slide = browser_page.locator("#diagnosis\\/score-location")
+
+    slide.evaluate("node => node.style.transform = 'translateX(-12px)'")
+    translated = _slide_overflow_audit(slide)
+    assert translated["rect"]["left"] < -2
+    slide.evaluate("node => node.style.removeProperty('transform')")
+
+    slide.evaluate(
+        """node => {
+          const scroller = document.createElement('div');
+          scroller.dataset.syntheticNestedScroller = 'true';
+          scroller.style.cssText = 'height: 1px; overflow-y: auto';
+          const content = document.createElement('div');
+          content.style.height = '24px';
+          scroller.append(content);
+          node.append(scroller);
+        }"""
+    )
+    nested = _slide_overflow_audit(slide)
+    assert len(nested["nestedVerticalOverflow"]) == 1
+    assert nested["nestedVerticalOverflow"][0]["overflowY"] == "auto"
+    slide.locator("[data-synthetic-nested-scroller]").evaluate("node => node.remove()")
+
+    _assert_slide_has_no_unintended_overflow(slide)
+    assert errors == []
 
 
 def test_reusable_visual_grammars_keep_primary_copy_bounded(page, enhanced_report: Path) -> None:
