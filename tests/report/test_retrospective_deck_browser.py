@@ -44,7 +44,7 @@ def page():
 
 def open_deck(page: Page, report: Path, suffix: str = "") -> None:
     page.goto(f"{report.as_uri()}{suffix}")
-    page.wait_for_function("document.documentElement.dataset.deckReady === 'true'")
+    page.locator("html[data-deck-ready='true']").wait_for()
 
 
 def test_groups_every_block_once(page, enhanced_report: Path) -> None:
@@ -72,7 +72,7 @@ def test_content_aware_archetypes_and_visual_canvas(page, enhanced_report: Path)
     covers = browser_page.locator(".deck-slide--cover")
     assert covers.count() == 7
     assert covers.locator(".deck-chapter-map").count() == 7
-    assert browser_page.locator(".deck-flow-lane").count() >= 6
+    assert browser_page.locator(".deck-flow-lane, .deck-diagnosis").count() >= 6
     assert browser_page.locator(".deck-mechanism").count() >= 4
     assert browser_page.locator(".deck-flow-step, .deck-mechanism-stage").count() >= 20
     assert browser_page.locator("figure.deck-visual img").count() == 0
@@ -82,6 +82,32 @@ def test_content_aware_archetypes_and_visual_canvas(page, enhanced_report: Path)
         "node => getComputedStyle(node).maxWidth"
     ) != "none"
     assert errors == []
+
+
+def test_diagnosis_is_visual_evidence_not_paragraph_prose(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    open_deck(browser_page, enhanced_report, "#diagnosis/information-loss")
+    assert browser_page.locator("[data-chapter='diagnosis'] .deck-slide").count() == 6
+    assert browser_page.locator("#diagnosis\\/information-loss .deck-bottleneck-stage").count() == 10
+    assert browser_page.locator("#diagnosis\\/constraint-wiring .deck-wiring-link").count() >= 8
+    assert browser_page.locator("#diagnosis\\/features-seen .deck-feature-family").count() == 6
+    assert browser_page.locator("#diagnosis\\/evidence-missed .deck-boundary-column").count() == 3
+    assert browser_page.locator("#diagnosis\\/confidence .deck-confidence-column").count() == 3
+    for slug in ("score-location", "information-loss", "constraint-wiring", "features-seen", "evidence-missed", "confidence"):
+        words = browser_page.locator(f"#diagnosis\\/{slug}").evaluate(
+            "node => [...node.querySelectorAll('p')].filter(p => p.offsetParent !== null).map(p => p.textContent).join(' ').split(/\\s+/).filter(Boolean).length"
+        )
+        assert words <= 120
+    assert errors == []
+
+
+def test_diagnosis_confidence_and_unknown_boundaries_are_explicit(page, enhanced_report: Path) -> None:
+    browser_page, _ = page
+    open_deck(browser_page, enhanced_report, "#diagnosis/confidence")
+    text = browser_page.locator("#diagnosis\\/confidence").inner_text()
+    for phrase in ("Verified", "Likely contributor", "Unknown", "candidate recall", "echo_retries=0"):
+        assert phrase in text
+    assert "sole cause" not in text.lower()
 
 
 def test_dense_topics_teach_then_compare(page, enhanced_report: Path) -> None:

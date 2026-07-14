@@ -410,6 +410,14 @@ html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;ove
 .deck-flow{display:grid;gap:18px}.deck-flow-lane{display:grid;gap:10px;padding:16px;border:1px solid var(--portable-border);border-radius:16px;background:var(--portable-surface)}.deck-flow-lane h3{margin:0;font-size:16px}.deck-flow-lane ol{display:grid;grid-template-columns:repeat(var(--flow-count),minmax(0,1fr));gap:24px;margin:0;padding:0;list-style:none;counter-reset:flow-step}.deck-flow-step{position:relative;min-width:0;padding:13px;border:1px solid color-mix(in srgb,var(--portable-accent) 38%,var(--portable-border));border-radius:12px;background:color-mix(in srgb,var(--portable-accent) 7%,var(--portable-surface));overflow-wrap:anywhere;counter-increment:flow-step}.deck-flow-step::before{content:counter(flow-step);display:block;margin-bottom:6px;color:var(--portable-accent);font-size:12px;font-weight:850}.deck-flow-step:not(:last-child)::after{content:"→";position:absolute;top:50%;right:-19px;color:var(--portable-accent);font-size:20px;font-weight:900;transform:translateY(-50%)}
 .deck-flow-only .deck-slide-inner{min-height:calc(100dvh - 190px);grid-template-rows:auto minmax(0,1fr)}.deck-flow-only .deck-flow{align-self:center}.deck-flow-only .deck-flow-step{display:grid;min-height:128px;align-content:center;font-size:clamp(15px,1.2vw,18px);line-height:1.4}
 .deck-mechanism{display:grid;gap:22px;align-self:center}.deck-mechanism-stages{display:grid;grid-template-columns:repeat(var(--stage-count),minmax(0,1fr));gap:26px;margin:0;padding:0;list-style:none;counter-reset:mechanism-stage}.deck-mechanism-stage{position:relative;display:grid;align-content:center;min-height:150px;padding:18px;border:1px solid var(--portable-border);border-top:5px solid var(--stage-color);border-radius:14px;background:var(--portable-surface);counter-increment:mechanism-stage}.deck-mechanism-stage::before{content:counter(mechanism-stage);margin-bottom:10px;color:var(--stage-color);font-size:13px;font-weight:900}.deck-mechanism-stage:not(:last-child)::after{content:"→";position:absolute;top:50%;right:-21px;color:var(--portable-accent);font-size:22px;font-weight:900;transform:translateY(-50%)}.deck-mechanism-stage h3{margin:0 0 8px;font-size:clamp(16px,1.35vw,20px)}.deck-mechanism-stage p{margin:0;color:var(--portable-muted);font-size:14px;line-height:1.5}.deck-takeaway{margin:0;padding:14px 18px;border-left:5px solid #d89a2b;border-radius:10px;background:color-mix(in srgb,#d89a2b 10%,var(--portable-surface));font-size:clamp(15px,1.15vw,18px);line-height:1.5}.deck-takeaway strong{display:block;margin-bottom:3px;color:#a96f09;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+.deck-diagnosis{display:grid;gap:18px;min-width:0}.deck-diagnosis ol,.deck-diagnosis ul{margin:0;padding:0;list-style:none}.deck-diagnosis h3,.deck-diagnosis h4{margin:0}.deck-diagnosis li{min-width:0;overflow-wrap:anywhere}
+.deck-score-findings{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.deck-score-finding{display:grid;gap:9px;min-height:120px;align-content:center;padding:16px;border:1px solid var(--portable-border);border-top:5px solid var(--portable-accent);border-radius:14px;background:var(--portable-surface)}.deck-score-finding h3{font-size:18px}.deck-score-finding span{color:var(--portable-muted)}
+.deck-bottleneck{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;counter-reset:bottleneck}.deck-bottleneck-stage,.deck-feature-family,.deck-boundary-column,.deck-confidence-column{min-width:0;padding:16px;border:1px solid var(--portable-border);border-radius:14px;background:var(--portable-surface)}.deck-bottleneck-stage{display:grid;gap:10px;align-content:start;counter-increment:bottleneck}.deck-bottleneck-stage::before{content:counter(bottleneck);color:var(--portable-accent);font-size:12px;font-weight:900}.deck-bottleneck-stage h3{font-size:15px}.deck-loss{padding:9px 11px;border-left:5px solid #c98612;border-radius:9px;background:color-mix(in srgb,#c98612 12%,var(--portable-surface));font-size:12px;line-height:1.35}
+.deck-wiring{display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,.5fr) minmax(0,1fr);gap:16px}.deck-wiring>section{display:grid;gap:9px;align-content:start}.deck-wiring>section>ol{display:grid;gap:7px}.deck-wiring-source li,.deck-wiring-target li{padding:8px 10px;border:1px solid var(--portable-border);border-radius:9px;background:var(--portable-surface);font-size:12px}.deck-wiring-link{padding:7px 9px;border:2px solid var(--portable-border);border-radius:9px;background:var(--portable-surface);font-size:11px;line-height:1.3}.deck-wiring-link[data-link-kind="direct"]{border-color:#15945b}.deck-wiring-link[data-link-kind="soft"]{border-style:dashed;border-color:#c98612}.deck-wiring-link[data-link-kind="feature-only"]{border-style:dotted;border-color:#6f54c7}
+.deck-feature-map{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.deck-feature-family{display:grid;grid-template-columns:1fr auto;gap:9px}.deck-feature-family h3{font-size:16px}.deck-feature-family>span:last-child{grid-column:1/-1;color:var(--portable-muted);font-size:13px;line-height:1.4}.deck-feature-badge{align-self:start;padding:3px 7px;border:1px solid var(--portable-accent);border-radius:999px;color:var(--portable-accent);font-size:10px;font-weight:800}
+.deck-boundary-map,.deck-confidence-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.deck-boundary-column,.deck-confidence-column{display:grid;gap:11px}.deck-boundary-column>ul,.deck-confidence-column>ul{display:grid;gap:7px}.deck-boundary-column li,.deck-confidence-column li{position:relative;padding-left:15px;color:var(--portable-muted);font-size:12px;line-height:1.35}.deck-boundary-column li::before,.deck-confidence-column li::before{position:absolute;left:0;content:"•";color:var(--portable-accent)}.deck-boundary-column[data-boundary="limited"]{border-top:5px solid #c98612}.deck-boundary-column[data-boundary="present"]{border-top:5px solid #15945b}
+.deck-confidence{display:grid;gap:14px}.deck-confidence-column[data-confidence="verified"]{border-top:5px solid #15945b}.deck-confidence-column[data-confidence="likely"]{border-top:5px solid #c98612}.deck-confidence-column[data-confidence="unknown"]{border-top:5px solid var(--portable-muted)}.deck-response-control{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}.deck-response-control>li{position:relative;padding:12px;border:1px solid var(--portable-border);border-radius:12px;background:var(--portable-surface)}.deck-response-control>li:not(:last-child)::after{position:absolute;top:50%;right:-15px;content:"→";color:var(--portable-accent);font-weight:900;transform:translateY(-50%)}.deck-response-control h3{margin-bottom:6px;font-size:14px}.deck-response-control span{color:var(--portable-muted);font-size:11px;line-height:1.35}
+.deck-belief-timeline,.deck-failure-taxonomy{display:grid;gap:9px}.deck-belief-timeline>ol,.deck-failure-taxonomy>ol{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.deck-belief-timeline li,.deck-failure-taxonomy li{padding:10px 12px;border:1px solid var(--portable-border);border-radius:11px;background:var(--portable-surface)}.deck-belief-timeline h4,.deck-failure-taxonomy h4{margin-bottom:5px;font-size:12px}.deck-belief-timeline span,.deck-failure-taxonomy span{color:var(--portable-muted);font-size:10px;line-height:1.3}.deck-failure-taxonomy span{display:inline-block;margin-top:4px;padding:2px 6px;border:1px solid currentColor;border-radius:999px}
 .deck-comparison{display:grid;gap:10px}.deck-comparison-columns,.deck-team-row{display:grid;grid-template-columns:minmax(115px,.55fr) repeat(3,minmax(0,1fr));gap:14px}.deck-comparison-columns{padding:0 16px;color:var(--portable-muted);font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.deck-team-row{padding:14px 16px;border:1px solid var(--portable-border);border-left:5px solid var(--team-color);border-radius:12px;background:var(--portable-surface)}.deck-team-row h3{margin:0;font-size:16px}.deck-team-value{display:grid;gap:4px;color:var(--portable-muted);font-size:13px;line-height:1.42}.deck-team-value::before{content:attr(data-label);display:none;color:var(--portable-ink);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.deck-team-status{display:inline-flex;width:max-content;margin-top:7px;padding:3px 8px;border:1px solid currentColor;border-radius:999px;color:var(--portable-muted);font-size:10px;font-weight:800;text-transform:uppercase}.deck-team-status--verified{color:#19724d}.deck-team-status--external{color:#176e9e}.deck-team-status--limit{color:#9a6810}.deck-common-different{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}.deck-synthesis-card{padding:14px 16px;border-left:5px solid var(--synthesis-color);border-radius:11px;background:var(--portable-surface);font-size:14px;line-height:1.5}.deck-synthesis-card strong{display:block;margin-bottom:4px;color:var(--portable-ink)}
 .deck-scoreboard{display:grid;align-self:start;grid-auto-rows:max-content;gap:6px;overflow-x:auto}.deck-score-header,.deck-score-row{display:grid;grid-template-columns:34px minmax(125px,1.25fr) minmax(130px,1fr) repeat(4,minmax(76px,.62fr));gap:12px;align-items:center;min-width:820px}.deck-score-header{padding:0 14px 5px;color:var(--portable-muted);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.deck-score-row{min-height:58px;padding:9px 14px;border:1px solid var(--portable-border);border-left:5px solid var(--score-color);border-radius:11px;background:var(--portable-surface)}.deck-score-rank{font-size:12px;font-weight:900}.deck-score-team{font-size:16px;font-weight:850}.deck-score-value{font-variant-numeric:tabular-nums;text-align:right}.deck-score-composite{position:relative;isolation:isolate;padding:7px 9px;border-radius:7px;overflow:hidden;text-align:right}.deck-score-composite::before{position:absolute;z-index:-1;inset:0 auto 0 0;width:var(--score-width);background:color-mix(in srgb,var(--score-color) 28%,transparent);content:""}
 .deck-slide--story .deck-slide-inner{gap:clamp(24px,3vw,40px)}.deck-slide.deck-slide--story .portable-markdown{width:100%;max-width:1120px;font-size:clamp(17px,1.35vw,20px);line-height:1.65}.deck-slide--story .portable-markdown p{margin-block:0 1.15em}.deck-slide--story .portable-markdown a{font-weight:650}.deck-slide--story .portable-page-header,.deck-slide--story .portable-content-card{width:100%;max-width:1120px}.deck-slide--story .deck-question{font-size:clamp(15px,1.15vw,18px)}
@@ -435,6 +443,8 @@ html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;ove
 html[data-deck-view="linear"],html[data-deck-view="linear"] body{height:auto;overflow:auto}
 html[data-deck-view="linear"] .retrospective-deck{height:auto;display:block}html[data-deck-view="linear"] .deck-track{display:block;overflow:visible}html[data-deck-view="linear"] .deck-chapter,html[data-deck-view="linear"] .deck-slide{height:auto;min-height:0}html[data-deck-view="linear"] .deck-vertical{height:auto;overflow:visible}html[data-deck-view="linear"] .deck-vertical-rail{display:none}html[data-deck-view="linear"] .deck-disclosure>summary{display:none}html[data-deck-view="linear"] .deck-disclosure>[data-artifact-block-id]{display:block!important}html[data-deck-view="linear"] .deck-insight-grid{display:block}html[data-deck-view="linear"] .deck-insight-card{border:0;background:transparent;overflow:visible}html[data-deck-view="linear"] .deck-insight-card>summary{display:none}html[data-deck-view="linear"] .deck-insight-detail{display:block!important;margin:0 0 1em;padding:0;border:0}html[data-deck-view="linear"] .deck-insight-detail strong:first-child{display:inline}
 @media(max-width:1100px){.deck-slide--cover .deck-slide-inner{grid-template-columns:1fr;min-height:0}.deck-slide--cover .deck-page-copy,.deck-chapter-map{grid-column:1;grid-row:auto}.deck-flow-lane ol,.deck-mechanism-stages{grid-template-columns:1fr;gap:22px}.deck-flow-step:not(:last-child)::after,.deck-mechanism-stage:not(:last-child)::after{content:"↓";top:auto;right:auto;bottom:-22px;left:50%;transform:translateX(-50%)}.deck-mechanism-stage{min-height:112px}.deck-comparison-columns{display:none}.deck-team-row{grid-template-columns:minmax(110px,.45fr) repeat(3,minmax(0,1fr))}.deck-prose-matrix tbody,.deck-insight-grid{grid-template-columns:1fr}.deck-flow-only .deck-slide-inner{min-height:0}}
+@media(max-width:900px){.deck-bottleneck,.deck-feature-map{grid-template-columns:repeat(2,minmax(0,1fr))}.deck-wiring,.deck-boundary-map,.deck-confidence-grid{grid-template-columns:1fr}.deck-score-findings,.deck-response-control,.deck-belief-timeline>ol,.deck-failure-taxonomy>ol{grid-template-columns:repeat(2,minmax(0,1fr))}.deck-response-control>li::after{display:none}}
+@media(max-width:600px){.deck-bottleneck,.deck-feature-map,.deck-score-findings,.deck-response-control,.deck-belief-timeline>ol,.deck-failure-taxonomy>ol{grid-template-columns:1fr}}
 @media(max-width:700px){.deck-title,.deck-breadcrumb,.deck-progress,.deck-axis-help,.deck-chapter-rail{display:none}.deck-mobile-orientation{display:block;min-width:0;margin-right:auto;overflow:hidden;font-weight:650;text-overflow:ellipsis;white-space:nowrap}.deck-topbar,.deck-footer{min-height:60px;padding:8px 10px}.deck-slide{padding:18px 12px}.deck-vertical-rail{display:none}.portable-table-scroll{max-width:calc(100vw - 24px)}.deck-button{min-width:48px;min-height:48px}.deck-slide--cover .deck-slide-heading{font-size:clamp(36px,13vw,58px)}.deck-team-row,.deck-common-different{grid-template-columns:1fr}.deck-team-value::before{display:block}.deck-slide--matrix .portable-table-scroll{overflow-x:auto}.deck-slide--matrix .portable-table-scroll:has(.deck-prose-matrix){overflow:visible}.deck-prose-matrix tbody td{grid-template-columns:1fr;gap:4px}.deck-slide--audit .portable-markdown{columns:1}}
 @media(prefers-reduced-motion:reduce){.deck-track,.deck-vertical{scroll-behavior:auto!important}}
 @media(forced-colors:active){.deck-button,.deck-chapter-button,.deck-rail-button,.deck-disclosure,.deck-jump-panel{border:1px solid CanvasText}}
@@ -493,6 +503,276 @@ function runtimeMain(CONFIG) {
   };
   const stageColors = ["#58aaf7", "#8570e6", "#24a88b", "#d89a2b", "#df7aa9"];
   const teamColors = ["#58aaf7", "#8570e6", "#24a88b", "#df7aa9", "#e28d43"];
+  const confidenceLabels = { verified: "Verified", likely: "Likely contributor", unknown: "Unknown" };
+  const renderTakeaway = (takeaway) => {
+    const note = document.createElement("aside");
+    note.className = "deck-takeaway";
+    const label = document.createElement("strong");
+    label.textContent = takeaway.confidence ? `${confidenceLabels[takeaway.confidence]} takeaway` : "Takeaway";
+    note.append(label, document.createTextNode(typeof takeaway === "string" ? takeaway : takeaway.text));
+    return note;
+  };
+  const renderScoreFindings = () => {
+    const findings = [
+      ["Ranking / nDCG", "Most of the arithmetic gap"],
+      ["LLM judge", "Another major share of the gap"],
+      ["Catalog diversity", "Nearly neutral"],
+      ["Lexical diversity", "Varied by team"],
+    ];
+    const list = document.createElement("ol");
+    list.className = "deck-score-findings";
+    list.setAttribute("aria-label", "Score-gap findings");
+    findings.forEach(([title, detail]) => {
+      const item = document.createElement("li");
+      item.className = "deck-score-finding";
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      const text = document.createElement("span");
+      text.textContent = detail;
+      item.append(heading, text);
+      list.append(item);
+    });
+    return list;
+  };
+  const renderBottleneck = (entry) => {
+    const list = document.createElement("ol");
+    list.className = "deck-bottleneck";
+    list.setAttribute("aria-label", "End-to-end information bottlenecks");
+    entry.stages.forEach((stage) => {
+      const item = document.createElement("li");
+      item.className = "deck-bottleneck-stage";
+      const heading = document.createElement("h3");
+      heading.textContent = stage;
+      item.append(heading);
+      entry.losses.filter(({ after }) => after === stage).forEach((loss) => {
+        const note = document.createElement("span");
+        note.className = "deck-loss";
+        note.dataset.confidence = loss.confidence;
+        note.textContent = `${confidenceLabels[loss.confidence]} · ${loss.label}`;
+        item.append(note);
+      });
+      list.append(item);
+    });
+    return list;
+  };
+  const renderConstraintWiring = () => {
+    const extracted = [
+      "Current request",
+      "Artist, album, track, and attribute facts",
+      "Hard and soft exclusions",
+      "Played-track sentiment and pinned references",
+      "Temporal and lyrical-theme constraints",
+      "Resolved IDs and routing/profile fields",
+    ];
+    const consumers = [
+      "Weighted BM25 clauses",
+      "Field-aligned dense strings",
+      "Audio and visual queries",
+      "Anchor and user centroids",
+      "Discography and era lookups",
+      "Hard rejection, demotion, veto, and soft era handling",
+      "LightGBM state, history, routing, rejection, and interaction features",
+    ];
+    const links = [
+      ["Current request", "Weighted BM25 clauses", "direct"],
+      ["Artist and attribute facts", "Field-aligned dense strings", "direct"],
+      ["Attribute facts", "Audio and visual queries", "soft"],
+      ["Played-track sentiment", "Anchor and user centroids", "soft"],
+      ["Resolved artist and era", "Discography and era lookups", "direct"],
+      ["Hard exclusions", "Hard rejection and artist veto", "direct"],
+      ["Soft exclusions", "Tag demotion and soft era handling", "soft"],
+      ["State and routing fields", "LightGBM features", "feature-only"],
+    ];
+    const group = (title, values, className) => {
+      const section = document.createElement("section");
+      section.className = className;
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      const list = document.createElement("ol");
+      values.forEach((value) => {
+        const item = document.createElement("li");
+        item.textContent = value;
+        list.append(item);
+      });
+      section.append(heading, list);
+      return section;
+    };
+    const wiring = document.createElement("section");
+    wiring.className = "deck-wiring";
+    wiring.setAttribute("aria-label", "Extracted evidence wired to operational consumers");
+    const linkGroup = document.createElement("section");
+    linkGroup.className = "deck-wiring-links";
+    const linkHeading = document.createElement("h3");
+    linkHeading.textContent = "Verified connections";
+    const linkList = document.createElement("ol");
+    links.forEach(([from, to, kind]) => {
+      const item = document.createElement("li");
+      item.className = "deck-wiring-link";
+      item.dataset.linkKind = kind;
+      item.textContent = `${from} → ${to}`;
+      linkList.append(item);
+    });
+    linkGroup.append(linkHeading, linkList);
+    wiring.append(group("Extracted state", extracted, "deck-wiring-source"), linkGroup, group("Actual consumers", consumers, "deck-wiring-target"));
+    return wiring;
+  };
+  const renderFeatureMap = (families) => {
+    const details = {
+      "Retriever evidence": "Rank, score, presence, margin, ratio, percentile, z-score, source",
+      "Semantic and multimodal": "b1_cos, Qwen metadata/lyrics, tags, CLAP audio, SigLIP visual",
+      "Behavioral and lookup": "Anchor/user CF-BPR centroids, CF similarities, discography, era-popularity",
+      Catalog: "Popularity, year, era, tags, artist, album, duration, culture, age affinity",
+      "Conversation and state": "Request, intent, routing, rejection, temporal constraints, history, overlap",
+      "Agreement and interactions": "Branch presence, best ranks, z-scores, percentiles, artist counts, cross-features",
+    };
+    const list = document.createElement("ol");
+    list.className = "deck-feature-map";
+    list.setAttribute("aria-label", "Six feature families in the 142-feature reranker");
+    families.forEach((family, index) => {
+      const item = document.createElement("li");
+      item.className = "deck-feature-family";
+      const heading = document.createElement("h3");
+      heading.textContent = family;
+      const badge = document.createElement("span");
+      badge.className = "deck-feature-badge";
+      badge.textContent = index === 0 ? "142 total" : `Family ${index + 1}`;
+      const detail = document.createElement("span");
+      detail.textContent = details[family];
+      item.append(heading, badge, detail);
+      list.append(item);
+    });
+    return list;
+  };
+  const renderEvidenceBoundaries = () => {
+    const columns = [
+      ["Missing upstream source", ["Direct track co-occurrence lane", "Markov / sequential-transition lane", "Candidate-producing b1 lane", "Grounded generated-description retrieval"]],
+      ["Consequent missing or limited feature", ["Direct co-occurrence probability and membership", "Transition probability", "Generated-description similarity", "Deliberate frequency priors"]],
+      ["Present evidence", ["Dense similarity", "CF/BPR centroids", "Conversation state", "Rejection and temporal signals", "Metadata, popularity, and era", "Cross-source agreement"]],
+    ];
+    const list = document.createElement("ol");
+    list.className = "deck-boundary-map";
+    list.setAttribute("aria-label", "Upstream and downstream evidence boundaries");
+    columns.forEach(([title, values], index) => {
+      const item = document.createElement("li");
+      item.className = "deck-boundary-column";
+      item.dataset.boundary = index === 2 ? "present" : "limited";
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      const evidence = document.createElement("ul");
+      values.forEach((value) => {
+        const row = document.createElement("li");
+        row.textContent = value;
+        evidence.append(row);
+      });
+      item.append(heading, evidence);
+      list.append(item);
+    });
+    return list;
+  };
+  const renderResponseControl = () => {
+    const list = document.createElement("ol");
+    list.className = "deck-response-control";
+    list.setAttribute("aria-label", "Verified Blind-B response-control path");
+    [
+      ["Top-1 ID fixed", "Recommendation identity"],
+      ["Grounded context", "Latest state plus XML-delimited catalog metadata"],
+      ["One Qwen call", "Temperature zero · echo_retries=0"],
+      ["Final response", "No independent selector, checker, critic, or repair"],
+    ].forEach(([title, detail]) => {
+      const item = document.createElement("li");
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      const text = document.createElement("span");
+      text.textContent = detail;
+      item.append(heading, text);
+      list.append(item);
+    });
+    return list;
+  };
+  const renderConfidence = (confidence) => {
+    const section = document.createElement("section");
+    section.className = "deck-confidence";
+    section.append(renderResponseControl());
+    const grid = document.createElement("ol");
+    grid.className = "deck-confidence-grid";
+    grid.setAttribute("aria-label", "Confidence-ranked diagnosis");
+    Object.entries(confidence).forEach(([level, claims]) => {
+      const item = document.createElement("li");
+      item.className = "deck-confidence-column";
+      item.dataset.confidence = level;
+      const heading = document.createElement("h3");
+      heading.textContent = confidenceLabels[level];
+      const list = document.createElement("ul");
+      claims.forEach((claim) => {
+        const row = document.createElement("li");
+        row.textContent = claim;
+        list.append(row);
+      });
+      item.append(heading, list);
+      grid.append(item);
+    });
+    section.append(grid);
+    return section;
+  };
+  const renderBeliefTimeline = () => {
+    const section = document.createElement("section");
+    section.className = "deck-belief-timeline";
+    const title = document.createElement("h3");
+    title.textContent = "Belief update";
+    const list = document.createElement("ol");
+    [
+      ["Before submission", "0.3844–0.4562 in-sample diagnostics encouraged confidence"],
+      ["Evidence already available", "0.1970–0.2032 leakage-safe OOF results indicated weaker generalization"],
+      ["Blind-B result", "0.2537 nDCG@20 and 3.30/5 judge score"],
+      ["Post-competition review", "Candidate, constraint-execution, behavioral-evidence, and response-control gaps emerged"],
+    ].forEach(([headingText, detail]) => {
+      const item = document.createElement("li");
+      const heading = document.createElement("h4");
+      heading.textContent = headingText;
+      const text = document.createElement("span");
+      text.textContent = detail;
+      item.append(heading, text);
+      list.append(item);
+    });
+    section.append(title, list);
+    return section;
+  };
+  const renderFailureTaxonomy = () => {
+    const section = document.createElement("section");
+    section.className = "deck-failure-taxonomy";
+    const title = document.createElement("h3");
+    title.textContent = "Failure attribution · frequencies unknown";
+    const list = document.createElement("ol");
+    [
+      "Relevant track never entered the candidate union",
+      "Relevant track entered but was misranked",
+      "Selected track was reasonable but its explanation was weak",
+      "Recommendation and explanation were both weak",
+    ].forEach((label) => {
+      const item = document.createElement("li");
+      const heading = document.createElement("h4");
+      heading.textContent = label;
+      const status = document.createElement("span");
+      status.textContent = "Unknown frequency";
+      item.append(heading, status);
+      list.append(item);
+    });
+    section.append(title, list);
+    return section;
+  };
+  const renderDiagnosis = (inner, entry) => {
+    const root = document.createElement("section");
+    root.className = `deck-diagnosis deck-diagnosis--${entry.diagnosisKind}`;
+    root.setAttribute("aria-label", entry.title);
+    if (entry.diagnosisKind === "bottleneck") root.append(renderBottleneck(entry));
+    if (entry.diagnosisKind === "wiring") root.append(renderConstraintWiring());
+    if (entry.diagnosisKind === "feature-map") root.append(renderFeatureMap(entry.featureFamilies));
+    if (entry.diagnosisKind === "boundaries") root.append(renderEvidenceBoundaries());
+    if (entry.diagnosisKind === "confidence") root.append(renderConfidence(entry.confidence), renderBeliefTimeline(), renderFailureTaxonomy());
+    if (entry.diagnosisKind === "score") root.append(renderScoreFindings());
+    if (entry.takeaway) root.append(renderTakeaway(entry.takeaway));
+    inner.append(root);
+  };
   const renderMechanism = (entry) => {
     const section = document.createElement("section");
     section.className = "deck-mechanism";
@@ -604,8 +884,9 @@ function runtimeMain(CONFIG) {
       question.textContent = chapter.question;
       pageCopy.append(heading, question);
       inner.append(pageCopy);
+      if (entry.diagnosisKind) renderDiagnosis(inner, entry);
       if (entry.visualKind === "mechanism") inner.append(renderMechanism(entry));
-      if (entry.visualKind === "comparison") inner.append(renderComparison(entry));
+      if (entry.visualKind === "comparison" && entry.teams) inner.append(renderComparison(entry));
       if (entry.archetype === "cover") {
         const map = document.createElement("ol");
         map.className = "deck-chapter-map";
