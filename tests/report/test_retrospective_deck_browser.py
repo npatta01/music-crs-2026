@@ -110,6 +110,31 @@ def test_diagnosis_confidence_and_unknown_boundaries_are_explicit(page, enhanced
     assert "sole cause" not in text.lower()
 
 
+def test_reusable_visual_grammars_compare_all_five_teams(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    for slug, selector in (
+        ("query/provenance-stacks", ".deck-provenance-stack"),
+        ("retrieval/evidence-heatmap", ".deck-evidence-heatmap"),
+        ("response/control-heatmap", ".deck-control-lanes"),
+    ):
+        open_deck(browser_page, enhanced_report, f"#{slug}")
+        escaped_slug = slug.replace("/", r"\/")
+        assert browser_page.locator(f"#{escaped_slug} {selector}").count() == 1
+        assert browser_page.locator(f"#{escaped_slug} [data-team]").count() == 5
+    assert errors == []
+
+
+def test_reusable_visual_grammars_keep_primary_copy_bounded(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    for slug in ("query/provenance-stacks", "retrieval/evidence-heatmap", "response/control-heatmap"):
+        open_deck(browser_page, enhanced_report, f"#{slug}")
+        words = browser_page.locator(f"[id='{slug}']").evaluate(
+            "node => node.innerText.split(/\\s+/).filter(Boolean).length"
+        )
+        assert words <= 120
+    assert errors == []
+
+
 def test_every_diagnosis_claim_has_a_visible_explicit_confidence(page, enhanced_report: Path) -> None:
     browser_page, errors = page
     open_deck(browser_page, enhanced_report, "#diagnosis/score-location")

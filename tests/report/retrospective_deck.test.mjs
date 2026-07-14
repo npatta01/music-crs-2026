@@ -189,6 +189,13 @@ test("visual summaries preserve documented evidence boundaries", () => {
   assert.match(team("response/grounding-heatmap", "swyoo"), /one PAS prediction.*no best-of-N critic/i);
 });
 
+test("primary comparisons use evidence heatmaps, provenance stacks, and control lanes", () => {
+  const pages = new Map(CHAPTERS.flatMap((chapter) => chapter.slides.map((entry) => [`${chapter.slug}/${entry.slug}`, entry])));
+  assert.equal(pages.get("retrieval/evidence-heatmap").visualKind, "heatmap");
+  assert.equal(pages.get("query/provenance-stacks").visualKind, "provenance");
+  assert.equal(pages.get("response/control-heatmap").visualKind, "control-lanes");
+});
+
 test("enhancement is deterministic and idempotent", async () => {
   const html = await readFile(REPORT, "utf8");
   const once = enhanceHtml(html);

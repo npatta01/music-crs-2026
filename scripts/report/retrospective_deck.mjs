@@ -72,6 +72,11 @@ export const CURATED_PATH = [
   "leaders/volart-retrieval", "synthesis/lessons",
 ];
 
+const provenanceLayers = ["Official challenge data", "External structured data", "Generated artifacts", "Latent LLM knowledge", "Verification boundary"];
+const evidenceColumns = ["Lexical", "Dense", "Collaborative", "Co-occurrence", "Transition", "Lookup", "Generated description", "Metadata", "Conversation/state", "Agreement/routing", "Priors"];
+const responseColumns = ["Grounding", "Drafts", "Selection", "Verification", "Repair", "Lexical control"];
+const cell = (status, label, short = label) => ({ status, label, short });
+
 export const CHAPTERS = [
   {
     slug: "outcome",
@@ -149,13 +154,45 @@ export const CHAPTERS = [
         ],
       }),
       slide("provenance-stacks", "How evidence provenance stacks up", "visual", [], {
-        visualKind: "mechanism",
+        visualKind: "provenance",
         takeaway: "Recorded, generated, latent, and verified evidence have different reproducibility boundaries.",
-        stages: [
-          { label: "Recorded", detail: "Challenge records and external structured data" },
-          { label: "Generated", detail: "States, rewrites, descriptions, and critiques" },
-          { label: "Latent", detail: "Associations available only inside model generation" },
-          { label: "Verified", detail: "Claims another record can independently check" },
+        layers: provenanceLayers,
+        teams: [
+          { name: "npatta01", cells: [
+            cell("present", "Official catalog, embeddings, conversations, users, and public labels", "Catalog + conversations"),
+            cell("not-documented", "No external structured music dataset documented", "None"),
+            cell("present", "Cached conversation state and artist known-for text", "State + known-for"),
+            cell("partial", "Response-model associations were available but not independently recorded", "Response-model associations"),
+            cell("partial", "Catalog IDs were resolved; no independent response fact checker was documented", "IDs only; no checker"),
+          ] },
+          { name: "volart", cells: [
+            cell("present", "Official records, train co-occurrence, frequency, and MOVES priors", "Records + priors"),
+            cell("not-documented", "No external structured music dataset documented", "None"),
+            cell("present", "Rewrites, descriptions, response candidates, critiques, and edits", "Rewrites + critiques"),
+            cell("partial", "Model associations could enter generated descriptions and drafts", "Model associations"),
+            cell("partial", "Track IDs stayed fixed; structured musical-fact verification was not documented", "IDs fixed; facts unchecked"),
+          ] },
+          { name: "niwatori", cells: [
+            cell("present", "Official challenge records", "Challenge records"),
+            cell("present", "TalkPlayData-1 statistics", "TalkPlayData-1"),
+            cell("partial", "Ten response drafts; no LLM retrieval rewrite documented", "10 drafts; no query rewrite"),
+            cell("partial", "Response-model associations could enter the drafts", "Response-model associations"),
+            cell("partial", "Mapped external IDs, duplicate audits, and OOF training; response fact checking not documented", "ID audits; response unchecked"),
+          ] },
+          { name: "swyoo", cells: [
+            cell("present", "Official challenge records", "Challenge records"),
+            cell("present", "LRCLIB, Genius, and MusicBrainz", "LRCLIB · Genius · MusicBrainz"),
+            cell("present", "Summaries, themes, candidates, and repaired responses", "Summaries + repairs"),
+            cell("partial", "Model predictions supplemented recorded facts", "Model predictions"),
+            cell("present", "Theme, citation, and field-level validation with repair", "Checks + repair"),
+          ] },
+          { name: "team2_s2", cells: [
+            cell("present", "Official catalog, conversations, users, labels, and embeddings", "Catalog + conversations"),
+            cell("not-documented", "No external structured music dataset documented", "None"),
+            cell("present", "Fact bundles, first-pass responses, and refinements", "Facts + responses"),
+            cell("partial", "Gemini generation could add associations beyond the supplied facts", "Gemini associations"),
+            cell("present", "Verified track facts were supplied to generation", "Verified facts"),
+          ] },
         ],
       }),
       slide("data-matrix", "Common records, different knowledge boundaries", "matrix", ["data_knowledge_matrix", "data_knowledge_interpretation"], {
@@ -205,8 +242,41 @@ export const CHAPTERS = [
         ],
       }),
       slide("evidence-heatmap", "Which retrieval evidence each system could use", "visual", [], {
-        visualKind: "comparison",
+        visualKind: "heatmap",
         takeaway: "Candidate-source coverage determines which evidence can become a ranking feature downstream.",
+        columns: evidenceColumns,
+        teams: [
+          { name: "npatta01", badge: "142 features", cells: [
+            cell("present", "BM25 lexical retrieval"), cell("present", "Multimodal and metadata ANN retrieval"), cell("present", "CF/BPR centroid retrieval"),
+            cell("not-documented", "No direct track co-occurrence source documented"), cell("not-documented", "No transition source documented"), cell("present", "Discography and era lookup branches"),
+            cell("partial", "Artist known-for text, not a general generated-description lane"), cell("present", "Catalog and media metadata features"), cell("present", "Conversation-state and feedback features"),
+            cell("present", "Cross-source agreement and routing features"), cell("partial", "Popularity and frequency evidence, without a dedicated prior source"),
+          ] },
+          { name: "volart", badge: "69 features", cells: [
+            cell("present", "BM25 lexical retrieval"), cell("present", "Metadata dense retrieval"), cell("partial", "Played-track co-occurrence rather than a learned collaborative model"),
+            cell("present", "Train co-occurrence source"), cell("not-documented", "No transition source documented"), cell("present", "Entity and era lookup slots"),
+            cell("present", "LLM-generated track descriptions"), cell("present", "Metadata features"), cell("present", "Rewrite, entities, and played-history evidence"),
+            cell("present", "RRF, source ranks, and agreement evidence"), cell("present", "Frequency and MOVES priors"),
+          ] },
+          { name: "niwatori", badge: "176 features", cells: [
+            cell("present", "Lexical retrieval sources"), cell("present", "Dense learned retrieval sources"), cell("present", "History and collaborative evidence"),
+            cell("present", "Full-history co-occurrence sources"), cell("present", "Last-track transition sources"), cell("partial", "Source-specific lookup evidence"),
+            cell("not-documented", "No generated-description retrieval lane documented"), cell("present", "Track and source metadata"), cell("present", "Recent text and played-history signals"),
+            cell("present", "Ordered-union, source, and agreement features"), cell("present", "Prior sources including TalkPlayData-1 statistics"),
+          ] },
+          { name: "swyoo", badge: "Count not established", cells: [
+            cell("present", "BM25 lexical retrieval"), cell("present", "QEmb and two-tower dense retrieval"), cell("present", "Two-tower interaction evidence"),
+            cell("partial", "Chat-derived aggregate behavior, not a dedicated co-occurrence lane"), cell("not-documented", "No direct transition source documented"), cell("partial", "External metadata and identifier lookups"),
+            cell("partial", "Generated summaries and themes, not a documented generated track-description retriever"), cell("present", "Catalog, demographic, lyrics, and credit metadata"), cell("present", "Current request, summary, and recent-listen evidence"),
+            cell("present", "Multi-source fusion and compatibility evidence"), cell("partial", "Popularity or demographic priors were available but exact submitted usage is bounded"),
+          ] },
+          { name: "team2_s2", badge: "37 features", cells: [
+            cell("present", "BM25 conversation and live-text retrieval"), cell("present", "Dense text and item branches"), cell("present", "CF/BPR branches"),
+            cell("partial", "Collaborative item evidence without a separately documented co-occurrence source"), cell("not-documented", "No transition source documented"), cell("partial", "Item and catalog lookup evidence"),
+            cell("not-documented", "No generated-description retrieval lane documented"), cell("present", "Catalog and item metadata"), cell("present", "Conversation and played-track windows"),
+            cell("present", "Source and fusion features"), cell("partial", "Some popularity evidence; explicit popularity and novelty rules not documented"),
+          ] },
+        ],
       }),
       slide("feature-glossary", "Feature-family glossary", "story", ["features_heading", "feature_glossary"]),
       slide("feature-matrix", "Feature families and validation lineage", "matrix", ["feature_matrix"]),
@@ -245,8 +315,16 @@ export const CHAPTERS = [
         ],
       }),
       slide("control-heatmap", "How each response was selected, checked, or repaired", "visual", [], {
-        visualKind: "comparison",
+        visualKind: "control-lanes",
         takeaway: "Multiple drafts add control only when a documented selector, verifier, critic, or repair pass decides what survives.",
+        columns: responseColumns,
+        teams: [
+          { name: "npatta01", cells: [cell("present", "Latest state and selected-track catalog metadata", "State + catalog"), cell("present", "One response draft", "1 draft"), cell("not-documented", "No independent selector documented", "None"), cell("not-documented", "No independent checker documented", "None"), cell("not-documented", "No repair pass documented", "None"), cell("not-documented", "No lexical-control pass documented", "None")] },
+          { name: "volart", cells: [cell("present", "Selected recommendation IDs stayed fixed", "IDs fixed"), cell("present", "Three temperature-diverse candidates", "3 varied drafts"), cell("present", "Independent critic selected or rejected candidates", "Critic"), cell("partial", "Quality hardening, not a documented structured musical-fact verifier", "Quality hardening"), cell("present", "Selective rewrite and hardening", "Selective rewrite"), cell("present", "Lexical-diversity pass", "Lexical pass")] },
+          { name: "niwatori", cells: [cell("present", "Selected track and conversation context", "Track + conversation"), cell("present", "Ten seeded candidates", "10 seeded drafts"), cell("present", "Lexical-diversity selection of a whole record", "Diversity selector"), cell("not-documented", "Selector was not a factual critic", "Not a factual critic"), cell("not-documented", "No repair pass documented", "None"), cell("present", "Lexical diversity was the selection objective", "Diversity objective")] },
+          { name: "swyoo", cells: [cell("present", "Catalog and crawled facts with a legal title pool", "Catalog + crawls"), cell("present", "Deterministic PAS proposals plus one PAS prediction", "PAS set"), cell("partial", "Deterministic proposal path, not best-of-N critique", "No critic"), cell("present", "Theme and citation validation", "Theme-citation checks"), cell("present", "Unsupported content was repaired", "Evidence repair"), cell("partial", "Legal-title controls, not a lexical-diversity selector", "Legal-title control")] },
+          { name: "team2_s2", cells: [cell("present", "Verified track-fact bundle", "Verified facts"), cell("present", "First response followed by refinement", "Draft + refinement"), cell("partial", "Gemini Pro refined the first response rather than independently selecting drafts", "Refinement, not selector"), cell("present", "Verified facts supplied before generation", "Verified bundle"), cell("partial", "Gemini Pro polished the first response; factual repair was not separately documented", "Polishing pass"), cell("not-documented", "No lexical-control pass documented", "None")] },
+        ],
       }),
       slide("tradeoffs", "Generation, selection, repair, and trade-offs", "audit", ["response_walkthroughs", "response_tradeoffs"]),
     ],
@@ -420,6 +498,8 @@ html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;ove
 .deck-confidence{display:grid;gap:14px}.deck-confidence-column[data-confidence="verified"]{border-top:5px solid #15945b}.deck-confidence-column[data-confidence="likely"]{border-top:5px solid #c98612}.deck-confidence-column[data-confidence="unknown"]{border-top:5px solid var(--portable-muted)}.deck-response-control{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}.deck-response-control>li{position:relative;padding:12px;border:1px solid var(--portable-border);border-radius:12px;background:var(--portable-surface)}.deck-response-control>li:not(:last-child)::after{position:absolute;top:50%;right:-15px;content:"→";color:var(--portable-accent);font-weight:900;transform:translateY(-50%)}.deck-response-control h3{margin-bottom:6px;font-size:14px}.deck-response-control span{color:var(--portable-muted);font-size:11px;line-height:1.35}
 .deck-belief-timeline,.deck-failure-taxonomy{display:grid;gap:9px}.deck-belief-timeline>ol,.deck-failure-taxonomy>ol{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.deck-belief-timeline li,.deck-failure-taxonomy li{padding:10px 12px;border:1px solid var(--portable-border);border-radius:11px;background:var(--portable-surface)}.deck-belief-timeline h4,.deck-failure-taxonomy h4{margin-bottom:5px;font-size:12px}.deck-belief-timeline span,.deck-failure-taxonomy span{color:var(--portable-muted);font-size:10px;line-height:1.3}.deck-failure-taxonomy span{display:inline-block;margin-top:4px;padding:2px 6px;border:1px solid currentColor;border-radius:999px}
 .deck-comparison{display:grid;gap:10px}.deck-comparison-columns,.deck-team-row{display:grid;grid-template-columns:minmax(115px,.55fr) repeat(3,minmax(0,1fr));gap:14px}.deck-comparison-columns{padding:0 16px;color:var(--portable-muted);font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.deck-team-row{padding:14px 16px;border:1px solid var(--portable-border);border-left:5px solid var(--team-color);border-radius:12px;background:var(--portable-surface)}.deck-team-row h3{margin:0;font-size:16px}.deck-team-value{display:grid;gap:4px;color:var(--portable-muted);font-size:13px;line-height:1.42}.deck-team-value::before{content:attr(data-label);display:none;color:var(--portable-ink);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.deck-team-status{display:inline-flex;width:max-content;margin-top:7px;padding:3px 8px;border:1px solid currentColor;border-radius:999px;color:var(--portable-muted);font-size:10px;font-weight:800;text-transform:uppercase}.deck-team-status--verified{color:#19724d}.deck-team-status--external{color:#176e9e}.deck-team-status--limit{color:#9a6810}.deck-common-different{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}.deck-synthesis-card{padding:14px 16px;border-left:5px solid var(--synthesis-color);border-radius:11px;background:var(--portable-surface);font-size:14px;line-height:1.5}.deck-synthesis-card strong{display:block;margin-bottom:4px;color:var(--portable-ink)}
+.deck-team-grid{display:grid;gap:12px;min-width:0}.deck-team-grid table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:5px}.deck-team-grid caption{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.deck-team-grid th,.deck-team-grid td{min-width:0;overflow-wrap:anywhere}.deck-team-grid thead th{padding:0 4px 5px;color:var(--portable-muted);font-size:9px;line-height:1.18;letter-spacing:.025em;text-align:center;text-transform:uppercase}.deck-team-grid thead th:first-child{width:128px;text-align:left}.deck-team-grid tbody th{padding:10px;border-left:5px solid var(--team-color);border-radius:10px;background:var(--portable-surface);font-size:14px;text-align:left}.deck-team-grid td{height:52px;padding:6px;border:1px solid var(--portable-border);border-radius:9px;background:var(--portable-surface);color:var(--portable-muted);font-size:10px;line-height:1.25;text-align:center;vertical-align:middle}.deck-grid-cell{display:grid;place-items:center;gap:4px}.deck-status-mark{display:inline-grid;place-items:center;width:24px;height:24px;border:2px solid currentColor;border-radius:7px;font-size:12px;font-weight:900}.deck-team-grid [data-status="present"]{color:#147a50;background:color-mix(in srgb,#15945b 14%,var(--portable-surface))}.deck-team-grid [data-status="partial"]{color:#95600a;background:color-mix(in srgb,#c98612 14%,var(--portable-surface))}.deck-team-grid [data-status="not-documented"]{color:var(--portable-muted);background:color-mix(in srgb,var(--portable-muted) 8%,var(--portable-surface))}.deck-team-grid [data-status="present"] .deck-status-mark::before{content:"✓"}.deck-team-grid [data-status="partial"] .deck-status-mark::before{content:"◐"}.deck-team-grid [data-status="not-documented"] .deck-status-mark::before{content:"—"}.deck-grid-cell-label{font-weight:700}.deck-evidence-heatmap .deck-grid-cell-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.deck-feature-count{display:block;margin-top:4px;color:var(--portable-muted);font-size:9px;font-weight:750;line-height:1.2}.deck-control-lanes thead th:first-child{width:132px}.deck-control-lanes td{height:68px}.deck-control-lanes .deck-status-mark{width:20px;height:20px;font-size:10px}
+.deck-provenance-stack{display:grid;gap:9px}.deck-provenance-head{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;padding:0 13px 0 18px;color:var(--portable-muted);font-size:9px;font-weight:850;line-height:1.15;letter-spacing:.025em;text-align:center;text-transform:uppercase}.deck-provenance-team{padding:11px 13px;border:1px solid var(--portable-border);border-left:5px solid var(--team-color);border-radius:12px;background:var(--portable-surface)}.deck-provenance-team h3{margin:0 0 8px;font-size:15px}.deck-provenance-team ol{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:0;padding:0;list-style:none}.deck-provenance-layer{min-width:0;padding:8px;border:1px solid currentColor;border-radius:9px;font-size:10px;line-height:1.3}.deck-provenance-layer[data-status="present"]{color:#147a50;background:color-mix(in srgb,#15945b 12%,var(--portable-surface))}.deck-provenance-layer[data-status="partial"]{color:#95600a;background:color-mix(in srgb,#c98612 12%,var(--portable-surface))}.deck-provenance-layer[data-status="not-documented"]{color:var(--portable-muted);background:color-mix(in srgb,var(--portable-muted) 7%,var(--portable-surface))}.deck-provenance-layer strong{display:none;margin-bottom:4px;color:var(--portable-ink);font-size:9px;line-height:1.15;text-transform:uppercase}.deck-provenance-layer span{font-weight:650}
 .deck-scoreboard{display:grid;align-self:start;grid-auto-rows:max-content;gap:6px;overflow-x:auto}.deck-score-header,.deck-score-row{display:grid;grid-template-columns:34px minmax(125px,1.25fr) minmax(130px,1fr) repeat(4,minmax(76px,.62fr));gap:12px;align-items:center;min-width:820px}.deck-score-header{padding:0 14px 5px;color:var(--portable-muted);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.deck-score-row{min-height:58px;padding:9px 14px;border:1px solid var(--portable-border);border-left:5px solid var(--score-color);border-radius:11px;background:var(--portable-surface)}.deck-score-rank{font-size:12px;font-weight:900}.deck-score-team{font-size:16px;font-weight:850}.deck-score-value{font-variant-numeric:tabular-nums;text-align:right}.deck-score-composite{position:relative;isolation:isolate;padding:7px 9px;border-radius:7px;overflow:hidden;text-align:right}.deck-score-composite::before{position:absolute;z-index:-1;inset:0 auto 0 0;width:var(--score-width);background:color-mix(in srgb,var(--score-color) 28%,transparent);content:""}
 .deck-slide--story .deck-slide-inner{gap:clamp(24px,3vw,40px)}.deck-slide.deck-slide--story .portable-markdown{width:100%;max-width:1120px;font-size:clamp(17px,1.35vw,20px);line-height:1.65}.deck-slide--story .portable-markdown p{margin-block:0 1.15em}.deck-slide--story .portable-markdown a{font-weight:650}.deck-slide--story .portable-page-header,.deck-slide--story .portable-content-card{width:100%;max-width:1120px}.deck-slide--story .deck-question{font-size:clamp(15px,1.15vw,18px)}
 .deck-slide--visual .deck-visual{max-width:1100px}.deck-slide--matrix .portable-content-card,.deck-slide--audit .portable-content-card{width:100%;max-width:none}
@@ -444,7 +524,7 @@ html.retrospective-deck-ready,html.retrospective-deck-ready body{height:100%;ove
 html[data-deck-view="linear"],html[data-deck-view="linear"] body{height:auto;overflow:auto}
 html[data-deck-view="linear"] .retrospective-deck{height:auto;display:block}html[data-deck-view="linear"] .deck-track{display:block;overflow:visible}html[data-deck-view="linear"] .deck-chapter,html[data-deck-view="linear"] .deck-slide{height:auto;min-height:0}html[data-deck-view="linear"] .deck-vertical{height:auto;overflow:visible}html[data-deck-view="linear"] .deck-vertical-rail{display:none}html[data-deck-view="linear"] .deck-disclosure>summary{display:none}html[data-deck-view="linear"] .deck-disclosure>[data-artifact-block-id]{display:block!important}html[data-deck-view="linear"] .deck-insight-grid{display:block}html[data-deck-view="linear"] .deck-insight-card{border:0;background:transparent;overflow:visible}html[data-deck-view="linear"] .deck-insight-card>summary{display:none}html[data-deck-view="linear"] .deck-insight-detail{display:block!important;margin:0 0 1em;padding:0;border:0}html[data-deck-view="linear"] .deck-insight-detail strong:first-child{display:inline}
 @media(max-width:1100px){.deck-slide--cover .deck-slide-inner{grid-template-columns:1fr;min-height:0}.deck-slide--cover .deck-page-copy,.deck-chapter-map{grid-column:1;grid-row:auto}.deck-flow-lane ol,.deck-mechanism-stages{grid-template-columns:1fr;gap:22px}.deck-flow-step:not(:last-child)::after,.deck-mechanism-stage:not(:last-child)::after{content:"↓";top:auto;right:auto;bottom:-22px;left:50%;transform:translateX(-50%)}.deck-mechanism-stage{min-height:112px}.deck-comparison-columns{display:none}.deck-team-row{grid-template-columns:minmax(110px,.45fr) repeat(3,minmax(0,1fr))}.deck-prose-matrix tbody,.deck-insight-grid{grid-template-columns:1fr}.deck-flow-only .deck-slide-inner{min-height:0}}
-@media(max-width:900px){.deck-bottleneck,.deck-feature-map{grid-template-columns:repeat(2,minmax(0,1fr))}.deck-wiring,.deck-boundary-map,.deck-confidence-grid{grid-template-columns:1fr}.deck-score-findings,.deck-response-control,.deck-belief-timeline>ol,.deck-failure-taxonomy>ol{grid-template-columns:repeat(2,minmax(0,1fr))}.deck-response-control>li::after{display:none}}
+@media(max-width:900px){.deck-bottleneck,.deck-feature-map{grid-template-columns:repeat(2,minmax(0,1fr))}.deck-wiring,.deck-boundary-map,.deck-confidence-grid{grid-template-columns:1fr}.deck-score-findings,.deck-response-control,.deck-belief-timeline>ol,.deck-failure-taxonomy>ol{grid-template-columns:repeat(2,minmax(0,1fr))}.deck-response-control>li::after{display:none}.deck-team-grid table,.deck-team-grid tbody{display:block}.deck-team-grid thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.deck-team-grid tbody{display:grid;gap:12px}.deck-team-grid tr[data-team]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:12px;border:1px solid var(--portable-border);border-left:5px solid var(--team-color);border-radius:13px;background:var(--portable-surface)}.deck-team-grid tbody th{grid-column:1/-1;padding:0 0 7px;border:0;border-bottom:1px solid var(--portable-border);border-radius:0;background:transparent}.deck-team-grid td{display:grid;grid-template-columns:minmax(80px,.6fr) minmax(0,1fr);gap:7px;align-items:center;height:auto;min-height:58px;text-align:left}.deck-team-grid td::before{content:attr(data-column);color:var(--portable-ink);font-size:9px;font-weight:850;letter-spacing:.025em;text-transform:uppercase}.deck-team-grid .deck-grid-cell{grid-template-columns:auto minmax(0,1fr);justify-items:start}.deck-evidence-heatmap .deck-grid-cell-label{position:static;width:auto;height:auto;overflow:visible;clip:auto;white-space:normal}.deck-provenance-head{display:none}.deck-provenance-team{padding:13px}.deck-provenance-team ol{grid-template-columns:1fr}.deck-provenance-layer{display:grid;grid-template-columns:minmax(105px,.45fr) minmax(0,1fr);gap:8px;align-items:center;min-height:52px}.deck-provenance-layer strong{display:block;margin:0}}
 @media(max-width:600px){.deck-bottleneck,.deck-feature-map,.deck-score-findings,.deck-response-control,.deck-belief-timeline>ol,.deck-failure-taxonomy>ol{grid-template-columns:1fr}}
 @media(max-width:700px){.deck-title,.deck-breadcrumb,.deck-progress,.deck-axis-help,.deck-chapter-rail{display:none}.deck-mobile-orientation{display:block;min-width:0;margin-right:auto;overflow:hidden;font-weight:650;text-overflow:ellipsis;white-space:nowrap}.deck-topbar,.deck-footer{min-height:60px;padding:8px 10px}.deck-slide{padding:18px 12px}.deck-vertical-rail{display:none}.portable-table-scroll{max-width:calc(100vw - 24px)}.deck-button{min-width:48px;min-height:48px}.deck-slide--cover .deck-slide-heading{font-size:clamp(36px,13vw,58px)}.deck-team-row,.deck-common-different{grid-template-columns:1fr}.deck-team-value::before{display:block}.deck-slide--matrix .portable-table-scroll{overflow-x:auto}.deck-slide--matrix .portable-table-scroll:has(.deck-prose-matrix){overflow:visible}.deck-prose-matrix tbody td{grid-template-columns:1fr;gap:4px}.deck-slide--audit .portable-markdown{columns:1}}
 @media(prefers-reduced-motion:reduce){.deck-track,.deck-vertical{scroll-behavior:auto!important}}
@@ -866,6 +946,119 @@ function runtimeMain(CONFIG) {
     section.append(synthesis);
     return section;
   };
+  const statusText = { present: "Present", partial: "Partial", "not-documented": "Not documented" };
+  const appendComparisonTakeaway = (section, takeaway) => {
+    if (!takeaway) return section;
+    const note = document.createElement("p");
+    note.className = "deck-takeaway";
+    const label = document.createElement("strong");
+    label.textContent = "Takeaway";
+    note.append(label, document.createTextNode(takeaway));
+    section.append(note);
+    return section;
+  };
+  const renderTeamGrid = (className, columns, teams, title) => {
+    const section = document.createElement("section");
+    section.className = `deck-team-grid ${className}`;
+    const table = document.createElement("table");
+    const caption = document.createElement("caption");
+    caption.textContent = `${title} team comparison`;
+    const head = document.createElement("thead");
+    const headingRow = document.createElement("tr");
+    const teamHeading = document.createElement("th");
+    teamHeading.scope = "col";
+    teamHeading.textContent = "Team";
+    headingRow.append(teamHeading);
+    columns.forEach((column) => {
+      const heading = document.createElement("th");
+      heading.scope = "col";
+      heading.textContent = column;
+      headingRow.append(heading);
+    });
+    head.append(headingRow);
+    const body = document.createElement("tbody");
+    teams.forEach((team, index) => {
+      const row = document.createElement("tr");
+      row.dataset.team = team.name;
+      row.style.setProperty("--team-color", teamColors[index % teamColors.length]);
+      const identity = document.createElement("th");
+      identity.scope = "row";
+      identity.textContent = team.name;
+      if (team.badge) {
+        const badge = document.createElement("span");
+        badge.className = "deck-feature-count";
+        badge.textContent = team.badge;
+        identity.append(badge);
+      }
+      row.append(identity);
+      team.cells.forEach((value, valueIndex) => {
+        const cellNode = document.createElement("td");
+        const column = columns[valueIndex];
+        cellNode.dataset.column = column;
+        cellNode.dataset.status = value.status;
+        cellNode.setAttribute("aria-label", `${column}: ${statusText[value.status]}. ${value.label}`);
+        cellNode.title = value.label;
+        const content = document.createElement("span");
+        content.className = "deck-grid-cell";
+        const mark = document.createElement("span");
+        mark.className = "deck-status-mark";
+        mark.setAttribute("aria-hidden", "true");
+        const shortLabel = document.createElement("span");
+        shortLabel.className = "deck-grid-cell-label";
+        shortLabel.textContent = value.short;
+        content.append(mark);
+        if (className !== "deck-evidence-heatmap") content.append(shortLabel);
+        cellNode.append(content);
+        row.append(cellNode);
+      });
+      body.append(row);
+    });
+    table.append(caption, head, body);
+    section.append(table);
+    return section;
+  };
+  const renderTeamStacks = (className, layers, teams, title) => {
+    const section = document.createElement("section");
+    section.className = className;
+    section.setAttribute("aria-label", `${title} team comparison`);
+    const layerHeadings = document.createElement("div");
+    layerHeadings.className = "deck-provenance-head";
+    layerHeadings.setAttribute("aria-hidden", "true");
+    layers.forEach((layer) => {
+      const heading = document.createElement("span");
+      heading.textContent = layer;
+      layerHeadings.append(heading);
+    });
+    section.append(layerHeadings);
+    teams.forEach((team, index) => {
+      const card = document.createElement("article");
+      card.className = "deck-provenance-team";
+      card.dataset.team = team.name;
+      card.style.setProperty("--team-color", teamColors[index % teamColors.length]);
+      const heading = document.createElement("h3");
+      heading.textContent = team.name;
+      const stack = document.createElement("ol");
+      team.cells.forEach((value, valueIndex) => {
+        const layer = document.createElement("li");
+        layer.className = "deck-provenance-layer";
+        layer.dataset.status = value.status;
+        layer.setAttribute("aria-label", `${layers[valueIndex]}: ${statusText[value.status]}. ${value.label}`);
+        layer.title = value.label;
+        const label = document.createElement("strong");
+        label.textContent = layers[valueIndex];
+        const shortLabel = document.createElement("span");
+        shortLabel.textContent = value.short;
+        layer.append(label, shortLabel);
+        stack.append(layer);
+      });
+      card.append(heading, stack);
+      section.append(card);
+    });
+    return section;
+  };
+  const renderHeatmap = ({ columns, teams, title, takeaway }) => appendComparisonTakeaway(renderTeamGrid("deck-evidence-heatmap", columns, teams, title), takeaway);
+  const renderProvenance = ({ layers, teams, title, takeaway }) => appendComparisonTakeaway(renderTeamStacks("deck-provenance-stack", layers, teams, title), takeaway);
+  const renderControlLanes = ({ columns, teams, title, takeaway }) => appendComparisonTakeaway(renderTeamGrid("deck-control-lanes", columns, teams, title), takeaway);
 
   for (const chapter of CONFIG.chapters) {
     const chapterNode = document.createElement("section");
@@ -902,6 +1095,9 @@ function runtimeMain(CONFIG) {
       if (entry.diagnosisKind) renderDiagnosis(inner, entry);
       if (entry.visualKind === "mechanism") inner.append(renderMechanism(entry));
       if (entry.visualKind === "comparison" && entry.teams) inner.append(renderComparison(entry));
+      if (entry.visualKind === "heatmap") inner.append(renderHeatmap(entry));
+      if (entry.visualKind === "provenance") inner.append(renderProvenance(entry));
+      if (entry.visualKind === "control-lanes") inner.append(renderControlLanes(entry));
       if (entry.archetype === "cover") {
         const map = document.createElement("ol");
         map.className = "deck-chapter-map";
