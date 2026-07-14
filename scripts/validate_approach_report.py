@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import binascii
+import re
 import sys
 from html.parser import HTMLParser
 from pathlib import Path
@@ -46,12 +47,20 @@ class ReportParser(HTMLParser):
         self.internal_links: list[str] = []
         self.details_count = 0
         self.png_data_uris: list[str] = []
+        self.evidence_statuses: set[str] = set()
+        self.gap_statuses: set[str] = set()
+        self.style_parts: list[str] = []
         self.errors: list[str] = []
+        self._status_markers: list[tuple[str, str, list[str]]] = []
+        self._style_depth = 0
 
     def handle_starttag(
         self, tag: str, attrs: list[tuple[str, str | None]]
     ) -> None:
         attributes = dict(attrs)
+        classes = set(attributes.get("class", "").split())
+        if inline_style := attributes.get("style"):
+            self.style_parts.append(inline_style)
         element_id = attributes.get("id")
         if element_id:
             self.ids.append(element_id)
@@ -72,6 +81,44 @@ class ReportParser(HTMLParser):
             self.errors.append("runtime-loaded stylesheet is not allowed")
         if tag == "script":
             self.errors.append("script is not allowed")
+
+        if tag == "style":
+            self._style_depth += 1
+        if tag == "dt":
+            self._status_markers.append((tag, "definition", []))
+        elif tag == "span" and "status-pill" in classes:
+            self._status_markers.append((tag, "status-pill", []))
+        elif tag == "span" and "evidence-badge" in classes:
+            self._status_markers.append((tag, "evidence-badge", []))
+
+    def handle_data(self, data: str) -> None:
+        if self._style_depth:
+            self.style_parts.append(data)
+        for _, _, parts in self._status_markers:
+            parts.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "style" and self._style_depth:
+            self._style_depth -= 1
+        for index in range(len(self._status_markers) - 1, -1, -1):
+            marker_tag, marker_kind, parts = self._status_markers[index]
+            if marker_tag != tag:
+                continue
+            del self._status_markers[index]
+            text = " ".join("".join(parts).split())
+            if marker_kind in {"definition", "evidence-badge", "status-pill"}:
+                self.evidence_statuses.update(
+                    status
+                    for status in EVIDENCE_STATUSES
+                    if text == status or text.startswith(f"{status} ·")
+                )
+            if marker_kind == "status-pill":
+                self.gap_statuses.update(
+                    status
+                    for status in GAP_STATUSES
+                    if text == status or text.startswith(f"{status} ·")
+                )
+            break
 
 
 def parse_args() -> argparse.Namespace:
@@ -126,11 +173,21 @@ def validate(report: Path) -> list[str]:
             errors.append(f"embedded PNG {index} has an invalid PNG signature")
 
     for status in EVIDENCE_STATUSES:
-        if status not in source:
+        if status not in parser.evidence_statuses:
             errors.append(f"missing evidence status: {status}")
     for status in GAP_STATUSES:
-        if status not in source:
+        if status not in parser.gap_statuses:
             errors.append(f"missing gap status: {status}")
+
+    css = re.sub(r"/\*.*?\*/", "", "".join(parser.style_parts), flags=re.DOTALL)
+    if re.search(r"@import\b", css, flags=re.IGNORECASE):
+        errors.append("CSS @import is not allowed")
+    for match in re.finditer(
+        r"url\(\s*(['\"]?)(.*?)\1\s*\)", css, flags=re.IGNORECASE | re.DOTALL
+    ):
+        target = match.group(2).strip()
+        if target and not target.lower().startswith("data:") and not target.startswith("#"):
+            errors.append(f"external CSS url is not allowed: {target}")
     if "{{" in source or "}}" in source:
         errors.append("unreplaced template token found")
     return errors
