@@ -97,6 +97,15 @@ test("curated path is short, answer-first, and references canonical slides", () 
   assert.ok(CURATED_PATH.every((slug) => allSlugs.has(slug)));
 });
 
+test("enhancement injects the curated path as navigation metadata", async () => {
+  const html = stripDeckInjection(await readFile(REPORT, "utf8"));
+  const enhanced = enhanceHtml(html);
+  const encodedPath = JSON.stringify(CURATED_PATH).replaceAll("<", "\\u003c");
+  assert.ok(enhanced.includes(`"curatedPath":${encodedPath}`));
+  assert.match(enhanced, /currentReadingPath/);
+  assert.match(enhanced, /setReadingPath/);
+});
+
 test("visual-first manifest has at least fifty content-aware pages", async () => {
   const html = await readFile(REPORT, "utf8");
   const result = validateChapterMap(CHAPTERS, stripDeckInjection(html));

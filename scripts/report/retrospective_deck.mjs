@@ -472,7 +472,7 @@ function runtimeMain(CONFIG) {
   live.setAttribute("aria-atomic", "true");
   const topbar = document.createElement("header");
   topbar.className = "deck-topbar deck-chrome";
-  topbar.innerHTML = '<strong class="deck-title">Music-CRS retrospective</strong><span class="deck-mobile-orientation"></span><span class="deck-breadcrumb"></span><span class="deck-progress"></span><button class="deck-button" type="button" data-action="linear">Linear view</button><button class="deck-button" type="button" data-action="jump">Jump</button>';
+  topbar.innerHTML = '<strong class="deck-title">Music-CRS retrospective</strong><span class="deck-mobile-orientation"></span><span class="deck-breadcrumb"></span><span class="deck-progress"></span><button class="deck-button" type="button" data-action="reading-path">Read retrospective</button><button class="deck-button" type="button" data-action="linear">Linear view</button><button class="deck-button" type="button" data-action="jump">Jump</button>';
   const chapterRail = document.createElement("nav");
   chapterRail.className = "deck-chapter-rail";
   chapterRail.setAttribute("aria-label", "Chapters");
@@ -491,7 +491,7 @@ function runtimeMain(CONFIG) {
   track.className = "deck-track";
   const footer = document.createElement("footer");
   footer.className = "deck-footer deck-chrome";
-  footer.innerHTML = '<button class="deck-button" type="button" data-action="previous">← Previous</button><span class="deck-axis-help">←/→ chapters · ↑/↓ depth</span><button class="deck-button" type="button" data-action="next">Next →</button>';
+  footer.innerHTML = '<button class="deck-button" type="button" data-action="previous" aria-label="Previous">← Previous</button><span class="deck-axis-help">←/→ chapters · ↑/↓ depth</span><button class="deck-button" type="button" data-action="next" aria-label="Next">Next →</button>';
   const disclosure = (node, label) => {
     if (!label) return node;
     const details = document.createElement("details");
@@ -1129,6 +1129,14 @@ function runtimeMain(CONFIG) {
     }
   });
   const setCanonicalOrder = (enabled) => {
+    const deckOrder = CONFIG.chapters.map(({ slug }) => slug);
+    const canonicalOrder = ["outcome", "diagnosis", "query", "retrieval", "response", "ours", "leaders", "synthesis"];
+    const order = enabled ? canonicalOrder : deckOrder;
+    const chaptersBySlug = new Map([...track.querySelectorAll(":scope > .deck-chapter")].map((node) => [node.dataset.chapter, node]));
+    order.forEach((slug) => {
+      const chapter = chaptersBySlug.get(slug);
+      if (chapter) track.append(chapter);
+    });
     const dataKnowledge = document.getElementById("query/data-glossary");
     const dataMatrix = document.getElementById("query/data-matrix");
     const promptAudit = document.getElementById("query/prompt-audit");
@@ -1151,6 +1159,7 @@ function runtimeMain(CONFIG) {
   const progress = topbar.querySelector(".deck-progress");
   const mobileOrientation = topbar.querySelector(".deck-mobile-orientation");
   let active = slides[0];
+  let readingPath = new URL(location.href).searchParams.get("path") === "curated" ? "curated" : "audit";
   let scrollTimer = 0;
   let programmaticTarget = null;
   let gestureOrigin = null;
@@ -1170,6 +1179,9 @@ function runtimeMain(CONFIG) {
     const chapterSlides = chapterSlidesFor(active);
     return chapterSlides[Math.max(0, Math.min(chapterSlides.length - 1, active.slideIndex + delta))];
   };
+  const navigationItems = () => readingPath === "curated"
+    ? CONFIG.curatedPath.map((slug) => bySlug.get(slug)).filter(Boolean)
+    : slides;
   const updateCurrent = (item, announce = false) => {
     active = item;
     document.querySelectorAll('.deck-slide[aria-current="true"],.deck-rail-button[aria-current="true"],.deck-chapter-button[aria-current="true"]').forEach((node) => node.removeAttribute("aria-current"));
@@ -1182,12 +1194,18 @@ function runtimeMain(CONFIG) {
     mobileOrientation.textContent = `${item.chapter.title} · ${item.slideIndex + 1}/${CONFIG.chapters[item.chapterIndex].slides.length}`;
     skip.href = `#${item.slug}`;
     const chapterSlides = chapterSlidesFor(item);
-    const previousItem = item.slideIndex > 0
-      ? chapterSlides[item.slideIndex - 1]
-      : slides.find((candidate) => candidate.chapterIndex === item.chapterIndex - 1 && candidate.slideIndex === 0);
-    const nextItem = item.slideIndex < chapterSlides.length - 1
-      ? chapterSlides[item.slideIndex + 1]
-      : slides.find((candidate) => candidate.chapterIndex === item.chapterIndex + 1 && candidate.slideIndex === 0);
+    const pathItems = navigationItems();
+    const pathIndex = pathItems.indexOf(item);
+    const previousItem = readingPath === "curated"
+      ? pathItems[pathIndex - 1]
+      : item.slideIndex > 0
+        ? chapterSlides[item.slideIndex - 1]
+        : slides.find((candidate) => candidate.chapterIndex === item.chapterIndex - 1 && candidate.slideIndex === 0);
+    const nextItem = readingPath === "curated"
+      ? pathItems[pathIndex + 1]
+      : item.slideIndex < chapterSlides.length - 1
+        ? chapterSlides[item.slideIndex + 1]
+        : slides.find((candidate) => candidate.chapterIndex === item.chapterIndex + 1 && candidate.slideIndex === 0);
     const previousButton = footer.querySelector('[data-action="previous"]');
     const nextButton = footer.querySelector('[data-action="next"]');
     previousButton.disabled = !previousItem;
@@ -1196,10 +1214,20 @@ function runtimeMain(CONFIG) {
     nextButton.textContent = nextItem ? `${nextItem.entry.title} →` : "End";
     if (announce) live.textContent = `${item.chapter.title}, ${item.entry.title}`;
   };
+  const setReadingPath = (mode) => {
+    readingPath = mode === "curated" ? "curated" : "audit";
+    html.dataset.readingPath = readingPath;
+    const url = new URL(location.href);
+    url.searchParams.set("path", readingPath);
+    history.replaceState(history.state, "", url.href);
+    topbar.querySelector('[data-action="reading-path"]').textContent = readingPath === "curated" ? "Explore evidence audit" : "Read retrospective";
+    updateCurrent(active, false);
+  };
   const goTo = (slug, { push = true, focus = true, announce = true, behavior = null } = {}) => {
     const requestedSlug = slug.split("?")[0];
     const cleanSlug = resolveSlug(requestedSlug);
     const item = bySlug.get(cleanSlug) || slides[0];
+    if (readingPath === "curated" && !CONFIG.curatedPath.includes(item.slug)) setReadingPath("audit");
     const target = document.getElementById(item.slug);
     const scrollBehavior = behavior || (matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth");
     programmaticTarget = scrollBehavior === "smooth" ? item.slug : null;
@@ -1235,6 +1263,7 @@ function runtimeMain(CONFIG) {
     const slideNode = nearest(chapterNode.querySelectorAll(".deck-slide"), "top");
     const item = bySlug.get(slideNode.dataset.slug);
     if (!item) return;
+    if (readingPath === "curated" && !CONFIG.curatedPath.includes(item.slug)) setReadingPath("audit");
     if (programmaticTarget) {
       const reachedTarget = item.slug === programmaticTarget;
       programmaticTarget = null;
@@ -1317,11 +1346,18 @@ function runtimeMain(CONFIG) {
     }
     const action = target?.closest("[data-action]")?.dataset.action;
     if (action === "jump") openJump(target);
+    if (action === "reading-path") setReadingPath(readingPath === "curated" ? "audit" : "curated");
     if (action === "linear") setLinear(html.dataset.deckView !== "linear");
-    if (action === "previous") goTo(active.slideIndex ? verticalItem(-1).slug : horizontal(-1).slug);
+    if (action === "previous") {
+      const pathItems = navigationItems();
+      const destination = readingPath === "curated" ? pathItems[pathItems.indexOf(active) - 1] : active.slideIndex ? verticalItem(-1) : horizontal(-1);
+      if (destination) goTo(destination.slug);
+    }
     if (action === "next") {
+      const pathItems = navigationItems();
       const chapterSlides = chapterSlidesFor(active);
-      goTo(active.slideIndex < chapterSlides.length - 1 ? verticalItem(1).slug : horizontal(1).slug);
+      const destination = readingPath === "curated" ? pathItems[pathItems.indexOf(active) + 1] : active.slideIndex < chapterSlides.length - 1 ? verticalItem(1) : horizontal(1);
+      if (destination) goTo(destination.slug);
     }
   });
   document.addEventListener("keydown", (event) => {
@@ -1352,7 +1388,10 @@ function runtimeMain(CONFIG) {
       goTo(destinations[event.key].slug);
     }
   });
-  addEventListener("popstate", () => goTo(location.hash.slice(1) || slides[0].slug, { push: false, focus: false, announce: true, behavior: "auto" }));
+  addEventListener("popstate", () => {
+    setReadingPath(new URL(location.href).searchParams.get("path"));
+    goTo(location.hash.slice(1) || slides[0].slug, { push: false, focus: false, announce: true, behavior: "auto" });
+  });
   addEventListener("beforeprint", () => {
     setAllOpen("deckPrintOpen");
     setCanonicalOrder(true);
@@ -1361,6 +1400,7 @@ function runtimeMain(CONFIG) {
     restoreOpen("deckPrintOpen");
     if (html.dataset.deckView !== "linear") setCanonicalOrder(false);
   });
+  setReadingPath(readingPath);
   const initial = location.hash.slice(1);
   const initialSlug = resolveSlug(initial.split("?")[0]);
   if (!bySlug.has(initialSlug)) goTo(slides[0].slug, { push: false, focus: false, announce: false, behavior: "auto" });
@@ -1368,7 +1408,7 @@ function runtimeMain(CONFIG) {
   setLinear(new URL(location.href).searchParams.get("view") === "linear");
   html.classList.add("retrospective-deck-ready");
   html.dataset.deckReady = "true";
-  window.__retrospectiveDeck = { CONFIG, app, track, live, goTo, setLinear, currentSlug: () => active.slug };
+  window.__retrospectiveDeck = { CONFIG, app, track, live, goTo, setLinear, setReadingPath, currentReadingPath: () => readingPath, currentSlug: () => active.slug };
 }
 
 export const DECK_RUNTIME = `(${runtimeMain.toString()})(__CONFIG__);`;
@@ -1376,7 +1416,7 @@ export const DECK_RUNTIME = `(${runtimeMain.toString()})(__CONFIG__);`;
 export function enhanceHtml(input) {
   const html = stripDeckInjection(input);
   validateChapterMap(CHAPTERS, html);
-  const config = JSON.stringify({ chapters: CHAPTERS, disclosures: DISCLOSURES, aliases: Object.fromEntries(LEGACY_ALIASES) }).replaceAll("<", "\\u003c");
+  const config = JSON.stringify({ chapters: CHAPTERS, curatedPath: CURATED_PATH, disclosures: DISCLOSURES, aliases: Object.fromEntries(LEGACY_ALIASES) }).replaceAll("<", "\\u003c");
   const style = `${STYLE_START}\n<style data-retrospective-deck-style>${DECK_STYLE}</style>\n${STYLE_END}`;
   const runtime = DECK_RUNTIME.replace("__CONFIG__", config);
   const script = `${SCRIPT_START}\n<script data-retrospective-deck-script>${runtime}</script>\n${SCRIPT_END}`;
