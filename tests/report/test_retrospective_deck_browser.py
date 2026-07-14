@@ -9,7 +9,7 @@ import pytest
 from playwright.sync_api import Locator, Page, sync_playwright
 
 ROOT = Path(__file__).resolve().parents[2]
-REPORT = ROOT / "retrospective.html"
+REPORT = ROOT / "docs" / "retrospective.html"
 ENHANCER = ROOT / "scripts/report/retrospective_deck.mjs"
 
 

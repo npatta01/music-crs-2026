@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -15,7 +15,8 @@ import {
   validateChapterMap,
 } from "../../scripts/report/retrospective_deck.mjs";
 
-const REPORT = new URL("../../retrospective.html", import.meta.url);
+const REPORT = new URL("../../docs/retrospective.html", import.meta.url);
+const ROOT_REPORT = new URL("../../retrospective.html", import.meta.url);
 const payload = (html) =>
   html.match(/<template id="data-analytics-portable-artifact-payload-source"[\s\S]*?<\/template>/)?.[0];
 const blockIds = (html) =>
@@ -24,6 +25,11 @@ const hrefs = (html) =>
   [...html.matchAll(/<a\b[^>]*href="([^"]+)"/g)].map((match) => match[1]).sort();
 const srcdocs = (html) =>
   [...html.matchAll(/\bsrcdoc="([^"]*)"/g)].map((match) => match[1]);
+
+test("retrospective artifact lives under docs only", async () => {
+  await access(REPORT);
+  await assert.rejects(access(ROOT_REPORT), { code: "ENOENT" });
+});
 
 test("chapter map assigns all 74 report blocks exactly once", async () => {
   const html = await readFile(REPORT, "utf8");
