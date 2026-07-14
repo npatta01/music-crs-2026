@@ -368,20 +368,95 @@ def test_dense_walkthroughs_use_progressive_visual_cards(page, enhanced_report: 
 
 def test_leader_introductions_are_compact_system_cards(page, enhanced_report: Path) -> None:
     browser_page, errors = page
-    exact_results = {
-        "volart-outcome": "0.5866 composite · 0.3965 nDCG@20 · 4.90/5 judge",
-        "niwatori-outcome": "0.5859 composite · 0.4934 nDCG@20 · 4.45/5 judge",
-        "swyoo-outcome": "0.5784 composite · 0.3829 nDCG@20 · 4.85/5 judge",
-        "team2-outcome": "0.5759 composite · 0.4452 nDCG@20 · 4.65/5 judge",
+    expected = {
+        "volart-outcome": {
+            "result": "0.5866 composite · 0.3965 nDCG@20 · 4.90/5 judge",
+            "query": "GPT-4o-mini produced one cached retrieval rewrite plus positive entity and era JSON.",
+            "knowledge": "Official records, train co-occurrence and frequency/MOVES priors, plus generated track descriptions.",
+            "retrieval": "Five lanes fed a top-500 LambdaMART boundary with direct co-occurrence features.",
+            "response": "Three drafts, independent critique, selective rewrite, hardening, and lexical control.",
+            "limit": "Structured musical-fact verification was not documented.",
+        },
+        "niwatori-outcome": {
+            "result": "0.5859 composite · 0.4934 nDCG@20 · 4.45/5 judge",
+            "query": "Source-specific safe text, full played history, and last-track transition keys; no LLM retrieval rewrite documented.",
+            "knowledge": "Official records plus mapped TalkPlayData-1 co-occurrence and transition statistics.",
+            "retrieval": "Fourteen-source union, direct co-occurrence, Markov transition, and 176 documented features with OOF artifacts.",
+            "response": "Ten seeded drafts selected for lexical diversity.",
+            "limit": "The selector was not a factual critic; response fact checking was not documented.",
+        },
+        "swyoo-outcome": {
+            "result": "0.5784 composite · 0.3829 nDCG@20 · 4.85/5 judge",
+            "query": "Separate BM25, QEmb, and two-tower representations with an optional cached session summary.",
+            "knowledge": "LRCLIB, Genius, and MusicBrainz enriched lyrics, identifiers, tags, labels, countries, and dates.",
+            "retrieval": "Three independently rendered pools with group-aware OOF routing for learned sources.",
+            "response": "PAS generation with theme/citation validation and repair.",
+            "limit": "One PAS prediction was used; no best-of-N independent critic was documented.",
+        },
+        "team2-outcome": {
+            "result": "0.5759 composite · 0.4452 nDCG@20 · 4.65/5 judge",
+            "query": "Conversation BM25, live text, recent item vectors, ALS history, and cached structured lists.",
+            "knowledge": "Official catalog, conversations, users, labels, and embeddings; no external music dataset documented.",
+            "retrieval": "Live and structured sources fed routed rankers with covariate-shift weighting and 37 documented features.",
+            "response": "Verified catalog facts grounded a first draft followed by Gemini Pro refinement.",
+            "limit": "No independent structured fact or recommendation-ID integrity check was documented.",
+        },
     }
-    for slug, result in exact_results.items():
+    visible_copy = {}
+    for slug, fields in expected.items():
         open_deck(browser_page, enhanced_report, f"#leaders/{slug}")
         card = browser_page.locator(f"#leaders\\/{slug} .deck-system-card")
         assert card.count() == 1
         assert card.locator("[data-system-field]").evaluate_all(
             "nodes => nodes.map(node => node.dataset.systemField)"
         ) == ["result", "query", "knowledge", "retrieval", "response", "limit"]
-        assert card.locator("[data-system-field='result'] dd").inner_text() == result
+        visible_copy[slug] = {
+            field: card.locator(f"[data-system-field='{field}'] dd").inner_text()
+            for field in fields
+        }
+        assert visible_copy[slug] == fields
+
+    # Preserve evidence boundaries instead of flattening every leader into the
+    # same external-data and multi-draft template.
+    assert "external" not in visible_copy["volart-outcome"]["knowledge"].lower()
+    assert "external" not in visible_copy["niwatori-outcome"]["knowledge"].lower()
+    assert "no external music dataset documented" in visible_copy["team2-outcome"]["knowledge"].lower()
+    assert "independent critique" not in visible_copy["niwatori-outcome"]["response"].lower()
+    assert "independent critique" not in visible_copy["swyoo-outcome"]["response"].lower()
+    assert "independent critique" not in visible_copy["team2-outcome"]["response"].lower()
+    assert "drafts" not in visible_copy["swyoo-outcome"]["response"].lower()
+    assert "drafts" not in visible_copy["team2-outcome"]["response"].lower()
+    assert "selector was not a factual critic" in visible_copy["niwatori-outcome"]["limit"].lower()
+    assert "one pas prediction" in visible_copy["swyoo-outcome"]["limit"].lower()
+    assert "no best-of-n independent critic" in visible_copy["swyoo-outcome"]["limit"].lower()
+    assert errors == []
+
+
+def test_leader_canonical_blocks_share_one_closed_named_disclosure(page, enhanced_report: Path) -> None:
+    browser_page, errors = page
+    canonical_blocks = {
+        "volart-outcome": ("volart_heading", "volart_outcome"),
+        "niwatori-outcome": ("niwatori_heading", "niwatori_outcome"),
+        "swyoo-outcome": ("swyoo_heading", "swyoo_outcome"),
+        "team2-outcome": ("team2_s2_heading", "team2_s2_outcome"),
+    }
+    for slug, block_ids in canonical_blocks.items():
+        open_deck(browser_page, enhanced_report, f"#leaders/{slug}")
+        slide = browser_page.locator(f"#leaders\\/{slug}")
+        disclosure = slide.locator(f"details[data-disclosure-for='{block_ids[-1]}']")
+        assert disclosure.count() == 1
+        assert disclosure.get_attribute("open") is None
+        assert disclosure.locator("[data-artifact-block-id]").evaluate_all(
+            "nodes => nodes.map(node => node.dataset.artifactBlockId)"
+        ) == list(block_ids)
+        for block_id in block_ids:
+            block = disclosure.locator(f"[data-artifact-block-id='{block_id}']")
+            assert block.count() == 1
+            assert block.is_hidden()
+        disclosure.locator("summary").click()
+        assert disclosure.get_attribute("open") == ""
+        for block_id in block_ids:
+            assert disclosure.locator(f"[data-artifact-block-id='{block_id}']").is_visible()
     assert errors == []
 
 
