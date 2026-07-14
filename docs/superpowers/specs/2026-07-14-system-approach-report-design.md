@@ -7,7 +7,8 @@
 **Audience:** Music-CRS competition participants, recommender-system practitioners,
 the project team, and future maintainers
 
-**Delivery:** One private, self-contained HTML report at `docs/approach.html`
+**Delivery:** One self-contained HTML report at `docs/approach.html`, published
+for review through the report branch and pull request
 
 ## 1. Purpose
 
@@ -45,8 +46,8 @@ examples. If no trace provides all intermediate artifacts, it may combine a
 real conversation with a clearly marked reconstructed walkthrough, provided
 every transformation follows the submitted code and config.
 
-The report remains private/local unless the user separately authorizes
-publishing or sharing.
+The user authorized publishing the report branch and a public HTML preview for
+competition-participant review.
 
 ## 3. Reader experience
 
@@ -68,23 +69,37 @@ The report uses progressive disclosure:
 Specialized terms such as BM25, ANN, centroid, reciprocal-rank fusion,
 LambdaMART, bi-encoder, nDCG, and LLM judge are defined on first use.
 
-### 3.1 Visual executive summary revision
+### 3.1 Organizer-first executive summary
 
-The opening must convey the approach before asking the reader to enter the
-technical chapters. Before the deep-dive boundary it contains, in order:
+The opening must let an organizer understand the submitted system within one
+minute without reading the remainder of the report. Before the deep-dive
+boundary it contains, in order:
 
-1. the hero illustration and four compact system facts;
-2. one five-stage visual flow: Conversation → State → Search → Rank → Response;
-3. one compact, real example showing the user signal, extracted cues, selected
-   track, and listener-facing reply;
+1. the title, one-sentence positioning, and four compact system facts;
+2. one complete architecture map covering the serving path and offline
+   evaluation loop;
+3. one compact, verified example showing the request, meaningful captured
+   state, retrieval/ranking outcome, selected track, and response provenance;
 4. a clearly labelled transition into the deep technical material.
 
-The quick-summary region must stay under 250 visible prose words, excluding
-navigation labels and accessibility-only text. The report directory and the
-infrastructure chapter move below this region. The five-stage summary uses
-native HTML/CSS with pictorial symbols and short labels so it remains legible,
-searchable, responsive, and accessible; it does not replace accurate technical
-diagrams later in the report.
+The architecture map uses a horizontal serving path on wide screens and a
+vertical path on narrow screens. Retrieval branches fan out and reconverge
+visibly. The offline trace/replay, ranking metrics, and LLM-as-judge response
+evaluation form a separate lane so they cannot be confused with online
+selection. Local, hosted-API, and Modal execution appear only as small placement
+badges; deployment infrastructure is not the map's organizing principle.
+
+The final submitted config uses `ranking.mode: lgbm`; LightGBM determines the
+delivered order. The compiler internally assembles the candidate pool using its
+configured branch-combination, soft-adjustment, filtering, and backfill logic.
+The overview labels this stage **candidate pool assembly**, not “the RRF
+ranker.” Internal weighted-RRF mechanics may be documented in the retrieval
+deep dive, but must never be presented as the final ordering model.
+
+Decorative hero imagery is removed. The opening spends its visual budget on
+accurate, searchable native HTML/CSS system design. The report directory sits
+directly below the executive architecture and remains horizontally sticky on
+desktop; individual chapters retain vertical stage flow.
 
 ## 4. Information architecture
 
@@ -93,15 +108,15 @@ diagrams later in the report.
 - Title: `Inside Our Music-CRS Recommender`
 - Subtitle: a plain-language statement that the system turns a multi-turn
   conversation into twenty ranked tracks and one grounded response.
-- Original editorial hero illustration.
 - Four compact facts: 47k-track catalog, 20 returned tracks, structured
-  conversation state, and a separately generated top-track explanation.
+  conversation state, and a separately generated top-track explanation or
+  another verified final-system quantity.
 - A reader map offering a short path and a deep technical path without
   splitting the page into separate experiences.
 
-### 4.2 Our approach in 60 seconds
+### 4.2 First-minute system map
 
-A single vertical lifecycle:
+A single diagram shows the full online path:
 
 ```text
 conversation
@@ -109,37 +124,33 @@ conversation
   -> V1-to-V0Plus projection
   -> catalog entity resolution
   -> retriever-specific query compilation
-  -> multimodal candidate union
+  -> multimodal retrieval mesh
+  -> candidate pool assembly
   -> LambdaMART reranking
+  -> final artist guard
   -> top-20 recommendations
   -> top-1 response generation
-  -> challenge evaluation, including the LLM judge
 ```
 
-The overview distinguishes offline preparation from inference and identifies
-the contract passed between stages.
-
-### 4.3 Why the infrastructure looks this way
-
-Explain the practical constraint: the project host did not provide a suitable
-local discrete GPU for the original competition workflow. Modal supplied
-on-demand GPU execution for expensive model and embedding workloads. Local
-caches, file-per-turn state artifacts, and staged replay reduced repeated calls,
-cost, and turnaround time.
-
-Show a vertical infrastructure map:
+The same map contains a separate offline lane:
 
 ```text
-local orchestration and caches
-  -> Modal GPU jobs where required
-  -> downloaded/replayed artifacts
-  -> local rerank and evaluation loops
+saved traces and staged replay
+  -> ranking metrics and boundary analysis
+  -> LLM-as-judge response evaluation
+  -> next experiment
 ```
 
-The report must not imply that every model call ran on Modal. Each workload is
-labelled local, hosted API, or Modal according to the final config and code.
+The overview identifies the contracts passed between stages, expands the typed
+state enough to show intent mode, exploration policy, routing, resolved
+entities, positive/negative facets, hard constraints, and history treatment,
+and makes three invariants visually explicit:
 
-### 4.4 One recommendation under the microscope
+1. retrieval sets the candidate ceiling;
+2. LightGBM determines the final ordering in the submitted config;
+3. response generation explains rank one and cannot select another track.
+
+### 4.3 One recommendation under the microscope
 
 Use one real, representative conversation as the report's spine. Follow it
 through every stage:
@@ -160,6 +171,19 @@ through every stage:
 The visible layer shows a curated subset. Expandable disclosures preserve the
 full state, compiled queries, top-20 table, feature values, trace provenance,
 and relevant configuration fragments.
+
+### 4.4 Why the infrastructure looks this way
+
+Explain the practical constraint: the project host did not provide a suitable
+local discrete GPU for the original competition workflow. Modal supplied
+on-demand GPU execution for expensive model and embedding workloads. Local
+caches, file-per-turn state artifacts, and staged replay reduced repeated calls,
+cost, and turnaround time.
+
+Infrastructure is a supporting chapter after the system design, not the opening
+story. It shows a compact placement map and must not imply that every model call
+ran on Modal. Each workload is labelled local, hosted API, or Modal according to
+the final config and code.
 
 ### 4.5 Understanding the conversation
 
@@ -211,6 +235,13 @@ Use a vertical ranking ladder to show a small set of candidates moving before
 and after reranking. End with the top twenty and make clear that response
 generation receives the top-ranked recommendation, not permission to select a
 different track.
+
+The chapter must distinguish three different concepts:
+
+- compiler candidate-pool assembly, which includes internal branch combination,
+  soft adjustments, filtering, and backfill;
+- `ranking.mode: lgbm`, the submitted final ordering model;
+- the final same-turn artist guard applied to the top twenty.
 
 ### 4.8 Response generation
 
@@ -329,6 +360,35 @@ End with a source map linking active configs, prompts, state schema, compiler,
 retrievers, ranker, response generation, cache documentation, and reproduction
 commands. Include a glossary and an evidence boundary.
 
+### 4.14 Organizer-visible slide order
+
+Although delivered as one responsive HTML document, each major chapter behaves
+like a vertically stacked slide with one takeaway and one primary visual:
+
+1. **System in one minute:** complete serving path plus offline learning loop.
+2. **One successful turn:** conversation through response in one vertical trace.
+3. **Conversation state:** prompt intent and the typed state contract.
+4. **Resolution and compilation:** entity roles, constraints, gates, and queries.
+5. **Retrieval mesh:** specialist branches, fired/skipped status, and inputs.
+6. **Candidate pool assembly:** deduplication, filtering, soft adjustment, and
+   backfill before learned ranking.
+7. **Learned ranking:** feature families, `b1_cos`, LambdaMART, artist guard,
+   and final top twenty.
+8. **Response handoff:** top-one context, prompt excerpt, and generated prose.
+9. **Compute design:** local/API/Modal placement and cache/replay rationale.
+10. **Evaluation:** ranking metrics versus LLM-as-judge response evaluation.
+11. **Good examples:** several verified request classes using a common grammar.
+12. **Failure anatomy:** first broken boundary and downstream recoverability.
+13. **Gaps and limitations:** observed, architectural, measurement, and unknown.
+14. **Lessons:** preserve, change, and validate next.
+15. **Reproduction appendix:** source map, commands, glossary, and evidence ledger.
+
+The sticky horizontal directory exposes these major chapters. The document
+itself remains vertical, and every technical diagram collapses into a vertical
+reading order on mobile. Progressive disclosure keeps prompts, full JSON,
+feature inventories, and audit tables available without forcing organizers to
+read them.
+
 ## 5. Visual design
 
 The page matches the established retrospective's editorial report language:
@@ -336,18 +396,14 @@ warm neutral background, dark ink, restrained accent colors, generous spacing,
 compact metric cards, semantic tables, evidence badges, and expandable audit
 detail. It is not a pixel clone; it is a sibling report.
 
-Two original bitmap illustrations will be generated:
-
-1. **Hero illustration:** dialogue flowing through a tactile music mixing
-   console into one selected record/track; approachable editorial style; no
-   embedded text.
-2. **Alignment versus distortion:** one clean signal path and one progressively
-   distorted path, used near the good/bad example transition; no embedded text.
+Decorative bitmap illustrations are removed from the visible report. The
+organizer-facing visual budget is reserved for accurate system diagrams,
+verified examples, and compact evidence summaries.
 
 Technical visuals remain native HTML/CSS/SVG-like markup so text stays accurate,
 searchable, responsive, and accessible:
 
-- vertical lifecycle timeline;
+- first-minute serving-path and offline-loop architecture map;
 - local/API/Modal compute map;
 - annotated state transformation;
 - branch fan-out and reconvergence;
@@ -356,7 +412,7 @@ searchable, responsive, and accessible:
 - top-20 recommendation stack;
 - response grounding boundary;
 - evaluation formula and metric contribution diagram;
-- good/bad boundary comparison.
+- good/bad boundary comparison;
 - vertical capability-gap map with evidence and recoverability labels.
 
 No diagram may depend on color alone. Every diagram must retain reading order
@@ -369,7 +425,7 @@ and a usable semantic fallback at narrow widths.
 - Native `details`/`summary` for disclosures.
 - Keyboard-visible focus styles.
 - Sufficient contrast and reduced-motion support.
-- Alt text for generated images.
+- Alt text for any informative images retained outside the native diagrams.
 - Tables use captions and proper headers; wide audit tables receive contained
   scrolling without making the page itself scroll horizontally.
 - Print styles preserve the visible story and identify collapsed audit sections.
@@ -415,14 +471,18 @@ expandable source disclosure when useful.
 
 The report is successful when a competition participant can:
 
-1. understand the system in roughly one minute from the overview;
+1. understand the complete submitted serving path and evaluation loop in roughly
+   one minute from the overview;
 2. follow a complete recommendation vertically without opening disclosures;
 3. inspect meaningful prompt, state, query, ranking, and response details;
-4. understand why and where Modal was used;
-5. distinguish the challenge LLM judge from development-time LLM judgments;
-6. inspect several strong examples spanning distinct conversational intents;
-7. compare strong and weak traces at the first failing boundary;
-8. distinguish observed failures from architectural, measurement, and unknown
+4. understand that LightGBM, not the compiler's internal candidate-assembly
+   order, determines the final submitted ranking;
+5. understand why and where Modal was used without mistaking deployment for the
+   system architecture;
+6. distinguish the challenge LLM judge from development-time LLM judgments;
+7. inspect several strong examples spanning distinct conversational intents;
+8. compare strong and weak traces at the first failing boundary;
+9. distinguish observed failures from architectural, measurement, and unknown
    gaps;
-9. reproduce or inspect the implementation from linked local sources;
-10. read the report comfortably on a phone or laptop.
+10. reproduce or inspect the implementation from linked local sources;
+11. read the report comfortably on a phone or laptop.
