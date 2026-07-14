@@ -42,7 +42,7 @@
     }
     img { display: block; max-width: 100%; }
     a { color: inherit; text-underline-offset: .2em; }
-    a:focus-visible, summary:focus-visible {
+    a:focus-visible, summary:focus-visible, .source-map-wrap:focus-visible {
       outline: .2rem solid var(--focus);
       outline-offset: .2rem;
     }
@@ -305,7 +305,18 @@
     .gap-card dt { margin-top: .75rem; color: var(--ink); font-weight: 800; }
     .gap-card dd { margin: .15rem 0 0; color: var(--ink-soft); }
 
-    .future { min-height: 1px; padding: 0; scroll-margin-top: 7rem; }
+    .source-map-wrap { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+    .source-map { width: 100%; min-width: 46rem; border-collapse: collapse; background: var(--paper); }
+    .source-map caption { padding: 0 0 .8rem; color: var(--ink-soft); text-align: left; font-size: .9rem; }
+    .source-map th, .source-map td { padding: .8rem .9rem; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .source-map th { background: var(--cream-deep); }
+    .source-map td:first-child { font-weight: 800; }
+    .source-map a { overflow-wrap: anywhere; }
+    .glossary { display: grid; grid-template-columns: minmax(8rem, .35fr) 1fr; margin: 0; }
+    .glossary dt, .glossary dd { padding: .7rem 0; border-bottom: 1px solid var(--line); }
+    .glossary dt { padding-right: 1rem; font-weight: 800; }
+    .glossary dd { margin: 0; color: var(--ink-soft); }
+    .future { min-height: 1px; padding: clamp(4.5rem, 9vw, 8rem) 0; border-top: 1px solid var(--line); scroll-margin-top: 7rem; }
     footer { padding: 3rem 0; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: .85rem; }
 
     @media (min-width: 56rem) {
@@ -314,12 +325,37 @@
       .lifecycle::before { left: 1.43rem; }
       .lifecycle li::before { width: 3rem; height: 3rem; }
     }
-    @media (max-width: 47.99rem) {
+    @media (max-width: 719px) {
       .facts { grid-template-columns: repeat(2, 1fr); }
       .directory-shell { position: static; }
       .directory { box-shadow: none; }
+      .chapter, .future { padding-block: 4rem; }
+      .glossary { display: block; }
+      .glossary dt { padding-bottom: .1rem; border-bottom: 0; }
+      .glossary dd { padding-top: 0; }
+      .gap-card { margin-left: 2.5rem; }
+      .gap-map::before { left: 1rem; }
+      .gap-card::before { left: -1.95rem; }
     }
-    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+    @media print {
+      :root { --cream: #fff; --paper: #fff; --ink: #000; --ink-soft: #333; --line: #777; }
+      body { background: #fff; color: #000; font-size: 10pt; }
+      .skip-link, .directory-shell { display: none; }
+      .hero, .chapter, .future, footer { padding-block: 1.5rem; }
+      .hero-figure::before { display: none; }
+      .hero-figure img, .alignment img, .directory, .facts { box-shadow: none; }
+      details { break-inside: avoid; }
+      details > div { display: block !important; }
+      .story-card, .example-card, .gap-card, .source-map tr { break-inside: avoid; }
+      .source-map-wrap { overflow: visible; }
+      .source-map { min-width: 0; font-size: 8pt; }
+      a { color: #000; text-decoration: underline; }
+      a[href]::after { content: " (" attr(href) ")"; font-size: .8em; overflow-wrap: anywhere; }
+    }
   </style>
 </head>
 <body>
@@ -332,6 +368,7 @@
       <p class="hero-intro">A source-backed tour from an open-ended conversation to a ranked listening queue—and the machinery that makes each handoff inspectable.</p>
       <figure class="hero-figure">
         <img src="{{HERO_DATA_URI}}" alt="A listener's conversation flowing through a structured music recommendation system into a final playlist.">
+        <figcaption>A visual summary of the report’s one-column path: conversation, structured state, retrieval, ranking, and the final listening queue.</figcaption>
       </figure>
       <ul class="facts" aria-label="System at a glance">
         <li><strong>47k</strong><span>tracks in the catalog</span></li>
@@ -885,7 +922,65 @@
         </ul>
       </div>
     </section>
-    <section class="future" id="reproduce" aria-label="Reproduce"></section>
+    <section class="future" id="reproduce" aria-labelledby="reproduce-title">
+      <div class="wrap">
+        <div class="chapter-head">
+          <p class="eyebrow"><span class="chapter-number">12</span> · Sources and reproduction</p>
+          <h2 id="reproduce-title">Follow each contract back to code and replay it safely</h2>
+          <p>This map points to the active implementation and its reproduction guides. Paths are repository-relative; the strict offline workflow is the appropriate starting point when a rerun must not make paid calls on a cache miss.</p>
+        </div>
+        <div class="source-map-wrap" role="region" aria-label="Source and reproduction map" tabindex="0">
+          <table class="source-map">
+            <caption>Canonical implementation and reproduction sources for the system described in this report.</caption>
+            <thead>
+              <tr><th scope="col">System boundary</th><th scope="col">Primary source</th><th scope="col">Reproduction or interpretation guide</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Active devset configuration</td><td><a href="../../configs/state_ranker_v10_lgbm_devset.yaml">state_ranker_v10_lgbm_devset.yaml</a></td><td><a href="../../configs/pipelines/state_ranker_v10_lgbm_devset.yaml">staged pipeline configuration</a></td></tr>
+              <tr><td>Conversation state schema and prompt</td><td><a href="../../mcrs/conversation_state/schema.py">schema.py</a> · <a href="../../mcrs/conversation_state/prompts/current.py">current V1 prompt</a></td><td><a href="../architectures/session_state.md">session-state contract</a></td></tr>
+              <tr><td>State compilation</td><td><a href="../../mcrs/qu_modules/compiled_state.py">compiled_state.py</a> · <a href="../../mcrs/qu_modules/compiler_qu.py">compiler_qu.py</a></td><td><a href="../architectures/v0plus_retrieval.md">v10 state-ranker pipeline</a></td></tr>
+              <tr><td>Catalog and specialist retrieval</td><td><a href="../../mcrs/qu_modules/catalog_lance.py">catalog_lance.py</a> · <a href="../../mcrs/qu_modules/retrieval_compiler.py">retrieval_compiler.py</a></td><td><a href="../codebase/modules/retrieval_modules.md">retrieval modules map</a></td></tr>
+              <tr><td>Bi-encoder feature</td><td><a href="../../scripts/rerank/b1_live.py">b1_live.py</a></td><td><a href="../architectures/biencoder.md">b1 bi-encoder architecture</a></td></tr>
+              <tr><td>LightGBM reranker</td><td><a href="../../mcrs/qu_modules/lgbm_reranker.py">lgbm_reranker.py</a> · <a href="../../models/reranker_v12_goalfree/model.txt">active model bundle</a></td><td><a href="../reproduce_reranker.md">reranker reproduction guide</a></td></tr>
+              <tr><td>Response handoff and prompt</td><td><a href="../../mcrs/response_context.py">response_context.py</a> · <a href="../../mcrs/system_prompts/response_generation.txt">response-generation prompt</a></td><td><a href="../architectures/explanation_generation.md">explanation and response generation</a></td></tr>
+              <tr><td>State extraction cache</td><td><a href="../state_extraction_cache.md">cache layout and materialization</a></td><td>Includes override precedence, split scope, packaging, and verification commands.</td></tr>
+              <tr><td>Staged replay</td><td><a href="../architectures/staged_pipeline.md">staged experiment pipeline</a></td><td>Reuse retrieval traces for rerank and evaluation iteration.</td></tr>
+              <tr><td>Strict offline reproduction</td><td><a href="../reproduce_offline_bundle.md">offline bundle guide</a></td><td>Frozen replay and zero-credential live-offline rerun, with cache misses configured to fail closed.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <details>
+          <summary>Glossary of retrieval, ranking, and evaluation terms</summary>
+          <div>
+            <dl class="glossary">
+              <dt>BM25</dt><dd>A lexical ranking method that scores documents from query-term matches while balancing term rarity and document length.</dd>
+              <dt>ANN</dt><dd>Approximate nearest-neighbor search: a fast way to retrieve vectors close to a query vector without exhaustively comparing the entire catalog.</dd>
+              <dt>Centroid</dt><dd>The average vector of a set of embeddings, used here as a compact representation of a group of tracks or preferences.</dd>
+              <dt>RRF</dt><dd>Reciprocal-rank fusion: a method that combines ranked lists by awarding each candidate a diminishing score based on its position in each list.</dd>
+              <dt>LambdaMART</dt><dd>A learning-to-rank method built from boosted decision trees and trained to improve ordering metrics; LightGBM implements the final ranker used here.</dd>
+              <dt>Bi-encoder</dt><dd>A model that encodes the conversation and track separately into the same vector space, allowing their similarity to be computed efficiently.</dd>
+              <dt>nDCG@20</dt><dd>Normalized discounted cumulative gain over the first 20 results: a ranking metric that rewards relevant items more when they appear nearer the top.</dd>
+              <dt>LLM judge</dt><dd>A language model used to assign a quality score to generated text. The organizer’s official response judge is distinct from development-time proxy judges.</dd>
+              <dt>Grounding</dt><dd>Keeping a generated claim tied to evidence supplied by the conversation, catalog, or trace rather than unsupported model knowledge or invention.</dd>
+              <dt>Candidate recall</dt><dd>The share of relevant targets present in the candidate pool before final reranking; a missing candidate cannot be recovered by the ranker.</dd>
+            </dl>
+          </div>
+        </details>
+
+        <details open>
+          <summary>Evidence-status boundary</summary>
+          <div>
+            <dl class="glossary">
+              <dt>Verified</dt><dd>Directly supported by an inspected repository source, saved artifact, labelled trace, or recorded configuration. Verification applies only to the claim and scope named.</dd>
+              <dt>Inferred</dt><dd>A reasoned interpretation that follows from verified evidence but is not itself recorded directly; it must not be presented as an observed causal result.</dd>
+              <dt>Illustrative</dt><dd>An example used to explain mechanics or show an output when relevance or outcome labels are unavailable; it does not establish quality or success.</dd>
+            </dl>
+            <p class="boundary-note"><strong>Evidence rule:</strong> source code verifies intended mechanics, saved traces verify recorded execution, and labelled evaluation artifacts verify outcomes within their stated split. None alone proves that a component caused a score change. Blind-B examples remain illustrative where per-turn labels are hidden.</p>
+          </div>
+        </details>
+      </div>
+    </section>
   </main>
 
   <footer>
