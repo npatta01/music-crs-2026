@@ -136,3 +136,9 @@ If you have feedback, please reach out to:
 - [Nidhin Pattaniyil](mailto:npatta01@gmail.com) ([LinkedIn](https://www.linkedin.com/in/nidhinpattaniyil/))
 - [Semih Yagli](mailto:semihyagli1@gmail.com) ([LinkedIn](https://www.linkedin.com/in/semihyagli/))
 - [Tanwir Zaman](mailto:zaman.tanwir@gmail.com) ([LinkedIn](https://www.linkedin.com/in/tanwirzaman/))
+
+---
+
+## Competition retrospective
+
+[Read the detailed post-competition retrospective](https://npatta01.github.io/music-conversational-music-recomender-2026/docs/retrospective.html?path=audit#outcome/gap-interpretation).
