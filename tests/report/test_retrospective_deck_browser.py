@@ -228,31 +228,38 @@ def test_answer_first_slides_have_no_overflow(viewport, enhanced_report: Path) -
         browser.close()
 
 
-def test_slide_overflow_audit_detects_offscreen_translation_and_nested_auto_scroll(page, enhanced_report: Path) -> None:
+def test_slide_overflow_assertion_detects_synthetic_regressions(page, enhanced_report: Path) -> None:
     browser_page, errors = page
     open_deck(browser_page, enhanced_report, "#diagnosis/score-location")
     slide = browser_page.locator("#diagnosis\\/score-location")
 
-    slide.evaluate("node => node.style.transform = 'translateX(-12px)'")
-    translated = _slide_overflow_audit(slide)
-    assert translated["rect"]["left"] < -2
-    slide.evaluate("node => node.style.removeProperty('transform')")
+    for translation in ("translateX(-12px)", "translateX(12px)"):
+        original_transform = slide.evaluate("node => node.style.transform")
+        try:
+            slide.evaluate("(node, value) => node.style.transform = value", translation)
+            with pytest.raises(AssertionError):
+                _assert_slide_has_no_unintended_overflow(slide)
+        finally:
+            slide.evaluate("(node, value) => node.style.transform = value", original_transform)
 
-    slide.evaluate(
-        """node => {
-          const scroller = document.createElement('div');
-          scroller.dataset.syntheticNestedScroller = 'true';
-          scroller.style.cssText = 'height: 1px; overflow-y: auto';
-          const content = document.createElement('div');
-          content.style.height = '24px';
-          scroller.append(content);
-          node.append(scroller);
-        }"""
-    )
-    nested = _slide_overflow_audit(slide)
-    assert len(nested["nestedVerticalOverflow"]) == 1
-    assert nested["nestedVerticalOverflow"][0]["overflowY"] == "auto"
-    slide.locator("[data-synthetic-nested-scroller]").evaluate("node => node.remove()")
+    for overflow_y in ("auto", "scroll"):
+        try:
+            slide.evaluate(
+                """(node, overflowY) => {
+                  const scroller = document.createElement('div');
+                  scroller.dataset.syntheticNestedScroller = overflowY;
+                  scroller.style.cssText = `height: 1px; overflow-y: ${overflowY}`;
+                  const content = document.createElement('div');
+                  content.style.height = '24px';
+                  scroller.append(content);
+                  node.append(scroller);
+                }""",
+                overflow_y,
+            )
+            with pytest.raises(AssertionError):
+                _assert_slide_has_no_unintended_overflow(slide)
+        finally:
+            slide.locator(f"[data-synthetic-nested-scroller='{overflow_y}']").evaluate("node => node.remove()")
 
     _assert_slide_has_no_unintended_overflow(slide)
     assert errors == []
