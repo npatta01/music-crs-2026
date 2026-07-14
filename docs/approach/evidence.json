@@ -154,17 +154,17 @@
     {
       "id": "pivot-new-artist",
       "intentClass": "pivot/new artist",
-      "request": "That's a fun one! It definitely has that energetic indie rock feel. But I'm actually looking for something else, I think it's pretty popular and might have a memorable whistle or a really strong bassline.",
+      "request": "I'm looking for an energetic indie rock track, popular, with a memorable whistle or a really strong bassline, maybe by a band like Foster The People or Cage The Elephant.",
       "labelledTarget": "Pumped Up Kicks — Foster The People",
       "sessionId": "a61b366c-8cf5-48ad-a13f-181c033b9d89",
       "turn": 2,
       "finalRank": 1,
-      "whyStrong": "A mid-conversation novelty cue and feature-based pivot produced the labelled new-artist target at rank one.",
+      "whyStrong": "The listener pivoted away from the prior recommendation and explicitly suggested new artists, including Foster The People; the labelled target ranked first.",
       "status": "Verified",
       "sourcePaths": [
         "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json"
       ],
-      "sourceNote": "Labelled devset positive control POS_clean_final_hit_control; cohort labels include midconv_new_artist and novelty_cue."
+      "sourceNote": "Labelled devset positive control POS_clean_final_hit_control; the extracted turn intent preserves Foster The People and Cage The Elephant, cohort labels include midconv_new_artist and novelty_cue, and BM25 was the best branch at rank 1."
     },
     {
       "id": "lyrical-clue-ice-cube",
@@ -174,12 +174,12 @@
       "sessionId": "a9b423bf-d05c-418d-98af-2a3b1e1d7917",
       "turn": 1,
       "finalRank": 2,
-      "whyStrong": "The system used an artist, era, and quoted lyric clue to place the labelled target second.",
+      "whyStrong": "The request combined an artist, an era, and a quoted lyric clue; lyric_search routing fired and the labelled target ranked second. The best branch was resolved artist discography at rank 1, so this example does not establish that lyric retrieval caused the placement.",
       "status": "Verified",
       "sourcePaths": [
         "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json"
       ],
-      "sourceNote": "Labelled devset positive control POS_clean_final_hit_control; sample a9b423bf-d05c-418d-98af-2a3b1e1d7917::t1."
+      "sourceNote": "Labelled devset positive control POS_clean_final_hit_control; sample a9b423bf-d05c-418d-98af-2a3b1e1d7917::t1 records routing exact_entity_probe plus lyric_search, best branch lookup.resolved_artist_discography at rank 1, and final rank 2."
     },
     {
       "id": "hidden-target-post-malone",
@@ -329,13 +329,13 @@
       "recoverability": "Improve ranker features and training labels, then replay the saved candidate trace to isolate ranker changes from retrieval changes."
     },
     {
-      "id": "entity-role-gap",
-      "status": "Architectural limitation",
+      "id": "frozen-baseline-entity-role-failure",
+      "status": "Observed failure",
       "expectedCapability": "Distinguish current targets from accepted, satisfied, rejected, or merely historical entities across turns.",
-      "submittedBehavior": "The analysed state snapshot sometimes retained a prior artist as a positive retrieval anchor after the listener asked for other artists or directions.",
-      "evidence": "P0_roleless_stale_entity_failure identifies stale/satisfied entities acting as current anchors, including The Real Thing on the Rick James target turn.",
-      "userConsequence": "Retrieval can remain anchored to yesterday's answer instead of following the listener's refinement or pivot.",
-      "recoverability": "Partly recoverable by enforcing source-turn, recency, entity-role, and seed-use semantics in extraction and compilation, with positive controls guarding continuation behavior."
+      "submittedBehavior": "The frozen 2026-06-06 roleless devset baseline sometimes retained a prior artist as a positive retrieval anchor after the listener asked for other artists or directions. The submitted config uses the newer V1 extractor, so this snapshot does not prove that the submitted system retains the same failure.",
+      "evidence": "P0_roleless_stale_entity_failure identifies stale/satisfied entities acting as current anchors in the frozen baseline, including The Real Thing on the Rick James target turn; configs/state_ranker_v10_lgbm_blindset_B.yaml separately specifies prompt_version v1 for the submission.",
+      "userConsequence": "In the observed baseline cases, retrieval remained anchored to a prior answer instead of fully following the listener's refinement or pivot; impact on the submitted V1 path is unknown from this evidence.",
+      "recoverability": "Re-evaluate the same labelled stale-entity cohort with V1 state traces. If failures persist, tighten source-turn, recency, entity-role, and seed-use semantics while using continuation controls to guard regressions."
     },
     {
       "id": "response-generalization",
