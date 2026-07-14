@@ -93,6 +93,19 @@ test("submitted inference takes five hundred candidates from every branch", () =
   assert.equal(lane.steps.some((step) => /union \(up to 500\)/i.test(step)), false);
 });
 
+test("visual summaries preserve documented evidence boundaries", () => {
+  const pages = new Map(CHAPTERS.flatMap((chapter) => (
+    chapter.slides.map((entry) => [`${chapter.slug}/${entry.slug}`, entry])
+  )));
+  const team = (slug, name) => pages.get(slug).teams.find((entry) => entry.name === name).values.join(" ");
+  assert.match(team("query/data-matrix", "niwatori"), /No LLM retrieval rewrite documented; ten response drafts/i);
+  assert.doesNotMatch(team("query/data-matrix", "niwatori"), /generated query\/description/i);
+  assert.match(team("retrieval/retriever-matrix", "swyoo"), /already-seen tracks.*no general hard rejection/i);
+  assert.match(team("retrieval/retriever-matrix", "team2_s2"), /played-track exclusion.*explicit rejection.*not documented/i);
+  assert.match(team("response/matrix", "niwatori"), /lexical-diversity selector.*not a factual critic/i);
+  assert.match(team("response/matrix", "swyoo"), /one PAS prediction.*no best-of-N critic/i);
+});
+
 test("enhancement is deterministic and idempotent", async () => {
   const html = await readFile(REPORT, "utf8");
   const once = enhanceHtml(html);
