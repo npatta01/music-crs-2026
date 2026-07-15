@@ -98,8 +98,6 @@ class ReportParser(HTMLParser):
             self._style_depth += 1
         if tag == "dt":
             self._status_markers.append((tag, "definition", []))
-        elif tag == "span" and "status-pill" in classes:
-            self._status_markers.append((tag, "status-pill", []))
         elif tag == "span" and "evidence-badge" in classes:
             self._status_markers.append((tag, "evidence-badge", []))
 
@@ -118,7 +116,7 @@ class ReportParser(HTMLParser):
                 continue
             del self._status_markers[index]
             text = " ".join("".join(parts).split())
-            if marker_kind in {"definition", "evidence-badge", "status-pill"}:
+            if marker_kind in {"definition", "evidence-badge"}:
                 self.evidence_statuses.update(
                     status
                     for status in EVIDENCE_STATUSES

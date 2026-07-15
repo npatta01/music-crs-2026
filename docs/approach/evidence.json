@@ -67,9 +67,9 @@
     }
   ],
   "primaryTrace": {
-    "id": "paired-multiturn-spines",
+    "id": "approach-evidence-scopes",
     "status": "Verified",
-    "scope": "A labelled frozen-baseline success establishes retrieval outcome quality; a separate Blind-B submitted-system trace establishes final mechanics and an observed completion-handling failure. They are not presented as one aligned run.",
+    "scope": "A labelled frozen-baseline success establishes retrieval outcome quality; a separate Blind-B submitted-system trace establishes final mechanics while outcome relevance remains hidden. They are not presented as one aligned run.",
     "alignedGood": {
       "systemScope": "Frozen 2026-06-06 labelled devset baseline, not the final submitted V1/LGBM system",
       "sessionId": "a61b366c-8cf5-48ad-a13f-181c033b9d89",
@@ -108,8 +108,8 @@
       },
       "reconstructionStatus": "Conversation, state summary, branch rank, fusion rank, final ranks, and dataset assistant text are recorded. The vertical stage layout is reconstructed; exact branch query payloads, branch counts, and generated handoff messages are unavailable."
     },
-    "submittedFailure": {
-      "systemScope": "Final Blind-B submitted V1 extractor and goal-free LightGBM bundle; relevance labels remain hidden",
+    "submittedMechanics": {
+      "systemScope": "Final Blind-B submitted V1 extractor and goal-free LightGBM bundle; this trace demonstrates stage contracts while outcome relevance remains hidden",
       "sessionId": "156cac0f-c16b-4bd2-8f4f-cc1691adef79",
       "turn": 8,
       "conversation": "After seven search turns, the listener explicitly confirms Pumped Up Kicks and says the search is complete.",
@@ -132,10 +132,10 @@
         "tracePrimaryTrack": "Tongue Tied — GROUPLOVE",
         "predictionPrimaryTrack": "Tongue Tied — GROUPLOVE",
         "outputCount": 20,
-        "artifactMismatch": "Trace and saved prediction agree through rank 14 and at ranks 17-19, but swap ranks 15/16 and contain different rank-20 IDs. Delivered top-20 claims use the saved prediction artifact."
+        "artifactScope": "Trace and saved prediction agree through rank 14 and at ranks 17-19, but record ranks 15/16 in opposite order and contain different rank-20 IDs. Delivered top-20 descriptions use the saved prediction artifact."
       },
       "responseProvenance": "Listener-facing Tongue Tied prose is verbatim from the saved prediction. Formatter messages are reconstructed from the trace, dataset row, catalog, and submitted code because outbound messages were not persisted.",
-      "reconstructionStatus": "Conversation, state, branch status/counts, ranking IDs, and saved response are recorded. Catalog labels and formatted response-model inputs are reconstructed; Blind-B relevance and causal impact remain unknown."
+      "reconstructionStatus": "Conversation, state, branch status/counts, ranking IDs, and saved response are recorded. Catalog labels and formatted response-model inputs are reconstructed; Blind-B outcome relevance remains hidden."
     },
     "sourcePaths": [
       "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json",
@@ -144,235 +144,8 @@
       "exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json",
       "mcrs/qu_modules/compiler.py"
     ],
-    "sourceNote": "Good spine: POS_clean_final_hit_control sample a61b366c-8cf5-48ad-a13f-181c033b9d89::t2. Submitted failure spine: Blind-B trace and prediction record 71 (zero-based 70), cross-checked against compiler role gates."
+    "sourceNote": "Frozen success: POS_clean_final_hit_control sample a61b366c-8cf5-48ad-a13f-181c033b9d89::t2. Submitted mechanics: Blind-B trace and prediction record 71 (zero-based 70), cross-checked against compiler role gates."
   },
-  "goodExamples": [
-    {
-      "id": "exact-entity-numb",
-      "intentClass": "exact entity",
-      "request": "I'm looking for the original 2003 release of 'Numb' by Linkin Park from the 'Meteora' album.",
-      "labelledTarget": "Numb — Linkin Park",
-      "sessionId": "0681d55b-98a0-4773-a9df-075a8050d805",
-      "turn": 1,
-      "finalRank": 1,
-      "whyStrong": "The target was ranked first from an exact title, artist, album, and year request.",
-      "status": "Verified",
-      "sourcePaths": [
-        "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json"
-      ],
-      "sourceNote": "Labelled devset positive control POS_exact_entity_success_control; sample 0681d55b-98a0-4773-a9df-075a8050d805::t1."
-    },
-    {
-      "id": "refinement-gorillaz",
-      "intentClass": "refinement",
-      "request": "More Gorillaz tracks with a strong electronic or synth vibe, regardless of whether they have a feature.",
-      "labelledTarget": "DARE — Gorillaz",
-      "sessionId": "737a65cf-9c45-4b1d-910d-2f1f1ef5eab7",
-      "turn": 3,
-      "finalRank": 4,
-      "whyStrong": "The system retained the artist while refining toward electronic and synth attributes, placing the labelled target fourth.",
-      "status": "Verified",
-      "sourcePaths": [
-        "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json"
-      ],
-      "sourceNote": "Labelled devset positive control POS_clean_final_hit_control; sample 737a65cf-9c45-4b1d-910d-2f1f1ef5eab7::t3."
-    },
-    {
-      "id": "pivot-new-artist",
-      "intentClass": "pivot/new artist",
-      "request": "I'm looking for an energetic indie rock track, popular, with a memorable whistle or a really strong bassline, maybe by a band like Foster The People or Cage The Elephant.",
-      "labelledTarget": "Pumped Up Kicks — Foster The People",
-      "sessionId": "a61b366c-8cf5-48ad-a13f-181c033b9d89",
-      "turn": 2,
-      "finalRank": 1,
-      "whyStrong": "The listener pivoted away from the prior recommendation and explicitly suggested new artists, including Foster The People; the labelled target ranked first.",
-      "status": "Verified",
-      "sourcePaths": [
-        "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json"
-      ],
-      "sourceNote": "Labelled devset positive control POS_clean_final_hit_control; the extracted turn intent preserves Foster The People and Cage The Elephant, cohort labels include midconv_new_artist and novelty_cue, and BM25 was the best branch at rank 1."
-    },
-    {
-      "id": "lyrical-clue-ice-cube",
-      "intentClass": "lyrical theme/clue",
-      "request": "Play the classic Ice Cube song from the 90s that starts with 'Just wakin' up in the morning, gotta thank God'.",
-      "labelledTarget": "It Was A Good Day — Ice Cube",
-      "sessionId": "a9b423bf-d05c-418d-98af-2a3b1e1d7917",
-      "turn": 1,
-      "finalRank": 2,
-      "whyStrong": "The request combined an artist, an era, and a quoted lyric clue; lyric_search routing fired and the labelled target ranked second. The best branch was resolved artist discography at rank 1, so this example does not establish that lyric retrieval caused the placement.",
-      "status": "Verified",
-      "sourcePaths": [
-        "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json"
-      ],
-      "sourceNote": "Labelled devset positive control POS_clean_final_hit_control; sample a9b423bf-d05c-418d-98af-2a3b1e1d7917::t1 records routing exact_entity_probe plus lyric_search, best branch lookup.resolved_artist_discography at rank 1, and final rank 2."
-    },
-    {
-      "id": "hidden-target-post-malone",
-      "intentClass": "hidden target",
-      "request": "There's this Post Malone song I really like, but I can't quite describe what it is about it that hooks me.",
-      "labelledTarget": "Congratulations — Quavo, Post Malone",
-      "sessionId": "13552d56-f3d8-443a-9272-11ec16c80fa1",
-      "turn": 1,
-      "finalRank": 13,
-      "whyStrong": "Despite a deliberately underspecified memory query, the labelled target remained inside the returned top 20.",
-      "status": "Verified",
-      "sourcePaths": [
-        "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json"
-      ],
-      "sourceNote": "Labelled devset positive control POS_clean_final_hit_control; sample 13552d56-f3d8-443a-9272-11ec16c80fa1::t1."
-    }
-  ],
-  "failureExamples": [
-    {
-      "id": "full-stale-anchor-failure",
-      "boundary": "state extraction and role assignment",
-      "request": "Yes! 'Can You Feel the Force' is awesome. What are some other high-energy, classic disco or funk tracks from that late 70s to early 80s period?",
-      "labelledTarget": "Give It To Me Baby — Rick James",
-      "sessionId": "0b9d547f-e748-464a-90e2-2199149f915c",
-      "turn": 6,
-      "observedPath": {
-        "state": "The prior artist The Real Thing remained a positive anchor even though the request asked for other tracks and the ideal state marks it satisfied/history.",
-        "bestBranch": "dense.qwen_8b.attributes.attributes_qwen3_embedding_8b",
-        "bestBranchRank": 101,
-        "fusedRank": 218,
-        "finalRank": 158
-      },
-      "firstBrokenBoundary": "State extraction failed to type the prior artist as satisfied/history before candidate generation; candidate placement made rescue difficult, and final ranking improved the target from 218 to 158 without reaching the delivered top 20.",
-      "status": "Verified",
-      "sourcePaths": [
-        "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json"
-      ],
-      "sourceNote": "Labelled devset failure P0_roleless_stale_entity_failure; the pack includes recent messages, extracted state, ideal state, branch ranks, fused rank, and final rank."
-    },
-    {
-      "id": "candidate-generation-miss",
-      "boundary": "candidate generation",
-      "request": "An electronic band with a powerful, anthemic sound.",
-      "labelledTarget": "Perpetual — VNV Nation",
-      "sessionId": "8741b1b4-cd87-42fc-a56d-483e7f66494c",
-      "turn": 1,
-      "observedPath": {
-        "routing": [
-          "feature_articulation",
-          "hidden_target_search"
-        ],
-        "positiveTags": [
-          "anthemic",
-          "electronic",
-          "powerful"
-        ],
-        "bestBranch": "NONE",
-        "bestBranchRank": null,
-        "fusedRank": null,
-        "finalRank": null
-      },
-      "firstBrokenBoundary": "No retrieval branch placed the labelled target in its top 1,000, so fusion and reranking had no opportunity to recover it.",
-      "status": "Verified",
-      "sourcePaths": [
-        "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/recall_gap_data.json"
-      ],
-      "sourceNote": "Labelled devset example in not_in_any_branch_top1000; the target has no branch, fused, or final rank."
-    },
-    {
-      "id": "fusion-loss-hardcore",
-      "boundary": "candidate fusion",
-      "request": "80s American hardcore punk bands known for their raw energy and short, intense songs.",
-      "labelledTarget": "Hard Times — Cro-Mags",
-      "sessionId": "0979c6fc-c382-4c14-be3e-2a4711fcc532",
-      "turn": 1,
-      "observedPath": {
-        "bestBranch": "dense.qwen_8b.metadata.metadata_qwen3_embedding_8b",
-        "bestBranchRank": 6,
-        "fusedRank": 60,
-        "finalRank": 134
-      },
-      "firstBrokenBoundary": "A strong branch retrieved the target at rank 6, but fusion demoted it outside the top 20 before the final ranker moved it farther down.",
-      "status": "Verified",
-      "sourcePaths": [
-        "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/recall_gap_data.json",
-        "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/ranker_decision/report_data.json"
-      ],
-      "sourceNote": "Labelled devset example in union20_fusion_loss / branch_top20_fusion_miss."
-    },
-    {
-      "id": "final-rerank-loss",
-      "boundary": "final learned ranking",
-      "request": "More 80s American hardcore punk bands that incorporated a bit more melody or even some metallic influences into their sound, while still keeping that raw energy.",
-      "labelledTarget": "Too Drunk to Fuck — Dead Kennedys",
-      "sessionId": "0979c6fc-c382-4c14-be3e-2a4711fcc532",
-      "turn": 4,
-      "observedPath": {
-        "bestBranchRank": 4,
-        "fusedRank": 13,
-        "finalRank": 74,
-        "entityBucket": "resolved_gt_artist"
-      },
-      "firstBrokenBoundary": "The target survived retrieval and fusion inside the top 20, but final ranking demoted it to rank 74.",
-      "status": "Verified",
-      "sourcePaths": [
-        "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/recall_gap_data.json",
-        "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/ranker_decision/report_data.json"
-      ],
-      "sourceNote": "Labelled devset example in union20_postfusion_or_final_loss / fused_top20_postfusion_demoted."
-    }
-  ],
-  "gaps": [
-    {
-      "id": "blind-b-relevance",
-      "status": "Measurement gap",
-      "expectedCapability": "Measure whether the final Blind-B top-20 lists and generated replies satisfy listeners.",
-      "submittedBehavior": "The trace records mechanics and outputs, but Blind-B relevance labels and judge scores are hidden.",
-      "evidence": "The Blind-B JSONL contains no ground-truth target or relevance field; the analysis snapshot documents blind-set metadata availability separately from labelled devset outcomes.",
-      "userConsequence": "We cannot honestly classify an individual submitted trace as a recommendation success or failure from this artifact alone.",
-      "recoverability": "Recoverable only when organizer evaluation or labels become available; until then use labelled devset traces for outcome claims."
-    },
-    {
-      "id": "candidate-recall-gap",
-      "status": "Observed failure",
-      "expectedCapability": "Place the relevant track into at least one candidate branch deeply enough for fusion and reranking to act.",
-      "submittedBehavior": "In the frozen devset baseline, 757 of 8,000 turns (9.46%) had the target absent from every branch top 1,000.",
-      "evidence": "recall_gap_data.json reports not_in_any_branch_top1000=757 and includes the VNV Nation hidden-target example with no branch rank.",
-      "userConsequence": "Once the target is absent from all candidate pools, no downstream ranker can recommend it.",
-      "recoverability": "Requires better state-to-query translation, new or improved retrieval branches, deeper pools, or catalog/index improvements; reranking alone cannot recover these cases."
-    },
-    {
-      "id": "fusion-gap",
-      "status": "Observed failure",
-      "expectedCapability": "Preserve candidates that a specialist branch ranks highly when combining heterogeneous retrievers.",
-      "submittedBehavior": "The frozen baseline lost 1,046 targets (13.08% of turns) that appeared in a branch top 20 but not in union/fused top 20.",
-      "evidence": "recall_gap_data.json reports union20_fusion_loss=1,046; Hard Times was rank 6 in metadata retrieval but rank 60 after fusion.",
-      "userConsequence": "A correct specialist signal can be diluted by other branches before the learned final ranker sees a practical top list.",
-      "recoverability": "Replay fusion with calibrated branch weights or learned fusion features, then verify that gains do not regress exact-entity controls."
-    },
-    {
-      "id": "final-ranking-gap",
-      "status": "Observed failure",
-      "expectedCapability": "Keep relevant candidates in the final top 20 after they survive fusion.",
-      "submittedBehavior": "The baseline has examples where a target was top 20 after fusion but was demoted by final ranking.",
-      "evidence": "Too Drunk to Fuck was branch rank 4 and fused rank 13, then final rank 74 in the labelled devset snapshot.",
-      "userConsequence": "The system retrieves the right item but does not expose it in the delivered recommendation list.",
-      "recoverability": "Improve ranker features and training labels, then replay the saved candidate trace to isolate ranker changes from retrieval changes."
-    },
-    {
-      "id": "frozen-baseline-entity-role-failure",
-      "status": "Observed failure",
-      "expectedCapability": "Distinguish current targets from accepted, satisfied, rejected, or merely historical entities across turns.",
-      "submittedBehavior": "The frozen 2026-06-06 roleless devset baseline sometimes retained a prior artist as a positive retrieval anchor after the listener asked for other artists or directions. The submitted config uses the newer V1 extractor, so this snapshot does not prove that the submitted system retains the same failure.",
-      "evidence": "P0_roleless_stale_entity_failure identifies stale/satisfied entities acting as current anchors in the frozen baseline, including The Real Thing on the Rick James target turn; configs/state_ranker_v10_lgbm_blindset_B.yaml separately specifies prompt_version v1 for the submission.",
-      "userConsequence": "In the observed baseline cases, retrieval remained anchored to a prior answer instead of fully following the listener's refinement or pivot; impact on the submitted V1 path is unknown from this evidence.",
-      "recoverability": "Re-evaluate the same labelled stale-entity cohort with V1 state traces. If failures persist, tighten source-turn, recency, entity-role, and seed-use semantics while using continuation controls to guard regressions."
-    },
-    {
-      "id": "response-generalization",
-      "status": "Unknown impact",
-      "expectedCapability": "Generate concise, personalized explanations that generalize across the full multilingual challenge distribution.",
-      "submittedBehavior": "The chosen Qwen/state-conditioned setup was selected from an eight-session, English-only proxy slice and validated on Blind-A, then enabled in the Blind-B config.",
-      "evidence": "The bake-off reports the 4.2 Blind-A result but explicitly calls for a larger, non-English evaluation slice and notes the proxy judge is only a coarse ranker.",
-      "userConsequence": "Response quality may vary for languages, conversational styles, or failure modes not represented in the small bake-off slice.",
-      "recoverability": "Evaluate a broader labelled multilingual replay set and compare response quality separately from retrieval quality."
-    }
-  ],
   "sources": [
     {
       "path": "configs/state_ranker_v10_lgbm_blindset_B.yaml",
@@ -384,7 +157,7 @@
     },
     {
       "path": "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json",
-      "role": "Labelled devset positive controls, full state failures, recent conversation context, and ideal-state targets."
+      "role": "Labelled devset positive controls, recent conversation context, and ideal-state targets."
     },
     {
       "path": "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/ranker_decision/report_data.json",
@@ -392,7 +165,7 @@
     },
     {
       "path": "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/recall_gap_data.json",
-      "role": "Frozen 8,000-turn devset recall ceilings, failure buckets, branch ranks, fusion ranks, and final ranks."
+      "role": "Frozen 8,000-turn devset recall ceilings, branch ranks, fusion ranks, and final ranks."
     },
     {
       "path": "docs/codebase/bugs.md",

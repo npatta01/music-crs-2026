@@ -6,8 +6,8 @@ import json
 import re
 import tempfile
 import unittest
+from html.parser import HTMLParser
 from pathlib import Path
-from unittest.mock import patch
 
 from scripts import build_approach_report, validate_approach_report
 
@@ -24,6 +24,59 @@ def report_opening() -> str:
     return source[source.index('<header class="hero">') : source.index(
         '<div class="deep-dive-boundary"'
     )]
+
+
+class SourceStructureParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.directory_links: list[tuple[str, str]] = []
+        self.response_payloads: list[tuple[str, bool]] = []
+        self._directory_depth = 0
+        self._response_depth = 0
+        self._details_depth = 0
+        self._link_href: str | None = None
+        self._link_text: list[str] = []
+
+    def handle_starttag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
+        attributes = dict(attrs)
+        classes = set(attributes.get("class", "").split())
+        if tag == "nav" and "directory" in classes:
+            self._directory_depth = 1
+        elif self._directory_depth:
+            self._directory_depth += 1
+        if tag == "section" and attributes.get("id") == "response":
+            self._response_depth = 1
+        elif self._response_depth:
+            self._response_depth += 1
+        if self._response_depth and tag == "details":
+            self._details_depth += 1
+        if self._directory_depth and tag == "a":
+            self._link_href = attributes.get("href")
+            self._link_text = []
+        if self._response_depth and tag == "pre":
+            label = attributes.get("aria-label", "")
+            if label.startswith("Exact "):
+                self.response_payloads.append((label, self._details_depth > 0))
+
+    def handle_data(self, data: str) -> None:
+        if self._link_href is not None:
+            self._link_text.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if self._directory_depth and tag == "a" and self._link_href is not None:
+            self.directory_links.append(
+                (self._link_href, " ".join("".join(self._link_text).split()))
+            )
+            self._link_href = None
+            self._link_text = []
+        if self._response_depth and tag == "details":
+            self._details_depth -= 1
+        if self._directory_depth:
+            self._directory_depth -= 1
+        if self._response_depth:
+            self._response_depth -= 1
 
 
 def valid_report(extra_head: str = "", extra_body: str = "") -> str:
@@ -79,6 +132,7 @@ class ApproachReportBuildTests(unittest.TestCase):
             "Retrieval mesh",
             "Candidate pool assembly",
             "LightGBM LambdaMART",
+            "Exact-track pin",
             "Final artist guard",
             "Top 20",
             "Top-1 explanation",
@@ -90,7 +144,7 @@ class ApproachReportBuildTests(unittest.TestCase):
     def test_opening_does_not_present_rrf_as_the_final_ranker(self) -> None:
         opening = report_opening()
         self.assertNotIn("Weighted RRF", opening)
-        self.assertIn("LightGBM determines the final order", opening)
+        self.assertIn("LightGBM determines the learned base order", opening)
 
     def test_opening_has_no_decorative_image(self) -> None:
         self.assertNotIn("<img", report_opening())
@@ -164,6 +218,21 @@ class ApproachReportBuildTests(unittest.TestCase):
         self.assertEqual(positions, sorted(positions))
         for removed in ("examples", "gaps", "lessons"):
             self.assertNotIn(f'id="{removed}"', source)
+        for forbidden in (
+            "Submitted failure spine",
+            "completion-handling failure",
+            "first broken boundary",
+            "Primary bad trace",
+            "failure-trace",
+        ):
+            self.assertNotIn(forbidden, source)
+
+        walkthrough = source[
+            source.index('<section class="chapter" id="walkthrough"') :
+            source.index('<section class="chapter" id="state"')
+        ]
+        self.assertIn("Pumped Up Kicks", walkthrough)
+        self.assertNotIn("Blind-B", walkthrough)
 
     def test_ranking_chapter_names_the_final_submitted_orderer(self) -> None:
         source = REPORT_SOURCE.read_text(encoding="utf-8")
@@ -171,7 +240,11 @@ class ApproachReportBuildTests(unittest.TestCase):
             '<section class="chapter" id="response"'
         )]
         self.assertIn("ranking.mode: lgbm", ranking)
-        self.assertIn("LightGBM determines the delivered order", ranking)
+        self.assertIn("learned base order", ranking)
+        self.assertIn("Exact-track pin", ranking)
+        self.assertIn("confidence ≥90", ranking)
+        self.assertIn("same-turn artist guard", ranking)
+        self.assertIn("visual/lyric rescue stages are disabled", ranking)
         self.assertIn("candidate pool assembly", ranking)
 
     def test_evaluation_separates_ranking_metrics_from_llm_judging(self) -> None:
@@ -200,28 +273,40 @@ class ApproachReportBuildTests(unittest.TestCase):
             self.assertIn(f"<code>{path}</code>", source)
         self.assertEqual(source.count(f"<code>{provenance_paths[1]}</code>"), 1)
 
-    def test_stale_anchor_evidence_records_partial_reranker_recovery(self) -> None:
+    def test_evidence_ledger_contains_only_approach_contracts(self) -> None:
         evidence = json.loads(EVIDENCE_LEDGER.read_text(encoding="utf-8"))
-        failure = next(
-            item
-            for item in evidence["failureExamples"]
-            if item["id"] == "full-stale-anchor-failure"
-        )
-        boundary = failure["firstBrokenBoundary"]
-        self.assertIn("218 to 158", boundary)
-        self.assertIn("without reaching", boundary)
-        self.assertNotIn("could not be repaired", boundary)
+        for removed in ("failureExamples", "gaps", "goodExamples"):
+            self.assertNotIn(removed, evidence)
+        self.assertIn("submittedMechanics", evidence["primaryTrace"])
+        self.assertNotIn("submittedFailure", evidence["primaryTrace"])
 
     def test_directory_contains_only_approach_slides(self) -> None:
         source = REPORT_SOURCE.read_text(encoding="utf-8")
-        directory = source[source.index('<nav class="directory') : source.index("</nav>")]
-        labels = [
-            "Architecture", "Worked example", "State", "Retrieval", "Ranking",
-            "Response", "Evaluation", "Compute", "Reproduce",
+        parser = SourceStructureParser()
+        parser.feed(source)
+        expected = [
+            ("#overview", "Architecture"),
+            ("#walkthrough", "Worked example"),
+            ("#state", "State"),
+            ("#compile", "Retrieval"),
+            ("#ranking", "Ranking"),
+            ("#response", "Response"),
+            ("#evaluation", "Evaluation"),
+            ("#infrastructure", "Compute"),
+            ("#reproduce", "Reproduce"),
         ]
-        self.assertEqual(directory.count("<li>"), len(labels))
-        positions = [directory.index(f">{label}<") for label in labels]
-        self.assertEqual(positions, sorted(positions))
+        self.assertEqual(parser.directory_links, expected)
+
+    def test_exact_response_payloads_are_progressively_disclosed(self) -> None:
+        parser = SourceStructureParser()
+        parser.feed(REPORT_SOURCE.read_text(encoding="utf-8"))
+        self.assertEqual(
+            parser.response_payloads,
+            [
+                ("Exact reconstructed listener context and style message", True),
+                ("Exact final response-model user wrapper", True),
+            ],
+        )
 
     def test_small_screen_directory_scrolls_inside_navigation(self) -> None:
         source = REPORT_SOURCE.read_text(encoding="utf-8")
@@ -243,28 +328,15 @@ class ApproachReportBuildTests(unittest.TestCase):
             source.parent.mkdir(parents=True)
             target.parent.mkdir(parents=True)
             target.write_text("active: true\n", encoding="utf-8")
-            hero = root / "hero.png"
-            alignment = root / "alignment.png"
-            hero.write_bytes(validate_approach_report.PNG_SIGNATURE + b"hero")
-            alignment.write_bytes(validate_approach_report.PNG_SIGNATURE + b"alignment")
             source.write_text(
                 '<a href="../../configs/active.yaml#ranking">config</a>'
                 '<a href="#overview">fragment</a>'
                 '<a href="https://example.test/citation">citation</a>'
-                '<a href="data:text/plain,source">data</a>'
-                '<img src="{{HERO_DATA_URI}}"><img src="{{ALIGNMENT_DATA_URI}}">',
+                '<a href="data:text/plain,source">data</a>',
                 encoding="utf-8",
             )
 
-            with patch.object(
-                build_approach_report,
-                "ASSETS",
-                (
-                    ("{{HERO_DATA_URI}}", hero),
-                    ("{{ALIGNMENT_DATA_URI}}", alignment),
-                ),
-            ):
-                build_approach_report.build(source, output)
+            build_approach_report.build(source, output)
 
             packaged = output.read_text(encoding="utf-8")
             self.assertIn('href="../configs/active.yaml#ranking"', packaged)
@@ -281,29 +353,15 @@ class ApproachReportBuildTests(unittest.TestCase):
             source.parent.mkdir(parents=True)
             target.parent.mkdir(parents=True)
             target.write_text("active: true\n", encoding="utf-8")
-            hero = root / "hero.png"
-            alignment = root / "alignment.png"
-            hero.write_bytes(validate_approach_report.PNG_SIGNATURE + b"hero")
-            alignment.write_bytes(validate_approach_report.PNG_SIGNATURE + b"alignment")
             fixture = valid_report(
                 extra_body=(
                     '<a href="../../configs/active.yaml?mode=full&amp;stage=ranking#ranking">'
                     "config</a>"
                 )
             )
-            fixture = fixture.replace(PNG_DATA, "{{HERO_DATA_URI}}", 1)
-            fixture = fixture.replace(PNG_DATA, "{{ALIGNMENT_DATA_URI}}", 1)
             source.write_text(fixture, encoding="utf-8")
 
-            with patch.object(
-                build_approach_report,
-                "ASSETS",
-                (
-                    ("{{HERO_DATA_URI}}", hero),
-                    ("{{ALIGNMENT_DATA_URI}}", alignment),
-                ),
-            ):
-                build_approach_report.build(source, output)
+            build_approach_report.build(source, output)
 
             packaged = output.read_text(encoding="utf-8")
             self.assertIn(
@@ -311,6 +369,16 @@ class ApproachReportBuildTests(unittest.TestCase):
                 packaged,
             )
             self.assertEqual(validate_approach_report.validate(output), [])
+
+    def test_build_rejects_malformed_template_tokens(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source.html"
+            output = root / "approach.html"
+            source.write_text("<main>{{BROKEN</main>", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "malformed template token"):
+                build_approach_report.build(source, output)
 
 
 class ApproachReportValidationTests(unittest.TestCase):
@@ -322,6 +390,15 @@ class ApproachReportValidationTests(unittest.TestCase):
 
     def test_approach_only_fixture_does_not_require_gap_statuses(self) -> None:
         self.assertEqual(self.validate_fixture(valid_report()), [])
+
+    def test_status_pills_do_not_count_as_evidence_statuses(self) -> None:
+        parser = validate_approach_report.ReportParser()
+        parser.feed(
+            '<span class="status-pill">Verified</span>'
+            '<span class="status-pill">Inferred</span>'
+            '<span class="status-pill">Illustrative</span>'
+        )
+        self.assertEqual(parser.evidence_statuses, set())
 
     def test_missing_packaged_local_href_fails(self) -> None:
         errors = self.validate_fixture(

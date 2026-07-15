@@ -121,7 +121,7 @@
     .architecture-head h2 { font-size: clamp(1.9rem, 4vw, 3.25rem); }
     .online-path {
       display: grid;
-      grid-template-columns: repeat(3, minmax(5.5rem, .8fr)) minmax(16rem, 2fr) repeat(4, minmax(5.8rem, .85fr));
+      grid-template-columns: repeat(3, minmax(5.5rem, .8fr)) minmax(16rem, 2fr) repeat(5, minmax(5.8rem, .85fr));
       gap: .55rem;
       margin: 0;
       padding: 0;
@@ -391,8 +391,9 @@
       .architecture-node:nth-child(4) { grid-column: 3 / span 2; grid-row: 2; }
       .architecture-node:nth-child(5) { grid-column: 2; grid-row: 2; }
       .architecture-node:nth-child(6) { grid-column: 1; grid-row: 2; }
-      .architecture-node:nth-child(7) { grid-column: 1 / span 2; grid-row: 3; }
-      .architecture-node:nth-child(8) { grid-column: 3 / span 2; grid-row: 3; }
+      .architecture-node:nth-child(7) { grid-column: 1; grid-row: 3; }
+      .architecture-node:nth-child(8) { grid-column: 2; grid-row: 3; }
+      .architecture-node:nth-child(9) { grid-column: 3 / span 2; grid-row: 3; }
       .architecture-node:nth-child(3)::after,
       .architecture-node:nth-child(6)::after { content: "↓"; top: auto; right: 50%; bottom: -.72rem; transform: translateX(50%); }
       .architecture-node:nth-child(4)::after,
@@ -483,18 +484,19 @@
             </li>
             <li class="architecture-node">Candidate pool assembly</li>
             <li class="architecture-node rank-node">LightGBM LambdaMART</li>
+            <li class="architecture-node">Exact-track pin</li>
             <li class="architecture-node">Final artist guard and Top 20</li>
             <li class="architecture-node response-node">Top-1 explanation</li>
           </ol>
           <div class="offline-loop" aria-label="Offline evaluation and improvement loop">
-            <span>Saved traces and staged replay</span>
-            <span>Ranking metrics and boundary analysis</span>
+            <span>Trace replay</span>
+            <span>Ranking metrics and trace inspection</span>
             <span>LLM-as-judge response evaluation</span>
             <span>Next experiment</span>
           </div>
           <ul class="architecture-invariants">
             <li>Retrieval sets the candidate ceiling.</li>
-            <li>LightGBM determines the final order.</li>
+            <li>LightGBM determines the learned base order.</li>
             <li>Generation explains rank one; it does not select.</li>
           </ul>
         </div>
@@ -544,9 +546,9 @@
     <section class="chapter" id="walkthrough" aria-labelledby="walkthrough-title">
       <div class="wrap">
         <div class="chapter-head">
-          <p class="eyebrow"><span class="chapter-number">02</span> · Two conversations, two evidence scopes</p>
-          <h2 id="walkthrough-title">A labelled retrieval success beside a submitted completion failure</h2>
-          <p>No single retained artifact proves both outcome quality and every final-system handoff. The first spine is a labelled two-turn devset success from the frozen 2026-06-06 baseline. The second is a final submitted-system Blind-B trace with complete mechanics but hidden relevance labels. They are intentionally separate.</p>
+          <p class="eyebrow"><span class="chapter-number">02</span> · Verified frozen-devset walkthrough</p>
+          <h2 id="walkthrough-title">A second-turn pivot lands “Pumped Up Kicks” at every rank-one boundary</h2>
+          <p>This labelled two-turn success comes from the frozen 2026-06-06 devset baseline. It demonstrates a complete retrieval path with visible ground truth; it is not attributed to the submitted LightGBM system.</p>
         </div>
         <article class="story-card" id="aligned-good-spine">
           <span class="evidence-badge">Primary good trace · verified frozen baseline</span>
@@ -562,63 +564,6 @@
           <p class="boundary-note"><strong>Reconstruction status:</strong> conversation messages, state summary, target branch/fusion/final ranks, final top five, and reference assistant text are recorded. This vertical layout and response-handoff interpretation are reconstructed from the compact positive-control record; missing branch payloads and a persisted generated response are not invented.</p>
           <details><summary>Good-trace identity and source</summary><div><p>Session <code>a61b366c-8cf5-48ad-a13f-181c033b9d89</code> · turn 2 · labelled target <code>3b08891f-8ba3-4d9b-b0ab-4f9afa5b58dd</code> (“Pumped Up Kicks” — Foster The People) · <a href="../../experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json">POS_clean_final_hit_control snapshot</a>.</p></div></details>
         </article>
-        <div class="chapter-head" style="margin-top:3rem">
-          <p class="eyebrow">Submitted failure spine · final Blind-B system</p>
-          <h3>After the listener says “that’s the one,” the pipeline recommends again</h3>
-          <p>This real eight-turn trace records extraction, retrieval, ranking, and saved output. Its failure is conversational completion handling: the listener explicitly ends the search, yet the system continues recommendation mode. Hidden organizer labels still prevent a relevance judgment about the returned tracks.</p>
-        </div>
-        <div class="story-flow">
-          <article class="story-card">
-            <span class="evidence-badge">Verified · Blind-B conversation</span>
-            <p class="mini-label">Turns 1–8 · selected turning points</p>
-            <div class="turn listener"><span class="speaker">Turn 1 · Listener</span>“Trying to place a tune from like a decade ago. Was proper catchy, on the radio all the time.”</div>
-            <div class="turn listener"><span class="speaker">Turn 2 · Listener</span>“The song I'm trying to place had a really distinct hook – think it might've been whistling or a dead catchy synth line. Felt like a big summer anthem around 2010-2012.”</div>
-            <div class="turn listener"><span class="speaker">Turn 7 · Listener</span>“I'm picturing something like Foster The People … a really iconic, almost haunting whistling melody throughout.”</div>
-            <div class="turn listener"><span class="speaker">Turn 8 · Listener</span>“Yes! ‘Pumped Up Kicks’ by Foster The People! The whistling is exactly what I was thinking of. That's the one!”</div>
-            <p>Across seven earlier recommendation cycles, the listener rejects or contrasts suggestions while accumulating era, genre, vocal, popularity, mood, and hook clues. The final message explicitly says the hidden target has been found.</p>
-          </article>
-          <div class="flow-arrow" aria-hidden="true">↓</div>
-          <article class="story-card">
-            <span class="evidence-badge">Verified · saved extracted state</span>
-            <h3>The final message still becomes a search state</h3>
-            <ul class="state-facts">
-              <li><strong>Current request</strong><span><code>hidden_target</code> · “Find the specific catchy indie pop/rock track from around 2010–2012…” even though the latest utterance confirms discovery.</span></li>
-              <li><strong>Facts</strong><span>“Pumped Up Kicks” and Foster The People become satisfied-prior facts; six older clues remain current-target query facets.</span></li>
-              <li><strong>Temporal context</strong><span>A soft 2010–2012 release range survives from earlier turns.</span></li>
-              <li><strong>Feedback and history</strong><span>Seven played IDs are retained: six contrast items and the identified track as satisfied feedback.</span></li>
-            </ul>
-          </article>
-          <div class="flow-arrow" aria-hidden="true">↓</div>
-          <article class="story-card">
-            <span class="evidence-badge reconstructed">Submitted failure walkthrough · recorded mechanics</span>
-            <h3>Resolve, fan out, reconverge, rerank, speak</h3>
-            <p>The trace resolves the named track and artist at 100% confidence. Exact-target and resolver-anchor arrays remain empty under role policy, yet compiler feedback anchoring still seeds three centroids. Seven 1,000-hit branches plus the 200-hit era lookup fire, producing 5,969 eligible unique candidates after one played item is removed. Candidate pool assembly orders the union; LightGBM promotes “Tongue Tied” to rank one; the response model explains that one track.</p>
-            <p class="boundary-note"><strong>Reading rule:</strong> conversation text, state, branch status, counts, IDs, rank orders, and response are recorded. Human-readable catalog labels and the separation of the combined trace into stage cards are reconstructed. Blind-B relevance and causal quality claims remain unknown.</p>
-          </article>
-        </div>
-        <details>
-          <summary>Audit identity and sources</summary>
-          <div>
-            <p>Session <code>156cac0f-c16b-4bd2-8f4f-cc1691adef79</code> · turn 8 · trace JSONL record 71 (zero-based index 70; trace <code>idx: 6</code>).</p>
-            <p><a href="https://huggingface.co/datasets/talkpl-ai/TalkPlayData-Challenge-Blind-B">Blind-B dataset citation</a> · <a href="../../configs/state_ranker_v10_lgbm_blindset_B.yaml">submitted config</a> · saved trace: <code>exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B_trace.jsonl</code>.</p>
-          </div>
-        </details>
-        <details>
-          <summary>All eight listener turns</summary>
-          <div>
-            <ol class="rank-list">
-              <li>“Trying to place a tune from like a decade ago. Was proper catchy, on the radio all the time. What you reckon?”</li>
-              <li>“Nah, not quite… a really distinct hook – think it might've been whistling or a dead catchy synth line… a big summer anthem around 2010-2012.”</li>
-              <li>“Bit too ambient and downtempo… way more upbeat… male vocals too… more indie pop or alternative.”</li>
-              <li>“Still not it… a really bright, summery feel and a proper iconic instrumental bit – kinda leaning towards it being a whistle.”</li>
-              <li>“Cool track but still not it… a very specific hook… an absolute earworm… around 2010-2012.”</li>
-              <li>“Nah, this ain't it either… prominent male vocals… very specific upbeat whistle or synth melody… absolutely all over the radio.”</li>
-              <li>“Still not landing. I'm picturing something like Foster The People… a really iconic, almost haunting whistling melody throughout.”</li>
-              <li>“Yes! ‘Pumped Up Kicks’ by Foster The People! The whistling is exactly what I was thinking of. That's the one! … Cheers for helping me find it!”</li>
-            </ol>
-            <p>The punctuation above is lightly normalized for HTML typography; the wording comes from the dataset row. Music IDs and assistant messages are omitted here to keep the listener’s evolving constraint chain legible.</p>
-          </div>
-        </details>
       </div>
     </section>
 
@@ -628,6 +573,7 @@
           <p class="eyebrow"><span class="chapter-number">03</span> · State extraction</p>
           <h2 id="state-title">Preserve what matters for the next recommendation</h2>
           <p>The production extractor is deliberately not a transcript summarizer. It asks for a narrow, evidence-linked V1 object, then a deterministic bridge derives the compatibility fields the existing resolver and compiler expect.</p>
+          <p><strong>Submitted mechanics example:</strong> the fields below come from a Blind-B trace whose outcome relevance is hidden; they demonstrate the state contract only.</p>
         </div>
         <div class="story-flow">
           <article class="story-card">
@@ -664,7 +610,7 @@
             <span class="evidence-badge">Resolved V0Plus · saved trace</span>
             <h3>3. Hand a stable contract downstream</h3>
             <p>The compatibility state is <code>intent_mode: open_explore</code>, <code>retrieval_profile: hidden_target_search</code>, <code>target_artist_mode: unknown</code>, and <code>hidden_target_search: true</code>. It carries six positive tags, seven played tracks, and no hard filters or explicit rejections.</p>
-            <p class="boundary-note"><strong>Observed state boundary:</strong> the final utterance is satisfaction, not a request for another recommendation, yet the stored <code>current_request</code> remains “Find the specific…” from the completed search. This is a verified trace fact; whether it hurt the hidden Blind-B score is unknown.</p>
+            <p class="boundary-note"><strong>Mechanics scope:</strong> the saved trace records the <code>current_request</code>, derived compatibility fields, feedback roles, and routing fields shown here. Blind-B outcome relevance is hidden.</p>
           </article>
         </div>
         <details>
@@ -695,7 +641,7 @@
   "process_constraints": {"exploration_policy":"balanced"},
   "explicit_rejections": [], "hard_filters": [], "lyrical_theme": null
 }</pre>
-            <p>The disclosure intentionally elides five repetitive contrast IDs. The complete <code>extracted_state</code> object remains in the linked JSONL trace.</p>
+            <p>The disclosure intentionally elides five repetitive contrast IDs. The complete <code>extracted_state</code> object remains in <code>exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B_trace.jsonl</code>.</p>
           </div>
         </details>
       </div>
@@ -707,6 +653,7 @@
           <p class="eyebrow"><span class="chapter-number">04</span> · Resolution and retrieval</p>
           <h2 id="compile-title">Specialists search independently, then meet again</h2>
           <p>Resolution first separates catalog identities from descriptive language. The compiler then fans one resolved state into specialist queries. A skipped branch is an explicit routing outcome, not missing telemetry.</p>
+          <p><strong>Submitted mechanics example:</strong> the counts and branch statuses below come from a Blind-B trace whose outcome relevance is hidden.</p>
         </div>
         <div class="story-flow">
           <article class="story-card">
@@ -752,7 +699,8 @@
         <div class="chapter-head">
           <p class="eyebrow"><span class="chapter-number">05</span> · Ranking</p>
           <h2 id="ranking-title">Retrieval sets the ceiling; the learned ranker changes the order</h2>
-          <p><code>ranking.mode: lgbm</code> is the submitted final path. The compiler’s candidate pool assembly first combines the specialist branches. The goal-free LambdaMART bundle runs next: LightGBM determines the delivered order, followed by the same-turn artist guard.</p>
+          <p><code>ranking.mode: lgbm</code> is the submitted final path: candidate pool assembly combines the specialist branches, and LightGBM determines the learned base order. An <strong>Exact-track pin</strong> may then place up to two resolver-confirmed exact targets with confidence ≥90 ahead of that learned order. The enabled same-turn artist guard finally shapes the delivered top 20.</p>
+          <p>Optional visual/lyric rescue stages are disabled for this active configuration. The ordering shown below is a submitted mechanics example from Blind-B; outcome relevance is hidden.</p>
         </div>
         <div class="story-flow">
           <article class="story-card">
@@ -763,7 +711,7 @@
             <p class="source-links">See <a href="../architectures/biencoder.md">b1 bi-encoder architecture</a> and the served model’s <a href="../../models/reranker_v12_goalfree/model.txt">feature manifest</a>.</p>
           </article>
           <article class="story-card">
-            <span class="evidence-badge reconstructed">Trace-stage order · catalog labels reconstructed</span>
+            <span class="evidence-badge reconstructed">Submitted mechanics example · labels reconstructed</span>
             <h3>Before: candidate-pool top five</h3>
             <ol class="rank-list">
               <li>“Houdini” — Foster The People</li>
@@ -776,7 +724,7 @@
           </article>
           <div class="flow-arrow" aria-hidden="true">↓ LambdaMART rerank</div>
           <article class="story-card">
-            <span class="evidence-badge reconstructed">Trace-stage order · catalog labels reconstructed</span>
+            <span class="evidence-badge reconstructed">Submitted mechanics example · labels reconstructed</span>
             <h3>After: LightGBM top five</h3>
             <ol class="rank-list">
               <li class="top-pick">Selected top track: “Tongue Tied” — GROUPLOVE, from <em>Never Trust A Happy Song</em></li>
@@ -785,7 +733,7 @@
               <li>“Houdini” — Foster The People</li>
               <li>“I Would Do Anything for You” — Foster The People</li>
             </ol>
-            <p>“Tongue Tied” was outside the fused top 20 and moved to rank one. The trace records that movement but not a human-readable per-feature explanation for the tree ensemble’s decision—and it does not label the move as good or bad.</p>
+            <p>“Tongue Tied” was outside the fused top 20 and moved to rank one in the learned base order. The trace records that movement but not a human-readable per-feature explanation for the tree ensemble’s decision. Blind-B outcome relevance is hidden.</p>
           </article>
         </div>
         <details>
@@ -795,7 +743,7 @@
             <ol class="rank-list">
               <li class="top-pick">Tongue Tied — GROUPLOVE</li><li>Call It What You Want — Foster The People</li><li>Don't Stop (Color on the Walls) — Foster The People</li><li>Houdini — Foster The People</li><li>I Would Do Anything for You — Foster The People</li><li>Helena Beat — Foster The People</li><li>Little Talks — Of Monsters and Men</li><li>Warrant — Foster The People</li><li>Young Folks — Peter Bjorn and John</li><li>Sweet Disposition — The Temper Trap</li><li>Young Blood — The Naked And Famous</li><li>Waste — Foster The People</li><li>Midnight City — M83</li><li>Life on the Nickel — Foster The People</li><li>Sit Next to Me — Foster The People</li><li>Shuffle — Bombay Bicycle Club</li><li>Sleepyhead — Passion Pit</li><li>Cool Kids — Echosmith</li><li>Dog Days Are Over — Florence + The Machine</li><li>The High Road — Broken Bells</li>
             </ol>
-            <p><strong>Artifact rule:</strong> “delivered” means the saved prediction JSON above. The trace-stage <code>final_recommendation</code> list swaps “Shuffle” / “Sit Next to Me” at ranks 15–16 and records “Dancing Song” instead of “The High Road” at rank 20. Both agree on rank one and the response. Blind-B ground truth is hidden, so neither list establishes relevance.</p>
+            <p><strong>Artifact scope:</strong> “delivered” means the saved prediction JSON above. The trace-stage <code>final_recommendation</code> list records “Shuffle” / “Sit Next to Me” at ranks 15–16 in the opposite order and records “Dancing Song” rather than “The High Road” at rank 20. Both agree on rank one and the response. Blind-B outcome relevance is hidden.</p>
           </div>
         </details>
       </div>
@@ -810,12 +758,12 @@
         </div>
         <div class="story-flow">
           <article class="story-card">
-            <span class="evidence-badge">Submitted response context</span>
+            <span class="evidence-badge">Submitted mechanics example · outcome relevance hidden</span>
             <h3>What crosses the handoff</h3>
             <ul class="state-facts">
               <li><strong>Latest conversation state</strong><span>The final satisfaction message, the still-active derived hidden-target request, six positive facets rendered as <code>Liked / wants</code>, preferred language, and the 2010–2012 range.</span></li>
               <li><strong>Selected item block</strong><span>The rank-one track’s title “Tongue Tied,” artist GROUPLOVE, album <em>Never Trust A Happy Song</em>, and exactly the first ten available catalog tags, rendered as delimited XML.</span></li>
-              <li><strong>Style contract</strong><span>One or two concise sentences, prioritize the latest ask, explain one supported reason, and avoid overselling a clear mismatch.</span></li>
+              <li><strong>Style contract</strong><span>One or two concise sentences, prioritize the latest ask, explain one supported reason, and avoid overselling unsupported alignment.</span></li>
             </ul>
           </article>
           <article class="story-card">
@@ -824,9 +772,12 @@
             <blockquote class="prompt-quote">“A separate recommendation system has ALREADY selected one track to play next. Your only job is to write the short listener-facing message that presents that track: acknowledge what the listener just asked, then naturally explain why this track fits their request and taste.” The same prompt says: “Use only facts supported by the provided track; invent nothing.”</blockquote>
             <p class="source-links">Excerpted from <a href="../../mcrs/system_prompts/response_generation.txt">the production response-generation prompt</a>; packaging defaults are documented in <a href="../../mcrs/response_context.py">response_context.py</a>.</p>
           </article>
-          <article class="story-card">
-            <span class="evidence-badge reconstructed">Reconstructed exactly from trace + production formatter</span>
-            <h3>Listener-context and style message</h3>
+          <details>
+            <summary>Exact reconstructed formatter payload and XML wrapper</summary>
+            <div class="story-flow">
+              <article class="story-card">
+                <span class="evidence-badge reconstructed">Reconstructed exactly from trace + production formatter</span>
+                <h3>Listener-context and style message</h3>
             <pre class="code-block" aria-label="Exact reconstructed listener context and style message">[LISTENER CONTEXT]
 Preferred language: English
 Latest user request: Yes! "Pumped Up Kicks" by Foster The People! The whistling is exactly what I was thinking of. That's the one! You got it! That's the catchy, massive track I was trying to remember. Cheers for helping me find it!
@@ -835,11 +786,11 @@ Current request: Find the specific catchy indie pop/rock track from around 2010-
 Liked / wants: indie pop/rock, whistling melody, upbeat, summery, massive, male vocals
 Release year range: 2010-2012
 Response style: Write 1-2 concise sentences about only the selected track. Prioritize the latest user request and extracted state over older conversation history. If the track is reasonably aligned, explain the fit with one specific supported reason. If it clearly conflicts with an explicit avoid/new-artist constraint, do not oversell it or blame the system; briefly frame the limitation and the closest supported reason.</pre>
-            <p>The saved artifact does not persist the outbound message array. This block is therefore a precise reconstruction: <code>format_latest_state_context</code> and the <code>phase2_best_qwen</code> style constant applied to the saved trace and dataset row.</p>
-          </article>
-          <article class="story-card">
-            <span class="evidence-badge reconstructed">Exact production wrapper · reconstructed selected item</span>
-            <h3>Final user message sent after the context</h3>
+                <p>The saved artifact does not persist the outbound message array. This block is therefore a precise reconstruction: <code>format_latest_state_context</code> and the <code>phase2_best_qwen</code> style constant applied to the saved trace and dataset row.</p>
+              </article>
+              <article class="story-card">
+                <span class="evidence-badge reconstructed">Exact production wrapper · reconstructed selected item</span>
+                <h3>Final user message sent after the context</h3>
             <pre class="code-block" aria-label="Exact final response-model user wrapper">Recommend the following track and write a natural assistant response that introduces it:
 &lt;recommended_track&gt;
   &lt;title&gt;Tongue Tied&lt;/title&gt;
@@ -847,8 +798,10 @@ Response style: Write 1-2 concise sentences about only the selected track. Prior
   &lt;album&gt;Never Trust A Happy Song&lt;/album&gt;
   &lt;tags&gt;loved, happy song, killer song, alternative rock, impulsive, makes me wanna dance, gossip girl, very good, 2010s, everything&lt;/tags&gt;
 &lt;/recommended_track&gt;</pre>
-            <p>The opening sentence is literal code from <code>_build_messages</code>; the XML is the deterministic <code>xml_track_item</code> rendering of recorded rank one plus its catalog row. Together with the system prompt and prior context message, this is the response-model handoff.</p>
-          </article>
+                <p>The opening sentence is literal code from <code>_build_messages</code>; the XML is the deterministic <code>xml_track_item</code> rendering of recorded rank one plus its catalog row. Together with the system prompt and prior context message, this is the response-model handoff.</p>
+              </article>
+            </div>
+          </details>
           <div class="flow-arrow" aria-hidden="true">↓ single pass</div>
           <article class="story-card">
             <span class="evidence-badge illustrative">Saved Blind-B response · outcome unlabelled</span>
@@ -859,7 +812,7 @@ Response style: Write 1-2 concise sentences about only the selected track. Prior
           <article class="story-card">
             <span class="evidence-badge">Grounding boundary</span>
             <h3>Where the evidence ends</h3>
-            <p>The item context supports alternative rock, a happy song, 2010s, and dance impulse, but it does not state that “Tongue Tied” contains whistling. More importantly, the latest user message celebrates finding a different track; the reply resumes recommendation mode instead of acknowledging completion. “Perfect match,” “whistling,” “infectious,” “summery,” and “sunlit rush” remain unverified generation claims, and there is no hidden-set response-judge label for this turn.</p>
+            <p>The item context supports alternative rock, a happy song, 2010s, and dance impulse, but it does not state that “Tongue Tied” contains whistling. “Perfect match,” “whistling,” “infectious,” “summery,” and “sunlit rush” remain unverified generation claims, and there is no hidden-set response-judge label for this turn.</p>
             <p class="boundary-note"><strong>Submitted control path:</strong> top-1, single-pass generation. We found no independently documented fact checker and no selector/critic that compares alternative responses or chooses another track after prose generation. The generator explains the ranker’s first choice; it does not audit or revise that choice.</p>
           </article>
         </div>

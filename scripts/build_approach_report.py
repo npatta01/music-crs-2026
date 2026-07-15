@@ -4,19 +4,11 @@
 from __future__ import annotations
 
 import argparse
-import base64
 import html
 import os
 import re
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
-
-
-PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
-ASSETS = (
-    ("{{HERO_DATA_URI}}", Path("docs/approach/assets/hero.png")),
-    ("{{ALIGNMENT_DATA_URI}}", Path("docs/approach/assets/alignment-vs-distortion.png")),
-)
 
 
 def parse_args() -> argparse.Namespace:
@@ -34,14 +26,6 @@ def parse_args() -> argparse.Namespace:
         help="packaged HTML output",
     )
     return parser.parse_args()
-
-
-def png_data_uri(path: Path) -> str:
-    payload = path.read_bytes()
-    if not payload.startswith(PNG_SIGNATURE):
-        raise ValueError(f"invalid PNG signature: {path}")
-    encoded = base64.b64encode(payload).decode("ascii")
-    return f"data:image/png;base64,{encoded}"
 
 
 HREF_ATTRIBUTE = re.compile(
@@ -73,15 +57,6 @@ def rebase_local_hrefs(source: str, source_path: Path, output_path: Path) -> str
 def build(source_path: Path, output_path: Path) -> int:
     source = source_path.read_text(encoding="utf-8")
     packaged = source
-    for placeholder, asset_path in ASSETS:
-        count = packaged.count(placeholder)
-        if count > 1:
-            raise ValueError(
-                f"expected placeholder at most once: {placeholder}; found {count}"
-            )
-        if count == 1:
-            packaged = packaged.replace(placeholder, png_data_uri(asset_path))
-
     remaining = sorted(set(re.findall(r"\{\{[^{}]*\}\}", packaged)))
     if remaining or "{{" in packaged or "}}" in packaged:
         detail = ", ".join(remaining) if remaining else "malformed template token"
