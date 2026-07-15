@@ -149,6 +149,14 @@ class ApproachReportBuildTests(unittest.TestCase):
     def test_opening_has_no_decorative_image(self) -> None:
         self.assertNotIn("<img", report_opening())
 
+    def test_obsolete_walkthrough_styles_and_classes_are_absent(self) -> None:
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        for selector in ("badge", "turn", "turn.listener", "speaker"):
+            self.assertNotRegex(source, rf"(?m)^\s*\.{re.escape(selector)}\s*\{{")
+        class_values = re.findall(r'class=["\']([^"\']*)["\']', source)
+        class_tokens = {token for value in class_values for token in value.split()}
+        self.assertTrue({"badge", "turn", "listener", "speaker"}.isdisjoint(class_tokens))
+
     def test_executive_example_exposes_meaningful_state(self) -> None:
         opening = report_opening()
         for label in (
