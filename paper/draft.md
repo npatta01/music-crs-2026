@@ -108,7 +108,7 @@ Table 4 — official CodaBench results (composite = 0.50·nDCG@20 + 0.10·catalo
 | Blind-A (dev phase) | 0.4380 | 0.0313 | 0.7670 | 4.20 | 0.5389 | 63/181 |
 | Blind-B (final) | 0.2537 | 0.0315 | 0.7862 | 3.30 | 0.3811 | 29/39 |
 
-Learned re-ranking beats static fusion by the leakage-safe estimate (0.149 -> 0.197-0.203); the in-sample replay (0.384) overstated it, and the blind result (0.2537) tracked the out-of-fold evidence available before submission.
+Learned re-ranking improves over static fusion by the leakage-safe estimate (0.149 → 0.197–0.203); Section 4.1 discusses the in-sample row.
 
 ## 4 Error Analysis
 
