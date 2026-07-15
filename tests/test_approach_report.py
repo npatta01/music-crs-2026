@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import html
+import json
 import re
 import tempfile
 import unittest
@@ -15,6 +16,7 @@ PNG_DATA = "data:image/png;base64," + base64.b64encode(
     validate_approach_report.PNG_SIGNATURE + b"fixture"
 ).decode("ascii")
 REPORT_SOURCE = Path(__file__).resolve().parents[1] / "docs" / "approach" / "source.html"
+EVIDENCE_LEDGER = REPORT_SOURCE.parent / "evidence.json"
 
 
 def report_opening() -> str:
@@ -217,11 +219,39 @@ class ApproachReportBuildTests(unittest.TestCase):
         self.assertIn("156cac0f-c16b-4bd2-8f4f-cc1691adef79", gap_card)
         self.assertIn("Tongue Tied", gap_card)
         self.assertIn(
-            'href="../../exp/inference/blindset_B/'
-            'state_ranker_v10_lgbm_blindset_B.json"',
+            "<code>exp/inference/blindset_B/"
+            "state_ranker_v10_lgbm_blindset_B.json</code>",
             gap_card,
         )
         self.assertNotIn("gradients, blurred shapes", gap_card)
+
+    def test_ignored_artifact_provenance_is_visible_but_not_linked(self) -> None:
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        local_hrefs = re.findall(r'<a\b[^>]*\bhref=["\']([^"\']+)', source)
+        self.assertFalse(
+            any("../../exp/" in href for href in local_hrefs),
+            local_hrefs,
+        )
+        provenance_paths = (
+            "exp/inference/blindset_B/"
+            "state_ranker_v10_lgbm_blindset_B_trace.jsonl",
+            "exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json",
+        )
+        for path in provenance_paths:
+            self.assertIn(f"<code>{path}</code>", source)
+        self.assertEqual(source.count(f"<code>{provenance_paths[1]}</code>"), 2)
+
+    def test_stale_anchor_evidence_records_partial_reranker_recovery(self) -> None:
+        evidence = json.loads(EVIDENCE_LEDGER.read_text(encoding="utf-8"))
+        failure = next(
+            item
+            for item in evidence["failureExamples"]
+            if item["id"] == "full-stale-anchor-failure"
+        )
+        boundary = failure["firstBrokenBoundary"]
+        self.assertIn("218 to 158", boundary)
+        self.assertIn("without reaching", boundary)
+        self.assertNotIn("could not be repaired", boundary)
 
     def test_directory_links_follow_organizer_order(self) -> None:
         source = REPORT_SOURCE.read_text(encoding="utf-8")
@@ -337,6 +367,23 @@ class ApproachReportValidationTests(unittest.TestCase):
         self.assertTrue(
             any("missing local href target" in error for error in errors), errors
         )
+
+    def test_local_href_outside_report_repository_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = root / "repository" / "docs" / "approach.html"
+            report.parent.mkdir(parents=True)
+            (root / "outside.json").write_text("{}", encoding="utf-8")
+            report.write_text(
+                valid_report(extra_body='<a href="../../outside.json">outside</a>'),
+                encoding="utf-8",
+            )
+
+            errors = validate_approach_report.validate(report)
+
+            self.assertTrue(
+                any("outside report repository" in error for error in errors), errors
+            )
 
     def test_existing_local_href_and_citation_data_and_fragment_are_allowed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

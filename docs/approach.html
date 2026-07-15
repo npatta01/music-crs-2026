@@ -629,7 +629,7 @@
           <summary>Audit identity and sources</summary>
           <div>
             <p>Session <code>156cac0f-c16b-4bd2-8f4f-cc1691adef79</code> · turn 8 · trace JSONL record 71 (zero-based index 70; trace <code>idx: 6</code>).</p>
-            <p><a href="https://huggingface.co/datasets/talkpl-ai/TalkPlayData-Challenge-Blind-B">Blind-B dataset citation</a> · <a href="../configs/state_ranker_v10_lgbm_blindset_B.yaml">submitted config</a> · <a href="../../../exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B_trace.jsonl">saved trace</a>.</p>
+            <p><a href="https://huggingface.co/datasets/talkpl-ai/TalkPlayData-Challenge-Blind-B">Blind-B dataset citation</a> · <a href="../configs/state_ranker_v10_lgbm_blindset_B.yaml">submitted config</a> · saved trace: <code>exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B_trace.jsonl</code>.</p>
           </div>
         </details>
         <details>
@@ -896,7 +896,7 @@ Response style: Write 1-2 concise sentences about only the selected track. Prior
           <summary>Response settings and audit sources</summary>
           <div>
             <p>The Blind-B config selects <code>phase2_best_qwen</code>, <code>conditioning: latest_state</code>, <code>item_format: xml</code>, <code>max_tags: 10</code>, <code>temperature: 0.0</code>, and Qwen3-30B-A3B via LiteLLM. The earlier small bake-off supports the configuration choice but is not a Blind-B quality score.</p>
-            <p><a href="../configs/state_ranker_v10_lgbm_blindset_B.yaml">Submitted config</a> · <a href="../../../exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json">saved predictions</a> · <a href="research/2026-06-10-response-generation-bakeoff.md">response bake-off</a>.</p>
+            <p><a href="../configs/state_ranker_v10_lgbm_blindset_B.yaml">Submitted config</a> · saved predictions: <code>exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json</code> · <a href="research/2026-06-10-response-generation-bakeoff.md">response bake-off</a>.</p>
           </div>
         </details>
       </div>
@@ -1117,7 +1117,7 @@ Response style: Write 1-2 concise sentences about only the selected track. Prior
           <article class="gap-card problem">
             <span class="status-pill limitation">Architectural limitation</span>
             <h3>Entity and response grounding</h3>
-            <dl><dt>Expected capability</dt><dd>Ground identity and descriptive claims in catalog evidence that crosses the response handoff.</dd><dt>Submitted behavior</dt><dd>The response receives title, artist, album, and capped tags for one selected track—not independently verified audio properties or a post-generation fact check.</dd><dt>Evidence</dt><dd>In session <code>156cac0f-c16b-4bd2-8f4f-cc1691adef79</code>, turn 8, the <a href="../../../exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json">saved Blind-B prose</a> calls “Tongue Tied” a “perfect match” for whistling energy even though the selected-item context provides title, artist, album, and capped tags but no verified whistling property. Blind-B relevance is hidden.</dd><dt>User consequence</dt><dd>Fluent language can sound more certain and specific than its supplied evidence supports.</dd><dt>Recoverability</dt><dd>Within this submitted control path, generation cannot switch tracks; only richer verified context or a separate checker could repair unsupported prose claims.</dd></dl>
+            <dl><dt>Expected capability</dt><dd>Ground identity and descriptive claims in catalog evidence that crosses the response handoff.</dd><dt>Submitted behavior</dt><dd>The response receives title, artist, album, and capped tags for one selected track—not independently verified audio properties or a post-generation fact check.</dd><dt>Evidence</dt><dd>In session <code>156cac0f-c16b-4bd2-8f4f-cc1691adef79</code>, turn 8, the saved Blind-B prose (<code>exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json</code>) calls “Tongue Tied” a “perfect match” for whistling energy even though the selected-item context provides title, artist, album, and capped tags but no verified whistling property. Blind-B relevance is hidden.</dd><dt>User consequence</dt><dd>Fluent language can sound more certain and specific than its supplied evidence supports.</dd><dt>Recoverability</dt><dd>Within this submitted control path, generation cannot switch tracks; only richer verified context or a separate checker could repair unsupported prose claims.</dd></dl>
           </article>
           <article class="gap-card problem">
             <span class="status-pill failure">Observed failure · frozen devset</span>

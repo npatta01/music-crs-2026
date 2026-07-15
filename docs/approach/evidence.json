@@ -238,7 +238,7 @@
         "fusedRank": 218,
         "finalRank": 158
       },
-      "firstBrokenBoundary": "State extraction failed to type the prior artist as satisfied/history before candidate generation; the target then missed union@100 and could not be repaired by final ranking.",
+      "firstBrokenBoundary": "State extraction failed to type the prior artist as satisfied/history before candidate generation; candidate placement made rescue difficult, and final ranking improved the target from 218 to 158 without reaching the delivered top 20.",
       "status": "Verified",
       "sourcePaths": [
         "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json"

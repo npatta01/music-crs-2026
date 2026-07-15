@@ -179,10 +179,19 @@ def validate(report: Path) -> list[str]:
     )
     if invalid_anchors:
         errors.append("invalid internal anchors: " + ", ".join(invalid_anchors))
+    validation_root = report.parent.parent if report.parent.name == "docs" else report.parent
+    resolved_root = validation_root.resolve()
     for href in parser.local_hrefs:
         parsed = urlsplit(href)
         local_path = unquote(parsed.path)
         target = report if not local_path else report.parent / local_path
+        resolved_target = target.resolve()
+        if not resolved_target.is_relative_to(resolved_root):
+            errors.append(
+                f"local href target is outside report repository: {href} -> "
+                f"{resolved_target}"
+            )
+            continue
         if not target.exists():
             errors.append(f"missing local href target: {href} -> {target}")
     if parser.details_count < 8:
