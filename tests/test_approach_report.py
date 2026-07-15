@@ -103,6 +103,14 @@ class ApproachReportBuildTests(unittest.TestCase):
         self.assertIn("BM25 rank 1", opening)
         self.assertIn("reference conversation text", opening)
 
+    def test_executive_example_scopes_frozen_baseline_ranks(self) -> None:
+        opening = report_opening()
+        self.assertIn("Verified frozen 2026-06-06 devset baseline", opening)
+        self.assertIn(
+            "BM25 rank 1 → fused rank 1 → recorded final rank 1.", opening
+        )
+        self.assertNotIn("LightGBM final rank 1", opening)
+
     def test_tablet_architecture_reflows_without_minimum_track_widths(self) -> None:
         source = REPORT_SOURCE.read_text(encoding="utf-8")
         tablet_marker = "@media (min-width: 720px) and (max-width: 1063px) {"
@@ -182,6 +190,38 @@ class ApproachReportBuildTests(unittest.TestCase):
         ):
             self.assertIn(boundary, gaps)
         self.assertIn("does not imply that every boundary failed", gaps)
+
+    def test_primary_bad_trace_records_reranker_recovery(self) -> None:
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        primary_bad_trace = source[
+            source.index("Primary bad trace · verified frozen devset baseline") :
+            source.index('<div class="example-stack"', source.index(
+                "Primary bad trace · verified frozen devset baseline"
+            ))
+        ]
+        self.assertIn("218 → 158", primary_bad_trace)
+        self.assertNotIn("made the error unrecoverable", primary_bad_trace)
+
+        perpetual_card = source[
+            source.index("No branch retrieved “Perpetual”") :
+            source.index('<article class="example-card failure">', source.index(
+                "No branch retrieved “Perpetual”"
+            ))
+        ]
+        self.assertIn("unrecoverable miss", perpetual_card)
+
+    def test_response_grounding_gap_identifies_submitted_trace(self) -> None:
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        gap_start = source.index("<h3>Entity and response grounding</h3>")
+        gap_card = source[gap_start : source.index("</article>", gap_start)]
+        self.assertIn("156cac0f-c16b-4bd2-8f4f-cc1691adef79", gap_card)
+        self.assertIn("Tongue Tied", gap_card)
+        self.assertIn(
+            'href="../../exp/inference/blindset_B/'
+            'state_ranker_v10_lgbm_blindset_B.json"',
+            gap_card,
+        )
+        self.assertNotIn("gradients, blurred shapes", gap_card)
 
     def test_directory_links_follow_organizer_order(self) -> None:
         source = REPORT_SOURCE.read_text(encoding="utf-8")

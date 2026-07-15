@@ -539,9 +539,9 @@
               <div><dt>History treatment</dt><dd>no stale entities; diversify from the prior artist</dd></div>
             </dl>
           </div>
-          <div><span class="mini-label">Retrieval and ranking</span><p>BM25 rank 1 → compiler candidate rank 1 → LightGBM final rank 1.</p></div>
+          <div><span class="mini-label">Verified frozen 2026-06-06 devset baseline</span><p>BM25 rank 1 → fused rank 1 → recorded final rank 1.</p></div>
           <div><span class="mini-label">Top pick</span><p><strong>Pumped Up Kicks</strong> — Foster The People</p></div>
-          <div><span class="mini-label">Response provenance</span><p>The visible reply summary is reference conversation text; a generated response from this frozen run was not stored.</p></div>
+          <div><span class="mini-label">Provenance</span><p>The visible reply summary is reference conversation text; a generated response from this frozen run was not stored.</p></div>
         </div>
       </div>
     </section>
@@ -1047,11 +1047,11 @@ Response style: Write 1-2 concise sentences about only the selected track. Prior
             <li><span class="trace-step">1</span><strong>User signal</strong><p>After praising “Can You Feel the Force,” the listener asks for <em>other</em> high-energy classic disco or funk from the late 1970s to early 1980s.</p></li>
             <li class="boundary"><span class="trace-step">2</span><strong>Extracted belief · first broken boundary</strong><p>The frozen roleless baseline kept the prior artist The Real Thing as a positive anchor. The ideal state marks it satisfied/history rather than a current target.</p></li>
             <li><span class="trace-step">3</span><strong>Branches activated</strong><p>The strongest recorded branch was Qwen-8B attribute retrieval, but the labelled target “Give It To Me Baby” by Rick James appeared only at branch rank 101.</p></li>
-            <li><span class="trace-step">4</span><strong>Candidate boundary</strong><p>The target missed union@100 and entered fusion at rank 218, outside the practical region where final ranking could expose it.</p></li>
+            <li><span class="trace-step">4</span><strong>Candidate boundary</strong><p>The target missed union@100 and entered fusion at rank 218, making delivery difficult.</p></li>
             <li><span class="trace-step">5</span><strong>Top pick and response</strong><p>The labelled target finished at rank 158, so it was absent from the delivered top 20. The compact record does not include the selected top track or response.</p></li>
-            <li><span class="trace-step">6</span><strong>Outcome</strong><p>Verified failure in the frozen 2026-06-06 baseline: state role assignment broke first, then candidate placement made the error unrecoverable downstream.</p></li>
+            <li><span class="trace-step">6</span><strong>Outcome</strong><p>Verified failure in the frozen 2026-06-06 baseline: role assignment broke first; candidate placement made rescue difficult; final ranking improved 218 → 158 but still missed the top 20.</p></li>
           </ol>
-          <p class="recoverability"><strong>Recoverability:</strong> reranking alone could not repair a target outside union@100. Re-test this cohort on the submitted V1 extractor; the evidence does not prove that the newer submitted path retains the same failure.</p>
+          <p class="recoverability"><strong>Recoverability:</strong> reranking did act on the target and improved its position, but could not lift it into delivery. Re-test this cohort on the submitted V1 extractor; the evidence does not prove that the newer submitted path retains the same failure.</p>
         </article>
 
         <div class="example-stack" aria-label="Distinct verified failure examples">
@@ -1117,7 +1117,7 @@ Response style: Write 1-2 concise sentences about only the selected track. Prior
           <article class="gap-card problem">
             <span class="status-pill limitation">Architectural limitation</span>
             <h3>Entity and response grounding</h3>
-            <dl><dt>Expected capability</dt><dd>Ground identity and descriptive claims in catalog evidence that crosses the response handoff.</dd><dt>Submitted behavior</dt><dd>The response receives title, artist, album, and capped tags for one selected track—not an independently verified cover description or a post-generation fact check.</dd><dt>Evidence</dt><dd>The saved Blind-B prose asserts gradients, blurred shapes, and a “perfect” match that are not established by the visible trace or item context.</dd><dt>User consequence</dt><dd>Fluent language can sound more certain and specific than its supplied evidence supports.</dd><dt>Recoverability</dt><dd>Within this submitted control path, generation cannot switch tracks; only richer verified context or a separate checker could repair unsupported prose claims.</dd></dl>
+            <dl><dt>Expected capability</dt><dd>Ground identity and descriptive claims in catalog evidence that crosses the response handoff.</dd><dt>Submitted behavior</dt><dd>The response receives title, artist, album, and capped tags for one selected track—not independently verified audio properties or a post-generation fact check.</dd><dt>Evidence</dt><dd>In session <code>156cac0f-c16b-4bd2-8f4f-cc1691adef79</code>, turn 8, the <a href="../../exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json">saved Blind-B prose</a> calls “Tongue Tied” a “perfect match” for whistling energy even though the selected-item context provides title, artist, album, and capped tags but no verified whistling property. Blind-B relevance is hidden.</dd><dt>User consequence</dt><dd>Fluent language can sound more certain and specific than its supplied evidence supports.</dd><dt>Recoverability</dt><dd>Within this submitted control path, generation cannot switch tracks; only richer verified context or a separate checker could repair unsupported prose claims.</dd></dl>
           </article>
           <article class="gap-card problem">
             <span class="status-pill failure">Observed failure · frozen devset</span>
