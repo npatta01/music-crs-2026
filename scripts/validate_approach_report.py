@@ -20,20 +20,11 @@ SECTION_IDS = (
     "compile",
     "ranking",
     "response",
-    "infrastructure",
     "evaluation",
-    "examples",
-    "gaps",
-    "lessons",
+    "infrastructure",
     "reproduce",
 )
 EVIDENCE_STATUSES = ("Verified", "Inferred", "Illustrative")
-GAP_STATUSES = (
-    "Observed failure",
-    "Architectural limitation",
-    "Measurement gap",
-    "Unknown impact",
-)
 PNG_PREFIX = "data:image/png;base64,"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
@@ -50,7 +41,6 @@ class ReportParser(HTMLParser):
         self.details_count = 0
         self.png_data_uris: list[str] = []
         self.evidence_statuses: set[str] = set()
-        self.gap_statuses: set[str] = set()
         self.style_parts: list[str] = []
         self.errors: list[str] = []
         self._status_markers: list[tuple[str, str, list[str]]] = []
@@ -134,12 +124,6 @@ class ReportParser(HTMLParser):
                     for status in EVIDENCE_STATUSES
                     if text == status or text.startswith(f"{status} ·")
                 )
-            if marker_kind == "status-pill":
-                self.gap_statuses.update(
-                    status
-                    for status in GAP_STATUSES
-                    if text == status or text.startswith(f"{status} ·")
-                )
             break
 
 
@@ -208,9 +192,6 @@ def validate(report: Path) -> list[str]:
     for status in EVIDENCE_STATUSES:
         if status not in parser.evidence_statuses:
             errors.append(f"missing evidence status: {status}")
-    for status in GAP_STATUSES:
-        if status not in parser.gap_statuses:
-            errors.append(f"missing gap status: {status}")
 
     css = re.sub(r"/\*.*?\*/", "", "".join(parser.style_parts), flags=re.DOTALL)
     if re.search(r"@import\b", css, flags=re.IGNORECASE):

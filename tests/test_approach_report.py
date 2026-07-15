@@ -27,9 +27,20 @@ def report_opening() -> str:
 
 
 def valid_report(extra_head: str = "", extra_body: str = "") -> str:
+    section_ids = (
+        "overview",
+        "walkthrough",
+        "state",
+        "compile",
+        "ranking",
+        "response",
+        "evaluation",
+        "infrastructure",
+        "reproduce",
+    )
     sections = "".join(
         f'<section id="{section}"><details><summary>x</summary>x</details></section>'
-        for section in validate_approach_report.SECTION_IDS
+        for section in section_ids
     )
     return f"""<!doctype html>
 <html><head><style>body {{ color: black; }}</style>{extra_head}</head><body>
@@ -38,10 +49,6 @@ def valid_report(extra_head: str = "", extra_body: str = "") -> str:
 <span class="evidence-badge">Verified</span>
 <span class="evidence-badge">Inferred</span>
 <span class="evidence-badge">Illustrative</span>
-<span class="status-pill">Observed failure</span>
-<span class="status-pill">Architectural limitation</span>
-<span class="status-pill">Measurement gap</span>
-<span class="status-pill">Unknown impact</span>
 {sections}{extra_body}</body></html>"""
 
 
@@ -359,6 +366,9 @@ class ApproachReportValidationTests(unittest.TestCase):
             report = Path(directory) / "report.html"
             report.write_text(html, encoding="utf-8")
             return validate_approach_report.validate(report)
+
+    def test_approach_only_fixture_does_not_require_gap_statuses(self) -> None:
+        self.assertEqual(self.validate_fixture(valid_report()), [])
 
     def test_missing_packaged_local_href_fails(self) -> None:
         errors = self.validate_fixture(
