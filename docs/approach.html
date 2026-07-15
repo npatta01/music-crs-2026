@@ -202,6 +202,24 @@
     .offline-loop span:not(:last-child)::after { content: "→"; position: absolute; top: 50%; right: -.55rem; transform: translateY(-50%); }
     .architecture-invariants { display: flex; flex-wrap: wrap; gap: .45rem 1.2rem; margin: 1rem 0 0; padding: 0; color: var(--ink-soft); list-style: none; font-size: .76rem; }
     .architecture-invariants li::before { content: "✓"; margin-right: .35rem; color: var(--teal-text); font-weight: 900; }
+    .executive-example {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1px;
+      margin-top: 1rem;
+      padding: 1px;
+      overflow: hidden;
+      border-radius: var(--radius);
+      background: var(--line);
+    }
+    .executive-example > div { min-width: 0; padding: 1rem 1.1rem; background: var(--paper); }
+    .executive-example .mini-label { display: block; margin-bottom: .4rem; }
+    .executive-example p { margin: 0; color: var(--ink-soft); }
+    .executive-example .captured-state { grid-column: span 2; }
+    .captured-state dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem 1.4rem; margin: 0; }
+    .captured-state dl > div { padding-top: .5rem; border-top: 1px solid var(--line); }
+    .captured-state dt { color: var(--ink); font-size: .8rem; font-weight: 900; }
+    .captured-state dd { margin: .1rem 0 0; color: var(--ink-soft); font-size: .88rem; }
     .deep-dive-boundary { padding: 1.25rem 0; border-block: 1px solid var(--line); background: var(--teal); color: white; text-align: center; }
     .deep-dive-boundary strong { display: block; font-family: Georgia, serif; font-size: 1.45rem; font-weight: 600; }
     .deep-dive-boundary span { display: block; margin-top: .2rem; color: rgba(255,255,255,.78); font-size: .82rem; }
@@ -407,6 +425,9 @@
       .offline-loop { grid-template-columns: 1fr; }
       .offline-loop span:not(:last-child)::after { content: "↓"; top: auto; right: 50%; bottom: -.55rem; transform: translateX(50%); }
       .architecture-invariants { display: grid; }
+      .executive-example { grid-template-columns: 1fr; }
+      .executive-example .captured-state { grid-column: auto; }
+      .captured-state dl { grid-template-columns: 1fr; }
       .directory-shell { position: static; }
       .directory { box-shadow: none; }
       .chapter, .future { padding-block: 4rem; }
@@ -497,6 +518,25 @@
             <li>LightGBM determines the final order.</li>
             <li>Generation explains rank one; it does not select.</li>
           </ul>
+        </div>
+        <div class="executive-example" aria-label="Verified Pumped Up Kicks devset example">
+          <div><span class="mini-label">Listener</span><p>Energetic indie rock, popular, with a memorable whistle or a really strong bassline, maybe Foster The People or Cage The Elephant.</p></div>
+          <div class="captured-state">
+            <span class="mini-label">Captured state</span>
+            <dl>
+              <div><dt>Intent mode</dt><dd>refinement</dd></div>
+              <div><dt>Exploration policy</dt><dd>diversify artists</dd></div>
+              <div><dt>Routing</dt><dd>feature articulation</dd></div>
+              <div><dt>Resolved entities</dt><dd>Foster The People · Cage The Elephant</dd></div>
+              <div><dt>Positive facets</dt><dd>energetic · indie rock · popular · whistle · strong bassline · driving</dd></div>
+              <div><dt>Negative facets</dt><dd>none recorded</dd></div>
+              <div><dt>Hard constraints</dt><dd>none</dd></div>
+              <div><dt>History treatment</dt><dd>no stale entities; diversify from the prior artist</dd></div>
+            </dl>
+          </div>
+          <div><span class="mini-label">Retrieval and ranking</span><p>BM25 rank 1 → compiler candidate rank 1 → LightGBM final rank 1.</p></div>
+          <div><span class="mini-label">Top pick</span><p><strong>Pumped Up Kicks</strong> — Foster The People</p></div>
+          <div><span class="mini-label">Response provenance</span><p>The visible reply summary is reference conversation text; a generated response from this frozen run was not stored.</p></div>
         </div>
       </div>
     </section>

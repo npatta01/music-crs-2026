@@ -86,6 +86,23 @@ class ApproachReportBuildTests(unittest.TestCase):
     def test_opening_has_no_decorative_image(self) -> None:
         self.assertNotIn("<img", report_opening())
 
+    def test_executive_example_exposes_meaningful_state(self) -> None:
+        opening = report_opening()
+        for label in (
+            "Intent mode",
+            "Exploration policy",
+            "Routing",
+            "Resolved entities",
+            "Positive facets",
+            "Negative facets",
+            "Hard constraints",
+            "History treatment",
+        ):
+            self.assertIn(label, opening)
+        self.assertIn("Pumped Up Kicks", opening)
+        self.assertIn("BM25 rank 1", opening)
+        self.assertIn("reference conversation text", opening)
+
     def test_tablet_architecture_reflows_without_minimum_track_widths(self) -> None:
         source = REPORT_SOURCE.read_text(encoding="utf-8")
         tablet_marker = "@media (min-width: 720px) and (max-width: 1063px) {"
