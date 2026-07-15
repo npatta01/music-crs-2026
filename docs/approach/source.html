@@ -400,6 +400,7 @@
       .hero .facts { grid-column: 1 / -1; margin-top: 0; }
       .hero h1 { font-size: clamp(3.6rem, 5vw, 5.2rem); }
       .directory-shell { position: sticky; z-index: 20; top: 0; }
+      .judge-split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 55.999rem) {
       .directory ul { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
@@ -582,7 +583,7 @@
           <ol class="trace" aria-label="Full positive-control trace for Pumped Up Kicks">
             <li><span class="trace-step">1</span><strong>Conversation</strong><p>Turn 1 asks for energetic indie rock for long drives; “Let’s Dance to Joy Division” by The Wombats is played. Turn 2 says that track is fun but asks for something else: a popular track with a memorable whistle or strong bassline, perhaps by Foster The People or Cage The Elephant.</p></li>
             <li><span class="trace-step">2</span><strong>Saved state</strong><p>The compact snapshot records <code>intent_mode: refinement</code>, <code>policy: diversify_artists</code>, <code>feature_articulation</code> routing, positive entities Foster The People and Cage The Elephant, no stale entities, and tags for energetic indie rock, popularity, whistle, bassline, and driving. It records no hard filters or explicit rejections.</p></li>
-            <li><span class="trace-step">3</span><strong>Candidate evidence</strong><p>BM25 places the labelled target “Pumped Up Kicks” at branch rank 1; weighted fusion preserves it at rank 1. The compact control does not retain exact branch query payloads, raw branch counts, or a full candidate union, so those details remain unknown.</p></li>
+            <li><span class="trace-step">3</span><strong>Candidate evidence</strong><p>BM25 places the labelled target “Pumped Up Kicks” at branch rank 1; candidate pool assembly preserves it at rank 1. The compact control does not retain exact branch query payloads, raw branch counts, or a full candidate union, so those details remain unknown.</p></li>
             <li><span class="trace-step">4</span><strong>Final ranking</strong><p>The target remains rank 1. The next four are “Ruby,” “Helena Beat,” “Warrant,” and “(If You’re Wondering If I Want You To) I Want You To.” This aligns extracted intent, the strongest recorded branch, fusion, final top pick, and the labelled target.</p></li>
             <li><span class="trace-step">5</span><strong>Response handoff boundary</strong><p>A top-1 handoff would therefore present “Pumped Up Kicks.” The dataset row contains assistant prose naming the same track and citing popularity, whistle, and bassline, but it is reference conversation text—not a persisted generator message from the frozen ranking run. The alignment is verified; generated response quality is not.</p></li>
             <li><span class="trace-step">6</span><strong>Outcome</strong><p>Verified aligned retrieval success: the labelled target is branch rank 1, fused rank 1, and final rank 1. This does not prove BM25 caused the outcome or that the final submitted system behaves identically.</p></li>
@@ -620,7 +621,7 @@
           <article class="story-card">
             <span class="evidence-badge reconstructed">Submitted failure walkthrough · recorded mechanics</span>
             <h3>Resolve, fan out, reconverge, rerank, speak</h3>
-            <p>The trace resolves the named track and artist at 100% confidence. Exact-target and resolver-anchor arrays remain empty under role policy, yet compiler feedback anchoring still seeds three centroids. Seven 1,000-hit branches plus the 200-hit era lookup fire, producing 5,969 eligible unique candidates after one played item is removed. Weighted RRF orders the union; LightGBM promotes “Tongue Tied” to rank one; the response model explains that one track.</p>
+            <p>The trace resolves the named track and artist at 100% confidence. Exact-target and resolver-anchor arrays remain empty under role policy, yet compiler feedback anchoring still seeds three centroids. Seven 1,000-hit branches plus the 200-hit era lookup fire, producing 5,969 eligible unique candidates after one played item is removed. Candidate pool assembly orders the union; LightGBM promotes “Tongue Tied” to rank one; the response model explains that one track.</p>
             <p class="boundary-note"><strong>Reading rule:</strong> conversation text, state, branch status, counts, IDs, rank orders, and response are recorded. Human-readable catalog labels and the separation of the combined trace into stage cards are reconstructed. Blind-B relevance and causal quality claims remain unknown.</p>
           </article>
         </div>
@@ -758,10 +759,16 @@
           <article class="story-card">
             <span class="evidence-badge">Saved candidate union</span>
             <h3>One union for one ranker</h3>
-            <p>Seven 1,000-hit retrieval lists plus the 200-hit era lookup deduplicated to <strong>5,970 unique candidates</strong>. Played-track filtering removed one item, leaving <strong>5,969 eligible candidates</strong>; no release-date, explicit-rejection, or artist-policy drop fired. Weighted reciprocal-rank fusion then produced one 1,000-item ordered candidate stage for learned reranking.</p>
+            <p>Seven 1,000-hit retrieval lists plus the 200-hit era lookup deduplicated to <strong>5,970 unique candidates</strong>. Played-track filtering removed one item, leaving <strong>5,969 eligible candidates</strong>; no release-date, explicit-rejection, or artist-policy drop fired. Candidate pool assembly then produced one 1,000-item stage for learned reranking.</p>
             <p class="boundary-note"><strong>Structural invariant:</strong> the fan-out ends here. Every retrieval path—whether lexical, semantic, audio, image, centroid, or lookup—must reconverge before the final ranker and response handoff.</p>
           </article>
         </div>
+        <details>
+          <summary>How candidate pool assembly combines branch evidence</summary>
+          <div>
+            <p>The compiler uses internal weighted reciprocal-rank fusion: <code>score(track) = Σ branch_weight / (60 + rank_in_branch)</code>. This rank-based score combines otherwise incomparable branch scales and orders the candidate stage supplied to LightGBM; it is not the submitted final ranker.</p>
+          </div>
+        </details>
         <details>
           <summary>Exact trace status for all configured branches</summary>
           <div><p>Fired with 1,000 raw hits each: <code>bm25</code>, <code>dense.qwen_8b.metadata</code>, <code>dense.qwen_8b.attributes</code>, <code>dense.clap_text.sonic_nl</code>, and image/audio/CF compiler centroids. Each centroid records source IDs for “Pumped Up Kicks,” “Sit Next to Me,” and “Houdini.” Era/popularity fired with 200. Skipped: lyrics (<code>no_query</code>), SigLIP2 text (<code>gated_off</code>), user CF (<code>missing_user_vector</code>), and resolved-artist discography (<code>no_query</code>; resolved artist present but role-ineligible).</p></div>
@@ -773,20 +780,20 @@
       <div class="wrap">
         <div class="chapter-head">
           <p class="eyebrow"><span class="chapter-number">05</span> · Ranking</p>
-          <h2 id="ranking-title">Retrieval sets the ceiling; the judge changes the order</h2>
-          <p>A ranker can promote only candidates that retrieval supplied. Here the candidate stage is weighted RRF; the final stage is the <code>models/reranker_v12_goalfree</code> LambdaMART bundle, recorded under the stable trace label <code>lgbm_v10</code>.</p>
+          <h2 id="ranking-title">Retrieval sets the ceiling; the learned ranker changes the order</h2>
+          <p><code>ranking.mode: lgbm</code> is the submitted final path. The compiler’s candidate pool assembly first combines the specialist branches. The goal-free LambdaMART bundle runs next: LightGBM determines the delivered order, followed by the same-turn artist guard.</p>
         </div>
         <div class="story-flow">
           <article class="story-card">
             <span class="evidence-badge">Verified ranking mechanics</span>
-            <h3>What the learned judge can see</h3>
+            <h3>What the learned ranker can see</h3>
             <p>Feature families include branch rank/score/margin signals; catalog priors such as popularity, era, duration, and tag coverage; request type and routing flags; constraints and exact-match tiers; session/history relationships; lexical and dense query-to-candidate similarities; collaborative, audio, and image affinities; and guard features for played or rejected items.</p>
             <p><code>b1_cos</code> adds a goal-free conversation-to-track score: the current conversation and each candidate’s precomputed track representation live in the same fine-tuned Qwen3-Embedding-4B space, and their cosine similarity becomes one LightGBM feature. In the submitted scout-only setup, it judges candidates already retrieved; it is not a separate candidate branch.</p>
             <p class="source-links">See <a href="../architectures/biencoder.md">b1 bi-encoder architecture</a> and the served model’s <a href="../../models/reranker_v12_goalfree/model.txt">feature manifest</a>.</p>
           </article>
           <article class="story-card">
             <span class="evidence-badge reconstructed">Trace-stage order · catalog labels reconstructed</span>
-            <h3>Before: weighted-RRF top five</h3>
+            <h3>Before: candidate-pool top five</h3>
             <ol class="rank-list">
               <li>“Houdini” — Foster The People</li>
               <li>“Waste” — Foster The People</li>
@@ -952,16 +959,23 @@ Response style: Write 1-2 concise sentences about only the selected track. Prior
           <li><strong>Lexical diversity · 10% · official Distinct-2</strong><span>The challenge term measures variation in generated response language through distinct bigrams. The local evaluator additionally reports Distinct-1 as a diagnostic alongside Distinct-2; retrieval-only dummy responses score zero by construction.</span></li>
           <li><strong>Normalized response judge · 30%</strong><span>The challenge LLM judge assigns the listener-facing reply a score from 1 to 5. The formula maps that value with <code>(judge − 1) / 4</code>, so 1 becomes 0 and 5 becomes 1 before applying the 30% weight.</span></li>
         </ul>
-        <div class="judge-split" aria-label="Two different uses of language-model judgment">
+        <div class="judge-split" aria-label="Ranking and response evaluation boundaries">
           <article class="judge-card challenge">
-            <h3>Challenge LLM judge · official response outcome</h3>
-            <p>This organizer-side score evaluates the submitted natural-language response and directly contributes 30% of the composite. Its prompt is undisclosed. A saved response or local trace does not reveal this score.</p>
+            <h3>Ranking relevance</h3>
+            <p>Recall and nDCG evaluate whether relevant tracks are retrieved and ordered.</p>
           </article>
           <article class="judge-card development">
-            <h3>Development-time LLM labels and judgments · analysis inputs</h3>
-            <p>Separate proxy judges and LLM-generated relevance labels helped compare response variants or build training evidence. They are development tools, not the challenge LLM judge, and the eight-session English proxy was explicitly treated as a coarse ranker rather than an official outcome measure.</p>
+            <h3>Response quality</h3>
+            <p>LLM-as-judge evaluates listener-facing prose offline; it does not rank tracks in the serving pipeline.</p>
           </article>
         </div>
+        <details>
+          <summary>Official and development-time language-model judgments</summary>
+          <div>
+            <p>The organizer-side challenge judge evaluates the submitted natural-language response and directly contributes 30% of the composite. Its prompt is undisclosed, and a saved response or local trace does not reveal this score.</p>
+            <p>Separate proxy judges and LLM-generated relevance labels helped compare response variants or build training evidence. They are development tools, not the challenge judge; the eight-session English proxy was explicitly treated as a coarse analysis signal rather than an official outcome measure.</p>
+          </div>
+        </details>
         <p class="boundary-note"><strong>Scope boundary:</strong> labelled devset traces below support success and failure claims. Blind-B traces show the final system’s mechanics, while organizer scores summarize the submission as a whole; hidden per-turn Blind-B relevance prevents attributing its result to any architecture difference or declaring an individual Blind-B example good or bad.</p>
       </div>
     </section>
@@ -1072,6 +1086,27 @@ Response style: Write 1-2 concise sentences about only the selected track. Prior
           <p class="eyebrow"><span class="chapter-number">10</span> · Boundary gap map</p>
           <h2 id="gaps-title">A failure is useful only when its boundary is named</h2>
           <p>The map separates observed failures from architectural limits, missing measurements, and unknown impact. Frozen-devset findings are not silently promoted to claims about the final submitted V1 path.</p>
+        </div>
+        <div class="judge-split" aria-label="Aligned and first-broken-boundary signal paths">
+          <article class="judge-card challenge">
+            <h3>Aligned signal path</h3>
+            <ol class="trace">
+              <li><span class="trace-step">1</span><strong>State</strong><p>The extracted belief preserves the listener’s current intent and constraints.</p></li>
+              <li><span class="trace-step">2</span><strong>Candidate coverage</strong><p>At least one specialist retrieves a relevant track into the assembled pool.</p></li>
+              <li><span class="trace-step">3</span><strong>Final ranking</strong><p>LightGBM and the artist guard keep that track in a useful delivered position.</p></li>
+              <li><span class="trace-step">4</span><strong>Response grounding</strong><p>The explanation stays within verified context for the already-selected track.</p></li>
+            </ol>
+          </article>
+          <article class="judge-card development">
+            <h3>First-broken-boundary path</h3>
+            <ol class="trace failure-trace">
+              <li><span class="trace-step">1</span><strong>State</strong><p>A stale entity or lost constraint can be the first break.</p></li>
+              <li><span class="trace-step">2</span><strong>Candidate coverage</strong><p>If state survives, specialist retrieval can still omit the relevant track.</p></li>
+              <li><span class="trace-step">3</span><strong>Final ranking</strong><p>If the pool contains it, learned ordering can still move it below delivery.</p></li>
+              <li><span class="trace-step">4</span><strong>Response grounding</strong><p>If selection is sound, unsupported prose can still break the listener-facing result.</p></li>
+            </ol>
+            <p class="boundary-note"><strong>Reading rule:</strong> diagnose the earliest evidenced break. Naming possible boundaries does not imply that every boundary failed in one run.</p>
+          </article>
         </div>
         <div class="gap-map">
           <article class="gap-card problem">

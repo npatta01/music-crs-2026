@@ -146,6 +146,43 @@ class ApproachReportBuildTests(unittest.TestCase):
         positions = [source.index(f'id="{section_id}"') for section_id in ids]
         self.assertEqual(positions, sorted(positions))
 
+    def test_ranking_chapter_names_the_final_submitted_orderer(self) -> None:
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        ranking = source[source.index('<section class="chapter" id="ranking"') : source.index(
+            '<section class="chapter" id="response"'
+        )]
+        self.assertIn("ranking.mode: lgbm", ranking)
+        self.assertIn("LightGBM determines the delivered order", ranking)
+        self.assertIn("candidate pool assembly", ranking)
+
+    def test_evaluation_separates_ranking_metrics_from_llm_judging(self) -> None:
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        evaluation = source[source.index('<section class="chapter" id="evaluation"') : source.index(
+            '<section class="chapter" id="examples"'
+        )]
+        self.assertIn("Ranking relevance", evaluation)
+        self.assertIn("Response quality", evaluation)
+        self.assertIn("LLM-as-judge", evaluation)
+        self.assertIn("does not rank tracks", evaluation)
+
+    def test_gaps_uses_native_semantic_boundary_paths(self) -> None:
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        gaps = source[source.index('<section class="chapter" id="gaps"') : source.index(
+            '<section class="chapter" id="lessons"'
+        )]
+        self.assertNotIn("<img", gaps)
+        self.assertIn("Aligned signal path", gaps)
+        self.assertIn("First-broken-boundary path", gaps)
+        self.assertGreaterEqual(gaps.count("<ol"), 2)
+        for boundary in (
+            "State",
+            "Candidate coverage",
+            "Final ranking",
+            "Response grounding",
+        ):
+            self.assertIn(boundary, gaps)
+        self.assertIn("does not imply that every boundary failed", gaps)
+
     def test_directory_links_follow_organizer_order(self) -> None:
         source = REPORT_SOURCE.read_text(encoding="utf-8")
         directory = source[source.index('<nav class="directory') : source.index("</nav>")]
