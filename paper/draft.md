@@ -3,7 +3,7 @@
 
 **Nidhin Pattaniyil, Semih Yagli, Tanwir Zaman** — Independent Researchers
 
-*Draft v3 for co-author review — mirrors paper/main.tex after an external (Antigravity) review pass. Body fills exactly 4 pages, references on page 5 — precisely the ACM 4+1 limit. Figures 1–4 are real in the PDF. Every number is verified against the repo or the official leaderboard CSV.*
+*Draft v4 for co-author review — round-1 comments applied. Mirrors paper/main.tex: body fills exactly 4 pages, references on page 5 (the ACM 4+1 limit). Figures 1–4 are real in the PDF. Every number is verified against the repo or the official leaderboard CSV.*
 
 ---
 
@@ -34,7 +34,7 @@ Related work in brief: the design follows the retrieve-then-rerank pattern stand
 
 ### 2.1 Understanding the conversation: state extraction
 
-At each turn we prompt deepseek-v4-flash to emit a schema-constrained conversation state with eleven fields: current request, intent mode, per-track feedback, mentioned entities, hard filters, explicit rejections, routing flags, lyrical theme, and a release-year window; Figure 2 shows the schema populated on a real turn. A fuzzy resolver grounds surface names to catalog IDs so downstream stages operate on identifiers. Cheaper extraction models under-filled optional fields (rejections, attribute facets) in our checks, so all final runs use deepseek-v4-flash. Extraction runs once per turn and is cached.
+At each turn we prompt deepseek-v4-flash to emit a schema-constrained conversation state with eleven fields: current request, intent mode, per-track feedback, pinned track references, mentioned entities, hard filters, explicit rejections, process constraints, routing flags, lyrical theme, and a release-year window; Figure 2 shows the schema populated on a real turn. A fuzzy resolver grounds surface names to catalog IDs so downstream stages operate on identifiers. Cheaper extraction models under-filled optional fields (rejections, attribute facets) in our checks, so all final runs use deepseek-v4-flash. Extraction runs once per turn and is cached.
 
 [Figure 2 — worked example box, real in the PDF.] Real Blind-B turn (session 024a2738…): user hunts a specific song ("subdued, female singer, a sense of place in the lyrics, stark almost a cappella delivery… not it either"). Extracted state (abridged): request_type hidden_target; anchor artist Neko Case (must_use); rejected tracks "Calling Cards", "Man"; facets mood=subdued, lyrical_theme=sense of place, sonic=stark almost a cappella. Top-1: Neko Case — "Bracing For Sunday", with the submitted response quote.
 

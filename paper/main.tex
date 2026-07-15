@@ -131,7 +131,7 @@ Related work in brief: the design follows the retrieve-then-rerank pattern stand
 \subsection{Understanding the conversation: state extraction}
 \label{sec:state}
 
-At each turn we prompt \texttt{deepseek-v4-flash} to emit a schema-constrained conversation state with eleven fields: current request, intent mode, per-track feedback, mentioned entities, hard filters, explicit rejections, routing flags, lyrical theme, and a release-year window; Figure~\ref{fig:example} shows the schema populated on a real turn. A fuzzy resolver grounds surface names to catalog IDs so downstream stages operate on identifiers. Cheaper extraction models under-filled optional fields (rejections, attribute facets) in our checks, so all final runs use \texttt{deepseek-v4-flash}. Extraction runs once per turn and is cached.
+At each turn we prompt \texttt{deepseek-v4-flash} to emit a schema-constrained conversation state with eleven fields: current request, intent mode, per-track feedback, pinned track references, mentioned entities, hard filters, explicit rejections, process constraints, routing flags, lyrical theme, and a release-year window; Figure~\ref{fig:example} shows the schema populated on a real turn. A fuzzy resolver grounds surface names to catalog IDs so downstream stages operate on identifiers. Cheaper extraction models under-filled optional fields (rejections, attribute facets) in our checks, so all final runs use \texttt{deepseek-v4-flash}. Extraction runs once per turn and is cached.
 
 \begin{figure}[t]
   \centering
