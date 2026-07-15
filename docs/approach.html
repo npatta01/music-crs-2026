@@ -110,69 +110,98 @@
     .chapter-number { color: var(--coral-text); }
 
     .quick-summary { padding-top: clamp(3rem, 6vw, 5rem); }
-    .quick-summary .chapter-head { margin-bottom: 2rem; }
-    .quick-flow {
+    .architecture-map {
+      padding: clamp(1.2rem, 3vw, 2rem);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+    .architecture-head { margin-bottom: 1.2rem; }
+    .architecture-head h2 { font-size: clamp(1.9rem, 4vw, 3.25rem); }
+    .online-path {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: .7rem;
+      grid-template-columns: repeat(3, minmax(5.5rem, .8fr)) minmax(16rem, 2fr) repeat(4, minmax(5.8rem, .85fr));
+      gap: .55rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      align-items: stretch;
+    }
+    .architecture-node {
+      position: relative;
+      display: grid;
+      min-width: 0;
+      padding: .8rem .65rem;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: .85rem;
+      background: var(--cream);
+      text-align: center;
+      font-size: .76rem;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+    .architecture-node:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      top: 50%;
+      right: -.74rem;
+      z-index: 2;
+      display: grid;
+      width: .9rem;
+      height: .9rem;
+      place-items: center;
+      color: var(--coral-text);
+      font-weight: 900;
+      transform: translateY(-50%);
+    }
+    .state-node, .rank-node, .response-node { background: var(--teal-soft); }
+    .retrieval-mesh { display: block; padding: .7rem; background: var(--cream-deep); }
+    .retrieval-title { display: block; margin-bottom: .55rem; color: var(--coral-text); }
+    .retrieval-branches {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .35rem;
       margin: 0;
       padding: 0;
       list-style: none;
     }
-    .quick-stage {
-      position: relative;
+    .retrieval-branches li {
       min-width: 0;
-      padding: 1.1rem .8rem;
-      border: 1px solid var(--line);
-      border-radius: 1rem;
+      padding: .38rem .32rem;
+      border-radius: .45rem;
       background: var(--paper);
-      text-align: center;
+      color: var(--ink-soft);
+      font-size: .62rem;
+      font-weight: 700;
+      line-height: 1.25;
     }
-    .quick-stage:not(:last-child)::after {
-      content: "→";
-      position: absolute;
-      top: 2rem;
-      right: -.72rem;
-      z-index: 2;
-      display: grid;
-      width: 1.4rem;
-      height: 1.4rem;
-      place-items: center;
-      border-radius: 50%;
-      background: var(--coral);
-      color: white;
-      font-weight: 900;
-    }
-    .quick-icon {
-      display: grid;
-      width: 3.4rem;
-      height: 3.4rem;
-      margin: 0 auto .75rem;
-      place-items: center;
-      border-radius: 1rem;
-      background: var(--teal-soft);
+    .placement-badge {
+      display: block;
+      width: max-content;
+      max-width: 100%;
+      margin: .2rem auto 0;
       color: var(--teal-text);
-      font-size: 1.65rem;
+      font-size: .52rem;
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-transform: uppercase;
     }
-    .quick-stage:nth-child(even) .quick-icon { background: var(--coral-soft); color: var(--coral-text); }
-    .quick-stage h3 { font-size: 1rem; letter-spacing: -.02em; }
-    .quick-stage p { margin: .35rem 0 0; color: var(--ink-soft); font-size: .78rem; line-height: 1.35; }
-    .quick-example {
+    .offline-loop {
       display: grid;
-      grid-template-columns: 1.35fr 1fr 1fr .85fr 1.15fr;
-      gap: 1px;
-      margin-top: 1rem;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--line);
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: .55rem;
+      margin-top: 1.25rem;
+      padding: .8rem;
+      border: 2px dashed var(--gold);
+      border-radius: .9rem;
+      background: var(--gold-soft);
     }
-    .quick-example > div { position: relative; min-width: 0; padding: 1rem; background: var(--paper); }
-    .quick-example > div:not(:last-child)::after { content: "›"; position: absolute; top: 50%; right: -.42rem; z-index: 2; color: var(--coral); font-size: 1.5rem; font-weight: 900; transform: translateY(-50%); }
-    .quick-example .mini-label { display: block; margin-bottom: .4rem; color: var(--coral-text); font-size: .65rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
-    .quick-example p { margin: 0; font-size: .86rem; line-height: 1.45; }
-    .quick-example strong { color: var(--teal-text); }
-    .quick-example-note { margin: .7rem 0 0; color: var(--ink-soft); font-size: .78rem; }
+    .offline-loop span { position: relative; padding: .3rem .7rem; color: #5a460f; text-align: center; font-size: .7rem; font-weight: 800; line-height: 1.35; }
+    .offline-loop span:not(:last-child)::after { content: "→"; position: absolute; top: 50%; right: -.55rem; transform: translateY(-50%); }
+    .architecture-invariants { display: flex; flex-wrap: wrap; gap: .45rem 1.2rem; margin: 1rem 0 0; padding: 0; color: var(--ink-soft); list-style: none; font-size: .76rem; }
+    .architecture-invariants li::before { content: "✓"; margin-right: .35rem; color: var(--teal-text); font-weight: 900; }
     .deep-dive-boundary { padding: 1.25rem 0; border-block: 1px solid var(--line); background: var(--teal); color: white; text-align: center; }
     .deep-dive-boundary strong { display: block; font-family: Georgia, serif; font-size: 1.45rem; font-weight: 600; }
     .deep-dive-boundary span { display: block; margin-top: .2rem; color: rgba(255,255,255,.78); font-size: .82rem; }
@@ -356,12 +385,13 @@
     }
     @media (max-width: 719px) {
       .facts { grid-template-columns: repeat(2, 1fr); }
-      .quick-flow { grid-template-columns: 1fr; }
-      .quick-stage { display: grid; grid-template-columns: 3.2rem 1fr; column-gap: .85rem; text-align: left; }
-      .quick-icon { grid-row: 1 / span 2; width: 3.2rem; height: 3.2rem; margin: 0; }
-      .quick-stage:not(:last-child)::after { content: "↓"; top: auto; right: 50%; bottom: -.72rem; transform: translateX(50%); }
-      .quick-example { grid-template-columns: 1fr; }
-      .quick-example > div:not(:last-child)::after { content: "↓"; top: auto; right: 50%; bottom: -.75rem; transform: translateX(50%); }
+      .online-path { grid-template-columns: 1fr; }
+      .architecture-node { min-height: 3.4rem; }
+      .architecture-node:not(:last-child)::after { content: "↓"; top: auto; right: 50%; bottom: -.72rem; transform: translateX(50%); }
+      .retrieval-branches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .offline-loop { grid-template-columns: 1fr; }
+      .offline-loop span:not(:last-child)::after { content: "↓"; top: auto; right: 50%; bottom: -.55rem; transform: translateX(50%); }
+      .architecture-invariants { display: grid; }
       .directory-shell { position: static; }
       .directory { box-shadow: none; }
       .chapter, .future { padding-block: 4rem; }
@@ -414,26 +444,45 @@
   <main id="main-content">
     <section class="chapter quick-summary" id="overview" aria-labelledby="overview-title">
       <div class="wrap">
-        <div class="chapter-head">
-          <p class="eyebrow"><span class="chapter-number">01</span> · The 30-second picture</p>
-          <h2 id="overview-title">From conversation to one grounded recommendation</h2>
-          <p>Five inspectable handoffs turn fuzzy language into a ranked queue and a short explanation.</p>
+        <div class="architecture-map" aria-label="Final submitted Music-CRS architecture">
+          <div class="architecture-head">
+            <p class="eyebrow">First-minute system map</p>
+            <h2 id="overview-title">Serving path and evaluation loop</h2>
+          </div>
+          <ol class="online-path" aria-label="Online recommendation path">
+            <li class="architecture-node">Conversation</li>
+            <li class="architecture-node state-node">LLM state → V1 → V0Plus projection → Entity resolution</li>
+            <li class="architecture-node">Query compiler</li>
+            <li class="architecture-node retrieval-mesh">
+              <span class="retrieval-title">Retrieval mesh</span>
+              <ul class="retrieval-branches" aria-label="Retrieval branches">
+                <li>BM25<span class="placement-badge">Local</span></li>
+                <li>Qwen metadata / attributes<span class="placement-badge">Modal</span></li>
+                <li>Lyrics<span class="placement-badge">API</span></li>
+                <li>CLAP<span class="placement-badge">Modal</span></li>
+                <li>SigLIP2<span class="placement-badge">Modal</span></li>
+                <li>Track / user centroids<span class="placement-badge">Local</span></li>
+                <li>Resolved-artist discography<span class="placement-badge">Local</span></li>
+                <li>Era / popularity<span class="placement-badge">Local</span></li>
+              </ul>
+            </li>
+            <li class="architecture-node">Candidate pool assembly</li>
+            <li class="architecture-node rank-node">LightGBM LambdaMART</li>
+            <li class="architecture-node">Final artist guard and Top 20</li>
+            <li class="architecture-node response-node">Top-1 explanation</li>
+          </ol>
+          <div class="offline-loop" aria-label="Offline evaluation and improvement loop">
+            <span>Saved traces and staged replay</span>
+            <span>Ranking metrics and boundary analysis</span>
+            <span>LLM-as-judge response evaluation</span>
+            <span>Next experiment</span>
+          </div>
+          <ul class="architecture-invariants">
+            <li>Retrieval sets the candidate ceiling.</li>
+            <li>LightGBM determines the final order.</li>
+            <li>Generation explains rank one; it does not select.</li>
+          </ul>
         </div>
-        <ol class="quick-flow" aria-label="Five-stage recommendation flow">
-          <li class="quick-stage"><span class="quick-icon" aria-hidden="true">💬</span><h3>Conversation</h3><p>Hear the latest ask in context.</p></li>
-          <li class="quick-stage"><span class="quick-icon" aria-hidden="true">◇</span><h3>State</h3><p>Capture intent, cues, and constraints.</p></li>
-          <li class="quick-stage"><span class="quick-icon" aria-hidden="true">⌕</span><h3>Search</h3><p>Compile specialist retrieval routes.</p></li>
-          <li class="quick-stage"><span class="quick-icon" aria-hidden="true">↕</span><h3>Rank</h3><p>Fuse candidates; judge the order.</p></li>
-          <li class="quick-stage"><span class="quick-icon" aria-hidden="true">♪</span><h3>Response</h3><p>Explain the selected top track.</p></li>
-        </ol>
-        <div class="quick-example" aria-label="Verified devset example from request to response">
-          <div><span class="mini-label">Listener</span><p>Energetic indie rock, popular, with a memorable whistle or strong bassline—maybe Foster The People.</p></div>
-          <div><span class="mini-label">State</span><p><strong>energetic · indie rock · whistle · bass</strong></p></div>
-          <div><span class="mini-label">Compile + search</span><p>Feature route; BM25 finds the target at rank 1.</p></div>
-          <div><span class="mini-label">Top pick</span><p><strong>Pumped Up Kicks</strong><br>Foster The People</p></div>
-          <div><span class="mini-label">Reply</span><p>The dataset reference presents the pick using its popularity, whistle, and bassline.</p></div>
-        </div>
-        <p class="quick-example-note"><span class="evidence-badge">Verified devset example</span> The ranking is saved; the displayed reply is reference conversation text, not a stored generated response.</p>
       </div>
     </section>
 

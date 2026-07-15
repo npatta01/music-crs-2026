@@ -17,6 +17,13 @@ PNG_DATA = "data:image/png;base64," + base64.b64encode(
 REPORT_SOURCE = Path(__file__).resolve().parents[1] / "docs" / "approach" / "source.html"
 
 
+def report_opening() -> str:
+    source = REPORT_SOURCE.read_text(encoding="utf-8")
+    return source[source.index('<header class="hero">') : source.index(
+        '<div class="deep-dive-boundary"'
+    )]
+
+
 def valid_report(extra_head: str = "", extra_body: str = "") -> str:
     sections = "".join(
         f'<section id="{section}"><details><summary>x</summary>x</details></section>'
@@ -52,20 +59,32 @@ class ApproachReportBuildTests(unittest.TestCase):
                 "<main>No decorative images</main>",
             )
 
-    def test_source_opens_with_a_five_stage_visual_summary(self) -> None:
-        source = REPORT_SOURCE.read_text(encoding="utf-8")
-        summary = re.search(
-            r'<section class="chapter quick-summary".*?</section>', source, re.S
-        )
-        self.assertIsNotNone(summary)
-        markup = summary.group(0)
+    def test_opening_contains_complete_submitted_architecture(self) -> None:
+        opening = report_opening()
+        for label in (
+            "Conversation",
+            "LLM state",
+            "V1 → V0Plus projection",
+            "Entity resolution",
+            "Query compiler",
+            "Retrieval mesh",
+            "Candidate pool assembly",
+            "LightGBM LambdaMART",
+            "Final artist guard",
+            "Top 20",
+            "Top-1 explanation",
+        ):
+            self.assertIn(label, opening)
+        self.assertIn('class="offline-loop"', opening)
+        self.assertIn("LLM-as-judge", opening)
 
-        self.assertEqual(markup.count('class="quick-stage"'), 5)
-        labels = ["Conversation", "State", "Search", "Rank", "Response"]
-        positions = [markup.index(f"<h3>{label}</h3>") for label in labels]
-        self.assertEqual(positions, sorted(positions))
-        self.assertIn("Pumped Up Kicks", markup)
-        self.assertIn("Verified devset example", markup)
+    def test_opening_does_not_present_rrf_as_the_final_ranker(self) -> None:
+        opening = report_opening()
+        self.assertNotIn("Weighted RRF", opening)
+        self.assertIn("LightGBM determines the final order", opening)
+
+    def test_opening_has_no_decorative_image(self) -> None:
+        self.assertNotIn("<img", report_opening())
 
     def test_quick_opening_stays_under_250_visible_words(self) -> None:
         source = REPORT_SOURCE.read_text(encoding="utf-8")
