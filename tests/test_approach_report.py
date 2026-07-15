@@ -137,6 +137,36 @@ class ApproachReportBuildTests(unittest.TestCase):
             source.index('<div class="directory-shell">'),
         )
 
+    def test_source_uses_organizer_slide_order(self) -> None:
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        ids = [
+            "overview", "walkthrough", "state", "compile", "ranking", "response",
+            "infrastructure", "evaluation", "examples", "gaps", "lessons", "reproduce",
+        ]
+        positions = [source.index(f'id="{section_id}"') for section_id in ids]
+        self.assertEqual(positions, sorted(positions))
+
+    def test_directory_links_follow_organizer_order(self) -> None:
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        directory = source[source.index('<nav class="directory') : source.index("</nav>")]
+        labels = [
+            "Architecture", "Worked example", "State", "Retrieval", "Ranking",
+            "Response", "Compute", "Evaluation", "Examples", "Gaps", "Lessons", "Reproduce",
+        ]
+        positions = [directory.index(f">{label}<") for label in labels]
+        self.assertEqual(positions, sorted(positions))
+
+    def test_small_screen_directory_scrolls_inside_navigation(self) -> None:
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        mobile_marker = "@media (max-width: 55.999rem) {"
+        self.assertIn(mobile_marker, source)
+        mobile_start = source.index(mobile_marker)
+        mobile_end = source.index("}", mobile_start)
+        mobile_css = source[mobile_start:mobile_end]
+        self.assertIn(".directory ul", mobile_css)
+        self.assertIn("overflow-x: auto", mobile_css)
+        self.assertIn("flex-wrap: nowrap", mobile_css)
+
     def test_rebases_relative_local_hrefs_from_source_to_output_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

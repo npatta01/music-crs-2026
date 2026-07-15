@@ -15,12 +15,12 @@ from urllib.parse import unquote, urlsplit
 
 SECTION_IDS = (
     "overview",
-    "infrastructure",
     "walkthrough",
     "state",
     "compile",
     "ranking",
     "response",
+    "infrastructure",
     "evaluation",
     "examples",
     "gaps",

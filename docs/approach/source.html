@@ -401,6 +401,10 @@
       .hero h1 { font-size: clamp(3.6rem, 5vw, 5.2rem); }
       .directory-shell { position: sticky; z-index: 20; top: 0; }
     }
+    @media (max-width: 55.999rem) {
+      .directory ul { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
+      .directory li { flex: 0 0 auto; }
+    }
     @media (min-width: 720px) and (max-width: 1063px) {
       .online-path { grid-template-columns: repeat(4, minmax(0, 1fr)); }
       .architecture-node:nth-child(1) { grid-column: 1; grid-row: 1; }
@@ -549,13 +553,13 @@
       <nav class="directory wrap" aria-label="Report directory">
         <p>Directory</p>
         <ul>
-          <li><a href="#overview">Overview</a></li>
-          <li><a href="#infrastructure">Infrastructure</a></li>
-          <li><a href="#walkthrough">Walkthrough</a></li>
+          <li><a href="#overview">Architecture</a></li>
+          <li><a href="#walkthrough">Worked example</a></li>
           <li><a href="#state">State</a></li>
-          <li><a href="#compile">Compile</a></li>
+          <li><a href="#compile">Retrieval</a></li>
           <li><a href="#ranking">Ranking</a></li>
           <li><a href="#response">Response</a></li>
+          <li><a href="#infrastructure">Compute</a></li>
           <li><a href="#evaluation">Evaluation</a></li>
           <li><a href="#examples">Examples</a></li>
           <li><a href="#gaps">Gaps</a></li>
@@ -565,54 +569,10 @@
       </nav>
     </div>
 
-    <section class="chapter" id="infrastructure" aria-labelledby="infrastructure-title">
-      <div class="wrap">
-        <div class="chapter-head">
-          <p class="eyebrow"><span class="chapter-number">02</span> · Workload placement</p>
-          <h2 id="infrastructure-title">Local control, selective remote compute</h2>
-          <p>“Local” describes the runner, not every model call. The competition workflow lacked a suitable local discrete GPU, so targeted remote GPU capacity handled the model-specific work below while orchestration, caches, catalog search, reranking, and evaluation stayed local.</p>
-        </div>
-
-        <ol class="infra-flow" aria-label="Infrastructure flow">
-          <li><article class="infra-card"><span class="workload local">Local</span><h3>Orchestration, caches, and catalog</h3><p>The Python runner loads YAML, checks file-per-turn state and embedding caches, resolves entities, and searches the local LanceDB catalog. The active staged devset pipeline also shards retrieval locally.</p></article></li>
-          <li>
-            <div class="remote-workloads" aria-label="Selective remote workloads">
-              <article class="infra-card split-card"><span class="workload hosted">Hosted API · OpenRouter</span><h3>DeepSeek state extraction</h3><p>On a genuine state-cache miss, LiteLLM routes <code>deepseek-v4-flash</code> through OpenRouter to produce the V1 conversation state.</p></article>
-              <article class="infra-card split-card"><span class="workload hosted">Hosted API · DeepInfra</span><h3>Qwen3-Embedding-0.6B</h3><p>Lyrics queries and tag-resolution embeddings use the config’s OpenAI-compatible DeepInfra endpoint, behind the shared disk cache.</p></article>
-              <article class="infra-card split-card"><span class="workload modal">Modal · vLLM</span><h3>Qwen3-Embedding-8B</h3><p>The logical <code>qwen3-embedding-8b</code> endpoint resolves to the private Modal vLLM service for metadata and attribute query embeddings.</p></article>
-              <article class="infra-card split-card"><span class="workload modal">Modal</span><h3>CLAP and SigLIP2</h3><p>Sonic and cover-art routes invoke the private <code>MultimodalTextEncoder</code> methods for CLAP-text and SigLIP2-text embeddings.</p></article>
-              <article class="infra-card split-card"><span class="workload hosted">Hosted API · OpenRouter</span><h3>Qwen response generation</h3><p>After ranking, LiteLLM sends the top-one explanation handoff to <code>qwen3-30b-a3b-instruct-2507</code> through OpenRouter.</p></article>
-            </div>
-          </li>
-          <li><article class="infra-card"><span class="workload artifact">Persisted artifact</span><h3>Predictions, traces, and a manifest</h3><p>Run-scoped JSON, JSONL, logs, scores, and manifest metadata make the expensive retrieval result reusable instead of ephemeral.</p></article></li>
-          <li><article class="infra-card"><span class="workload local">Local</span><h3>Replay and evaluation</h3><p>The staged runner replays the committed LightGBM bundle over a saved trace, merges shards, writes the top 20, and evaluates devset output locally. Staged explanation replay is intentionally dummy-only.</p></article></li>
-        </ol>
-
-        <p class="boundary-note"><strong>Boundary check:</strong> the submitted Blind-B YAML and endpoint-resolution code establish this placement. A cache hit can avoid a remote call, and a runner labelled <code>local</code> can still invoke these private hosted services; the runner backend and individual model placement are separate controls.</p>
-
-        <details>
-          <summary>Configuration map: what controls placement?</summary>
-          <div>
-            <p><code>configs/pipelines/state_ranker_v10_lgbm_devset.yaml</code> sets the staged runner, retrieval, and rerank backends to local and points replay at <code>models/reranker_v12_goalfree</code>.</p>
-            <p><code>configs/state_ranker_v10_lgbm_devset.yaml</code> sets the extractor and Qwen encoder endpoints, Modal multimodal methods, LanceDB path, candidate depths, fusion, and final LightGBM paths.</p>
-            <p><code>run_pipeline.py</code> enforces local-only rerank replay, persists run roots under <code>exp/pipeline/runs</code>, and invokes the devset evaluator after merge.</p>
-          </div>
-        </details>
-
-        <details>
-          <summary>Zero-cost offline reproduction</summary>
-          <div>
-            <p>The offline bundle can replay the shipped splits with credentials blanked and the network fenced. Its activation script points state, embedding, and LiteLLM lookups at curated caches and enables <code>MCRS_REQUIRE_LITELLM_CACHE=1</code>, so a miss fails instead of spending money.</p>
-            <p>Frozen predictions can be byte-verified. A fresh offline ANN run can reproduce comparable recommendations but is not promised to be byte-identical because approximate-nearest-neighbor ordering can vary; blind-set relevance still cannot be scored locally because organizer labels are hidden.</p>
-          </div>
-        </details>
-      </div>
-    </section>
-
     <section class="chapter" id="walkthrough" aria-labelledby="walkthrough-title">
       <div class="wrap">
         <div class="chapter-head">
-          <p class="eyebrow"><span class="chapter-number">03</span> · Two conversations, two evidence scopes</p>
+          <p class="eyebrow"><span class="chapter-number">02</span> · Two conversations, two evidence scopes</p>
           <h2 id="walkthrough-title">A labelled retrieval success beside a submitted completion failure</h2>
           <p>No single retained artifact proves both outcome quality and every final-system handoff. The first spine is a labelled two-turn devset success from the frozen 2026-06-06 baseline. The second is a final submitted-system Blind-B trace with complete mechanics but hidden relevance labels. They are intentionally separate.</p>
         </div>
@@ -693,7 +653,7 @@
     <section class="chapter" id="state" aria-labelledby="state-title">
       <div class="wrap">
         <div class="chapter-head">
-          <p class="eyebrow"><span class="chapter-number">04</span> · State extraction</p>
+          <p class="eyebrow"><span class="chapter-number">03</span> · State extraction</p>
           <h2 id="state-title">Preserve what matters for the next recommendation</h2>
           <p>The production extractor is deliberately not a transcript summarizer. It asks for a narrow, evidence-linked V1 object, then a deterministic bridge derives the compatibility fields the existing resolver and compiler expect.</p>
         </div>
@@ -772,7 +732,7 @@
     <section class="chapter" id="compile" aria-labelledby="compile-title">
       <div class="wrap">
         <div class="chapter-head">
-          <p class="eyebrow"><span class="chapter-number">05</span> · Resolution and retrieval</p>
+          <p class="eyebrow"><span class="chapter-number">04</span> · Resolution and retrieval</p>
           <h2 id="compile-title">Specialists search independently, then meet again</h2>
           <p>Resolution first separates catalog identities from descriptive language. The compiler then fans one resolved state into specialist queries. A skipped branch is an explicit routing outcome, not missing telemetry.</p>
         </div>
@@ -812,7 +772,7 @@
     <section class="chapter" id="ranking" aria-labelledby="ranking-title">
       <div class="wrap">
         <div class="chapter-head">
-          <p class="eyebrow"><span class="chapter-number">06</span> · Ranking</p>
+          <p class="eyebrow"><span class="chapter-number">05</span> · Ranking</p>
           <h2 id="ranking-title">Retrieval sets the ceiling; the judge changes the order</h2>
           <p>A ranker can promote only candidates that retrieval supplied. Here the candidate stage is weighted RRF; the final stage is the <code>models/reranker_v12_goalfree</code> LambdaMART bundle, recorded under the stable trace label <code>lgbm_v10</code>.</p>
         </div>
@@ -866,7 +826,7 @@
     <section class="chapter" id="response" aria-labelledby="response-title">
       <div class="wrap">
         <div class="chapter-head">
-          <p class="eyebrow"><span class="chapter-number">07</span> · Response handoff</p>
+          <p class="eyebrow"><span class="chapter-number">06</span> · Response handoff</p>
           <h2 id="response-title">The language model presents one already-selected track</h2>
           <p>Generation does not choose among the 20. The submitted path passes only rank one to Qwen3-30B-A3B, alongside latest-state conditioning, and asks for a short listener-facing explanation.</p>
         </div>
@@ -934,6 +894,50 @@ Response style: Write 1-2 concise sentences about only the selected track. Prior
         </details>
       </div>
     </section>
+    <section class="chapter" id="infrastructure" aria-labelledby="infrastructure-title">
+      <div class="wrap">
+        <div class="chapter-head">
+          <p class="eyebrow"><span class="chapter-number">07</span> · Workload placement</p>
+          <h2 id="infrastructure-title">Local control, selective remote compute</h2>
+          <p>“Local” describes the runner, not every model call. The competition workflow lacked a suitable local discrete GPU, so targeted remote GPU capacity handled the model-specific work below while orchestration, caches, catalog search, reranking, and evaluation stayed local.</p>
+        </div>
+
+        <ol class="infra-flow" aria-label="Infrastructure flow">
+          <li><article class="infra-card"><span class="workload local">Local</span><h3>Orchestration, caches, and catalog</h3><p>The Python runner loads YAML, checks file-per-turn state and embedding caches, resolves entities, and searches the local LanceDB catalog. The active staged devset pipeline also shards retrieval locally.</p></article></li>
+          <li>
+            <div class="remote-workloads" aria-label="Selective remote workloads">
+              <article class="infra-card split-card"><span class="workload hosted">Hosted API · OpenRouter</span><h3>DeepSeek state extraction</h3><p>On a genuine state-cache miss, LiteLLM routes <code>deepseek-v4-flash</code> through OpenRouter to produce the V1 conversation state.</p></article>
+              <article class="infra-card split-card"><span class="workload hosted">Hosted API · DeepInfra</span><h3>Qwen3-Embedding-0.6B</h3><p>Lyrics queries and tag-resolution embeddings use the config’s OpenAI-compatible DeepInfra endpoint, behind the shared disk cache.</p></article>
+              <article class="infra-card split-card"><span class="workload modal">Modal · vLLM</span><h3>Qwen3-Embedding-8B</h3><p>The logical <code>qwen3-embedding-8b</code> endpoint resolves to the private Modal vLLM service for metadata and attribute query embeddings.</p></article>
+              <article class="infra-card split-card"><span class="workload modal">Modal</span><h3>CLAP and SigLIP2</h3><p>Sonic and cover-art routes invoke the private <code>MultimodalTextEncoder</code> methods for CLAP-text and SigLIP2-text embeddings.</p></article>
+              <article class="infra-card split-card"><span class="workload hosted">Hosted API · OpenRouter</span><h3>Qwen response generation</h3><p>After ranking, LiteLLM sends the top-one explanation handoff to <code>qwen3-30b-a3b-instruct-2507</code> through OpenRouter.</p></article>
+            </div>
+          </li>
+          <li><article class="infra-card"><span class="workload artifact">Persisted artifact</span><h3>Predictions, traces, and a manifest</h3><p>Run-scoped JSON, JSONL, logs, scores, and manifest metadata make the expensive retrieval result reusable instead of ephemeral.</p></article></li>
+          <li><article class="infra-card"><span class="workload local">Local</span><h3>Replay and evaluation</h3><p>The staged runner replays the committed LightGBM bundle over a saved trace, merges shards, writes the top 20, and evaluates devset output locally. Staged explanation replay is intentionally dummy-only.</p></article></li>
+        </ol>
+
+        <p class="boundary-note"><strong>Boundary check:</strong> the submitted Blind-B YAML and endpoint-resolution code establish this placement. A cache hit can avoid a remote call, and a runner labelled <code>local</code> can still invoke these private hosted services; the runner backend and individual model placement are separate controls.</p>
+
+        <details>
+          <summary>Configuration map: what controls placement?</summary>
+          <div>
+            <p><code>configs/pipelines/state_ranker_v10_lgbm_devset.yaml</code> sets the staged runner, retrieval, and rerank backends to local and points replay at <code>models/reranker_v12_goalfree</code>.</p>
+            <p><code>configs/state_ranker_v10_lgbm_devset.yaml</code> sets the extractor and Qwen encoder endpoints, Modal multimodal methods, LanceDB path, candidate depths, fusion, and final LightGBM paths.</p>
+            <p><code>run_pipeline.py</code> enforces local-only rerank replay, persists run roots under <code>exp/pipeline/runs</code>, and invokes the devset evaluator after merge.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Zero-cost offline reproduction</summary>
+          <div>
+            <p>The offline bundle can replay the shipped splits with credentials blanked and the network fenced. Its activation script points state, embedding, and LiteLLM lookups at curated caches and enables <code>MCRS_REQUIRE_LITELLM_CACHE=1</code>, so a miss fails instead of spending money.</p>
+            <p>Frozen predictions can be byte-verified. A fresh offline ANN run can reproduce comparable recommendations but is not promised to be byte-identical because approximate-nearest-neighbor ordering can vary; blind-set relevance still cannot be scored locally because organizer labels are hidden.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
     <section class="chapter" id="evaluation" aria-labelledby="evaluation-title">
       <div class="wrap">
         <div class="chapter-head">
