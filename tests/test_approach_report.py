@@ -86,6 +86,23 @@ class ApproachReportBuildTests(unittest.TestCase):
     def test_opening_has_no_decorative_image(self) -> None:
         self.assertNotIn("<img", report_opening())
 
+    def test_tablet_architecture_reflows_without_minimum_track_widths(self) -> None:
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        tablet_marker = "@media (min-width: 720px) and (max-width: 1063px) {"
+        self.assertIn(tablet_marker, source)
+        tablet_start = source.index(tablet_marker)
+        tablet_end = source.index("@media (max-width: 719px) {", tablet_start)
+        tablet_css = source[tablet_start:tablet_end]
+
+        self.assertIn(
+            ".online-path { grid-template-columns: repeat(4, minmax(0, 1fr)); }",
+            tablet_css,
+        )
+        self.assertIn(
+            ".architecture-node:nth-child(4) { grid-column: 3 / span 2;",
+            tablet_css,
+        )
+
     def test_quick_opening_stays_under_250_visible_words(self) -> None:
         source = REPORT_SOURCE.read_text(encoding="utf-8")
         opening = source[source.index('<header class="hero">') : source.index(
