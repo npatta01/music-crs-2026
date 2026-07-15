@@ -33,44 +33,23 @@
 - Consumes: `validate(report: Path) -> list[str]`, `SECTION_IDS`, and `REPORT_SOURCE`.
 - Produces: a nine-section structural contract with no RCA-only section or gap-status requirement.
 
-- [ ] **Step 1: Add failing source and validator tests**
+- [ ] **Step 1: Add a failing validator-contract test**
+
+Update `valid_report()` to emit the nine required sections and remove the four gap-status pills. Add:
 
 ```python
-def test_source_is_an_approach_only_deck(self) -> None:
-    source = REPORT_SOURCE.read_text(encoding="utf-8")
-    required = [
-        "overview", "walkthrough", "state", "compile", "ranking",
-        "response", "evaluation", "infrastructure", "reproduce",
-    ]
-    positions = [source.index(f'id="{section_id}"') for section_id in required]
-    self.assertEqual(positions, sorted(positions))
-    for removed in ("examples", "gaps", "lessons"):
-        self.assertNotIn(f'id="{removed}"', source)
-
-
-def test_directory_contains_only_approach_slides(self) -> None:
-    source = REPORT_SOURCE.read_text(encoding="utf-8")
-    directory = source[source.index('<nav class="directory') : source.index("</nav>")]
-    labels = [
-        "Architecture", "Worked example", "State", "Retrieval", "Ranking",
-        "Response", "Evaluation", "Compute", "Reproduce",
-    ]
-    self.assertEqual(directory.count("<li>"), len(labels))
-    positions = [directory.index(f">{label}<") for label in labels]
-    self.assertEqual(positions, sorted(positions))
+def test_approach_only_fixture_does_not_require_gap_statuses(self) -> None:
+    self.assertEqual(self.validate_fixture(valid_report()), [])
 ```
-
-Update `valid_report()` to emit the nine required sections and remove the four gap-status pills. Add a validation test asserting a nine-section fixture passes without gap statuses.
 
 - [ ] **Step 2: Run focused tests and verify RED**
 
 ```bash
 PYTHONPATH=. uv run --no-sync python -m unittest \
-  tests.test_approach_report.ApproachReportBuildTests.test_source_is_an_approach_only_deck \
-  tests.test_approach_report.ApproachReportBuildTests.test_directory_contains_only_approach_slides -v
+  tests.test_approach_report.ApproachReportValidationTests.test_approach_only_fixture_does_not_require_gap_statuses -v
 ```
 
-Expected: failure because the source still contains examples, gaps, lessons, and the old ordering.
+Expected: failure because the validator still requires the old section order and gap statuses.
 
 - [ ] **Step 3: Update the validator contract**
 
@@ -120,7 +99,44 @@ git commit -m "test: define approach-only report structure"
 - Consumes: the structural contract from Task 1.
 - Produces: a nine-slide source and generated deck with evaluation before compute placement.
 
-- [ ] **Step 1: Remove the three RCA-only semantic sections**
+- [ ] **Step 1: Add failing source and navigation tests**
+
+```python
+def test_source_is_an_approach_only_deck(self) -> None:
+    source = REPORT_SOURCE.read_text(encoding="utf-8")
+    required = [
+        "overview", "walkthrough", "state", "compile", "ranking",
+        "response", "evaluation", "infrastructure", "reproduce",
+    ]
+    positions = [source.index(f'id="{section_id}"') for section_id in required]
+    self.assertEqual(positions, sorted(positions))
+    for removed in ("examples", "gaps", "lessons"):
+        self.assertNotIn(f'id="{removed}"', source)
+
+
+def test_directory_contains_only_approach_slides(self) -> None:
+    source = REPORT_SOURCE.read_text(encoding="utf-8")
+    directory = source[source.index('<nav class="directory') : source.index("</nav>")]
+    labels = [
+        "Architecture", "Worked example", "State", "Retrieval", "Ranking",
+        "Response", "Evaluation", "Compute", "Reproduce",
+    ]
+    self.assertEqual(directory.count("<li>"), len(labels))
+    positions = [directory.index(f">{label}<") for label in labels]
+    self.assertEqual(positions, sorted(positions))
+```
+
+- [ ] **Step 2: Run the source tests and verify RED**
+
+```bash
+PYTHONPATH=. uv run --no-sync python -m unittest \
+  tests.test_approach_report.ApproachReportBuildTests.test_source_is_an_approach_only_deck \
+  tests.test_approach_report.ApproachReportBuildTests.test_directory_contains_only_approach_slides -v
+```
+
+Expected: failure because the source still contains examples, gaps, lessons, and the old ordering.
+
+- [ ] **Step 3: Remove the three RCA-only semantic sections**
 
 Delete the complete blocks beginning with:
 
@@ -132,7 +148,7 @@ Delete the complete blocks beginning with:
 
 Do not move their failure cards, gap map, or lessons copy into another slide.
 
-- [ ] **Step 2: Move evaluation before infrastructure**
+- [ ] **Step 4: Move evaluation before infrastructure**
 
 The source order after `section#response` must be:
 
@@ -144,7 +160,7 @@ The source order after `section#response` must be:
 
 Preserve each section's evidence content and disclosures. Renumber visible chapter numbers to 07 Evaluation, 08 Compute design, and 09 Reproduce.
 
-- [ ] **Step 3: Replace the directory with nine links**
+- [ ] **Step 5: Replace the directory with nine links**
 
 ```html
 <li><a href="#overview">Architecture</a></li>
@@ -160,11 +176,11 @@ Preserve each section's evidence content and disclosures. Renumber visible chapt
 
 Update the deep-dive boundary subtitle to `Worked example, state, retrieval, ranking, response, evaluation, compute, and reproduction.`
 
-- [ ] **Step 4: Remove CSS used only by deleted slides**
+- [ ] **Step 6: Remove CSS used only by deleted slides**
 
 Delete selectors whose elements no longer exist, including `.example-stack`, `.example-card`, `.gap-map`, `.gap-card`, `.status-pill`, `.boundary-compare`, `.signal-path`, and deleted-section-only mobile/print rules. Retain shared `.trace`, `.story-card`, `.status-pill` only if an element still uses it; confirm with `rg` before removal.
 
-- [ ] **Step 5: Run source tests, build, and validator**
+- [ ] **Step 7: Run source tests, build, and validator**
 
 ```bash
 PYTHONPATH=. uv run --no-sync python -m unittest tests.test_approach_report -v
@@ -175,7 +191,7 @@ git diff --check
 
 Expected: all focused tests pass, the validator prints `approach report valid`, and the generated report contains nine required sections.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add docs/approach/source.html docs/approach.html tests/test_approach_report.py
