@@ -74,18 +74,6 @@
     h2 { margin: 0; font-family: Georgia, serif; font-size: clamp(2.1rem, 5vw, 4.25rem); font-weight: 600; }
     h3 { margin: 0; font-size: clamp(1.15rem, 2.2vw, 1.45rem); }
     .hero-intro { max-width: 47rem; margin: 1.4rem 0 0; color: var(--ink-soft); font-size: clamp(1.05rem, 2vw, 1.3rem); }
-    .hero-figure { position: relative; margin: clamp(2rem, 5vw, 4.5rem) 0 0; }
-    .hero-figure::before {
-      content: "";
-      position: absolute;
-      inset: 8% -1.25% -5% 3%;
-      z-index: -1;
-      border-radius: var(--radius);
-      background: var(--coral);
-      transform: rotate(-1.2deg);
-    }
-    .hero-figure img { width: 100%; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
-    .hero-figure figcaption { padding-inline: .45rem; color: var(--paper); }
     .facts {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -200,10 +188,6 @@
       letter-spacing: .07em;
       text-transform: uppercase;
     }
-
-    .alignment { margin: 3.5rem 0 0; }
-    .alignment img { width: 100%; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow); }
-    figcaption { max-width: 55rem; margin-top: .8rem; color: var(--ink-soft); font-size: .85rem; }
 
     .infra-flow { display: flex; flex-direction: column; gap: .85rem; margin: 0; padding: 0; list-style: none; }
     .infra-flow li { position: relative; padding-bottom: 2.25rem; }
@@ -366,7 +350,6 @@
     @media (min-width: 56rem) {
       .hero > .wrap { display: grid; grid-template-columns: minmax(18rem, .8fr) minmax(0, 1.2fr); gap: 2.5rem 4rem; align-items: center; }
       .hero-copy { grid-column: 1; }
-      .hero-figure { grid-column: 2; margin: 0; }
       .hero .facts { grid-column: 1 / -1; margin-top: 0; }
       .hero h1 { font-size: clamp(3.6rem, 5vw, 5.2rem); }
       .directory-shell { position: sticky; z-index: 20; top: 0; }
@@ -398,8 +381,7 @@
       body { background: #fff; color: #000; font-size: 10pt; }
       .skip-link, .directory-shell { display: none; }
       .hero, .chapter, .future, footer { padding-block: 1.5rem; }
-      .hero-figure::before { display: none; }
-      .hero-figure img, .alignment img, .directory, .facts { box-shadow: none; }
+      .directory, .facts { box-shadow: none; }
       details { break-inside: avoid; }
       details > div { display: block !important; }
       .story-card, .example-card, .gap-card, .source-map tr { break-inside: avoid; }
@@ -420,10 +402,6 @@
         <h1>Inside Our Music-CRS Recommender</h1>
         <p class="hero-intro">A source-backed tour from an open-ended conversation to a ranked listening queue—and the machinery that makes each handoff inspectable.</p>
       </div>
-      <figure class="hero-figure">
-        <img src="{{HERO_DATA_URI}}" alt="A listener's conversation flowing through a structured music recommendation system into a final playlist.">
-        <figcaption>A visual summary of the report’s one-column path: conversation, structured state, retrieval, ranking, and the final listening queue.</figcaption>
-      </figure>
       <ul class="facts" aria-label="System at a glance">
         <li><strong>47k</strong><span>tracks in the catalog</span></li>
         <li><strong>Top 20</strong><span>tracks returned per turn</span></li>
@@ -987,10 +965,6 @@ Response style: Write 1-2 concise sentences about only the selected track. Prior
           <h2 id="gaps-title">A failure is useful only when its boundary is named</h2>
           <p>The map separates observed failures from architectural limits, missing measurements, and unknown impact. Frozen-devset findings are not silently promoted to claims about the final submitted V1 path.</p>
         </div>
-        <figure class="alignment">
-          <img src="{{ALIGNMENT_DATA_URI}}" alt="Two musical signal paths: one stays aligned through each transformation and reaches a harmonious record, while the other progressively bends, loses cues, and ends at a mismatched record.">
-          <figcaption>Success keeps the listener’s signal aligned across every boundary; failure can begin at state, search, fusion, ranking, or response grounding.</figcaption>
-        </figure>
         <div class="gap-map">
           <article class="gap-card problem">
             <span class="status-pill failure">Observed failure · frozen baseline</span>

@@ -75,11 +75,12 @@ def build(source_path: Path, output_path: Path) -> int:
     packaged = source
     for placeholder, asset_path in ASSETS:
         count = packaged.count(placeholder)
-        if count != 1:
+        if count > 1:
             raise ValueError(
-                f"expected placeholder exactly once: {placeholder}; found {count}"
+                f"expected placeholder at most once: {placeholder}; found {count}"
             )
-        packaged = packaged.replace(placeholder, png_data_uri(asset_path))
+        if count == 1:
+            packaged = packaged.replace(placeholder, png_data_uri(asset_path))
 
     remaining = sorted(set(re.findall(r"\{\{[^{}]*\}\}", packaged)))
     if remaining or "{{" in packaged or "}}" in packaged:

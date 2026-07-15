@@ -37,6 +37,21 @@ def valid_report(extra_head: str = "", extra_body: str = "") -> str:
 
 
 class ApproachReportBuildTests(unittest.TestCase):
+    def test_build_supports_a_report_without_decorative_assets(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "docs" / "approach" / "source.html"
+            output = root / "docs" / "approach.html"
+            source.parent.mkdir(parents=True)
+            source.write_text("<main>No decorative images</main>", encoding="utf-8")
+
+            build_approach_report.build(source, output)
+
+            self.assertEqual(
+                output.read_text(encoding="utf-8"),
+                "<main>No decorative images</main>",
+            )
+
     def test_source_opens_with_a_five_stage_visual_summary(self) -> None:
         source = REPORT_SOURCE.read_text(encoding="utf-8")
         summary = re.search(
@@ -204,6 +219,11 @@ class ApproachReportValidationTests(unittest.TestCase):
             '<iframe src="data:text/html,%3Cp%3Eembedded%3C/p%3E"></iframe>'
         )
         self.assertEqual(self.validate_fixture(valid_report(extra_body=markup)), [])
+
+    def test_zero_embedded_pngs_are_allowed(self) -> None:
+        report = valid_report().replace(f'<img src="{PNG_DATA}" alt="one">', "")
+        report = report.replace(f'<img src="{PNG_DATA}" alt="two">', "")
+        self.assertEqual(self.validate_fixture(report), [])
 
 
 if __name__ == "__main__":

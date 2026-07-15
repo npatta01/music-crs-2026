@@ -187,10 +187,6 @@ def validate(report: Path) -> list[str]:
             errors.append(f"missing local href target: {href} -> {target}")
     if parser.details_count < 8:
         errors.append(f"expected at least 8 disclosures; found {parser.details_count}")
-    if len(parser.png_data_uris) != 2:
-        errors.append(
-            f"expected exactly 2 embedded PNG data URIs; found {len(parser.png_data_uris)}"
-        )
     for index, uri in enumerate(parser.png_data_uris, 1):
         try:
             payload = base64.b64decode(uri.removeprefix(PNG_PREFIX), validate=True)
