@@ -154,14 +154,16 @@ class ApproachReportBuildTests(unittest.TestCase):
             source.index('<div class="directory-shell">'),
         )
 
-    def test_source_uses_organizer_slide_order(self) -> None:
+    def test_source_is_an_approach_only_deck(self) -> None:
         source = REPORT_SOURCE.read_text(encoding="utf-8")
-        ids = [
-            "overview", "walkthrough", "state", "compile", "ranking", "response",
-            "infrastructure", "evaluation", "examples", "gaps", "lessons", "reproduce",
+        required = [
+            "overview", "walkthrough", "state", "compile", "ranking",
+            "response", "evaluation", "infrastructure", "reproduce",
         ]
-        positions = [source.index(f'id="{section_id}"') for section_id in ids]
+        positions = [source.index(f'id="{section_id}"') for section_id in required]
         self.assertEqual(positions, sorted(positions))
+        for removed in ("examples", "gaps", "lessons"):
+            self.assertNotIn(f'id="{removed}"', source)
 
     def test_ranking_chapter_names_the_final_submitted_orderer(self) -> None:
         source = REPORT_SOURCE.read_text(encoding="utf-8")
@@ -175,62 +177,12 @@ class ApproachReportBuildTests(unittest.TestCase):
     def test_evaluation_separates_ranking_metrics_from_llm_judging(self) -> None:
         source = REPORT_SOURCE.read_text(encoding="utf-8")
         evaluation = source[source.index('<section class="chapter" id="evaluation"') : source.index(
-            '<section class="chapter" id="examples"'
+            '<section class="chapter" id="infrastructure"'
         )]
         self.assertIn("Ranking relevance", evaluation)
         self.assertIn("Response quality", evaluation)
         self.assertIn("LLM-as-judge", evaluation)
         self.assertIn("does not rank tracks", evaluation)
-
-    def test_gaps_uses_native_semantic_boundary_paths(self) -> None:
-        source = REPORT_SOURCE.read_text(encoding="utf-8")
-        gaps = source[source.index('<section class="chapter" id="gaps"') : source.index(
-            '<section class="chapter" id="lessons"'
-        )]
-        self.assertNotIn("<img", gaps)
-        self.assertIn("Aligned signal path", gaps)
-        self.assertIn("First-broken-boundary path", gaps)
-        self.assertGreaterEqual(gaps.count("<ol"), 2)
-        for boundary in (
-            "State",
-            "Candidate coverage",
-            "Final ranking",
-            "Response grounding",
-        ):
-            self.assertIn(boundary, gaps)
-        self.assertIn("does not imply that every boundary failed", gaps)
-
-    def test_primary_bad_trace_records_reranker_recovery(self) -> None:
-        source = REPORT_SOURCE.read_text(encoding="utf-8")
-        primary_bad_trace = source[
-            source.index("Primary bad trace · verified frozen devset baseline") :
-            source.index('<div class="example-stack"', source.index(
-                "Primary bad trace · verified frozen devset baseline"
-            ))
-        ]
-        self.assertIn("218 → 158", primary_bad_trace)
-        self.assertNotIn("made the error unrecoverable", primary_bad_trace)
-
-        perpetual_card = source[
-            source.index("No branch retrieved “Perpetual”") :
-            source.index('<article class="example-card failure">', source.index(
-                "No branch retrieved “Perpetual”"
-            ))
-        ]
-        self.assertIn("unrecoverable miss", perpetual_card)
-
-    def test_response_grounding_gap_identifies_submitted_trace(self) -> None:
-        source = REPORT_SOURCE.read_text(encoding="utf-8")
-        gap_start = source.index("<h3>Entity and response grounding</h3>")
-        gap_card = source[gap_start : source.index("</article>", gap_start)]
-        self.assertIn("156cac0f-c16b-4bd2-8f4f-cc1691adef79", gap_card)
-        self.assertIn("Tongue Tied", gap_card)
-        self.assertIn(
-            "<code>exp/inference/blindset_B/"
-            "state_ranker_v10_lgbm_blindset_B.json</code>",
-            gap_card,
-        )
-        self.assertNotIn("gradients, blurred shapes", gap_card)
 
     def test_ignored_artifact_provenance_is_visible_but_not_linked(self) -> None:
         source = REPORT_SOURCE.read_text(encoding="utf-8")
@@ -246,7 +198,7 @@ class ApproachReportBuildTests(unittest.TestCase):
         )
         for path in provenance_paths:
             self.assertIn(f"<code>{path}</code>", source)
-        self.assertEqual(source.count(f"<code>{provenance_paths[1]}</code>"), 2)
+        self.assertEqual(source.count(f"<code>{provenance_paths[1]}</code>"), 1)
 
     def test_stale_anchor_evidence_records_partial_reranker_recovery(self) -> None:
         evidence = json.loads(EVIDENCE_LEDGER.read_text(encoding="utf-8"))
@@ -260,13 +212,14 @@ class ApproachReportBuildTests(unittest.TestCase):
         self.assertIn("without reaching", boundary)
         self.assertNotIn("could not be repaired", boundary)
 
-    def test_directory_links_follow_organizer_order(self) -> None:
+    def test_directory_contains_only_approach_slides(self) -> None:
         source = REPORT_SOURCE.read_text(encoding="utf-8")
         directory = source[source.index('<nav class="directory') : source.index("</nav>")]
         labels = [
             "Architecture", "Worked example", "State", "Retrieval", "Ranking",
-            "Response", "Compute", "Evaluation", "Examples", "Gaps", "Lessons", "Reproduce",
+            "Response", "Evaluation", "Compute", "Reproduce",
         ]
+        self.assertEqual(directory.count("<li>"), len(labels))
         positions = [directory.index(f">{label}<") for label in labels]
         self.assertEqual(positions, sorted(positions))
 
