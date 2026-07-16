@@ -8,7 +8,7 @@
 
 ## Abstract
 
-We describe team npatta01's submission to the RecSys Challenge 2026 conversational music recommendation task: given a multi-turn dialog, retrieve 20 tracks from a 47,071-track catalog and generate a natural-language response. The pipeline extracts a typed conversation state with an LLM, gathers candidates from eleven retrieval branches over a unified track index, re-ranks the pooled candidates with a LambdaMART model whose dominant feature is a fine-tuned conversational bi-encoder cosine, and generates a state-conditioned response. On the final Blind-B leaderboard the submission scored 0.3811 composite (nDCG@20 0.2537, LLM-judge 3.30), ranking 29th of 39 teams. We describe the system, then examine the result: the in-sample development estimates that guided our choices overstated performance, while leakage-safe out-of-fold estimates (nDCG@20 0.197–0.203) anticipated the blind outcome; the benchmark's single-ground-truth labels carry a quantified *anchoring bias* that rewards copying the just-played artist; and failure cases from the submitted run show extracted constraints the pipeline could not enforce. Code, models, and a full reproduction bundle are publicly released.
+We describe team npatta01's submission to the RecSys Challenge 2026 conversational music recommendation task: given a multi-turn dialog, retrieve 20 tracks from a 47,071-track catalog and generate a natural-language response. The pipeline extracts a typed conversation state with an LLM, gathers candidates from eleven retrieval branches over a unified track index, re-ranks the pooled candidates with a LambdaMART model whose dominant feature is a fine-tuned conversational bi-encoder cosine, and generates a state-conditioned response. On the final Blind-B leaderboard the submission scored 0.3811 composite (nDCG@20 0.2537, LLM-judge 3.30), ranking 29th of 39 teams. We describe the system, then examine the result: the in-sample development estimates that guided our choices overstated performance, while leakage-safe out-of-fold estimates (nDCG@20 0.197–0.203) were far closer to the blind outcome; the benchmark's single-ground-truth labels carry a quantified *anchoring bias* that rewards copying the just-played artist; and failure cases from the submitted run show extracted constraints the pipeline could not enforce. Code, models, and a full reproduction bundle are publicly released.
 
 ## 1 Introduction
 
@@ -18,7 +18,7 @@ Composite = 0.50 · nDCG@20 + 0.10 · catalog diversity + 0.10 · lexical divers
 
 where "judge" is a 1–5 rating of the generated response from the organizers' LLM-based evaluator. In addition to the training sessions, a 1,000-session development split with public per-turn ground truth (one target track per turn) supports offline iteration.
 
-Our system is a retrieve-then-rerank pipeline conditioned on an explicitly compiled conversation state. This paper documents the pipeline (Section 2, Figure 1) and its results (Section 3), then analyzes the errors behind the final score (Section 4): in-sample development evaluation (Section 4.1); ground-truth label noise and its anchoring bias (Section 4.2); and the constraint-enforcement gaps behind concrete failure cases (Section 4.3). The system's strongest single component is a fine-tuned conversational bi-encoder whose one cosine feature carries 59% of the reranker's decision weight and displaces the label-noise-induced artist-copy shortcut. Code, models, and a cleaned, LLM-re-judged label set are released at https://github.com/npatta01/music-crs-2026.
+Our system is a retrieve-then-rerank pipeline conditioned on an explicitly compiled conversation state. This paper documents the pipeline (Section 2, Figure 1) and its results (Section 3), then analyzes the errors behind the final score (Section 4): in-sample development evaluation (Section 4.1); ground-truth label noise and its anchoring bias (Section 4.2); and the constraint-enforcement gaps behind concrete failure cases (Section 4.3). The system's strongest single component is a fine-tuned conversational bi-encoder whose one cosine feature accounts for 59% of the reranker's total split gain and displaces the label-noise-induced artist-copy shortcut. Code, models, and a cleaned, LLM-re-judged label set are released at https://github.com/npatta01/music-crs-2026.
 
 Related work in brief: the design follows the retrieve-then-rerank pattern standard in large-catalog recommendation, with reciprocal-rank fusion [4] for multi-source pooling, LambdaMART [5, 6] for learned ranking, and LLM-based dialog state tracking.
 
@@ -34,7 +34,7 @@ At each turn we prompt deepseek-v4-flash [14] with the full conversation so far 
 
 ### 2.2 Candidate retrieval
 
-All per-track information lives in a **single LanceDB collection** [15]: metadata fields, a full-text index, and every embedding column — three Qwen3-Embedding text views (metadata, attributes, lyrics; 1024-d), LAION-CLAP audio (512-d) [8], SigLIP-2 cover art (768-d) [9], BPR collaborative-filtering vectors (128-d) [10], and our bi-encoder document vectors (2560-d, Section 2.4). Every retrieval branch is a differently-shaped query against the same table — in principle the whole retrieval step could be one composed query clause (a gap Section 4.3 returns to).
+All per-track information lives in a **single LanceDB collection** [15]: metadata fields, a full-text index, and every embedding column — three Qwen3-Embedding text views (metadata, attributes, lyrics; 1024-d), LAION-CLAP audio (512-d) [8], SigLIP-2 cover art (768-d) [9], BPR collaborative-filtering vectors (128-d) [10], and our bi-encoder document vectors (2560-d, Section 2.4). Every retrieval branch is a differently-shaped query against the same table — in principle much of the retrieval step could be expressed as a single composed query (a gap Section 4.3 returns to).
 
 Table 1 lists the eleven branches that produce candidate pools each turn. In the BM25 branch [11], free-text mood and genre phrases first pass through a **tiered tag resolver**: exact, alias, and substring matching against the catalog tag vocabulary, with an embedding nearest-neighbor fallback (cosine >= 0.6, top-3). Weighted reciprocal-rank fusion [4] (k=60, top-1000) plus post-fusion multiplicative adjustments (rejected artists/tracks dropped, played tracks dropped, exact-membership tag promotes/demotes, year-range decay) yields an explicit ranking that serves as **baseline and fallback**.
 
@@ -66,7 +66,7 @@ Table 2 — reranker feature families (share of total gain, deployed model).
 | Tag / lexical overlap | 10 | 2.0% | IDF tag overlap |
 | Constraints / rejections | 13 | 0.7% | rejected-artist flag |
 
-Training uses the per-turn ground-truth track as a binary label (LambdaRank objective optimizing nDCG@20; learning rate 0.025; 127 leaves; truncation 200; 5-fold user-grouped cross-validation; ~20.6M rows). Because the ground truth is noisy (Section 4.2), labels are down-weighted when the *next* turn contradicts them: ×0.3 if goal progress says the recommendation did not move toward the goal, ×0.3 if the user rejects the ground-truth track, ×0.6 if they reject its artist. The deployed bundle is *goal-free*: trained without the conversation-goal fields Blind-B removes. Cost shaped the training set: state extraction and per-turn retrieval tracing run through a paid LLM API, so the model trains on a 30,000-turn subset (~25% of the ~121.6k-turn split); the data-scaling curve had not flattened at that size.
+Training uses the per-turn ground-truth track as a binary label (LambdaRank objective optimizing nDCG@20; learning rate 0.025; 127 leaves; truncation 200; 5-fold user-grouped cross-validation; ~20.6M rows). Because the ground truth is noisy (Section 4.2), labels are down-weighted when the *next* turn contradicts them: ×0.3 if goal progress says the recommendation did not move toward the goal, ×0.3 if the user rejects the ground-truth track, ×0.6 if they reject its artist. The deployed bundle is *goal-free*: trained without the conversation-goal fields Blind-B removes. Cost shaped the training set: the state extraction that per-turn retrieval tracing depends on runs through a paid LLM API, so the model trains on a 30,000-turn subset (~25% of the ~121.6k-turn split); the data-scaling curve had not flattened at that size.
 
 ### 2.4 The bi-encoder feature b1_cos
 
@@ -78,7 +78,7 @@ We deploy the bi-encoder as a reranker feature only: as a retrieval branch it ad
 
 ### 2.5 Response generation
 
-The response generator is Qwen3-30B-A3B-Instruct-2507 [12] at temperature 0: a single pass over the top-1 track rendered as a delimited XML block (≤10 tags; the delimiting stops the model from echoing raw metadata) plus the *latest* extracted state. The deployed template's full style instruction is:
+The response generator is Qwen3-30B-A3B-Instruct-2507 [12] at temperature 0: a single pass over the top-1 track rendered as a delimited XML block (≤10 tags; the delimiting prevents the verbatim metadata echoes we observed with plain-text rendering) plus the *latest* extracted state. The deployed template's full style instruction is:
 
 > *"Write 1–2 concise sentences about only the selected track. Prioritize the latest user request and extracted state over older conversation history. If the track is reasonably aligned, explain the fit with one specific supported reason. If it clearly conflicts with an explicit avoid/new-artist constraint, do not oversell it or blame the system; briefly frame the limitation and the closest supported reason."*
 
@@ -136,20 +136,20 @@ A separate label-free audit — a single LLM judge over the 80 submitted Blind-B
 | Entity-resolution miss | 1 |
 
 - **Anchoring at serving time.** "Another alt-country song… but **from a different artist than Ryan Adams**" → our top-1 was *Ryan Adams & The Cardinals*, plus five more of their tracks in the top-20: the rejection resolved to the solo "Ryan Adams" ID, and the band-variant ID passed the hard filter. A second session leaked the same way — four Cradle of Filth tracks despite "not Cradle of Filth" (a duplicate artist ID), under an unenforceable "female operatic vocals" ask. **Gap:** rejections are enforced by exact catalog ID, but artist identity is fragmented across band variants and duplicates; a name-level veto would have caught both. This is the serving-time face of the Section 4.2 bias.
-- **Impossible exact request.** "Play 'Watercolors' by Pat Metheny" — the track does not exist in the 47,071-track catalog; we returned Pat Metheny's "Alfie" without saying so. **Gap:** no world knowledge or external data to recognize an out-of-catalog request, and the single-pass response cannot flag unavailability — costly, since the response term carries 30% of the composite (our judge score: 3.30).
+- **Impossible exact request.** "Play 'Watercolors' by Pat Metheny" — the track does not exist in the 47,071-track catalog; we returned Pat Metheny's "Alfie" without saying so. **Gap:** the failed catalog resolution was never passed to the response generator, and without external data the system cannot distinguish an out-of-catalog track from a misremembered one; the single-pass response therefore could not flag unavailability — costly, since the response term carries 30% of the composite (our judge score: 3.30).
 - **Unactionable constraint.** "Any aggressive metal track that **exactly matches 126.70 bpm and G minor**, with tempo and key stated" — the catalog has no BPM or key fields. **Gap:** the constraint was captured in state, but the catalog has no field to map it onto.
 
 The primary limitation is that **the system does not model a sufficient portion of the user's intent as executable constraints**. The state records what the user wants, but few fields became filters or ranked evidence — each branch consumed a slice of the state, and tag matching fell back to exact strings outside the BM25 branch — while no co-occurrence, transition, or live-reasoning lane existed to compensate. Noisy candidate pools therefore reached the reranker, and a reranker trained on a quarter of the available turns could not reliably rank the target track within the top-20.
 
 ## 5 Conclusion
 
-We documented a state-compiled retrieve-then-rerank conversational music recommender and finished 29th of 39. Three gaps in our approach explain most of the result:
+We documented a state-compiled retrieve-then-rerank conversational music recommender and finished 29th of 39. Three gaps in our approach account for the failures we could diagnose:
 
 1. model selection relied on in-sample development replays, although out-of-fold estimates that predicted the blind score were on hand;
 2. the extracted conversation state was rich, but too little of it became executable filters or ranking evidence, so noisy candidate pools reached the reranker;
 3. responses were generated in a single unchecked pass that could flag neither unavailable tracks nor unmet constraints, under a judge term worth 30% of the composite.
 
-A quantified anchoring bias in the ground-truth labels compounded all three. We release the pipeline, the models, a replay bundle, and a cleaned relabeling of the training turns.
+A quantified anchoring bias in the ground-truth labels distorted both training and evaluation. We release the pipeline, the models, a replay bundle, and a cleaned relabeling of the training turns.
 
 ---
 
