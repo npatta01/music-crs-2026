@@ -331,11 +331,11 @@ Entity-resolution miss & 1 \\
 \item \textbf{Unactionable constraint.} ``Any aggressive metal track that \textbf{exactly matches 126.70 bpm and G minor}, with tempo and key stated'' --- the catalog has no BPM or key fields. \textbf{Gap:} the constraint was captured in state, but the catalog has no field to map it onto.
 \end{itemize}
 
-The unifying gap: \textbf{we did not model enough of the user's ask as executable constraints}. The state records what the user wants, but few fields became filters or ranked evidence --- each branch consumed a slice of the state, and tag matching fell back to exact strings beyond the BM25 clause --- while no co-occurrence, transition, or live-reasoning lane existed to compensate. Noisy candidate pools therefore reached the reranker, and a ranker trained on a quarter of the available turns could not reliably pull the right track back up.
+The primary limitation is that \textbf{the system does not model a sufficient portion of the user's intent as executable constraints}. The state records what the user wants, but few fields became filters or ranked evidence --- each branch consumed a slice of the state, and tag matching fell back to exact strings beyond the BM25 clause --- while no co-occurrence, transition, or live-reasoning lane existed to compensate. Noisy candidate pools therefore reached the reranker, and a ranker trained on a quarter of the available turns could not reliably pull the right track back up.
 
 \section{Conclusion}
 
-We documented a state-compiled retrieve-then-rerank conversational music recommender in full and audited our mid-pack result: an in-sample development estimate inflated confidence that leakage-safe evidence had already contradicted; the ground truth carries a quantified anchoring bias our own submission reproduced at serving time; and several extracted constraints had nothing in the catalog to act on. We release the pipeline, the models, a replay bundle, and a cleaned relabeling of the training turns.
+We documented a state-compiled retrieve-then-rerank conversational music recommender in full and audited our mid-pack result: an in-sample development estimate inflated confidence that leakage-safe evidence had already contradicted; the ground truth carries a quantified anchoring bias our own submission reproduced at serving time; and several extracted constraints could not be grounded in the available catalog metadata. We release the pipeline, the models, a replay bundle, and a cleaned relabeling of the training turns.
 
 \begin{thebibliography}{15}
 \bibitem{musiccrs} NLP4MusA organizers. 2026. Music-CRS Challenge 2026. \url{https://nlp4musa.github.io/music-crs-challenge/}
