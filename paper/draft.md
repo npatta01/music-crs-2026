@@ -143,7 +143,9 @@ The primary limitation is that **the system does not model a sufficient portion 
 
 ## 5 Conclusion
 
-We documented a state-compiled retrieve-then-rerank conversational music recommender in full and audited our mid-pack result: an in-sample development estimate inflated confidence that leakage-safe evidence had already contradicted; the ground truth carries a quantified anchoring bias our own submission reproduced at serving time; and several extracted constraints could not be grounded in the available catalog metadata. We release the pipeline, models, a zero-credential replay bundle, and a cleaned relabeling for future iterations.
+We documented a state-compiled retrieve-then-rerank conversational music recommender in full and audited our mid-pack result: an in-sample development estimate inflated confidence that leakage-safe evidence had already contradicted; the ground truth carries a quantified anchoring bias our own submission reproduced at serving time; and several extracted constraints could not be grounded in the available catalog metadata.
+
+Three lessons generalize beyond this system. First, when per-example annotation is expensive, evaluation hygiene degrades quietly; model selection must rest on out-of-fold estimates regardless of what the development dashboard shows. Second, extraction quality is not system quality: a conversation state helps only insofar as its fields become executable retrieval predicates or ranked evidence, and enforcement additionally requires identity resolution and catalog coverage to act on. Third, benchmark labels deserve the same auditing as models: a bias that rewards copying the just-played artist shaped what our ranker learned, and detecting it required judging the labels themselves. We release the pipeline, the models, a replay bundle, and the cleaned relabeling of the training turns so that these findings can be verified and extended.
 
 ---
 
