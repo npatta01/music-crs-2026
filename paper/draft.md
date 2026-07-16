@@ -143,7 +143,13 @@ The primary limitation is that **the system does not model a sufficient portion 
 
 ## 5 Conclusion
 
-We documented a state-compiled retrieve-then-rerank conversational music recommender and finished 29th of 39. Four gaps in our own approach explain most of the result. First, we selected models on in-sample development replays, although the out-of-fold estimates that predicted the blind score were already on hand. Second, we extracted a rich conversation state but turned too little of it into executable filters or ranking evidence, so noisy candidate pools reached the reranker. Third, we enforced rejections by exact catalog ID over a fragmented artist namespace, letting refused artists back into the top-20. Fourth, we generated responses in a single unchecked pass that could flag neither unavailable tracks nor unmet constraints — costly under a judge term worth 30% of the composite. A quantified anchoring bias in the ground-truth labels compounded these gaps and shaped what the ranker learned. We release the pipeline, the models, a replay bundle, and a cleaned relabeling of the training turns.
+We documented a state-compiled retrieve-then-rerank conversational music recommender and finished 29th of 39. Three gaps in our approach explain most of the result:
+
+1. model selection relied on in-sample development replays, although out-of-fold estimates that predicted the blind score were on hand;
+2. the extracted conversation state was rich, but too little of it became executable filters or ranking evidence, so noisy candidate pools reached the reranker;
+3. responses were generated in a single unchecked pass that could flag neither unavailable tracks nor unmet constraints, under a judge term worth 30% of the composite.
+
+A quantified anchoring bias in the ground-truth labels compounded all three. We release the pipeline, the models, a replay bundle, and a cleaned relabeling of the training turns.
 
 ---
 
