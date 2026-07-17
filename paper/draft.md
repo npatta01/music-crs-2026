@@ -2,7 +2,7 @@
 
 **Nidhin Pattaniyil, Semih Yagli, Tanwir Zaman** — Independent Researchers
 
-*Draft v9 — fourth PDF round applied: goal-free vs. goal-progress-supervision distinction spelled out, §2.3 down-weighting de-linked from the LLM re-judgment, §4.2 rates re-based onto the 106,393 training turns, all LLM judges named (Gemma-4-26B / DeepSeek-V4-Flash / Claude Opus arbiter), "displaced" softened, abstract split. Mirrors paper/main.tex. All numbers verified.*
+*Draft v10 — §4.3 restructured by pipeline stage (Retrieval and ranking vs. Response generation), verified from the Blind-B submission trace: constraint-not-enforced (Kamelot Silverthorn→Haven, album in catalog; "explore beyond"→10/20 same artist), absent-data constraints (126.70 bpm/key, Breaking Bad soundtrack — no such catalog fields), and exact-track-not-in-catalog response-gen failure (Watercolors/Fallen/Czar Refaeli). Prior v9: goal-free vs. goal-progress distinction, §4.2 rates re-based to 106,393, LLM judges named, abstract split. Mirrors paper/main.tex. All numbers verified.*
 
 ---
 
@@ -126,7 +126,7 @@ To measure the disagreement at scale, two inexpensive LLM judges (Gemma-4-26B an
 
 ### 4.3 Failure cases
 
-A separate label-free audit — a single LLM judge (DeepSeek-V4-Flash) over the 80 submitted Blind-B turns, unlike the two-judge pipeline of Section 4.2 — rated 68% of them weak-or-bad fits; the table below breaks a subset of the flagged turns down by failure diagnosis (hidden-label frequencies remain unknown). The largest bucket — a better candidate present in the pool but ranked below the top-20 — is the ranking gap the closing paragraph returns to. The cases below, from the submitted predictions, illustrate the smaller buckets and adjacent gaps the table's categories only partly capture:
+A separate label-free audit — a single LLM judge (DeepSeek-V4-Flash) over the 80 submitted Blind-B turns, unlike the two-judge pipeline of Section 4.2 — rated 68% of them weak-or-bad fits; the table below breaks a subset of the flagged turns down by failure diagnosis (hidden-label frequencies remain unknown). The failures split by pipeline stage — what retrieval surfaced, and what the response did with it — and on several turns the response generator's own text flags the problem:
 
 | Diagnosis | Turns |
 |---|---|
@@ -135,9 +135,8 @@ A separate label-free audit — a single LLM judge (DeepSeek-V4-Flash) over the 
 | State-extraction miss | 3 |
 | Entity-resolution miss | 1 |
 
-- **Anchoring at serving time.** "Another alt-country song… but **from a different artist than Ryan Adams**" → our top-1 was *Ryan Adams & The Cardinals*: the rejection resolved to the solo "Ryan Adams" catalog ID, and the band-variant ID passed the hard filter. **Gap:** rejections are enforced by exact catalog ID, while artist identity is fragmented across variant and duplicate IDs; a name-level veto would have caught this. The bucket is small (table above), but it is the serving-time face of the Section 4.2 anchoring pattern.
-- **Impossible exact request.** "Play 'Watercolors' by Pat Metheny" — the track does not exist in the 47,071-track catalog; we returned Pat Metheny's "Alfie" without saying so. **Gap:** the failed catalog resolution was never passed to the response generator, and without external data the system cannot distinguish an out-of-catalog track from a misremembered one; the single-pass response therefore could not flag unavailability — costly, since the response term carries 30% of the composite (our judge score: 3.30).
-- **Unactionable constraint.** "Any aggressive metal track that **exactly matches 126.70 bpm and G minor**, with tempo and key stated" — the catalog has no BPM or key fields. **Gap:** the constraint was captured in state, but the catalog has no field to map it onto.
+- **Retrieval and ranking.** Extracted constraints often did not become filters or ranked evidence, so the top-1 violated the request. Asked for "the Kamelot track from *Silverthorn*," the system returned *Fallen Star* from Kamelot's *Haven* — *Silverthorn* is in the catalog, but nothing constrained retrieval to it; asked to "explore beyond" the current artist, it stayed on them (10 of the top 20 in one Ryan Adams session). Other constraints key on data the catalog does not hold — an exact "126.70 bpm and G minor" (no tempo or key field), or "a song from the *Breaking Bad* soundtrack" (no film/TV metadata) — so retrieval cannot act on them at all.
+- **Response generation.** The single-pass generator did not properly consider the query — in particular an exact-track request for a title we do not have. "'Watercolors' by Pat Metheny," "Sarah McLachlan's 'Fallen'," and "'Czar Refaeli' by CZARFACE" were read correctly as exact-track requests, but none is in the 47,071-track catalog; rather than flag the track unavailable, the generator described a different song by the artist as if it were the one asked for (Pat Metheny's "Alfie"). The response term is 30% of the composite (our judge score 3.30).
 
 The primary limitation is that **the system does not model a sufficient portion of the user's intent as executable constraints**. The state records what the user wants, but few fields became filters or ranked evidence — each branch consumed a slice of the state, and tag matching fell back to exact strings outside the BM25 branch — while no co-occurrence, transition, or live-reasoning lane existed to compensate. Noisy candidate pools therefore reached the reranker, which could not reliably rank the target track within the top-20 — the largest bucket in the audit table.
 
