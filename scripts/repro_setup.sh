@@ -17,12 +17,6 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 echo "  uv: $(uv --version)"
 
-if ! command -v hf >/dev/null 2>&1; then
-  echo "ERROR: hf (huggingface_hub CLI) not found. Install: uv pip install -U 'huggingface_hub[cli]'"
-  exit 1
-fi
-echo "  hf: $(hf --version)"
-
 if [ -z "${MODAL_TOKEN_ID:-}" ] || [ -z "${MODAL_TOKEN_SECRET:-}" ]; then
   echo "  modal: no credentials set — fine for this bundle. Every devset /"
   echo "         Blind-A / Blind-B session is pre-cached, so reproduction"
@@ -31,11 +25,14 @@ if [ -z "${MODAL_TOKEN_ID:-}" ] || [ -z "${MODAL_TOKEN_SECRET:-}" ]; then
 fi
 
 echo "== Installing Python environment (.venv) =="
-if [ ! -d .venv ]; then
-  uv venv .venv --python=3.12
-fi
+uv sync
 source .venv/bin/activate
-uv pip install -e .
+
+if ! command -v hf >/dev/null 2>&1; then
+  echo "ERROR: hf (huggingface_hub CLI) was not installed by uv sync"
+  exit 1
+fi
+echo "  hf: $(hf --version)"
 
 echo "== Downloading the offline reproduction bundle from Hugging Face =="
 hf download Npatta01/music-crs-repro-2026 --repo-type dataset --local-dir .
