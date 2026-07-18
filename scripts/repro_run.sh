@@ -62,14 +62,8 @@ if command -v jq >/dev/null 2>&1; then
     cat <<MSG
 
 NOTE: $BLANK/$(jq 'length' "$OUT") session(s) came back with an empty
-predicted_response. This is expected, occasional behavior for live reruns,
-not a bug: retrieval isn't byte-reproducible run to run (see "Why frozen
-replay, not live rerun, is canonical" in docs/reproduce_offline_bundle.md),
-so a different track can end up ranked #1 than in the canonical run — and
-this bundle's cached explanations only cover the tracks that were actually
-#1 in that canonical run. The recommended track IDs are unaffected either
-way; only the natural-language explanation for the affected turn(s) is
-blank. Re-running may or may not reproduce the same gap.
+predicted_response due to expected live-rerun variation. Recommended track
+IDs are unaffected. Details: docs/reproduce_offline_bundle.md
 MSG
   fi
 fi
