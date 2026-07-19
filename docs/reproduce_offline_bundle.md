@@ -26,7 +26,7 @@ inference with zero credentials.
 git clone --branch main https://github.com/npatta01/music-crs-2026.git
 cd music-conversational-music-recomender-2026
 
-scripts/repro_setup.sh   # checks uv/hf are installed, sets up .venv, downloads
+scripts/repro_setup.sh   # checks uv, syncs .venv (including hf), downloads
                           # + extracts + verifies the bundle from Hugging Face
 scripts/repro_run.sh     # runs Blind-B end to end — no credentials, no Modal
 ```
