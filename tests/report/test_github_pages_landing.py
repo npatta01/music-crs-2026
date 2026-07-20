@@ -4,9 +4,13 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 
+import pytest
+from playwright.sync_api import sync_playwright
+
 
 ROOT = Path(__file__).resolve().parents[2]
 PAGE = ROOT / "index.html"
+CHROME = Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
 
 EXPECTED_LINKS = {
     "docs/submission-architecture.html",
@@ -59,3 +63,44 @@ def test_page_has_no_remote_resource_dependencies_or_scripts() -> None:
     assert not re.search(r'<(?:img|iframe|audio|video|source)[^>]+src="https?://', html, re.I)
     assert not re.search(r'<link[^>]+href="https?://', html, re.I)
     assert "@import" not in html
+
+
+def launch_browser(playwright):
+    if CHROME.exists():
+        return playwright.chromium.launch(headless=True, executable_path=str(CHROME))
+    return playwright.chromium.launch(headless=True)
+
+
+@pytest.mark.parametrize(
+    ("viewport", "columns"),
+    [((1440, 900), 3), ((900, 900), 2), ((390, 844), 1)],
+)
+def test_responsive_grid_and_no_horizontal_overflow(viewport, columns) -> None:
+    with sync_playwright() as playwright:
+        browser = launch_browser(playwright)
+        page = browser.new_page(viewport={"width": viewport[0], "height": viewport[1]})
+        page.goto(PAGE.as_uri())
+        template = page.locator(".link-grid").evaluate("node => getComputedStyle(node).gridTemplateColumns")
+        assert len(template.split()) == columns
+        assert page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth + 2")
+        browser.close()
+
+
+def test_focus_light_reduced_motion_and_print_are_readable() -> None:
+    with sync_playwright() as playwright:
+        browser = launch_browser(playwright)
+        page = browser.new_page(viewport={"width": 1440, "height": 900}, color_scheme="dark")
+        page.goto(PAGE.as_uri())
+        dark_bg = page.locator("body").evaluate("node => getComputedStyle(node).backgroundColor")
+        page.keyboard.press("Tab")
+        outline = page.locator(":focus").evaluate("node => getComputedStyle(node).outlineStyle")
+        assert outline != "none"
+
+        page.emulate_media(color_scheme="light", reduced_motion="reduce")
+        light_bg = page.locator("body").evaluate("node => getComputedStyle(node).backgroundColor")
+        assert light_bg != dark_bg
+        assert page.locator(".link-card").first.evaluate("node => getComputedStyle(node).transitionDuration") in {"0s", "0.000001s", "1e-06s"}
+
+        page.emulate_media(media="print")
+        assert page.locator("body").evaluate("node => getComputedStyle(node).backgroundColor") in {"rgb(255, 255, 255)", "rgba(0, 0, 0, 0)"}
+        browser.close()
