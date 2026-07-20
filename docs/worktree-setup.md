@@ -9,7 +9,7 @@
 > worktree. Kept here for the original problem statement and rationale;
 > follow CLAUDE.md for the current setup steps.
 
-Tracked in [#10](https://github.com/npatta01/music-conversational-music-recomender-2026/issues/10).
+Tracked in [#10](https://github.com/npatta01/music-crs-2026/issues/10).
 Implemented in f57fddc on `main`.
 
 ## Problem

@@ -3,11 +3,11 @@
 Hybrid log for code and experiment outcomes. This file now keeps only the
 current experiment-facing entries plus a pointer to Git history for older waves.
 
-Repo: https://github.com/npatta01/music-conversational-music-recomender-2026
+Repo: https://github.com/npatta01/music-crs-2026
 
 ## 2026-06
 
-- `Added` **Anchoring-fix relevance labels v1.1** ([PR #161](https://github.com/npatta01/music-conversational-music-recomender-2026/pull/161)).
+- `Added` **Anchoring-fix relevance labels v1.1** ([PR #161](https://github.com/npatta01/music-crs-2026/pull/161)).
   Clean LLM-judged labels over train (106,393 turns) + dev (7,000), built to
   retrain the retriever against the anchoring bug. Data shipped as the
   `anchor-labels-v1.1` GitHub release at the time, since migrated to the
@@ -27,7 +27,7 @@ Repo: https://github.com/npatta01/music-conversational-music-recomender-2026
   per-run reports, and checked-in raw analysis artifacts so agents use the
   current configs and concise status files instead of old experiment notes.
 - `Experiment` **v0+ prompt-v4 all-retrievers full devset** -
-  [#80](https://github.com/npatta01/music-conversational-music-recomender-2026/pull/80).
+  [#80](https://github.com/npatta01/music-crs-2026/pull/80).
   `v0plus_compiler_all_retrievers_devset` exercises BM25/year boosts, Qwen3
   dense text, CLAP text, centroid branches, resolved-artist discography, and
   era/popularity. Full 5-shard Modal run: NDCG@20 0.1219, Hit@20 0.2660,
@@ -37,13 +37,13 @@ Repo: https://github.com/npatta01/music-conversational-music-recomender-2026
 ## 2026-05
 
 - `Fixed` **Issue #70 code-audit bugs** -
-  [#71](https://github.com/npatta01/music-conversational-music-recomender-2026/pull/71).
+  [#71](https://github.com/npatta01/music-crs-2026/pull/71).
   Canonical `image` config re-run post-fix: NDCG@20 0.1452. This was the
   score anchor for that wave. [report](experiments/v0plus_compiler_image_devset.md)
 - `Added` v0+ compiler `blindset_A` config -
-  [#63](https://github.com/npatta01/music-conversational-music-recomender-2026/pull/63).
+  [#63](https://github.com/npatta01/music-crs-2026/pull/63).
 - `Changed` LanceDB is the v0+ catalog source of truth -
-  [#62](https://github.com/npatta01/music-conversational-music-recomender-2026/pull/62).
+  [#62](https://github.com/npatta01/music-crs-2026/pull/62).
 
 ## Older History
 

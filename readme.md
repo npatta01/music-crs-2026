@@ -34,8 +34,8 @@ Full detail per stage:
 | Split | NDCG@20 | Catalog Diversity | Lexical Diversity | LLM-as-a-Judge | Composite | Source |
 |---|---:|---:|---:|---:|---:|---|
 | Devset | 0.4562 | — | — | — | — | Local evaluator ([leaderboard.md](leaderboard.md)) |
-| Blind-A | 0.4380 | 0.0313 | 0.7670 | 4.2000 | **0.5389** | CodaBench submission `797598` |
-| Blind-B | 0.2537 | 0.0315 | 0.7862 | 3.3000 | **0.3811** | CodaBench submission `819863` (rank 29, final leaderboard) |
+| Blind-A | 0.4380 | 0.0313 | 0.7670 | 4.2000 | **0.5389** | CodaBench submission `797598` (dev-phase rank 63/181 submissions) |
+| Blind-B | 0.2537 | 0.0315 | 0.7862 | 3.3000 | **0.3811** | CodaBench submission `819863` (**final rank 29/39 teams**) |
 
 Devset extras (no CodaBench equivalent): Hit@20 0.6138, MRR 0.4102 — see [leaderboard.md](leaderboard.md) for deep-cutoff diagnostics (@50–@1000) and per-stage recall breakdowns.
 
@@ -123,6 +123,18 @@ Offline bundle (catalog, caches, frozen traces, model weights): **https://huggin
 
 ---
 
+## Paper
+
+Our participant paper, **"Team npatta01's Conversational Music Recommender for the RecSys Challenge 2026"** (ACM sigconf, 4 pages + references), lives in [`paper/`](paper/): [`main.tex`](paper/main.tex) is the authoritative source, [`draft.md`](paper/draft.md) is a readable mirror. It documents the full pipeline and an honest retrospective: the in-sample-evaluation lesson, the ground-truth anchoring-bias analysis (cleaned relabeling released — see the [anchor labels](data/anchor_labels_v1/README.md)), and concrete failure cases from the submitted Blind-B run.
+
+---
+
+## License
+
+Code is released under the [MIT License](LICENSE). Datasets referenced from Hugging Face keep their own licenses.
+
+---
+
 ## Acknowledgments
 
 Built on the RecSys 2026 Music-CRS organizers' baseline evaluation framework and the [TalkPlayData-Challenge](https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge) datasets. Thanks to the organizing committee for the challenge and infrastructure.
@@ -141,4 +153,4 @@ If you have feedback, please reach out to:
 
 ## Competition retrospective
 
-[Read the detailed post-competition retrospective](https://npatta01.github.io/music-conversational-music-recomender-2026/docs/retrospective.html?path=audit#outcome/gap-interpretation).
+[Read the detailed post-competition retrospective](https://npatta01.github.io/music-crs-2026/docs/retrospective.html?path=audit#outcome/gap-interpretation).
