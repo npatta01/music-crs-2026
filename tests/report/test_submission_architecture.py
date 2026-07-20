@@ -214,6 +214,51 @@ def test_reviewed_slides_explain_runtime_contracts_and_state_fields() -> None:
     assert "Exact-track request recognized, but Watercolors was not found" in source
 
 
+def test_ranking_has_a_distinct_final_ordering_phase() -> None:
+    source = _source()
+    pipeline_svg = (ROOT / "docs" / "submission-architecture" / "submission-pipeline-dark.svg").read_text()
+
+    assert "Final ordering" in source
+    assert "Exact-track pin + final artist check" in source
+    assert "Final ordering" in pipeline_svg
+    assert "exact-track pin + artist check" in pipeline_svg
+
+
+def test_only_deployed_dense_branches_are_documented() -> None:
+    source = _source()
+
+    assert "visual request" not in source
+    assert "image_siglip2" not in source
+    assert "The 11 modeled branches preserve" in source
+
+
+def test_response_prompt_has_one_sentence_count_instruction() -> None:
+    source = _source()
+
+    assert "1-3 sentences" not in source
+    assert source.count("1-2 concise sentences") == 1
+
+
+def test_reviewed_labels_and_scope_are_unambiguous() -> None:
+    source = _source()
+
+    assert "Whole-system input" in source
+    assert "Goal not fully materialized" in source
+    assert "Training-label failure examples" in source
+    assert "Bonobo / Cornelia" not in source
+    assert "Bonobo — “Pieces”" in source
+
+
+def test_diagram_legends_and_retired_biencoder_path_are_explicit() -> None:
+    pipeline_svg = (ROOT / "docs" / "submission-architecture" / "submission-pipeline-dark.svg").read_text()
+    biencoder_svg = (ROOT / "docs" / "submission-architecture" / "biencoder-dark.svg").read_text()
+
+    assert "AMBER = WEIGHTED RRF BASELINE / FALLBACK" in pipeline_svg
+    assert 'class="fallback-label"' in pipeline_svg
+    assert "EARLIER EXPERIMENT" in biencoder_svg
+    assert "not deployed" in biencoder_svg
+
+
 def test_reviewed_visual_components_have_non_overlapping_layout_rules() -> None:
     theme = (ROOT / "docs" / "submission-architecture" / "theme.scss").read_text()
     assert re.search(r"\.turn p\s*\{[^}]*padding-left:", theme, re.DOTALL)

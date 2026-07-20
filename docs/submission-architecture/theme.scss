@@ -1054,7 +1054,7 @@ body,
 .biencoder-lift > i { color: var(--deck-blue); font-size: 1.2em; font-style: normal; }
 .biencoder-lift > strong { color: var(--deck-green); font-size: 1.25em; }
 
-.ranking-inference-flow { align-items: stretch; display: grid; gap: .55em; grid-template-columns: 1fr auto 1.35fr auto .8fr auto .9fr; margin-top: .85em; }
+.ranking-inference-flow { align-items: stretch; display: grid; gap: .65em; grid-template-columns: 1.15fr auto 1fr auto 1.25fr; margin-top: .85em; }
 .ranking-inference-flow > div { border-top: 5px solid var(--deck-blue); padding: .65em .25em; }
 .ranking-inference-flow > div:nth-of-type(2) { border-color: var(--deck-violet); }
 .ranking-inference-flow > div:nth-of-type(3) { border-color: var(--deck-amber); }

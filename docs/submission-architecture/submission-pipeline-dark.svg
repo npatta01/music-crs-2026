@@ -1,15 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1460 590" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1460 640" role="img" aria-labelledby="title desc">
   <title id="title">Music-CRS deployed architecture</title>
-  <desc id="desc">Dark adaptation of the submission architecture. Conversation and played tracks pass through state extraction and resolver into eleven LanceDB retrieval branches. Their pool union is scored by a 146-feature LambdaMART ranker, producing top 20 tracks and a response. Weighted RRF appears separately as the baseline and fallback.</desc>
+  <desc id="desc">Dark adaptation of the submission architecture. Conversation and played tracks pass through state extraction and resolver into eleven LanceDB retrieval branches. Their pool union is scored by a 146-feature LambdaMART ranker. Final ordering applies an exact-track pin + artist check before producing the top 20 tracks and a response. Weighted RRF appears separately in amber as the baseline and fallback.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#8eb4d8"/></marker>
     <marker id="arrowDash" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#f3bd62"/></marker>
     <style>
-      .box{fill:#10243b;stroke:#466789;stroke-width:2}.lane{fill:#0b1b2d;stroke:#35627a;stroke-width:1.5}.rank{fill:#123528;stroke:#65c984}.response{fill:#112f4e;stroke:#70b8ff}.fallback{fill:#342a19;stroke:#f3bd62}.t{fill:#eef5ff;font:700 20px system-ui,sans-serif}.s{fill:#afc1d7;font:15px system-ui,sans-serif}.tiny{fill:#a9bad0;font:13px system-ui,sans-serif}.arr{fill:none;stroke:#8eb4d8;stroke-width:2.5;marker-end:url(#arrow)}.dash{fill:none;stroke:#f3bd62;stroke-width:2.5;stroke-dasharray:9 8;marker-end:url(#arrowDash)}.label{fill:#79c7ff;font:700 14px system-ui,sans-serif;letter-spacing:1px}
+      .box{fill:#10243b;stroke:#466789;stroke-width:2}.lane{fill:#0b1b2d;stroke:#35627a;stroke-width:1.5}.rank{fill:#123528;stroke:#65c984}.response{fill:#112f4e;stroke:#70b8ff}.fallback{fill:#342a19;stroke:#f3bd62}.t{fill:#eef5ff;font:700 20px system-ui,sans-serif}.s{fill:#afc1d7;font:15px system-ui,sans-serif}.tiny{fill:#a9bad0;font:13px system-ui,sans-serif}.arr{fill:none;stroke:#8eb4d8;stroke-width:2.5;marker-end:url(#arrow)}.dash{fill:none;stroke:#f3bd62;stroke-width:2.5;stroke-dasharray:9 8;marker-end:url(#arrowDash)}.label{fill:#79c7ff;font:700 14px system-ui,sans-serif;letter-spacing:1px}.fallback-label{fill:#f3bd62;font:700 14px system-ui,sans-serif;letter-spacing:1px}
     </style>
   </defs>
   <text x="32" y="30" class="label">SOLID = SUBMITTED LEARNED PATH</text>
-  <text x="1110" y="30" class="label" fill="#f3bd62">AMBER = BASELINE / FALLBACK</text>
+  <text x="1060" y="30" class="fallback-label">AMBER = WEIGHTED RRF BASELINE / FALLBACK</text>
 
   <rect class="box" x="32" y="236" width="170" height="92" rx="14"/>
   <text class="t" x="117" y="270" text-anchor="middle">Conversation</text>
@@ -42,19 +42,24 @@
   <text class="s" x="1274" y="240" text-anchor="middle">146 features</text>
   <text class="s" x="1274" y="260" text-anchor="middle">learned order</text>
 
-  <rect class="box rank" x="1197" y="314" width="155" height="80" rx="14"/>
-  <text class="t" x="1274" y="350" text-anchor="middle">Top 20</text>
-  <text class="s" x="1274" y="376" text-anchor="middle">track IDs</text>
+  <rect class="box rank" x="1197" y="305" width="185" height="80" rx="14"/>
+  <text class="t" x="1289" y="334" text-anchor="middle">Final ordering</text>
+  <text class="s" x="1289" y="358" text-anchor="middle">exact-track pin</text>
+  <text class="s" x="1289" y="378" text-anchor="middle">+ artist check</text>
 
-  <rect class="box response" x="1197" y="434" width="220" height="92" rx="14"/>
-  <text class="t" x="1307" y="468" text-anchor="middle">Response LLM</text>
-  <text class="s" x="1307" y="494" text-anchor="middle">latest state + top track</text>
+  <rect class="box rank" x="1197" y="410" width="155" height="70" rx="14"/>
+  <text class="t" x="1274" y="440" text-anchor="middle">Top 20</text>
+  <text class="s" x="1274" y="464" text-anchor="middle">track IDs</text>
 
-  <rect class="box fallback" x="1000" y="338" width="165" height="80" rx="14"/>
-  <text class="t" x="1082" y="369" text-anchor="middle">Weighted RRF</text>
-  <text class="s" x="1082" y="394" text-anchor="middle">baseline + fallback</text>
+  <rect class="box response" x="1197" y="520" width="220" height="92" rx="14"/>
+  <text class="t" x="1307" y="554" text-anchor="middle">Response LLM</text>
+  <text class="s" x="1307" y="580" text-anchor="middle">latest state + top track</text>
+
+  <rect class="box fallback" x="1000" y="410" width="165" height="70" rx="14"/>
+  <text class="t" x="1082" y="439" text-anchor="middle">Weighted RRF</text>
+  <text class="s" x="1082" y="463" text-anchor="middle">baseline + fallback</text>
 
   <path class="arr" d="M202 282H242"/><path class="arr" d="M422 282H462"/><path class="arr" d="M617 282H655"/>
-  <path class="arr" d="M973 229H1012"/><path class="arr" d="M1157 229H1197"/><path class="arr" d="M1274 275V314"/><path class="arr" d="M1274 394V434"/>
-  <path class="dash" d="M973 378H1000"/><path class="dash" d="M1165 378H1197"/>
+  <path class="arr" d="M973 229H1012"/><path class="arr" d="M1157 229H1197"/><path class="arr" d="M1274 275V305"/><path class="arr" d="M1289 385V410"/><path class="arr" d="M1274 480V520"/>
+  <path class="dash" d="M973 445H1000"/><path class="dash" d="M1165 445H1197"/>
 </svg>

@@ -69,14 +69,14 @@ Section 1 · deployed path
 
 ::: {.system-overview}
 ::: {.overview-input}
-**Input**
+**Whole-system input**
 
 Conversation, played tracks, user profile
 :::
 ::: {.overview-system}
 **Retrieve → rank → respond**
 
-Typed state → 11 catalog queries → candidate union → LambdaMART → response LLM
+Typed state → 11 catalog queries → candidate union → LambdaMART → final ordering → response LLM
 :::
 ::: {.overview-output}
 **Output**
@@ -91,7 +91,7 @@ Typed state → 11 catalog queries → candidate union → LambdaMART → respon
 
 ## Deployed pipeline {#deployed-pipeline}
 
-![](submission-architecture/submission-pipeline-dark.svg){.diagram .pipeline-diagram .nostretch fig-alt="The submission architecture: conversation and played tracks flow through state extraction and entity resolution into eleven LanceDB retrieval branches. Their pool union goes to a 146-feature LambdaMART ranker, top 20, and response LLM. Weighted RRF appears separately as the baseline and fallback."}
+![](submission-architecture/submission-pipeline-dark.svg){.diagram .pipeline-diagram .nostretch fig-alt="The submission architecture: conversation and played tracks flow through state extraction and entity resolution into eleven LanceDB retrieval branches. Their pool union goes to a 146-feature LambdaMART ranker, final ordering with an exact-track pin and artist check, the top 20, and a response LLM. Weighted RRF appears separately in amber as the baseline and fallback."}
 
 <p class="source-line">Dark adaptation of the architecture figure. The main learned path and the separate RRF baseline/fallback are visually distinguished.</p>
 
@@ -111,7 +111,7 @@ Hidden target · Neko Case · mood/lyric/sonic clues
 ::: {.contract-node}
 **Ranking**
 
-Candidate union → learned top 20
+Candidate union → learned scores → final ordering → top 20
 :::
 ::: {.contract-node}
 **Experience**
@@ -124,7 +124,7 @@ Top track + grounded response
 <p class="stage-contract-title">What crosses each system boundary</p>
 <div><b>State Extraction</b><span>conversation history</span><i>→</i><strong>structured, catalog-groundable state</strong></div>
 <div><b>Retrieval</b><span>state + catalog</span><i>→</i><strong>candidate union</strong></div>
-<div><b>Ranking</b><span>candidate rows + features</span><i>→</i><strong>ordered top 20</strong></div>
+<div><b>Ranking</b><span>candidate rows + features</span><i>→</i><strong>learned scores + exact-track/artist guards → ordered top 20</strong></div>
 <div><b>Response Generation</b><span>top 1 + latest state</span><i>→</i><strong>listener-facing response</strong></div>
 :::
 
@@ -329,7 +329,7 @@ Union of branch pools, each truncated to 500, ready for learned ranking
 Every branch queries the same catalog row and returns the same `track_id`, which makes union, feature joins, and replay deterministic.
 
 ::: {.north-star}
-<i>◎</i><p><b>Design goal</b><span>Express the listener’s complete request as one catalog-grounded query plan. In practice, each branch consumed one slice of the request and the ranker recombined the evidence.</span></p>
+<i>◎</i><p><b>Goal not fully materialized</b><span>We wanted one catalog-grounded query plan for the listener’s complete request. In practice, retrieval split the request across branches and the ranker had to recombine their evidence.</span></p>
 :::
 
 <p class="source-line">Source: paper/main.tex `2; mcrs/qu_modules/catalog_lance.py.</p>
@@ -398,9 +398,8 @@ If no tag resolves, the raw phrase remains in text search so the signal is not d
 | musical attributes | `attributes_qwen3_embedding_8b` | genre, mood, style, and descriptive matches |
 | lyrical theme | `lyrics_qwen3_embedding_0_6b` | lyric and narrative similarity |
 | sonic description | `audio_laion_clap` | text-to-audio similarity |
-| visual request | `image_siglip2` | cover-art similarity; only when visual intent is detected |
 
-Each branch preserves its own score scale. LambdaMART receives branch-specific rank, score, margin, hit, z-score, and percentile evidence.
+The 11 modeled branches preserve their own score scales. LambdaMART receives branch-specific rank, score, margin, hit, z-score, and percentile evidence.
 
 <p class="source-line">Source: paper/main.tex `2 and model feature names.</p>
 
@@ -609,16 +608,16 @@ Section 5 · candidate evidence → ordered top 20
 Candidate union: up to 500 per branch + 146 features per turn–track pair
 :::
 ::: {.overview-system}
-**LambdaMART**
+**Learned scoring**
 
-Learn a score within each conversational turn
+LambdaMART learns one score per candidate within the turn
 
 <span class="mini-gain"><b>b1 cosine 59.0%</b> · branch 11.5% · affinity 10.7% · other cosine 8.9%</span>
 :::
 ::: {.overview-output}
-**Output**
+**Final ordering**
 
-Final ordered top 20 track IDs
+Exact-track pin + final artist check → ordered top 20
 :::
 :::
 
@@ -629,13 +628,11 @@ Final ordered top 20 track IDs
 ## Inference-time ranking {#ranking-input}
 
 ::: {.ranking-inference-flow}
-<div><small>INPUT · ONE TURN</small><b>Candidate union</b><span>up to 500 tracks from each retrieval branch</span></div>
+<div><small>PHASE 1 · CANDIDATE EVIDENCE</small><b>One row per track</b><span>candidate union + state + branch evidence + catalog and embedding matches</span></div>
 <i>→</i>
-<div><small>FEATURE MATRIX</small><b>One row per candidate track</b><span>conversation state + branch evidence + catalog/embedding match + history/constraints</span></div>
+<div><small>PHASE 2 · LEARNED SCORING</small><b>LambdaMART</b><span>one score for every candidate; compared within this conversation turn</span></div>
 <i>→</i>
-<div><small>MODEL</small><b>LambdaMART</b><span>one learned score for every candidate row</span></div>
-<i>→</i>
-<div class="ranking-output"><small>OUTPUT</small><b>Ordered top 20</b><span>highest-scoring track IDs</span></div>
+<div class="ranking-output"><small>PHASE 3 · FINAL ORDERING</small><b>Score order → two guards → top 20</b><span>exact-track pin + final artist check, then return ordered track IDs</span></div>
 :::
 
 <div class="ranking-field-boundary"><span><b>Used at inference</b>conversation state · branch ranks/scores · catalog metadata · embeddings · played/rejected history</span><span class="excluded"><b>Not used</b>conversation-goal fields</span></div>
@@ -795,13 +792,12 @@ You are the conversational voice of a music recommender — a "track explainer."
 
 Guidelines:
 - Output ONLY the listener-facing message — no labels, headers, quotes, or YAML.
-- Brief and conversational: 1-3 sentences. Match the listener's tone, energy, and LANGUAGE (reply in the same language they wrote in).
+- Brief and conversational: 1-2 concise sentences. Match the listener's tone, energy, and LANGUAGE (reply in the same language they wrote in).
 - Ground the "why it fits" in their request/stated taste. You MAY name the title/artist, but do NOT recite a metadata or tag dump (genre/mood/style lists) unless they asked for those details.
 - If the track clearly doesn't match, briefly and honestly acknowledge the mismatch — don't oversell.
 - Vary your wording across turns. Use only facts supported by the provided track; invent nothing.
 - The track may be provided as structured &lt;recommended_track&gt; data. NEVER output that data, the tag list, or any XML verbatim — always write a natural conversational sentence.</code></pre>
-<div class="prompt-label prompt-style">STYLE INSTRUCTIONS</div><pre class="prompt-copy prompt-style"><code>Write 1-2 concise sentences about only the selected track.
-Prioritize the latest user request and extracted state over older conversation history.
+<div class="prompt-label prompt-style">STYLE INSTRUCTIONS</div><pre class="prompt-copy prompt-style"><code>Prioritize the latest user request and extracted state over older conversation history.
 If the track is reasonably aligned, explain the fit with one specific supported reason.
 If it clearly conflicts with an explicit avoid/new-artist constraint, do not oversell it or blame the system; briefly frame the limitation and the closest supported reason.</code></pre>
 <div class="prompt-label prompt-runtime">RUNTIME INPUT · appended per turn</div><div class="runtime-injection"><div><small>LISTENER CONTEXT</small><b>latest request + extracted state</b><span>Neko Case · subdued · sense of place · two rejected tracks</span></div><div><small>SELECTED TRACK XML</small><b>Neko Case — “Bracing For Sunday”</b><span>album · year · tags</span></div></div></div>
@@ -976,7 +972,7 @@ Rejudge request fit and artist anchoring; test a cleaner-label model.
 ↓ Detail: [Bonobo example](#label-bonobo) · [judge flow](#label-judging-flow) · [counts](#label-audit-counts) · [outcome](#label-outcome-limitations)
 :::
 
-## Bonobo anchoring example {#label-bonobo}
+## Training-label failure examples {#label-bonobo}
 
 <div class="session-meta"><span>SESSION</span> 016099ac-567c-4cd7-81f5-d385be38a4bc</div>
 
@@ -984,7 +980,7 @@ Rejudge request fit and artist anchoring; test a cleaner-label model.
 <div class="anchor-step history"><i>T1</i><p><b>Previously played</b><br>Bonobo — “Antenna”</p></div>
 <div class="anchor-step history"><i>T2</i><p><b>Previously played</b><br>Bonobo — “Cirrus”</p></div>
 <div class="anchor-step conflict"><i>T3</i><p><b>Listener</b><br>“Similar chill, electronic vibe… but <strong>from a different artist</strong>?”</p><p><b>Ground truth</b><br>Bonobo — “Jets” <mark>MOVES toward goal</mark></p></div>
-<div class="anchor-step conflict"><i>T4</i><p><b>Listener</b><br>“‘Jets’ is cool, but… <strong>a different artist this time</strong>…”</p><p><b>Ground truth</b><br>Bonobo / Cornelia — “Pieces” <mark>MOVES toward goal</mark></p></div>
+<div class="anchor-step conflict"><i>T4</i><p><b>Listener</b><br>“‘Jets’ is cool, but… <strong>a different artist this time</strong>…”</p><p><b>Ground truth</b><br>Bonobo — “Pieces” <mark>MOVES toward goal</mark></p></div>
 :::
 
 The ground truth repeats the artist the listener explicitly asked to leave.
