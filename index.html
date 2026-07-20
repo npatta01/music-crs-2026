@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Music-CRS RecSys Challenge 2026 submission artifacts, reports, code, and data.">
+  <title>Music-CRS Submission</title>
+  <style>
+    :root {
+      color-scheme: dark light;
+      --bg: #07111f;
+      --panel: #0e2036;
+      --text: #edf5ff;
+      --muted: #a9bdd3;
+      --border: #29435f;
+      --blue: #6ab8ff;
+      --cyan: #52d6ca;
+      --violet: #b596ff;
+      --green: #6ed58a;
+      --amber: #f4bd62;
+      --coral: #ff7f8a;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); margin: 0; min-height: 100vh; }
+    main { margin: 0 auto; max-width: 1180px; padding: clamp(48px, 8vw, 100px) 28px 56px; }
+    .eyebrow { color: var(--blue); font-size: .78rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    h1 { font-size: clamp(2.5rem, 6vw, 5.5rem); letter-spacing: -.055em; line-height: .95; margin: 18px 0 24px; max-width: 900px; }
+    .intro { color: var(--muted); font-size: clamp(1rem, 1.8vw, 1.3rem); line-height: 1.6; margin: 0 0 44px; max-width: 760px; }
+    .link-grid { display: grid; gap: 22px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .link-card { --accent: var(--blue); border-top: 5px solid var(--accent); min-height: 230px; padding: 26px 22px 22px; position: relative; }
+    .link-card::before { color: var(--accent); content: attr(data-icon); font-size: 1.5rem; position: absolute; right: 22px; top: 22px; }
+    .link-card h2 { font-size: 1.35rem; margin: 0 0 10px; }
+    .link-card p { color: var(--muted); line-height: 1.5; margin: 0 0 22px; }
+    .link-card ul { list-style: none; margin: 0; padding: 0; }
+    .link-card li + li { border-top: 1px solid var(--border); margin-top: 10px; padding-top: 10px; }
+    .link-card a { color: var(--text); font-weight: 750; text-decoration-color: color-mix(in srgb, var(--accent) 70%, transparent); text-decoration-thickness: 2px; text-underline-offset: .25em; }
+    .link-card a:hover { color: var(--accent); }
+    .link-card a:focus-visible, footer a:focus-visible { border-radius: 3px; outline: 3px solid var(--amber); outline-offset: 5px; }
+    .reports { --accent: var(--blue); }
+    .paper { --accent: var(--violet); }
+    .submissions { --accent: var(--green); }
+    .audits { --accent: var(--coral); }
+    .code { --accent: var(--cyan); }
+    .data { --accent: var(--amber); }
+    footer { align-items: center; border-top: 1px solid var(--border); color: var(--muted); display: flex; font-size: .9rem; gap: 22px; justify-content: space-between; margin-top: 46px; padding-top: 22px; }
+    footer nav { display: flex; gap: 18px; }
+    footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="eyebrow">RecSys Challenge 2026 · Music-CRS</div>
+      <h1>Music-CRS submission</h1>
+      <p class="intro">Architecture, paper, submitted artifacts, audits, code, and data from our conversational music recommendation system.</p>
+    </header>
+    <section class="link-grid" aria-label="Project artifacts">
+      <article class="link-card reports" data-icon="↗"><h2>Reports</h2><p>Understand the system and what we learned.</p><ul><li><a href="docs/submission-architecture.html">Architecture Deck</a></li><li><a href="docs/retrospective.html">Competition Retrospective</a></li></ul></article>
+      <article class="link-card paper" data-icon="¶"><h2>Paper</h2><p>Read the participant paper.</p><ul><li><a href="paper/main.pdf">Paper PDF</a></li></ul></article>
+      <article class="link-card submissions" data-icon="↓"><h2>Submissions</h2><p>Download the submitted prediction bundles.</p><ul><li><a href="submission/v10_lgbm_A.zip">Blind-A submission</a></li><li><a href="submission/v10_lgbm_B_v1.zip">Blind-B submission</a></li></ul></article>
+      <article class="link-card audits" data-icon="✓"><h2>Audits</h2><p>Inspect the retained submission evidence.</p><ul><li><a href="reports/blindset-a-submission-audit/report.html">Blind-A audit</a></li><li><a href="reports/blindset-b-submission-audit/report.html">Blind-B audit</a></li></ul></article>
+      <article class="link-card code" data-icon="&lt;/&gt;"><h2>Code</h2><p>Explore the implementation.</p><ul><li><a href="https://github.com/npatta01/music-crs-2026">GitHub repository</a></li></ul></article>
+      <article class="link-card data" data-icon="◫"><h2>Data</h2><p>Access challenge and released reproduction artifacts.</p><ul><li><a href="https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge">Challenge datasets</a></li><li><a href="https://huggingface.co/datasets/Npatta01/music-crs-repro-2026">Offline reproduction bundle</a></li><li><a href="data/anchor_labels_v1/README.md">Anchor-label data</a></li></ul></article>
+    </section>
+    <footer><span>Team npatta01</span><nav aria-label="Project information"><a href="https://nlp4musa.github.io/music-crs-challenge/">Challenge</a><a href="LICENSE">License</a></nav></footer>
+  </main>
+</body>
+</html>
