@@ -28,6 +28,28 @@ EXPECTED_LINKS = {
     "LICENSE",
 }
 
+EXPECTED_CARD_LINKS = [
+    ("Reports", ["docs/submission-architecture.html", "docs/retrospective.html"]),
+    ("Paper", ["paper/main.pdf"]),
+    ("Submissions", ["submission/v10_lgbm_A.zip", "submission/v10_lgbm_B_v1.zip"]),
+    (
+        "Audits",
+        [
+            "reports/blindset-a-submission-audit/report.html",
+            "reports/blindset-b-submission-audit/report.html",
+        ],
+    ),
+    ("Code", ["https://github.com/npatta01/music-crs-2026"]),
+    (
+        "Data",
+        [
+            "https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge",
+            "https://huggingface.co/datasets/Npatta01/music-crs-repro-2026",
+            "data/anchor_labels_v1/README.md",
+        ],
+    ),
+]
+
 
 def page_text() -> str:
     assert PAGE.exists(), "Create the repository-root GitHub Pages entrypoint"
@@ -39,6 +61,23 @@ def test_landing_page_has_exact_six_link_groups() -> None:
     assert len(re.findall(r'<article class="link-card ', html)) == 6
     for title in ("Reports", "Paper", "Submissions", "Audits", "Code", "Data"):
         assert f">{title}</h2>" in html
+
+
+def test_landing_page_cards_and_links_have_exact_order() -> None:
+    with sync_playwright() as playwright:
+        browser = launch_browser(playwright)
+        page = browser.new_page()
+        page.goto(PAGE.as_uri())
+        cards = page.locator(".link-grid > .link-card").evaluate_all(
+            """
+            cards => cards.map(card => ({
+                title: card.querySelector("h2").textContent.trim(),
+                links: [...card.querySelectorAll("a")].map(link => link.getAttribute("href")),
+            }))
+            """
+        )
+        assert [(card["title"], card["links"]) for card in cards] == EXPECTED_CARD_LINKS
+        browser.close()
 
 
 def test_landing_page_contains_only_the_approved_destinations() -> None:
@@ -99,7 +138,7 @@ def test_focus_light_reduced_motion_and_print_are_readable() -> None:
         page.emulate_media(color_scheme="light", reduced_motion="reduce")
         light_bg = page.locator("body").evaluate("node => getComputedStyle(node).backgroundColor")
         assert light_bg != dark_bg
-        assert page.locator(".link-card").first.evaluate("node => getComputedStyle(node).transitionDuration") in {"0s", "0.000001s", "1e-06s"}
+        assert page.locator(".link-card").first.evaluate("node => getComputedStyle(node).transitionDuration") in {"0.000001s", "1e-06s"}
 
         page.emulate_media(media="print")
         assert page.locator("body").evaluate("node => getComputedStyle(node).backgroundColor") in {"rgb(255, 255, 255)", "rgba(0, 0, 0, 0)"}
