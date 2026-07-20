@@ -25,6 +25,9 @@ EXPECTED_LINKS = {
     "https://huggingface.co/datasets/Npatta01/music-crs-repro-2026",
     "data/anchor_labels_v1/README.md",
     "https://nlp4musa.github.io/music-crs-challenge/",
+    "https://www.linkedin.com/in/nidhinpattaniyil/",
+    "https://www.linkedin.com/in/semihyagli/",
+    "https://www.linkedin.com/in/tanwirzaman/",
     "LICENSE",
 }
 
@@ -87,6 +90,13 @@ def test_landing_page_contains_only_the_approved_destinations() -> None:
     assert "paper/draft.md" not in html
     assert "docs/codebase/README.md" not in html
     assert "docs/reproduce_offline_bundle.md" not in html
+
+
+def test_footer_credits_all_paper_authors() -> None:
+    html = page_text()
+    assert "Team npatta01" in html
+    for author in ("Nidhin Pattaniyil", "Semih Yagli", "Tanwir Zaman"):
+        assert author in html
 
 
 def test_every_relative_link_exists() -> None:
