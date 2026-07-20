@@ -333,3 +333,5 @@ def test_quarto_version_and_readme_entrypoint() -> None:
     readme = (ROOT / "readme.md").read_text()
     assert "[Submission architecture deck]" in readme
     assert "(docs/submission-architecture.html)" in readme
+    assert "https://npatta01.github.io/music-crs-2026/index.html" in readme
+    assert "https://npatta01.github.io/music-crs-2026/docs/submission-architecture.html#/high-level-architecture" in readme
