@@ -4,36 +4,19 @@ Our entry to the **[RecSys 2026 Music Conversational Recommendation Challenge](h
 
 Built on top of the organizers' official baseline/evaluation framework (task format, dataset loaders, inference contract). Everything past the original two-stage BM25/BERT + Llama-3.2-1B baseline — the state extraction, multi-branch retrieval, RRF fusion, learned reranker, and response generation — is our own pipeline, described below.
 
-## Project website
+## Start here
 
-**[Open the Music-CRS project website →](https://npatta01.github.io/music-crs-2026/index.html)**
+**[Open the interactive architecture deck →](https://npatta01.github.io/music-crs-2026/docs/submission-architecture.html#/high-level-architecture)**
 
-One-page access to the architecture, paper, submitted artifacts, audits, code, and data.
+The progressive walkthrough explains how a conversation moves through state extraction, retrieval, ranking, and response generation, with examples and label-audit evidence.
 
-[Submission architecture deck](https://npatta01.github.io/music-crs-2026/docs/submission-architecture.html#/high-level-architecture) · [Repository copy](docs/submission-architecture.html)
+[Project website](https://npatta01.github.io/music-crs-2026/index.html) · [Submission architecture deck](docs/submission-architecture.html) in this repository
 
 - **Challenge site**: https://nlp4musa.github.io/music-crs-challenge/
 - **ACM RecSys Challenge**: https://www.recsyschallenge.com/2026
 - **Datasets**: [TalkPlayData-Challenge collection](https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge)
 - **Scores**: see [below](#scores) — devset, Blind-A, and Blind-B across every reported facet
 - **Competition retrospective**: [what we built, where we fell short, and what the leading public teams did differently](docs/retrospective.html)
-
----
-
-## Approach overview
-
-Each turn compiles the running conversation into a structured state, retrieves candidates through several independent retrievers, fuses and reranks them, and generates a response for the top pick.
-
-![Our submission pipeline: state extraction, resolve, multi-branch retrieval, weighted RRF fusion, LightGBM reranker, response generation](docs/architectures/submission_pipeline.svg)
-
-Full detail per stage:
-
-- [docs/architectures/v0plus_retrieval.md](docs/architectures/v0plus_retrieval.md) — retriever branches, RRF fusion math, post-fusion features
-- [docs/architectures/session_state.md](docs/architectures/session_state.md) — the state schema and extract→resolve pipeline
-- [docs/reproduce_reranker.md](docs/reproduce_reranker.md) — LightGBM reranker: features, training, FAST vs FULL retrain
-- [docs/architectures/explanation_generation.md](docs/architectures/explanation_generation.md) — response generation
-
-(Full per-module map is in [Repo map](#repo-map) below.)
 
 ---
 
