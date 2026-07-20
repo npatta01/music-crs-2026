@@ -1,0 +1,179 @@
+{
+  "meta": {
+    "title": "Inside Our Music-CRS Recommender",
+    "generated": "2026-07-14",
+    "submittedConfig": "configs/state_ranker_v10_lgbm_blindset_B.yaml",
+    "evidencePolicy": "Outcome quality is labelled only from devset examples with visible ground truth. Blind-B is used to illustrate submitted mechanics because its relevance labels are hidden."
+  },
+  "claims": [
+    {
+      "id": "submitted-pipeline",
+      "claim": "The Blind-B submission extracts a typed conversation state with DeepSeek V4 Flash, resolves entities and constraints, retrieves up to 1,000 candidates per branch, and applies the goal-free LightGBM bundle before returning 20 tracks.",
+      "status": "Verified",
+      "sourcePaths": [
+        "configs/state_ranker_v10_lgbm_blindset_B.yaml",
+        "exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B_trace.jsonl"
+      ],
+      "sourceNote": "The active config specifies prompt_version v1, pool_k 500, top_k_out 1000, retrieval_topk 20, and models/reranker_v12_goalfree; the saved trace records extracted_state, resolver, retrieval, ranking, and final_recommendation stages."
+    },
+    {
+      "id": "multimodal-candidate-generation",
+      "claim": "Candidate generation combines lexical BM25, metadata and attribute text embeddings, lyric embeddings when routed, CLAP audio-text retrieval, SigLIP2 cover-image retrieval when routed, anchor/user centroids, artist discography, and era-popularity lookup.",
+      "status": "Verified",
+      "sourcePaths": [
+        "configs/state_ranker_v10_lgbm_blindset_B.yaml",
+        "exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B_trace.jsonl"
+      ],
+      "sourceNote": "The config enumerates the active dense and centroid branches; the primary trace shows which branches fired or were skipped and why."
+    },
+    {
+      "id": "exact-entity-strength",
+      "claim": "Exact track-and-artist requests are a demonstrated strength of the labelled devset snapshot: the ten exact-entity positive controls all landed in the final top two, including Numb at rank 1.",
+      "status": "Verified",
+      "sourcePaths": [
+        "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json"
+      ],
+      "sourceNote": "Pack POS_exact_entity_success_control contains ten labelled positive controls with final ranks 1 or 2. This is evidence for the analysed devset baseline, not a Blind-B relevance claim."
+    },
+    {
+      "id": "retrieval-ranking-headroom",
+      "claim": "The labelled devset baseline had substantial stage-localized headroom: final top-20 hit rate was 27.36%, while the union of branch top-20 lists contained the target on 47.66% of turns and the union of branch top-1000 lists on 90.54%.",
+      "status": "Verified",
+      "sourcePaths": [
+        "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/recall_gap_data.json",
+        "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/ranker_decision/report_data.json"
+      ],
+      "sourceNote": "The frozen 2026-06-06 analysis reports final_hit@20=0.2736, union_hit@20=0.4766, and union_hit@1000=0.9054 over 8,000 devset turns. It predates the final submitted ranker and is used as diagnostic evidence, not an estimate of Blind-B quality."
+    },
+    {
+      "id": "response-generator-choice",
+      "claim": "The submitted response generator uses Qwen3-30B-A3B with latest-state conditioning and an XML item block capped at ten tags; the earlier bake-off found this model and state conditioning best among tested settings.",
+      "status": "Verified",
+      "sourcePaths": [
+        "configs/state_ranker_v10_lgbm_blindset_B.yaml",
+        "docs/research/2026-06-10-response-generation-bakeoff.md"
+      ],
+      "sourceNote": "The active config sets phase2_best_qwen, conditioning latest_state, item_format xml, max_tags 10, and temperature 0.0. The bake-off reports a 4.2/5 Blind-A judge score for Qwen3-30B-A3B with state conditioning; that score is not a Blind-B measurement."
+    },
+    {
+      "id": "blind-b-outcomes-unknown",
+      "claim": "The saved Blind-B trace proves execution mechanics but cannot establish that its recommendations are relevant.",
+      "status": "Verified",
+      "sourcePaths": [
+        "exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B_trace.jsonl",
+        "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json"
+      ],
+      "sourceNote": "Blind-B ground-truth relevance is hidden. The analysis snapshot explicitly distinguishes blind-set metadata availability, so no Blind-B trace is labelled good or bad here."
+    }
+  ],
+  "primaryTrace": {
+    "id": "approach-evidence-scopes",
+    "status": "Verified",
+    "scope": "A labelled frozen-baseline success establishes retrieval outcome quality; a separate Blind-B submitted-system trace establishes final mechanics while outcome relevance remains hidden. They are not presented as one aligned run.",
+    "alignedGood": {
+      "systemScope": "Frozen 2026-06-06 labelled devset baseline, not the final submitted V1/LGBM system",
+      "sessionId": "a61b366c-8cf5-48ad-a13f-181c033b9d89",
+      "turn": 2,
+      "conversation": [
+        "Turn 1 requested energetic indie rock for long drives; Let's Dance to Joy Division by The Wombats was played.",
+        "Turn 2 asked for something else: a popular track with a memorable whistle or strong bassline, perhaps by Foster The People or Cage The Elephant."
+      ],
+      "state": {
+        "turnIntent": "I'm looking for an energetic indie rock track, popular, with a memorable whistle or a really strong bassline, maybe by a band like Foster The People or Cage The Elephant.",
+        "intentMode": "refinement",
+        "policy": "diversify_artists",
+        "routing": ["feature_articulation"],
+        "positiveEntities": ["Foster The People", "Cage The Elephant"],
+        "positiveTags": ["energetic", "indie rock", "rock", "popular", "whistle", "strong bassline", "bass", "long drives", "driving"],
+        "staleEntities": [],
+        "hardFilterCount": 0,
+        "explicitRejectionCount": 0
+      },
+      "candidateEvidence": {
+        "bestBranch": "bm25",
+        "labelledTargetBestBranchRank": 1,
+        "labelledTargetFusedRank": 1,
+        "branchQueriesAndCounts": "Not retained in the compact positive-control record"
+      },
+      "ranking": {
+        "labelledTarget": "Pumped Up Kicks — Foster The People",
+        "labelledTargetId": "3b08891f-8ba3-4d9b-b0ab-4f9afa5b58dd",
+        "finalRank": 1,
+        "finalTopFive": ["Pumped Up Kicks", "Ruby", "Helena Beat", "Warrant", "(If You're Wondering If I Want You To) I Want You To"]
+      },
+      "responseProvenance": {
+        "retrievalHandoff": "The labelled target Pumped Up Kicks was rank 1, so it aligns with a top-1 response handoff.",
+        "datasetReferenceAssistant": "The dataset row contains assistant prose recommending Pumped Up Kicks and citing popularity, whistle, and bassline, but this is reference conversation text, not a stored response generated from the frozen ranking run.",
+        "generatedResponse": "Unknown"
+      },
+      "reconstructionStatus": "Conversation, state summary, branch rank, fusion rank, final ranks, and dataset assistant text are recorded. The vertical stage layout is reconstructed; exact branch query payloads, branch counts, and generated handoff messages are unavailable."
+    },
+    "submittedMechanics": {
+      "systemScope": "Final Blind-B submitted V1 extractor and goal-free LightGBM bundle; this trace demonstrates stage contracts while outcome relevance remains hidden",
+      "sessionId": "156cac0f-c16b-4bd2-8f4f-cc1691adef79",
+      "turn": 8,
+      "conversation": "After seven search turns, the listener explicitly confirms Pumped Up Kicks and says the search is complete.",
+      "state": "The saved state remains hidden_target/open_explore with six older facets and the identified track as positive satisfied feedback.",
+      "retrieval": {
+        "resolverAnchorTrackIds": [],
+        "resolverExactTrackTargetIds": [],
+        "centroidSourceTrackIds": [
+          "3b08891f-8ba3-4d9b-b0ab-4f9afa5b58dd",
+          "a3b6fca1-9195-4973-a163-00c365f4b69e",
+          "e9deaf34-02e2-46ad-83b0-a84a9e72f305"
+        ],
+        "centroidExplanation": "Pumped Up Kicks enters all three compiler centroids through positive satisfied track_feedback; Sit Next to Me and Houdini are representative Foster The People tracks added by similar-artist anchoring.",
+        "discographyExplanation": "The discography query has no targets because it accepts exact_target artists; Foster The People was resolved but was ineligible under the satisfied-prior/style-reference role policy.",
+        "firedBranchCount": 8,
+        "rawUnionSize": 5970,
+        "eligibleUnionSize": 5969
+      },
+      "ranking": {
+        "tracePrimaryTrack": "Tongue Tied — GROUPLOVE",
+        "predictionPrimaryTrack": "Tongue Tied — GROUPLOVE",
+        "outputCount": 20,
+        "artifactScope": "Trace and saved prediction agree through rank 14 and at ranks 17-19, but record ranks 15/16 in opposite order and contain different rank-20 IDs. Delivered top-20 descriptions use the saved prediction artifact."
+      },
+      "responseProvenance": "Listener-facing Tongue Tied prose is verbatim from the saved prediction. Formatter messages are reconstructed from the trace, dataset row, catalog, and submitted code because outbound messages were not persisted.",
+      "reconstructionStatus": "Conversation, state, branch status/counts, ranking IDs, and saved response are recorded. Catalog labels and formatted response-model inputs are reconstructed; Blind-B outcome relevance remains hidden."
+    },
+    "sourcePaths": [
+      "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json",
+      "configs/state_ranker_v10_lgbm_blindset_B.yaml",
+      "exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B_trace.jsonl",
+      "exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B.json",
+      "mcrs/qu_modules/compiler.py"
+    ],
+    "sourceNote": "Frozen success: POS_clean_final_hit_control sample a61b366c-8cf5-48ad-a13f-181c033b9d89::t2. Submitted mechanics: Blind-B trace and prediction record 71 (zero-based 70), cross-checked against compiler role gates."
+  },
+  "sources": [
+    {
+      "path": "configs/state_ranker_v10_lgbm_blindset_B.yaml",
+      "role": "Active submitted configuration and exact model, routing, retrieval, ranking, and response-generation settings."
+    },
+    {
+      "path": "exp/inference/blindset_B/state_ranker_v10_lgbm_blindset_B_trace.jsonl",
+      "role": "Saved submitted-system mechanics; illustrative only for outcomes because Blind-B labels are hidden."
+    },
+    {
+      "path": "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/state_experiment_pack.json",
+      "role": "Labelled devset positive controls, recent conversation context, and ideal-state targets."
+    },
+    {
+      "path": "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/ranker_decision/report_data.json",
+      "role": "Frozen ranker diagnostics, examples, caveats, metrics, and stage-localized decisions."
+    },
+    {
+      "path": "experiments/analysis/devset_recall_gap_v0plus_all_retrievers_2026_06_06/recall_gap_data.json",
+      "role": "Frozen 8,000-turn devset recall ceilings, branch ranks, fusion ranks, and final ranks."
+    },
+    {
+      "path": "docs/codebase/bugs.md",
+      "role": "Point-in-time verified-bug audit and resolution status; used to avoid presenting resolved or retracted findings as current behavior."
+    },
+    {
+      "path": "docs/research/2026-06-10-response-generation-bakeoff.md",
+      "role": "Response-generation experiment design, proxy caveats, Blind-A results, chosen model, and conditioning decision."
+    }
+  ]
+}
