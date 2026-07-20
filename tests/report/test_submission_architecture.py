@@ -335,3 +335,7 @@ def test_quarto_version_and_readme_entrypoint() -> None:
     assert "(docs/submission-architecture.html)" in readme
     assert "https://npatta01.github.io/music-crs-2026/index.html" in readme
     assert "https://npatta01.github.io/music-crs-2026/docs/submission-architecture.html#/high-level-architecture" in readme
+    assert "## Start here" in readme
+    assert "Open the interactive architecture deck →" in readme
+    assert "## Approach overview" not in readme
+    assert "docs/architectures/submission_pipeline.svg" not in readme
