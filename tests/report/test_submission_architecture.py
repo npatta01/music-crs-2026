@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -290,8 +291,8 @@ def test_required_links_and_local_output_contract() -> None:
         "paper/main.pdf",
         "https://nlp4musa.github.io/music-crs-challenge/",
         "../data/anchor_labels_v1/README.md",
-        "reports/blindset-a-submission-audit/report.html",
-        "reports/blindset-b-submission-audit/report.html",
+        "reports/blindset-a-prediction-audit/index.html",
+        "reports/blindset-b-prediction-audit/index.html",
         "retrospective.html",
     ]
     for link in required_links:
@@ -321,8 +322,8 @@ def test_checked_in_html_is_self_contained_and_complete() -> None:
         "../paper/main.pdf",
         "https://nlp4musa.github.io/music-crs-challenge/",
         "../data/anchor_labels_v1/README.md",
-        "../reports/blindset-a-submission-audit/report.html",
-        "../reports/blindset-b-submission-audit/report.html",
+        "../reports/blindset-a-prediction-audit/index.html",
+        "../reports/blindset-b-prediction-audit/index.html",
     ):
         assert link in html
 
@@ -339,3 +340,33 @@ def test_quarto_version_and_readme_entrypoint() -> None:
     assert "Open the interactive architecture deck →" in readme
     assert "## Approach overview" not in readme
     assert "docs/architectures/submission_pipeline.svg" not in readme
+
+
+def test_blind_prediction_audits_are_complete_and_portable() -> None:
+    for split in ("a", "b"):
+        report_dir = ROOT / "reports" / f"blindset-{split}-prediction-audit"
+        audit = json.loads((report_dir / "audit.json").read_text())
+        html = (report_dir / "index.html").read_text()
+        aggregate = audit["aggregate"]
+
+        assert aggregate["n_rows"] == 80
+        assert aggregate["n_with_trace"] == 80
+        for metric in (
+            "llm_judge_metrics",
+            "llm_explanation_judge_metrics",
+            "llm_state_judge_metrics",
+        ):
+            assert aggregate[metric]["n_judged"] == 80
+            assert aggregate[metric]["error_rows"] == 0
+
+        for cache_name in (
+            "llm_judgments.jsonl",
+            "llm_explanation_judgments.jsonl",
+            "llm_state_judgments.jsonl",
+        ):
+            assert len((report_dir / cache_name).read_text().splitlines()) == 80
+
+        assert "/Users/" not in html
+        assert "/Users/" not in json.dumps(audit)
+        for row in audit["rows"]:
+            assert row["session_id"] in html

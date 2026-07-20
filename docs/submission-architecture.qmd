@@ -1084,9 +1084,9 @@ Section 9 · source index
 ::: {.reference-card}
 **Submission audits**
 
-[Blind-A audit](../reports/blindset-a-submission-audit/report.html)
+[Blind-A prediction audit](../reports/blindset-a-prediction-audit/index.html)
 
-[Blind-B audit](../reports/blindset-b-submission-audit/report.html)
+[Blind-B prediction audit](../reports/blindset-b-prediction-audit/index.html)
 :::
 ::: {.reference-card}
 **Retrospective**

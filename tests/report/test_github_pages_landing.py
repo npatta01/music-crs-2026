@@ -18,8 +18,8 @@ EXPECTED_LINKS = {
     "paper/main.pdf",
     "submission/v10_lgbm_A.zip",
     "submission/v10_lgbm_B_v1.zip",
-    "reports/blindset-a-submission-audit/report.html",
-    "reports/blindset-b-submission-audit/report.html",
+    "reports/blindset-a-prediction-audit/index.html",
+    "reports/blindset-b-prediction-audit/index.html",
     "https://github.com/npatta01/music-crs-2026",
     "https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge",
     "https://huggingface.co/datasets/Npatta01/music-crs-repro-2026",
@@ -38,8 +38,8 @@ EXPECTED_CARD_LINKS = [
     (
         "Audits",
         [
-            "reports/blindset-a-submission-audit/report.html",
-            "reports/blindset-b-submission-audit/report.html",
+            "reports/blindset-a-prediction-audit/index.html",
+            "reports/blindset-b-prediction-audit/index.html",
         ],
     ),
     ("Code", ["https://github.com/npatta01/music-crs-2026"]),
