@@ -43,9 +43,16 @@ five content pages excluding references.
 - Added an explicit short-author form for running heads.
 - Added Hoboken, New Jersey, USA to every author affiliation as confirmed by
   the authors.
-- Replaced the generic challenge-webpage citation with the supplied RecSys '26
-  proceedings citation and used the three author names printed in this paper,
-  as instructed by the authors.
+- Replaced the generic challenge-webpage citation with the RecSys '26 challenge
+  overview citation supplied by the organizers, using their author list verbatim
+  (Doh, Oramas, Sguerra, Bohra, Pomo, Barile). An earlier revision substituted
+  this paper's own three author names; that was a misreading of the organizers'
+  email and has been corrected.
+- Added the remaining two organizer-recommended citations: the TalkPlay
+  multimodal recommendation paper (cited with the TalkPlayData 2 dataset in
+  Section 1) and the LLM-as-a-Judge evaluation paper (cited where the composite
+  metric's judge term is defined). All four recommended references are now
+  present.
 - Added a generative-AI disclosure in Acknowledgments because AI assisted with
   camera-ready language editing, reference normalization, and formatting.
 - Tightened a few phrases and the official-results table typography to remove
