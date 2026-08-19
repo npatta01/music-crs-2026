@@ -270,7 +270,7 @@ We tried to train on cleaner labels instead. Two inexpensive LLM judges (Gemma-4
 \subsection{Failure cases}
 \label{sec:failures}
 
-We wanted to understand where the system failed, so we had a single LLM judge (DeepSeek-V4-Flash) rate the submitted Blind-B run: 68\% of turns came back weak-or-bad. Table~\ref{tab:audit} diagnoses a subset of them. These are examples and audit categories, not measures of what each cost us --- Blind-B exposes no relevance labels, so only the validation failure of Section~\ref{sec:insample} is actually measured.
+We wanted to understand where the system failed, so we had a single LLM judge (DeepSeek-V4-Flash) rate the submitted Blind-B run: 78\% of turns came back weak-or-bad. A separate audit pass over the same predictions returned 68\%, so we read the rate as indicative rather than precise. Table~\ref{tab:audit} diagnoses a subset of them. These are examples and audit categories, not measures of what each cost us --- Blind-B exposes no relevance labels, so only the validation failure of Section~\ref{sec:insample} is actually measured.
 
 \begin{table}[!htbp]
 \caption{Label-free audit of the submitted Blind-B run: where the flagged turns were lost.}
