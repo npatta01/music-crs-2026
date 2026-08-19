@@ -24,7 +24,7 @@ inference with zero credentials.
 
 ```bash
 git clone --branch main https://github.com/npatta01/music-crs-2026.git
-cd music-conversational-music-recomender-2026
+cd music-crs-2026
 
 scripts/repro_setup.sh   # checks uv, syncs .venv (including hf), downloads
                           # + extracts + verifies the bundle from Hugging Face
@@ -78,7 +78,7 @@ hours.
 
 ```bash
 git clone --branch main https://github.com/npatta01/music-crs-2026.git
-cd music-conversational-music-recomender-2026
+cd music-crs-2026
 
 hf download Npatta01/music-crs-repro-2026 --repo-type dataset --local-dir .
 
