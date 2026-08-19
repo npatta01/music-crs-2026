@@ -223,15 +223,15 @@ LambdaMART, evaluated in-sample (train replay) & 0.3844 \\
 \end{table}
 
 \begin{table}[t]
-\caption{Official CodaBench scores. Section~\ref{sec:intro} defines the composite; Blind-A rank includes every development-phase submission. The Blind-A row is our final development-phase submission, which used the same response template as Blind-B.}
+\caption{Official CodaBench scores. Section~\ref{sec:intro} defines the composite. The Blind-A row is our final development-phase submission, which used the same response template as Blind-B; we give no Blind-A rank because that leaderboard counted submissions rather than teams, so it is not comparable to the Blind-B standing.}
 \label{tab:official}
-\Description{Blind-A scores 0.4380 nDCG and 0.5799 composite, ranking 51st of 181 submissions. Final Blind-B scores 0.2537 nDCG and 0.3811 composite, ranking 29th of 39 teams.}
+\Description{Blind-A scores 0.4380 nDCG and 0.5799 composite, with no rank reported. Final Blind-B scores 0.2537 nDCG and 0.3811 composite, ranking 29th of 39 teams.}
 \footnotesize
 \begin{tabular}{lrrrrrr}
 \toprule
 Split & nDCG & Cat. & Lex. & Judge & Comp. & Rank \\
 \midrule
-Blind-A (dev) & 0.4380 & 0.0313 & 0.8028 & 4.70 & 0.5799 & 51/181 \\
+Blind-A (dev) & 0.4380 & 0.0313 & 0.8028 & 4.70 & 0.5799 & --- \\
 \textbf{Blind-B (final)} & 0.2537 & 0.0315 & 0.7862 & 3.30 & \textbf{0.3811} & \textbf{29/39} \\
 \bottomrule
 \end{tabular}
