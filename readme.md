@@ -27,7 +27,7 @@ The progressive walkthrough explains how a conversation moves through state extr
 | Devset | 0.4562 | — | — | — | — | Local evaluator ([leaderboard.md](leaderboard.md)) |
 | Blind-A (final) | 0.4380 | 0.0313 | 0.8028 | 4.7000 | **0.5799** | CodaBench submission `799459` — same retrieval as `797598`, after the response sweep; the row in the paper's Table 4 |
 | Blind-A (pre-sweep) | 0.4380 | 0.0313 | 0.7670 | 4.2000 | **0.5389** | CodaBench submission `797598` |
-| Blind-B | 0.2537 | 0.0315 | 0.7862 | 3.3000 | **0.3811** | CodaBench submission `819863` (**final rank 29/39 teams**) |
+| Blind-B | 0.2537 | 0.0315 | 0.7862 | 3.3000 | **0.3811** | CodaBench submission `819863` (**final rank 29/40 teams**) |
 
 Devset extras (no CodaBench equivalent): Hit@20 0.6138, MRR 0.4102 — see [leaderboard.md](leaderboard.md) for deep-cutoff diagnostics (@50–@1000) and per-stage recall breakdowns.
 
@@ -118,6 +118,8 @@ Offline bundle (catalog, caches, frozen traces, model weights): **https://huggin
 ## Paper
 
 Our participant paper, **"Team npatta01's Conversational Music Recommender for the RecSys Challenge 2026"** (ACM sigconf, 4 pages + references), lives in [`paper/`](paper/): [`main.tex`](paper/main.tex) is the authoritative source, [`draft.md`](paper/draft.md) is a readable mirror. It documents the full pipeline and an honest retrospective: the in-sample-evaluation lesson, the ground-truth anchoring-bias analysis (cleaned relabeling released — see the [anchor labels](data/anchor_labels_v1/README.md)), and concrete failure cases from the submitted Blind-B run.
+
+The ready-to-upload TAPS bundle is included as [`paper/recsyschallenge26-7.zip`](paper/recsyschallenge26-7.zip).
 
 ---
 
