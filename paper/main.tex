@@ -32,7 +32,7 @@
 \renewcommand{\shortauthors}{Pattaniyil, Yagli, and Zaman}
 
 \begin{abstract}
-We describe team npatta01's submission to the RecSys Challenge 2026 conversational music recommendation task. The pipeline extracts a typed conversation state with an LLM, gathers candidates from eleven retrieval branches over a unified track index, re-ranks them with a LambdaMART model, and uses the state to generate a response. On the final Blind-B leaderboard it scored 0.3811 composite (nDCG@20 0.2537, LLM-judge 3.30), ranking 29th of 39 teams. We then examine why. The development estimates we selected on were computed in-sample and overstated performance. The training conversations are LLM-generated, and on many turns we were unsure that the single ground-truth track matched the request --- often it repeats the just-played artist after an explicit request for someone else. We re-judged the turns with LLM judges and release that relabeling; a model trained on it scored lower against the original labels, so the submission kept them. Failure cases from the submitted run show extracted constraints the pipeline could not enforce. Code, models, and a full reproduction bundle are publicly released.
+We describe team npatta01's submission to the RecSys Challenge 2026 conversational music recommendation task. The pipeline extracts a typed conversation state with an LLM, gathers candidates from eleven retrieval branches over a unified track index, re-ranks them with a LambdaMART model, and uses the state to generate a response. On the final Blind-B leaderboard it scored 0.3811 composite (nDCG@20 0.2537, LLM-judge 3.30), ranking 29th of 40 teams. We then examine why. The development estimates we selected on were computed in-sample and overstated performance. The training conversations are LLM-generated, and on many turns we were unsure that the single ground-truth track matched the request --- often it repeats the just-played artist after an explicit request for someone else. We re-judged the turns with LLM judges and release that relabeling; a model trained on it scored lower against the original labels, so the submission kept them. Failure cases from the submitted run show extracted constraints the pipeline could not enforce. Code, models, and a full reproduction bundle are publicly released.
 \end{abstract}
 
 \begin{CCSXML}
@@ -92,7 +92,7 @@ Figure~\ref{fig:pipeline} shows the pipeline end to end; the subsections below f
 \subsection{State extraction}
 \label{sec:state}
 
-At each turn we prompt an LLM (\texttt{deepseek-v4-flash}, build 0423~\cite{deepseek}) with the dialog so far --- the turns themselves and the IDs of the tracks already played --- to emit a schema-constrained conversation state. None of the dataset's supplied annotations --- conversation goals, goal progress, or user profiles --- reach the extractor, so the state is whatever an LLM can read off the conversation. Its fields cover the current request and intent mode, track feedback and pinned references, mentioned entities, hard filters and explicit rejections, process constraints, routing flags, lyrical theme, and a release-year window; Figure~\ref{fig:example} shows the schema populated on a real turn. A fuzzy resolver grounds surface names to catalog IDs so downstream stages operate on identifiers: fuzzy string matching of artist and track names against the catalog name lists, keeping matches above 80/100. Cheaper extractors under-filled optional fields such as rejections and facets, so all final runs use it.
+At each turn we prompt DeepSeek-V4-Flash (build 0423)~\cite{deepseek} with the dialog so far --- the turns themselves and the IDs of the tracks already played --- to emit a schema-constrained conversation state. None of the dataset's supplied annotations --- conversation goals, goal progress, or user profiles --- reach the extractor, so the state is whatever an LLM can read off the conversation. Its fields cover the current request and intent mode, track feedback and pinned references, mentioned entities, hard filters and explicit rejections, process constraints, routing flags, lyrical theme, and a release-year window; Figure~\ref{fig:example} shows the schema populated on a real turn. A fuzzy resolver grounds surface names to catalog IDs so downstream stages operate on identifiers: fuzzy string matching of artist and track names against the catalog name lists, keeping matches above 80/100. Cheaper extractors under-filled optional fields such as rejections and facets, so all final runs use it.
 
 \begin{figure}[!htbp]
   \centering
@@ -190,7 +190,7 @@ We deploy the bi-encoder as a reranker feature only. In an earlier experiment we
 \subsection{Response generation}
 \label{sec:response}
 
-The response generator is \texttt{Qwen3-30B-A3B-Instruct-2507}~\cite{qwen3} at temperature 0: a single pass over the top-1 track rendered as a delimited XML block ($\leq$10 tags) plus the \emph{latest} extracted state. The deployed template's full style instruction is:
+The response generator is \texttt{Qwen3-30B-A3B-Instruct-2507}~\cite{qwen3,qwen3model} at temperature 0: a single pass over the top-1 track rendered as a delimited XML block ($\leq$10 tags) plus the \emph{latest} extracted state. The deployed template's full style instruction is:
 \begin{quote}\small\itshape
 ``Write 1--2 concise sentences about only the selected track. Prioritize the latest user request and extracted state over older conversation history. If the track is reasonably aligned, explain the fit with one specific supported reason. If it clearly conflicts with an explicit avoid/new-artist constraint, do not oversell it or blame the system; briefly frame the limitation and the closest supported reason.''
 \end{quote}
@@ -204,9 +204,9 @@ Code, configs, trained models, cached extraction states, and a frozen-LLM-cache 
 The development split (1,000 sessions $\times$ 8 turns) has one ground-truth track per turn. Table~\ref{tab:devset} reports development-split numbers, separating leakage-safe estimates from in-sample ones; Table~\ref{tab:official} reports the official leaderboard results.
 
 \begin{table}[t]
-\caption{Development split. The in-sample row replays turns a full-data model saw during training; the out-of-fold rows are leakage-safe cross-validation estimates.}
+\caption{Development split. The out-of-fold rows are leakage-safe. The in-sample row is a historical goal-aware v10 model without \texttt{b1\_cos} and is not directly comparable.}
 \label{tab:devset}
-\Description{Development nDCG at twenty increases from 0.1492 for weighted reciprocal-rank fusion to 0.1970 for out-of-fold LambdaMART and 0.2032 after adding the deployed bi-encoder feature. The in-sample train replay reaches 0.3844.}
+\Description{Development nDCG at twenty is 0.1492 for weighted reciprocal-rank fusion, 0.1970 for out-of-fold LambdaMART, and 0.2032 after adding the deployed bi-encoder feature; the first comparison uses different candidate-pool depths. A non-comparable historical v10 in-sample replay reaches 0.3844.}
 \small
 \begin{tabular}{lr}
 \toprule
@@ -215,7 +215,7 @@ System (how measured) & nDCG@20 \\
 Weighted RRF fusion (no training) & 0.1492 \\
 LambdaMART, out-of-fold CV & 0.1970 \\
 \quad + \texttt{b1\_cos} (deployed feature set) & 0.2032 \\
-LambdaMART, evaluated in-sample (train replay) & 0.3844 \\
+Historical v10 LambdaMART, in-sample & 0.3844 \\
 \bottomrule
 \end{tabular}
 \par\smallskip
@@ -237,7 +237,7 @@ Blind-A (dev) & 0.4380 & 0.0313 & 0.8028 & 4.70 & 0.5799 \\
 \end{tabular}
 \end{table}
 
-Learned re-ranking improves over static fusion by the leakage-safe estimate ($0.149 \rightarrow 0.197$--$0.203$); Section~\ref{sec:insample} discusses the in-sample row.
+The evaluated static-fusion and learned-ranker configurations used different candidate-pool depths, so the leakage-safe scores ($0.149$ versus $0.197$--$0.203$) do not isolate the effect of learned re-ranking; Section~\ref{sec:insample} discusses the in-sample row.
 
 \section{Error Analysis}
 \label{sec:discussion}
@@ -270,18 +270,18 @@ We tried to train on cleaner labels instead. Two inexpensive LLM judges (Gemma-4
 \subsection{Failure cases}
 \label{sec:failures}
 
-We wanted to understand where the system failed, so we had a single LLM judge (DeepSeek-V4-Flash) rate the submitted Blind-B run: 78\% of turns came back weak-or-bad. Table~\ref{tab:audit} diagnoses 32 turns. These are examples and audit categories, not measures of what each cost us --- Blind-B exposes no relevance labels, so only the validation failure of Section~\ref{sec:insample} is actually measured.
+We used two label-free diagnostics on the submitted Blind-B run. A single LLM judge (DeepSeek-V4-Flash) rated 78\% of turns weak-or-bad. Separately, a deterministic trace audit checked constraints and searched the logged candidate pool using positive-term metadata matches plus popularity; Table~\ref{tab:audit} diagnoses 32 turns. These are examples and audit categories, not measures of what each cost us --- Blind-B exposes no relevance labels, so only the validation failure of Section~\ref{sec:insample} is actually measured.
 
 \begin{table}[!htbp]
-\caption{Label-free audit of the submitted Blind-B run. Categories overlap: 43 diagnoses across 32 distinct turns.}
+\caption{Deterministic label-free trace audit of the submitted Blind-B run. Categories overlap: 43 diagnoses across 32 distinct turns.}
 \label{tab:audit}
-\Description{The audit assigns 31 flagged turns to a better pooled candidate ranked below the top twenty, eight to an under-applied constraint, three to state-extraction misses, and one to an entity-resolution miss.}
+\Description{The heuristic audit assigns 31 flagged turns to a non-violating pooled candidate ranked below the top twenty, eight to an under-applied constraint, three to state-extraction misses, and one to an entity-resolution miss.}
 \small
 \begin{tabular}{lr}
 \toprule
 Diagnosis & Turns \\
 \midrule
-Better candidate in pool, ordered below top-20 & 31 \\
+Heuristic alternative below top-20 & 31 \\
 Under-applied constraint & 8 \\
 State-extraction miss & 3 \\
 Entity-resolution miss & 1 \\
@@ -295,13 +295,13 @@ Entity-resolution miss & 1 \\
 \item \textbf{Response generation.} The single-pass generator did not properly consider the query --- in particular an exact-track request for a title we do not have. On several turns a named track was read correctly as an exact-track request but is absent from the 47,071-track catalog; rather than flag it unavailable, the generator described a different song by the same artist as if it were the one asked for --- for ``\,`Watercolors' by Pat Metheny,'' it returned Metheny's ``Alfie.''
 \end{itemize}
 
-The limitation we keep returning to is that too little of the user's intent became executable constraints. The state records what the user wants, but few fields became filters or ranked evidence --- each branch consumed a slice of the state, and tag matching fell back to exact strings outside the BM25 branch --- while no co-occurrence, transition, or live-reasoning lane existed to compensate. Noisy candidate pools therefore reached the reranker; in the audit, 31 turns had a candidate the judge preferred sitting in the pool below our top-20 --- Table~\ref{tab:audit}'s largest bucket.
+The limitation we keep returning to is that too little of the user's intent became executable constraints. The state records what the user wants, but few fields became filters or ranked evidence --- each branch consumed a slice of the state, and tag matching fell back to exact strings outside the BM25 branch --- while no co-occurrence, transition, or live-reasoning lane existed to compensate. Noisy candidate pools therefore reached the reranker; on 31 flagged turns, the audit heuristic found a non-violating alternative below our top-20, selected by positive-term metadata matches plus popularity --- Table~\ref{tab:audit}'s largest bucket, but an audit signal rather than a relevance judgment.
 
-Our analysis has its own limits. The relabeling was never checked against human judgments, the Blind-B audit used a single LLM judge, the conversations are LLM-generated rather than observed listening sessions, and neither blind split exposes relevance labels --- so the blind-set failure rates and the relabeling rates come from our own judges rather than from ground truth. The development-split and leaderboard numbers in Section~\ref{sec:experiments} are separate measurements.
+Our analysis has its own limits. The relabeling was never checked against human judgments, the Blind-B quality audit used a single LLM judge, the trace audit was heuristic, the conversations are LLM-generated rather than observed listening sessions, and neither blind split exposes relevance labels --- so the blind-set failure rates and the relabeling rates are diagnostic rather than ground truth. The development-split and leaderboard numbers in Section~\ref{sec:experiments} are separate measurements.
 
 \section{Conclusion}
 
-We documented a state-compiled retrieve-then-rerank conversational music recommender and finished 29th of 39. Four gaps stand out among the failures we could diagnose:
+We documented a state-compiled retrieve-then-rerank conversational music recommender and finished 29th of 40. Four gaps stand out among the failures we could diagnose:
 \begin{enumerate}
 \item model selection relied on in-sample development replays, and we had no clean held-out set to check them against;
 \item the extracted conversation state was rich, but too little of it became executable filters or ranking evidence, so noisy candidate pools reached the reranker;

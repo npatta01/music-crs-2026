@@ -78,10 +78,8 @@ five content pages excluding references.
 The build has no errors, no undefined references, and no unresolved citations.
 It is *not* diagnostic-free; three warnings are expected and accepted:
 
-- `Underfull \vbox (badness 1867)` while `\output` is active, on page 1. It
-  comes from the CC BY licence badge that the rights block adds to the
-  first-page strip. Cosmetic vertical spacing only, and removing it would mean
-  altering ACM's mandated first-page layout.
+- `Underfull \vbox (badness 2837)` while `\output` is active during the
+  final-page bibliography. This is cosmetic column whitespace only.
 - `Package balance Warning: You have called \balance in second column.` Emitted
   by `acmart`'s own last-page column balancing, not by anything in this source.
 - BibTeX: `page numbers missing in both pages and numpages` for
@@ -93,12 +91,12 @@ returns, since those are what actually publish.
 
 ## The built archive
 
-The assembled TAPS archive is attached to the GitHub release
-[`recsyschallenge26-7`](https://github.com/npatta01/music-crs-2026/releases/tag/recsyschallenge26-7)
-as `recsyschallenge26-7.zip`, so it does not have to be rebuilt to be inspected
-or re-uploaded. It is built by the commands above from the source in `paper/`,
-and its `pdf/main.pdf` is produced from exactly the `Source/` it ships with, so
-the two cannot drift apart. Rebuild and replace it if `paper/` changes.
+The ready-to-upload archive is stored in the repository at
+[`paper/recsyschallenge26-7.zip`](recsyschallenge26-7.zip). It was rebuilt from
+the latest manuscript on 2026-08-19, and its SHA-256 digest is
+`3ab814b359c5eba13a49c7ff22a74f4c6a7309a97de6dc399abe5d07c4b24a47`.
+The archive contains this exact `main.pdf` under `pdf/` alongside the matching
+source under `Source/`, so the PDF and source contents do not drift apart.
 
 ## Build
 

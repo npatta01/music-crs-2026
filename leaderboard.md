@@ -69,7 +69,7 @@ Modal number; rerun on Modal for an apples-to-apples current baseline before ran
 
 First Blind-B submission. Uses the goal-free `reranker_v12_goalfree` bundle and the
 qwen3-30b explanation LM (see `experiments/v10_lgbm_B_v1.md`). **Final leaderboard
-rank: 29 of 39 teams** (official results CSV, 2026-07-12 read; the same Blind-B numbers appear in
+rank: 29 of 40 teams** (official results page, 2026-08-19 read; the same Blind-B numbers appear in
 the paper, `paper/main.tex` Table 4). Per-axis breakdown wasn't exposed by the leaderboard
 at submission-capture time (2026-06-29); backfilled here from the final leaderboard.
 Label-free audit at capture time flagged ranking/ordering (ranking_gap dominant) as
