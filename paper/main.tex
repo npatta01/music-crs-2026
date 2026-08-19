@@ -194,7 +194,7 @@ The response generator is \texttt{Qwen3-30B-A3B-Instruct-2507}~\cite{qwen3} at t
 \begin{quote}\small\itshape
 ``Write 1--2 concise sentences about only the selected track. Prioritize the latest user request and extracted state over older conversation history. If the track is reasonably aligned, explain the fit with one specific supported reason. If it clearly conflicts with an explicit avoid/new-artist constraint, do not oversell it or blame the system; briefly frame the limitation and the closest supported reason.''
 \end{quote}
-Over a frozen Blind-A retrieval output, a sweep of eight response variants (varying state conditioning, history depth, item rendering, and concision) reached the 4.70 judge score of Table~\ref{tab:official} without changing the recommendations; a further variant that also swapped the generator model scored 3.95. Our own offline judge did not rank these variants reliably, so we selected on the leaderboard score instead; 4.70 is a selected estimate. There is no multi-draft sampling, selection, checking, or repair pass.
+Over a frozen Blind-A retrieval output, a sweep of eight response variants (varying state conditioning, history depth, item rendering, and concision) reached the 4.70 judge score of Table~\ref{tab:official} without changing the recommendations; we selected on the leaderboard score. There is no multi-draft sampling, selection, checking, or repair pass.
 
 Code, configs, trained models, cached extraction states, and a frozen-LLM-cache reproduction bundle that replays our submissions without API credentials are public.\footnote{\url{https://github.com/npatta01/music-crs-2026}; models and data: \url{https://huggingface.co/datasets/Npatta01/music-crs-repro-2026}.}
 
