@@ -107,7 +107,7 @@ The baseline in this repo directly loads only the conversation, track metadata, 
 | `track_name` | list[str] | Track title(s) |
 | `artist_name` | list[str] | Artist name(s) |
 | `album_name` | list[str] | Album name(s) |
-| `tag_list` | list[str] | Genre/mood tags (up to 37) |
+| `tag_list` | list[str] | Genre/mood tags (median 17, max 105) |
 | `popularity` | float | Popularity score |
 | `release_date` | str | YYYY-MM-DD |
 | `duration` | int | Duration in milliseconds |

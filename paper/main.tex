@@ -1,37 +1,38 @@
 \documentclass[sigconf]{acmart}
-\settopmatter{printacmref=false}
-\setcopyright{none}
-\renewcommand\footnotetextcopyrightpermission[1]{}
-% Camera-ready (ICPS): the ACM eRights form supplies \setcopyright, \acmDOI,
-% and \acmISBN; drop printacmref=false and the footnote override then.
-\acmConference[RecSysChallenge '26]{Recommender Systems Challenge 2026}{September 2026}{Minneapolis, MN, USA}
-\acmYear{2026}
+% Rights block supplied verbatim by ACM eRights (Publication Release
+% Confirmation, 2026-08-18). Do not edit.
 \copyrightyear{2026}
-
-\usepackage{booktabs}
-\usepackage{tikz}
-\usetikzlibrary{positioning,fit,arrows.meta,calc}
-
-% Camera-ready TODO: swap manual thebibliography for BibTeX. (Author countries confirmed: USA.)
+\acmYear{2026}
+\setcopyright{cc}
+\setcctype{by}
+\acmConference[RecSysChallenge '26]{RecSys Challenge 2026}{October 02, 2026}{Minneapolis, MN, USA}
+\acmBooktitle{RecSys Challenge 2026 (RecSysChallenge '26), October 02, 2026, Minneapolis, MN, USA}
+\acmDOI{10.1145/3842413.3842420}
+\acmISBN{979-8-4007-2863-1/2026/10}
 
 \begin{document}
 
 \title{State-Driven Retrieval and Learned Re-Ranking for Conversational Music Recommendation}
 
 \author{Nidhin Pattaniyil}
+\orcid{0009-0006-4594-3477}
 \email{npatta01@gmail.com}
-\affiliation{\institution{Independent Researcher}\country{USA}}
+\affiliation{\institution{Independent Researcher}\city{Hoboken}\state{New Jersey}\country{USA}}
 
 \author{Semih Yagli}
+\orcid{0000-0003-4836-8026}
 \email{semihyagli1@gmail.com}
-\affiliation{\institution{Independent Researcher}\country{USA}}
+\affiliation{\institution{Independent Researcher}\city{Hoboken}\state{New Jersey}\country{USA}}
 
 \author{Tanwir Zaman}
+\orcid{0009-0004-0617-5132}
 \email{zaman.tanwir@gmail.com}
-\affiliation{\institution{Independent Researcher}\country{USA}}
+\affiliation{\institution{Independent Researcher}\city{Hoboken}\state{New Jersey}\country{USA}}
+
+\renewcommand{\shortauthors}{Pattaniyil, Yagli, and Zaman}
 
 \begin{abstract}
-We describe team npatta01's submission to the RecSys Challenge 2026 conversational music recommendation task. The pipeline extracts a typed conversation state with an LLM, gathers candidates from eleven retrieval branches over a unified track index, re-ranks them with a LambdaMART model, and generates a state-conditioned response. On the final Blind-B leaderboard it scored 0.3811 composite (nDCG@20 0.2537, LLM-judge 3.30), ranking 29th of 39 teams. We then examine why. Our development estimates were computed in-sample and overstated performance. The training conversations are LLM-generated, and on many turns we were unsure that the single ground-truth track matched the request --- often it repeats the just-played artist after an explicit request for someone else. We re-judged the turns with LLM judges and release that relabeling; a model trained on it scored lower, so the submission kept the original labels. Failure cases from the submitted run show extracted constraints the pipeline could not enforce. Code, models, and a full reproduction bundle are publicly released.
+We describe team npatta01's submission to the RecSys Challenge 2026 conversational music recommendation task. The pipeline extracts a typed conversation state with an LLM, gathers candidates from eleven retrieval branches over a unified track index, re-ranks them with a LambdaMART model, and uses the state to generate a response. On the final Blind-B leaderboard it scored 0.3811 composite (nDCG@20 0.2537, LLM-judge 3.30), ranking 29th of 39 teams. We then examine why. The development estimates we selected on were computed in-sample and overstated performance. The training conversations are LLM-generated, and on many turns we were unsure that the single ground-truth track matched the request --- often it repeats the just-played artist after an explicit request for someone else. We re-judged the turns with LLM judges and release that relabeling; a model trained on it scored lower against the original labels, so the submission kept them. Failure cases from the submitted run show extracted constraints the pipeline could not enforce. Code, models, and a full reproduction bundle are publicly released.
 \end{abstract}
 
 \begin{CCSXML}
@@ -58,22 +59,22 @@ We describe team npatta01's submission to the RecSys Challenge 2026 conversation
 \ccsdesc[300]{Information systems~Retrieval models and ranking}
 \ccsdesc[300]{Information systems~Music retrieval}
 
-\keywords{conversational recommender systems, music recommendation, learning to rank, reciprocal rank fusion, label noise, RecSys Challenge}
+\keywords{conversational recommendation, music recommendation, learning to rank, rank fusion, label noise, RecSys Challenge}
 
 \maketitle
 
 \section{Introduction}
 \label{sec:intro}
 
-The Music-CRS challenge~\cite{musiccrs,recsyschallenge2026} asks systems to act as a conversational music recommender. Each session is a multi-turn dialog between a listener and an assistant; at every assistant turn the system must (i)~retrieve a ranked list of 20 tracks from a shared 47,071-track catalog and (ii)~write a short natural-language response presenting its top recommendation. Training data comprises 15,199 sessions built on the TalkPlayData~2 collection~\cite{talkplay}, with per-track metadata (title, artist, album, up to 37 genre/mood tags, popularity, release date) and precomputed embeddings (text, audio, cover art, collaborative filtering). Evaluation is on two 80-session blind splits of final turns; Blind-B additionally removes the conversation-goal annotations present in training data. Submissions are scored with the organizers' composite metric:
+The Music-CRS challenge~\cite{doh2026recsyschallenge} asks systems to act as a conversational music recommender. Each session is a multi-turn dialog between a listener and an assistant; at every assistant turn the system must (i)~retrieve a ranked list of 20 tracks from a shared 47,071-track catalog and (ii)~write a short natural-language response presenting its top recommendation. Training data comprises 15,199 sessions built on the TalkPlayData~2 collection~\cite{talkplay,doh2025talkplay}, with per-track metadata (title, artist, album, a median of 17 genre/mood tags, popularity, release date) and precomputed embeddings (text, audio, cover art, collaborative filtering). Evaluation is on two 80-session blind splits of final turns; Blind-B additionally removes the conversation-goal annotations present in training data. Submissions are scored with the organizers' composite metric~\cite{doh2026recsyschallenge}:
 \begin{displaymath}
 0.50\cdot\text{nDCG@20} + 0.10\cdot\text{cat.\ div.} + 0.10\cdot\text{lex.\ div.} + 0.30\cdot\tfrac{\text{judge}-1}{4},
 \end{displaymath}
-where ``judge'' is a 1--5 rating of the generated response from the organizers' LLM-based evaluator. In addition to the training sessions, a 1,000-session development split with public per-turn ground truth (one target track per turn) supports offline iteration.
+where ``judge'' is a 1--5 rating of the generated response from the organizers' LLM-based evaluator~\cite{doh2026llmjudge}. In addition to the training sessions, a 1,000-session development split with public per-turn ground truth (one target track per turn) supports offline iteration.
 
 Our system is a retrieve-then-rerank pipeline conditioned on an explicitly compiled conversation state. The deployed reranker is \emph{goal-free} at inference: no conversation-goal annotation is an input feature, though goal-progress annotations did shape its training labels (Section~\ref{sec:reranker}). Section~\ref{sec:approach} documents the pipeline, Section~\ref{sec:experiments} the results, and Section~\ref{sec:discussion} the errors behind the final score.
 
-Related work. The design combines four established lines rather than proposing a new method. Conversational recommenders commonly track dialog state explicitly and condition retrieval on it; we follow that pattern but compile the state with a prompted LLM instead of a trained tracker. Large-catalog systems retrieve then rerank, pooling multiple sources with reciprocal-rank fusion~\cite{rrf} and ranking with LambdaMART~\cite{lightgbm,lambdamart}. Music retrieval adds modality-specific encoders --- contrastive language-audio pretraining~\cite{clap} and vision-language models over cover art~\cite{siglip2} --- alongside collaborative-filtering embeddings~\cite{bpr} and general-purpose text embeddings~\cite{qwen3embedding}. What we report is how that combination behaved, not a new technique.
+Related work. The design combines four established lines rather than proposing a new method. Conversational recommenders commonly track dialog state explicitly and condition retrieval on it~\cite{crssurvey}; we follow that pattern but compile the state with a prompted LLM instead of a trained tracker. Large-catalog systems retrieve then rerank, pooling multiple sources with reciprocal-rank fusion~\cite{rrf} and ranking with LambdaMART~\cite{lightgbm,lambdamart}. Music retrieval adds modality-specific encoders --- contrastive language-audio pretraining~\cite{clap} and vision-language models over cover art~\cite{siglip2} --- alongside collaborative-filtering embeddings~\cite{bpr} and general-purpose text embeddings~\cite{qwen3embedding}. What we report is how that combination behaved, not a new technique.
 
 \section{Approach}
 \label{sec:approach}
@@ -82,57 +83,21 @@ Figure~\ref{fig:pipeline} shows the pipeline end to end; the subsections below f
 
 \begin{figure*}[t]
   \centering
-  \resizebox{\textwidth}{!}{%
-  \begin{tikzpicture}[
-    font=\footnotesize,
-    box/.style={draw, rounded corners=2pt, align=center, inner sep=4pt, minimum height=0.34in},
-    lane/.style={draw, rounded corners=1pt, align=left, inner sep=2.5pt, font=\scriptsize, fill=black!4},
-    arr/.style={-{Stealth[length=2mm]}, thick},
-    dasharr/.style={-{Stealth[length=2mm]}, densely dashed}
-  ]
-    \node[box] (conv) {Conversation\\+ played tracks};
-    \node[box, right=0.32in of conv] (state) {State extraction\\\scriptsize deepseek-v4-flash};
-    \node[box, right=0.32in of state] (res) {Resolver\\\scriptsize names $\rightarrow$ catalog IDs};
-
-    \node[lane, right=0.5in of res, yshift=0.62in] (l1) {BM25 + tiered tag resolver};
-    \node[lane, below=0.055in of l1] (l2) {Dense text $\times$3 (Qwen3 views)};
-    \node[lane, below=0.055in of l2] (l3) {CLAP text$\rightarrow$audio};
-    \node[lane, below=0.055in of l3] (l4) {Anchor centroids (SigLIP-2/CLAP/CF)};
-    \node[lane, below=0.055in of l4] (l5) {User-CF centroid};
-    \node[lane, below=0.055in of l5] (l6) {Artist discography + era lookups};
-    \node[draw, rounded corners=2pt, fit=(l1)(l2)(l3)(l4)(l5)(l6), inner sep=5pt, label={[font=\scriptsize\itshape]below:{one LanceDB collection: metadata + FTS + all embeddings}}] (branches) {};
-
-    \node[box, right=0.42in of branches, yshift=0.32in] (union) {Pool union\\\scriptsize $\leq$500 / branch};
-    \node[box, right=0.34in of union] (lgbm) {LightGBM\\LambdaMART\\\scriptsize 146 features};
-    \node[box, right=0.34in of lgbm] (out) {Top-20};
-    \node[box, right=0.34in of out] (resp) {Response LLM\\\scriptsize Qwen3-30B, state-conditioned};
-
-    \node[box, below=0.28in of union, xshift=0.2in] (rrf) {Weighted RRF + post-fusion\\\scriptsize baseline \& fallback ranking};
-
-    \draw[arr] (conv) -- (state);
-    \draw[arr] (state) -- (res);
-    \draw[arr] (res) -- (branches.west|-res) -- (branches.west);
-    \draw[arr] (branches.east|-union) -- (union);
-    \draw[arr] (union) -- (lgbm);
-    \draw[arr] (lgbm) -- (out);
-    \draw[arr] (out) -- (resp);
-    \draw[dasharr] (branches.east|-rrf) -- (rrf);
-    \draw[dasharr] (rrf.east) -| (out.south);
-  \end{tikzpicture}%
-  }
+  \includegraphics[width=\textwidth]{figures/pipeline}
   \caption{System overview. The conversation is compiled into a typed state; eleven retrieval branches query one LanceDB collection; the LambdaMART reranker scores the branch-pool union and emits the top-20; a response LLM presents the top track. Weighted RRF over the same branches provides the baseline and fallback ranking (dashed).}
   \label{fig:pipeline}
+  \Description[Pipeline from conversation state extraction to retrieval, reranking, and response generation.]{Conversation and played-track history pass through state extraction and entity resolution. Eleven retrieval branches query one LanceDB collection and feed a pooled candidate set to a LightGBM LambdaMART reranker, which emits twenty tracks for the response model. A parallel weighted reciprocal-rank-fusion path supplies the baseline and fallback order.}
 \end{figure*}
 
 \subsection{State extraction}
 \label{sec:state}
 
-At each turn we prompt an LLM (\texttt{deepseek-v4-flash}~\cite{deepseek}) with the dialog so far --- the turns themselves and the IDs of the tracks already played --- to emit a schema-constrained conversation state. Nothing else is fed in: none of the dataset's supplied annotations reach the extractor, so the state is whatever an LLM can read off the conversation. Its fields cover the current request and intent mode, track feedback and pinned references, mentioned entities, hard filters and explicit rejections, process constraints, routing flags, lyrical theme, and a release-year window; Figure~\ref{fig:example} shows the schema populated on a real turn. A fuzzy resolver grounds surface names to catalog IDs so downstream stages operate on identifiers. Cheaper extractors under-filled optional fields such as rejections and facets, so all final runs use it.
+At each turn we prompt an LLM (\texttt{deepseek-v4-flash}, build 0423~\cite{deepseek}) with the dialog so far --- the turns themselves and the IDs of the tracks already played --- to emit a schema-constrained conversation state. None of the dataset's supplied annotations --- conversation goals, goal progress, or user profiles --- reach the extractor, so the state is whatever an LLM can read off the conversation. Its fields cover the current request and intent mode, track feedback and pinned references, mentioned entities, hard filters and explicit rejections, process constraints, routing flags, lyrical theme, and a release-year window; Figure~\ref{fig:example} shows the schema populated on a real turn. A fuzzy resolver grounds surface names to catalog IDs so downstream stages operate on identifiers: fuzzy string matching of artist and track names against the catalog name lists, keeping matches above 80/100. Cheaper extractors under-filled optional fields such as rejections and facets, so all final runs use it.
 
 \begin{figure}[!htbp]
   \centering
   \fbox{\begin{minipage}{0.94\linewidth}\scriptsize
-  \textbf{User (turn 3):} ``\ldots subdued, female singer, a sense of place in the lyrics, stark almost a cappella delivery\ldots not it either.''\\[2pt]
+  \textbf{User (turns 2--3):} ``\ldots subdued, female singer, a sense of place in the lyrics, stark almost a cappella delivery\ldots not it either.''\\[2pt]
   \textbf{Extracted state (abridged):}\\
   \texttt{request\_type: hidden\_target}\\
   \texttt{anchor artist: Neko Case (must\_use)}\\
@@ -144,6 +109,7 @@ At each turn we prompt an LLM (\texttt{deepseek-v4-flash}~\cite{deepseek}) with 
   \end{minipage}}
   \caption{A Blind-B turn: extracted state and submitted output for a hidden-target request.}
   \label{fig:example}
+  \Description[Blind-B request, extracted state, and submitted recommendation.]{The user asks for subdued female vocals, a sense of place in the lyrics, and a stark almost a cappella delivery. The extracted state records Neko Case as an anchor, two rejected tracks, and mood, lyrical, and sonic facets. The system recommends Bracing For Sunday and explains the match.}
 \end{figure}
 
 \subsection{Candidate retrieval}
@@ -156,6 +122,7 @@ Table~\ref{tab:branches} lists the eleven branches the reranker scores. A twelft
 \begin{table}[!htbp]
 \caption{The eleven retrieval branches (all queries against the one collection).}
 \label{tab:branches}
+\Description{Six rows group the eleven retrieval branches by representation space and query. They include one lexical branch, three dense-text views, one audio branch, three anchor-centroid branches, one user collaborative-filtering branch, and two catalog lookups.}
 \footnotesize
 \begin{tabular}{@{}lll@{}}
 \toprule
@@ -181,6 +148,7 @@ The submitted system replaces the fused order: a LightGBM LambdaMART~\cite{light
 \begin{table}[t]
 \caption{Reranker feature families (share of total gain, deployed model).}
 \label{tab:families}
+\Description{Eight feature families are listed with their feature counts and shares of model gain. The single bi-encoder cosine feature contributes 59 percent, followed by per-branch rank and score features at 11.5 percent and session and artist affinity at 10.7 percent.}
 \small
 \begin{tabular}{lrrl}
 \toprule
@@ -198,31 +166,20 @@ Constraints/rejections & 13 & 0.7\% & rejected-artist flag \\
 \end{tabular}
 \end{table}
 
-The deployed model is \emph{goal-free}: no conversation-goal annotation enters it as a feature, since Blind-B removes them. Its training data is the development split only --- the same 8,000 turns used for offline evaluation (${\sim}20.6$M candidate rows). Per-turn state extraction runs through a paid LLM API, so we never built features over the ${\sim}121.6$k-turn training split; Section~\ref{sec:insample} discusses what that reuse cost us. Training treats the per-turn ground-truth track as a binary label under a LambdaRank objective.\footnote{Learning rate 0.025, 127 leaves, truncation 200, 5-fold user-grouped cross-validation.} Because the labels are noisy (Section~\ref{sec:groundtruth}), we down-weight a turn when the \emph{next} turn contradicts it: $\times 0.3$ when the user rejects the labelled track or the goal-progress annotation says it did not help, $\times 0.6$ when they reject only its artist. That annotation shapes training labels --- these weights and the bi-encoder positives of Section~\ref{sec:biencoder} --- but is never itself a feature.
+The deployed model is \emph{goal-free}: no conversation-goal annotation enters it as a feature, since Blind-B removes them. Its training data is the development split only --- the same 8,000 turns used for offline evaluation (${\sim}20.6$M candidate rows). Per-turn state extraction runs through a paid LLM API, so we never built features over the ${\sim}121.6$k-turn training split; Section~\ref{sec:insample} discusses what that reuse cost us. Training treats the per-turn ground-truth track as a binary label under a LambdaRank objective.\footnote{Learning rate 0.025, 127 leaves, truncation 200, 5-fold user-grouped cross-validation.} Because the labels are noisy (Section~\ref{sec:groundtruth}), we down-weight a turn when the \emph{next} turn contradicts it: $\times 0.3$ when the user rejects the labelled track or the goal-progress annotation says it did not help, $\times 0.6$ when they reject only its artist, floored at 0.2. We chose these magnitudes by hand and did not tune them. That annotation shapes training labels --- these weights and the bi-encoder positives of Section~\ref{sec:biencoder} --- but is never itself a feature.
 
 \subsection{The bi-encoder feature \texttt{b1\_cos}}
 \label{sec:biencoder}
 
 \begin{figure}[!htbp]
   \centering
-  \begin{tikzpicture}[
-    font=\scriptsize,
-    box/.style={draw, rounded corners=2pt, align=center, inner sep=3.5pt},
-    arr/.style={-{Stealth[length=1.8mm]}, thick}
-  ]
-    \node[box, text width=1.25in] (q) {\textbf{Conversation rendering}\\{[prev]} user turn $t{-}1$\\{[now]} user turn $t$\\{[prev\_track]} artist --- title};
-    \node[box, text width=1.25in, right=0.45in of q] (d) {\textbf{Track card}\\artist --- title (year)\\tags ($\leq$5, cleaned)\\known for: \emph{LLM line}};
-    \node[box, below=0.28in of $(q.south)!0.5!(d.south)$, text width=1.7in, fill=black!5] (enc) {\textbf{Shared encoder} (fine-tuned Qwen3-Embedding-4B)\\last-token pool, L2-norm};
-    \node[box, below=0.24in of enc] (cos) {cosine $\rightarrow$ \texttt{b1\_cos} reranker feature};
-    \draw[arr] (q.south) -- (enc.north-|q.south);
-    \draw[arr] (d.south) -- (enc.north-|d.south);
-    \draw[arr] (enc) -- node[right, font=\tiny]{2560-d unit vectors} (cos);
-  \end{tikzpicture}
+  \includegraphics[width=0.9\columnwidth]{figures/biencoder}
   \caption{The b1 bi-encoder: one shared fine-tuned encoder embeds the conversation and the track card; their cosine is the reranker's dominant feature.}
   \label{fig:biencoder}
+  \Description[Two-tower bi-encoder used to compute the reranker's dominant feature.]{The conversation rendering holds three labelled lines: the previous user turn, the current user turn, and the previously played track as artist and title. The track card holds the artist and title with year, up to five cleaned tags, and a one-line LLM-written "known for" description. Both enter the same fine-tuned Qwen3-Embedding-4B encoder. Last-token pooling and L2 normalization produce two 2560-dimensional unit vectors whose cosine becomes the b1 cosine reranker feature.}
 \end{figure}
 
-The reranker's dominant feature comes from a two-tower bi-encoder fine-tuned from Qwen3-Embedding-4B~\cite{qwen3embedding}. The query tower renders the conversation compactly behind a retrieval instruction prefix and the document tower renders a track card (both formats in Figure~\ref{fig:biencoder}); the card's one-line LLM-written ``known for'' artist description imports static world knowledge from larger models into the embedding space. One shared encoder $E_\theta$ serves both towers; with $v_x = E_\theta(x)/\lVert E_\theta(x)\rVert_2$ (last-token pooling, 2560-d), the feature is the cosine $\texttt{b1\_cos}(q,d) = v_q^{\top} v_d$. Training minimizes the in-batch contrastive (MNRL~\cite{sbert}) loss over batches of positive pairs $(q_i, d_i^{+})$ with four mined hard negatives per positive,
+The reranker's dominant feature comes from a two-tower bi-encoder fine-tuned from Qwen3-Embedding-4B~\cite{qwen3embedding}. The query tower renders the conversation compactly behind a retrieval instruction prefix and the document tower renders a track card (both formats in Figure~\ref{fig:biencoder}); the card's one-line LLM-written ``known for'' artist description imports static world knowledge from larger models into the embedding space. One shared encoder $E_\theta$ serves both towers; with $v_x = E_\theta(x)/\lVert E_\theta(x)\rVert_2$ (last-token pooling, 2560-d), the feature is the cosine $\texttt{b1\_cos}(q,d) = v_q^{\top} v_d$. Training minimizes the in-batch contrastive loss~\cite{sbert} over batches of positive pairs $(q_i, d_i^{+})$ with four mined hard negatives per positive,
 \begin{displaymath}
 \mathcal{L} = -\tfrac{1}{B}\textstyle\sum_i \log \frac{\exp(v_{q_i}^{\top} v_{d_i^{+}}/\tau)}{\sum_{d \in \mathcal{D}_i} \exp(v_{q_i}^{\top} v_{d}/\tau)}, \qquad \tau = \tfrac{1}{20},
 \end{displaymath}
@@ -237,7 +194,7 @@ The response generator is \texttt{Qwen3-30B-A3B-Instruct-2507}~\cite{qwen3} at t
 \begin{quote}\small\itshape
 ``Write 1--2 concise sentences about only the selected track. Prioritize the latest user request and extracted state over older conversation history. If the track is reasonably aligned, explain the fit with one specific supported reason. If it clearly conflicts with an explicit avoid/new-artist constraint, do not oversell it or blame the system; briefly frame the limitation and the closest supported reason.''
 \end{quote}
-Over a frozen Blind-A retrieval output, a sweep of eight response variants (varying state conditioning, history depth, item rendering, and concision) moved the Blind-A judge score from 4.20 to 4.70 without changing the recommendations; a further variant that also swapped the generator model scored 3.95. Our own offline judge did not rank these variants reliably, so we selected on the leaderboard score instead. There is no multi-draft sampling, selection, checking, or repair pass.
+Over a frozen Blind-A retrieval output, a sweep of eight response variants (varying state conditioning, history depth, item rendering, concision, and the generator model) reached the 4.70 judge score of Table~\ref{tab:official} without changing the recommendations; we selected on the leaderboard score. There is no multi-draft sampling, selection, checking, or repair pass.
 
 Code, configs, trained models, cached extraction states, and a frozen-LLM-cache reproduction bundle that replays our submissions without API credentials are public.\footnote{\url{https://github.com/npatta01/music-crs-2026}; models and data: \url{https://huggingface.co/datasets/Npatta01/music-crs-repro-2026}.}
 
@@ -247,8 +204,9 @@ Code, configs, trained models, cached extraction states, and a frozen-LLM-cache 
 The development split (1,000 sessions $\times$ 8 turns) has one ground-truth track per turn. Table~\ref{tab:devset} reports development-split numbers, separating leakage-safe estimates from in-sample ones; Table~\ref{tab:official} reports the official leaderboard results.
 
 \begin{table}[t]
-\caption{Development split. The in-sample row replays turns the deployed (full-data) model saw during training; the out-of-fold rows are leakage-safe cross-validation estimates.}
+\caption{Development split. The in-sample row replays turns a full-data model saw during training; the out-of-fold rows are leakage-safe cross-validation estimates.}
 \label{tab:devset}
+\Description{Development nDCG at twenty increases from 0.1492 for weighted reciprocal-rank fusion to 0.1970 for out-of-fold LambdaMART and 0.2032 after adding the deployed bi-encoder feature. The in-sample train replay reaches 0.3844.}
 \small
 \begin{tabular}{lr}
 \toprule
@@ -265,15 +223,16 @@ LambdaMART, evaluated in-sample (train replay) & 0.3844 \\
 \end{table}
 
 \begin{table}[t]
-\caption{Official CodaBench results; the composite formula is defined in Section~\ref{sec:intro}. The Blind-A rank counts all development-phase submissions.}
+\caption{Official CodaBench scores. Section~\ref{sec:intro} defines the composite. The Blind-A row is our final development-phase submission.}
 \label{tab:official}
-\small
-\begin{tabular}{lrrrrrr}
+\Description{Blind-A scores 0.4380 nDCG and 0.5799 composite. Final Blind-B scores 0.2537 nDCG and 0.3811 composite.}
+\footnotesize
+\begin{tabular}{lrrrrr}
 \toprule
-Split & nDCG & Cat. & Lex. & Judge & Comp. & Rank \\
+Split & nDCG & Cat. & Lex. & Judge & Comp. \\
 \midrule
-Blind-A (dev) & 0.4380 & 0.0313 & 0.7670 & 4.20 & 0.5389 & 63/181 \\
-\textbf{Blind-B (final)} & 0.2537 & 0.0315 & 0.7862 & 3.30 & \textbf{0.3811} & \textbf{29/39} \\
+Blind-A (dev) & 0.4380 & 0.0313 & 0.8028 & 4.70 & 0.5799 \\
+\textbf{Blind-B (final)} & 0.2537 & 0.0315 & 0.7862 & 3.30 & \textbf{0.3811} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -286,7 +245,7 @@ Learned re-ranking improves over static fusion by the leakage-safe estimate ($0.
 \subsection{In-sample development evaluation}
 \label{sec:insample}
 
-We never built features over the training split, so the development split served as both training and evaluation data and we had no clean held-out set. The numbers we selected on (0.38--0.46) were replays of turns the model had trained on; our out-of-fold estimates were much lower (0.197--0.203). The blind score (0.2537) came out between the two --- above the out-of-fold estimates, well below the in-sample replays. We overfit our own selection process.
+We never built features over the training split, so the development split served as both training and evaluation data and we had no clean held-out set. The numbers we selected on (0.38--0.46) were replays of turns the model had trained on; our out-of-fold estimates were much lower (0.197--0.203). The blind score (0.2537) came out between the two --- above the out-of-fold estimates, well below the in-sample replays. We overfit our own selection process. Even the out-of-fold numbers are not independent: we chose the design against the same 8,000 turns.
 
 \subsection{Label disagreement and relabeling}
 \label{sec:groundtruth}
@@ -303,25 +262,27 @@ Our own model shows anchoring behaviour, and we think it learns it from the labe
   \end{minipage}}
   \caption{The anchoring pattern: two consecutive explicit different-artist requests, yet the label stays on Bonobo and the goal-progress annotation records both turns as moving toward the goal.}
   \label{fig:contradiction}
+  \Description[Two different-artist requests receive Bonobo ground-truth tracks.]{After the user asks twice for music from a different artist than Bonobo, the ground truth remains Bonobo for both turns, and both recommendations are annotated as moving toward the goal.}
 \end{figure}
 
-We tried to train on cleaner labels instead. Two inexpensive LLM judges (Gemma-4-26B and DeepSeek-V4-Flash) re-judged every labelable training and development turn (113,393) on two axes --- whether the user asked for a different artist, and whether the track fits the request. They disagreed on about 20\% of the 106,393 training turns, which Claude Opus arbitrated. Across the same turns they did not settle on the played track being a good fit for 57\%, and 17\% (18,222) are anchoring cases. A model trained on the relabeled data scored lower in our own evaluation, so the final submission kept the original labels. Our judges may be wrong too; we release the relabeling so others can check it.
+We tried to train on cleaner labels instead. Two inexpensive LLM judges (Gemma-4-26B and DeepSeek-V4-Flash) re-judged every labelable training and development turn (113,393) on two axes --- whether the user asked for a different artist, and whether the track fits the request. They disagreed on about 20\% of the 106,393 training turns, which Claude Opus arbitrated. Across the same turns they did not settle on the played track being a good fit for 61\%, and 17\% (18,222) are anchoring cases. Training on the relabeled data lowered our development score --- but that score uses the original labels, so it could not have favoured the relabeling. We kept the original labels. Our judges may be wrong too; we release the relabeling so others can check it.
 
 \subsection{Failure cases}
 \label{sec:failures}
 
-We wanted to understand where the system failed, so we had a single LLM judge (DeepSeek-V4-Flash) rate the submitted Blind-B run: 68\% of turns came back weak-or-bad. Table~\ref{tab:audit} diagnoses a subset of them. These are examples and audit categories, not measures of what each cost us --- Blind-B exposes no relevance labels, so only the validation failure of Section~\ref{sec:insample} is actually measured.
+We wanted to understand where the system failed, so we had a single LLM judge (DeepSeek-V4-Flash) rate the submitted Blind-B run: 78\% of turns came back weak-or-bad. Table~\ref{tab:audit} diagnoses 32 turns. These are examples and audit categories, not measures of what each cost us --- Blind-B exposes no relevance labels, so only the validation failure of Section~\ref{sec:insample} is actually measured.
 
 \begin{table}[!htbp]
-\caption{Label-free audit of the submitted Blind-B run: where the flagged turns were lost.}
+\caption{Label-free audit of the submitted Blind-B run. Categories overlap: 43 diagnoses across 32 distinct turns.}
 \label{tab:audit}
+\Description{The audit assigns 31 flagged turns to a better pooled candidate ranked below the top twenty, eight to an under-applied constraint, three to state-extraction misses, and one to an entity-resolution miss.}
 \small
 \begin{tabular}{lr}
 \toprule
 Diagnosis & Turns \\
 \midrule
 Better candidate in pool, ordered below top-20 & 31 \\
-Over-aggressive filtering & 8 \\
+Under-applied constraint & 8 \\
 State-extraction miss & 3 \\
 Entity-resolution miss & 1 \\
 \bottomrule
@@ -329,7 +290,7 @@ Entity-resolution miss & 1 \\
 \end{table}
 
 \begin{itemize}
-\item \textbf{The constraint was under-applied.} Asked for ``the Kamelot track from \emph{Silverthorn},'' the system matched the artist but not the album, returning \emph{Fallen Star} from Kamelot's \emph{Haven} (\emph{Silverthorn} is in the catalog); asked to ``explore beyond'' the current artist, it stayed on them (10 of the top 20 in one Ryan Adams session).
+\item \textbf{The constraint was under-applied.} Asked for ``the Kamelot track from \emph{Silverthorn},'' the system matched the artist but not the album, returning \emph{Fallen Star} from Kamelot's \emph{Haven} (\emph{Silverthorn} is in the catalog); asked to branch out to other artists, it stayed on the current one (10 of the top 20 in one Ryan Adams session).
 \item \textbf{Nothing in our data encodes the request.} An exact ``126.70 bpm and G minor'' (no tempo or key field), or ``a song from the \emph{Breaking Bad} soundtrack'' (no film/TV metadata), which no branch can match on.
 \item \textbf{Response generation.} The single-pass generator did not properly consider the query --- in particular an exact-track request for a title we do not have. On several turns a named track was read correctly as an exact-track request but is absent from the 47,071-track catalog; rather than flag it unavailable, the generator described a different song by the same artist as if it were the one asked for --- for ``\,`Watercolors' by Pat Metheny,'' it returned Metheny's ``Alfie.''
 \end{itemize}
@@ -345,27 +306,15 @@ We documented a state-compiled retrieve-then-rerank conversational music recomme
 \item model selection relied on in-sample development replays, and we had no clean held-out set to check them against;
 \item the extracted conversation state was rich, but too little of it became executable filters or ranking evidence, so noisy candidate pools reached the reranker;
 \item for retrieval and ranking we had little information about tracks and artists beyond the provided catalog metadata --- no external source, and no LLM-generated knowledge beyond the one-line artist description --- so requests naming anything the catalog does not encode had nothing to match against;
-\item responses were generated in a single unchecked pass that could flag neither unavailable tracks nor unmet constraints.
+\item responses were generated in a single unchecked pass that could reliably flag neither unavailable tracks nor unmet constraints.
 \end{enumerate}
 Separately, we were unsure about many of the training labels, and re-judged the 113,393 labelable turns with LLM judges (Section~\ref{sec:groundtruth}). We release the pipeline, the models, a replay bundle, and the re-judged labels~\cite{repo}.
 
-\begin{thebibliography}{16}
-\bibitem{musiccrs} NLP4MusA organizers. 2026. Music-CRS Challenge 2026. \url{https://nlp4musa.github.io/music-crs-challenge/}
-\bibitem{recsyschallenge2026} RecSys Challenge organizers. 2026. RecSys Challenge 2026. \url{https://www.recsyschallenge.com/2026/}
-\bibitem{talkplay} TalkPlay / TalkPlayData 2: multimodal conversational music recommendation dataset. \url{https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge}
-\bibitem{rrf} Gordon V. Cormack, Charles L. A. Clarke, and Stefan B\"uttcher. 2009. Reciprocal rank fusion outperforms Condorcet and individual rank learning methods. In \emph{SIGIR}.
-\bibitem{lightgbm} Guolin Ke et al. 2017. LightGBM: a highly efficient gradient boosting decision tree. In \emph{NeurIPS}.
-\bibitem{lambdamart} Christopher J. C. Burges. 2010. From RankNet to LambdaRank to LambdaMART: an overview. MSR-TR-2010-82.
-\bibitem{qwen3embedding} Qwen Team. 2025. Qwen3 Embedding: advancing text embedding and reranking. arXiv:2506.05176.
-\bibitem{clap} Yusong Wu et al. 2023. Large-scale contrastive language-audio pretraining. In \emph{ICASSP}.
-\bibitem{siglip2} Michael Tschannen et al. 2025. SigLIP 2: multilingual vision-language encoders. arXiv:2502.14786.
-\bibitem{bpr} Steffen Rendle et al. 2009. BPR: Bayesian personalized ranking from implicit feedback. In \emph{UAI}.
-\bibitem{bm25} Stephen Robertson and Hugo Zaragoza. 2009. The probabilistic relevance framework: BM25 and beyond. \emph{Foundations and Trends in IR}.
-\bibitem{qwen3} Qwen Team. 2025. Qwen3 technical report. arXiv:2505.09388.
-\bibitem{sbert} Nils Reimers and Iryna Gurevych. 2019. Sentence-BERT: sentence embeddings using Siamese BERT-networks. In \emph{EMNLP}.
-\bibitem{deepseek} DeepSeek. 2026. DeepSeek-V4-Flash model card (OpenRouter).
-\bibitem{lancedb} LanceDB: serverless vector database. \url{https://lancedb.com}
-\bibitem{repo} Team npatta01. 2026. music-crs-2026: code, models, and reproduction bundle. \url{https://github.com/npatta01/music-crs-2026}
-\end{thebibliography}
+\begin{acks}
+Generative AI tools (OpenAI Codex/ChatGPT) assisted with coding, debugging, analysis of experimental outputs, drafting and editing this paper, and camera-ready formatting and reference normalization. All AI-generated content was reviewed by the authors, who take responsibility for the final work.
+\end{acks}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
 
 \end{document}

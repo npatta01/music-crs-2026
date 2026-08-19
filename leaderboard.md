@@ -69,25 +69,33 @@ Modal number; rerun on Modal for an apples-to-apples current baseline before ran
 
 First Blind-B submission. Uses the goal-free `reranker_v12_goalfree` bundle and the
 qwen3-30b explanation LM (see `experiments/v10_lgbm_B_v1.md`). **Final leaderboard
-rank: 29 of 39 teams** (official results CSV, 2026-07-12 read; same numbers cited in
+rank: 29 of 39 teams** (official results CSV, 2026-07-12 read; the same Blind-B numbers appear in
 the paper, `paper/main.tex` Table 4). Per-axis breakdown wasn't exposed by the leaderboard
 at submission-capture time (2026-06-29); backfilled here from the final leaderboard.
 Label-free audit at capture time flagged ranking/ordering (ranking_gap dominant) as
 the main lever — consistent with the lower nDCG@20 relative to Blind-A (0.2537 vs
-0.4380) despite comparable lexical_diversity (0.7862 vs 0.7670) and llm_judge in the
-same range (3.30 vs 4.20).
+0.4380) with lexical_diversity 0.7862 vs 0.8028 and llm_judge 3.30 vs 4.70 against the
+final Blind-A submission `799459` (3.30 vs 4.20 against the earlier `797598`).
 
 ## Blind-A (CodaBench)
 
 | Submission | File | nDCG@20 | catalog_diversity | lexical_diversity | llm_judge | composite |
 |---|---|---:|---:|---:|---:|---:|
+| `799459` | response sweep over frozen `v10_lgbm_A` retrieval | **0.4380** | 0.0313 | 0.8028 | 4.7000 | **0.5799** |
 | `797598` | `v10_lgbm_A.zip` | **0.4380** | 0.0313 | 0.7670 | 4.2000 | **0.5389** |
 | `795544` | `rr2-0622986.zip` | 0.4261 | 0.0311 | 0.7755 | 4.2500 | 0.5375 |
 
-The v10 submission improves Blind-A nDCG@20 by +0.0119 and composite by +0.0014
-over the previous `rr2` submission, despite a small LLM-judge decrease. **Dev-phase
-rank at close: 63 of 181 submissions** (CodaBench Blind-A phase counts submissions,
-not teams; recorded in the paper's Table 4). This
+`799459` (2026-06-15 23:26, from the CodaBench leaderboard and its scoring log) is our
+final Blind-A submission and the row the paper's Table 4 reports. Its nDCG@20 and
+catalog diversity are identical to `797598`, so retrieval was unchanged and only the
+response text differed: llm_judge 4.2000 -> 4.7000, lexical_diversity 0.7670 -> 0.8028.
+Which response configuration produced it is not recorded here: the `phase2_best_qwen`
+template first entered the repo on 2026-06-22 (`419804b`), a week after this submission,
+so the run predates the committed template and the pairing cannot be verified from git. Ranks at close:
+`799459` 51st, `797598` 63rd of 181 (the CodaBench Blind-A phase counts submissions,
+not teams, so these are not comparable to the Blind-B team rank; the paper reports
+no Blind-A rank for that reason). The v10 submission improved nDCG@20 by +0.0119
+over the previous `rr2` submission. This
 historical Blind-A score predates populated `routing_tags` in the state-ranker
 serving trace; rerun Blind-A before treating the next submission as comparable.
 
