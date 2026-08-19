@@ -1,19 +1,23 @@
-# RecSys 2026 camera-ready preflight
+# RecSys 2026 camera-ready
 
 ## Status
 
-The source compiles successfully with LuaLaTeX, TeX Live 2026, and `acmart`
-2.19. The generated PDF is a **preflight artifact**, not the file to upload,
-until the author-supplied items below are completed.
+The source compiles with LuaLaTeX, TeX Live 2026, and `acmart` 2.19. The ACM
+eRights rights block is in place, so `main.pdf` carries the assigned DOI,
+ISBN, and CC BY licence. This is the version to submit, not a preflight
+artifact. Note that TAPS recompiles from the uploaded source and publishes
+*its* build, so the proofs TAPS returns are the authoritative output.
 
-## Author-supplied blockers
+## ACM camera-ready items (both complete)
 
-1. Paste the exact LaTeX rights-management block from the ACM eRights email
-   into `main.tex`. It must replace the provisional conference metadata and
-   supply the final `\setcopyright`, `\acmDOI`, `\acmISBN`, and related
-   commands. Without it, `acmart` prints dummy DOI and ISBN values.
-2. Rename the final source ZIP using the exact proceeding acronym and paper ID
-   supplied by ACM before uploading it to TAPS.
+1. **Done.** The rights block from ACM's Publication Release Confirmation
+   (2026-08-18) sits in the `main.tex` preamble, verbatim and unedited:
+   `\setcopyright{cc}` with `\setcctype{by}`, DOI `10.1145/3842413.3842420`,
+   ISBN `979-8-4007-2863-1/2026/10`, and the final conference metadata
+   (October 02, 2026). **Do not edit those eight lines** — they are
+   system-generated for this paper and this rights election.
+2. **Done.** TAPS assigned proceeding acronym `recsyschallenge26` and paper
+   ID `7`, so the upload archive is named `recsyschallenge26-7.zip`.
 
 ## Page-limit confirmation
 
@@ -53,8 +57,10 @@ five content pages excluding references.
   Section 1) and the LLM-as-a-Judge evaluation paper (cited where the composite
   metric's judge term is defined). All four recommended references are now
   present.
-- Added a generative-AI disclosure in Acknowledgments because AI assisted with
-  camera-ready language editing, reference normalization, and formatting.
+- Added a generative-AI disclosure in Acknowledgments. Its scope was later
+  widened to match the GenAI disclosure filed with submission 1275 (coding,
+  debugging, analysis of experimental outputs, and drafting and editing the
+  paper), so the published text and the declared disclosure agree.
 - Tightened a few phrases and the official-results table typography to remove
   horizontal overflow without changing ACM margins or spacing.
 
@@ -66,11 +72,24 @@ five content pages excluding references.
 - All citations and cross-references resolve
 - Nine figure/table descriptions present
 - Fonts embedded in the main PDF and both external vector figures
-- All five pages visually inspected for clipping, overlap, and missing glyphs
+- First-page rights strip renders the assigned DOI, ISBN, and CC BY statement
+- All three authors carry ORCIDs, embedded as author links in the PDF
 
-The final LaTeX log has no warnings or layout diagnostics. BibTeX reports that
-the supplied, to-appear RecSys Challenge overview citation has no `pages` or
-`numpages` value; no pagination was invented before ACM assigns it.
+The build has no errors, no undefined references, and no unresolved citations.
+It is *not* diagnostic-free; three warnings are expected and accepted:
+
+- `Underfull \vbox (badness 1867)` while `\output` is active, on page 1. It
+  comes from the CC BY licence badge that the rights block adds to the
+  first-page strip. Cosmetic vertical spacing only, and removing it would mean
+  altering ACM's mandated first-page layout.
+- `Package balance Warning: You have called \balance in second column.` Emitted
+  by `acmart`'s own last-page column balancing, not by anything in this source.
+- BibTeX: `page numbers missing in both pages and numpages` for
+  `doh2026recsyschallenge` and `doh2026llmjudge`. Both are to-appear RecSys '26
+  proceedings papers; no pagination was invented before ACM assigns it.
+
+Page-level appearance should be re-checked on the PDF and HTML proofs TAPS
+returns, since those are what actually publish.
 
 ## Build
 
@@ -83,6 +102,22 @@ lualatex -interaction=nonstopmode -halt-on-error main.tex
 lualatex -interaction=nonstopmode -halt-on-error main.tex
 ```
 
-The TAPS source archive should contain only `main.tex`, `references.bib`, and
-the two files in `figures/`; do not include generated auxiliary files or a
-local copy of `acmart.cls`.
+The TAPS archive must be named `recsyschallenge26-7.zip` and use the two-folder
+layout the author dashboard specifies — a flat archive is rejected:
+
+```
+recsyschallenge26-7.zip
+├── pdf/
+│   └── main.pdf
+└── Source/
+    ├── main.tex
+    ├── references.bib
+    └── figures/{pipeline,biencoder}.pdf
+```
+
+Do not include generated auxiliary files or a local copy of `acmart.cls`; TAPS
+supplies its own class. Keep the archive under 10 MB to use the dashboard's
+plain Upload button (it is currently ~1.6 MB). Build the PDF from exactly the
+source you ship so the two cannot drift apart. After upload, TAPS returns PDF
+and HTML5 proofs to approve or reject; "Reject" then "Resubmit" replaces a
+file, so upload is reversible but approval is the commit point.
