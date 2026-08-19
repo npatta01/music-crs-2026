@@ -97,7 +97,7 @@ At each turn we prompt an LLM (\texttt{deepseek-v4-flash}~\cite{deepseek}) with 
 \begin{figure}[!htbp]
   \centering
   \fbox{\begin{minipage}{0.94\linewidth}\scriptsize
-  \textbf{User (turn 3):} ``\ldots subdued, female singer, a sense of place in the lyrics, stark almost a cappella delivery\ldots not it either.''\\[2pt]
+  \textbf{User (turns 2--3):} ``\ldots subdued, female singer, a sense of place in the lyrics, stark almost a cappella delivery\ldots not it either.''\\[2pt]
   \textbf{Extracted state (abridged):}\\
   \texttt{request\_type: hidden\_target}\\
   \texttt{anchor artist: Neko Case (must\_use)}\\
@@ -179,7 +179,7 @@ The deployed model is \emph{goal-free}: no conversation-goal annotation enters i
   \Description[Two-tower bi-encoder used to compute the reranker's dominant feature.]{A compact conversation rendering and a metadata-rich track card enter the same fine-tuned Qwen3 Embedding model. Last-token pooling and normalization produce two 2560-dimensional unit vectors whose cosine becomes the b1 cosine reranker feature.}
 \end{figure}
 
-The reranker's dominant feature comes from a two-tower bi-encoder fine-tuned from Qwen3-Embedding-4B~\cite{qwen3embedding}. The query tower renders the conversation compactly behind a retrieval instruction prefix and the document tower renders a track card (both formats in Figure~\ref{fig:biencoder}); the card's one-line LLM-written ``known for'' artist description imports static world knowledge from larger models into the embedding space. One shared encoder $E_\theta$ serves both towers; with $v_x = E_\theta(x)/\lVert E_\theta(x)\rVert_2$ (last-token pooling, 2560-d), the feature is the cosine $\texttt{b1\_cos}(q,d) = v_q^{\top} v_d$. Training minimizes the in-batch contrastive (MNRL~\cite{sbert}) loss over batches of positive pairs $(q_i, d_i^{+})$ with four mined hard negatives per positive,
+The reranker's dominant feature comes from a two-tower bi-encoder fine-tuned from Qwen3-Embedding-4B~\cite{qwen3embedding}. The query tower renders the conversation compactly behind a retrieval instruction prefix and the document tower renders a track card (both formats in Figure~\ref{fig:biencoder}); the card's one-line LLM-written ``known for'' artist description imports static world knowledge from larger models into the embedding space. One shared encoder $E_\theta$ serves both towers; with $v_x = E_\theta(x)/\lVert E_\theta(x)\rVert_2$ (last-token pooling, 2560-d), the feature is the cosine $\texttt{b1\_cos}(q,d) = v_q^{\top} v_d$. Training minimizes the in-batch contrastive loss~\cite{sbert} over batches of positive pairs $(q_i, d_i^{+})$ with four mined hard negatives per positive,
 \begin{displaymath}
 \mathcal{L} = -\tfrac{1}{B}\textstyle\sum_i \log \frac{\exp(v_{q_i}^{\top} v_{d_i^{+}}/\tau)}{\sum_{d \in \mathcal{D}_i} \exp(v_{q_i}^{\top} v_{d}/\tau)}, \qquad \tau = \tfrac{1}{20},
 \end{displaymath}
@@ -270,7 +270,7 @@ We tried to train on cleaner labels instead. Two inexpensive LLM judges (Gemma-4
 \subsection{Failure cases}
 \label{sec:failures}
 
-We wanted to understand where the system failed, so we had a single LLM judge (DeepSeek-V4-Flash) rate the submitted Blind-B run: 78\% of turns came back weak-or-bad. Table~\ref{tab:audit} diagnoses 32 of them. These are examples and audit categories, not measures of what each cost us --- Blind-B exposes no relevance labels, so only the validation failure of Section~\ref{sec:insample} is actually measured.
+We wanted to understand where the system failed, so we had a single LLM judge (DeepSeek-V4-Flash) rate the submitted Blind-B run: 78\% of turns came back weak-or-bad. Table~\ref{tab:audit} diagnoses 32 turns. These are examples and audit categories, not measures of what each cost us --- Blind-B exposes no relevance labels, so only the validation failure of Section~\ref{sec:insample} is actually measured.
 
 \begin{table}[!htbp]
 \caption{Label-free audit of the submitted Blind-B run. Categories overlap: 43 diagnoses across 32 distinct turns.}
@@ -290,7 +290,7 @@ Entity-resolution miss & 1 \\
 \end{table}
 
 \begin{itemize}
-\item \textbf{The constraint was under-applied.} Asked for ``the Kamelot track from \emph{Silverthorn},'' the system matched the artist but not the album, returning \emph{Fallen Star} from Kamelot's \emph{Haven} (\emph{Silverthorn} is in the catalog); asked to ``explore beyond'' the current artist, it stayed on them (10 of the top 20 in one Ryan Adams session).
+\item \textbf{The constraint was under-applied.} Asked for ``the Kamelot track from \emph{Silverthorn},'' the system matched the artist but not the album, returning \emph{Fallen Star} from Kamelot's \emph{Haven} (\emph{Silverthorn} is in the catalog); asked to branch out to other artists, it stayed on the current one (10 of the top 20 in one Ryan Adams session).
 \item \textbf{Nothing in our data encodes the request.} An exact ``126.70 bpm and G minor'' (no tempo or key field), or ``a song from the \emph{Breaking Bad} soundtrack'' (no film/TV metadata), which no branch can match on.
 \item \textbf{Response generation.} The single-pass generator did not properly consider the query --- in particular an exact-track request for a title we do not have. On several turns a named track was read correctly as an exact-track request but is absent from the 47,071-track catalog; rather than flag it unavailable, the generator described a different song by the same artist as if it were the one asked for --- for ``\,`Watercolors' by Pat Metheny,'' it returned Metheny's ``Alfie.''
 \end{itemize}
@@ -306,7 +306,7 @@ We documented a state-compiled retrieve-then-rerank conversational music recomme
 \item model selection relied on in-sample development replays, and we had no clean held-out set to check them against;
 \item the extracted conversation state was rich, but too little of it became executable filters or ranking evidence, so noisy candidate pools reached the reranker;
 \item for retrieval and ranking we had little information about tracks and artists beyond the provided catalog metadata --- no external source, and no LLM-generated knowledge beyond the one-line artist description --- so requests naming anything the catalog does not encode had nothing to match against;
-\item responses were generated in a single unchecked pass that could flag neither unavailable tracks nor unmet constraints.
+\item responses were generated in a single unchecked pass that could reliably flag neither unavailable tracks nor unmet constraints.
 \end{enumerate}
 Separately, we were unsure about many of the training labels, and re-judged the 113,393 labelable turns with LLM judges (Section~\ref{sec:groundtruth}). We release the pipeline, the models, a replay bundle, and the re-judged labels~\cite{repo}.
 
