@@ -32,7 +32,7 @@
 \renewcommand{\shortauthors}{Pattaniyil, Yagli, and Zaman}
 
 \begin{abstract}
-We describe team npatta01's submission to the RecSys Challenge 2026 conversational music recommendation task. The pipeline extracts a typed conversation state with an LLM, gathers candidates from eleven retrieval branches over a unified track index, re-ranks them with a LambdaMART model, and uses the state to generate a response. On the final Blind-B leaderboard it scored 0.3811 composite (nDCG@20 0.2537, LLM-judge 3.30), ranking 29th of 39 teams. We then examine why. Our development estimates were computed in-sample and overstated performance. The training conversations are LLM-generated, and on many turns we were unsure that the single ground-truth track matched the request --- often it repeats the just-played artist after an explicit request for someone else. We re-judged the turns with LLM judges and release that relabeling; a model trained on it scored lower, so the submission kept the original labels. Failure cases from the submitted run show extracted constraints the pipeline could not enforce. Code, models, and a full reproduction bundle are publicly released.
+We describe team npatta01's submission to the RecSys Challenge 2026 conversational music recommendation task. The pipeline extracts a typed conversation state with an LLM, gathers candidates from eleven retrieval branches over a unified track index, re-ranks them with a LambdaMART model, and uses the state to generate a response. On the final Blind-B leaderboard it scored 0.3811 composite (nDCG@20 0.2537, LLM-judge 3.30), ranking 29th of 39 teams. We then examine why. Our development estimates were computed in-sample and overstated performance. The training conversations are LLM-generated, and on many turns we were unsure that the single ground-truth track matched the request --- often it repeats the just-played artist after an explicit request for someone else. We re-judged the turns with LLM judges and release that relabeling; a model trained on it scored lower against the original labels, so the submission kept them. Failure cases from the submitted run show extracted constraints the pipeline could not enforce. Code, models, and a full reproduction bundle are publicly released.
 \end{abstract}
 
 \begin{CCSXML}
@@ -66,7 +66,7 @@ We describe team npatta01's submission to the RecSys Challenge 2026 conversation
 \section{Introduction}
 \label{sec:intro}
 
-The Music-CRS challenge~\cite{doh2026recsyschallenge} asks systems to act as a conversational music recommender. Each session is a multi-turn dialog between a listener and an assistant; at every assistant turn the system must (i)~retrieve a ranked list of 20 tracks from a shared 47,071-track catalog and (ii)~write a short natural-language response presenting its top recommendation. Training data comprises 15,199 sessions built on the TalkPlayData~2 collection~\cite{talkplay,doh2025talkplay}, with per-track metadata (title, artist, album, up to 37 genre/mood tags, popularity, release date) and precomputed embeddings (text, audio, cover art, collaborative filtering). Evaluation is on two 80-session blind splits of final turns; Blind-B additionally removes the conversation-goal annotations present in training data. Submissions are scored with the organizers' composite metric~\cite{doh2026recsyschallenge}:
+The Music-CRS challenge~\cite{doh2026recsyschallenge} asks systems to act as a conversational music recommender. Each session is a multi-turn dialog between a listener and an assistant; at every assistant turn the system must (i)~retrieve a ranked list of 20 tracks from a shared 47,071-track catalog and (ii)~write a short natural-language response presenting its top recommendation. Training data comprises 15,199 sessions built on the TalkPlayData~2 collection~\cite{talkplay,doh2025talkplay}, with per-track metadata (title, artist, album, a median of 17 genre/mood tags, popularity, release date) and precomputed embeddings (text, audio, cover art, collaborative filtering). Evaluation is on two 80-session blind splits of final turns; Blind-B additionally removes the conversation-goal annotations present in training data. Submissions are scored with the organizers' composite metric~\cite{doh2026recsyschallenge}:
 \begin{displaymath}
 0.50\cdot\text{nDCG@20} + 0.10\cdot\text{cat.\ div.} + 0.10\cdot\text{lex.\ div.} + 0.30\cdot\tfrac{\text{judge}-1}{4},
 \end{displaymath}
@@ -270,19 +270,19 @@ We tried to train on cleaner labels instead. Two inexpensive LLM judges (Gemma-4
 \subsection{Failure cases}
 \label{sec:failures}
 
-We wanted to understand where the system failed, so we had a single LLM judge (DeepSeek-V4-Flash) rate the submitted Blind-B run: 78\% of turns came back weak-or-bad. Table~\ref{tab:audit} diagnoses a subset of them. These are examples and audit categories, not measures of what each cost us --- Blind-B exposes no relevance labels, so only the validation failure of Section~\ref{sec:insample} is actually measured.
+We wanted to understand where the system failed, so we had a single LLM judge (DeepSeek-V4-Flash) rate the submitted Blind-B run: 78\% of turns came back weak-or-bad. Table~\ref{tab:audit} diagnoses 32 of them. These are examples and audit categories, not measures of what each cost us --- Blind-B exposes no relevance labels, so only the validation failure of Section~\ref{sec:insample} is actually measured.
 
 \begin{table}[!htbp]
-\caption{Label-free audit of the submitted Blind-B run: where the flagged turns were lost.}
+\caption{Label-free audit of the submitted Blind-B run. Categories overlap: 43 diagnoses across 32 distinct turns.}
 \label{tab:audit}
-\Description{The audit assigns 31 flagged turns to a better pooled candidate ranked below the top twenty, eight to over-aggressive filtering, three to state-extraction misses, and one to an entity-resolution miss.}
+\Description{The audit assigns 31 flagged turns to a better pooled candidate ranked below the top twenty, eight to an under-applied constraint, three to state-extraction misses, and one to an entity-resolution miss.}
 \small
 \begin{tabular}{lr}
 \toprule
 Diagnosis & Turns \\
 \midrule
 Better candidate in pool, ordered below top-20 & 31 \\
-Over-aggressive filtering & 8 \\
+Under-applied constraint & 8 \\
 State-extraction miss & 3 \\
 Entity-resolution miss & 1 \\
 \bottomrule
