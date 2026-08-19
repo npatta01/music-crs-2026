@@ -194,7 +194,7 @@ The response generator is \texttt{Qwen3-30B-A3B-Instruct-2507}~\cite{qwen3} at t
 \begin{quote}\small\itshape
 ``Write 1--2 concise sentences about only the selected track. Prioritize the latest user request and extracted state over older conversation history. If the track is reasonably aligned, explain the fit with one specific supported reason. If it clearly conflicts with an explicit avoid/new-artist constraint, do not oversell it or blame the system; briefly frame the limitation and the closest supported reason.''
 \end{quote}
-Over a frozen Blind-A retrieval output, a sweep of eight response variants (varying state conditioning, history depth, item rendering, and concision) reached the 4.70 judge score of Table~\ref{tab:official} without changing the recommendations; we selected on the leaderboard score. There is no multi-draft sampling, selection, checking, or repair pass.
+Over a frozen Blind-A retrieval output, a sweep of eight response variants (varying state conditioning, history depth, item rendering, concision, and the generator model) reached the 4.70 judge score of Table~\ref{tab:official} without changing the recommendations; we selected on the leaderboard score. There is no multi-draft sampling, selection, checking, or repair pass.
 
 Code, configs, trained models, cached extraction states, and a frozen-LLM-cache reproduction bundle that replays our submissions without API credentials are public.\footnote{\url{https://github.com/npatta01/music-crs-2026}; models and data: \url{https://huggingface.co/datasets/Npatta01/music-crs-repro-2026}.}
 
@@ -204,7 +204,7 @@ Code, configs, trained models, cached extraction states, and a frozen-LLM-cache 
 The development split (1,000 sessions $\times$ 8 turns) has one ground-truth track per turn. Table~\ref{tab:devset} reports development-split numbers, separating leakage-safe estimates from in-sample ones; Table~\ref{tab:official} reports the official leaderboard results.
 
 \begin{table}[t]
-\caption{Development split. The in-sample row replays turns the deployed (full-data) model saw during training; the out-of-fold rows are leakage-safe cross-validation estimates.}
+\caption{Development split. The in-sample row replays turns a full-data model saw during training; the out-of-fold rows are leakage-safe cross-validation estimates.}
 \label{tab:devset}
 \Description{Development nDCG at twenty increases from 0.1492 for weighted reciprocal-rank fusion to 0.1970 for out-of-fold LambdaMART and 0.2032 after adding the deployed bi-encoder feature. The in-sample train replay reaches 0.3844.}
 \small
