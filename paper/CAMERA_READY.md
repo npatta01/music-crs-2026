@@ -91,6 +91,15 @@ It is *not* diagnostic-free; three warnings are expected and accepted:
 Page-level appearance should be re-checked on the PDF and HTML proofs TAPS
 returns, since those are what actually publish.
 
+## The built archive
+
+The assembled TAPS archive is attached to the GitHub release
+[`recsyschallenge26-7`](https://github.com/npatta01/music-crs-2026/releases/tag/recsyschallenge26-7)
+as `recsyschallenge26-7.zip`, so it does not have to be rebuilt to be inspected
+or re-uploaded. It is built by the commands above from the source in `paper/`,
+and its `pdf/main.pdf` is produced from exactly the `Source/` it ships with, so
+the two cannot drift apart. Rebuild and replace it if `paper/` changes.
+
 ## Build
 
 Run from this directory:
@@ -117,7 +126,7 @@ recsyschallenge26-7.zip
 
 Do not include generated auxiliary files or a local copy of `acmart.cls`; TAPS
 supplies its own class. Keep the archive under 10 MB to use the dashboard's
-plain Upload button (it is currently ~1.6 MB). Build the PDF from exactly the
+plain Upload button (it is currently ~385 KB). Build the PDF from exactly the
 source you ship so the two cannot drift apart. After upload, TAPS returns PDF
 and HTML5 proofs to approve or reject; "Reject" then "Resubmit" replaces a
 file, so upload is reversible but approval is the commit point.
