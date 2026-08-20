@@ -717,7 +717,7 @@ Latest extracted state + selected top track + catalog metadata
 ::: {.overview-system}
 **Single pass**
 
-XML item card → Qwen3-30B-A3B-Instruct, temperature 0
+XML item card → Qwen3-30B-A3B-Instruct-2507, temperature 0
 :::
 ::: {.overview-output}
 **Output**
@@ -779,7 +779,7 @@ The generator presents the ranking decision; it cannot replace the selected trac
 ::: {.input-stream .xml-stream}
 <i>&lt;/&gt;</i><div><b>Formatting</b><span>delimited XML item block</span></div>
 :::
-<div class="generator-core"><i>◇</i><small>GENERATOR</small><b>Qwen3-30B-A3B</b><span>temperature 0 · no echo retries</span></div>
+<div class="generator-core"><i>◇</i><small>GENERATOR</small><b>Qwen3-30B-A3B-Instruct-2507</b><span>temperature 0 · no echo retries</span></div>
 :::
 
 <p class="source-line">Source: final Blind-B config; docs/architectures/explanation_generation.md.</p>
@@ -824,7 +824,7 @@ Session → state → resolved constraints → top predictions → response
 ::: {.overview-output}
 **Output insight**
 
-One success; three distinct architectural failure boundaries
+One constraint-preserving trace; three distinct architectural failure boundaries
 :::
 :::
 
@@ -832,7 +832,7 @@ One success; three distinct architectural failure boundaries
 ↓ Cases: [Neko Case](#example-neko-case) · [Kamelot](#example-kamelot) · [missing metadata](#example-metadata) · [Watercolors](#example-watercolors)
 :::
 
-## Success: Neko Case {#example-neko-case}
+## Constraint-preserving trace: Neko Case {#example-neko-case}
 
 <div class="session-meta"><span>SESSION</span> 024a2738-a96c-4e11-adf3-b2cb8311a493 <b>· TURN 3</b></div>
 
@@ -858,11 +858,11 @@ One success; three distinct architectural failure boundaries
 
 <ol class="ranked-tracks"><li class="selected">Bracing For Sunday <em>Selected Top 1</em></li><li>Maybe Sparrow</li><li>I Wish I Was the Moon</li><li>Lady Pilot</li><li>Lion’s Jaws</li></ol>
 
-<small class="rank-legend"><i></i> Selected Top 1 <i></i> Ranks 2–5 · not independently judged</small>
+<small class="rank-legend"><i></i> Selected Top 1 <i></i> Blind-B relevance labels · unavailable</small>
 :::
 :::
 
-All five are Neko Case; the top track and response preserve the request’s concrete clues.
+All five preserve the required Neko Case artist constraint, and the response carries forward the request’s concrete clues. Because Blind-B relevance labels are unavailable, this trace demonstrates constraint preservation—not target correctness.
 
 <p class="source-line">Source: retained Blind-B trace/output, session 024a… turn 3.</p>
 
@@ -1078,8 +1078,6 @@ Section 9 · source index
 **Paper**
 
 [Paper PDF](../paper/main.pdf)
-
-[Readable Markdown](../paper/draft.md)
 :::
 ::: {.reference-card}
 **Submission audits**
