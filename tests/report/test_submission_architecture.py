@@ -170,9 +170,10 @@ def test_examples_use_traceable_sessions_and_exact_reader_facing_artifacts() -> 
     assert "always write a natural conversational sentence" in source
     assert "STYLE INSTRUCTIONS" in source
 
-    # Visual semantics must not overclaim relevance for unjudged Blind-B ranks.
+    # Visual semantics must not overclaim relevance for unjudged Blind-B output.
     assert "Selected Top 1" in source
-    assert "Ranks 2–5 · not independently judged" in source
+    assert "Blind-B relevance labels · unavailable" in source
+    assert "constraint preservation—not target correctness" in source
     assert "metadata_qwen3_embedding_8b" in source
     assert "attributes_qwen3_embedding_8b" in source
     assert "lyrics_qwen3_embedding_0_6b" in source
@@ -210,9 +211,19 @@ def test_reviewed_slides_explain_runtime_contracts_and_state_fields() -> None:
     assert "RUNTIME INPUT · appended per turn" in source
     assert "roleplay.txt + response_generation.txt" not in source
     assert "DISAGREEMENT ONLY" in source
-    assert "Success: Neko Case" in source
+    assert "Constraint-preserving trace: Neko Case" in source
     assert "Constraint lost: Kamelot album" in source
     assert "Exact-track request recognized, but Watercolors was not found" in source
+
+
+def test_references_use_the_authoritative_paper_and_exact_response_checkpoint() -> None:
+    source = _source()
+
+    assert "[Paper PDF](../paper/main.pdf)" in source
+    assert "paper/draft.md" not in source
+    assert source.count("Qwen3-30B-A3B-Instruct-2507") == 2
+    assert "Qwen3-30B-A3B-Instruct," not in source
+    assert "<b>Qwen3-30B-A3B</b>" not in source
 
 
 def test_ranking_has_a_distinct_final_ordering_phase() -> None:
@@ -340,6 +351,9 @@ def test_quarto_version_and_readme_entrypoint() -> None:
     assert "Open the interactive architecture deck →" in readme
     assert "## Approach overview" not in readme
     assert "docs/architectures/submission_pipeline.svg" not in readme
+    assert "State-Driven Retrieval and Learned Re-Ranking for Conversational Music Recommendation" in readme
+    assert "[`main.pdf`](paper/main.pdf) is the final camera-ready paper" in readme
+    assert "paper/draft.md" not in readme
 
 
 def test_blind_prediction_audits_are_complete_and_portable() -> None:

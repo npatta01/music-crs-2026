@@ -1838,7 +1838,7 @@ Source: paper/main.tex `2.3; scripts/rerank/build_label_weights.py and train_lgb
 </div>
 <div class="overview-system">
 <p><strong>Single pass</strong></p>
-<p>XML item card → Qwen3-30B-A3B-Instruct, temperature 0</p>
+<p>XML item card → Qwen3-30B-A3B-Instruct-2507, temperature 0</p>
 </div>
 <div class="overview-output">
 <p><strong>Output</strong></p>
@@ -1920,7 +1920,7 @@ Source: retained Blind-B output; paper/main.tex Figure 2.
 </div>
 </div>
 <div class="generator-core">
-<i>◇</i><small>GENERATOR</small><b>Qwen3-30B-A3B</b><span>temperature 0 · no echo retries</span>
+<i>◇</i><small>GENERATOR</small><b>Qwen3-30B-A3B-Instruct-2507</b><span>temperature 0 · no echo retries</span>
 </div>
 </div>
 <p class="source-line">
@@ -1983,7 +1983,7 @@ Source: deployed response template quoted in paper/main.tex `2.5.
 </div>
 <div class="overview-output">
 <p><strong>Output insight</strong></p>
-<p>One success; three distinct architectural failure boundaries</p>
+<p>One constraint-preserving trace; three distinct architectural failure boundaries</p>
 </div>
 </div>
 <div class="detail-strip">
@@ -1991,7 +1991,7 @@ Source: deployed response template quoted in paper/main.tex `2.5.
 </div>
 </section>
 <section id="example-neko-case" class="slide level2">
-<h2>Success: Neko Case</h2>
+<h2>Constraint-preserving trace: Neko Case</h2>
 <div class="session-meta">
 <span>SESSION</span> 024a2738-a96c-4e11-adf3-b2cb8311a493 <b>· TURN 3</b>
 </div>
@@ -2039,10 +2039,10 @@ Lady Pilot
 Lion’s Jaws
 </li>
 </ol>
-<p><small class="rank-legend"><i></i> Selected Top 1 <i></i> Ranks 2–5 · not independently judged</small></p>
+<p><small class="rank-legend"><i></i> Selected Top 1 <i></i> Blind-B relevance labels · unavailable</small></p>
 </div>
 </div>
-<p>All five are Neko Case; the top track and response preserve the request’s concrete clues.</p>
+<p>All five preserve the required Neko Case artist constraint, and the response carries forward the request’s concrete clues. Because Blind-B relevance labels are unavailable, this trace demonstrates constraint preservation—not target correctness.</p>
 <p class="source-line">
 Source: retained Blind-B trace/output, session 024a… turn 3.
 </p>
@@ -2379,7 +2379,6 @@ Source: paper/main.tex `4.2; scripts/rerank/build_label_weights.py.
 <div class="reference-card">
 <p><strong>Paper</strong></p>
 <p><a href="../paper/main.pdf">Paper PDF</a></p>
-<p><a href="../paper/draft.md">Readable Markdown</a></p>
 </div>
 <div class="reference-card">
 <p><strong>Submission audits</strong></p>

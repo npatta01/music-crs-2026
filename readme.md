@@ -117,7 +117,7 @@ Offline bundle (catalog, caches, frozen traces, model weights): **https://huggin
 
 ## Paper
 
-Our participant paper, **"Team npatta01's Conversational Music Recommender for the RecSys Challenge 2026"** (ACM sigconf, 4 pages + references), lives in [`paper/`](paper/): [`main.tex`](paper/main.tex) is the authoritative source, [`draft.md`](paper/draft.md) is a readable mirror. It documents the full pipeline and an honest retrospective: the in-sample-evaluation lesson, the ground-truth anchoring-bias analysis (cleaned relabeling released — see the [anchor labels](data/anchor_labels_v1/README.md)), and concrete failure cases from the submitted Blind-B run.
+Our participant paper, **"State-Driven Retrieval and Learned Re-Ranking for Conversational Music Recommendation"** (ACM sigconf, 4 pages + references), lives in [`paper/`](paper/): [`main.pdf`](paper/main.pdf) is the final camera-ready paper, and [`main.tex`](paper/main.tex) is its authoritative source. It documents the full pipeline and an honest retrospective: the in-sample-evaluation lesson, the ground-truth anchoring-bias analysis (cleaned relabeling released — see the [anchor labels](data/anchor_labels_v1/README.md)), and concrete failure cases from the submitted Blind-B run.
 
 The ready-to-upload TAPS bundle is included as [`paper/recsyschallenge26-7.zip`](paper/recsyschallenge26-7.zip).
 
