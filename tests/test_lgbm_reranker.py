@@ -1024,6 +1024,90 @@ def test_online_reranker_final_artist_guard_ignores_stale_rejected_artist():
     assert "ranking_guard_actions" not in trace
 
 
+def test_online_reranker_final_artist_guard_uses_latest_switch_text_fallback():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.final_artist_guard_enabled = True
+    trace = {
+        "branches": {
+            "pools": [{"name": "bm25", "hits": [("t-two", 2.0), ("t-one", 1.0)]}],
+            "fused": [("t-two", 2.0), ("t-one", 1.0)],
+            "branch_queries": {},
+        },
+        "state": {
+            "current_request": {"request_type": "mood", "source_turn": 2},
+            "facts": [],
+        },
+        "resolver": {"played_track_ids": [], "positive_tags": []},
+    }
+    session_meta = {
+        "turn_number": 2,
+        "conversations": [
+            {"role": "user", "content": "I liked that piano one.", "turn_number": 1},
+            {"role": "music", "content": "t-two", "turn_number": 1},
+            {
+                "role": "user",
+                "content": "Something different this time, maybe a warmer sound.",
+                "turn_number": 2,
+            },
+        ],
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta=session_meta,
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-one", "t-two"]
+    assert trace["ranking_guard_actions"] == [
+        {
+            "type": "final_artist_guard",
+            "track_id": "t-two",
+            "from_rank": 1,
+            "to_rank": 2,
+            "request_type": "mood",
+            "matched_artist_id": "a-other",
+            "matched_artist_name": "Other Band",
+            "evidence_role": "session_recent_artist",
+            "evidence_relation": "latest_turn_switch_fallback",
+        }
+    ]
+
+
+def test_online_reranker_final_artist_guard_fallback_ignores_more_like_this_text():
+    reranker = _make_synthetic_lgbm_reranker(
+        _FeatureCatalogFromCompilerCatalog(_CompilerCatalogSource())
+    )
+    reranker.final_artist_guard_enabled = True
+    trace = {
+        "branches": {"pools": [], "fused": [], "branch_queries": {}},
+        "state": {"current_request": {"request_type": "mood", "source_turn": 2}},
+        "resolver": {"played_track_ids": [], "positive_tags": []},
+    }
+    session_meta = {
+        "turn_number": 2,
+        "conversations": [
+            {"role": "music", "content": "t-two", "turn_number": 1},
+            {"role": "user", "content": "More like this please.", "turn_number": 2},
+        ],
+    }
+
+    ranked = reranker.rerank(
+        trace,
+        session_meta=session_meta,
+        user_id="u1",
+        hard_drop=set(),
+        fallback=["t-two", "t-one"],
+    )
+
+    assert ranked == ["t-two", "t-one"]
+    assert "ranking_guard_actions" not in trace
+
+
 def test_feature_catalog_adapter_matches_offline_catalog_rerank_outputs(tmp_path):
     pytest.importorskip("lancedb")
     import lancedb

@@ -135,6 +135,7 @@ class _FeatureCatalogFromCompilerCatalog:
             tag_keys = frozenset(catalog_tag_key(t) for t in tags) - {""}
             track_name = _first(row.get("track_name")) or ""
             artist_names = _as_list(row.get("artist_name"))
+            artist_display_names = tuple(str(a) for a in artist_names if str(a or "").strip())
             artist_name_keys = tuple(
                 k for k in (catalog_tag_key(str(a or "")) for a in artist_names) if k
             )
@@ -152,6 +153,7 @@ class _FeatureCatalogFromCompilerCatalog:
                 "tag_keys": tag_keys,
                 "n_tags": len(tags),
                 "name_tokens": frozenset(catalog_tag_key(str(track_name or "")).split()) - {""},
+                "artist_names": artist_display_names,
                 "artist_name_keys": artist_name_keys,
                 "duration": duration,
             }
@@ -434,6 +436,10 @@ def _artist_switch_marker(text: str) -> bool:
         marker in lowered
         for marker in (
             "different artist",
+            "something different",
+            "different this time",
+            "something else",
+            "switch it up",
             "new artist",
             "another artist",
             "other artist",
@@ -446,6 +452,77 @@ def _artist_switch_marker(text: str) -> bool:
             "stop",
         )
     )
+
+
+def _latest_user_text(session_meta: dict[str, Any] | None, current_turn: int | None) -> str:
+    if not session_meta or not current_turn:
+        return ""
+    for msg in session_meta.get("conversations") or []:
+        if not isinstance(msg, dict):
+            continue
+        if str(msg.get("role") or "") != "user":
+            continue
+        if _int_or_none(msg.get("turn_number")) == int(current_turn):
+            return str(msg.get("content") or "")
+    return ""
+
+
+def _latest_played_artist_guard_targets(
+    session_meta: dict[str, Any] | None,
+    *,
+    current_turn: int | None,
+    catalog_meta: dict[str, dict],
+) -> list[dict[str, str]]:
+    latest_text = _latest_user_text(session_meta, current_turn)
+    if not latest_text or not _artist_switch_marker(latest_text):
+        return []
+
+    latest_music_turn = -1
+    latest_track_ids: list[str] = []
+    for msg in session_meta.get("conversations") or [] if session_meta else []:
+        if not isinstance(msg, dict) or str(msg.get("role") or "") != "music":
+            continue
+        turn_number = _int_or_none(msg.get("turn_number"))
+        if turn_number is None or not current_turn or turn_number >= int(current_turn):
+            continue
+        track_id = str(msg.get("content") or "")
+        if not track_id:
+            continue
+        if turn_number > latest_music_turn:
+            latest_music_turn = turn_number
+            latest_track_ids = [track_id]
+        elif turn_number == latest_music_turn:
+            latest_track_ids.append(track_id)
+    if not latest_track_ids:
+        return []
+
+    targets: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for track_id in latest_track_ids:
+        meta = catalog_meta.get(track_id) or {}
+        artist_ids = [str(artist_id) for artist_id in meta.get("artists") or []]
+        artist_names = [str(name) for name in meta.get("artist_name_keys") or []]
+        display_name = str(_first(meta.get("artist_names")) or "")
+        if not display_name:
+            display_name = str(_first(meta.get("artist_name")) or "")
+        for index, artist_id in enumerate(artist_ids or [""]):
+            artist_name_key = artist_names[index] if index < len(artist_names) else ""
+            if not artist_id and not artist_name_key:
+                continue
+            key = (artist_id, artist_name_key)
+            if key in seen:
+                continue
+            seen.add(key)
+            targets.append(
+                {
+                    "artist_id": artist_id,
+                    "artist_name": display_name or artist_name_key or artist_id,
+                    "artist_name_key": artist_name_key,
+                    "role": "session_recent_artist",
+                    "relation": "latest_turn_switch_fallback",
+                }
+            )
+    return targets
 
 
 def _same_turn_artist_guard_targets(
@@ -560,10 +637,14 @@ def _artist_guard_match(
             matched_artist_id = artist_id
             break
     for target in targets:
-        if target["artist_name_key"] not in artist_name_keys:
+        target_artist_id = str(target.get("artist_id") or "")
+        target_name_key = str(target.get("artist_name_key") or "")
+        if target_artist_id and target_artist_id not in artists:
+            continue
+        if not target_artist_id and target_name_key not in artist_name_keys:
             continue
         return {
-            "matched_artist_id": matched_artist_id,
+            "matched_artist_id": matched_artist_id or target_artist_id,
             "matched_artist_name": target["artist_name"],
             "evidence_role": target["role"],
             "evidence_relation": target["relation"],
@@ -580,6 +661,7 @@ def _apply_final_artist_guard(
     enabled: bool,
     guard_top_k: int,
     current_turn: int | None,
+    session_meta: dict[str, Any] | None = None,
 ) -> list[str]:
     """Demote any track by an artist this turn just switched away from/rejected,
     out of the top `guard_top_k` slots.
@@ -592,6 +674,20 @@ def _apply_final_artist_guard(
     if not enabled or guard_top_k <= 0:
         return ranked[:top_k_out]
     targets = _same_turn_artist_guard_targets(trace, current_turn=current_turn)
+    existing_target_keys = {
+        (str(target.get("artist_id") or ""), str(target.get("artist_name_key") or ""))
+        for target in targets
+    }
+    for target in _latest_played_artist_guard_targets(
+        session_meta,
+        current_turn=current_turn,
+        catalog_meta=catalog_meta,
+    ):
+        key = (str(target.get("artist_id") or ""), str(target.get("artist_name_key") or ""))
+        if key in existing_target_keys:
+            continue
+        existing_target_keys.add(key)
+        targets.append(target)
     if not targets:
         return ranked[:top_k_out]
 
@@ -1081,6 +1177,7 @@ class LgbmOnlineReranker:
                 enabled=final_artist_guard_enabled,
                 guard_top_k=final_artist_guard_top_k,
                 current_turn=current_turn,
+                session_meta=session_meta,
             )
 
         try:
