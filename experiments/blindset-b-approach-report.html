@@ -1,0 +1,1831 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Blindset B Approach</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;max-width:736px;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+</head>
+<body>
+<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" title="Blindset B Approach" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;Blindset B Approach&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(--background) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: light-dark(rgb(255 255 255), rgb(24 24 24));
+  --foreground: light-dark(rgb(26 28 31), rgb(255 255 255));
+  --card: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --card-foreground: var(--foreground);
+  --popover: light-dark(rgb(255 255 255), rgb(45 45 45));
+  --popover-foreground: var(--foreground);
+  --primary: light-dark(rgb(51 156 255), rgb(131 195 255));
+  --primary-foreground: light-dark(rgb(255 255 255), rgb(13 13 13));
+  --secondary: light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%));
+  --secondary-foreground: var(--foreground);
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: light-dark(
+    rgb(26 28 31 / 49.4%),
+    rgb(255 255 255 / 49.8%)
+  );
+  --accent: light-dark(rgb(229 242 255), rgb(13 39 63));
+  --accent-foreground: var(--primary);
+  --destructive: light-dark(rgb(226 85 7), rgb(255 133 73));
+  --border: light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%));
+  --input: light-dark(
+    rgb(26 28 31 / 11.8%),
+    color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+  );
+  --ring: light-dark(rgb(51 156 255), rgb(131 195 255 / 76%));
+  --font-size-base: 14px;
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, &quot;Segoe UI&quot;, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --radius: 12.5px;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+  --color-background-primary: var(--background);
+  --color-text-primary: var(--foreground);
+  --color-border-secondary: var(--border);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  margin: 0;
+  padding: 5px;
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--viz-font-weight-medium);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: superellipse(1.5);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget &gt; :not(.card) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: superellipse(1.5);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+    [aria-pressed=&quot;true&quot;],
+    [aria-selected=&quot;true&quot;],
+    .is-selected
+  ) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div id=&quot;blindset-b-report&quot;&gt;
+  &lt;style&gt;
+    #blindset-b-report {
+      --report-bg: #080d19;
+      --report-surface: #101827;
+      --report-surface-raised: #151f33;
+      --report-surface-soft: #1a2740;
+      --report-border: #2b3a57;
+      --report-text: #f2f6ff;
+      --report-muted: #aab7ce;
+      --report-cyan: #58d7ff;
+      --report-blue: #6f9dff;
+      --report-violet: #ad8cff;
+      --report-green: #42d6a4;
+      --report-amber: #f7c86c;
+      color-scheme: dark;
+      color: var(--report-text);
+      background:
+        radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--report-blue) 16%, transparent) 0, transparent 32%),
+        radial-gradient(circle at 96% 8%, color-mix(in srgb, var(--report-violet) 12%, transparent) 0, transparent 28%),
+        var(--report-bg);
+      border: 1px solid var(--report-border);
+      border-radius: 20px;
+      padding: 26px;
+      box-shadow: 0 28px 70px color-mix(in srgb, var(--report-bg) 78%, transparent);
+    }
+    #blindset-b-report * { box-sizing: border-box; }
+    #blindset-b-report h2 { margin: 0; color: var(--report-text); letter-spacing: -.02em; }
+    #blindset-b-report h3 { color: var(--report-text); letter-spacing: -.01em; }
+    #blindset-b-report p, #blindset-b-report li, #blindset-b-report td { color: #dce5f5; }
+    #blindset-b-report .hero {
+      display: grid;
+      gap: 18px;
+      padding: 4px 0 28px;
+      border-bottom: 1px solid var(--report-border);
+    }
+    #blindset-b-report .eyebrow { color: var(--report-cyan); letter-spacing: .13em; text-transform: uppercase; }
+    #blindset-b-report .hero-title-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: start; }
+    #blindset-b-report .hero-title-copy { min-width: 0; }
+    #blindset-b-report .hero-title-copy h1 {
+      max-width: 22ch;
+      margin: 0;
+      color: var(--report-text);
+      font-size: calc(var(--font-size-base) * 2.15);
+      font-weight: 500;
+      letter-spacing: -.04em;
+    }
+    #blindset-b-report .hero-subtitle { max-width: 54ch; margin: 8px 0 0; color: var(--report-cyan); }
+    #blindset-b-report .hero-title-row .viz-badge,
+    #blindset-b-report .section-head .viz-badge {
+      color: var(--report-cyan);
+      background: color-mix(in srgb, var(--report-cyan) 11%, var(--report-surface));
+      border: 1px solid color-mix(in srgb, var(--report-cyan) 34%, var(--report-border));
+    }
+    #blindset-b-report .lede { max-width: 72ch; margin: 0; color: var(--report-muted); }
+    #blindset-b-report .reading-path { display: flex; gap: 8px 18px; flex-wrap: wrap; color: var(--report-muted); }
+    #blindset-b-report .reading-path span { display: inline-flex; align-items: center; gap: 7px; }
+    #blindset-b-report .reading-path b { color: var(--report-text); font-weight: 500; }
+    #blindset-b-report .reading-path i { color: var(--report-cyan); }
+    #blindset-b-report .metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    #blindset-b-report .metric-grid .card {
+      color: var(--report-text);
+      background: linear-gradient(145deg, var(--report-surface-raised), var(--report-surface));
+      border-color: var(--report-border);
+      box-shadow: 0 12px 30px color-mix(in srgb, var(--report-bg) 62%, transparent);
+    }
+    #blindset-b-report .metric-grid .text-muted { color: var(--report-muted); }
+    #blindset-b-report .metric-grid .viz-stat-value { color: var(--report-text); }
+    #blindset-b-report .metric-grid .text-small { color: var(--report-cyan); }
+    #blindset-b-report .nav {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 7px;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--report-border);
+    }
+    #blindset-b-report .nav button {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      color: var(--report-muted);
+      background: var(--report-surface);
+      border-color: var(--report-border);
+    }
+    #blindset-b-report .nav button[aria-pressed=&quot;true&quot;] {
+      color: var(--report-bg);
+      background: linear-gradient(135deg, var(--report-cyan), var(--report-blue));
+      border-color: transparent;
+      box-shadow: 0 8px 22px color-mix(in srgb, var(--report-cyan) 22%, transparent);
+    }
+    #blindset-b-report .panel { display: none; padding: 28px 0 4px; }
+    #blindset-b-report .panel.is-active { display: block; }
+    #blindset-b-report .section-head { display: flex; justify-content: space-between; gap: 18px; align-items: start; flex-wrap: wrap; margin-bottom: 22px; }
+    #blindset-b-report .section-head p { max-width: 68ch; margin: 6px 0 0; color: var(--report-muted); }
+    #blindset-b-report .flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 20px 0; }
+    #blindset-b-report .flow button {
+      position: relative;
+      min-height: 110px;
+      display: grid;
+      align-content: center;
+      gap: 7px;
+      text-align: left;
+      color: var(--report-text);
+      background: linear-gradient(150deg, var(--report-surface-raised), var(--report-surface));
+      border-color: var(--report-border);
+      overflow: hidden;
+    }
+    #blindset-b-report .flow button::before { content: &quot;&quot;; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--report-cyan); }
+    #blindset-b-report .flow button:nth-child(2)::before { background: var(--report-violet); }
+    #blindset-b-report .flow button:nth-child(3)::before { background: var(--report-amber); }
+    #blindset-b-report .flow button:nth-child(4)::before { background: var(--report-green); }
+    #blindset-b-report .flow button[aria-pressed=&quot;true&quot;] {
+      background: color-mix(in srgb, var(--report-blue) 18%, var(--report-surface-raised));
+      border-color: color-mix(in srgb, var(--report-cyan) 52%, var(--report-border));
+      box-shadow: 0 12px 28px color-mix(in srgb, var(--report-blue) 16%, transparent);
+    }
+    #blindset-b-report .flow small { color: var(--report-muted); }
+    #blindset-b-report .detail {
+      padding: 18px 20px;
+      border: 1px solid color-mix(in srgb, var(--report-cyan) 30%, var(--report-border));
+      border-left: 4px solid var(--report-cyan);
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--report-cyan) 7%, var(--report-surface));
+      color: #dce5f5;
+    }
+    #blindset-b-report .detail strong { color: var(--report-cyan); }
+    #blindset-b-report .beginner-summary {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 14px;
+      align-items: start;
+      margin-bottom: 20px;
+      padding: 17px 18px;
+      color: #e5edfb;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--report-blue) 14%, var(--report-surface)), var(--report-surface));
+      border: 1px solid color-mix(in srgb, var(--report-blue) 38%, var(--report-border));
+      border-radius: 12px;
+    }
+    #blindset-b-report .beginner-summary i { color: var(--report-cyan); }
+    #blindset-b-report .beginner-summary p { margin: 0; }
+    #blindset-b-report .beginner-summary strong { color: var(--report-text); }
+    #blindset-b-report .stage-explainer { display: grid; grid-template-columns: 1.25fr 1fr 1fr; gap: 18px; }
+    #blindset-b-report .stage-explainer &gt; div { min-width: 0; }
+    #blindset-b-report .stage-explainer span { display: block; margin-bottom: 5px; color: var(--report-muted); }
+    #blindset-b-report .stage-explainer strong { display: block; margin-bottom: 5px; }
+    #blindset-b-report .handoff-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    #blindset-b-report .handoff {
+      min-height: 152px;
+      padding: 16px;
+      background: linear-gradient(150deg, var(--report-surface-raised), var(--report-surface));
+      border: 1px solid var(--report-border);
+      border-radius: 11px;
+    }
+    #blindset-b-report .handoff .step-label { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 10px; color: var(--report-cyan); }
+    #blindset-b-report .handoff h3 { margin: 0 0 7px; }
+    #blindset-b-report .handoff p { margin: 0; color: var(--report-muted); }
+    #blindset-b-report .walkthrough { display: grid; gap: 0; border: 1px solid var(--report-border); border-radius: 12px; overflow: hidden; }
+    #blindset-b-report .walk-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; padding: 15px 17px; background: var(--report-surface); border-bottom: 1px solid var(--report-border); }
+    #blindset-b-report .walk-row:last-child { border-bottom: 0; }
+    #blindset-b-report .walk-row:nth-child(even) { background: color-mix(in srgb, var(--report-surface-raised) 80%, transparent); }
+    #blindset-b-report .walk-label { display: flex; align-items: start; gap: 8px; color: var(--report-cyan); font-weight: 500; }
+    #blindset-b-report .walk-label i { flex: 0 0 auto; }
+    #blindset-b-report .walk-row p { margin: 0; }
+    #blindset-b-report .glossary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 20px; }
+    #blindset-b-report .glossary-item { padding: 11px 0; border-bottom: 1px solid var(--report-border); }
+    #blindset-b-report .glossary-item strong { display: block; margin-bottom: 4px; color: var(--report-text); }
+    #blindset-b-report .glossary-item span { color: var(--report-muted); }
+    #blindset-b-report .two-col { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 26px; align-items: start; }
+    #blindset-b-report .stack { display: grid; gap: 18px; }
+    #blindset-b-report .subsection { padding: 20px 0; border-bottom: 1px solid var(--report-border); }
+    #blindset-b-report .subsection:last-child { border-bottom: 0; }
+    #blindset-b-report .subsection h3 { margin-top: 0; }
+    #blindset-b-report table { width: 100%; border-collapse: separate; border-spacing: 0; overflow: hidden; border: 1px solid var(--report-border); border-radius: 12px; }
+    #blindset-b-report th, #blindset-b-report td { text-align: left; vertical-align: top; padding: 11px 12px; border-bottom: 1px solid var(--report-border); }
+    #blindset-b-report tr:last-child th, #blindset-b-report tr:last-child td { border-bottom: 0; }
+    #blindset-b-report tbody tr:nth-child(odd) { background: color-mix(in srgb, var(--report-surface-raised) 74%, transparent); }
+    #blindset-b-report tbody tr:nth-child(even) { background: color-mix(in srgb, var(--report-surface) 82%, transparent); }
+    #blindset-b-report th { min-width: 120px; font-weight: 500; color: var(--report-cyan); }
+    #blindset-b-report pre {
+      margin: 12px 0 0;
+      padding: 18px;
+      color: #d9e5f8;
+      background: #070b14;
+      border: 1px solid var(--report-border);
+      border-radius: 12px;
+      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--report-text) 4%, transparent);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    #blindset-b-report code { color: #8ee7ff; overflow-wrap: anywhere; }
+    #blindset-b-report pre code { color: #cfe0f7; }
+    #blindset-b-report .state-panel .two-col { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+    #blindset-b-report .state-panel .stack { gap: 20px; min-width: 0; }
+    #blindset-b-report .state-panel .subsection {
+      min-width: 0;
+      padding: 20px;
+      background: linear-gradient(150deg, var(--report-surface-raised), var(--report-surface));
+      border: 1px solid var(--report-border);
+      border-radius: 12px;
+    }
+    #blindset-b-report .state-panel .subsection:last-child { border-bottom: 1px solid var(--report-border); }
+    #blindset-b-report .state-panel .subsection h3 { margin-bottom: 8px; }
+    #blindset-b-report .state-step { display: inline-block; margin-right: 8px; color: var(--report-cyan); }
+    #blindset-b-report .state-panel details { width: 100%; min-width: 0; }
+    #blindset-b-report .state-panel pre { width: 100%; max-width: 100%; min-width: 0; word-break: break-word; }
+    #blindset-b-report .state-panel pre code { white-space: inherit; overflow-wrap: anywhere; word-break: break-word; }
+    #blindset-b-report .state-panel table { width: 100%; table-layout: fixed; }
+    #blindset-b-report .state-panel th, #blindset-b-report .state-panel td { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+    #blindset-b-report .state-panel .schema-table th:nth-child(1), #blindset-b-report .state-panel .schema-table td:nth-child(1) { width: 25%; }
+    #blindset-b-report .state-panel .schema-table th:nth-child(2), #blindset-b-report .state-panel .schema-table td:nth-child(2) { width: 20%; }
+    #blindset-b-report .state-panel .schema-table th:nth-child(3), #blindset-b-report .state-panel .schema-table td:nth-child(3) { width: 55%; }
+    #blindset-b-report details { margin-top: 10px; padding: 12px 14px; border: 1px solid var(--report-border); border-radius: 10px; background: var(--report-surface); }
+    #blindset-b-report summary { cursor: pointer; color: var(--report-cyan); font-weight: 500; }
+    #blindset-b-report .callout {
+      padding: 16px 18px;
+      color: var(--report-text);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--report-violet) 14%, var(--report-surface)), var(--report-surface));
+      border: 1px solid color-mix(in srgb, var(--report-violet) 38%, var(--report-border));
+      border-radius: 12px;
+    }
+    #blindset-b-report .callout p { margin: 0; color: #e4e9f6; }
+    #blindset-b-report .callout strong { color: #d0bcff; }
+    #blindset-b-report blockquote { margin: 12px 0; padding: 18px 20px; color: #e7eefb; background: var(--report-surface); border-left: 4px solid var(--report-green); border-radius: 0 12px 12px 0; }
+    #blindset-b-report .legend { display: flex; gap: 16px; flex-wrap: wrap; color: var(--report-muted); }
+    #blindset-b-report .dot { width: 10px; height: 10px; display: inline-block; margin-right: 6px; border-radius: 50%; background: var(--report-cyan); box-shadow: 0 0 12px color-mix(in srgb, var(--report-cyan) 45%, transparent); }
+    #blindset-b-report .dot.proxy { background: var(--report-violet); box-shadow: 0 0 12px color-mix(in srgb, var(--report-violet) 45%, transparent); }
+    #blindset-b-report .branch-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    #blindset-b-report .branch { padding: 14px; background: var(--report-surface); border: 1px solid var(--report-border); border-radius: 10px; }
+    #blindset-b-report .branch strong { display: block; margin-bottom: 5px; color: var(--report-text); font-weight: 500; }
+    #blindset-b-report .branch .text-small { color: var(--report-muted); }
+    #blindset-b-report .retrieval-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 18px 0 8px; }
+    #blindset-b-report .retrieval-step { min-width: 0; padding: 15px 16px; background: var(--report-surface); border-left: 3px solid var(--report-cyan); border-radius: 0 10px 10px 0; }
+    #blindset-b-report .retrieval-step:nth-child(2) { border-left-color: var(--report-violet); }
+    #blindset-b-report .retrieval-step:nth-child(3) { border-left-color: var(--report-green); }
+    #blindset-b-report .retrieval-step span { display: block; margin-bottom: 5px; color: var(--report-muted); }
+    #blindset-b-report .retrieval-step strong { display: block; margin-bottom: 5px; color: var(--report-text); font-weight: 500; }
+    #blindset-b-report .retrieval-step p { margin: 0; color: var(--report-muted); }
+    #blindset-b-report .embedding-list { display: grid; gap: 0; }
+    #blindset-b-report .embedding-family { min-width: 0; padding: 22px 0; border-bottom: 1px solid var(--report-border); }
+    #blindset-b-report .embedding-family:last-child { border-bottom: 0; }
+    #blindset-b-report .embedding-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 13px; }
+    #blindset-b-report .embedding-head h3 { margin: 0; }
+    #blindset-b-report .embedding-head .viz-badge { color: var(--report-cyan); background: color-mix(in srgb, var(--report-cyan) 9%, var(--report-surface)); border: 1px solid color-mix(in srgb, var(--report-cyan) 30%, var(--report-border)); }
+    #blindset-b-report .embedding-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+    #blindset-b-report .embedding-side { min-width: 0; }
+    #blindset-b-report .embedding-side &gt; strong { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; color: var(--report-text); font-weight: 500; }
+    #blindset-b-report .embedding-side &gt; strong i { color: var(--report-cyan); }
+    #blindset-b-report .embedding-side p { margin: 0 0 8px; color: var(--report-muted); }
+    #blindset-b-report .embedding-side ul { margin: 0; padding-left: 19px; }
+    #blindset-b-report .embedding-side li { margin: 5px 0; color: #dce5f5; }
+    #blindset-b-report .template-line { margin-top: 9px; padding: 10px 12px; color: #dce5f5; background: color-mix(in srgb, var(--report-surface-raised) 82%, transparent); border-left: 2px solid var(--report-violet); overflow-wrap: anywhere; }
+    #blindset-b-report .embedding-note { margin-top: 13px; padding-top: 11px; border-top: 1px dashed var(--report-border); color: var(--report-muted); }
+    #blindset-b-report .retrieval-panel table { table-layout: fixed; }
+    #blindset-b-report .retrieval-panel th, #blindset-b-report .retrieval-panel td { min-width: 0; overflow-wrap: anywhere; }
+    #blindset-b-report .retrieval-panel .branch-table th:nth-child(1), #blindset-b-report .retrieval-panel .branch-table td:nth-child(1) { width: 22%; }
+    #blindset-b-report .retrieval-panel .branch-table th:nth-child(2), #blindset-b-report .retrieval-panel .branch-table td:nth-child(2) { width: 39%; }
+    #blindset-b-report .retrieval-panel .branch-table th:nth-child(3), #blindset-b-report .retrieval-panel .branch-table td:nth-child(3) { width: 39%; }
+    #blindset-b-report .bars { display: grid; gap: 12px; margin-top: 16px; }
+    #blindset-b-report .bar-row { display: grid; grid-template-columns: minmax(180px, 1.5fr) minmax(100px, 2fr) 64px; gap: 12px; align-items: center; }
+    #blindset-b-report .bar-row &gt; span { color: var(--report-text); text-align: right; }
+    #blindset-b-report .bar-track { height: 12px; overflow: hidden; background: var(--report-surface-soft); border-radius: 999px; }
+    #blindset-b-report .bar-fill { height: 100%; min-width: 3px; background: linear-gradient(90deg, var(--report-cyan), var(--report-violet)); border-radius: inherit; box-shadow: 0 0 14px color-mix(in srgb, var(--report-cyan) 28%, transparent); }
+    #blindset-b-report .feature-list { display: grid; gap: 6px; margin-top: 14px; }
+    #blindset-b-report .feature-row { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 12px; padding: 10px 12px; background: color-mix(in srgb, var(--report-surface) 88%, transparent); border: 1px solid var(--report-border); border-radius: 8px; }
+    #blindset-b-report .feature-row span:last-child { color: var(--report-muted); text-align: right; }
+    #blindset-b-report .form-label { color: var(--report-muted); }
+    #blindset-b-report .form-control, #blindset-b-report .form-select { color: var(--report-text); background: var(--report-surface); border-color: var(--report-border); }
+    #blindset-b-report .score-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    #blindset-b-report .score { padding: 16px; background: var(--report-surface); border: 1px solid var(--report-border); border-top: 3px solid var(--report-cyan); border-radius: 10px; }
+    #blindset-b-report .score:nth-child(2) { border-top-color: var(--report-violet); }
+    #blindset-b-report .score:nth-child(3) { border-top-color: var(--report-green); }
+    #blindset-b-report .score .text-muted, #blindset-b-report .score .text-small { color: var(--report-muted); }
+    #blindset-b-report .score strong { display: block; margin: 4px 0; color: var(--report-text); font-size: calc(var(--font-size-base) * 1.35); font-weight: 500; }
+    #blindset-b-report .source-list { columns: 2; column-gap: 28px; }
+    #blindset-b-report .source-list li { break-inside: avoid; margin-bottom: 9px; color: var(--report-muted); }
+    #blindset-b-report .text-muted { color: var(--report-muted); }
+    #blindset-b-report .hidden { display: none !important; }
+    @media (max-width: 700px) {
+      #blindset-b-report { padding: 20px; border-radius: 14px; }
+      #blindset-b-report .nav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      #blindset-b-report .metric-grid, #blindset-b-report .score-grid { grid-template-columns: 1fr; }
+      #blindset-b-report .flow, #blindset-b-report .branch-grid { grid-template-columns: 1fr 1fr; }
+      #blindset-b-report .stage-explainer, #blindset-b-report .handoff-grid { grid-template-columns: 1fr; }
+      #blindset-b-report .retrieval-flow { grid-template-columns: 1fr; }
+      #blindset-b-report .hero-title-row { grid-template-columns: 1fr; gap: 10px; }
+      #blindset-b-report .two-col { grid-template-columns: 1fr; }
+      #blindset-b-report .bar-row { grid-template-columns: 1fr 70px; }
+      #blindset-b-report .bar-track { grid-column: 1 / -1; }
+      #blindset-b-report .source-list { columns: 1; }
+    }
+    @media (max-width: 480px) {
+      #blindset-b-report { padding: 16px; }
+      #blindset-b-report .hero-title-copy h1 { font-size: calc(var(--font-size-base) * 1.75); }
+      #blindset-b-report .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #blindset-b-report .flow, #blindset-b-report .branch-grid { grid-template-columns: 1fr; }
+      #blindset-b-report .embedding-sides { grid-template-columns: 1fr; gap: 16px; }
+      #blindset-b-report .beginner-summary { grid-template-columns: 1fr; }
+      #blindset-b-report .walk-row { grid-template-columns: 1fr; }
+      #blindset-b-report .glossary-grid { grid-template-columns: 1fr; }
+      #blindset-b-report .feature-row { grid-template-columns: 1fr; }
+      #blindset-b-report .feature-row span:last-child { text-align: left; }
+      #blindset-b-report th { min-width: 96px; }
+      #blindset-b-report .state-panel .subsection { padding: 15px; }
+      #blindset-b-report .state-panel .schema-table th, #blindset-b-report .state-panel .schema-table td { padding: 9px 7px; }
+      #blindset-b-report .state-panel .schema-table th:nth-child(1), #blindset-b-report .state-panel .schema-table td:nth-child(1) { width: 31%; }
+      #blindset-b-report .state-panel .schema-table th:nth-child(2), #blindset-b-report .state-panel .schema-table td:nth-child(2) { width: 24%; }
+      #blindset-b-report .state-panel .schema-table th:nth-child(3), #blindset-b-report .state-panel .schema-table td:nth-child(3) { width: 45%; }
+      #blindset-b-report .retrieval-panel .branch-table th, #blindset-b-report .retrieval-panel .branch-table td { padding: 9px 6px; }
+    }
+  &lt;/style&gt;
+
+  &lt;section class=&quot;hero&quot; aria-label=&quot;Blindset B approach summary&quot;&gt;
+    &lt;div class=&quot;eyebrow text-small&quot;&gt;Technical implementation report · Blindset B&lt;/div&gt;
+    &lt;div class=&quot;hero-title-row&quot;&gt;
+      &lt;div class=&quot;hero-title-copy&quot;&gt;
+        &lt;h1&gt;How Blindset B Turns a Conversation into Music Recommendations&lt;/h1&gt;
+        &lt;p class=&quot;hero-subtitle&quot;&gt;Query understanding · multimodal retrieval · learned ranking · response generation&lt;/p&gt;
+      &lt;/div&gt;
+      &lt;span class=&quot;viz-badge&quot;&gt;submission 819863&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;p class=&quot;lede&quot;&gt;The shipped Blind-B path converts the latest conversation into a structured state, searches a 47,071-track multimodal LanceDB catalog, reranks a 500-track union with the goal-free LightGBM bundle, returns 20 tracks, and asks Qwen3-30B to explain only rank 1.&lt;/p&gt;
+    &lt;div class=&quot;reading-path text-small&quot;&gt;&lt;span&gt;&lt;i data-lucide=&quot;route&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;b&gt;Start:&lt;/b&gt; Pipeline&lt;/span&gt;&lt;span&gt;&lt;i data-lucide=&quot;scan-search&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;b&gt;Inspect:&lt;/b&gt; Retrieval + Ranking&lt;/span&gt;&lt;span&gt;&lt;i data-lucide=&quot;hammer&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;b&gt;Build:&lt;/b&gt; Reimplement&lt;/span&gt;&lt;/div&gt;
+    &lt;div class=&quot;metric-grid&quot;&gt;
+      &lt;div class=&quot;card viz-stat&quot;&gt;&lt;span class=&quot;text-muted&quot;&gt;Blind-B sessions&lt;/span&gt;&lt;span class=&quot;viz-stat-value&quot;&gt;80&lt;/span&gt;&lt;span class=&quot;text-small&quot;&gt;final turn only&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;card viz-stat&quot;&gt;&lt;span class=&quot;text-muted&quot;&gt;Catalog&lt;/span&gt;&lt;span class=&quot;viz-stat-value&quot;&gt;47,071&lt;/span&gt;&lt;span class=&quot;text-small&quot;&gt;LanceDB rows&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;card viz-stat&quot;&gt;&lt;span class=&quot;text-muted&quot;&gt;CodaBench composite&lt;/span&gt;&lt;span class=&quot;viz-stat-value&quot;&gt;0.38&lt;/span&gt;&lt;span class=&quot;text-small&quot;&gt;submission 819863&lt;/span&gt;&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;nav class=&quot;nav&quot; aria-label=&quot;Report sections&quot;&gt;
+    &lt;button class=&quot;btn btn-primary&quot; type=&quot;button&quot; data-panel=&quot;overview&quot; aria-pressed=&quot;true&quot;&gt;&lt;i data-lucide=&quot;route&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Pipeline&lt;/button&gt;
+    &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-panel=&quot;state&quot; aria-pressed=&quot;false&quot;&gt;&lt;i data-lucide=&quot;brain-circuit&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Query state&lt;/button&gt;
+    &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-panel=&quot;retrieval&quot; aria-pressed=&quot;false&quot;&gt;&lt;i data-lucide=&quot;database&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Retrieval&lt;/button&gt;
+    &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-panel=&quot;ranking&quot; aria-pressed=&quot;false&quot;&gt;&lt;i data-lucide=&quot;list-ordered&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Ranking&lt;/button&gt;
+    &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-panel=&quot;response&quot; aria-pressed=&quot;false&quot;&gt;&lt;i data-lucide=&quot;message-square-text&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Response&lt;/button&gt;
+    &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-panel=&quot;judge&quot; aria-pressed=&quot;false&quot;&gt;&lt;i data-lucide=&quot;scale&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Judge&lt;/button&gt;
+    &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-panel=&quot;reimplement&quot; aria-pressed=&quot;false&quot;&gt;&lt;i data-lucide=&quot;wrench&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Reimplement&lt;/button&gt;
+  &lt;/nav&gt;
+
+  &lt;section class=&quot;panel is-active&quot; data-panel-content=&quot;overview&quot;&gt;
+    &lt;div class=&quot;section-head&quot;&gt;&lt;div&gt;&lt;h2&gt;Runtime pipeline&lt;/h2&gt;&lt;p&gt;Follow one conversation from the listener&#x27;s words to the 20 submitted tracks and the message shown back to the listener.&lt;/p&gt;&lt;/div&gt;&lt;span class=&quot;viz-badge&quot;&gt;config: state_ranker_v10_lgbm_blindset_B&lt;/span&gt;&lt;/div&gt;
+    &lt;div class=&quot;beginner-summary&quot;&gt;
+      &lt;i data-lucide=&quot;lightbulb&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;
+      &lt;p&gt;&lt;strong&gt;The pipeline has two jobs.&lt;/strong&gt; First, decide which tracks best answer the latest request. Second, explain the highest-ranked track naturally. The system does not ask one LLM to do everything: query understanding, retrieval, ranking, and writing are separate stages with inspectable handoffs.&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;flow&quot; role=&quot;group&quot; aria-label=&quot;Pipeline stages&quot;&gt;
+      &lt;button class=&quot;btn btn-primary&quot; type=&quot;button&quot; data-stage=&quot;state&quot; aria-pressed=&quot;true&quot;&gt;&lt;small&gt;01 · understand&lt;/small&gt;ConversationState V1&lt;/button&gt;
+      &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-stage=&quot;retrieve&quot; aria-pressed=&quot;false&quot;&gt;&lt;small&gt;02 · recall&lt;/small&gt;11 retrieval branches&lt;/button&gt;
+      &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-stage=&quot;rank&quot; aria-pressed=&quot;false&quot;&gt;&lt;small&gt;03 · order&lt;/small&gt;LightGBM LambdaMART&lt;/button&gt;
+      &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-stage=&quot;respond&quot; aria-pressed=&quot;false&quot;&gt;&lt;small&gt;04 · speak&lt;/small&gt;Qwen3-30B top-1&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;detail&quot; id=&quot;stage-detail&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
+    &lt;div class=&quot;subsection&quot;&gt;
+      &lt;h3&gt;What moves through the system&lt;/h3&gt;
+      &lt;div class=&quot;handoff-grid&quot;&gt;
+        &lt;div class=&quot;handoff&quot;&gt;
+          &lt;span class=&quot;step-label text-small&quot;&gt;&lt;i data-lucide=&quot;messages-square&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Raw input&lt;/span&gt;
+          &lt;h3&gt;Conversation + history&lt;/h3&gt;
+          &lt;p&gt;The full multi-turn dialogue, IDs of tracks already played, listener metadata, and the latest request.&lt;/p&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;handoff&quot;&gt;
+          &lt;span class=&quot;step-label text-small&quot;&gt;&lt;i data-lucide=&quot;boxes&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Working representation&lt;/span&gt;
+          &lt;h3&gt;State + candidate evidence&lt;/h3&gt;
+          &lt;p&gt;Structured intent, constraints, entities, feedback, branch queries, candidate ranks, scores, and catalog metadata.&lt;/p&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;handoff&quot;&gt;
+          &lt;span class=&quot;step-label text-small&quot;&gt;&lt;i data-lucide=&quot;package-check&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Final output&lt;/span&gt;
+          &lt;h3&gt;20 tracks + one reply&lt;/h3&gt;
+          &lt;p&gt;An ordered list of 20 unique track IDs and a short response explaining only the track ranked first.&lt;/p&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;subsection&quot;&gt;
+      &lt;h3&gt;One Blind-B turn, end to end&lt;/h3&gt;
+      &lt;div class=&quot;walkthrough&quot;&gt;
+        &lt;div class=&quot;walk-row&quot;&gt;&lt;div class=&quot;walk-label&quot;&gt;&lt;i data-lucide=&quot;message-circle&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Listener says&lt;/div&gt;&lt;p&gt;“I need new underground hip-hop artists from the late &#x27;90s/early 2000s with sharp lyrics and sample-based production. No more Del.”&lt;/p&gt;&lt;/div&gt;
+        &lt;div class=&quot;walk-row&quot;&gt;&lt;div class=&quot;walk-label&quot;&gt;&lt;i data-lucide=&quot;brain-circuit&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;State extracts&lt;/div&gt;&lt;p&gt;&lt;code&gt;request_type=new_artist&lt;/code&gt;; target facets for underground hip-hop, sharp lyricism, sample-based production, and era; hard artist exclusions for Deltron 3030 and Del The Funky Homosapien.&lt;/p&gt;&lt;/div&gt;
+        &lt;div class=&quot;walk-row&quot;&gt;&lt;div class=&quot;walk-label&quot;&gt;&lt;i data-lucide=&quot;search&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Retrieval recalls&lt;/div&gt;&lt;p&gt;BM25 searches names and tags; dense branches search lyrics, metadata, attributes, and sonic meaning; era popularity and artist lookups add specialized candidates. The combined union is capped at 500 tracks for ranking.&lt;/p&gt;&lt;/div&gt;
+        &lt;div class=&quot;walk-row&quot;&gt;&lt;div class=&quot;walk-label&quot;&gt;&lt;i data-lucide=&quot;list-ordered&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Ranker orders&lt;/div&gt;&lt;p&gt;LambdaMART compares 146 features per candidate—semantic fit, branch evidence, popularity, history, same-artist behavior, and constraint signals—then the final artist guard protects the submitted top 20.&lt;/p&gt;&lt;/div&gt;
+        &lt;div class=&quot;walk-row&quot;&gt;&lt;div class=&quot;walk-label&quot;&gt;&lt;i data-lucide=&quot;disc-3&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Top result&lt;/div&gt;&lt;p&gt;&lt;strong&gt;Dead Prez — “Hip Hop”&lt;/strong&gt; becomes rank 1. The output list still contains 19 alternatives because the challenge evaluates the full ordered top 20.&lt;/p&gt;&lt;/div&gt;
+        &lt;div class=&quot;walk-row&quot;&gt;&lt;div class=&quot;walk-label&quot;&gt;&lt;i data-lucide=&quot;message-square-text&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Response writes&lt;/div&gt;&lt;p&gt;Qwen3-30B receives the latest state and metadata for Dead Prez only, then writes a concise explanation of why that selected track fits.&lt;/p&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;two-col&quot;&gt;
+      &lt;div class=&quot;subsection&quot;&gt;
+        &lt;h3&gt;Why separate retrieval and ranking?&lt;/h3&gt;
+        &lt;p&gt;&lt;strong&gt;Retrieval optimizes recall:&lt;/strong&gt; find a broad set that probably contains good answers. &lt;strong&gt;Ranking optimizes order:&lt;/strong&gt; use richer evidence to move the best candidates to the top. A track cannot be rescued by the ranker if retrieval never found it.&lt;/p&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;subsection&quot;&gt;
+        &lt;h3&gt;What is learned vs deterministic?&lt;/h3&gt;
+        &lt;p&gt;The state is produced by an LLM, the candidate order is learned by LightGBM, and the final prose is produced by an LLM. Schema validation, state projection, entity resolution, branch construction, fusion, hard exclusions, and output validation are deterministic code.&lt;/p&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;subsection&quot;&gt;
+      &lt;h3&gt;First-time reader glossary&lt;/h3&gt;
+      &lt;div class=&quot;glossary-grid&quot;&gt;
+        &lt;div class=&quot;glossary-item&quot;&gt;&lt;strong&gt;Conversation state&lt;/strong&gt;&lt;span&gt;A compact, structured description of what the listener wants next—not a generic summary of the whole chat.&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;glossary-item&quot;&gt;&lt;strong&gt;Retrieval branch&lt;/strong&gt;&lt;span&gt;One search strategy, such as BM25 text matching, lyric-vector search, sonic similarity, or era popularity.&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;glossary-item&quot;&gt;&lt;strong&gt;Candidate union&lt;/strong&gt;&lt;span&gt;The deduplicated pool of tracks found across all branches before the learned ranker decides their final order.&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;glossary-item&quot;&gt;&lt;strong&gt;Reranker&lt;/strong&gt;&lt;span&gt;A model that compares candidates using more context than any single retrieval branch has available.&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;glossary-item&quot;&gt;&lt;strong&gt;Top-1 explanation&lt;/strong&gt;&lt;span&gt;The natural-language message explains the first submitted track only; it is not a summary of the full top 20.&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;glossary-item&quot;&gt;&lt;strong&gt;Trace&lt;/strong&gt;&lt;span&gt;A saved record of state, branch queries, candidates, scores, and ranking stages used to debug why a track moved or disappeared.&lt;/span&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;subsection&quot;&gt;
+      &lt;h3&gt;What was actually submitted&lt;/h3&gt;
+      &lt;table&gt;
+        &lt;tbody&gt;
+          &lt;tr&gt;&lt;th&gt;Dataset&lt;/th&gt;&lt;td&gt;&lt;code&gt;talkpl-ai/TalkPlayData-Challenge-Blind-B&lt;/code&gt;; 80 final-turn rows&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Track output&lt;/th&gt;&lt;td&gt;Exactly 20 unique track IDs per row&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Response output&lt;/th&gt;&lt;td&gt;80/80 non-empty; 150–450 characters, median 277&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Ranker&lt;/th&gt;&lt;td&gt;&lt;code&gt;models/reranker_v12_goalfree&lt;/code&gt;; the trace label remains &lt;code&gt;lgbm_v10&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Guard&lt;/th&gt;&lt;td&gt;Final same-turn artist veto enabled for the top 20 when structured state explicitly says “different/new artist” or “no more X”&lt;/td&gt;&lt;/tr&gt;
+        &lt;/tbody&gt;
+      &lt;/table&gt;
+    &lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;section class=&quot;panel state-panel&quot; data-panel-content=&quot;state&quot;&gt;
+    &lt;div class=&quot;section-head&quot;&gt;&lt;div&gt;&lt;h2&gt;Conversation-state extraction&lt;/h2&gt;&lt;p&gt;DeepSeek V4 Flash writes the seven-field V1 contract. A deterministic bridge derives compiler-facing compatibility fields such as &lt;code&gt;turn_intent&lt;/code&gt;, entities, target-artist mode, retrieval profile, and rejections.&lt;/p&gt;&lt;/div&gt;&lt;span class=&quot;viz-badge&quot;&gt;temperature 0 · max 8,000&lt;/span&gt;&lt;/div&gt;
+    &lt;div class=&quot;callout&quot;&gt;&lt;p&gt;&lt;strong&gt;Prompt wording note.&lt;/strong&gt; The production &lt;code&gt;prompt_version: v1&lt;/code&gt; maps to &lt;code&gt;prompts/current.py&lt;/code&gt; and sends 24 few-shot examples. The prompt view below intentionally omits those examples, as requested; it is not claiming the live extractor was zero-shot.&lt;/p&gt;&lt;/div&gt;
+    &lt;div class=&quot;two-col&quot;&gt;
+      &lt;div class=&quot;stack&quot;&gt;
+        &lt;div class=&quot;subsection&quot;&gt;
+          &lt;h3&gt;&lt;span class=&quot;state-step&quot;&gt;01&lt;/span&gt;System prompt, examples omitted&lt;/h3&gt;
+          &lt;details open&gt;&lt;summary&gt;Core production instructions&lt;/summary&gt;&lt;pre&gt;&lt;code&gt;You extract a structured ConversationState v1 from a multi-turn music recommendation conversation.
+
+Output ONE JSON object that validates against the provided schema. No prose, no markdown fences.
+
+Rendered input
+1. played_track_ids lists the track ids behind music markers. Echo only these ids in track_feedback.track_id and referenced_track_ids.
+2. Music turns look like [turn N] music: #M (Artist - Track).
+3. Extract state for the NEXT recommendation at the latest user turn. Do not use any later music/assistant turn as evidence.
+
+Main task
+- current_request: what the latest user literally asked for.
+- facts: artist/album/track/attribute facts with role, anchor_use, source turn, and bounded evidence.
+- exclusions: explicit next-turn exclusions.
+- temporal_constraint: literal dates may filter; style eras should not.
+- lyrical_theme: only when lyrics/meaning/message/story is the requested retrieval signal.
+
+Do not emit compatibility fields. The deterministic bridge derives them.
+The state is for the NEXT recommendation, not a transcript summary.
+Preserve retriever-ready phrases, explicit evidence, current-turn exclusions, feedback, and ambiguity.
+Use only played track IDs provided in the rendered input.&lt;/code&gt;&lt;/pre&gt;&lt;/details&gt;
+          &lt;p class=&quot;text-small text-muted&quot;&gt;The complete system string is 24,576 characters. The source includes detailed decision rules for request types, fact roles, retrieval-anchor use, exclusion scope, temporal semantics, track feedback, references, and evidence spans.&lt;/p&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;subsection&quot;&gt;
+          &lt;h3&gt;&lt;span class=&quot;state-step&quot;&gt;02&lt;/span&gt;LLM-facing schema&lt;/h3&gt;
+          &lt;table class=&quot;schema-table&quot;&gt;
+            &lt;thead&gt;&lt;tr&gt;&lt;th&gt;Field&lt;/th&gt;&lt;th&gt;Shape&lt;/th&gt;&lt;th&gt;Purpose&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+            &lt;tbody&gt;
+              &lt;tr&gt;&lt;td&gt;&lt;code&gt;current_request&lt;/code&gt;&lt;/td&gt;&lt;td&gt;object | null&lt;/td&gt;&lt;td&gt;Primary request type, summary, source turn, evidence, alternate candidate readings&lt;/td&gt;&lt;/tr&gt;
+              &lt;tr&gt;&lt;td&gt;&lt;code&gt;facts&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Fact[]&lt;/td&gt;&lt;td&gt;Artist, album, track, and attribute evidence with role, relation, anchor/reuse policy&lt;/td&gt;&lt;/tr&gt;
+              &lt;tr&gt;&lt;td&gt;&lt;code&gt;exclusions&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Exclusion[]&lt;/td&gt;&lt;td&gt;Explicit next-turn hard or soft exclusions&lt;/td&gt;&lt;/tr&gt;
+              &lt;tr&gt;&lt;td&gt;&lt;code&gt;track_feedback&lt;/code&gt;&lt;/td&gt;&lt;td&gt;TrackFeedback[]&lt;/td&gt;&lt;td&gt;Sentiment and role for IDs that actually appeared in music turns&lt;/td&gt;&lt;/tr&gt;
+              &lt;tr&gt;&lt;td&gt;&lt;code&gt;referenced_track_ids&lt;/code&gt;&lt;/td&gt;&lt;td&gt;string[]&lt;/td&gt;&lt;td&gt;Pronoun or positional references to played tracks&lt;/td&gt;&lt;/tr&gt;
+              &lt;tr&gt;&lt;td&gt;&lt;code&gt;temporal_constraint&lt;/code&gt;&lt;/td&gt;&lt;td&gt;object | null&lt;/td&gt;&lt;td&gt;Literal release dates vs soft style-era range&lt;/td&gt;&lt;/tr&gt;
+              &lt;tr&gt;&lt;td&gt;&lt;code&gt;lyrical_theme&lt;/code&gt;&lt;/td&gt;&lt;td&gt;string | null&lt;/td&gt;&lt;td&gt;Dedicated lyrics/meaning/story retrieval query&lt;/td&gt;&lt;/tr&gt;
+            &lt;/tbody&gt;
+          &lt;/table&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;stack&quot;&gt;
+        &lt;div class=&quot;subsection&quot;&gt;
+          &lt;h3&gt;&lt;span class=&quot;state-step&quot;&gt;03&lt;/span&gt;Blind-B sample&lt;/h3&gt;
+          &lt;p class=&quot;text-small text-muted&quot;&gt;Final turn asks for different late-90s/early-2000s underground hip-hop artists and explicitly rejects Deltron and Del.&lt;/p&gt;
+          &lt;pre&gt;&lt;code&gt;{
+  &quot;current_request&quot;: {
+    &quot;request_type&quot;: &quot;new_artist&quot;,
+    &quot;summary&quot;: &quot;New established underground hip-hop artists from the late 90s/early 2000s with sharp lyricism and intricate sample-based production; no more Deltron 3030 or Del The Funky Homosapien.&quot;,
+    &quot;source_turn&quot;: 5,
+    &quot;evidence_text&quot;: &quot;break away from Deltron and Del completely&quot;
+  },
+  &quot;facts&quot;: [
+    {&quot;type&quot;:&quot;artist&quot;,&quot;value&quot;:&quot;Deltron 3030&quot;,&quot;role&quot;:&quot;rejected&quot;,&quot;anchor_use&quot;:&quot;do_not_use&quot;,&quot;reuse&quot;:&quot;must_exclude&quot;},
+    {&quot;type&quot;:&quot;artist&quot;,&quot;value&quot;:&quot;Del The Funky Homosapien&quot;,&quot;role&quot;:&quot;rejected&quot;,&quot;anchor_use&quot;:&quot;do_not_use&quot;,&quot;reuse&quot;:&quot;must_exclude&quot;},
+    {&quot;type&quot;:&quot;attribute&quot;,&quot;facet&quot;:&quot;genre&quot;,&quot;value&quot;:&quot;underground hip-hop&quot;,&quot;role&quot;:&quot;current_target&quot;},
+    {&quot;type&quot;:&quot;attribute&quot;,&quot;facet&quot;:&quot;lyrical_theme&quot;,&quot;value&quot;:&quot;sharp lyricism&quot;,&quot;role&quot;:&quot;current_target&quot;},
+    {&quot;type&quot;:&quot;attribute&quot;,&quot;facet&quot;:&quot;sonic&quot;,&quot;value&quot;:&quot;intricate sample-based production&quot;,&quot;role&quot;:&quot;current_target&quot;},
+    {&quot;type&quot;:&quot;attribute&quot;,&quot;facet&quot;:&quot;era&quot;,&quot;value&quot;:&quot;late 90s/early 2000s&quot;,&quot;role&quot;:&quot;current_target&quot;}
+  ],
+  &quot;exclusions&quot;: [
+    {&quot;type&quot;:&quot;artist&quot;,&quot;value&quot;:&quot;Deltron 3030&quot;,&quot;scope&quot;:&quot;next_turn_hard&quot;},
+    {&quot;type&quot;:&quot;artist&quot;,&quot;value&quot;:&quot;Del The Funky Homosapien&quot;,&quot;scope&quot;:&quot;next_turn_hard&quot;}
+  ],
+  &quot;temporal_constraint&quot;: {
+    &quot;kind&quot;:&quot;style_era&quot;,&quot;start_year&quot;:1997,&quot;end_year&quot;:2003,
+    &quot;strength&quot;:&quot;soft&quot;,&quot;apply_as_filter&quot;:false
+  },
+  &quot;lyrical_theme&quot;: &quot;sharp lyricism&quot;
+}&lt;/code&gt;&lt;/pre&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;subsection&quot;&gt;
+          &lt;h3&gt;&lt;span class=&quot;state-step&quot;&gt;04&lt;/span&gt;Bridge output used downstream&lt;/h3&gt;
+          &lt;table&gt;&lt;tbody&gt;
+            &lt;tr&gt;&lt;th&gt;&lt;code&gt;turn_intent&lt;/code&gt;&lt;/th&gt;&lt;td&gt;Copy of the current request summary&lt;/td&gt;&lt;/tr&gt;
+            &lt;tr&gt;&lt;th&gt;&lt;code&gt;entities&lt;/code&gt;&lt;/th&gt;&lt;td&gt;Compiler-ready artist/tag roles and seed flags&lt;/td&gt;&lt;/tr&gt;
+            &lt;tr&gt;&lt;th&gt;&lt;code&gt;target_artist_mode&lt;/code&gt;&lt;/th&gt;&lt;td&gt;&lt;code&gt;new_artist&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;
+            &lt;tr&gt;&lt;th&gt;&lt;code&gt;retrieval_profile&lt;/code&gt;&lt;/th&gt;&lt;td&gt;&lt;code&gt;novelty&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;
+            &lt;tr&gt;&lt;th&gt;&lt;code&gt;rejections&lt;/code&gt;&lt;/th&gt;&lt;td&gt;Hard artist exclusions for Deltron 3030 and Del&lt;/td&gt;&lt;/tr&gt;
+          &lt;/tbody&gt;&lt;/table&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;section class=&quot;panel retrieval-panel&quot; data-panel-content=&quot;retrieval&quot;&gt;
+    &lt;div class=&quot;section-head&quot;&gt;&lt;div&gt;&lt;h2&gt;Retrieval over LanceDB&lt;/h2&gt;&lt;p&gt;State fields become structured BM25 clauses, dense text-to-track queries, anchor centroids, and catalog lookups. Each active branch retrieves up to 1,000; the compiler fuses and hands a 500-track pool to the ranker.&lt;/p&gt;&lt;/div&gt;&lt;span class=&quot;viz-badge&quot;&gt;47,071 tracks · cosine · RRF k=60&lt;/span&gt;&lt;/div&gt;
+    &lt;div class=&quot;beginner-summary&quot;&gt;
+      &lt;i data-lucide=&quot;scan-search&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;
+      &lt;p&gt;&lt;strong&gt;An embedding is a numeric fingerprint.&lt;/strong&gt; The catalog was fingerprinted offline, once per track. At request time, Blind-B creates a compatible fingerprint from the listener&#x27;s words—or reuses track/user vectors—and asks LanceDB for the closest catalog vectors. “Compatible” matters: each query must use the same model and modality as its target column.&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;retrieval-flow&quot; aria-label=&quot;Dense retrieval lifecycle&quot;&gt;
+      &lt;div class=&quot;retrieval-step&quot;&gt;&lt;span class=&quot;text-small&quot;&gt;01 · offline&lt;/span&gt;&lt;strong&gt;Generate catalog vectors&lt;/strong&gt;&lt;p&gt;Text, audio, cover art, and collaborative data are encoded and stored as fixed-size float32 columns.&lt;/p&gt;&lt;/div&gt;
+      &lt;div class=&quot;retrieval-step&quot;&gt;&lt;span class=&quot;text-small&quot;&gt;02 · per request&lt;/span&gt;&lt;strong&gt;Build matching query vectors&lt;/strong&gt;&lt;p&gt;Compiled state text is encoded by the paired model; anchor/user branches reuse or average existing vectors.&lt;/p&gt;&lt;/div&gt;
+      &lt;div class=&quot;retrieval-step&quot;&gt;&lt;span class=&quot;text-small&quot;&gt;03 · nearest neighbors&lt;/span&gt;&lt;strong&gt;Search, guard, and fuse&lt;/strong&gt;&lt;p&gt;LanceDB scores cosine similarity, excludes unavailable vectors with &lt;code&gt;has_*&lt;/code&gt;, and RRF combines branch ranks.&lt;/p&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;two-col&quot;&gt;
+      &lt;div&gt;
+        &lt;h3&gt;Columns actively used&lt;/h3&gt;
+        &lt;table&gt;
+          &lt;thead&gt;&lt;tr&gt;&lt;th&gt;Role&lt;/th&gt;&lt;th&gt;LanceDB columns&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+          &lt;tbody&gt;
+            &lt;tr&gt;&lt;td&gt;Identity / metadata&lt;/td&gt;&lt;td&gt;&lt;code&gt;track_id&lt;/code&gt;, &lt;code&gt;track_name&lt;/code&gt;, &lt;code&gt;artist_name&lt;/code&gt;, &lt;code&gt;album_name&lt;/code&gt;, &lt;code&gt;tag_list&lt;/code&gt;, IDs, popularity, release date, duration&lt;/td&gt;&lt;/tr&gt;
+            &lt;tr&gt;&lt;td&gt;Fielded FTS&lt;/td&gt;&lt;td&gt;&lt;code&gt;track_name_text&lt;/code&gt;, &lt;code&gt;artist_name_text&lt;/code&gt;, &lt;code&gt;album_name_text&lt;/code&gt;, &lt;code&gt;tag_list_text&lt;/code&gt;, &lt;code&gt;release_year_text&lt;/code&gt;, &lt;code&gt;release_decade_text&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;
+            &lt;tr&gt;&lt;td&gt;Dense query vectors&lt;/td&gt;&lt;td&gt;&lt;code&gt;lyrics_qwen3_embedding_0_6b&lt;/code&gt;, &lt;code&gt;metadata_qwen3_embedding_8b&lt;/code&gt;, &lt;code&gt;attributes_qwen3_embedding_8b&lt;/code&gt;, &lt;code&gt;audio_laion_clap&lt;/code&gt;, &lt;code&gt;image_siglip2&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;
+            &lt;tr&gt;&lt;td&gt;Anchor / user centroids&lt;/td&gt;&lt;td&gt;&lt;code&gt;audio_laion_clap&lt;/code&gt;, &lt;code&gt;image_siglip2&lt;/code&gt;, &lt;code&gt;cf_bpr&lt;/code&gt;&lt;/td&gt;&lt;/tr&gt;
+            &lt;tr&gt;&lt;td&gt;Availability guards&lt;/td&gt;&lt;td&gt;&lt;code&gt;has_*&lt;/code&gt; boolean for every optional embedding column&lt;/td&gt;&lt;/tr&gt;
+          &lt;/tbody&gt;
+        &lt;/table&gt;
+      &lt;/div&gt;
+      &lt;div&gt;
+        &lt;h3&gt;How vectors are stored&lt;/h3&gt;
+        &lt;table&gt;&lt;tbody&gt;
+          &lt;tr&gt;&lt;th&gt;Type&lt;/th&gt;&lt;td&gt;Fixed-size &lt;code&gt;float32[dimension]&lt;/code&gt;; vector dimensions are pinned in the LanceDB schema.&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Missing values&lt;/th&gt;&lt;td&gt;Zero-filled for schema consistency, paired with a false &lt;code&gt;has_*&lt;/code&gt; flag so the row is not treated as a real match.&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Distance&lt;/th&gt;&lt;td&gt;Cosine similarity for every active vector branch. Raw catalog vectors can remain unnormalized because cosine normalizes magnitude during comparison.&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Sources&lt;/th&gt;&lt;td&gt;Base vectors came from the TalkPlay embeddings dataset; generated Qwen 8B fields were merged into the same table during indexing.&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Query cache&lt;/th&gt;&lt;td&gt;Qwen, CLAP, and SigLIP2 query embeddings are disk-cached so repeated text does not invoke the encoder again.&lt;/td&gt;&lt;/tr&gt;
+        &lt;/tbody&gt;&lt;/table&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;subsection&quot;&gt;
+      &lt;h3&gt;Embeddings actually used by Blind-B&lt;/h3&gt;
+      &lt;div class=&quot;embedding-list&quot;&gt;
+        &lt;article class=&quot;embedding-family&quot;&gt;
+          &lt;div class=&quot;embedding-head&quot;&gt;&lt;h3&gt;Lyrics semantics — Qwen3-Embedding-0.6B&lt;/h3&gt;&lt;span class=&quot;viz-badge&quot;&gt;1,024d · text ↔ text&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;embedding-sides&quot;&gt;
+            &lt;div class=&quot;embedding-side&quot;&gt;&lt;strong&gt;&lt;i data-lucide=&quot;hard-drive&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Catalog side · generated offline&lt;/strong&gt;&lt;p&gt;Model &lt;code&gt;Qwen/Qwen3-Embedding-0.6B&lt;/code&gt; encoded one document per non-empty lyric field using last-token pooling and left padding for batches.&lt;/p&gt;&lt;div class=&quot;template-line&quot;&gt;&lt;code&gt;music lyrics :{lyrics}&lt;/code&gt;&lt;/div&gt;&lt;ul&gt;&lt;li&gt;No retrieval instruction prefix was added.&lt;/li&gt;&lt;li&gt;Vectors were saved as raw float32 values in &lt;code&gt;lyrics_qwen3_embedding_0_6b&lt;/code&gt;.&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;
+            &lt;div class=&quot;embedding-side&quot;&gt;&lt;strong&gt;&lt;i data-lucide=&quot;message-square&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Query side · generated per request&lt;/strong&gt;&lt;p&gt;The compiler takes &lt;code&gt;lyrical_theme&lt;/code&gt; from conversation state and sends the plain text to the matching 0.6B model through LiteLLM/DeepInfra.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Float output, batch size 32, with disk caching.&lt;/li&gt;&lt;li&gt;The local client L2-normalizes the query; cosine scoring remains compatible with raw catalog vectors.&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/article&gt;
+        &lt;article class=&quot;embedding-family&quot;&gt;
+          &lt;div class=&quot;embedding-head&quot;&gt;&lt;h3&gt;Metadata semantics — Qwen3-Embedding-8B&lt;/h3&gt;&lt;span class=&quot;viz-badge&quot;&gt;4,096d · text ↔ text&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;embedding-sides&quot;&gt;
+            &lt;div class=&quot;embedding-side&quot;&gt;&lt;strong&gt;&lt;i data-lucide=&quot;hard-drive&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Catalog side · generated during index build&lt;/strong&gt;&lt;p&gt;Model &lt;code&gt;openai/Qwen/Qwen3-Embedding-8B&lt;/code&gt; encoded a compact identity document for every track through the self-hosted vLLM endpoint &lt;code&gt;qwen3-embedding-8b&lt;/code&gt;.&lt;/p&gt;&lt;div class=&quot;template-line&quot;&gt;&lt;code&gt;music track, title:{track_name}, artist:{artist1, ...}, album:{album1, ...}&lt;/code&gt;&lt;/div&gt;&lt;ul&gt;&lt;li&gt;LiteLLM&#x27;s file cache was checked first; cache misses were sent to vLLM.&lt;/li&gt;&lt;li&gt;Results were merged into &lt;code&gt;metadata_qwen3_embedding_8b&lt;/code&gt;.&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;
+            &lt;div class=&quot;embedding-side&quot;&gt;&lt;strong&gt;&lt;i data-lucide=&quot;message-square&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Query side · generated per request&lt;/strong&gt;&lt;p&gt;The compiler assembles a metadata-oriented query from resolved artists, titles, genres, styles, and related state evidence, then calls the same 8B vLLM endpoint.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Float output, batch size 32, with disk caching.&lt;/li&gt;&lt;li&gt;Cosine ANN retrieves semantically similar track identity documents.&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/article&gt;
+        &lt;article class=&quot;embedding-family&quot;&gt;
+          &lt;div class=&quot;embedding-head&quot;&gt;&lt;h3&gt;Music attributes — Qwen3-Embedding-8B&lt;/h3&gt;&lt;span class=&quot;viz-badge&quot;&gt;4,096d · text ↔ text&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;embedding-sides&quot;&gt;
+            &lt;div class=&quot;embedding-side&quot;&gt;&lt;strong&gt;&lt;i data-lucide=&quot;hard-drive&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Catalog side · generated during index build&lt;/strong&gt;&lt;p&gt;The same 8B model encoded a separate attribute document so production and musical descriptors are searchable independently of names.&lt;/p&gt;&lt;div class=&quot;template-line&quot;&gt;&lt;code&gt;music attributes, tags :{tags}, tempo :{tempo}, key :{key}, chord :{chord}&lt;/code&gt;&lt;/div&gt;&lt;ul&gt;&lt;li&gt;Generated by the same cached LiteLLM → self-hosted vLLM path.&lt;/li&gt;&lt;li&gt;Stored in &lt;code&gt;attributes_qwen3_embedding_8b&lt;/code&gt;.&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;
+            &lt;div class=&quot;embedding-side&quot;&gt;&lt;strong&gt;&lt;i data-lucide=&quot;message-square&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Query side · generated per request&lt;/strong&gt;&lt;p&gt;The compiled attribute query combines mood, instruments, energy, era, performer cues, and other resolved facets, then uses the matching 8B encoder.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Kept separate from metadata to preserve attribute-focused recall.&lt;/li&gt;&lt;li&gt;Cosine ANN returns the closest catalog attribute descriptions.&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/article&gt;
+        &lt;article class=&quot;embedding-family&quot;&gt;
+          &lt;div class=&quot;embedding-head&quot;&gt;&lt;h3&gt;Sonic similarity — LAION CLAP&lt;/h3&gt;&lt;span class=&quot;viz-badge&quot;&gt;512d · text ↔ audio&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;embedding-sides&quot;&gt;
+            &lt;div class=&quot;embedding-side&quot;&gt;&lt;strong&gt;&lt;i data-lucide=&quot;audio-waveform&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Catalog side · generated from audio&lt;/strong&gt;&lt;p&gt;Audio files were encoded with LAION CLAP using &lt;code&gt;HTSAT-base&lt;/code&gt;, RoBERTa text tower, and checkpoint &lt;code&gt;music_audioset_epoch_15_esc_90.14.pt&lt;/code&gt;.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;code&gt;get_audio_embedding_from_filelist&lt;/code&gt; produced raw 512-value float vectors.&lt;/li&gt;&lt;li&gt;Stored in &lt;code&gt;audio_laion_clap&lt;/code&gt;.&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;
+            &lt;div class=&quot;embedding-side&quot;&gt;&lt;strong&gt;&lt;i data-lucide=&quot;message-square&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Query side · generated from text&lt;/strong&gt;&lt;p&gt;The state compiler writes a natural-language sonic description (&lt;code&gt;sonic_nl&lt;/code&gt;), and the same CLAP checkpoint&#x27;s text tower encodes it.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;The Modal T4 service runs &lt;code&gt;get_text_embedding&lt;/code&gt;; results use a checkpoint-specific disk-cache namespace.&lt;/li&gt;&lt;li&gt;No manual normalization is required because LanceDB uses cosine.&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;embedding-note&quot;&gt;The same catalog column also supports an anchor-centroid branch: average the CLAP vectors of accepted or referenced tracks, then search for nearby audio.&lt;/div&gt;
+        &lt;/article&gt;
+        &lt;article class=&quot;embedding-family&quot;&gt;
+          &lt;div class=&quot;embedding-head&quot;&gt;&lt;h3&gt;Cover-art similarity — SigLIP2&lt;/h3&gt;&lt;span class=&quot;viz-badge&quot;&gt;768d · text ↔ image · gated&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;embedding-sides&quot;&gt;
+            &lt;div class=&quot;embedding-side&quot;&gt;&lt;strong&gt;&lt;i data-lucide=&quot;image&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Catalog side · generated from cover art&lt;/strong&gt;&lt;p&gt;Track images were processed by &lt;code&gt;google/siglip2-base-patch16-224&lt;/code&gt;; &lt;code&gt;get_image_features&lt;/code&gt; produced raw 768-value float vectors.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Stored in &lt;code&gt;image_siglip2&lt;/code&gt;.&lt;/li&gt;&lt;li&gt;The image and text towers share one cross-modal embedding space.&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;
+            &lt;div class=&quot;embedding-side&quot;&gt;&lt;strong&gt;&lt;i data-lucide=&quot;message-square&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Query side · generated from text&lt;/strong&gt;&lt;p&gt;A visual description is encoded with the same model&#x27;s &lt;code&gt;get_text_features&lt;/code&gt; on the Modal T4 service and retrieved by cosine.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;The branch runs only when state routing includes &lt;code&gt;image_or_visual_search&lt;/code&gt;.&lt;/li&gt;&lt;li&gt;Text vectors are disk-cached under a model-specific namespace.&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;embedding-note&quot;&gt;A second visual branch averages the SigLIP2 vectors of positive anchor tracks; it does not generate new text.&lt;/div&gt;
+        &lt;/article&gt;
+        &lt;article class=&quot;embedding-family&quot;&gt;
+          &lt;div class=&quot;embedding-head&quot;&gt;&lt;h3&gt;Collaborative similarity — BPR&lt;/h3&gt;&lt;span class=&quot;viz-badge&quot;&gt;128d · vector ↔ vector&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;embedding-sides&quot;&gt;
+            &lt;div class=&quot;embedding-side&quot;&gt;&lt;strong&gt;&lt;i data-lucide=&quot;users&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Catalog side · supplied precomputed&lt;/strong&gt;&lt;p&gt;Each track has a dataset-provided BPR collaborative vector in &lt;code&gt;cf_bpr&lt;/code&gt;, learned from interaction/co-listening behavior rather than lyrics, audio, or cover art.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;The exact upstream training recipe is not implemented in this repository.&lt;/li&gt;&lt;li&gt;The index stores the supplied 128-value track vectors as float32.&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;
+            &lt;div class=&quot;embedding-side&quot;&gt;&lt;strong&gt;&lt;i data-lucide=&quot;combine&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Query side · reused, not encoded&lt;/strong&gt;&lt;p&gt;There is no text model call. Blind-B either averages &lt;code&gt;cf_bpr&lt;/code&gt; vectors for positive anchor tracks or uses the user&#x27;s precomputed BPR vector directly.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Anchor centroid captures similarity to tracks liked in this conversation.&lt;/li&gt;&lt;li&gt;User vector supplies a longer-term taste prior; both search track &lt;code&gt;cf_bpr&lt;/code&gt; by cosine.&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/article&gt;
+      &lt;/div&gt;
+      &lt;details&gt;&lt;summary&gt;Stored embeddings that Blind-B did not query directly&lt;/summary&gt;&lt;p&gt;The table also contains &lt;code&gt;attributes_qwen3_embedding_0_6b&lt;/code&gt;, &lt;code&gt;metadata_qwen3_embedding_0_6b&lt;/code&gt;, 4B metadata/attribute vectors, and &lt;code&gt;b1_vstructpt_4b&lt;/code&gt;. They were not configured as retrieval branches for this run. The reranker obtains &lt;code&gt;b1_cos&lt;/code&gt; through a separate memoized feature path.&lt;/p&gt;&lt;/details&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;subsection&quot;&gt;
+      &lt;h3&gt;Branch inventory&lt;/h3&gt;
+      &lt;table class=&quot;branch-table&quot;&gt;
+        &lt;thead&gt;&lt;tr&gt;&lt;th&gt;Branch&lt;/th&gt;&lt;th&gt;Query source&lt;/th&gt;&lt;th&gt;Why it exists&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+        &lt;tbody&gt;
+          &lt;tr&gt;&lt;td&gt;BM25&lt;/td&gt;&lt;td&gt;State entities, resolved tags, intent, year/decade terms&lt;/td&gt;&lt;td&gt;Exact names and lexical attribute recall&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;Dense lyrics&lt;/td&gt;&lt;td&gt;&lt;code&gt;lyrical_theme&lt;/code&gt;&lt;/td&gt;&lt;td&gt;Meaning, story, and lyric content&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;Dense metadata&lt;/td&gt;&lt;td&gt;Compiled metadata query&lt;/td&gt;&lt;td&gt;Semantic names/genre/style matching&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;Dense attributes&lt;/td&gt;&lt;td&gt;Compiled attribute query&lt;/td&gt;&lt;td&gt;Mood, instrument, energy, era, performer cues&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;Dense CLAP&lt;/td&gt;&lt;td&gt;Natural-language sonic description&lt;/td&gt;&lt;td&gt;Audio texture and production&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;Dense SigLIP2&lt;/td&gt;&lt;td&gt;Natural-language visual description&lt;/td&gt;&lt;td&gt;Cover-art searches; state gated&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;Anchor centroids ×3&lt;/td&gt;&lt;td&gt;Accepted/referenced tracks&lt;/td&gt;&lt;td&gt;Audio, image, and collaborative similarity&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;User CF centroid&lt;/td&gt;&lt;td&gt;User vector&lt;/td&gt;&lt;td&gt;Longer-term taste prior&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;Era popularity&lt;/td&gt;&lt;td&gt;Soft temporal range&lt;/td&gt;&lt;td&gt;Popular candidates in the requested period&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;Artist discography&lt;/td&gt;&lt;td&gt;High-confidence resolved artist&lt;/td&gt;&lt;td&gt;Exact artist recall; gated by intent&lt;/td&gt;&lt;/tr&gt;
+        &lt;/tbody&gt;
+      &lt;/table&gt;
+    &lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;section class=&quot;panel&quot; data-panel-content=&quot;ranking&quot;&gt;
+    &lt;div class=&quot;section-head&quot;&gt;&lt;div&gt;&lt;h2&gt;Goal-free LightGBM reranking&lt;/h2&gt;&lt;p&gt;The model is a LambdaMART booster over 146 configured inputs. Features combine catalog priors, session continuity, user affinity, semantic similarities, structured-state constraints, and per-branch rank/score evidence.&lt;/p&gt;&lt;/div&gt;&lt;span class=&quot;viz-badge&quot;&gt;pool 500 · rank ceiling 1,000 · submit 20&lt;/span&gt;&lt;/div&gt;
+    &lt;div class=&quot;callout&quot;&gt;&lt;p&gt;&lt;strong&gt;SHAP evidence boundary.&lt;/strong&gt; The committed bundle and Blind-B submission do not include the frozen Blind-B feature matrix or trace sidecar, so a truthful aggregate Blind-B mean-|SHAP| chart cannot be reconstructed from the artifact alone. The chart below is exact global split-gain parsed from the shipped booster, not SHAP. Per-candidate TreeSHAP is supported by &lt;code&gt;mcrs-debug rerank-features --contrib&lt;/code&gt; when a trace is retained.&lt;/p&gt;&lt;/div&gt;
+    &lt;div class=&quot;subsection&quot;&gt;
+      &lt;div class=&quot;legend&quot;&gt;&lt;span&gt;&lt;i class=&quot;dot&quot;&gt;&lt;/i&gt;exact booster gain&lt;/span&gt;&lt;span&gt;&lt;i class=&quot;dot proxy&quot;&gt;&lt;/i&gt;SHAP replay available, aggregate absent&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;bars&quot; aria-label=&quot;Top LightGBM gain features&quot;&gt;
+        &lt;div class=&quot;bar-row&quot;&gt;&lt;code&gt;b1_cos&lt;/code&gt;&lt;div class=&quot;bar-track&quot;&gt;&lt;div class=&quot;bar-fill&quot; style=&quot;width:100%&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;span&gt;59.03%&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;bar-row&quot;&gt;&lt;code&gt;same_artist_session&lt;/code&gt;&lt;div class=&quot;bar-track&quot;&gt;&lt;div class=&quot;bar-fill&quot; style=&quot;width:8.45%&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;span&gt;4.99%&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;bar-row&quot;&gt;&lt;code&gt;artist_track_count&lt;/code&gt;&lt;div class=&quot;bar-track&quot;&gt;&lt;div class=&quot;bar-fill&quot; style=&quot;width:3.51%&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;span&gt;2.07%&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;bar-row&quot;&gt;&lt;code&gt;artist_best_rank_in_union&lt;/code&gt;&lt;div class=&quot;bar-track&quot;&gt;&lt;div class=&quot;bar-fill&quot; style=&quot;width:3.31%&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;span&gt;1.95%&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;bar-row&quot;&gt;&lt;code&gt;same_album_any&lt;/code&gt;&lt;div class=&quot;bar-track&quot;&gt;&lt;div class=&quot;bar-fill&quot; style=&quot;width:2.09%&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;span&gt;1.23%&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;bar-row&quot;&gt;&lt;code&gt;within_artist_pop&lt;/code&gt;&lt;div class=&quot;bar-track&quot;&gt;&lt;div class=&quot;bar-fill&quot; style=&quot;width:2.09%&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;span&gt;1.23%&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;bar-row&quot;&gt;&lt;code&gt;pct_user_cf&lt;/code&gt;&lt;div class=&quot;bar-track&quot;&gt;&lt;div class=&quot;bar-fill&quot; style=&quot;width:1.74%&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;span&gt;1.03%&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;bar-row&quot;&gt;&lt;code&gt;z__score__bm25&lt;/code&gt;&lt;div class=&quot;bar-track&quot;&gt;&lt;div class=&quot;bar-fill&quot; style=&quot;width:1.64%&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;span&gt;0.97%&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;bar-row&quot;&gt;&lt;code&gt;clap_centroid&lt;/code&gt;&lt;div class=&quot;bar-track&quot;&gt;&lt;div class=&quot;bar-fill&quot; style=&quot;width:1.57%&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;span&gt;0.93%&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;bar-row&quot;&gt;&lt;code&gt;pct_cf_centroid&lt;/code&gt;&lt;div class=&quot;bar-track&quot;&gt;&lt;div class=&quot;bar-fill&quot; style=&quot;width:1.46%&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;span&gt;0.86%&lt;/span&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;two-col&quot;&gt;
+      &lt;div class=&quot;subsection&quot;&gt;
+        &lt;h3&gt;Feature families&lt;/h3&gt;
+        &lt;table&gt;&lt;tbody&gt;
+          &lt;tr&gt;&lt;th&gt;Catalog priors&lt;/th&gt;&lt;td&gt;Popularity, era popularity, artist catalog size, release year, tags, duration&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Session / user&lt;/th&gt;&lt;td&gt;Same artist/album, play counts, history depth, CF affinity, demographics and culture match&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Semantic fit&lt;/th&gt;&lt;td&gt;&lt;code&gt;b1_cos&lt;/code&gt;, CLAP/CF/SigLIP centroids, tag embedding, message/context cosine features&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Query state&lt;/th&gt;&lt;td&gt;Request/intent/target-artist modes, routing flags, constraints, facts, wants-new-artist&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Retriever evidence&lt;/th&gt;&lt;td&gt;Rank, score, margin, ratio, hit, z-score for every canonical branch&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Safety&lt;/th&gt;&lt;td&gt;Played-track, rejected-artist/track, and violates-new-artist signals&lt;/td&gt;&lt;/tr&gt;
+        &lt;/tbody&gt;&lt;/table&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;subsection&quot;&gt;
+        &lt;h3&gt;Explore all model inputs&lt;/h3&gt;
+        &lt;div class=&quot;viz-controls&quot;&gt;
+          &lt;label class=&quot;form-label&quot;&gt;Search&lt;input class=&quot;form-control&quot; id=&quot;feature-search&quot; type=&quot;search&quot; placeholder=&quot;e.g. bm25, artist, cosine&quot;&gt;&lt;/label&gt;
+          &lt;label class=&quot;form-label&quot;&gt;Family&lt;select class=&quot;form-select&quot; id=&quot;feature-family&quot;&gt;&lt;option value=&quot;all&quot;&gt;All&lt;/option&gt;&lt;option value=&quot;catalog&quot;&gt;Catalog&lt;/option&gt;&lt;option value=&quot;session&quot;&gt;Session / user&lt;/option&gt;&lt;option value=&quot;semantic&quot;&gt;Semantic&lt;/option&gt;&lt;option value=&quot;state&quot;&gt;State / constraint&lt;/option&gt;&lt;option value=&quot;branch&quot;&gt;Retriever branch&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;feature-list&quot; id=&quot;feature-list&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
+        &lt;p class=&quot;text-small text-muted&quot; id=&quot;feature-count&quot;&gt;&lt;/p&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;section class=&quot;panel&quot; data-panel-content=&quot;response&quot;&gt;
+    &lt;div class=&quot;section-head&quot;&gt;&lt;div&gt;&lt;h2&gt;Response generation&lt;/h2&gt;&lt;p&gt;The selected top track—not the full top 20—is serialized as capped XML and explained from the listener goal, preferred language, latest request, and extracted state.&lt;/p&gt;&lt;/div&gt;&lt;span class=&quot;viz-badge&quot;&gt;Qwen3-30B · temperature 0&lt;/span&gt;&lt;/div&gt;
+    &lt;div class=&quot;two-col&quot;&gt;
+      &lt;div class=&quot;stack&quot;&gt;
+        &lt;div class=&quot;subsection&quot;&gt;&lt;h3&gt;System prompt&lt;/h3&gt;&lt;pre&gt;&lt;code&gt;You are the conversational voice of a music recommender — a &quot;track explainer.&quot; A separate recommendation system has ALREADY selected one track to play next.
+
+Write only the listener-facing message. Acknowledge what the listener just asked, then naturally explain why this track fits.
+
+- Brief and conversational: 1–3 sentences.
+- Match the listener&#x27;s tone, energy, and language.
+- Ground the reason in the request and supported track facts.
+- If the track clearly does not match, acknowledge the mismatch; do not oversell.
+- Never emit the XML or tag list verbatim.&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+        &lt;div class=&quot;subsection&quot;&gt;&lt;h3&gt;Phase-2 style instruction&lt;/h3&gt;&lt;pre&gt;&lt;code&gt;Write 1-2 concise sentences about only the selected track. Prioritize the latest user request and extracted state over older conversation history. If the track is reasonably aligned, explain the fit with one specific supported reason. If it clearly conflicts with an explicit avoid/new-artist constraint, do not oversell it or blame the system; briefly frame the limitation and the closest supported reason.&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;stack&quot;&gt;
+        &lt;div class=&quot;subsection&quot;&gt;&lt;h3&gt;Input packaging&lt;/h3&gt;&lt;pre&gt;&lt;code&gt;[LISTENER CONTEXT]
+Listener goal: …
+Preferred language: English
+Latest user request: …
+[LISTENER CONTEXT]
+Current request: …
+Liked / wants: …
+Disliked / avoid: …
+Explicit rejections: …
+Release year range: …
+Lyrical theme: …
+
+&amp;lt;recommended_track&amp;gt;
+  &amp;lt;title&amp;gt;Hip Hop&amp;lt;/title&amp;gt;
+  &amp;lt;artist&amp;gt;Dead Prez&amp;lt;/artist&amp;gt;
+  &amp;lt;album&amp;gt;Let&#x27;s Get Free&amp;lt;/album&amp;gt;
+  &amp;lt;tags&amp;gt;… at most 10 tags …&amp;lt;/tags&amp;gt;
+&amp;lt;/recommended_track&amp;gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+        &lt;div class=&quot;subsection&quot;&gt;&lt;h3&gt;Blind-B output example&lt;/h3&gt;&lt;blockquote&gt;You&#x27;re looking for sharp, sample-heavy underground hip-hop from the late &#x27;90s/early 2000s, and Dead Prez’s “Hip Hop” from &lt;em&gt;Let’s Get Free&lt;/em&gt; delivers that with a vengeance—its gritty, politically charged lyricism and layered, soul-sampled production are exactly the kind of intricate, conscious sound you’re after. While they’re not Del, they’re a perfect fit for your craving for underground depth and lyrical precision from that era.&lt;/blockquote&gt;&lt;p class=&quot;text-small text-muted&quot;&gt;The explanation judge marked this response good. The recommendation-fit judge still marked the turn bad because it preferred submitted rank 2, making this a concrete ranking-gap example.&lt;/p&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;section class=&quot;panel&quot; data-panel-content=&quot;judge&quot;&gt;
+    &lt;div class=&quot;section-head&quot;&gt;&lt;div&gt;&lt;h2&gt;LLM-as-a-judge findings&lt;/h2&gt;&lt;p&gt;There are three distinct signals: the real Blind-B scoreboard, a label-free recommendation-fit audit, and a response/explanation audit. Keep them separate; none reveals hidden Blind-B relevance labels.&lt;/p&gt;&lt;/div&gt;&lt;span class=&quot;viz-badge&quot;&gt;qualitative, label-free&lt;/span&gt;&lt;/div&gt;
+    &lt;div class=&quot;score-grid&quot;&gt;
+      &lt;div class=&quot;score&quot;&gt;&lt;span class=&quot;text-muted&quot;&gt;CodaBench composite&lt;/span&gt;&lt;strong&gt;0.38&lt;/strong&gt;&lt;span class=&quot;text-small&quot;&gt;real submission outcome; component scores not retained here&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;score&quot;&gt;&lt;span class=&quot;text-muted&quot;&gt;Recommendation-fit audit&lt;/span&gt;&lt;strong&gt;54 / 79&lt;/strong&gt;&lt;span class=&quot;text-small&quot;&gt;weak or bad in the recorded experiment audit&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;score&quot;&gt;&lt;span class=&quot;text-muted&quot;&gt;Explanation audit&lt;/span&gt;&lt;strong&gt;21 / 79&lt;/strong&gt;&lt;span class=&quot;text-small&quot;&gt;weak or bad on the archived submitted-response audit&lt;/span&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;two-col&quot;&gt;
+      &lt;div class=&quot;subsection&quot;&gt;
+        &lt;h3&gt;Main findings&lt;/h3&gt;
+        &lt;ol&gt;
+          &lt;li&gt;&lt;strong&gt;Ordering was the largest diagnosed lever.&lt;/strong&gt; The traced recommendation audit reported 31 ranking gaps, versus 8 compiler-filter gaps, 3 state gaps, and 1 resolver gap.&lt;/li&gt;
+          &lt;li&gt;&lt;strong&gt;Existing candidates often contained a better answer.&lt;/strong&gt; It reported 31 rows with a better candidate in the pool and 30 with a better candidate already in the submitted 20.&lt;/li&gt;
+          &lt;li&gt;&lt;strong&gt;State extraction was inconsistent.&lt;/strong&gt; The traced state judge recorded 39 good, 39 bad, and 1 partial among 79 judged turns.&lt;/li&gt;
+          &lt;li&gt;&lt;strong&gt;Response quality was better than recommendation fit.&lt;/strong&gt; In the archived submission-response audit, explanation verdicts were 54 good, 4 acceptable, 7 weak, 14 bad, with 1 error.&lt;/li&gt;
+          &lt;li&gt;&lt;strong&gt;Proxy judges are screening tools, not calibrated leaderboard predictors.&lt;/strong&gt; Earlier response bakeoffs inverted the order of two strong models relative to the real judge.&lt;/li&gt;
+        &lt;/ol&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;subsection&quot;&gt;
+        &lt;h3&gt;Why audit totals differ&lt;/h3&gt;
+        &lt;p&gt;The experiment record cites a traced recommendation-set audit whose responses differed from the final submission: 25 good, 12 weak, 42 bad, 1 error. The archived &lt;code&gt;v10_lgbm_B_v1_origin_main&lt;/code&gt; artifact has no trace and reports 24 good, 1 acceptable, 6 weak, 48 bad, 1 error for recommendation fit; it also contains the separate explanation audit above.&lt;/p&gt;
+        &lt;div class=&quot;callout&quot;&gt;&lt;p&gt;&lt;strong&gt;Interpretation:&lt;/strong&gt; both passes say the retrieval/ranking decision is the dominant weakness. Do not treat either pass as nDCG or as hidden-label truth.&lt;/p&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;section class=&quot;panel&quot; data-panel-content=&quot;reimplement&quot;&gt;
+    &lt;div class=&quot;section-head&quot;&gt;&lt;div&gt;&lt;h2&gt;Reimplementation checklist&lt;/h2&gt;&lt;p&gt;Build around explicit contracts and preserve traceability. The hard part is not calling an ANN index; it is keeping state, branch evidence, ranker features, and response conditioning aligned.&lt;/p&gt;&lt;/div&gt;&lt;span class=&quot;viz-badge&quot;&gt;fast path + faithful path&lt;/span&gt;&lt;/div&gt;
+    &lt;div class=&quot;two-col&quot;&gt;
+      &lt;div class=&quot;stack&quot;&gt;
+        &lt;div class=&quot;subsection&quot;&gt;&lt;h3&gt;Minimal faithful order&lt;/h3&gt;&lt;ol&gt;
+          &lt;li&gt;Materialize the 47,071-row LanceDB table with text fields, vectors, and &lt;code&gt;has_*&lt;/code&gt; flags.&lt;/li&gt;
+          &lt;li&gt;Extract final-turn &lt;code&gt;ConversationStateV1&lt;/code&gt;; validate IDs and evidence; project to compiler fields.&lt;/li&gt;
+          &lt;li&gt;Resolve surface-form artist/track/tag facts against the catalog.&lt;/li&gt;
+          &lt;li&gt;Compile fielded BM25, dense, centroid, and lookup branches with soft/hard policies.&lt;/li&gt;
+          &lt;li&gt;Retain canonical branch names, ranks, scores, margins, ratios, hits, and query text in a trace.&lt;/li&gt;
+          &lt;li&gt;Assemble feature columns in the exact model order from &lt;code&gt;meta.json&lt;/code&gt;; apply categorical maps.&lt;/li&gt;
+          &lt;li&gt;Rerank the union; enforce hard drops and the final artist guard; emit top 20.&lt;/li&gt;
+          &lt;li&gt;Generate a response for rank 1 from latest state plus capped track metadata.&lt;/li&gt;
+          &lt;li&gt;Validate 20 unique IDs, non-empty response, no metadata echo, and split-correct packaging.&lt;/li&gt;
+        &lt;/ol&gt;&lt;/div&gt;
+        &lt;div class=&quot;subsection&quot;&gt;&lt;h3&gt;Run commands&lt;/h3&gt;&lt;pre&gt;&lt;code&gt;# State cache, final turn only
+uv run python scripts/extract_state.py \
+  --tid state_ranker_v10_lgbm_blindset_B \
+  --turn-scope final \
+  --output-dir cache/state_extraction/blindset_B \
+  --skip-existing
+
+# End-to-end inference
+python run_experiment.py --backend local \
+  --tid state_ranker_v10_lgbm_blindset_B \
+  --eval_dataset blindset_B
+
+# Package the correct split
+bash prepare_submission.sh state_ranker_v10_lgbm_blindset_B blindset_B&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;stack&quot;&gt;
+        &lt;div class=&quot;subsection&quot;&gt;&lt;h3&gt;Failure modes worth testing&lt;/h3&gt;&lt;table&gt;&lt;tbody&gt;
+          &lt;tr&gt;&lt;th&gt;State drift&lt;/th&gt;&lt;td&gt;Prior praise remains an active seed after “other artist” or a pivot.&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Soft era becomes hard&lt;/th&gt;&lt;td&gt;“Late-90s sound” is incorrectly treated as a strict release-date filter.&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Branch schema drift&lt;/th&gt;&lt;td&gt;Missing branch names reorder feature columns or silently change model input.&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Missing vectors&lt;/th&gt;&lt;td&gt;ANN query ignores &lt;code&gt;has_*&lt;/code&gt; and scores zero placeholders.&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Ranker artifact mismatch&lt;/th&gt;&lt;td&gt;&lt;code&gt;model.txt&lt;/code&gt;, &lt;code&gt;meta.json&lt;/code&gt;, category maps, and branch names come from different runs.&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Response mismatch&lt;/th&gt;&lt;td&gt;Prose explains another item or the whole queue instead of &lt;code&gt;predicted_track_ids[0]&lt;/code&gt;.&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;th&gt;Packaging split&lt;/th&gt;&lt;td&gt;Blind-B predictions are looked up under Blind-A.&lt;/td&gt;&lt;/tr&gt;
+        &lt;/tbody&gt;&lt;/table&gt;&lt;/div&gt;
+        &lt;div class=&quot;subsection&quot;&gt;&lt;h3&gt;Trace and SHAP command&lt;/h3&gt;&lt;pre&gt;&lt;code&gt;# Retain a retrieval trace, then inspect exact per-candidate TreeSHAP contributions
+mcrs-debug rerank-features \
+  --config configs/state_ranker_v10_lgbm_blindset_B.yaml \
+  --trace replay_trace.json \
+  --candidates candidates.txt \
+  --contrib \
+  --out rerank_features.json&lt;/code&gt;&lt;/pre&gt;&lt;p class=&quot;text-small text-muted&quot;&gt;Aggregate mean-|SHAP| requires a representative, frozen feature matrix. Save it with the prediction/trace artifact if explainability must be reproducible.&lt;/p&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;subsection&quot;&gt;&lt;h3&gt;Source map&lt;/h3&gt;&lt;ul class=&quot;source-list&quot;&gt;
+      &lt;li&gt;&lt;code&gt;configs/state_ranker_v10_lgbm_blindset_B.yaml&lt;/code&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;code&gt;experiments/v10_lgbm_B_v1.md&lt;/code&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;code&gt;mcrs/conversation_state/prompts/current.py&lt;/code&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;code&gt;mcrs/conversation_state/schema.py&lt;/code&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;code&gt;mcrs/qu_modules/compiler_v0plus.py&lt;/code&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;code&gt;mcrs/qu_modules/lgbm_reranker.py&lt;/code&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;code&gt;mcrs/qu_modules/v0plus_catalog_lance.py&lt;/code&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;code&gt;mcrs/lancedb/indexing.py&lt;/code&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;code&gt;mcrs/response_context.py&lt;/code&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;code&gt;mcrs/system_prompts/response_generation.txt&lt;/code&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;code&gt;models/reranker_v12_goalfree/*&lt;/code&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;code&gt;exp/analysis/prediction_audit/v10_lgbm_B_v1_origin_main/audit.json&lt;/code&gt;&lt;/li&gt;
+    &lt;/ul&gt;&lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;script&gt;
+    (() =&gt; {
+      const root = document.getElementById(&#x27;blindset-b-report&#x27;);
+      const stageDetails = {
+        state: &#x27;&lt;div class=&quot;stage-explainer&quot;&gt;&lt;div&gt;&lt;span class=&quot;text-small&quot;&gt;Why this stage exists&lt;/span&gt;&lt;strong&gt;Turn natural language into an explicit contract&lt;/strong&gt;The conversation contains praise, corrections, old requests, new constraints, and played-track IDs. State extraction identifies what matters for the next recommendation.&lt;/div&gt;&lt;div&gt;&lt;span class=&quot;text-small&quot;&gt;Reads&lt;/span&gt;&lt;strong&gt;Conversation + played tracks&lt;/strong&gt;DeepSeek V4 Flash returns schema-validated JSON and the file-per-turn cache makes it reusable.&lt;/div&gt;&lt;div&gt;&lt;span class=&quot;text-small&quot;&gt;Hands forward&lt;/span&gt;&lt;strong&gt;Seven V1 fields&lt;/strong&gt;Request, facts, exclusions, feedback, references, time, and lyrical theme—then deterministic compatibility fields.&lt;/div&gt;&lt;/div&gt;&#x27;,
+        retrieve: &#x27;&lt;div class=&quot;stage-explainer&quot;&gt;&lt;div&gt;&lt;span class=&quot;text-small&quot;&gt;Why this stage exists&lt;/span&gt;&lt;strong&gt;Search broadly so promising tracks are not missed&lt;/strong&gt;No single search method handles exact artists, vague moods, lyric themes, cover art, sound, and user taste equally well.&lt;/div&gt;&lt;div&gt;&lt;span class=&quot;text-small&quot;&gt;Reads&lt;/span&gt;&lt;strong&gt;Resolved state + anchors&lt;/strong&gt;Eleven canonical branches search LanceDB, each returning ranked candidates with scores and query evidence.&lt;/div&gt;&lt;div&gt;&lt;span class=&quot;text-small&quot;&gt;Hands forward&lt;/span&gt;&lt;strong&gt;Up to 500 candidates&lt;/strong&gt;Weighted reciprocal-rank fusion deduplicates branch results into the pool the ranker can inspect.&lt;/div&gt;&lt;/div&gt;&#x27;,
+        rank: &#x27;&lt;div class=&quot;stage-explainer&quot;&gt;&lt;div&gt;&lt;span class=&quot;text-small&quot;&gt;Why this stage exists&lt;/span&gt;&lt;strong&gt;Convert a broad pool into a useful top 20&lt;/strong&gt;Retrieval ranks are branch-specific. The reranker compares every candidate using a shared set of semantic, catalog, history, and constraint features.&lt;/div&gt;&lt;div&gt;&lt;span class=&quot;text-small&quot;&gt;Reads&lt;/span&gt;&lt;strong&gt;Candidate rows × 146 features&lt;/strong&gt;The goal-free LambdaMART model scores each candidate; categorical maps and canonical branch names keep serving aligned with training.&lt;/div&gt;&lt;div&gt;&lt;span class=&quot;text-small&quot;&gt;Hands forward&lt;/span&gt;&lt;strong&gt;Ordered track IDs&lt;/strong&gt;Hard drops and the final artist guard are applied before the first 20 unique IDs are submitted.&lt;/div&gt;&lt;/div&gt;&#x27;,
+        respond: &#x27;&lt;div class=&quot;stage-explainer&quot;&gt;&lt;div&gt;&lt;span class=&quot;text-small&quot;&gt;Why this stage exists&lt;/span&gt;&lt;strong&gt;Explain the decision without changing it&lt;/strong&gt;The track has already been selected. The generator should communicate the fit, not choose a safer track or describe the whole queue.&lt;/div&gt;&lt;div&gt;&lt;span class=&quot;text-small&quot;&gt;Reads&lt;/span&gt;&lt;strong&gt;Latest state + rank-1 metadata&lt;/strong&gt;Qwen3-30B sees listener context and a capped XML block for the selected track at temperature 0.&lt;/div&gt;&lt;div&gt;&lt;span class=&quot;text-small&quot;&gt;Hands forward&lt;/span&gt;&lt;strong&gt;One concise reply&lt;/strong&gt;The response names or explains rank 1, matches the listener language, avoids metadata echo, and does not oversell a mismatch.&lt;/div&gt;&lt;/div&gt;&#x27;
+      };
+      const detail = root.querySelector(&#x27;#stage-detail&#x27;);
+      detail.innerHTML = stageDetails.state;
+      root.querySelectorAll(&#x27;[data-stage]&#x27;).forEach(button =&gt; button.addEventListener(&#x27;click&#x27;, () =&gt; {
+        root.querySelectorAll(&#x27;[data-stage]&#x27;).forEach(peer =&gt; { peer.classList.toggle(&#x27;btn-primary&#x27;, peer === button); peer.setAttribute(&#x27;aria-pressed&#x27;, String(peer === button)); });
+        detail.innerHTML = stageDetails[button.dataset.stage];
+      }));
+
+      root.querySelectorAll(&#x27;[data-panel]&#x27;).forEach(button =&gt; button.addEventListener(&#x27;click&#x27;, () =&gt; {
+        const name = button.dataset.panel;
+        root.querySelectorAll(&#x27;[data-panel]&#x27;).forEach(peer =&gt; { peer.classList.toggle(&#x27;btn-primary&#x27;, peer === button); peer.setAttribute(&#x27;aria-pressed&#x27;, String(peer === button)); });
+        root.querySelectorAll(&#x27;[data-panel-content]&#x27;).forEach(panel =&gt; panel.classList.toggle(&#x27;is-active&#x27;, panel.dataset.panelContent === name));
+      }));
+
+      const features = [
+        &#x27;pop_pct&#x27;,&#x27;era_pop_pct&#x27;,&#x27;within_artist_pop&#x27;,&#x27;release_year&#x27;,&#x27;has_year&#x27;,&#x27;tag_count&#x27;,&#x27;n_artists&#x27;,&#x27;artist_track_count&#x27;,&#x27;duration_ms&#x27;,&#x27;cf_last&#x27;,&#x27;cf_centroid&#x27;,&#x27;cf_drift&#x27;,&#x27;clap_last&#x27;,&#x27;clap_centroid&#x27;,&#x27;siglip_centroid&#x27;,&#x27;b1_cos&#x27;,&#x27;same_artist_session&#x27;,&#x27;same_artist_last&#x27;,&#x27;same_album_last&#x27;,&#x27;same_album_any&#x27;,&#x27;album_played_count&#x27;,&#x27;artist_played_count&#x27;,&#x27;artist_share&#x27;,&#x27;turn_number_f&#x27;,&#x27;n_played&#x27;,&#x27;has_history&#x27;,&#x27;user_cf&#x27;,&#x27;has_user_vec&#x27;,&#x27;age_era_affinity&#x27;,&#x27;culture_match&#x27;,&#x27;age_group&#x27;,&#x27;gender&#x27;,&#x27;session_minus_release_year&#x27;,&#x27;tag_overlap&#x27;,&#x27;tag_overlap_idf&#x27;,&#x27;n_exact_tier&#x27;,&#x27;max_tag_match_score&#x27;,&#x27;tag_emb_cos&#x27;,&#x27;title_request_overlap&#x27;,&#x27;has_constraint&#x27;,&#x27;request_type&#x27;,&#x27;intent_mode&#x27;,&#x27;target_artist_mode&#x27;,&#x27;routing_lyric&#x27;,&#x27;routing_visual&#x27;,&#x27;routing_exact&#x27;,&#x27;temporal_strength&#x27;,&#x27;year_in_constraint&#x27;,&#x27;n_facts&#x27;,&#x27;wants_new_artist&#x27;,&#x27;q06_lyric_cos&#x27;,&#x27;msg_meta_cos&#x27;,&#x27;msg_attr_cos&#x27;,&#x27;msg_lyr_cos&#x27;,&#x27;ctx_meta_cos&#x27;,&#x27;lex_overlap_idf&#x27;,&#x27;title_in_msg&#x27;,&#x27;wants_new_proxy&#x27;,&#x27;x_same_artist_wants_new&#x27;,&#x27;x_cflast_turn&#x27;,&#x27;x_era_hard&#x27;,&#x27;x_pop_within_artist&#x27;,&#x27;n_same_artist_in_union&#x27;,&#x27;artist_best_rank_in_union&#x27;,&#x27;same_artist_as_abandoned&#x27;,&#x27;tag_overlap_abandoned&#x27;,&#x27;artist_mention&#x27;,&#x27;rejected_artist_proxy&#x27;,&#x27;rank__bm25&#x27;,&#x27;score__bm25&#x27;,&#x27;margin__bm25&#x27;,&#x27;ratio__bm25&#x27;,&#x27;hit__bm25&#x27;,&#x27;rank__centroid.anchor_tracks.audio_laion_clap&#x27;,&#x27;score__centroid.anchor_tracks.audio_laion_clap&#x27;,&#x27;margin__centroid.anchor_tracks.audio_laion_clap&#x27;,&#x27;ratio__centroid.anchor_tracks.audio_laion_clap&#x27;,&#x27;hit__centroid.anchor_tracks.audio_laion_clap&#x27;,&#x27;rank__centroid.anchor_tracks.cf_bpr&#x27;,&#x27;score__centroid.anchor_tracks.cf_bpr&#x27;,&#x27;margin__centroid.anchor_tracks.cf_bpr&#x27;,&#x27;ratio__centroid.anchor_tracks.cf_bpr&#x27;,&#x27;hit__centroid.anchor_tracks.cf_bpr&#x27;,&#x27;rank__centroid.anchor_tracks.image_siglip2&#x27;,&#x27;score__centroid.anchor_tracks.image_siglip2&#x27;,&#x27;margin__centroid.anchor_tracks.image_siglip2&#x27;,&#x27;ratio__centroid.anchor_tracks.image_siglip2&#x27;,&#x27;hit__centroid.anchor_tracks.image_siglip2&#x27;,&#x27;rank__centroid.user.cf_bpr&#x27;,&#x27;score__centroid.user.cf_bpr&#x27;,&#x27;margin__centroid.user.cf_bpr&#x27;,&#x27;ratio__centroid.user.cf_bpr&#x27;,&#x27;hit__centroid.user.cf_bpr&#x27;,&#x27;rank__dense.clap_text.sonic_nl.audio_laion_clap&#x27;,&#x27;score__dense.clap_text.sonic_nl.audio_laion_clap&#x27;,&#x27;margin__dense.clap_text.sonic_nl.audio_laion_clap&#x27;,&#x27;ratio__dense.clap_text.sonic_nl.audio_laion_clap&#x27;,&#x27;hit__dense.clap_text.sonic_nl.audio_laion_clap&#x27;,&#x27;rank__dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b&#x27;,&#x27;score__dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b&#x27;,&#x27;margin__dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b&#x27;,&#x27;ratio__dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b&#x27;,&#x27;hit__dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b&#x27;,&#x27;rank__dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;,&#x27;score__dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;,&#x27;margin__dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;,&#x27;ratio__dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;,&#x27;hit__dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;,&#x27;rank__dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;,&#x27;score__dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;,&#x27;margin__dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;,&#x27;ratio__dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;,&#x27;hit__dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;,&#x27;rank__lookup.era_popularity&#x27;,&#x27;score__lookup.era_popularity&#x27;,&#x27;margin__lookup.era_popularity&#x27;,&#x27;ratio__lookup.era_popularity&#x27;,&#x27;hit__lookup.era_popularity&#x27;,&#x27;rank__lookup.resolved_artist_discography&#x27;,&#x27;score__lookup.resolved_artist_discography&#x27;,&#x27;margin__lookup.resolved_artist_discography&#x27;,&#x27;ratio__lookup.resolved_artist_discography&#x27;,&#x27;hit__lookup.resolved_artist_discography&#x27;,&#x27;z__score__bm25&#x27;,&#x27;z__score__centroid.anchor_tracks.audio_laion_clap&#x27;,&#x27;z__score__centroid.anchor_tracks.cf_bpr&#x27;,&#x27;z__score__centroid.anchor_tracks.image_siglip2&#x27;,&#x27;z__score__centroid.user.cf_bpr&#x27;,&#x27;z__score__dense.clap_text.sonic_nl.audio_laion_clap&#x27;,&#x27;z__score__dense.qwen_0_6b.lyric.lyrics_qwen3_embedding_0_6b&#x27;,&#x27;z__score__dense.qwen_8b.attributes.attributes_qwen3_embedding_8b&#x27;,&#x27;z__score__dense.qwen_8b.metadata.metadata_qwen3_embedding_8b&#x27;,&#x27;z__score__lookup.era_popularity&#x27;,&#x27;z__score__lookup.resolved_artist_discography&#x27;,&#x27;pct_pop_pct&#x27;,&#x27;pct_era_pop_pct&#x27;,&#x27;pct_cf_last&#x27;,&#x27;pct_cf_centroid&#x27;,&#x27;pct_user_cf&#x27;,&#x27;pct_tag_overlap_idf&#x27;,&#x27;pct_msg_meta_cos&#x27;,&#x27;pct_lex_overlap_idf&#x27;,&#x27;is_played_track&#x27;,&#x27;rejected_artist_exact&#x27;,&#x27;rejected_track_exact&#x27;,&#x27;violates_new_artist&#x27;
+      ];
+      const family = name =&gt; {
+        if (/^(rank__|score__|margin__|ratio__|hit__|z__)/.test(name)) return &#x27;branch&#x27;;
+        if (/(request_type|intent_mode|target_artist_mode|routing_|constraint|wants_new|n_facts|year_in_constraint|temporal|rejected_|violates_)/.test(name)) return &#x27;state&#x27;;
+        if (/(cos|clap|siglip|cf_|user_cf|tag_emb|msg_|ctx_)/.test(name)) return &#x27;semantic&#x27;;
+        if (/(same_|played|turn_number|n_played|has_history|artist_share|culture|age_|gender)/.test(name)) return &#x27;session&#x27;;
+        return &#x27;catalog&#x27;;
+      };
+      const labels = {catalog:&#x27;Catalog&#x27;,session:&#x27;Session / user&#x27;,semantic:&#x27;Semantic&#x27;,state:&#x27;State / constraint&#x27;,branch:&#x27;Retriever branch&#x27;};
+      const list = root.querySelector(&#x27;#feature-list&#x27;);
+      const search = root.querySelector(&#x27;#feature-search&#x27;);
+      const select = root.querySelector(&#x27;#feature-family&#x27;);
+      const count = root.querySelector(&#x27;#feature-count&#x27;);
+      const renderFeatures = () =&gt; {
+        const needle = search.value.trim().toLowerCase();
+        const wanted = select.value;
+        const visible = features.filter(name =&gt; (!needle || name.toLowerCase().includes(needle)) &amp;&amp; (wanted === &#x27;all&#x27; || family(name) === wanted));
+        list.innerHTML = visible.slice(0, 40).map(name =&gt; `&lt;div class=&quot;feature-row&quot;&gt;&lt;code&gt;${name}&lt;/code&gt;&lt;span&gt;${labels[family(name)]}&lt;/span&gt;&lt;/div&gt;`).join(&#x27;&#x27;);
+        count.textContent = `${visible.length} of ${features.length} features${visible.length &gt; 40 ? &#x27; · showing first 40&#x27; : &#x27;&#x27;}`;
+      };
+      search.addEventListener(&#x27;input&#x27;, renderFeatures);
+      select.addEventListener(&#x27;change&#x27;, renderFeatures);
+      renderFeatures();
+    })();
+  &lt;/script&gt;
+&lt;/div&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+
+  const getTrigger = (target) =&gt;
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest(&quot;[data-tooltip]&quot;)
+      : null;
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handleLeave = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    document.removeEventListener(&quot;pointerover&quot;, handlePointerOpen);
+    document.removeEventListener(&quot;pointerout&quot;, handleLeave);
+    document.removeEventListener(&quot;focusin&quot;, handleFocusIn);
+    document.removeEventListener(&quot;focusout&quot;, handleLeave);
+    document.removeEventListener(&quot;keydown&quot;, handleKeyDown);
+    document.removeEventListener(&quot;contextmenu&quot;, handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener(&quot;pointerover&quot;, handlePointerOpen);
+  document.addEventListener(&quot;pointerout&quot;, handleLeave);
+  document.addEventListener(&quot;focusin&quot;, handleFocusIn);
+  document.addEventListener(&quot;focusout&quot;, handleLeave);
+  document.addEventListener(&quot;keydown&quot;, handleKeyDown);
+  document.addEventListener(&quot;contextmenu&quot;, handleContextMenu);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</body>
+</html>
