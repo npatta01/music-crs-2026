@@ -1,0 +1,220 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "Blind B Submission Audit",
+    "description": "Per-split audit of the saved Blind B submission, native prediction-audit output, frozen trace, and retained historical judge summary.",
+    "generatedAt": "2026-07-17T14:40:00Z",
+    "cards": [
+      {
+        "id": "rows",
+        "dataset": "summary",
+        "sourceId": "blind_b_submission",
+        "description": "Rows in the canonical Blind B submitted prediction.",
+        "metrics": [{"label": "Submission rows", "field": "rows", "format": "number"}]
+      },
+      {
+        "id": "trace",
+        "dataset": "summary",
+        "sourceId": "blind_b_submission",
+        "description": "Submitted top-20 rows exactly matching the frozen trace.",
+        "metrics": [{"label": "Exact trace matches", "field": "trace_matches", "format": "number"}]
+      },
+      {
+        "id": "fit",
+        "dataset": "summary",
+        "sourceId": "blind_b_history",
+        "description": "Recommendation-fit judgments documented by the historical summary.",
+        "metrics": [{"label": "Recommendation rows judged", "field": "fit_judged", "format": "number"}]
+      },
+      {
+        "id": "state",
+        "dataset": "summary",
+        "sourceId": "blind_b_history",
+        "description": "State judgments documented by the historical summary.",
+        "metrics": [{"label": "State rows judged", "field": "state_judged", "format": "number"}]
+      }
+    ],
+    "charts": [
+      {
+        "id": "historical_verdicts",
+        "title": "Blind B historical qualitative verdict counts",
+        "subtitle": "Recorded aggregate for 79 judged rows per available axis; underlying row-level files are absent.",
+        "type": "bar",
+        "dataset": "historical_verdicts",
+        "sourceId": "blind_b_history",
+        "encodings": {
+          "x": {"field": "dimension", "type": "nominal", "label": "Audit dimension"},
+          "y": {"field": "count", "type": "quantitative", "label": "Rows"},
+          "color": {"field": "verdict", "type": "nominal", "label": "Verdict"}
+        },
+        "yAxisTitle": "Rows",
+        "valueFormat": "number",
+        "layout": "full"
+      }
+    ],
+    "tables": [
+      {
+        "id": "coverage",
+        "title": "Blind B retained audit coverage",
+        "subtitle": "The submission and trace are complete; qualitative evidence survives only as a historical aggregate.",
+        "dataset": "coverage",
+        "sourceId": "blind_b_history",
+        "defaultSort": {"field": "dimension", "direction": "asc"},
+        "columns": [
+          {"field": "dimension", "label": "Dimension", "type": "text"},
+          {"field": "coverage", "label": "Coverage", "type": "text"},
+          {"field": "finding", "label": "Recorded finding", "type": "text"},
+          {"field": "retention", "label": "Retention", "type": "text"}
+        ]
+      },
+      {
+        "id": "submission_integrity",
+        "title": "Blind B submission integrity",
+        "subtitle": "The saved prediction file is byte-identical to the original submitted ZIP payload and aligns to the frozen trace.",
+        "dataset": "submission_integrity",
+        "sourceId": "blind_b_submission",
+        "defaultSort": {"field": "check", "direction": "asc"},
+        "columns": [
+          {"field": "check", "label": "Check", "type": "text"},
+          {"field": "result", "label": "Result", "type": "text"}
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "id": "blind_b_submission",
+        "label": "Blind B submitted prediction and frozen trace",
+        "path": ".repro/HANDOFF.md",
+        "query": {
+          "engine": "local-json",
+          "sql": "SELECT session_id, turn_number, predicted_track_ids, final_recommendation_track_ids FROM blind_b_submission JOIN blind_b_frozen_trace USING (session_id, turn_number)",
+          "description": "Read-only byte identity, row validity, and trace-alignment checks."
+        }
+      },
+      {
+        "id": "blind_b_history",
+        "label": "Blind B historical audit summary",
+        "path": "experiments/v10_lgbm_B_v1.md",
+        "query": {
+          "engine": "repository-document",
+          "sql": "SELECT audit_dimension, coverage, verdict, row_count FROM blind_b_historical_audit_summary",
+          "description": "Documented historical Blind B audit aggregate; row-level audit files are absent."
+        }
+      },
+      {
+        "id": "blind_b_leaderboard",
+        "label": "Blind B recorded CodaBench result",
+        "path": "leaderboard.md",
+        "query": {
+          "engine": "repository-document",
+          "sql": "SELECT submission_id, ndcg20, catalog_diversity, lexical_diversity, llm_judge, composite FROM leaderboard_md WHERE split = 'Blind B'",
+          "description": "Organizer-scored Blind B metrics recorded in the repository."
+        }
+      }
+    ],
+    "blocks": [
+      {"id": "title", "type": "markdown", "body": "# Blind B Submission Audit"},
+      {
+        "id": "summary",
+        "type": "markdown",
+        "body": "## Technical summary\n\n**Blind B now has the native prediction-audit skill output: `index.html` plus `audit.json`.** It was generated directly from the existing submitted prediction and frozen trace, covering all 80 rows, extracted and compiled state, recommendations, responses, and deterministic gaps. No qualitative judges were run; the older recommendation/state judgments survive only as a historical aggregate, and no response-quality judgment exists."
+      },
+      {"id": "metrics", "type": "metric-strip", "cardIds": ["rows", "trace", "fit", "state"]},
+      {
+        "id": "integrity_finding",
+        "type": "markdown",
+        "sourceId": "blind_b_submission",
+        "body": "## The saved Blind B submission itself is complete and trace-aligned\n\nThe prediction contains 80 valid rows, every row has 20 unique track IDs and a nonempty response, and all 80 top-20 lists exactly match the frozen trace. Its SHA-256 matches `prediction.json` inside the original Blind B submission ZIP."
+      },
+      {"id": "integrity_table", "type": "table", "tableId": "submission_integrity", "layout": "full"},
+      {
+        "id": "quality_finding",
+        "type": "markdown",
+        "sourceId": "blind_b_history",
+        "body": "## The historical evidence points to ranking, but cannot support a full audit claim\n\nThe saved summary records 31 ranking gaps and 54 weak-or-bad recommendation-fit verdicts among 79 judged rows. State judgments were 39 good, 1 partial, and 39 bad. Because the underlying rows are absent, these counts are historical evidence rather than independently revalidated audit output."
+      },
+      {"id": "verdict_chart", "type": "chart", "chartId": "historical_verdicts", "layout": "full"},
+      {"id": "coverage_table", "type": "table", "tableId": "coverage", "layout": "full"},
+      {
+        "id": "definitions",
+        "type": "markdown",
+        "body": "## Scope and metric definitions\n\n- **Submission validity** checks row count, unique session-turn keys, exactly 20 unique track IDs, and nonempty response text.\n- **Trace alignment** means submitted track IDs equal the frozen final-recommendation top 20.\n- **Historical qualitative evidence** means only the written aggregate remains; individual verdicts and reasons cannot be inspected.\n- **Response-quality unavailable** means no retained judgment applies to the canonical submitted response text."
+      },
+      {
+        "id": "method",
+        "type": "markdown",
+        "sourceId": "blind_b_submission",
+        "body": "## Methodology\n\nThis report reconciles the existing Blind B prediction, frozen reference, original ZIP payload, and frozen trace. It then reports the qualitative and deterministic counts already documented in the Blind B experiment summary. No inference, retrieval, response generation, model replay, or new judge call was performed."
+      },
+      {
+        "id": "limitations",
+        "type": "markdown",
+        "body": "## Limitations and uncertainty\n\nThe native `index.html` plus `audit.json` pair contains the full static audit but no new qualitative judge verdicts. The historical recommendation audit covered the same track IDs but different response text, so it cannot evaluate the submitted response. The repository records the organizer result separately: nDCG@20 0.2537 and composite 0.3811."
+      },
+      {
+        "id": "next",
+        "type": "markdown",
+        "body": "## Recommended next steps\n\n1. Treat the frozen prediction and trace as the canonical Blind B submission boundary.\n2. Do not describe the current evidence as a complete response/state/recommendation audit.\n3. Only if complete parity is required, explicitly authorize a new audit and retain its `index.html`, `audit.json`, and row-level judge caches together."
+      },
+      {
+        "id": "questions",
+        "type": "markdown",
+        "body": "## Further questions\n\n- Can the original Blind B row-level audit be recovered from an external archive?\n- Do the 31 recorded ranking gaps concentrate in particular request types?\n- Is a complete Blind B response audit worth rerunning, given the organizer result and missing historical rows?"
+      }
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "generatedAt": "2026-07-17T14:40:00Z",
+    "status": "partial",
+    "datasets": {
+      "summary": [{"rows": 80, "trace_matches": 80, "fit_judged": 79, "state_judged": 79}],
+      "historical_verdicts": [
+        {"dimension": "Recommendation fit", "verdict": "Good", "count": 25},
+        {"dimension": "Recommendation fit", "verdict": "Weak", "count": 12},
+        {"dimension": "Recommendation fit", "verdict": "Bad", "count": 42},
+        {"dimension": "State", "verdict": "Good", "count": 39},
+        {"dimension": "State", "verdict": "Partial", "count": 1},
+        {"dimension": "State", "verdict": "Bad", "count": 39}
+      ],
+      "coverage": [
+        {"dimension": "Deterministic diagnosis", "coverage": "80/80", "finding": "31 ranking; 8 compiler/filter; 3 state; 1 resolver gaps", "retention": "Historical aggregate only"},
+        {"dimension": "Recommendation fit", "coverage": "79/80", "finding": "25 good; 12 weak; 42 bad", "retention": "Historical aggregate only"},
+        {"dimension": "Response quality", "coverage": "Not judged", "finding": "No valid result for submitted response text", "retention": "Unavailable"},
+        {"dimension": "State accuracy", "coverage": "79/80", "finding": "39 good; 1 partial; 39 bad", "retention": "Historical aggregate only"}
+      ],
+      "submission_integrity": [
+        {"check": "Original ZIP payload", "result": "Byte-identical; SHA-256 9a034f0a0e34ee09b2d41c91ce6e3ccdfd1ba86e7d3110061c1cb14a371f9bcb"},
+        {"check": "Prediction structure", "result": "80/80 rows valid; 20 unique tracks; nonempty response"},
+        {"check": "Frozen trace alignment", "result": "80/80 exact final top-20 matches"},
+        {"check": "State and candidate trace", "result": "80/80 extracted + compiled state; 1,000 candidates"}
+      ]
+    },
+    "accessIssues": [
+      {"id": "blind_b_native_judges_disabled", "dataset": "coverage", "message": "The native Blind B prediction-audit output was generated without recommendation, response, or state judge calls."},
+      {"id": "blind_b_response_judge_absent", "dataset": "coverage", "message": "No retained response-quality judgment applies to the canonical submitted Blind B response text."}
+    ]
+  },
+  "sources": [
+    {
+      "id": "blind_b_submission",
+      "label": "Blind B submitted prediction and frozen trace",
+      "path": ".repro/HANDOFF.md",
+      "query": {"engine": "local-json", "sql": "SELECT session_id, turn_number, predicted_track_ids, final_recommendation_track_ids FROM blind_b_submission JOIN blind_b_frozen_trace USING (session_id, turn_number)", "description": "Submission integrity and trace alignment checks."}
+    },
+    {
+      "id": "blind_b_history",
+      "label": "Blind B historical audit summary",
+      "path": "experiments/v10_lgbm_B_v1.md",
+      "query": {"engine": "repository-document", "sql": "SELECT audit_dimension, coverage, verdict, row_count FROM blind_b_historical_audit_summary", "description": "Historical aggregate; row-level files absent."}
+    },
+    {
+      "id": "blind_b_leaderboard",
+      "label": "Blind B recorded CodaBench result",
+      "path": "leaderboard.md",
+      "query": {"engine": "repository-document", "sql": "SELECT submission_id, ndcg20, catalog_diversity, lexical_diversity, llm_judge, composite FROM leaderboard_md WHERE split = 'Blind B'", "description": "Recorded organizer result."}
+    }
+  ]
+}

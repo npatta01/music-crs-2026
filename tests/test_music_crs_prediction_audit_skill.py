@@ -78,6 +78,33 @@ def test_state_judge_cache_key_changes_with_rendered_state():
     assert first != second
 
 
+def test_public_artifact_metadata_uses_portable_paths(tmp_path):
+    audit = load_audit_module()
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    metadata = {
+        "prediction_path": str(repo_root / "submission" / "blind.zip"),
+        "trace_path": "/Users/example/project/.repro/traces/blind_trace.jsonl",
+        "catalog_lancedb": "/Users/example/project/cache/lancedb",
+        "llm_judge": {
+            "cache_path": str(repo_root / "reports" / "audit" / "llm_judgments.jsonl"),
+            "litellm_cache": {
+                "enabled": True,
+                "path": str(repo_root / "reports" / ".litellm_cache"),
+            },
+        },
+    }
+
+    audit.make_metadata_paths_portable(metadata, repo_root)
+
+    assert metadata["prediction_path"] == "submission/blind.zip"
+    assert metadata["trace_path"] == ".repro/traces/blind_trace.jsonl"
+    assert metadata["catalog_lancedb"] == "cache/lancedb"
+    assert metadata["llm_judge"]["cache_path"] == "reports/audit/llm_judgments.jsonl"
+    assert metadata["llm_judge"]["litellm_cache"]["path"] == "reports/.litellm_cache"
+
+
 def test_judge_verdict_labels_are_user_facing():
     audit = load_audit_module()
 
@@ -371,3 +398,4 @@ def test_render_html_groups_metric_cards_into_collapsible_rows():
     assert "Fit Judged" not in rendered
     assert "Responses Judged" not in rendered
     assert "State Judged" not in rendered
+    assert all(line == line.rstrip() for line in rendered.splitlines())

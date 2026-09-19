@@ -4,7 +4,6 @@ import modal
 app = modal.App("ckpt-info", image=modal.Image.debian_slim(python_version="3.12"))
 model_vol = modal.Volume.from_name("scout-models")
 CKPTS = [
-    "biencoder_variant_v_struct_pt_l2048",
     "biencoder_variant_v_struct_pt_l2048_qwen3-embedding-4b",
     "biencoder_variant_baseline_l2048",
     "biencoder_variant_baseline_l2048_qwen3-embedding-4b",

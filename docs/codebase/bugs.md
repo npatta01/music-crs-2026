@@ -2,7 +2,7 @@
 
 9 issue(s) confirmed after an adversarial verification pass.
 
-> **Status (2026-05-29):** Bugs **2–8** were tracked in [issue #70](https://github.com/npatta01/music-conversational-music-recomender-2026/issues/70) and are now **FIXED** on `main` (PRs [#66](https://github.com/npatta01/music-conversational-music-recomender-2026/pull/66) and [#71](https://github.com/npatta01/music-conversational-music-recomender-2026/pull/71)); bug #3 (`id_to_metadata`) was resolved separately via the `DefaultFormatter` refactor.
+> **Status (2026-05-29):** Bugs **2–8** were tracked in [issue #70](https://github.com/npatta01/music-crs-2026/issues/70) and are now **FIXED** on `main` (PRs [#66](https://github.com/npatta01/music-crs-2026/pull/66) and [#71](https://github.com/npatta01/music-crs-2026/pull/71)); bug #3 (`id_to_metadata`) was resolved separately via the `DefaultFormatter` refactor.
 > Bug **#1 is RETRACTED — false positive** (see below; the code is correct, the real per-turn row order is `user / music / assistant`). **#9 (`prepare_submission.sh` hardcoded split) is FIXED** — the script now accepts an optional `<split>` arg (`SPLIT="${2:-blindset_A}"`), used for both blindset_A and blindset_B submissions. All 9 findings are now resolved/retracted; findings below are kept as the point-in-time audit record.
 > Config references in the findings are also point-in-time; several old configs
 > were later pruned from the working tree.

@@ -1,6 +1,6 @@
 # Autorun Modal experiments with session-sharded inference
 
-**Issue:** [#99](https://github.com/npatta01/music-conversational-music-recomender-2026/issues/99)
+**Issue:** [#99](https://github.com/npatta01/music-crs-2026/issues/99)
 **Date:** 2026-06-03
 
 ## Goal

@@ -23,10 +23,10 @@ install the environment, download and verify the bundle, then run
 inference with zero credentials.
 
 ```bash
-git clone --branch main https://github.com/npatta01/music-conversational-music-recomender-2026.git
-cd music-conversational-music-recomender-2026
+git clone --branch main https://github.com/npatta01/music-crs-2026.git
+cd music-crs-2026
 
-scripts/repro_setup.sh   # checks uv/hf are installed, sets up .venv, downloads
+scripts/repro_setup.sh   # checks uv, syncs .venv (including hf), downloads
                           # + extracts + verifies the bundle from Hugging Face
 scripts/repro_run.sh     # runs Blind-B end to end — no credentials, no Modal
 ```
@@ -77,8 +77,8 @@ hours.
 ## Path 1 — Frozen replay (byte-exact, works on `main`)
 
 ```bash
-git clone --branch main https://github.com/npatta01/music-conversational-music-recomender-2026.git
-cd music-conversational-music-recomender-2026
+git clone --branch main https://github.com/npatta01/music-crs-2026.git
+cd music-crs-2026
 
 hf download Npatta01/music-crs-repro-2026 --repo-type dataset --local-dir .
 

@@ -4,27 +4,19 @@ Our entry to the **[RecSys 2026 Music Conversational Recommendation Challenge](h
 
 Built on top of the organizers' official baseline/evaluation framework (task format, dataset loaders, inference contract). Everything past the original two-stage BM25/BERT + Llama-3.2-1B baseline — the state extraction, multi-branch retrieval, RRF fusion, learned reranker, and response generation — is our own pipeline, described below.
 
+## Start here
+
+**[Open the interactive architecture deck →](https://npatta01.github.io/music-crs-2026/docs/submission-architecture.html#/high-level-architecture)**
+
+The progressive walkthrough explains how a conversation moves through state extraction, retrieval, ranking, and response generation, with examples and label-audit evidence.
+
+[Project website](https://npatta01.github.io/music-crs-2026/index.html) · [Submission architecture deck](docs/submission-architecture.html) in this repository
+
 - **Challenge site**: https://nlp4musa.github.io/music-crs-challenge/
 - **ACM RecSys Challenge**: https://www.recsyschallenge.com/2026
 - **Datasets**: [TalkPlayData-Challenge collection](https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge)
 - **Scores**: see [below](#scores) — devset, Blind-A, and Blind-B across every reported facet
-
----
-
-## Approach overview
-
-Each turn compiles the running conversation into a structured state, retrieves candidates through several independent retrievers, fuses and reranks them, and generates a response for the top pick.
-
-![Our submission pipeline: state extraction, resolve, multi-branch retrieval, weighted RRF fusion, LightGBM reranker, response generation](docs/architectures/submission_pipeline.svg)
-
-Full detail per stage:
-
-- [docs/architectures/v0plus_retrieval.md](docs/architectures/v0plus_retrieval.md) — retriever branches, RRF fusion math, post-fusion features
-- [docs/architectures/session_state.md](docs/architectures/session_state.md) — the state schema and extract→resolve pipeline
-- [docs/reproduce_reranker.md](docs/reproduce_reranker.md) — LightGBM reranker: features, training, FAST vs FULL retrain
-- [docs/architectures/explanation_generation.md](docs/architectures/explanation_generation.md) — response generation
-
-(Full per-module map is in [Repo map](#repo-map) below.)
+- **Competition retrospective**: [what we built, where we fell short, and what the leading public teams did differently](docs/retrospective.html)
 
 ---
 
@@ -33,8 +25,9 @@ Full detail per stage:
 | Split | NDCG@20 | Catalog Diversity | Lexical Diversity | LLM-as-a-Judge | Composite | Source |
 |---|---:|---:|---:|---:|---:|---|
 | Devset | 0.4562 | — | — | — | — | Local evaluator ([leaderboard.md](leaderboard.md)) |
-| Blind-A | 0.4380 | 0.0313 | 0.7670 | 4.2000 | **0.5389** | CodaBench submission `797598` |
-| Blind-B | 0.2537 | 0.0315 | 0.7862 | 3.3000 | **0.3811** | CodaBench submission `819863` (rank 29, final leaderboard) |
+| Blind-A (final) | 0.4380 | 0.0313 | 0.8028 | 4.7000 | **0.5799** | CodaBench submission `799459` — same retrieval as `797598`, after the response sweep; the row in the paper's Table 4 |
+| Blind-A (pre-sweep) | 0.4380 | 0.0313 | 0.7670 | 4.2000 | **0.5389** | CodaBench submission `797598` |
+| Blind-B | 0.2537 | 0.0315 | 0.7862 | 3.3000 | **0.3811** | CodaBench submission `819863` (**final rank 29/40 teams**) |
 
 Devset extras (no CodaBench equivalent): Hit@20 0.6138, MRR 0.4102 — see [leaderboard.md](leaderboard.md) for deep-cutoff diagnostics (@50–@1000) and per-stage recall breakdowns.
 
@@ -122,6 +115,36 @@ Offline bundle (catalog, caches, frozen traces, model weights): **https://huggin
 
 ---
 
+## Paper
+
+Our participant paper, **"State-Driven Retrieval and Learned Re-Ranking for Conversational Music Recommendation"** (ACM sigconf, 4 pages + references), lives in [`paper/`](paper/): [`main.pdf`](paper/main.pdf) is the final camera-ready paper, and [`main.tex`](paper/main.tex) is its authoritative source. It documents the full pipeline and an honest retrospective: the in-sample-evaluation lesson, the ground-truth anchoring-bias analysis (cleaned relabeling released — see the [anchor labels](data/anchor_labels_v1/README.md)), and concrete failure cases from the submitted Blind-B run.
+
+The ready-to-upload TAPS bundle is included as [`paper/recsyschallenge26-7.zip`](paper/recsyschallenge26-7.zip).
+
+---
+
+## License
+
+Code is released under the [MIT License](LICENSE). Datasets referenced from Hugging Face keep their own licenses.
+
+---
+
 ## Acknowledgments
 
 Built on the RecSys 2026 Music-CRS organizers' baseline evaluation framework and the [TalkPlayData-Challenge](https://huggingface.co/collections/talkpl-ai/talkplay-data-challenge) datasets. Thanks to the organizing committee for the challenge and infrastructure.
+
+---
+
+## Authors / Feedback
+
+If you have feedback, please reach out to:
+
+- [Nidhin Pattaniyil](mailto:npatta01@gmail.com) ([LinkedIn](https://www.linkedin.com/in/nidhinpattaniyil/))
+- [Semih Yagli](mailto:semihyagli1@gmail.com) ([LinkedIn](https://www.linkedin.com/in/semihyagli/))
+- [Tanwir Zaman](mailto:zaman.tanwir@gmail.com) ([LinkedIn](https://www.linkedin.com/in/tanwirzaman/))
+
+---
+
+## Competition retrospective
+
+[Read the detailed post-competition retrospective](https://npatta01.github.io/music-crs-2026/docs/retrospective.html?path=audit#outcome/gap-interpretation).

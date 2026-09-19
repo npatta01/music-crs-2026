@@ -275,6 +275,43 @@ def resolve_inputs(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def portable_artifact_path(value: str, repo_root: Path) -> str:
+    """Return a public, machine-independent path for report provenance."""
+    candidate = Path(value)
+    try:
+        return candidate.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        pass
+
+    parts = candidate.parts
+    for anchor in (".repro", "cache", "exp", "submission", "configs", "reports", "data"):
+        if anchor in parts:
+            return Path(*parts[parts.index(anchor) :]).as_posix()
+    return candidate.name
+
+
+def make_metadata_paths_portable(metadata: dict[str, Any], repo_root: Path) -> None:
+    """Remove workstation-specific prefixes before publishing an audit."""
+    path_keys = {
+        "prediction_path",
+        "trace_path",
+        "ground_truth_path",
+        "config_path",
+        "catalog_lancedb",
+        "cache_path",
+        "path",
+    }
+
+    def visit(value: dict[str, Any]) -> None:
+        for key, child in value.items():
+            if isinstance(child, dict):
+                visit(child)
+            elif key in path_keys and isinstance(child, str):
+                value[key] = portable_artifact_path(child, repo_root)
+
+    visit(metadata)
+
+
 def load_predictions(path: Path) -> list[dict[str, Any]]:
     data = load_json_or_zip(path)
     if not isinstance(data, list):
@@ -2841,7 +2878,7 @@ def render_html(audit: dict[str, Any], catalog: Catalog) -> str:
                     {judge_badge}
                     {explanation_badge}
                     {state_badge}
-                    <span>#{row['index']} · turn {row['turn_number']} · {escape(row['session_id'][:8])}</span>
+                    <span>#{row['index']} · turn {row['turn_number']} · session {escape(row['session_id'])}</span>
                   </div>
                   <p>{escape(row['latest_user_text'][:260])}</p>
                 </div>
@@ -3191,7 +3228,7 @@ statePills.forEach(p => p.addEventListener('click', () => {{
 </body>
 </html>
 """
-    return html
+    return "\n".join(line.rstrip() for line in html.splitlines()) + "\n"
 
 
 def parse_args() -> argparse.Namespace:
@@ -3480,6 +3517,7 @@ def main() -> int:
             litellm_cache_mode=args.judge_litellm_cache,
             litellm_cache_dir=litellm_cache_dir,
         )
+    make_metadata_paths_portable(metadata, resolved["repo_root"])
     audit = {
         "aggregate": aggregate(rows, metadata),
         "rows": rows,

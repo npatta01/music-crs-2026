@@ -25,10 +25,13 @@ Promotion via `scripts/rerank/modal_promote_hf.py` (casts fp32→bf16, ~halves s
 private HF repo, tags `v1`). The bf16 file gets its **own** sha256 (recorded on upload); the fp32
 sha256 above is the source-of-truth provenance.
 
-| model | HF repo (private) | bf16 `model.safetensors` | bf16 sha256 |
+| model | HF repo (at promotion time) | bf16 `model.safetensors` | bf16 sha256 |
 |---|---|---|---|
-| v_struct_pt · 0.6B | `Npatta01/music-recsys-2026-retriever-0.6b` | 1.19 GB (1,191,586,416 B) | `94e1e9d393b038398100529eb2548f78814ec123391059e72100b429b53db506` |
-| v_struct_pt · 4B | `Npatta01/music-recsys-2026-retriever-4b` | 8.04 GB (8,043,592,168 B) | `79aa4d26be96a117d749c6f067d31306b21a1e34fb1525a5aa9246537fe4c9a9` |
+| v_struct_pt · 0.6B | ~~`Npatta01/music-recsys-2026-retriever-0.6b`~~ **deleted 2026-07-12** | 1.19 GB (1,191,586,416 B) | `94e1e9d393b038398100529eb2548f78814ec123391059e72100b429b53db506` |
+| v_struct_pt · 4B | `Npatta01/music-recsys-2026-retriever-4b` (public) | 8.04 GB (8,043,592,168 B) | `79aa4d26be96a117d749c6f067d31306b21a1e34fb1525a5aa9246537fe4c9a9` |
 
-Promoted 2026-06-25 (bf16, private). Load: `AutoModel.from_pretrained("Npatta01/music-recsys-2026-retriever-0.6b", token=...)`.
+Promoted 2026-06-25 (bf16, private at the time; 4B made public for code-submission review, 0.6B
+deleted as unused post-competition -- b1 serving always used the 4B, see `docs/architectures/biencoder.md`).
+The fp32 source checkpoint for 0.6B still exists on the `scout-models` Modal volume (row above) if
+ever needed again.
 **Rotate the HF write token** used for this push (it was shared in chat).

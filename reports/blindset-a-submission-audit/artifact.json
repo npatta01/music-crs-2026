@@ -1,0 +1,221 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "Blind A Submission Audit",
+    "description": "Per-split audit of the saved Blind A submission and retained prediction-audit evidence.",
+    "generatedAt": "2026-07-17T14:40:00Z",
+    "cards": [
+      {
+        "id": "rows",
+        "dataset": "summary",
+        "sourceId": "blind_a_audit",
+        "description": "Rows covered by the retained Blind A audit.",
+        "metrics": [{"label": "Audited rows", "field": "rows", "format": "number"}]
+      },
+      {
+        "id": "state",
+        "dataset": "summary",
+        "sourceId": "blind_a_audit",
+        "description": "Rows judged accurate after state compilation.",
+        "metrics": [{"label": "Compiled state accurate", "field": "compiled_accurate", "format": "number"}]
+      },
+      {
+        "id": "fit",
+        "dataset": "summary",
+        "sourceId": "blind_a_audit",
+        "description": "Rows receiving a good recommendation-fit verdict.",
+        "metrics": [{"label": "Recommendation fit good", "field": "fit_good", "format": "number"}]
+      },
+      {
+        "id": "response",
+        "dataset": "summary",
+        "sourceId": "blind_a_audit",
+        "description": "Responses judged good or acceptable.",
+        "metrics": [{"label": "Response good or acceptable", "field": "response_usable", "format": "number"}]
+      }
+    ],
+    "charts": [
+      {
+        "id": "verdicts",
+        "title": "Blind A qualitative verdict counts",
+        "subtitle": "Label-free judgments across all 80 submitted rows; state uses the combined strict state verdict.",
+        "type": "bar",
+        "dataset": "verdicts",
+        "sourceId": "blind_a_audit",
+        "encodings": {
+          "x": {"field": "dimension", "type": "nominal", "label": "Audit dimension"},
+          "y": {"field": "count", "type": "quantitative", "label": "Rows"},
+          "color": {"field": "verdict", "type": "nominal", "label": "Verdict"}
+        },
+        "yAxisTitle": "Rows",
+        "valueFormat": "number",
+        "layout": "full"
+      }
+    ],
+    "tables": [
+      {
+        "id": "quality_detail",
+        "title": "Blind A audit detail",
+        "subtitle": "Retained row-level evidence for state, recommendation, response, and deterministic diagnosis.",
+        "dataset": "quality_detail",
+        "sourceId": "blind_a_audit",
+        "defaultSort": {"field": "dimension", "direction": "asc"},
+        "columns": [
+          {"field": "dimension", "label": "Dimension", "type": "text"},
+          {"field": "coverage", "label": "Coverage", "type": "text"},
+          {"field": "finding", "label": "Finding", "type": "text"},
+          {"field": "evidence", "label": "Evidence", "type": "text"}
+        ]
+      },
+      {
+        "id": "submission_integrity",
+        "title": "Blind A submission integrity",
+        "subtitle": "The saved prediction file is byte-identical to the original submitted ZIP payload and aligns to the frozen trace.",
+        "dataset": "submission_integrity",
+        "sourceId": "blind_a_submission",
+        "defaultSort": {"field": "check", "direction": "asc"},
+        "columns": [
+          {"field": "check", "label": "Check", "type": "text"},
+          {"field": "result", "label": "Result", "type": "text"}
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "id": "blind_a_audit",
+        "label": "Blind A retained prediction audit",
+        "path": "exp/analysis/prediction_audit/state_ranker_v10_lgbm_blindset_A_full_20260717/audit.json",
+        "query": {
+          "engine": "saved-audit",
+          "sql": "SELECT audit_dimension, verdict, COUNT(*) AS row_count FROM blind_a_retained_audit GROUP BY audit_dimension, verdict",
+          "description": "Aggregate recalculated from the retained 80-row Blind A audit JSON."
+        }
+      },
+      {
+        "id": "blind_a_submission",
+        "label": "Blind A submitted prediction and frozen trace",
+        "path": ".repro/HANDOFF.md",
+        "query": {
+          "engine": "local-json",
+          "sql": "SELECT session_id, turn_number, predicted_track_ids, final_recommendation_track_ids FROM blind_a_submission JOIN blind_a_frozen_trace USING (session_id, turn_number)",
+          "description": "Read-only byte identity, row validity, and trace-alignment checks."
+        }
+      },
+      {
+        "id": "blind_a_leaderboard",
+        "label": "Blind A recorded CodaBench result",
+        "path": "leaderboard.md",
+        "query": {
+          "engine": "repository-document",
+          "sql": "SELECT submission_id, ndcg20, catalog_diversity, lexical_diversity, llm_judge, composite FROM leaderboard_md WHERE split = 'Blind A'",
+          "description": "Organizer-scored Blind A metrics recorded in the repository."
+        }
+      }
+    ],
+    "blocks": [
+      {"id": "title", "type": "markdown", "body": "# Blind A Submission Audit"},
+      {
+        "id": "summary",
+        "type": "markdown",
+        "sourceId": "blind_a_audit",
+        "body": "## Technical summary\n\n**Blind A has the complete prediction-audit skill output.** Its retained `index.html` and `audit.json` cover all 80 submitted rows across deterministic diagnosis, recommendation fit, response quality, extracted state, and compiled state. The strongest diagnosed weakness is final ordering: 33 rows carry a ranking gap, while response generation is good or acceptable on 63 rows."
+      },
+      {"id": "metrics", "type": "metric-strip", "cardIds": ["rows", "state", "fit", "response"]},
+      {
+        "id": "integrity_finding",
+        "type": "markdown",
+        "sourceId": "blind_a_submission",
+        "body": "## The report audits the actual submitted Blind A bytes\n\nThe saved prediction contains 80 valid rows, every row has 20 unique track IDs and a nonempty response, and all 80 top-20 lists exactly match the frozen trace. Its SHA-256 also matches `prediction.json` inside the original submission ZIP."
+      },
+      {"id": "integrity_table", "type": "table", "tableId": "submission_integrity", "layout": "full"},
+      {
+        "id": "quality_finding",
+        "type": "markdown",
+        "sourceId": "blind_a_audit",
+        "body": "## Compiled-state fidelity and ranking are the main improvement targets\n\nExtraction was judged accurate on 79 rows, while compiled state was accurate on 68. Recommendation fit was good on 37 rows and weak or bad on 43. The verdict chart summarizes the retained qualitative evidence; it is diagnostic and does not use hidden blind-set labels."
+      },
+      {"id": "verdict_chart", "type": "chart", "chartId": "verdicts", "layout": "full"},
+      {"id": "quality_table", "type": "table", "tableId": "quality_detail", "layout": "full"},
+      {
+        "id": "definitions",
+        "type": "markdown",
+        "body": "## Scope and metric definitions\n\n- **Extracted state accurate** means the label-free state judge found the extracted conversational constraints faithful.\n- **Compiled state accurate** means the compiled retrieval state preserved those constraints without harmful scope changes.\n- **Recommendation fit** evaluates the submitted tracks against the raw conversation, without hidden labels.\n- **Response quality** evaluates whether the generated prose grounds the top recommendation and avoids unsupported claims.\n- **Ranking gap** means a cleaner candidate existed but was ordered below the selected result."
+      },
+      {
+        "id": "method",
+        "type": "markdown",
+        "sourceId": "blind_a_audit",
+        "body": "## Methodology\n\nThis report reads the existing prediction-audit outputs and recomputes aggregate counts from their retained row records. Submission identity was checked against the frozen reference, original ZIP payload, and final-recommendation trace. No inference, retrieval, response generation, or new judge call was performed for this report."
+      },
+      {
+        "id": "limitations",
+        "type": "markdown",
+        "body": "## Limitations and uncertainty\n\nThe qualitative judges are model-dependent diagnostics, not hidden-label retrieval metrics. The frozen trace proves what produced the submission but does not guarantee a live ANN rerun would be byte-identical across environments. The repository records the organizer result separately: nDCG@20 0.4380 and composite 0.5389."
+      },
+      {
+        "id": "next",
+        "type": "markdown",
+        "body": "## Recommended next steps\n\n1. Inspect the 12 compiled-state failures before changing extraction.\n2. Prioritize reranking experiments on the 33 ranking-gap rows.\n3. Keep the frozen submission, trace, prompt versions, and row-level judge caches together for future comparisons."
+      },
+      {
+        "id": "questions",
+        "type": "markdown",
+        "body": "## Further questions\n\n- Which compiler transformations account for the extraction-to-compiled-state drop?\n- Which request types dominate the ranking-gap rows?\n- Can reranking improve fit without reducing the already-strong response-quality result?"
+      }
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "generatedAt": "2026-07-17T14:40:00Z",
+    "status": "ready",
+    "datasets": {
+      "summary": [{"rows": 80, "compiled_accurate": 68, "fit_good": 37, "response_usable": 63}],
+      "verdicts": [
+        {"dimension": "Recommendation fit", "verdict": "Good", "count": 37},
+        {"dimension": "Recommendation fit", "verdict": "Weak", "count": 7},
+        {"dimension": "Recommendation fit", "verdict": "Bad", "count": 36},
+        {"dimension": "Response quality", "verdict": "Good", "count": 58},
+        {"dimension": "Response quality", "verdict": "Acceptable", "count": 5},
+        {"dimension": "Response quality", "verdict": "Weak", "count": 6},
+        {"dimension": "Response quality", "verdict": "Bad", "count": 11},
+        {"dimension": "Strict state", "verdict": "Good", "count": 68},
+        {"dimension": "Strict state", "verdict": "Bad", "count": 12}
+      ],
+      "quality_detail": [
+        {"dimension": "Compiled state", "coverage": "80/80", "finding": "68 accurate; 12 inaccurate; 12 risk flags", "evidence": "Retained row-level judge"},
+        {"dimension": "Deterministic diagnosis", "coverage": "80/80", "finding": "33 ranking; 5 state; 4 compiler/filter; 3 response self-flag gaps", "evidence": "Retained static audit"},
+        {"dimension": "Extracted state", "coverage": "80/80", "finding": "79 accurate; 1 inaccurate", "evidence": "Retained row-level judge"},
+        {"dimension": "Recommendation fit", "coverage": "80/80", "finding": "37 good; 7 weak; 36 bad", "evidence": "Retained row-level judge"},
+        {"dimension": "Response quality", "coverage": "80/80", "finding": "58 good; 5 acceptable; 6 weak; 11 bad", "evidence": "Retained row-level judge"}
+      ],
+      "submission_integrity": [
+        {"check": "Original ZIP payload", "result": "Byte-identical; SHA-256 d60907f69f12ab91cf33528bb535de402bd114f129b1b777fb00846d9220b2bb"},
+        {"check": "Prediction structure", "result": "80/80 rows valid; 20 unique tracks; nonempty response"},
+        {"check": "Frozen trace alignment", "result": "80/80 exact final top-20 matches"},
+        {"check": "State and candidate trace", "result": "80/80 extracted + compiled state; 1,000 candidates"}
+      ]
+    }
+  },
+  "sources": [
+    {
+      "id": "blind_a_audit",
+      "label": "Blind A retained prediction audit",
+      "path": "exp/analysis/prediction_audit/state_ranker_v10_lgbm_blindset_A_full_20260717/audit.json",
+      "query": {"engine": "saved-audit", "sql": "SELECT audit_dimension, verdict, COUNT(*) AS row_count FROM blind_a_retained_audit GROUP BY audit_dimension, verdict", "description": "Aggregate recalculated from retained Blind A rows."}
+    },
+    {
+      "id": "blind_a_submission",
+      "label": "Blind A submitted prediction and frozen trace",
+      "path": ".repro/HANDOFF.md",
+      "query": {"engine": "local-json", "sql": "SELECT session_id, turn_number, predicted_track_ids, final_recommendation_track_ids FROM blind_a_submission JOIN blind_a_frozen_trace USING (session_id, turn_number)", "description": "Submission integrity and trace alignment checks."}
+    },
+    {
+      "id": "blind_a_leaderboard",
+      "label": "Blind A recorded CodaBench result",
+      "path": "leaderboard.md",
+      "query": {"engine": "repository-document", "sql": "SELECT submission_id, ndcg20, catalog_diversity, lexical_diversity, llm_judge, composite FROM leaderboard_md WHERE split = 'Blind A'", "description": "Recorded organizer result."}
+    }
+  ]
+}

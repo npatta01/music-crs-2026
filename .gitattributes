@@ -1,0 +1,5 @@
+index.html linguist-documentation=true
+data/anchor_labels_v1/reports/**/*.html linguist-documentation=true
+docs/**/*.html linguist-documentation=true
+experiments/analysis/**/*.html linguist-documentation=true
+reports/**/*.html linguist-documentation=true
