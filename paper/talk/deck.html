@@ -305,7 +305,7 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
     break-after:page;page-break-after:always}
   :root[data-print="core"] .slide[data-tier="optional"],
   :root[data-print="core"] .slide[data-appendix]{display:none!important}
-  .slide:last-of-type{break-after:auto;page-break-after:auto}
+  .slide:last-of-type,.slide.last-visible{break-after:auto;page-break-after:auto}
   .overlay,#timer,#notes,#bar,#jumpbuf{display:none!important}
 }
 
@@ -504,7 +504,7 @@ tbody tr.hi td{background:var(--hue-soft)}
   <div class="diagram"><img src="figures/architecture.svg" alt="System architecture: conversation and played tracks go to an LLM state extractor; eleven retrieval branches query one LanceDB collection of 47,071 tracks; pooled candidates are scored by a LambdaMART reranker that emits twenty tracks; a response model writes a reply conditioned on the top track and the same state. A weighted reciprocal-rank-fusion path is the untrained baseline and fallback."></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide divider" data-tier="core" data-title="§1 · The task"
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide divider" data-tier="optional" data-title="§1 · The task"
   data-notes="Section 1 of 8 — what the challenge asks, and how it is scored. A beat, not a slide.">
   <div class="divrail"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
   <div class="divicon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
@@ -569,7 +569,7 @@ tbody tr.hi td{background:var(--hue-soft)}
   </div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide divider" data-tier="core" data-title="§2 · State extraction"
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide divider" data-tier="optional" data-title="§2 · State extraction"
   data-notes="Section 2 of 8 — reading a typed state off the conversation. A beat, not a slide.">
   <div class="divrail"><span class="done"></span><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
   <div class="divicon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg></div>
@@ -811,7 +811,7 @@ tbody tr.hi td{background:var(--hue-soft)}
   </div></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide divider" data-tier="core" data-title="§3 · Retrieval"
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide divider" data-tier="optional" data-title="§3 · Retrieval"
   data-notes="Section 3 of 8 — eleven branches over one index. A beat, not a slide.">
   <div class="divrail"><span class="done"></span><span class="done"></span><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
   <div class="divicon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div>
@@ -1725,6 +1725,14 @@ document.getElementById("stage").addEventListener("click", function(e){
 if (/(?:\?|&)core=1\b/.test(location.search)) {
   document.documentElement.setAttribute("data-print", "core");
   coreOnly = true;
+  /* the last slide in the file is hidden in this mode, so its page break would
+     emit a blank trailing page — move the "no break" marker to the last one
+     that is actually shown. */
+  for (var ci = slides.length - 1; ci >= 0; ci--) {
+    if (slides[ci].dataset.tier !== "optional" && !("appendix" in slides[ci].dataset)) {
+      slides[ci].classList.add("last-visible"); break;
+    }
+  }
   document.getElementById("coreflag").classList.add("on");
 }
 
