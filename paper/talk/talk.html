@@ -179,6 +179,26 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
 .lrn b{display:block;color:var(--ink);margin-bottom:.2cqw}
 .slide[data-dense] .lrn li{font-size:1.6cqw} .slide[data-dense] .lrn{gap:1.15cqw}
 
+
+/* ---------- worked examples: every slide readable without a speaker ---------- */
+.ex{display:grid;grid-template-columns:8.4cqw 1fr;gap:.55cqw 1.1cqw;align-items:baseline}
+.ex .k{font-size:1.12cqw;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);padding-top:.15cqw}
+.ex .said{font-size:1.4cqw;line-height:1.4;color:var(--ink-2);font-style:italic}
+.ex .got{font-family:var(--mono);font-size:1.3cqw;color:var(--bad);font-weight:700}
+.ex .want{font-family:var(--mono);font-size:1.3cqw;color:var(--good);font-weight:700}
+.ex .st{font-family:var(--mono);font-size:1.22cqw;color:var(--ink-2)}
+.ex .st b{color:var(--accent)}
+.exlist{display:flex;flex-direction:column;gap:1.25cqw}
+.exrow{border-left:.3cqw solid var(--line);padding-left:1.2cqw}
+.exrow.bad{border-left-color:var(--bad)}
+.exrow.warn{border-left-color:var(--warn)}
+.exrow.good{border-left-color:var(--good)}
+.takeaway{margin-top:auto;padding-top:1.1cqw;border-top:.09cqw solid var(--line);
+  font-size:1.6cqw;line-height:1.4;color:var(--ink)}
+.takeaway b{color:var(--bad)}
+.rtable td:first-child{font-family:var(--mono);font-size:.92em;color:var(--accent);font-weight:700}
+
 /* ---------- title slide ---------- */
 #s-title{justify-content:center;padding-left:7cqw;padding-right:7cqw}
 #s-title .rule{width:7cqw;height:.42cqw;background:var(--accent);margin:2.4cqw 0}
@@ -418,6 +438,68 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
       <div class="card warn"><h3>And where they do not</h3>
         <div class="small">Nothing here becomes a hard filter on album, and the year window never
           reaches the index. That gap is the main diagnostic later.</div></div>
+    </div>
+  </div></div>
+</section>
+
+<section class="slide" data-tier="optional" data-dense data-title="Six request types, six shapes of state"
+  data-notes="&lt;b&gt;1:00.&lt;/b&gt; Every example here is a real Blind-B turn. The request type decides which branches fire and what the state has to carry: an exact_album needs artist AND album as must-use, an attribute_search carries only facets, a new_artist carries an avoid. Point out that the extractor got all six of these right — extraction was rarely the failure.">
+  <div class="slide-head"><h2>Six request types, six shapes of state</h2>
+    <span class="tag">Approach</span></div>
+  <div class="fill">
+    <table class="rtable tight">
+      <thead><tr><th>Request type</th><th style="text-align:left">A real turn</th><th style="text-align:left">What the extractor pulled out</th></tr></thead>
+      <tbody>
+        <tr><td>exact_track</td>
+          <td style="text-align:left">“I wanted <em>Watercolors</em> by Pat Metheny specifically.”</td>
+          <td style="text-align:left">track = Watercolors <b>must_use</b> · artist = Pat Metheny <b>must_use</b></td></tr>
+        <tr><td>exact_album</td>
+          <td style="text-align:left">“Which song from Peter Doherty's <em>Grace/Wastelands</em>…”</td>
+          <td style="text-align:left">artist + album <b>must_use</b> · facet “best tracks of 2009”</td></tr>
+        <tr><td>same_artist</td>
+          <td style="text-align:left">“Got another track known for his guitar work?”</td>
+          <td style="text-align:left">artist <b>must_use</b> · prior track <b>do_not_use</b> · facets: guitar work, melodic complexity</td></tr>
+        <tr><td>new_artist</td>
+          <td style="text-align:left">“…branching out to other singer-songwriter artists.”</td>
+          <td style="text-align:left">artist = Ryan Adams &amp; The Cardinals <b>do_not_use</b> · facets: acoustic, introspective</td></tr>
+        <tr><td>attribute_search</td>
+          <td style="text-align:left">“…a really striking, abstract cover art, bold colors and shapes.”</td>
+          <td style="text-align:left">three visual facets · routing flag <b>image_or_visual_search</b></td></tr>
+        <tr><td>hidden_target</td>
+          <td style="text-align:left">“A Lil Wayne song from an experimental phase.”</td>
+          <td style="text-align:left">artist <b>must_use</b> · facet “experimental” · flag <b>hidden_target_search</b></td></tr>
+      </tbody>
+    </table>
+    <div class="takeaway">The extractor read all six of these correctly. Across the whole Blind-B
+      run only <b>3 of 80 turns</b> were diagnosed as a state-extraction miss — reading the
+      conversation was almost never the problem.</div>
+  </div>
+</section>
+
+<section class="slide" data-tier="optional" data-dense data-title="Routing flags decide which branches fire"
+  data-notes="&lt;b&gt;0:45.&lt;/b&gt; Five boolean flags on the state. The visual one is the clearest case: it is the only thing that opens the twelfth, gated SigLIP-2 cover-art branch. Note the honest bit — the reranker carries no features for that branch, so even when it fires, the ranker cannot weigh it.">
+  <div class="slide-head"><h2>Routing flags decide which branches fire</h2>
+    <span class="tag">Approach</span></div>
+  <div class="fill"><div class="cols c2w">
+    <table class="tight">
+      <thead><tr><th>Flag</th><th style="text-align:left">Opens</th></tr></thead>
+      <tbody>
+        <tr><td><span class="mono">exact_entity_probe</span></td><td style="text-align:left">catalog lookups — discography, album</td></tr>
+        <tr><td><span class="mono">lyric_search</span></td><td style="text-align:left">the Qwen3 lyrics view</td></tr>
+        <tr><td><span class="mono">feature_articulation</span></td><td style="text-align:left">CLAP text→audio on the sonic description</td></tr>
+        <tr><td><span class="mono">image_or_visual_search</span></td><td style="text-align:left">the gated SigLIP-2 cover-art branch</td></tr>
+        <tr><td><span class="mono">hidden_target_search</span></td><td style="text-align:left">widens the pool; suppresses exact pins</td></tr>
+      </tbody>
+    </table>
+    <div class="stack">
+      <div class="card"><h3>A real visual request</h3>
+        <div class="small">“I'm looking for an album with a really striking, abstract cover art…
+          bold colors and shapes, almost like a modern painting.”</div>
+        <div class="tiny" style="margin-top:.6cqw">→ three visual facets,
+          <span class="mono">image_or_visual_search = true</span></div></div>
+      <div class="card bad"><h3>And the honest part</h3>
+        <div class="small">The reranker carries <strong>no features</strong> for that branch. Even
+          when the flag opens it, the ranker cannot weigh what it returns.</div></div>
     </div>
   </div></div>
 </section>
@@ -710,6 +792,112 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
   </div>
   <div class="small" style="margin-top:1.8cqw"><em>Silverthorn</em> is in the catalog. The third is
     a response failure, not a retrieval one — the track simply does not exist in the 47,071.</div></div>
+</section>
+
+<section class="slide" data-tier="optional" data-dense data-title="Where the failures were"
+  data-notes="&lt;b&gt;0:45.&lt;/b&gt; The deterministic trace audit over all 80 Blind-B turns. Ranking dominates: 31 turns where a better candidate sat in the pool. Extraction — the part people assume is the fragile bit — accounts for 3. That ordering is the whole diagnosis.">
+  <div class="slide-head"><h2>Where the failures were — all 80 Blind-B turns</h2>
+    <span class="tag">Analysis</span></div>
+  <div class="fill"><div class="cols c2w">
+    <table>
+      <thead><tr><th>Diagnosed gap</th><th>Turns</th><th style="text-align:left">Meaning</th></tr></thead>
+      <tbody>
+        <tr class="hi"><td>Ranking</td><td>31</td><td style="text-align:left">a better, non-violating candidate sat below our top-20</td></tr>
+        <tr><td>Constraint not applied</td><td>8</td><td style="text-align:left">an extracted filter never reached the pool</td></tr>
+        <tr><td>State extraction</td><td>3</td><td style="text-align:left">the extractor missed something the user said</td></tr>
+        <tr><td>Entity resolution</td><td>1</td><td style="text-align:left">a name never resolved to a catalog ID</td></tr>
+      </tbody>
+    </table>
+    <div class="stack">
+      <div class="card bad"><h3>Top-1 flagged</h3><div class="stat sm bad">17 / 80</div>
+        <div class="small" style="margin-top:.4cqw">the track we led with violated something the
+          state had recorded</div></div>
+      <div class="card warn"><h3>Categories overlap</h3>
+        <div class="small">43 diagnoses across 32 distinct turns. This is a heuristic audit, not a
+          relevance judgment — Blind-B exposes no labels.</div></div>
+    </div>
+  </div>
+  <div class="takeaway">Extraction is <b>3 of 43</b> diagnoses. The failure is overwhelmingly
+    downstream of understanding the conversation.</div></div>
+</section>
+
+<section class="slide" data-tier="core" data-dense data-title="Failure 1 — extracted, then ignored"
+  data-notes="&lt;b&gt;1:15.&lt;/b&gt; The most common shape, and the most embarrassing. In each of these the state correctly carried an avoid for the artist, and we served that same artist at rank 1. This is our own model doing exactly what the training labels do — anchoring on the just-played artist. The constraint features carry 0.7% of ranker gain, which is why nothing stopped it.">
+  <div class="slide-head"><h2>Failure 1 — the constraint was extracted, then ignored</h2>
+    <span class="tag">Analysis</span></div>
+  <div class="fill"><div class="exlist">
+    <div class="exrow bad"><div class="ex">
+      <div class="k">User</div><div class="said">“…I gotta break away from Deltron and Del completely. Looking for <strong>new</strong> established underground hip-hop artists.”</div>
+      <div class="k">State</div><div class="st">avoid <b>Deltron 3030</b>, <b>Del The Funky Homosapien</b> · request_type <b>new_artist</b></div>
+      <div class="k">We served</div><div class="got">Dead Prez — Hip Hop &nbsp;<span style="color:var(--ink-3);font-weight:400">(classic hip-hop, the thing they rejected)</span></div>
+    </div></div>
+    <div class="exrow bad"><div class="ex">
+      <div class="k">User</div><div class="said">“…branching out to other singer-songwriter or alt-country artists.”</div>
+      <div class="k">State</div><div class="st">avoid <b>Ryan Adams &amp; The Cardinals</b> · request_type <b>new_artist</b></div>
+      <div class="k">We served</div><div class="got">Ryan Adams — When The Stars Go Blue</div>
+    </div></div>
+    <div class="exrow bad"><div class="ex">
+      <div class="k">User</div><div class="said">“…still focusing on Juanes. While I enjoy his music, I haven't found the specific lyrical depth I'm after.”</div>
+      <div class="k">State</div><div class="st">rejected <b>Juanes</b> · avoid <b>Juanes</b>, <b>Latin Pop</b></div>
+      <div class="k">We served</div><div class="got">Juanes — Me Enamoré De Ti</div>
+    </div></div>
+  </div>
+  <div class="takeaway">Three different sessions, one failure: the listener asked to move on, the
+    state recorded it, and <b>the ranker served that artist anyway</b>. Constraint features carry
+    0.7% of split gain — nothing in the model was weighing them.</div></div>
+</section>
+
+<section class="slide" data-tier="optional" data-dense data-title="Failure 2 — nothing in the data to match"
+  data-notes="&lt;b&gt;0:55.&lt;/b&gt; A different shape: the extractor understood perfectly and there was simply nothing in the catalog to satisfy it. The Metheny case is the worst of the three — the track does not exist in the 47,071, and rather than say so the generator described a different song as if it were the one asked for.">
+  <div class="slide-head"><h2>Failure 2 — nothing in the data to match</h2>
+    <span class="tag">Analysis</span></div>
+  <div class="fill"><div class="exlist">
+    <div class="exrow warn"><div class="ex">
+      <div class="k">User</div><div class="said">“I wanted <em>Watercolors</em> by Pat Metheny specifically. Can you play that one?”</div>
+      <div class="k">State</div><div class="st">track <b>Watercolors</b> must_use · artist <b>Pat Metheny</b> must_use — read perfectly</div>
+      <div class="k">Reality</div><div class="st">the track is not in the 47,071-track catalog</div>
+      <div class="k">We served</div><div class="got">Pat Metheny — Alfie, described as if it were the one asked for</div>
+    </div></div>
+    <div class="exrow warn"><div class="ex">
+      <div class="k">User</div><div class="said">“Exactly 126.70 bpm, in G minor.”</div>
+      <div class="k">Reality</div><div class="st">no tempo field, no key field — no branch can match on either</div>
+    </div></div>
+    <div class="exrow warn"><div class="ex">
+      <div class="k">User</div><div class="said">“A song from the <em>Breaking Bad</em> soundtrack.”</div>
+      <div class="k">Reality</div><div class="st">no film or TV metadata anywhere in the catalog</div>
+    </div></div>
+  </div>
+  <div class="takeaway">Extraction was correct every time. The gap is <b>knowledge, not
+    understanding</b> — and when the answer does not exist, the system should say so rather than
+    offer the nearest thing in its place.</div></div>
+</section>
+
+<section class="slide" data-tier="optional" data-dense data-title="Failure 3 — the better track was already in the pool"
+  data-notes="&lt;b&gt;0:55.&lt;/b&gt; This is the one that says the loss is in ranking, not retrieval. In each case a non-violating, better-fitting candidate was already in our own candidate pool, just below the top-20 we served. St Germain is nu-jazz and downtempo — literally what the user described — and it sat at pool rank 34 while we served the artist they had asked to avoid.">
+  <div class="slide-head"><h2>Failure 3 — the better track was already in our pool</h2>
+    <span class="tag">Analysis</span></div>
+  <div class="fill">
+    <table class="tight">
+      <thead><tr><th>What they asked for</th><th style="text-align:left">We served at rank 1</th><th style="text-align:left">Already in our pool</th><th>Pool rank</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left">nu-jazz, downtempo, female vocals — <em>not</em> Parov Stelar</td>
+          <td style="text-align:left" class="mono">Parov Stelar — Booty Swing</td>
+          <td style="text-align:left" class="mono">St Germain — What You Think About…</td><td>34</td></tr>
+        <tr><td style="text-align:left">new underground hip-hop, not Deltron</td>
+          <td style="text-align:left" class="mono">Dead Prez — Hip Hop</td>
+          <td style="text-align:left" class="mono">Souls Of Mischief — Make Your Mind Up</td><td>31</td></tr>
+        <tr><td style="text-align:left">hardcore, not classic hip-hop</td>
+          <td style="text-align:left" class="mono">Dead Prez — Hip Hop</td>
+          <td style="text-align:left" class="mono">Papa Roach — Getting Away With Murder</td><td>49</td></tr>
+        <tr><td style="text-align:left">that carol, but not Beegie Adair again</td>
+          <td style="text-align:left" class="mono">Beegie Adair — The Christmas Song</td>
+          <td style="text-align:left" class="mono">Frank Sinatra — Have Yourself A Merry Little Christmas</td><td>63</td></tr>
+      </tbody>
+    </table>
+    <div class="takeaway">On <b>31 of 80 Blind-B turns</b> a non-violating, better-fitting candidate
+      was sitting in our own pool below the top-20 we served. Retrieval found it; ranking buried
+      it.</div>
+  </div>
 </section>
 
 <section class="slide" data-tier="optional" data-title="Label-free audit"

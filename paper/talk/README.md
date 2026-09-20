@@ -16,8 +16,8 @@ does not hold fabric well — sort out mounting in advance. See the
 | --- | --- |
 | `deck.html` | **Deck source.** The detailed record of the work — edit this. |
 | `talk.html` | **Present from this.** Self-contained, figures inlined, no network. |
-| `talk.pdf` | Full deck, 30 slides at 960×540pt. |
-| `talk-core.pdf` | The short talk — 10 slides, same source filtered. |
+| `talk.pdf` | Full deck, 36 slides at 960×540pt. |
+| `talk-core.pdf` | The short talk — 11 slides, same source filtered. |
 | `poster.html` | **Poster source.** Hand-written HTML + inline SVG — not LaTeX. |
 | `poster.pdf` | **Send this to the printer.** True-size A1 (594×841mm), one page. |
 | `render.sh` | Renders and preflights the poster. |
@@ -69,16 +69,23 @@ EOF
 **The deck is the detailed record of the work, not a conference cut.** It covers
 the system properly — state extraction, entity resolution, all eleven branches,
 the index, fusion, the ranker, the bi-encoder and its training, response
-generation — then results and the full analysis. Thirty slides.
+generation — then results and the full analysis. Thirty-six slides.
+
+Slides are written to **stand alone**: each carries its own takeaway line, so a
+reader gets the point without the speaker. The worked examples are all real
+turns from the submitted Blind-B run, pulled from
+`reports/blindset-b-prediction-audit/audit.json` — six request types with the
+state the extractor actually produced, and three shapes of failure with the
+track we actually served.
 
 The short talk is a **filter over that same source**, never a second file:
 
-- **`data-tier="core"`** marks the nine slides that make up the short path.
+- **`data-tier="core"`** marks the ten slides that make up the short path.
 - **`C`** toggles core-only navigation while presenting — arrows skip the rest.
 - **`?core=1`** hides everything else, so `talk-core.pdf` is the slimmed deck.
 
 ```bash
-bash paper/talk/render-deck.sh      # talk.pdf (30) and talk-core.pdf (10)
+bash paper/talk/render-deck.sh      # talk.pdf (36) and talk-core.pdf (11)
 ```
 
 To move a slide in or out of the short talk, change its `data-tier`. Nothing
