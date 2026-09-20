@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1000 210" xmlns="http://www.w3.org/2000/svg" role="img"
+             aria-label="Relabelling flow: every train and dev turn is scored by two LLM judges. Where they agree, about 80 percent of turns, that verdict becomes the re-judged label. Where they disagree, about 20 percent, Opus decides and its verdict becomes the label.">
+          <style>
+            .jt{font:700 21px "Lato","Liberation Sans",sans-serif;fill:#14161a}
+            .js{font:400 16px "Lato","Liberation Sans",sans-serif;fill:#4b5563}
+            .jl{font:600 15px "Lato","Liberation Sans",sans-serif;fill:#4b5563}
+          </style>
+          <defs><marker id="ja" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+                markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#6f7785"/></marker></defs>
+
+          <rect x="2" y="74" width="152" height="62" rx="10" fill="#fff" stroke="#aeb5c1" stroke-width="3"/>
+          <text class="jt" x="78" y="103" text-anchor="middle">Every turn</text>
+          <text class="js" x="78" y="125" text-anchor="middle">train + dev</text>
+          <line x1="158" y1="105" x2="192" y2="105" stroke="#6f7785" stroke-width="3" marker-end="url(#ja)"/>
+
+          <rect x="196" y="40" width="238" height="54" rx="10" fill="#d9e4fb" stroke="#93b0ec" stroke-width="3"/>
+          <text class="jt" x="315" y="74" text-anchor="middle" fill="#1a56db">Gemma-4-26B</text>
+          <rect x="196" y="116" width="238" height="54" rx="10" fill="#d9e4fb" stroke="#93b0ec" stroke-width="3"/>
+          <text class="jt" x="315" y="150" text-anchor="middle" fill="#1a56db">DeepSeek-V4-Flash</text>
+
+          <path d="M434,67 H492" fill="none" stroke="#6f7785" stroke-width="3"/>
+          <path d="M434,143 H492" fill="none" stroke="#6f7785" stroke-width="3"/>
+          <path d="M492,67 V143" fill="none" stroke="#6f7785" stroke-width="3"/>
+
+          <text class="jl" x="640" y="84" text-anchor="middle">agree · ~80%</text>
+          <path d="M492,95 H784" fill="none" stroke="#6f7785" stroke-width="3" marker-end="url(#ja)"/>
+
+          <path d="M492,120 V158 H539" fill="none" stroke="#6f7785" stroke-width="3" marker-end="url(#ja)"/>
+          <rect x="543" y="130" width="172" height="56" rx="10" fill="#fae4c3" stroke="#dcb069" stroke-width="3"/>
+          <text class="jt" x="629" y="165" text-anchor="middle" fill="#9c4708">Opus decides</text>
+          <text class="jl" x="629" y="204" text-anchor="middle">disagree · ~20%</text>
+          <path d="M719,158 H752 V120 H784" fill="none" stroke="#6f7785" stroke-width="3" marker-end="url(#ja)"/>
+
+          <rect x="788" y="80" width="208" height="58" rx="10" fill="#cfeadd" stroke="#7fc4a5" stroke-width="3"/>
+          <text class="jt" x="892" y="116" text-anchor="middle" fill="#0a7d55">re-judged label</text>
+        </svg>

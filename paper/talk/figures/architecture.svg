@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1700 620" xmlns="http://www.w3.org/2000/svg" role="img"
+       aria-label="System architecture. The conversation and the tracks already played go to an LLM that emits a typed state. Eleven retrieval branches query one LanceDB collection of 47,071 tracks. Their pooled candidates, capped at 500 per branch, are scored by a LambdaMART reranker with 146 features, which emits the top twenty tracks. A response model then writes a reply about the top track, conditioned on that track and the latest state. A weighted reciprocal-rank-fusion path is the untrained baseline and the fallback ranking.">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#4b5563"/></marker>
+      <marker id="arb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#1a56db"/></marker>
+      <marker id="ard" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#6f7785"/></marker>
+    </defs>
+    <style>
+      .bt{font:700 23px "Lato","Liberation Sans",sans-serif;fill:#14161a}
+      .bs{font:400 17px "Lato","Liberation Sans",sans-serif;fill:#4b5563}
+      .bm{font:700 15px "DejaVu Sans Mono",monospace;fill:#2b3038}
+      .an{font:700 17px "Lato","Liberation Sans",sans-serif;fill:#2b3038;letter-spacing:.04em}
+      .hd{font:700 16px "Lato","Liberation Sans",sans-serif;fill:#4b5563;letter-spacing:.12em}
+      .ch{font:700 19px "Lato","Liberation Sans",sans-serif}
+      .cs{font:400 16px "Lato","Liberation Sans",sans-serif;fill:#4b5563}
+      .bg{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+    </style>
+
+    <rect x="8" y="238" width="196" height="124" rx="12" fill="#fff" stroke="#aeb5c1" stroke-width="3"/>
+    <text class="bt" x="106" y="282" text-anchor="middle">Conversation</text>
+    <text class="bs" x="106" y="310" text-anchor="middle">every turn so far</text>
+    <text class="bs" x="106" y="332" text-anchor="middle">+ tracks already played</text>
+    <line x1="208" y1="300" x2="248" y2="300" stroke="#4b5563" stroke-width="3.4" marker-end="url(#ar)"/>
+
+    <rect x="252" y="206" width="230" height="188" rx="12" fill="#d9e4fb" stroke="#93b0ec" stroke-width="3.4"/>
+    <text class="bt" x="367" y="246" text-anchor="middle" fill="#1a56db">Typed state</text>
+    <text class="bs" x="367" y="270" text-anchor="middle">LLM · DeepSeek-V4-Flash</text>
+    <text class="bm" x="272" y="302">anchors · rejections</text>
+    <text class="bm" x="272" y="326">hard filters · facets</text>
+    <text class="bm" x="272" y="350">intent · year range</text>
+    <text class="bs" x="367" y="378" text-anchor="middle">no goal labels are used</text>
+    <line x1="486" y1="300" x2="526" y2="300" stroke="#1a56db" stroke-width="3.4" marker-end="url(#arb)"/>
+
+    <rect x="530" y="10" width="452" height="560" rx="14" fill="#eceef2" stroke="#aeb5c1" stroke-width="3"/>
+    <text class="hd" x="756" y="44" text-anchor="middle">ELEVEN BRANCHES · ONE INDEX</text>
+
+    <rect x="552" y="60" width="408" height="62" rx="9" fill="#fae4c3" stroke="#dcb069" stroke-width="3"/>
+    <g transform="translate(570,77) scale(1.16)"><path class="bg" d="M4 5h16M4 10h16M4 15h10" stroke="#9c4708"/></g>
+    <text class="ch" x="606" y="88" fill="#9c4708">BM25 + tag resolver</text>
+    <text class="cs" x="606" y="110">lexical · state text and resolved tags</text>
+
+    <rect x="552" y="132" width="408" height="62" rx="9" fill="#d9e4fb" stroke="#93b0ec" stroke-width="3"/>
+    <g transform="translate(570,149) scale(1.16)"><path class="bg" d="M5 3h9l5 5v13H5z" stroke="#1a56db"/><path class="bg" d="M14 3v5h5" stroke="#1a56db"/></g>
+    <text class="ch" x="606" y="160" fill="#1a56db">Dense text × 3</text>
+    <text class="cs" x="606" y="182">Qwen3 views · lyrics, metadata, attributes</text>
+
+    <rect x="552" y="204" width="408" height="62" rx="9" fill="#e3d7fa" stroke="#b69cef" stroke-width="3"/>
+    <g transform="translate(570,221) scale(1.16)"><path class="bg" d="M2 12h3l2.5-7 3 14 3-10 2.5 3H22" stroke="#6d28d9"/></g>
+    <text class="ch" x="606" y="232" fill="#6d28d9">CLAP text → audio</text>
+    <text class="cs" x="606" y="254">audio · the sonic description</text>
+
+    <rect x="552" y="276" width="408" height="62" rx="9" fill="#f8d3e5" stroke="#e595bd" stroke-width="3"/>
+    <g transform="translate(570,293) scale(1.16)"><circle class="bg" cx="12" cy="12" r="8" stroke="#a21c63"/><circle cx="12" cy="12" r="2.6" fill="#a21c63"/></g>
+    <text class="ch" x="606" y="304" fill="#a21c63">Anchor centroids × 3</text>
+    <text class="cs" x="606" y="326">SigLIP-2 / CLAP / CF · from liked tracks</text>
+
+    <rect x="552" y="348" width="408" height="62" rx="9" fill="#cfeadd" stroke="#7fc4a5" stroke-width="3"/>
+    <g transform="translate(570,365) scale(1.16)"><circle class="bg" cx="12" cy="8" r="3.6" stroke="#0a7d55"/><path class="bg" d="M4.5 20c1.4-4 4.2-6 7.5-6s5.9 2 7.5 6" stroke="#0a7d55"/></g>
+    <text class="ch" x="606" y="376" fill="#0a7d55">User-CF centroid</text>
+    <text class="cs" x="606" y="398">BPR · this listener's own vector</text>
+
+    <rect x="552" y="420" width="408" height="62" rx="9" fill="#fff" stroke="#aeb5c1" stroke-width="3"/>
+    <g transform="translate(570,437) scale(1.16)"><ellipse class="bg" cx="12" cy="6" rx="8" ry="3" stroke="#2b3038"/><path class="bg" d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6" stroke="#2b3038"/><path class="bg" d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" stroke="#2b3038"/></g>
+    <text class="ch" x="606" y="448" fill="#2b3038">Catalog lookups × 2</text>
+    <text class="cs" x="606" y="470">discography · era popularity</text>
+
+    <text class="an" x="756" y="514" text-anchor="middle">one LanceDB collection · 47,071 tracks</text>
+    <text class="cs" x="756" y="540" text-anchor="middle">metadata + full-text index + six embedding families</text>
+
+    <path d="M964,91 C1006,91 1006,276 1042,276" fill="none" stroke="#6f7785" stroke-width="3"/>
+    <path d="M964,163 C1006,163 1006,282 1042,282" fill="none" stroke="#6f7785" stroke-width="3"/>
+    <path d="M964,235 C1006,235 1006,288 1042,288" fill="none" stroke="#6f7785" stroke-width="3"/>
+    <path d="M964,307 C1006,307 1006,300 1042,300" fill="none" stroke="#6f7785" stroke-width="3"/>
+    <path d="M964,379 C1006,379 1006,306 1042,306" fill="none" stroke="#6f7785" stroke-width="3"/>
+    <path d="M964,451 C1006,451 1006,312 1042,312" fill="none" stroke="#6f7785" stroke-width="3" marker-end="url(#ard)"/>
+
+    <rect x="1046" y="246" width="136" height="108" rx="12" fill="#fff" stroke="#aeb5c1" stroke-width="3"/>
+    <text class="bt" x="1114" y="290" text-anchor="middle">Pooled</text>
+    <text class="bs" x="1114" y="316" text-anchor="middle">≤ 500 per</text>
+    <text class="bs" x="1114" y="338" text-anchor="middle">branch</text>
+    <line x1="1186" y1="300" x2="1218" y2="300" stroke="#4b5563" stroke-width="3.4" marker-end="url(#ar)"/>
+
+    <rect x="1222" y="216" width="210" height="168" rx="12" fill="#d9e4fb" stroke="#93b0ec" stroke-width="3.4"/>
+    <g transform="translate(1303,248) scale(1.9)">
+      <path class="bg" d="M4 19V5" stroke="#1a56db"/><path class="bg" d="M4 19h16" stroke="#1a56db"/>
+      <path class="bg" d="M8 19v-4M13 19v-8M18 19v-11" stroke="#1a56db"/></g>
+    <text class="bt" x="1327" y="332" text-anchor="middle" fill="#1a56db">Reranker</text>
+    <text class="bs" x="1327" y="360" text-anchor="middle">gradient-boosted trees</text>
+    <path d="M1436,300 H1462 V210 H1486" fill="none" stroke="#4b5563" stroke-width="3.4" marker-end="url(#ar)"/>
+
+    <rect x="1490" y="160" width="202" height="100" rx="12" fill="#cfeadd" stroke="#7fc4a5" stroke-width="3.4"/>
+    <text class="bt" x="1591" y="200" text-anchor="middle" fill="#0a7d55">Top-20 tracks</text>
+    <text class="bs" x="1591" y="228" text-anchor="middle">what is scored for</text>
+    <text class="bs" x="1591" y="248" text-anchor="middle">nDCG@20</text>
+
+    <path d="M1591,264 V318" fill="none" stroke="#4b5563" stroke-width="3.4" marker-end="url(#ar)"/>
+    <text class="cs" x="1604" y="298">top-1</text>
+
+    <rect x="1462" y="322" width="230" height="150" rx="12" fill="#d9e4fb" stroke="#93b0ec" stroke-width="3.4"/>
+    <g transform="translate(1558,346) scale(1.7)">
+      <path class="bg" d="M4 5h16v11H9l-5 4z" stroke="#1a56db"/></g>
+    <text class="bt" x="1577" y="418" text-anchor="middle" fill="#1a56db">Response LLM</text>
+    <text class="bs" x="1577" y="446" text-anchor="middle">LLM · Qwen3-30B</text>
+
+    <path d="M367,398 V592 H1577 V478" fill="none" stroke="#1a56db" stroke-width="3"
+          stroke-dasharray="7 6" opacity=".72" marker-end="url(#arb)"/>
+    <text class="cs" x="980" y="584" text-anchor="middle" fill="#1a56db">the same state conditions the reply</text>
+
+    <path d="M986,470 H1014 V500 H1042" fill="none" stroke="#6f7785" stroke-width="3" stroke-dasharray="7 6"/>
+    <rect x="1046" y="470" width="330" height="62" rx="10" fill="#fff" stroke="#aeb5c1"
+          stroke-width="3" stroke-dasharray="7 6"/>
+    <text class="ch" x="1066" y="496" fill="#4b5563">Weighted RRF</text>
+    <text class="cs" x="1066" y="518">baseline and fallback ranking</text>
+    <path d="M1380,501 H1440 V210 H1486" fill="none" stroke="#6f7785" stroke-width="3"
+          stroke-dasharray="7 6" marker-end="url(#ard)"/>
+  </svg>

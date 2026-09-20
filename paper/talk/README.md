@@ -1,4 +1,4 @@
-# Conference poster — RecSys Challenge 2026
+# Talk deck and poster — RecSys Challenge 2026
 
 A1 poster for our slot at the RecSys Challenge 2026 workshop.
 
@@ -10,25 +10,29 @@ The workshop puts posters on the room walls with **blue painter's tape**, which
 does not hold fabric well — sort out mounting in advance. See the
 [workshop organizer instructions](https://recsys.acm.org/wp-content/uploads/2026/08/Workshop-Organizer-Instructions.pdf).
 
-> The talk deck lives on the `backup/talk-deck-and-poster` branch and lands in a
-> separate PR.
-
 ## Files
 
 | File | What it is |
 | --- | --- |
-| `poster.html` | **The source.** Hand-written HTML + inline SVG — not LaTeX. Edit this. |
+| `deck.html` | **Deck source.** The detailed record of the work — edit this. |
+| `talk.html` | **Present from this.** Self-contained, figures inlined, no network. |
+| `talk.pdf` | Full deck, 30 slides at 960×540pt. |
+| `talk-core.pdf` | The short talk — 10 slides, same source filtered. |
+| `poster.html` | **Poster source.** Hand-written HTML + inline SVG — not LaTeX. |
 | `poster.pdf` | **Send this to the printer.** True-size A1 (594×841mm), one page. |
-| `render.sh` | Renders the PDF and preflights it. |
-| `figures/qr-repo.svg` | The QR code, pointing at the repo. |
+| `render.sh` | Renders and preflights the poster. |
+| `render-deck.sh` | Builds `talk.html`, renders both deck PDFs, preflights them. |
+| `build.py` | Inlines the deck's figures into `talk.html` (called by `render-deck.sh`). |
+| `figures/` | `architecture.svg`, `biencoder2.svg`, `relabelling.svg` — **shared** by the poster and the deck — plus `qr-repo.svg`. |
 
 ## Rebuilding
 
 ```bash
-bash paper/talk/render.sh
+bash paper/talk/render.sh        # the poster
+bash paper/talk/render-deck.sh   # the deck, both cuts
 ```
 
-The PDF comes from HTML rendered by headless Chrome — there is no LaTeX here.
+Both come from HTML rendered by headless Chrome — there is no LaTeX here.
 Only `paper/main.tex` (the paper itself) is LaTeX, and every number on the
 poster traces to it.
 
@@ -43,7 +47,7 @@ is not cosmetic: Chrome emits Type 3 for fonts it cannot subset normally —
 variable fonts, and fallbacks pulled in for a handful of glyphs — and some print
 RIPs mishandle Type 3. Two real instances were caught this way: Inter, which is
 a variable font, and DejaVu Sans pulled in as a fallback for `★` and `∈`, which
-Lato does not contain. The poster pins `Lato` / `DejaVu Sans Mono` and stays
+Lato does not contain. Both documents pin `Lato` / `DejaVu Sans Mono` and stay
 inside those glyph sets.
 
 **If you add a character and the preflight starts failing**, that character is
@@ -59,6 +63,41 @@ cmap = set(TTFont(subprocess.run(['fc-match','-f','%{file}','Lato'],
 print([c for c in sorted(set(txt)) if ord(c) > 127 and ord(c) not in cmap])
 EOF
 ```
+
+## The deck
+
+**The deck is the detailed record of the work, not a conference cut.** It covers
+the system properly — state extraction, entity resolution, all eleven branches,
+the index, fusion, the ranker, the bi-encoder and its training, response
+generation — then results and the full analysis. Thirty slides.
+
+The short talk is a **filter over that same source**, never a second file:
+
+- **`data-tier="core"`** marks the nine slides that make up the short path.
+- **`C`** toggles core-only navigation while presenting — arrows skip the rest.
+- **`?core=1`** hides everything else, so `talk-core.pdf` is the slimmed deck.
+
+```bash
+bash paper/talk/render-deck.sh      # talk.pdf (30) and talk-core.pdf (10)
+```
+
+To move a slide in or out of the short talk, change its `data-tier`. Nothing
+else needs touching and the two PDFs stay in step by construction.
+
+### Driving it
+
+| Key | Action |
+| --- | --- |
+| `→` `space` / `←` | Next / previous |
+| `C` | Core path — arrows skip the optional slides |
+| `A` | Appendix index |
+| digits then `Enter` | Jump to an appendix slide |
+| `B` | Back to where you left the spine |
+| `G` or `/` | Search every slide by title |
+| `O` | Overview grid |
+| `N` | Speaker notes (every slide has them, with a time budget) |
+| `T` / `R` | Start-stop the timer / reset — amber at 6:00, red at 7:00 |
+| `F` | Fullscreen |
 
 ## The poster
 
