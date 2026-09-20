@@ -96,6 +96,29 @@ bash paper/talk/render-deck.sh      # talk.pdf (49) and talk-core.pdf (21)
 To move a slide in or out of the short talk, change its `data-tier`. Nothing
 else needs touching and the two PDFs stay in step by construction.
 
+### Accessibility
+
+Checked numerically, not by eye, because the RecSys guidance asks for it and a
+conference room has people who need it.
+
+- **Contrast:** all 54 text/background pairs clear **4.5:1** (WCAG AA), lowest
+  4.50. The first palette failed 21 of them — the vivid amber, teal and green
+  were far too light — so the eight hues were re-solved for the lightest shade
+  that still passes white-on-hue, hue-on-paper, hue-on-white and hue-on-tint.
+- **Type:** no content text below **12pt** at 960×540 (i.e. ~24pt on a
+  1920×1080 projection); body is ~20pt and headings ~32pt. The only smaller
+  glyphs are formula subscripts and the presenter-only CORE/OPTIONAL badges.
+- **Never colour alone:** section identity is colour **plus** a number, an icon
+  and a name; track status is colour **plus** a written badge; findings are
+  colour **plus** a number. A viewer who cannot separate the hues loses nothing.
+- **Motion:** `prefers-reduced-motion` disables all transitions.
+- **Focus:** a visible focus ring, so the deck is keyboard-navigable.
+- Decorative art (the equaliser bars, the big divider numeral, section icons)
+  is `aria-hidden`; the diagrams carry real `aria-label` descriptions.
+
+To re-check after changing a colour or size, the contrast and type probes are
+in the commit history for this file — both are short standalone scripts.
+
 ### Driving it
 
 | Key | Action |
