@@ -16,8 +16,8 @@ does not hold fabric well — sort out mounting in advance. See the
 | --- | --- |
 | `deck.html` | **Deck source.** The detailed record of the work — edit this. |
 | `talk.html` | **Present from this.** Self-contained, figures inlined, no network. |
-| `talk.pdf` | Full deck, 42 slides at 960×540pt. |
-| `talk-core.pdf` | The short talk — 16 slides, same source filtered. |
+| `talk.pdf` | Full deck, 49 slides at 960×540pt. |
+| `talk-core.pdf` | The short talk — 21 slides, same source filtered. |
 | `poster.html` | **Poster source.** Hand-written HTML + inline SVG — not LaTeX. |
 | `poster.pdf` | **Send this to the printer.** True-size A1 (594×841mm), one page. |
 | `render.sh` | Renders and preflights the poster. |
@@ -69,24 +69,28 @@ EOF
 **The deck is the detailed record of the work, not a conference cut.** It covers
 the system properly — state extraction, entity resolution, all eleven branches,
 the index, fusion, the ranker, the bi-encoder and its training, response
-generation — then results and the full analysis. Forty-two slides, in five sections with a contents slide and a divider before each.
+generation — then results and the full analysis. Forty-nine slides in eight sections, with a contents slide and a divider before each. The
+approach is split into **state, retrieval, re-ranking and response generation** so each can
+be skipped independently.
 
 Slides are written to **stand alone**: each carries its own takeaway line, so a
 reader gets the point without the speaker. The worked examples are all real
 turns from the submitted Blind-B run, pulled from
-`reports/blindset-b-prediction-audit/audit.json` — six request types with the
-state the extractor actually produced, and three shapes of failure with the
-track we actually served.
+`reports/blindset-b-prediction-audit/audit.json` — three fully worked state
+examples plus six request types with the state the extractor actually produced;
+three shapes of retrieval failure with the track we served; four ways the reply
+went wrong with the judge's own verdict; and four training turns whose
+ground-truth label repeats the artist the listener asked to move on from.
 
 The short talk is a **filter over that same source**, never a second file:
 
-- **`data-tier="core"`** marks the fifteen slides in the short path — ten of content
-  plus the five section dividers, which are cheap and keep the talk oriented.
+- **`data-tier="core"`** marks the twenty core slides — twelve of content plus the eight
+  section dividers, which are cheap and keep the talk oriented.
 - **`C`** toggles core-only navigation while presenting — arrows skip the rest.
 - **`?core=1`** hides everything else, so `talk-core.pdf` is the slimmed deck.
 
 ```bash
-bash paper/talk/render-deck.sh      # talk.pdf (42) and talk-core.pdf (16)
+bash paper/talk/render-deck.sh      # talk.pdf (49) and talk-core.pdf (21)
 ```
 
 To move a slide in or out of the short talk, change its `data-tier`. Nothing

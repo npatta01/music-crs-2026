@@ -202,6 +202,10 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
 
 /* ---------- contents and section dividers ---------- */
 .toc{display:flex;flex-direction:column;gap:1.15cqw}
+.toc.tight8{gap:.62cqw}
+.toc.tight8 .tocrow{padding-bottom:.6cqw}
+.toc.tight8 .tt{font-size:1.85cqw}
+.toc.tight8 .td{font-size:1.35cqw}
 .tocrow{display:grid;grid-template-columns:3.4cqw 20cqw 1fr;gap:1.4cqw;align-items:baseline;
   padding-bottom:1.05cqw;border-bottom:.09cqw solid var(--line-2)}
 .tocrow .tn{font-family:var(--mono);font-size:1.7cqw;font-weight:700;color:var(--accent)}
@@ -210,11 +214,11 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
 .tocrow.ax .tn,.tocrow.ax .tt{color:var(--ink-3)}
 
 .slide.divider{justify-content:space-between;padding:4.2cqw 5cqw 4.6cqw}
-.rail{display:flex;gap:1.1cqw;align-items:stretch}
+.rail{display:flex;gap:.75cqw;align-items:stretch}
 .rail .stop{flex:1;display:flex;flex-direction:column;gap:.5cqw;
   padding-top:.8cqw;border-top:.36cqw solid var(--line-2)}
 .rail .stop .n{font-family:var(--mono);font-size:1.15cqw;font-weight:700;color:var(--ink-3)}
-.rail .stop .t{font-size:1.3cqw;line-height:1.3;color:var(--ink-3)}
+.rail .stop .t{font-size:1.15cqw;line-height:1.25;color:var(--ink-3)}
 .rail .stop.done{border-top-color:#9fb4e6}
 .rail .stop.done .n,.rail .stop.done .t{color:var(--ink-3)}
 .rail .stop.on{border-top-color:var(--accent)}
@@ -328,21 +332,31 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
 </section>
 
 <section class="slide" data-tier="optional" data-title="Contents"
-  data-notes="Optional in the short talk. Useful when the deck is read rather than presented, and as a place to jump from. Five sections; the appendix sits behind A.">
-  <div class="slide-head"><h2>Contents</h2><span class="tag">36 slides · 11 in the short talk</span></div>
-  <div class="fill"><div class="toc">
+  data-notes="Optional in the short talk; earns its place when the deck is read. Eight sections — the approach is split into state, retrieval, re-ranking and response so each can be skipped independently.">
+  <div class="slide-head"><h2>Contents</h2><span class="tag">eight sections</span></div>
+  <div class="fill"><div class="toc tight8">
     <div class="tocrow"><span class="tn">1</span><span class="tt">The task</span><span class="td">what the challenge asks, and how it is scored</span></div>
-    <div class="tocrow"><span class="tn">2</span><span class="tt">The system</span><span class="td">state, eleven branches, one learned ranker</span></div>
-    <div class="tocrow"><span class="tn">3</span><span class="tt">What it scored</span><span class="td">the official splits and what we steered on</span></div>
-    <div class="tocrow"><span class="tn">4</span><span class="tt">What went wrong</span><span class="td">four findings, and the turns behind them</span></div>
-    <div class="tocrow"><span class="tn">5</span><span class="tt">Where it leaves us</span><span class="td">what we would change, and what is released</span></div>
+    <div class="tocrow"><span class="tn">2</span><span class="tt">State extraction</span><span class="td">reading a typed state off the conversation</span></div>
+    <div class="tocrow"><span class="tn">3</span><span class="tt">Retrieval</span><span class="td">eleven branches over one index</span></div>
+    <div class="tocrow"><span class="tn">4</span><span class="tt">Re-ranking</span><span class="td">one learned model over the pooled candidates</span></div>
+    <div class="tocrow"><span class="tn">5</span><span class="tt">Response generation</span><span class="td">writing the reply — 30% of the composite</span></div>
+    <div class="tocrow"><span class="tn">6</span><span class="tt">What it scored</span><span class="td">the official splits, and what we steered on</span></div>
+    <div class="tocrow"><span class="tn">7</span><span class="tt">What went wrong</span><span class="td">four findings, and the turns behind them</span></div>
+    <div class="tocrow"><span class="tn">8</span><span class="tt">Where it leaves us</span><span class="td">what we would change, and what is released</span></div>
     <div class="tocrow ax"><span class="tn">A</span><span class="tt">Appendix</span><span class="td">related work, and how to reproduce the run</span></div>
   </div></div>
 </section>
 
+<section class="slide" data-tier="core" data-title="The system in one picture"
+  data-notes="&lt;b&gt;1:15.&lt;/b&gt; An LLM compiles each conversation into a typed state. Eleven branches query ONE LanceDB table holding metadata, a full-text index and six embedding families. LambdaMART scores the pooled union and emits 20. A response model writes the reply, conditioned on the top track AND the same state. Note the families: two boxes are LLMs, the ranker is trees — people assume the Qwen model does the ranking.">
+  <div class="slide-head"><h2>One state, eleven branches, one learned ranker</h2>
+    <span class="tag">Approach</span></div>
+  <div class="diagram"><img src="figures/architecture.svg" alt="System architecture: conversation and played tracks go to an LLM state extractor; eleven retrieval branches query one LanceDB collection of 47,071 tracks; pooled candidates are scored by a LambdaMART reranker that emits twenty tracks; a response model writes a reply conditioned on the top track and the same state. A weighted reciprocal-rank-fusion path is the untrained baseline and fallback."></div>
+</section>
+
 <section class="slide divider" data-tier="core" data-title="§1 · The task"
-  data-notes="Section 1 of 5 — what the challenge asks, and how it is scored. A beat, not a slide: two or three seconds.">
-  <div class="rail"><div class="stop on"><span class="n">1</span><span class="t">The task</span></div><div class="stop "><span class="n">2</span><span class="t">The system</span></div><div class="stop "><span class="n">3</span><span class="t">What it scored</span></div><div class="stop "><span class="n">4</span><span class="t">What went wrong</span></div><div class="stop "><span class="n">5</span><span class="t">Where it leaves us</span></div></div>
+  data-notes="Section 1 of 8 — what the challenge asks, and how it is scored. A beat, not a slide.">
+  <div class="rail"><div class="stop on"><span class="n">1</span><span class="t">Task</span></div><div class="stop "><span class="n">2</span><span class="t">State</span></div><div class="stop "><span class="n">3</span><span class="t">Retrieval</span></div><div class="stop "><span class="n">4</span><span class="t">Re-ranking</span></div><div class="stop "><span class="n">5</span><span class="t">Response</span></div><div class="stop "><span class="n">6</span><span class="t">Scored</span></div><div class="stop "><span class="n">7</span><span class="t">Went wrong</span></div><div class="stop "><span class="n">8</span><span class="t">Leaves us</span></div></div>
   <div class="divbody">
     <div class="divnum">1</div>
     <div><h1 class="divtitle">The task</h1>
@@ -403,21 +417,14 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
   </div>
 </section>
 
-<section class="slide divider" data-tier="core" data-title="§2 · The system"
-  data-notes="Section 2 of 5 — state, eleven branches, one learned ranker. A beat, not a slide: two or three seconds.">
-  <div class="rail"><div class="stop done"><span class="n">1</span><span class="t">The task</span></div><div class="stop on"><span class="n">2</span><span class="t">The system</span></div><div class="stop "><span class="n">3</span><span class="t">What it scored</span></div><div class="stop "><span class="n">4</span><span class="t">What went wrong</span></div><div class="stop "><span class="n">5</span><span class="t">Where it leaves us</span></div></div>
+<section class="slide divider" data-tier="core" data-title="§2 · State extraction"
+  data-notes="Section 2 of 8 — reading a typed state off the conversation. A beat, not a slide.">
+  <div class="rail"><div class="stop done"><span class="n">1</span><span class="t">Task</span></div><div class="stop on"><span class="n">2</span><span class="t">State</span></div><div class="stop "><span class="n">3</span><span class="t">Retrieval</span></div><div class="stop "><span class="n">4</span><span class="t">Re-ranking</span></div><div class="stop "><span class="n">5</span><span class="t">Response</span></div><div class="stop "><span class="n">6</span><span class="t">Scored</span></div><div class="stop "><span class="n">7</span><span class="t">Went wrong</span></div><div class="stop "><span class="n">8</span><span class="t">Leaves us</span></div></div>
   <div class="divbody">
     <div class="divnum">2</div>
-    <div><h1 class="divtitle">The system</h1>
-      <div class="sub">state, eleven branches, one learned ranker</div></div>
+    <div><h1 class="divtitle">State extraction</h1>
+      <div class="sub">reading a typed state off the conversation</div></div>
   </div>
-</section>
-
-<section class="slide" data-tier="core" data-title="The system in one picture"
-  data-notes="&lt;b&gt;1:15.&lt;/b&gt; An LLM compiles each conversation into a typed state. Eleven branches query ONE LanceDB table holding metadata, a full-text index and six embedding families. LambdaMART scores the pooled union and emits 20. A response model writes the reply, conditioned on the top track AND the same state. Note the families: two boxes are LLMs, the ranker is trees — people assume the Qwen model does the ranking.">
-  <div class="slide-head"><h2>One state, eleven branches, one learned ranker</h2>
-    <span class="tag">Approach</span></div>
-  <div class="diagram"><img src="figures/architecture.svg" alt="System architecture: conversation and played tracks go to an LLM state extractor; eleven retrieval branches query one LanceDB collection of 47,071 tracks; pooled candidates are scored by a LambdaMART reranker that emits twenty tracks; a response model writes a reply conditioned on the top track and the same state. A weighted reciprocal-rank-fusion path is the untrained baseline and fallback."></div>
 </section>
 
 <section class="slide" data-tier="optional" data-title="State extraction"
@@ -502,6 +509,72 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
   </div></div>
 </section>
 
+<section class="slide" data-tier="optional" data-dense data-title="State on a lookup turn"
+  data-notes="&lt;b&gt;0:45.&lt;/b&gt; A second shape. The listener names an artist and an album and asks a factual question about them. Both become must_use, the descriptive part becomes a facet, and the exact_entity_probe flag opens the catalog lookups. This is the easy case and the system gets it right — Arcady is from Grace/Wastelands.">
+  <div class="slide-head"><h2>State on a lookup turn</h2><span class="tag">State</span></div>
+  <div class="fill"><div class="cols c2w">
+    <div class="card">
+      <div class="dialog" style="font-size:1.32cqw">
+        <div><span class="who">User:</span> “Can you tell me which song from Peter Doherty's
+          <em>Grace/Wastelands</em> was frequently mentioned as one of the best tracks of 2009?”</div>
+        <div style="height:.7cqw"></div>
+        <div><span class="who">Extracted state:</span></div>
+        <div>request_type: exact_album</div>
+        <div>intent_mode: refinement</div>
+        <div>artist: Peter Doherty (must_use)</div>
+        <div>album: Grace/Wastelands (must_use)</div>
+        <div>facet: "best tracks of 2009"</div>
+        <div>routing: exact_entity_probe = true</div>
+        <div style="height:.7cqw"></div>
+        <div><span class="who">We served:</span> Peter Doherty — “Arcady”</div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card good"><h3>This one works</h3>
+        <div class="small">Two hard entities plus a soft facet. The probe flag opens the catalog
+          lookups, the album constrains the pool, and <em>Arcady</em> is genuinely from
+          <em>Grace/Wastelands</em>.</div></div>
+      <div class="card"><h3>Why it is easy</h3>
+        <div class="small">Everything the listener asked for is a field the catalog actually has.
+          Compare the next failures, where it is not.</div></div>
+    </div>
+  </div></div>
+</section>
+
+<section class="slide" data-tier="optional" data-dense data-title="State on a request the catalog cannot answer"
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; A third shape, and the interesting one. The listener describes cover art. The extractor does the right thing — three visual facets and the image flag — which opens the gated SigLIP-2 cover-art branch. But the reranker carries no features for that branch, so whatever it returns cannot be weighed. Correct extraction, nowhere for it to go.">
+  <div class="slide-head"><h2>State on a request the pipeline cannot use</h2>
+    <span class="tag">State</span></div>
+  <div class="fill"><div class="cols c2w">
+    <div class="card">
+      <div class="dialog" style="font-size:1.32cqw">
+        <div><span class="who">User:</span> “I'm looking for an album with a really striking,
+          abstract cover art. It had some bold colors and shapes, almost like a modern painting.”</div>
+        <div style="height:.7cqw"></div>
+        <div><span class="who">Extracted state:</span></div>
+        <div>request_type: attribute_search</div>
+        <div>facet: striking abstract cover art</div>
+        <div>facet: bold colors and shapes</div>
+        <div>facet: like a modern painting</div>
+        <div>routing: image_or_visual_search = true</div>
+        <div style="height:.7cqw"></div>
+        <div><span class="who">We served:</span> Frank Ocean — “Pink + White”</div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card good"><h3>Extraction: right</h3>
+        <div class="small">Three visual facets and the image flag — exactly what the schema is
+          for.</div></div>
+      <div class="card bad"><h3>Pipeline: nowhere to put it</h3>
+        <div class="small">The flag opens the gated SigLIP-2 cover-art branch, but
+          <strong>the reranker has no features for that branch</strong>. Whatever it returns cannot
+          be weighed against anything else.</div></div>
+    </div>
+  </div>
+  <div class="takeaway">This is the gap in miniature: the state understood the request, and the
+    rest of the pipeline had no way to act on it.</div></div>
+</section>
+
 <section class="slide" data-tier="optional" data-dense data-title="Six request types, six shapes of state"
   data-notes="&lt;b&gt;1:00.&lt;/b&gt; Every example here is a real Blind-B turn. The request type decides which branches fire and what the state has to carry: an exact_album needs artist AND album as must-use, an attribute_search carries only facets, a new_artist carries an avoid. Point out that the extractor got all six of these right — extraction was rarely the failure.">
   <div class="slide-head"><h2>Six request types, six shapes of state</h2>
@@ -584,6 +657,16 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
   </div></div>
 </section>
 
+<section class="slide divider" data-tier="core" data-title="§3 · Retrieval"
+  data-notes="Section 3 of 8 — eleven branches over one index. A beat, not a slide.">
+  <div class="rail"><div class="stop done"><span class="n">1</span><span class="t">Task</span></div><div class="stop done"><span class="n">2</span><span class="t">State</span></div><div class="stop on"><span class="n">3</span><span class="t">Retrieval</span></div><div class="stop "><span class="n">4</span><span class="t">Re-ranking</span></div><div class="stop "><span class="n">5</span><span class="t">Response</span></div><div class="stop "><span class="n">6</span><span class="t">Scored</span></div><div class="stop "><span class="n">7</span><span class="t">Went wrong</span></div><div class="stop "><span class="n">8</span><span class="t">Leaves us</span></div></div>
+  <div class="divbody">
+    <div class="divnum">3</div>
+    <div><h1 class="divtitle">Retrieval</h1>
+      <div class="sub">eleven branches over one index</div></div>
+  </div>
+</section>
+
 <section class="slide" data-tier="optional" data-title="The eleven branches"
   data-notes="&lt;b&gt;0:50.&lt;/b&gt; All eleven query the same collection; each is a differently-shaped query against one table. A twelfth, SigLIP-2 text-to-cover-art, is configured but gated behind a visual-request flag and the reranker carries no features for it.">
   <div class="slide-head"><h2>The eleven retrieval branches</h2><span class="tag">Approach</span></div>
@@ -660,6 +743,16 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
       <div class="small">If the learned ranker is unavailable, this order ships. It is the only
         part of the ranking stack with no trained component.</div></div>
   </div></div>
+</section>
+
+<section class="slide divider" data-tier="core" data-title="§4 · Re-ranking"
+  data-notes="Section 4 of 8 — one learned model over the pooled candidates. A beat, not a slide.">
+  <div class="rail"><div class="stop done"><span class="n">1</span><span class="t">Task</span></div><div class="stop done"><span class="n">2</span><span class="t">State</span></div><div class="stop done"><span class="n">3</span><span class="t">Retrieval</span></div><div class="stop on"><span class="n">4</span><span class="t">Re-ranking</span></div><div class="stop "><span class="n">5</span><span class="t">Response</span></div><div class="stop "><span class="n">6</span><span class="t">Scored</span></div><div class="stop "><span class="n">7</span><span class="t">Went wrong</span></div><div class="stop "><span class="n">8</span><span class="t">Leaves us</span></div></div>
+  <div class="divbody">
+    <div class="divnum">4</div>
+    <div><h1 class="divtitle">Re-ranking</h1>
+      <div class="sub">one learned model over the pooled candidates</div></div>
+  </div>
 </section>
 
 <section class="slide" data-tier="core" data-dense data-title="The reranker"
@@ -740,6 +833,16 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
   </div></div>
 </section>
 
+<section class="slide divider" data-tier="core" data-title="§5 · Response generation"
+  data-notes="Section 5 of 8 — writing the reply — 30% of the composite. A beat, not a slide.">
+  <div class="rail"><div class="stop done"><span class="n">1</span><span class="t">Task</span></div><div class="stop done"><span class="n">2</span><span class="t">State</span></div><div class="stop done"><span class="n">3</span><span class="t">Retrieval</span></div><div class="stop done"><span class="n">4</span><span class="t">Re-ranking</span></div><div class="stop on"><span class="n">5</span><span class="t">Response</span></div><div class="stop "><span class="n">6</span><span class="t">Scored</span></div><div class="stop "><span class="n">7</span><span class="t">Went wrong</span></div><div class="stop "><span class="n">8</span><span class="t">Leaves us</span></div></div>
+  <div class="divbody">
+    <div class="divnum">5</div>
+    <div><h1 class="divtitle">Response generation</h1>
+      <div class="sub">writing the reply — 30% of the composite</div></div>
+  </div>
+</section>
+
 <section class="slide" data-tier="optional" data-dense data-title="Response generation"
   data-notes="&lt;b&gt;0:50.&lt;/b&gt; Qwen3-30B-A3B-Instruct-2507 at temperature 0. One pass over the top-1 track as a delimited XML block plus the LATEST state only. Over a frozen Blind-A retrieval output we swept eight variants and reached 4.70 judge without changing any recommendation. No multi-draft sampling, no checking, no repair.">
   <div class="slide-head"><h2>Response generation — 30% of the composite</h2>
@@ -766,13 +869,44 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
   </div></div>
 </section>
 
-<section class="slide divider" data-tier="core" data-title="§3 · What it scored"
-  data-notes="Section 3 of 5 — the official splits and what we steered on. A beat, not a slide: two or three seconds.">
-  <div class="rail"><div class="stop done"><span class="n">1</span><span class="t">The task</span></div><div class="stop done"><span class="n">2</span><span class="t">The system</span></div><div class="stop on"><span class="n">3</span><span class="t">What it scored</span></div><div class="stop "><span class="n">4</span><span class="t">What went wrong</span></div><div class="stop "><span class="n">5</span><span class="t">Where it leaves us</span></div></div>
+<section class="slide" data-tier="core" data-dense data-title="Four ways the reply went wrong"
+  data-notes="&lt;b&gt;1:15.&lt;/b&gt; All four are real Blind-B replies, with the judge&#x27;s own verdict. The first is the worst: &#x27;Got it&#x27; for a track we do not have. The second and third are the prompt working exactly as instructed — it was told to flag a conflict rather than oversell — and the result is a reply that argues against our own top pick. We optimised the prompt against the Blind-A judge and never checked what it did to the recommendation itself.">
+  <div class="slide-head"><h2>Four ways the reply went wrong</h2>
+    <span class="tag">Response</span></div>
+  <div class="fill"><div class="exlist">
+    <div class="exrow bad"><div class="ex">
+      <div class="k">Asked</div><div class="said">“I wanted <em>Watercolors</em> by Pat Metheny specifically. Can you play that one?”</div>
+      <div class="k">Replied</div><div class="st">“<b>Got it</b> — here's <em>Alfie</em> by Pat Metheny, a smooth, introspective piece…”</div>
+      <div class="k">Judge</div><div class="got">constraint violation — claims to comply with a request it did not meet</div>
+    </div></div>
+    <div class="exrow bad"><div class="ex">
+      <div class="k">Asked</div><div class="said">“…something with a strong social or political message.”</div>
+      <div class="k">Replied</div><div class="st">“<b>Sorry</b>, <em>Cthulhu Dawn</em> by Cradle of Filth leans more into dark fantasy… It doesn't match your request.”</div>
+      <div class="k">Judge</div><div class="got">talks its own top recommendation down without justifying why it was picked</div>
+    </div></div>
+    <div class="exrow warn"><div class="ex">
+      <div class="k">Asked</div><div class="said">“Is it the rhythm or the overall instrumentation that makes it feel so good?”</div>
+      <div class="k">Replied</div><div class="st">“You're really into that smooth, groove-driven nu-jazz vibe — this one's got…”</div>
+      <div class="k">Judge</div><div class="got">recommends instead of answering; breaks conversational flow</div>
+    </div></div>
+    <div class="exrow warn"><div class="ex">
+      <div class="k">Asked</div><div class="said">“Which song from <em>Grace/Wastelands</em> was one of the best tracks of 2009?”</div>
+      <div class="k">Replied</div><div class="st">“…hauntingly beautiful and rich with folk-inflected melancholy… raw emotion and experimental edge.”</div>
+      <div class="k">Judge</div><div class="got">generic praise, no evidence from the conversation or the track</div>
+    </div></div>
+  </div>
+  <div class="takeaway">The middle two are the prompt <b>working as written</b> — it was told to
+    flag a conflict rather than oversell. We tuned it against the Blind-A judge and never asked
+    what it did to the recommendation it was describing.</div></div>
+</section>
+
+<section class="slide divider" data-tier="core" data-title="§6 · What it scored"
+  data-notes="Section 6 of 8 — the official splits, and what we steered on. A beat, not a slide.">
+  <div class="rail"><div class="stop done"><span class="n">1</span><span class="t">Task</span></div><div class="stop done"><span class="n">2</span><span class="t">State</span></div><div class="stop done"><span class="n">3</span><span class="t">Retrieval</span></div><div class="stop done"><span class="n">4</span><span class="t">Re-ranking</span></div><div class="stop done"><span class="n">5</span><span class="t">Response</span></div><div class="stop on"><span class="n">6</span><span class="t">Scored</span></div><div class="stop "><span class="n">7</span><span class="t">Went wrong</span></div><div class="stop "><span class="n">8</span><span class="t">Leaves us</span></div></div>
   <div class="divbody">
-    <div class="divnum">3</div>
+    <div class="divnum">6</div>
     <div><h1 class="divtitle">What it scored</h1>
-      <div class="sub">the official splits and what we steered on</div></div>
+      <div class="sub">the official splits, and what we steered on</div></div>
   </div>
 </section>
 
@@ -828,11 +962,11 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
   </div></div>
 </section>
 
-<section class="slide divider" data-tier="core" data-title="§4 · What went wrong"
-  data-notes="Section 4 of 5 — four findings, and the turns behind them. A beat, not a slide: two or three seconds.">
-  <div class="rail"><div class="stop done"><span class="n">1</span><span class="t">The task</span></div><div class="stop done"><span class="n">2</span><span class="t">The system</span></div><div class="stop done"><span class="n">3</span><span class="t">What it scored</span></div><div class="stop on"><span class="n">4</span><span class="t">What went wrong</span></div><div class="stop "><span class="n">5</span><span class="t">Where it leaves us</span></div></div>
+<section class="slide divider" data-tier="core" data-title="§7 · What went wrong"
+  data-notes="Section 7 of 8 — four findings, and the turns behind them. A beat, not a slide.">
+  <div class="rail"><div class="stop done"><span class="n">1</span><span class="t">Task</span></div><div class="stop done"><span class="n">2</span><span class="t">State</span></div><div class="stop done"><span class="n">3</span><span class="t">Retrieval</span></div><div class="stop done"><span class="n">4</span><span class="t">Re-ranking</span></div><div class="stop done"><span class="n">5</span><span class="t">Response</span></div><div class="stop done"><span class="n">6</span><span class="t">Scored</span></div><div class="stop on"><span class="n">7</span><span class="t">Went wrong</span></div><div class="stop "><span class="n">8</span><span class="t">Leaves us</span></div></div>
   <div class="divbody">
-    <div class="divnum">4</div>
+    <div class="divnum">7</div>
     <div><h1 class="divtitle">What went wrong</h1>
       <div class="sub">four findings, and the turns behind them</div></div>
   </div>
@@ -1005,6 +1139,34 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
   </div></div>
 </section>
 
+<section class="slide" data-tier="core" data-dense data-title="What the training labels look like"
+  data-notes="&lt;b&gt;1:15.&lt;/b&gt; Four real training turns. In each the listener asks for something else and the ground-truth next track is the same artist again. Read the last column: the dataset&#x27;s own annotation says MOVES TOWARD GOAL on three of them. The Arctic Monkeys turn is the clearest — the listener names the exact track and artist they want, three times, and the label is another Arctic Monkeys song. A model trained on this learns to anchor, which is exactly what ours does.">
+  <div class="slide-head"><h2>What the training labels look like</h2>
+    <span class="tag">Went wrong</span></div>
+  <div class="fill">
+    <table class="tight">
+      <thead><tr><th style="text-align:left">The listener asked</th><th style="text-align:left">Just played</th><th style="text-align:left">Ground-truth next track</th><th>Annotated</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left">“I keep asking for <em>My Body Is a Cage</em> by <strong>Arcade Fire</strong>… that's the only song I want”</td>
+          <td style="text-align:left">Arctic Monkeys</td>
+          <td style="text-align:left" class="mono">Arctic Monkeys — This House is a Circus</td><td>DOES NOT</td></tr>
+        <tr class="hi"><td style="text-align:left">“…something with a similar chill vibe, but <strong>from a different artist</strong>”</td>
+          <td style="text-align:left">Bonobo</td>
+          <td style="text-align:left" class="mono">Bonobo — Jets</td><td>MOVES</td></tr>
+        <tr class="hi"><td style="text-align:left">“What <strong>other artists</strong> or tracks fit this introspective, darkwave style?”</td>
+          <td style="text-align:left">Tropic of Cancer</td>
+          <td style="text-align:left" class="mono">Tropic of Cancer — The Dull Age</td><td>MOVES</td></tr>
+        <tr class="hi"><td style="text-align:left">“What <strong>other</strong> powerful orchestral tracks or artists would you recommend next?”</td>
+          <td style="text-align:left">Nick Phoenix</td>
+          <td style="text-align:left" class="mono">Nick Phoenix — Kogan</td><td>MOVES</td></tr>
+      </tbody>
+    </table>
+    <div class="takeaway">Three of these four are annotated <b>MOVES TOWARD GOAL</b> — the dataset
+      records them as the recommendation having helped. Train on this and the model learns to
+      repeat the just-played artist. <b>Ours does.</b></div>
+  </div>
+</section>
+
 <section class="slide" data-tier="core" data-title="The target often ignores the request"
   data-notes="&lt;b&gt;1:00.&lt;/b&gt; Ground truth is whatever played next, in a session an LLM wrote. Here the listener asks twice, explicitly, for a different artist — and the target stays on Bonobo both times, with the annotation calling both MOVES TOWARD GOAL. Our own model anchors on the just-played artist and we think it learns it here.">
   <div class="slide-head"><h2>The target often ignores the request</h2>
@@ -1073,11 +1235,11 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
   </ul></div>
 </section>
 
-<section class="slide divider" data-tier="core" data-title="§5 · Where it leaves us"
-  data-notes="Section 5 of 5 — what we would change, and what is released. A beat, not a slide: two or three seconds.">
-  <div class="rail"><div class="stop done"><span class="n">1</span><span class="t">The task</span></div><div class="stop done"><span class="n">2</span><span class="t">The system</span></div><div class="stop done"><span class="n">3</span><span class="t">What it scored</span></div><div class="stop done"><span class="n">4</span><span class="t">What went wrong</span></div><div class="stop on"><span class="n">5</span><span class="t">Where it leaves us</span></div></div>
+<section class="slide divider" data-tier="core" data-title="§8 · Where it leaves us"
+  data-notes="Section 8 of 8 — what we would change, and what is released. A beat, not a slide.">
+  <div class="rail"><div class="stop done"><span class="n">1</span><span class="t">Task</span></div><div class="stop done"><span class="n">2</span><span class="t">State</span></div><div class="stop done"><span class="n">3</span><span class="t">Retrieval</span></div><div class="stop done"><span class="n">4</span><span class="t">Re-ranking</span></div><div class="stop done"><span class="n">5</span><span class="t">Response</span></div><div class="stop done"><span class="n">6</span><span class="t">Scored</span></div><div class="stop done"><span class="n">7</span><span class="t">Went wrong</span></div><div class="stop on"><span class="n">8</span><span class="t">Leaves us</span></div></div>
   <div class="divbody">
-    <div class="divnum">5</div>
+    <div class="divnum">8</div>
     <div><h1 class="divtitle">Where it leaves us</h1>
       <div class="sub">what we would change, and what is released</div></div>
   </div>
