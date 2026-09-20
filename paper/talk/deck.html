@@ -199,6 +199,33 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
 .takeaway b{color:var(--bad)}
 .rtable td:first-child{font-family:var(--mono);font-size:.92em;color:var(--accent);font-weight:700}
 
+
+/* ---------- contents and section dividers ---------- */
+.toc{display:flex;flex-direction:column;gap:1.15cqw}
+.tocrow{display:grid;grid-template-columns:3.4cqw 20cqw 1fr;gap:1.4cqw;align-items:baseline;
+  padding-bottom:1.05cqw;border-bottom:.09cqw solid var(--line-2)}
+.tocrow .tn{font-family:var(--mono);font-size:1.7cqw;font-weight:700;color:var(--accent)}
+.tocrow .tt{font-size:2.1cqw;font-weight:660;color:var(--ink);letter-spacing:-.01em}
+.tocrow .td{font-size:1.5cqw;color:var(--ink-3)}
+.tocrow.ax .tn,.tocrow.ax .tt{color:var(--ink-3)}
+
+.slide.divider{justify-content:space-between;padding:4.2cqw 5cqw 4.6cqw}
+.rail{display:flex;gap:1.1cqw;align-items:stretch}
+.rail .stop{flex:1;display:flex;flex-direction:column;gap:.5cqw;
+  padding-top:.8cqw;border-top:.36cqw solid var(--line-2)}
+.rail .stop .n{font-family:var(--mono);font-size:1.15cqw;font-weight:700;color:var(--ink-3)}
+.rail .stop .t{font-size:1.3cqw;line-height:1.3;color:var(--ink-3)}
+.rail .stop.done{border-top-color:#9fb4e6}
+.rail .stop.done .n,.rail .stop.done .t{color:var(--ink-3)}
+.rail .stop.on{border-top-color:var(--accent)}
+.rail .stop.on .n{color:var(--accent)}
+.rail .stop.on .t{color:var(--ink);font-weight:660}
+.divbody{display:flex;align-items:baseline;gap:2.6cqw;padding-bottom:4cqw}
+.divnum{font-size:9cqw;line-height:.85;font-weight:700;color:var(--accent-soft);
+  letter-spacing:-.04em}
+.divtitle{font-size:5.2cqw;line-height:1.05;letter-spacing:-.025em;font-weight:680}
+.slide.divider .sub{margin-top:.9cqw}
+
 /* ---------- title slide ---------- */
 #s-title{justify-content:center;padding-left:7cqw;padding-right:7cqw}
 #s-title .rule{width:7cqw;height:.42cqw;background:var(--accent);margin:2.4cqw 0}
@@ -300,6 +327,29 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
   </div>
 </section>
 
+<section class="slide" data-tier="optional" data-title="Contents"
+  data-notes="Optional in the short talk. Useful when the deck is read rather than presented, and as a place to jump from. Five sections; the appendix sits behind A.">
+  <div class="slide-head"><h2>Contents</h2><span class="tag">36 slides · 11 in the short talk</span></div>
+  <div class="fill"><div class="toc">
+    <div class="tocrow"><span class="tn">1</span><span class="tt">The task</span><span class="td">what the challenge asks, and how it is scored</span></div>
+    <div class="tocrow"><span class="tn">2</span><span class="tt">The system</span><span class="td">state, eleven branches, one learned ranker</span></div>
+    <div class="tocrow"><span class="tn">3</span><span class="tt">What it scored</span><span class="td">the official splits and what we steered on</span></div>
+    <div class="tocrow"><span class="tn">4</span><span class="tt">What went wrong</span><span class="td">four findings, and the turns behind them</span></div>
+    <div class="tocrow"><span class="tn">5</span><span class="tt">Where it leaves us</span><span class="td">what we would change, and what is released</span></div>
+    <div class="tocrow ax"><span class="tn">A</span><span class="tt">Appendix</span><span class="td">related work, and how to reproduce the run</span></div>
+  </div></div>
+</section>
+
+<section class="slide divider" data-tier="core" data-title="§1 · The task"
+  data-notes="Section 1 of 5 — what the challenge asks, and how it is scored. A beat, not a slide: two or three seconds.">
+  <div class="rail"><div class="stop on"><span class="n">1</span><span class="t">The task</span></div><div class="stop "><span class="n">2</span><span class="t">The system</span></div><div class="stop "><span class="n">3</span><span class="t">What it scored</span></div><div class="stop "><span class="n">4</span><span class="t">What went wrong</span></div><div class="stop "><span class="n">5</span><span class="t">Where it leaves us</span></div></div>
+  <div class="divbody">
+    <div class="divnum">1</div>
+    <div><h1 class="divtitle">The task</h1>
+      <div class="sub">what the challenge asks, and how it is scored</div></div>
+  </div>
+</section>
+
 <section class="slide" data-tier="optional" data-title="The task"
   data-notes="&lt;b&gt;0:45.&lt;/b&gt; Skip for a challenge audience — they built the same thing. Each assistant turn: return 20 tracks from a shared 47,071-track catalog and write a short reply presenting the top one. Training data is 15,199 LLM-generated sessions over TalkPlayData 2.">
   <div class="slide-head"><h2>The task</h2><span class="tag">Setup</span></div>
@@ -350,6 +400,16 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
           diversity returned <strong>0.003</strong> of the 0.10 on offer. We optimised almost
           entirely for relevance and left the diversity terms alone.</div></div>
     </div>
+  </div>
+</section>
+
+<section class="slide divider" data-tier="core" data-title="§2 · The system"
+  data-notes="Section 2 of 5 — state, eleven branches, one learned ranker. A beat, not a slide: two or three seconds.">
+  <div class="rail"><div class="stop done"><span class="n">1</span><span class="t">The task</span></div><div class="stop on"><span class="n">2</span><span class="t">The system</span></div><div class="stop "><span class="n">3</span><span class="t">What it scored</span></div><div class="stop "><span class="n">4</span><span class="t">What went wrong</span></div><div class="stop "><span class="n">5</span><span class="t">Where it leaves us</span></div></div>
+  <div class="divbody">
+    <div class="divnum">2</div>
+    <div><h1 class="divtitle">The system</h1>
+      <div class="sub">state, eleven branches, one learned ranker</div></div>
   </div>
 </section>
 
@@ -706,6 +766,16 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
   </div></div>
 </section>
 
+<section class="slide divider" data-tier="core" data-title="§3 · What it scored"
+  data-notes="Section 3 of 5 — the official splits and what we steered on. A beat, not a slide: two or three seconds.">
+  <div class="rail"><div class="stop done"><span class="n">1</span><span class="t">The task</span></div><div class="stop done"><span class="n">2</span><span class="t">The system</span></div><div class="stop on"><span class="n">3</span><span class="t">What it scored</span></div><div class="stop "><span class="n">4</span><span class="t">What went wrong</span></div><div class="stop "><span class="n">5</span><span class="t">Where it leaves us</span></div></div>
+  <div class="divbody">
+    <div class="divnum">3</div>
+    <div><h1 class="divtitle">What it scored</h1>
+      <div class="sub">the official splits and what we steered on</div></div>
+  </div>
+</section>
+
 <section class="slide" data-tier="core" data-title="Official results"
   data-notes="&lt;b&gt;1:00.&lt;/b&gt; Blind-A, the development phase: 0.5799. Blind-B, the final: 0.3811, 29th of 40. nDCG nearly halved and the judge fell 1.4 points; the diversity terms barely moved. Blind-B also withholds the goal annotations, but our ranker was already goal-free at inference — so that is not the explanation.">
   <div class="slide-head"><h2>How it scored</h2><span class="tag">Results</span></div>
@@ -756,6 +826,16 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
           Not directly comparable — shown because it is the number we were selecting on.</div></div>
     </div>
   </div></div>
+</section>
+
+<section class="slide divider" data-tier="core" data-title="§4 · What went wrong"
+  data-notes="Section 4 of 5 — four findings, and the turns behind them. A beat, not a slide: two or three seconds.">
+  <div class="rail"><div class="stop done"><span class="n">1</span><span class="t">The task</span></div><div class="stop done"><span class="n">2</span><span class="t">The system</span></div><div class="stop done"><span class="n">3</span><span class="t">What it scored</span></div><div class="stop on"><span class="n">4</span><span class="t">What went wrong</span></div><div class="stop "><span class="n">5</span><span class="t">Where it leaves us</span></div></div>
+  <div class="divbody">
+    <div class="divnum">4</div>
+    <div><h1 class="divtitle">What went wrong</h1>
+      <div class="sub">four findings, and the turns behind them</div></div>
+  </div>
 </section>
 
 <section class="slide" data-tier="core" data-dense data-title="What is not ideal"
@@ -991,6 +1071,16 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
       are <strong>diagnostic, not ground truth</strong>.</li>
     <li>Development-split and leaderboard numbers are <strong>separate measurements</strong>.</li>
   </ul></div>
+</section>
+
+<section class="slide divider" data-tier="core" data-title="§5 · Where it leaves us"
+  data-notes="Section 5 of 5 — what we would change, and what is released. A beat, not a slide: two or three seconds.">
+  <div class="rail"><div class="stop done"><span class="n">1</span><span class="t">The task</span></div><div class="stop done"><span class="n">2</span><span class="t">The system</span></div><div class="stop done"><span class="n">3</span><span class="t">What it scored</span></div><div class="stop done"><span class="n">4</span><span class="t">What went wrong</span></div><div class="stop on"><span class="n">5</span><span class="t">Where it leaves us</span></div></div>
+  <div class="divbody">
+    <div class="divnum">5</div>
+    <div><h1 class="divtitle">Where it leaves us</h1>
+      <div class="sub">what we would change, and what is released</div></div>
+  </div>
 </section>
 
 <section class="slide" data-tier="core" data-title="What we would do differently"
