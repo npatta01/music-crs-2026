@@ -101,16 +101,28 @@ else needs touching and the two PDFs stay in step by construction.
 Checked numerically, not by eye, because the RecSys guidance asks for it and a
 conference room has people who need it.
 
-- **Contrast:** all 54 text/background pairs clear **4.5:1** (WCAG AA), lowest
-  4.50. The first palette failed 21 of them — the vivid amber, teal and green
-  were far too light — so the eight hues were re-solved for the lightest shade
-  that still passes white-on-hue, hue-on-paper, hue-on-white and hue-on-tint.
+- **Four colours, each meaning something:** blue for how the system works
+  (sections 1–5), green for what it scored, red for what went wrong, amber for
+  what we would change. An earlier version used eight decorative hues; nobody
+  learns that teal means retrieval, and two pairs were hard to separate on a
+  weak projector.
+- **Contrast:** every text/background pair clears **4.5:1** (WCAG AA), lowest
+  4.50. The first palette failed 21 pairs — the vivid amber, teal and green
+  were far too light — so each hue was re-solved for the lightest shade that
+  still passes white-on-hue, hue-on-paper, hue-on-white and hue-on-tint.
+- **Greyscale:** all four sit at near-identical luminance, so in greyscale or
+  to a viewer with achromatopsia they read the same. That is survivable only
+  because nothing depends on the hue — see below — and it was checked by
+  rendering the dividers in greyscale.
 - **Type:** no content text below **12pt** at 960×540 (i.e. ~24pt on a
   1920×1080 projection); body is ~20pt and headings ~32pt. The only smaller
   glyphs are formula subscripts and the presenter-only CORE/OPTIONAL badges.
 - **Never colour alone:** section identity is colour **plus** a number, an icon
   and a name; track status is colour **plus** a written badge; findings are
-  colour **plus** a number. A viewer who cannot separate the hues loses nothing.
+  colour **plus** a number. A viewer who cannot separate the hues loses nothing
+  — confirmed by reading the greyscale renders.
+- **Frame use:** content fills a median **85%** of the vertical space, worst
+  case 74%, so nothing floats in a sea of white on a big screen.
 - **Motion:** `prefers-reduced-motion` disables all transitions.
 - **Focus:** a visible focus ring, so the deck is keyboard-navigable.
 - Decorative art (the equaliser bars, the big divider numeral, section icons)
