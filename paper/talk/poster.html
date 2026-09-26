@@ -9,10 +9,11 @@
    36x48in is a change to --w / --h plus the @page rule. */
 :root{
   --w:594mm; --h:841mm;
-  --ink:#14161a; --ink-2:#2b3038; --ink-3:#4b5563;
-  --line:#aeb5c1; --line-2:#d6dae1;
+  --paper:#FBF8F4;
+  --ink:#1A1714; --ink-2:#3A332D; --ink-3:#6B6259; --muted:#6B6259;
+  --line:#C9BFB2; --line-2:#E6DED3;
   --blue:#1a56db; --blue-soft:#d9e4fb;
-  --amber:#9c4708; --amber-soft:#fae4c3;
+  --amber:#A55A18; --amber-soft:#fae4c3;
   --red:#b42318; --red-soft:#fad6d2;
   --green:#0a7d55; --green-soft:#cfeadd;
   --mono:"DejaVu Sans Mono","Liberation Mono",monospace;
@@ -21,7 +22,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#3a3f47;font-family:var(--sans);color:var(--ink);
   display:flex;justify-content:center;padding:20px 0}
-#poster{width:var(--w);height:var(--h);background:#fff;container-type:size;
+#poster{width:var(--w);height:var(--h);background:var(--paper);container-type:size;
   display:flex;flex-direction:column;overflow:hidden}
 @media screen{
   body{align-items:flex-start}
@@ -29,8 +30,8 @@ body{background:#3a3f47;font-family:var(--sans);color:var(--ink);
     transform:scale(calc(min(96vw / 594, 92vh / 841) * 3.7795));}
 }
 
-h1{font-size:2.98cqw;line-height:1.06;letter-spacing:-.02em;font-weight:700;
-  text-wrap:normal}
+h1{font-size:3.3cqw;line-height:1.08;letter-spacing:-.02em;font-weight:700;
+  text-wrap:balance}
 h2{font-size:1.62cqw;line-height:1.15;font-weight:700;letter-spacing:-.01em;
   margin-bottom:.7cqw;display:flex;align-items:center;gap:.62cqw}
 /* section glyphs: drawn at the cap height of the heading they sit beside */
@@ -40,14 +41,20 @@ h3{font-size:1.03cqw;font-weight:700;letter-spacing:.1em;text-transform:uppercas
   color:var(--ink-3);margin-bottom:.55cqw}
 /* section sub-headings read as headings, not as labels */
 h3.sub{color:var(--ink);font-size:1.12cqw;letter-spacing:.06em}
-p,li{font-size:1.2cqw;line-height:1.46;color:var(--ink-2)}
-.small{font-size:.96cqw;line-height:1.42;color:var(--ink-3)}
-.tiny{font-size:.92cqw;line-height:1.35;color:var(--ink-3)}
+p,li{font-size:1.2cqw;line-height:1.46;color:var(--ink-2);text-wrap:pretty;hyphens:manual}
+.small{font-size:1.07cqw;line-height:1.42;color:var(--ink-3)}
+.tiny{font-size:1.07cqw;line-height:1.35;color:var(--ink-3)}
 strong{font-weight:700;color:var(--ink)}
 .mono,code{font-family:var(--mono);font-size:.93em}
 
 /* ---------- header ---------- */
-header{padding:1.9cqw 3.1cqw 1.35cqw;border-bottom:.26cqw solid var(--blue)}
+header{padding:1.9cqw 3.1cqw 1.35cqw;border-bottom:.2cqw solid var(--blue);
+  display:grid;grid-template-columns:1fr auto;gap:2.6cqw;align-items:center}
+.hqr{display:flex;flex-direction:column;align-items:center;text-align:center;gap:.35cqw;
+  padding-left:2.4cqw;border-left:.07cqw solid var(--line)}
+.hqr img{width:11cqw;height:11cqw;display:block;background:#fff;padding:.5cqw;border-radius:.4cqw}
+.hqr .t{font-size:1.07cqw;font-weight:700;color:var(--ink);margin-top:.2cqw}
+.hqr .u{font-family:var(--mono);font-size:1.05cqw;color:var(--blue);line-height:1.3}
 .eyebrow{font-size:.95cqw;font-weight:700;letter-spacing:.17em;text-transform:uppercase;
   color:var(--blue);margin-bottom:.85cqw}
 .hrow{display:flex;justify-content:space-between;align-items:flex-end;gap:2.4cqw;
@@ -56,28 +63,28 @@ header{padding:1.9cqw 3.1cqw 1.35cqw;border-bottom:.26cqw solid var(--blue)}
 .byline .aff{color:var(--ink-3);font-size:.9cqw}
 
 /* ---------- what it does ---------- */
-.premise{padding:1.35cqw 2.6cqw;background:#f1f3f6;border-bottom:.14cqw solid var(--line);
+.premise{padding:1.35cqw 2.6cqw;background:#f1f3f6;border-bottom:.07cqw solid var(--line);
   display:grid;grid-template-columns:1fr auto;gap:2.4cqw;align-items:center}
 .premise .say{font-size:1.4cqw;line-height:1.42;color:var(--ink)}
 .premise .say b{color:var(--blue)}
 .numbers{display:flex;gap:1.9cqw}
 .num{text-align:right}
 .num .v{font-size:1.85cqw;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
-.num .k{font-size:.76cqw;color:var(--ink-3);margin-top:.28cqw;font-weight:600}
+.num .k{font-size:.98cqw;color:var(--ink-3);margin-top:.28cqw;font-weight:600}
 
 /* ---------- architecture ---------- */
-.arch{padding:1.2cqw 3.1cqw 0.85cqw;border-bottom:.14cqw solid var(--line)}
+.arch{padding:1.2cqw 3.1cqw 0.85cqw;border-bottom:.07cqw solid var(--line)}
 .arch img{width:100%;height:auto;display:block}
 
 /* ---------- columns ---------- */
-.main{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:1fr 1fr;
+.main{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:.92fr 1.08fr;
   border-bottom:none}
-.col{padding:1.3cqw 2.05cqw;display:flex;flex-direction:column;gap:1.5cqw}
-.main > .col:first-child{padding-left:3.1cqw}
+.col{padding:1.3cqw 2.05cqw;display:flex;flex-direction:column;gap:1.35cqw}
+.main > .col:first-child{padding-left:3.1cqw;padding-bottom:3.1cqw;justify-content:space-between}
 .main > .col:last-child{padding-right:3.1cqw;padding-bottom:2.4cqw}
-.col + .col{border-left:.14cqw solid var(--line)}
+.col + .col{border-left:.07cqw solid var(--line)}
 
-.card{border:.14cqw solid var(--line);border-radius:.5cqw;padding:1.1cqw 1.25cqw;background:#fff}
+.card{border:.07cqw solid var(--line);border-radius:.5cqw;padding:1.1cqw 1.25cqw;background:#fff}
 .card.blue{border-color:#93b0ec;background:var(--blue-soft)}
 .card.green{border-color:#7fc4a5;background:var(--green-soft)}
 .card h3{margin-bottom:.45cqw}
@@ -88,27 +95,29 @@ ul li{position:relative;padding-left:1.2cqw}
 ul li::before{content:"";position:absolute;left:.14cqw;top:.6em;width:.32cqw;height:.32cqw;
   border-radius:50%;background:var(--blue)}
 
-table{width:100%;border-collapse:collapse;font-size:1.06cqw;font-variant-numeric:tabular-nums}
-th,td{text-align:right;padding:.38cqw .5cqw;border-bottom:.14cqw solid var(--line-2)}
+table{width:100%;border-collapse:collapse;font-size:1.12cqw;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:.6cqw .6cqw;border-bottom:.07cqw solid var(--line-2)}
 th:first-child,td:first-child{text-align:left}
-thead th{font-size:.78cqw;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--ink-3);border-bottom:.14cqw solid var(--line)}
+thead th{font-size:.98cqw;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-3);border-bottom:.07cqw solid var(--line)}
 tbody tr.hi td{background:var(--blue-soft);font-weight:700;color:var(--ink)}
 tbody tr.dim td{color:var(--ink-3)}
 table.gain tbody tr.low td{color:var(--amber);font-weight:700}
 
 figure{display:flex;flex-direction:column;align-items:center;gap:.5cqw}
 figure img{width:84%;height:auto}
-figcaption{font-size:.74cqw;color:var(--ink-3);text-align:center;line-height:1.35}
+figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.35}
 
-.state{font-family:var(--mono);font-size:1.03cqw;line-height:1.66;color:var(--ink-2)}
+.state{font-family:var(--sans);font-size:1.16cqw;line-height:1.55;color:var(--ink-2)}
+.state .k{font-family:var(--mono);font-size:.9em}
+.q{font-style:italic;color:var(--ink)}
 .state .k{color:var(--blue);font-weight:700}
 .state .u{color:var(--ink);font-weight:700}
 .state .row{display:grid;grid-template-columns:9.4cqw minmax(0,1fr);gap:1.35cqw;
   align-items:baseline}
 .state .row + .row{margin-top:.28cqw}
 .statesep{display:flex;align-items:center;gap:.6cqw;margin:.75cqw 0 .55cqw;
-  font-family:var(--sans);font-size:.72cqw;font-weight:700;letter-spacing:.11em;
+  font-family:var(--sans);font-size:.92cqw;font-weight:700;letter-spacing:.11em;
   text-transform:uppercase;color:var(--muted);line-height:1}
 .statesep::after{content:"";flex:1;height:.06cqw;background:var(--line)}
 
@@ -122,24 +131,22 @@ figcaption{font-size:.74cqw;color:var(--ink-3);text-align:center;line-height:1.3
 
 
 
-/* learnings — a rule and a lead clause carry these better than a number column */
-.lrn{display:flex;flex-direction:column;gap:.98cqw}
-.lrn li{position:relative;padding:.14cqw 0 .14cqw 1.3cqw;font-size:1.18cqw;line-height:1.48}
-.lrn li::before{content:"";position:absolute;left:0;top:.22em;bottom:.22em;height:auto;width:.22cqw;
-  border-radius:.11cqw;background:var(--line)}
-.lrn li.a::before{background:var(--red)} .lrn li.b::before{background:var(--amber)}
-.lrn li.c::before{background:var(--blue)} .lrn li.d::before{background:#6d28d9}
-.lrn b{display:block;color:var(--ink);margin-bottom:.12cqw}
+/* findings — four claims as cards, the same shape the talk uses */
+.finds{display:grid;grid-template-columns:1fr 1fr;gap:.9cqw}
+.find{background:#fff;border:.07cqw solid var(--line);border-top:.42cqw solid var(--c);
+  border-radius:.5cqw;padding:.9cqw 1.05cqw 1cqw}
+.find b{display:block;font-size:1.24cqw;line-height:1.25;color:var(--ink);margin-bottom:.35cqw}
+.find p{font-size:1.1cqw;line-height:1.42}
 
 /* relabelling */
-.dlg{font-family:var(--mono);font-size:.9cqw;line-height:1.55;color:var(--ink-2)}
+.dlg{font-family:var(--sans);font-size:1.12cqw;line-height:1.55;color:var(--ink-2)}
 .dlg .u{color:var(--ink);font-weight:700}
 .dlg .g{color:var(--red);font-weight:700}
 .dlg .nt{color:var(--muted)}
 .split{display:grid;grid-template-columns:1fr 1fr;gap:.8cqw;margin-top:.7cqw}
-.tile{border:.14cqw solid var(--line);border-radius:.5cqw;padding:.62cqw .85cqw}
+.tile{border:.07cqw solid var(--line);border-radius:.5cqw;padding:.62cqw .85cqw}
 .tile .v{font-size:1.72cqw;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
-.tile .k{font-size:.95cqw;color:var(--muted);margin-top:.2cqw;line-height:1.35}
+.tile .k{font-size:1.07cqw;color:var(--muted);margin-top:.2cqw;line-height:1.35}
 .tile.w{border-color:#dcb069;background:var(--amber-soft)} .tile.w .v{color:var(--amber)}
 .tile.r{border-color:#e39a93;background:var(--red-soft)} .tile.r .v{color:var(--red)}
 .tower{margin-top:.75cqw}
@@ -177,12 +184,12 @@ figcaption{font-size:.74cqw;color:var(--ink-3);text-align:center;line-height:1.3
 /* asked → got: the failures as a visual pair, not prose */
 .gotwrong{display:flex;flex-direction:column;gap:.5cqw;margin-top:.3cqw}
 .gw{display:grid;grid-template-columns:1fr 1.7cqw 1fr;gap:.55cqw;align-items:center}
-.gw .a,.gw .b{font-family:var(--mono);font-size:.92cqw;line-height:1.34;padding:.52cqw .7cqw;
+.gw .a,.gw .b{font-family:var(--sans);font-size:1.12cqw;line-height:1.34;padding:.6cqw .8cqw;
   border-radius:.4cqw}
-.gw .a{background:var(--blue-soft);color:var(--ink);border:.14cqw solid #93b0ec}
-.gw .b{background:var(--red-soft);color:var(--ink);border:.14cqw solid #e39a93}
+.gw .a{font-style:italic;background:var(--blue-soft);color:var(--ink);border:.07cqw solid #93b0ec}
+.gw .b{background:var(--red-soft);color:var(--ink);border:.07cqw solid #e39a93}
 .gw .ar{font-size:1.15cqw;color:var(--ink-3);text-align:center;font-weight:700}
-.gw .st{display:block;font-family:var(--sans);font-size:.76cqw;font-weight:700;
+.gw .st{display:block;font-family:var(--sans);font-size:.92cqw;font-weight:700;
   letter-spacing:.08em;text-transform:uppercase;color:var(--red);margin-top:.28cqw}
 
 /* composite decomposition */
@@ -194,18 +201,10 @@ figcaption{font-size:.74cqw;color:var(--ink-3);text-align:center;line-height:1.3
 .dkey i::before{content:"";width:.62cqw;height:.62cqw;border-radius:.15cqw;background:var(--c)}
 .dkey b{color:var(--ink);font-variant-numeric:tabular-nums}
 
-/* ---------- footer ---------- */
-footer.incol{margin-top:auto;padding:1.15cqw 1.3cqw 0;display:grid;
-  grid-template-columns:auto 1fr;gap:1.35cqw;align-items:center;
-  border-top:.14cqw solid var(--line)}
-footer img{width:6.8cqw;height:6.8cqw;image-rendering:pixelated}
-footer .t{font-size:1.18cqw;font-weight:700;color:var(--ink);line-height:1.3}
-footer .u{font-family:var(--mono);font-size:.95cqw;color:var(--blue);margin-top:.3cqw}
-footer .d{font-size:.84cqw;color:var(--ink-3);margin-top:.4cqw;line-height:1.4}
 
 @page{size:594mm 841mm;margin:0}
 @media print{
-  body{background:#fff;padding:0;display:block}
+  body{background:var(--paper);padding:0;display:block}
   #poster{transform:none;width:594mm;height:841mm}
 }
 </style>
@@ -214,9 +213,9 @@ footer .d{font-size:.84cqw;color:var(--ink-3);margin-top:.4cqw;line-height:1.4}
 <div id="poster">
 
 <header>
+  <div class="htext">
   <div class="eyebrow">RecSys Challenge 2026 · Music-CRS · team npatta01</div>
-  <h1>State-Driven Retrieval and Learned Re-Ranking for
-Conversational Music Recommendation</h1>
+  <h1>State-Driven Retrieval and Learned Re-Ranking<br>for Conversational Music Recommendation</h1>
   <div class="hrow">
     <div class="byline">Nidhin Pattaniyil · Semih Yagli · Tanwir Zaman
       <div class="aff">Independent Researchers, Hoboken, New Jersey, USA</div></div>
@@ -226,6 +225,10 @@ Conversational Music Recommendation</h1>
       <div class="num"><div class="v">29<span style="font-size:.62em">/40</span></div><div class="k">where that finished</div></div>
     </div>
   </div>
+  </div>
+  <div class="hqr"><img src="figures/qr-repo.svg" alt="QR code linking to github.com/npatta01/music-crs-2026">
+    <div class="t">Paper, code, models, data</div>
+    <div class="u">github.com/npatta01/<br>music-crs-2026</div></div>
 </header>
 
 <div class="arch">
@@ -241,8 +244,8 @@ Conversational Music Recommendation</h1>
       <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg><span>What the system reads off a conversation</span></h2>
       <div class="card" style="margin-bottom:.7cqw">
         <div class="state">
-          <div><span class="u">User:</span> “…subdued, female singer, a sense of place in
-            the lyrics, stark almost a cappella delivery… not it either.”</div>
+          <div><span class="u">User:</span> <span class="q">“…subdued, female singer, a sense of place in
+            the lyrics, stark almost a cappella delivery… not it either.”</span></div>
           <div class="statesep"><span>extracted state</span></div>
           <div class="row"><span class="k">anchor artist</span><span>Neko Case (must use)</span></div>
           <div class="row"><span class="k">rejected</span><span>“Calling Cards”, “Man”</span></div>
@@ -289,13 +292,6 @@ Conversational Music Recommendation</h1>
       </table>
     </section>
 
-  <footer class="incol">
-    <img src="figures/qr-repo.svg" alt="QR code linking to github.com/npatta01/music-crs-2026">
-    <div>
-      <div class="t">Paper, code, trained models and data</div>
-      <div class="u">github.com/npatta01/music-crs-2026</div>
-    </div>
-  </footer>
   </div>
 
   <!-- ══════ RIGHT: how it did, and what we learned ══════ -->
@@ -303,18 +299,12 @@ Conversational Music Recommendation</h1>
 
     <section>
       <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg><span>What is not ideal</span></h2>
-      <ul class="lrn">
-        <li class="a"><b>We tuned on what we measured.</b>The development set was both our
-          training and our evaluation data, and the response prompt was picked against the Blind-A
-          leaderboard: 4.70 there, 3.30 on Blind-B.</li>
-        <li class="c"><b>We extracted more than we used.</b>Most fields in the state never
-          reached retrieval or ranking at all.</li>
-        <li class="d"><b>Nothing from outside the catalog.</b>No outside source for what a track
-          or artist is known for, and no tempo, key or soundtrack. Past one CF vector, no
-          listening behaviour.</li>
-        <li class="b"><b>The reply was never checked.</b>Asked for a track we do not have, it
-          described another by the same artist.</li>
-      </ul>
+      <div class="finds">
+        <div class="find" style="--c:var(--red)"><b>We tuned on what we measured.</b><p>The development set was both our training and our evaluation data, and the response prompt was picked against the Blind-A leaderboard: 4.70 there, 3.30 on Blind-B.</p></div>
+        <div class="find" style="--c:#6d28d9"><b>Nothing from outside the catalog.</b><p>No outside source for what a track or artist is known for, and no tempo, key or soundtrack. Past one CF vector, no listening behaviour.</p></div>
+        <div class="find" style="--c:var(--blue)"><b>We extracted more than we used.</b><p>Most fields in the state never reached retrieval or ranking at all.</p></div>
+        <div class="find" style="--c:var(--amber)"><b>The reply was never checked.</b><p>Asked for a track we do not have, it described another by the same artist.</p></div>
+      </div>
     </section>
 
     <section>
@@ -336,12 +326,12 @@ Conversational Music Recommendation</h1>
       <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 4H5v8.5L13 20l7-7z"/><circle cx="9" cy="8" r="1.3"/><path d="M15.5 14.5 19 18M19 14.5l-3.5 3.5"/></svg><span>The target often ignores the request</span></h2>
       <div class="card">
         <div class="dlg">
-          <div><span class="u">User:</span> “…similar chill vibe, but <b>from a different
-            artist</b>?” <span class="nt">(just played: Bonobo)</span></div>
+          <div><span class="u">User:</span> <span class="q">“…similar chill vibe, but <b>from a different
+            artist</b>?”</span> <span class="nt">(just played: Bonobo)</span></div>
           <div><span class="u">Target:</span> <span class="g">Bonobo — “Jets”</span>
             <span class="nt">· annotated MOVES toward goal</span></div>
-          <div><span class="u">Next turn:</span> “…hoping for something <b>from a different
-            artist this time</b>…”</div>
+          <div><span class="u">Next turn:</span> <span class="q">“…hoping for something <b>from a different
+            artist this time</b>…”</span></div>
           <div><span class="u">Target:</span> <span class="g">Bonobo — “Pieces”</span>
             <span class="nt">· annotated MOVES toward goal</span></div>
         </div>
