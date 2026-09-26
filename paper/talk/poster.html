@@ -199,6 +199,14 @@ figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.3
 .gwhead{display:grid;grid-template-columns:1fr 1.7cqw 1fr;gap:.55cqw;margin-bottom:.3cqw;
   font-size:.92cqw;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
 
+
+/* findings tied to the turns that show them */
+.miss{border-left:.42cqw solid var(--c);padding:.1cqw 0 .1cqw .9cqw}
+.miss .mh{font-size:1.36cqw;font-weight:700;color:var(--ink);margin-bottom:.45cqw}
+.gotwrong{gap:1.1cqw}
+section > .find{margin-bottom:1cqw}
+.gwhead.ind{padding-left:1.32cqw;margin-bottom:.1cqw}
+
 /* composite decomposition */
 .decomp{display:flex;height:1.6cqw;border-radius:.3cqw;overflow:hidden;margin-top:.7cqw}
 .decomp span{display:block}
@@ -310,27 +318,21 @@ figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.3
 
     <section>
       <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg><span>What is not ideal</span></h2>
-      <div class="finds">
-        <div class="find" style="--c:var(--red)"><b>We tuned on what we measured.</b></div>
-        <div class="find" style="--c:#6d28d9"><b>Nothing from outside the catalog.</b></div>
-        <div class="find" style="--c:var(--blue)"><b>We extracted more than we used.</b></div>
-        <div class="find" style="--c:var(--amber)"><b>The reply was never checked.</b></div>
-      </div>
-    </section>
-
-    <section>
-      <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/><path d="M8.6 8.6l4.8 4.8M13.4 8.6l-4.8 4.8"/></svg><span>Asked for, served: where our top pick missed</span></h2>
-      <div class="gwhead"><span>The listener asked for</span><span></span><span>Our top pick</span></div>
+      <div class="find" style="--c:var(--red)"><b>The ranker was trained on the same dev set we evaluated on.</b></div>
+      <div class="gwhead ind"><span>The listener asked for</span><span></span><span>Our top pick</span></div>
       <div class="gotwrong">
-        <div class="gw"><span class="a">the Kamelot track<br>from <b>Silverthorn</b></span>
-          <span class="ar">→</span>
-          <span class="b">Kamelot — Fallen Star,<br>from <b>Haven</b><span class="st">constraint never applied</span></span></div>
-        <div class="gw"><span class="a">exactly <b>126.70 bpm</b>,<br>in G minor</span>
-          <span class="ar">→</span>
-          <span class="b">no tempo or key field<br>exists to match on<span class="st">nothing in the catalog</span></span></div>
-        <div class="gw"><span class="a"><b>“Watercolors”</b><br>by Pat Metheny</span>
-          <span class="ar">→</span>
-          <span class="b">Metheny — Alfie,<br>described as if it were<span class="st">response LLM</span></span></div>
+        <div class="miss" style="--c:var(--blue)"><div class="mh">We extracted more than we used</div>
+          <div class="gw"><span class="a">the Kamelot track<br>from <b>Silverthorn</b></span>
+            <span class="ar">→</span>
+            <span class="b">Kamelot — Fallen Star,<br>from <b>Haven</b></span></div></div>
+        <div class="miss" style="--c:#6d28d9"><div class="mh">Nothing from outside the catalog</div>
+          <div class="gw"><span class="a">exactly <b>126.70 bpm</b>,<br>in G minor</span>
+            <span class="ar">→</span>
+            <span class="b">no tempo or key field<br>exists to match on</span></div></div>
+        <div class="miss" style="--c:var(--amber)"><div class="mh">The reply was never checked</div>
+          <div class="gw"><span class="a"><b>“Watercolors”</b><br>by Pat Metheny</span>
+            <span class="ar">→</span>
+            <span class="b">Metheny — Alfie,<br>described as if it were “Watercolors”</span></div></div>
       </div>
     </section>
 
