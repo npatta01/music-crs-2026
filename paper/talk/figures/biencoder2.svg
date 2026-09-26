@@ -2,13 +2,13 @@
 <svg viewBox="0 0 760 318" xmlns="http://www.w3.org/2000/svg" role="img"
              aria-label="Two-tower bi-encoder. A conversation rendering (previous turn, current turn, previously played track) and a track card (artist, title and year, up to five cleaned tags, and a one-line LLM-written known-for description) each pass through the same fine-tuned Qwen3-Embedding-4B encoder. Last-token pooling and L2 normalisation give two 2560-dimensional unit vectors whose cosine is the reranker feature.">
           <style>
-            .tt{font:700 20px "Lato","Liberation Sans",sans-serif;fill:#1A1714}
-            .tx{font:400 17px "DejaVu Sans Mono",monospace;fill:#4A423B}
-            .tl{font:600 17px "Lato","Liberation Sans",sans-serif;fill:#4A423B}
+            .tt{font:700 20px "Lato","Liberation Sans",sans-serif;fill:#16181C}
+            .tx{font:400 17px "DejaVu Sans Mono",monospace;fill:#44484F}
+            .tl{font:600 17px "Lato","Liberation Sans",sans-serif;fill:#44484F}
           </style>
           <defs><marker id="ta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6"
                 markerHeight="6" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="#7A7066"/></marker></defs>
+            <path d="M0,0 L10,5 L0,10 z" fill="#737780"/></marker></defs>
 
           <rect x="2" y="2" width="352" height="104" rx="10" fill="#d9e4fb" stroke="#93b0ec" stroke-width="1.8"/>
           <text class="tt" x="178" y="28" text-anchor="middle" fill="#1a56db">The conversation</text>
@@ -22,18 +22,18 @@
           <text class="tx" x="426" y="75">up to 5 cleaned tags</text>
           <text class="tx" x="426" y="96">known for: one LLM line</text>
 
-          <path d="M178,110 V138" fill="none" stroke="#7A7066" stroke-width="2" marker-end="url(#ta)"/>
-          <path d="M582,110 V138" fill="none" stroke="#7A7066" stroke-width="2" marker-end="url(#ta)"/>
+          <path d="M178,110 V138" fill="none" stroke="#737780" stroke-width="2" marker-end="url(#ta)"/>
+          <path d="M582,110 V138" fill="none" stroke="#737780" stroke-width="2" marker-end="url(#ta)"/>
 
-          <rect x="112" y="142" width="536" height="78" rx="10" fill="#EFEAE2" stroke="#BDB3A6" stroke-width="1.8"/>
+          <rect x="112" y="142" width="536" height="78" rx="10" fill="#EEF0F2" stroke="#BCC0C6" stroke-width="1.8"/>
           <text class="tt" x="380" y="172" text-anchor="middle">Shared encoder</text>
           <text class="tl" x="380" y="200" text-anchor="middle">Qwen3-Embedding-4B, fine-tuned · last-token pool · L2-norm</text>
 
-          <path d="M250,224 V250" fill="none" stroke="#7A7066" stroke-width="2"/>
-          <path d="M510,224 V250" fill="none" stroke="#7A7066" stroke-width="2"/>
+          <path d="M250,224 V250" fill="none" stroke="#737780" stroke-width="2"/>
+          <path d="M510,224 V250" fill="none" stroke="#737780" stroke-width="2"/>
           <text class="tl" x="380" y="242" text-anchor="middle">two 2560-d unit vectors</text>
-          <path d="M250,250 H510" fill="none" stroke="#7A7066" stroke-width="2"/>
-          <path d="M380,250 V272" fill="none" stroke="#7A7066" stroke-width="2" marker-end="url(#ta)"/>
+          <path d="M250,250 H510" fill="none" stroke="#737780" stroke-width="2"/>
+          <path d="M380,250 V272" fill="none" stroke="#737780" stroke-width="2" marker-end="url(#ta)"/>
 
           <rect x="222" y="278" width="316" height="34" rx="8" fill="#d9e4fb" stroke="#93b0ec" stroke-width="1.8"/>
           <text class="tl" x="380" y="301" text-anchor="middle" fill="#1a56db">their cosine = the ranker's top feature</text>

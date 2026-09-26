@@ -9,9 +9,9 @@
    36x48in is a change to --w / --h plus the @page rule. */
 :root{
   --w:594mm; --h:841mm;
-  --paper:#FBF8F4;
-  --ink:#1A1714; --ink-2:#3A332D; --ink-3:#6B6259; --muted:#6B6259;
-  --line:#C9BFB2; --line-2:#E6DED3;
+  --paper:#fff;
+  --ink:#16181C; --ink-2:#33373E; --ink-3:#5B6068; --muted:#5B6068;
+  --line:#C3C7CD; --line-2:#E3E5E8;
   --blue:#1a56db; --blue-soft:#d9e4fb;
   --amber:#A55A18; --amber-soft:#fae4c3;
   --red:#b42318; --red-soft:#fad6d2;
@@ -79,7 +79,7 @@ header{padding:1.9cqw 3.1cqw 1.35cqw;border-bottom:.2cqw solid var(--blue);
 /* ---------- columns ---------- */
 .main{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:.92fr 1.08fr;
   border-bottom:none}
-.col{padding:1.3cqw 2.05cqw;display:flex;flex-direction:column;gap:1.35cqw}
+.col{padding:1.3cqw 2.05cqw;display:flex;flex-direction:column;gap:1.2cqw}
 .main > .col:first-child{padding-left:3.1cqw;padding-bottom:3.1cqw;justify-content:space-between}
 .main > .col:last-child{padding-right:3.1cqw;padding-bottom:2.4cqw}
 .col + .col{border-left:.07cqw solid var(--line)}
@@ -96,7 +96,7 @@ ul li::before{content:"";position:absolute;left:.14cqw;top:.6em;width:.32cqw;hei
   border-radius:50%;background:var(--blue)}
 
 table{width:100%;border-collapse:collapse;font-size:1.12cqw;font-variant-numeric:tabular-nums}
-th,td{text-align:right;padding:.6cqw .6cqw;border-bottom:.07cqw solid var(--line-2)}
+th,td{text-align:right;padding:.5cqw .6cqw;border-bottom:.07cqw solid var(--line-2)}
 th:first-child,td:first-child{text-align:left}
 thead th{font-size:.98cqw;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   color:var(--ink-3);border-bottom:.07cqw solid var(--line)}
@@ -111,6 +111,8 @@ figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.3
 .state{font-family:var(--sans);font-size:1.16cqw;line-height:1.55;color:var(--ink-2)}
 .state .k{font-family:var(--mono);font-size:.9em}
 .q{font-style:italic;color:var(--ink)}
+.state .ctx{color:var(--ink-3);margin-bottom:.35cqw}
+.state .src{color:var(--ink-3);font-size:.9em}
 .state .k{color:var(--blue);font-weight:700}
 .state .u{color:var(--ink);font-weight:700}
 .state .row{display:grid;grid-template-columns:9.4cqw minmax(0,1fr);gap:1.35cqw;
@@ -135,11 +137,11 @@ figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.3
 .finds{display:grid;grid-template-columns:1fr 1fr;gap:.9cqw}
 .find{background:#fff;border:.07cqw solid var(--line);border-top:.42cqw solid var(--c);
   border-radius:.5cqw;padding:.9cqw 1.05cqw 1cqw}
-.find b{display:block;font-size:1.24cqw;line-height:1.25;color:var(--ink);margin-bottom:.35cqw}
-.find p{font-size:1.1cqw;line-height:1.42}
+.find b{display:block;font-size:1.2cqw;line-height:1.25;color:var(--ink);margin-bottom:.35cqw}
+.find p{font-size:1.07cqw;line-height:1.4}
 
 /* relabelling */
-.dlg{font-family:var(--sans);font-size:1.12cqw;line-height:1.55;color:var(--ink-2)}
+.dlg{font-family:var(--sans);font-size:1.12cqw;line-height:1.46;color:var(--ink-2)}
 .dlg .u{color:var(--ink);font-weight:700}
 .dlg .g{color:var(--red);font-weight:700}
 .dlg .nt{color:var(--muted)}
@@ -170,7 +172,7 @@ figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.3
 .callout{display:flex;gap:.6cqw;align-items:flex-start;margin-top:.7cqw;
   padding:.65cqw .8cqw;border-left:.22cqw solid var(--blue);background:var(--blue-soft);
   border-radius:0 .4cqw .4cqw 0}
-.callout p{font-size:1.02cqw;line-height:1.4;color:var(--ink)}
+.callout p{font-size:1.1cqw;line-height:1.4;color:var(--ink)}
 
 
 /* worked failures — the bit people quote back at you */
@@ -191,6 +193,10 @@ figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.3
 .gw .ar{font-size:1.15cqw;color:var(--ink-3);text-align:center;font-weight:700}
 .gw .st{display:block;font-family:var(--sans);font-size:.92cqw;font-weight:700;
   letter-spacing:.08em;text-transform:uppercase;color:var(--red);margin-top:.28cqw}
+
+.lead{margin:-.2cqw 0 .55cqw}
+.gwhead{display:grid;grid-template-columns:1fr 1.7cqw 1fr;gap:.55cqw;margin-bottom:.3cqw;
+  font-size:.92cqw;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
 
 /* composite decomposition */
 .decomp{display:flex;height:1.6cqw;border-radius:.3cqw;overflow:hidden;margin-top:.7cqw}
@@ -244,11 +250,13 @@ figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.3
       <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg><span>What the system reads off a conversation</span></h2>
       <div class="card" style="margin-bottom:.7cqw">
         <div class="state">
-          <div><span class="u">User:</span> <span class="q">“…subdued, female singer, a sense of place in
-            the lyrics, stark almost a cappella delivery… not it either.”</span></div>
+          <div class="ctx">Earlier turns: we played Neko Case’s “Calling Cards”
+            (<span class="q">“not quite the one”</span>), then “Man” (<span class="q">“not it either”</span>).</div>
+          <div><span class="u">User, now:</span> <span class="q">“…much more subdued… a specific sense of
+            place in the lyrics… a somewhat stark, almost a cappella delivery.”</span></div>
           <div class="statesep"><span>extracted state</span></div>
-          <div class="row"><span class="k">anchor artist</span><span>Neko Case (must use)</span></div>
-          <div class="row"><span class="k">rejected</span><span>“Calling Cards”, “Man”</span></div>
+          <div class="row"><span class="k">anchor artist</span><span>Neko Case (must use) <span class="src">· earlier turns</span></span></div>
+          <div class="row"><span class="k">rejected</span><span>“Calling Cards”, “Man” <span class="src">· earlier turns</span></span></div>
           <div class="row"><span class="k">facets</span><span>mood = subdued · theme = sense of place<br>sonic = stark, almost a cappella</span></div>
           <div class="row"><span class="k">request</span><span>hidden_target</span></div>
         </div>
@@ -308,7 +316,8 @@ figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.3
     </section>
 
     <section>
-      <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/><path d="M8.6 8.6l4.8 4.8M13.4 8.6l-4.8 4.8"/></svg><span>Asked for, served</span></h2>
+      <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/><path d="M8.6 8.6l4.8 4.8M13.4 8.6l-4.8 4.8"/></svg><span>Asked for, served: where our top pick missed</span></h2>
+      <div class="gwhead"><span>The listener asked for</span><span></span><span>Our top pick</span></div>
       <div class="gotwrong">
         <div class="gw"><span class="a">the Kamelot track<br>from <b>Silverthorn</b></span>
           <span class="ar">→</span>
@@ -323,7 +332,7 @@ figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.3
     </section>
 
     <section>
-      <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 4H5v8.5L13 20l7-7z"/><circle cx="9" cy="8" r="1.3"/><path d="M15.5 14.5 19 18M19 14.5l-3.5 3.5"/></svg><span>The target often ignores the request</span></h2>
+      <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 4H5v8.5L13 20l7-7z"/><circle cx="9" cy="8" r="1.3"/><path d="M15.5 14.5 19 18M19 14.5l-3.5 3.5"/></svg><span>The training labels often ignore the request</span></h2>
       <div class="card">
         <div class="dlg">
           <div><span class="u">User:</span> <span class="q">“…similar chill vibe, but <b>from a different
@@ -336,11 +345,9 @@ figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.3
             <span class="nt">· annotated MOVES toward goal</span></div>
         </div>
       </div>
-      <p style="margin-top:.65cqw">Ground truth is whatever played next in an LLM-generated
-        session, so we had every turn re-scored.</p>
-      <h3 class="sub" style="margin-top:1.2cqw;margin-bottom:.2cqw">How the LLM relabelling worked</h3>
-      <p class="tiny">Both judges score the same two axes: different artist asked for? does the
-        track fit?</p>
+      <p style="margin-top:.65cqw">The label is whatever played next in an LLM-generated session,
+        even when the listener had just asked for something else.</p>
+      <h3 class="sub" style="margin-top:1.2cqw;margin-bottom:.2cqw">Our fix: two LLM judges re-score every training turn</h3>
       <div class="judges">
         <img class="judge-img" src="figures/relabelling.svg" alt="">
       </div>
@@ -351,6 +358,8 @@ figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.3
         <div class="tile r"><div class="v">17%</div>
           <div class="k">keep the artist the listener had just rejected</div></div>
       </div>
+      <div class="callout"><p><strong>Did it help?</strong> Retrained on these labels, it scored lower
+        against the originals, so we kept the originals. That test could never favour the fix.</p></div>
     </section>
   </div>
 </div>

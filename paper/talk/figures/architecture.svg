@@ -1,31 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg viewBox="0 0 1700 592" xmlns="http://www.w3.org/2000/svg" role="img"
+<svg viewBox="0 0 1700 560" xmlns="http://www.w3.org/2000/svg" role="img"
        aria-label="System architecture. The conversation and the tracks already played go to an LLM that emits a typed state. Eleven retrieval branches query one LanceDB collection of 47,071 tracks. Their pooled candidates, capped at 500 per branch, are scored by a LambdaMART reranker with 146 features, which emits the top twenty tracks. A response model then writes a reply about the top track, conditioned on that track and the latest state. A weighted reciprocal-rank-fusion path over the same pool is the untrained baseline and the fallback ranking.">
     <defs>
       <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-        <path d="M0,0 L10,5 L0,10 z" fill="#5A5148"/></marker>
+        <path d="M0,0 L10,5 L0,10 z" fill="#50545B"/></marker>
       <marker id="arb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
         <path d="M0,0 L10,5 L0,10 z" fill="#1a56db"/></marker>
       <marker id="ard" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-        <path d="M0,0 L10,5 L0,10 z" fill="#7A7066"/></marker>
+        <path d="M0,0 L10,5 L0,10 z" fill="#737780"/></marker>
     </defs>
     <style>
-      .bt{font:700 24px "Lato","Liberation Sans",sans-serif;fill:#1A1714}
-      .bs{font:400 18px "Lato","Liberation Sans",sans-serif;fill:#4A423B}
-      .bm{font:700 16px "DejaVu Sans Mono",monospace;fill:#4A423B}
-      .an{font:700 18px "Lato","Liberation Sans",sans-serif;fill:#1A1714;letter-spacing:.03em}
-      .hd{font:700 17px "Lato","Liberation Sans",sans-serif;fill:#4A423B;letter-spacing:.12em}
+      .bt{font:700 24px "Lato","Liberation Sans",sans-serif;fill:#16181C}
+      .bs{font:400 18px "Lato","Liberation Sans",sans-serif;fill:#44484F}
+      .bm{font:700 16px "DejaVu Sans Mono",monospace;fill:#44484F}
+      .an{font:700 18px "Lato","Liberation Sans",sans-serif;fill:#16181C;letter-spacing:.03em}
+      .hd{font:700 17px "Lato","Liberation Sans",sans-serif;fill:#44484F;letter-spacing:.12em}
       .ch{font:700 20px "Lato","Liberation Sans",sans-serif}
-      .cs{font:400 18px "Lato","Liberation Sans",sans-serif;fill:#4A423B}
+      .cs{font:400 18px "Lato","Liberation Sans",sans-serif;fill:#44484F}
       .bg{fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
     </style>
 
     <!-- conversation -> typed state -->
-    <rect x="8" y="238" width="196" height="124" rx="12" fill="#fff" stroke="#BDB3A6" stroke-width="1.8"/>
+    <rect x="8" y="238" width="196" height="124" rx="12" fill="#fff" stroke="#BCC0C6" stroke-width="1.8"/>
     <text class="bt" x="106" y="282" text-anchor="middle">Conversation</text>
     <text class="bs" x="106" y="310" text-anchor="middle">every turn so far</text>
     <text class="bs" x="106" y="333" text-anchor="middle">+ tracks already played</text>
-    <line x1="208" y1="300" x2="248" y2="300" stroke="#5A5148" stroke-width="2.6" marker-end="url(#ar)"/>
+    <line x1="208" y1="300" x2="248" y2="300" stroke="#50545B" stroke-width="2.6" marker-end="url(#ar)"/>
 
     <rect x="252" y="200" width="232" height="200" rx="12" fill="#d9e4fb" stroke="#93b0ec" stroke-width="1.8"/>
     <text class="bt" x="368" y="240" text-anchor="middle" fill="#1a56db">Typed state</text>
@@ -37,7 +37,7 @@
     <line x1="488" y1="300" x2="526" y2="300" stroke="#1a56db" stroke-width="2.6" marker-end="url(#arb)"/>
 
     <!-- eleven branches, one index -->
-    <rect x="530" y="10" width="470" height="506" rx="14" fill="#EFEAE2" stroke="#BDB3A6" stroke-width="1.8"/>
+    <rect x="530" y="10" width="470" height="506" rx="14" fill="#EEF0F2" stroke="#BCC0C6" stroke-width="1.8"/>
     <text class="hd" x="765" y="44" text-anchor="middle">ELEVEN BRANCHES · ONE INDEX</text>
 
     <rect x="550" y="56" width="430" height="58" rx="9" fill="#fae4c3" stroke="#dcb069" stroke-width="1.8"/>
@@ -65,27 +65,27 @@
     <text class="ch" x="602" y="338" fill="#0a7d55">User-CF centroid</text>
     <text class="cs" x="602" y="360">BPR · this listener's own vector</text>
 
-    <rect x="550" y="376" width="430" height="58" rx="9" fill="#fff" stroke="#BDB3A6" stroke-width="1.8"/>
-    <g transform="translate(566,391) scale(1.16)"><ellipse class="bg" cx="12" cy="6" rx="8" ry="3" stroke="#4A423B"/><path class="bg" d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6" stroke="#4A423B"/><path class="bg" d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" stroke="#4A423B"/></g>
-    <text class="ch" x="602" y="402" fill="#4A423B">Catalog lookups × 2</text>
+    <rect x="550" y="376" width="430" height="58" rx="9" fill="#fff" stroke="#BCC0C6" stroke-width="1.8"/>
+    <g transform="translate(566,391) scale(1.16)"><ellipse class="bg" cx="12" cy="6" rx="8" ry="3" stroke="#44484F"/><path class="bg" d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6" stroke="#44484F"/><path class="bg" d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" stroke="#44484F"/></g>
+    <text class="ch" x="602" y="402" fill="#44484F">Catalog lookups × 2</text>
     <text class="cs" x="602" y="424">discography · era popularity</text>
 
     <text class="an" x="765" y="466" text-anchor="middle">one LanceDB collection · 47,071 tracks</text>
     <text class="cs" x="765" y="492" text-anchor="middle">metadata + full-text index + six embedding families</text>
 
     <!-- branches fan into the pool -->
-    <path d="M984,85 C1024,85 1024,276 1058,276" fill="none" stroke="#7A7066" stroke-width="2"/>
-    <path d="M984,149 C1024,149 1024,282 1058,282" fill="none" stroke="#7A7066" stroke-width="2"/>
-    <path d="M984,213 C1024,213 1024,288 1058,288" fill="none" stroke="#7A7066" stroke-width="2"/>
-    <path d="M984,277 C1024,277 1024,300 1058,300" fill="none" stroke="#7A7066" stroke-width="2"/>
-    <path d="M984,341 C1024,341 1024,306 1058,306" fill="none" stroke="#7A7066" stroke-width="2"/>
-    <path d="M984,405 C1024,405 1024,312 1058,312" fill="none" stroke="#7A7066" stroke-width="2" marker-end="url(#ard)"/>
+    <path d="M984,85 C1024,85 1024,276 1058,276" fill="none" stroke="#737780" stroke-width="2"/>
+    <path d="M984,149 C1024,149 1024,282 1058,282" fill="none" stroke="#737780" stroke-width="2"/>
+    <path d="M984,213 C1024,213 1024,288 1058,288" fill="none" stroke="#737780" stroke-width="2"/>
+    <path d="M984,277 C1024,277 1024,300 1058,300" fill="none" stroke="#737780" stroke-width="2"/>
+    <path d="M984,341 C1024,341 1024,306 1058,306" fill="none" stroke="#737780" stroke-width="2"/>
+    <path d="M984,405 C1024,405 1024,312 1058,312" fill="none" stroke="#737780" stroke-width="2" marker-end="url(#ard)"/>
 
-    <rect x="1062" y="246" width="132" height="108" rx="12" fill="#fff" stroke="#BDB3A6" stroke-width="1.8"/>
+    <rect x="1062" y="246" width="132" height="108" rx="12" fill="#fff" stroke="#BCC0C6" stroke-width="1.8"/>
     <text class="bt" x="1128" y="290" text-anchor="middle">Pooled</text>
     <text class="bs" x="1128" y="316" text-anchor="middle">≤ 500 per</text>
     <text class="bs" x="1128" y="338" text-anchor="middle">branch</text>
-    <line x1="1198" y1="300" x2="1226" y2="300" stroke="#5A5148" stroke-width="2.6" marker-end="url(#ar)"/>
+    <line x1="1198" y1="300" x2="1226" y2="300" stroke="#50545B" stroke-width="2.6" marker-end="url(#ar)"/>
 
     <!-- learned ranker -->
     <rect x="1230" y="216" width="198" height="168" rx="12" fill="#d9e4fb" stroke="#93b0ec" stroke-width="1.8"/>
@@ -93,17 +93,17 @@
       <path class="bg" d="M4 19V5" stroke="#1a56db"/><path class="bg" d="M4 19h16" stroke="#1a56db"/>
       <path class="bg" d="M8 19v-4M13 19v-8M18 19v-11" stroke="#1a56db"/></g>
     <text class="bt" x="1329" y="332" text-anchor="middle" fill="#1a56db">Reranker</text>
-    <text class="bs" x="1329" y="359" text-anchor="middle">gradient-boosted trees</text>
-    <path d="M1432,300 H1460 V210 H1486" fill="none" stroke="#5A5148" stroke-width="2.6" marker-end="url(#ar)"/>
+    <text class="bs" x="1329" y="359" text-anchor="middle">LightGBM LambdaMART</text>
+    <path d="M1432,300 H1460 V210 H1486" fill="none" stroke="#50545B" stroke-width="2.6" marker-end="url(#ar)"/>
 
     <!-- untrained baseline over the same pool, joining the ranker's output -->
-    <path d="M1128,358 V466" fill="none" stroke="#7A7066" stroke-width="2" stroke-dasharray="10 7" marker-end="url(#ard)"/>
-    <rect x="1062" y="470" width="330" height="64" rx="10" fill="#fff" stroke="#BDB3A6"
+    <path d="M1128,358 V466" fill="none" stroke="#737780" stroke-width="2" stroke-dasharray="10 7" marker-end="url(#ard)"/>
+    <rect x="1062" y="470" width="330" height="64" rx="10" fill="#fff" stroke="#BCC0C6"
           stroke-width="1.8" stroke-dasharray="10 7"/>
-    <text class="ch" x="1082" y="497" fill="#4A423B">Weighted RRF</text>
+    <text class="ch" x="1082" y="497" fill="#44484F">Weighted RRF</text>
     <text class="cs" x="1082" y="521">baseline and fallback ranking</text>
-    <path d="M1392,502 H1460 V304" fill="none" stroke="#7A7066" stroke-width="2" stroke-dasharray="10 7"/>
-    <circle cx="1460" cy="300" r="5" fill="#5A5148"/>
+    <path d="M1392,502 H1460 V304" fill="none" stroke="#737780" stroke-width="2" stroke-dasharray="10 7"/>
+    <circle cx="1460" cy="300" r="5" fill="#50545B"/>
 
     <!-- outputs -->
     <rect x="1490" y="160" width="202" height="100" rx="12" fill="#cfeadd" stroke="#7fc4a5" stroke-width="1.8"/>
@@ -111,7 +111,7 @@
     <text class="bs" x="1591" y="227" text-anchor="middle">what is scored for</text>
     <text class="bs" x="1591" y="248" text-anchor="middle">nDCG@20</text>
 
-    <path d="M1591,264 V318" fill="none" stroke="#5A5148" stroke-width="2.6" marker-end="url(#ar)"/>
+    <path d="M1591,264 V318" fill="none" stroke="#50545B" stroke-width="2.6" marker-end="url(#ar)"/>
     <text class="cs" x="1604" y="298">top-1</text>
 
     <rect x="1490" y="322" width="202" height="150" rx="12" fill="#d9e4fb" stroke="#93b0ec" stroke-width="1.8"/>
@@ -121,7 +121,7 @@
     <text class="bs" x="1591" y="446" text-anchor="middle">LLM · Qwen3-30B</text>
 
     <!-- the state also conditions the reply -->
-    <path d="M368,404 V556 H1591 V478" fill="none" stroke="#1a56db" stroke-width="2"
+    <path d="M368,404 V550 H1591 V478" fill="none" stroke="#1a56db" stroke-width="2"
           stroke-dasharray="10 7" opacity=".75" marker-end="url(#arb)"/>
-    <text class="cs" x="840" y="582" text-anchor="middle" fill="#1a56db">the same state conditions the reply</text>
+    <text class="cs" x="384" y="530" fill="#1a56db">the same state conditions the reply</text>
   </svg>
