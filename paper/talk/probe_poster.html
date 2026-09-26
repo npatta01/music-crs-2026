@@ -27,7 +27,7 @@ body{background:#3a3f47;font-family:var(--sans);color:var(--ink);
 @media screen{
   body{align-items:flex-start}
   #poster{transform-origin:top center;
-    transform:scale(calc(min(96vw / 594, 92vh / 841) * 3.7795));}
+    transform:none;}
 }
 
 h1{font-size:3.3cqw;line-height:1.08;letter-spacing:-.02em;font-weight:700;
@@ -77,11 +77,11 @@ header{padding:1.9cqw 3.1cqw 1.35cqw;border-bottom:.2cqw solid var(--blue);
 .arch img{width:100%;height:auto;display:block}
 
 /* ---------- columns ---------- */
-.main{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:.92fr 1.08fr;
+.main{flex:1 1 auto;min-height:0;display:grid;align-items:start;grid-template-columns:.92fr 1.08fr;
   border-bottom:none}
 .col{padding:1.3cqw 2.05cqw;display:flex;flex-direction:column;gap:1.2cqw}
-.main > .col:first-child{padding-left:3.1cqw;padding-bottom:3.1cqw;justify-content:space-between}
-.main > .col:last-child{padding-right:3.1cqw;padding-bottom:3.1cqw;justify-content:space-between}
+.main > .col:first-child{padding-left:3.1cqw;padding-bottom:3.1cqw}
+.main > .col:last-child{padding-right:3.1cqw;padding-bottom:3.1cqw}
 .col + .col{border-left:.07cqw solid var(--line)}
 
 .card{border:.07cqw solid var(--line);border-radius:.5cqw;padding:1.1cqw 1.25cqw;background:#fff}
@@ -367,5 +367,5 @@ figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.3
 
 
 </div>
-</body>
+<script src="/probe.js"></script></body>
 </html>

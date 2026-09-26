@@ -93,7 +93,7 @@
       <path class="bg" d="M4 19V5" stroke="#1a56db"/><path class="bg" d="M4 19h16" stroke="#1a56db"/>
       <path class="bg" d="M8 19v-4M13 19v-8M18 19v-11" stroke="#1a56db"/></g>
     <text class="bt" x="1329" y="332" text-anchor="middle" fill="#1a56db">Reranker</text>
-    <text class="bs" x="1329" y="359" text-anchor="middle">LightGBM LambdaMART</text>
+    <text class="bs" x="1329" y="359" text-anchor="middle">LightGBM</text>
     <path d="M1432,300 H1460 V210 H1486" fill="none" stroke="#50545B" stroke-width="2.6" marker-end="url(#ar)"/>
 
     <!-- untrained baseline over the same pool, joining the ranker's output -->
