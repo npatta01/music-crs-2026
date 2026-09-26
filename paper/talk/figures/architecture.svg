@@ -107,9 +107,7 @@
 
     <!-- outputs -->
     <rect x="1490" y="160" width="202" height="100" rx="12" fill="#cfeadd" stroke="#7fc4a5" stroke-width="1.8"/>
-    <text class="bt" x="1591" y="200" text-anchor="middle" fill="#0a7d55">Top-20 tracks</text>
-    <text class="bs" x="1591" y="227" text-anchor="middle">what is scored for</text>
-    <text class="bs" x="1591" y="248" text-anchor="middle">nDCG@20</text>
+    <text class="bt" x="1591" y="218" text-anchor="middle" fill="#0a7d55">Top-20 tracks</text>
 
     <path d="M1591,264 V318" fill="none" stroke="#50545B" stroke-width="2.6" marker-end="url(#ar)"/>
     <text class="cs" x="1604" y="298">top-1</text>
