@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <title>Music-CRS poster — A1 portrait</title>
 <style>
-/* A1 portrait, 594 x 841 mm. Sizes are in cqw (1% of poster width), so the
+/* 24x36in portrait, 609.6 x 914.4 mm (the US stock size near the venue). Sizes are in cqw (1% of poster width), so the
    layout is identical on screen and at print size, and moving to A0 or
    36x48in is a change to --w / --h plus the @page rule. */
 :root{
-  --w:594mm; --h:841mm;
+  --w:609.6mm; --h:914.4mm;
   --paper:#fff;
   --ink:#16181C; --ink-2:#33373E; --ink-3:#5B6068; --muted:#5B6068;
   --line:#C3C7CD; --line-2:#E3E5E8;
@@ -27,23 +27,23 @@ body{background:#3a3f47;font-family:var(--sans);color:var(--ink);
 @media screen{
   body{align-items:flex-start}
   #poster{transform-origin:top center;
-    transform:scale(calc(min(96vw / 594, 92vh / 841) * 3.7795));}
+    transform:scale(calc(min(96vw / 609.6, 92vh / 914.4) * 3.7795));}
 }
 
 h1{font-size:3.3cqw;line-height:1.08;letter-spacing:-.02em;font-weight:700;
   text-wrap:balance}
-h2{font-size:1.78cqw;line-height:1.15;font-weight:700;letter-spacing:-.01em;
+h2{font-size:1.958cqw;line-height:1.15;font-weight:700;letter-spacing:-.01em;
   margin-bottom:.7cqw;display:flex;align-items:center;gap:.62cqw}
 /* section glyphs: drawn at the cap height of the heading they sit beside */
-h2 .ic{width:1.62cqw;height:1.62cqw;flex:0 0 auto;stroke:var(--blue);stroke-width:1.7;
+h2 .ic{width:1.782cqw;height:1.782cqw;flex:0 0 auto;stroke:var(--blue);stroke-width:1.7;
   fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
 h3{font-size:1.03cqw;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
   color:var(--ink-3);margin-bottom:.55cqw}
 /* section sub-headings read as headings, not as labels */
 h3.sub{color:var(--ink);font-size:1.12cqw;letter-spacing:.06em}
-p,li{font-size:1.3cqw;line-height:1.46;color:var(--ink-2);text-wrap:pretty;hyphens:manual}
-.small{font-size:1.14cqw;line-height:1.42;color:var(--ink-3)}
-.tiny{font-size:1.14cqw;line-height:1.35;color:var(--ink-3)}
+p,li{font-size:1.430cqw;line-height:1.46;color:var(--ink-2);text-wrap:pretty;hyphens:manual}
+.small{font-size:1.254cqw;line-height:1.42;color:var(--ink-3)}
+.tiny{font-size:1.254cqw;line-height:1.35;color:var(--ink-3)}
 strong{font-weight:700;color:var(--ink)}
 .mono,code{font-family:var(--mono);font-size:.93em}
 
@@ -95,32 +95,32 @@ ul li{position:relative;padding-left:1.2cqw}
 ul li::before{content:"";position:absolute;left:.14cqw;top:.6em;width:.32cqw;height:.32cqw;
   border-radius:50%;background:var(--blue)}
 
-table{width:100%;border-collapse:collapse;font-size:1.24cqw;font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-size:1.364cqw;font-variant-numeric:tabular-nums}
 th,td{text-align:right;padding:.5cqw .6cqw;border-bottom:.07cqw solid var(--line-2)}
 th:first-child,td:first-child{text-align:left}
-thead th{font-size:.98cqw;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+thead th{font-size:1.078cqw;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   color:var(--ink-3);border-bottom:.07cqw solid var(--line)}
 tbody tr.hi td{background:var(--blue-soft);font-weight:700;color:var(--ink)}
 tbody tr.dim td{color:var(--ink-3)}
-table.gain td{padding-top:.66cqw;padding-bottom:.66cqw}
+table.gain td{padding-top:.86cqw;padding-bottom:.86cqw}
 table.gain tbody tr.low td{color:var(--amber);font-weight:700}
 
 figure{display:flex;flex-direction:column;align-items:center;gap:.5cqw}
 figure img{width:84%;height:auto}
 figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.35}
 
-.state{font-family:var(--sans);font-size:1.4cqw;line-height:1.55;color:var(--ink-2)}
-.state .k{font-family:var(--mono);font-size:.9em}
+.state{font-family:var(--sans);font-size:1.64cqw;line-height:1.55;color:var(--ink-2)}
+.state .k{font-family:var(--mono);font-size:.9em;white-space:nowrap}
 .q{font-style:italic;color:var(--ink)}
 .state .ctx{color:var(--ink-3);margin-bottom:.35cqw}
 .state .src{color:var(--ink-3);font-size:.9em}
 .state .k{color:var(--blue);font-weight:700}
 .state .u{color:var(--ink);font-weight:700}
-.state .row{display:grid;grid-template-columns:10.6cqw minmax(0,1fr);gap:1.35cqw;
+.state .row{display:grid;grid-template-columns:12.2cqw minmax(0,1fr);gap:1.4cqw;
   align-items:baseline}
 .state .row + .row{margin-top:.28cqw}
 .statesep{display:flex;align-items:center;gap:.6cqw;margin:.75cqw 0 .55cqw;
-  font-family:var(--sans);font-size:.92cqw;font-weight:700;letter-spacing:.11em;
+  font-family:var(--sans);font-size:1.012cqw;font-weight:700;letter-spacing:.11em;
   text-transform:uppercase;color:var(--muted);line-height:1}
 .statesep::after{content:"";flex:1;height:.06cqw;background:var(--line)}
 
@@ -138,11 +138,11 @@ figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.3
 .finds{display:grid;grid-template-columns:1fr 1fr;gap:.9cqw}
 .find{background:#fff;border:.07cqw solid var(--line);border-top:.42cqw solid var(--c);
   border-radius:.5cqw;padding:1.05cqw 1.15cqw 1.15cqw;display:flex;align-items:center}
-.find b{display:block;font-size:1.44cqw;line-height:1.25;color:var(--ink)}
+.find b{display:block;font-size:1.584cqw;line-height:1.25;color:var(--ink)}
 .find p{font-size:1.07cqw;line-height:1.4}
 
 /* relabelling */
-.dlg{font-family:var(--sans);font-size:1.28cqw;line-height:1.5;color:var(--ink-2)}
+.dlg{font-family:var(--sans);font-size:1.408cqw;line-height:1.5;color:var(--ink-2)}
 .dlg .u{color:var(--ink);font-weight:700}
 .dlg .g{color:var(--red);font-weight:700}
 .dlg .nt{color:var(--muted)}
@@ -187,22 +187,22 @@ figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.3
 /* asked → got: the failures as a visual pair, not prose */
 .gotwrong{display:flex;flex-direction:column;gap:.7cqw;margin-top:.3cqw}
 .gw{display:grid;grid-template-columns:1fr 1.7cqw 1fr;gap:.55cqw;align-items:center}
-.gw .a,.gw .b{font-family:var(--sans);font-size:1.32cqw;line-height:1.34;padding:.8cqw 1cqw;
+.gw .a,.gw .b{font-family:var(--sans);font-size:1.452cqw;line-height:1.34;padding:.8cqw 1cqw;
   border-radius:.4cqw}
 .gw .a{font-style:italic;background:var(--blue-soft);color:var(--ink);border:.07cqw solid #93b0ec}
 .gw .b{background:var(--red-soft);color:var(--ink);border:.07cqw solid #e39a93}
-.gw .ar{font-size:1.15cqw;color:var(--ink-3);text-align:center;font-weight:700}
-.gw .st{display:block;font-family:var(--sans);font-size:1.07cqw;font-weight:700;
+.gw .ar{font-size:1.265cqw;color:var(--ink-3);text-align:center;font-weight:700}
+.gw .st{display:block;font-family:var(--sans);font-size:1.177cqw;font-weight:700;
   color:var(--red);margin-top:.35cqw;line-height:1.3}
 
 .lead{margin:-.2cqw 0 .55cqw}
 .gwhead{display:grid;grid-template-columns:1fr 1.7cqw 1fr;gap:.55cqw;margin-bottom:.3cqw;
-  font-size:.92cqw;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+  font-size:1.012cqw;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
 
 
 /* findings tied to the turns that show them */
 .miss{border-left:.42cqw solid var(--c);padding:.1cqw 0 .1cqw .9cqw}
-.miss .mh{font-size:1.36cqw;font-weight:700;color:var(--ink);margin-bottom:.45cqw}
+.miss .mh{font-size:1.496cqw;font-weight:700;color:var(--ink);margin-bottom:.45cqw}
 .gotwrong{gap:1.1cqw}
 section > .find{margin-bottom:1cqw}
 .gwhead.ind{padding-left:1.32cqw;margin-bottom:.1cqw}
@@ -217,10 +217,10 @@ section > .find{margin-bottom:1cqw}
 .dkey b{color:var(--ink);font-variant-numeric:tabular-nums}
 
 
-@page{size:594mm 841mm;margin:0}
+@page{size:609.6mm 914.4mm;margin:0}
 @media print{
   body{background:var(--paper);padding:0;display:block}
-  #poster{transform:none;width:594mm;height:841mm}
+  #poster{transform:none;width:609.6mm;height:914.4mm}
 }
 </style>
 </head>
@@ -266,7 +266,7 @@ section > .find{margin-bottom:1cqw}
           <div class="statesep"><span>extracted state</span></div>
           <div class="row"><span class="k">anchor artist</span><span>Neko Case (must use) <span class="src">· earlier turns</span></span></div>
           <div class="row"><span class="k">rejected</span><span>“Calling Cards”, “Man” <span class="src">· earlier turns</span></span></div>
-          <div class="row"><span class="k">facets</span><span>mood = subdued · theme = sense of place<br>sonic = stark, almost a cappella</span></div>
+          <div class="row"><span class="k">facets</span><span>mood = subdued<br>theme = sense of place<br>sonic = stark, almost a cappella</span></div>
           <div class="row"><span class="k">request</span><span>hidden_target</span></div>
         </div>
       </div>
@@ -328,11 +328,11 @@ section > .find{margin-bottom:1cqw}
         <div class="miss" style="--c:#6d28d9"><div class="mh">We used no data from outside the catalog</div>
           <div class="gw"><span class="a">exactly <b>126.70 bpm</b>,<br>in G minor</span>
             <span class="ar">→</span>
-            <span class="b">the catalog has no tempo or key,<br>and we added no outside source</span></div></div>
+            <span class="b">the catalog has no tempo or key, and we added no outside source</span></div></div>
         <div class="miss" style="--c:var(--amber)"><div class="mh">The reply said “Got it” for a track we did not have</div>
           <div class="gw"><span class="a"><b>“Watercolors”</b><br>by Pat Metheny</span>
             <span class="ar">→</span>
-            <span class="b">Metheny — Alfie, with the reply<br><i>“Got it — here’s ‘Alfie’…”</i><span class="st">“Watercolors” is not in the catalog</span></span></div></div>
+            <span class="b">Metheny — Alfie, with the reply <i>“Got it — here’s ‘Alfie’…”</i><span class="st">“Watercolors” is not in the catalog</span></span></div></div>
       </div>
     </section>
 
