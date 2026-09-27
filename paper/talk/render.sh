@@ -49,5 +49,17 @@ preflight() {  # preflight <name> <expected page size fragment>
   pdffonts "$n.pdf" | tail -n +3 | awk '$(NF-3)!="yes"{print "  !! not embedded: "$1; bad=1} END{exit bad+0}'
 }
 
+# US shops (FedEx Office etc.) stock 24x36in, not A1. The layout is sized in
+# cqw, so the US version is the same source with the page size swapped; the
+# extra height goes into the column gaps.
+sed -e 's/--w:594mm; --h:841mm;/--w:609.6mm; --h:914.4mm;/' \
+    -e 's#96vw / 594, 92vh / 841#96vw / 609.6, 92vh / 914.4#' \
+    -e 's/size:594mm 841mm;/size:609.6mm 914.4mm;/' \
+    -e 's/width:594mm;height:841mm/width:609.6mm;height:914.4mm/' \
+    poster.html > poster-24x36.html
+
 render poster
 preflight poster "A1"
+render poster-24x36
+preflight poster-24x36 "1728 x 2592"
+rm -f poster-24x36.html
