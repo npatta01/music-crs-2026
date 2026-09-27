@@ -1,14 +1,19 @@
 # Talk deck and poster — RecSys Challenge 2026
 
-A1 poster for our slot at the RecSys Challenge 2026 workshop.
+24×36in poster for our slot at the RecSys Challenge 2026 workshop — the US stock
+size the print shops near the venue carry, and one of the two sizes the RecSys
+poster instructions recommend (the other is A1).
 
 **Slot:** Friday 2 October 2026 — our paper is at **14:50–15:00**, last of
 Session 3, and the **poster session runs 15:30–16:30**. Confirm with the
 nlp4musa organizers whether every paper presents a poster.
 
-The workshop puts posters on the room walls with **blue painter's tape**, which
-does not hold fabric well — sort out mounting in advance. See the
+The workshop puts posters on the room walls with **blue painter's tape**, so
+print on plain matte paper with no lamination or mounting. See the
 [workshop organizer instructions](https://recsys.acm.org/wp-content/uploads/2026/08/Workshop-Organizer-Instructions.pdf).
+
+> The talk deck lives on the `backup/talk-deck-and-poster` branch and lands in a
+> separate PR.
 
 ## Files
 
@@ -17,14 +22,13 @@ does not hold fabric well — sort out mounting in advance. See the
 | `deck.html` | **Deck source.** The detailed record of the work — edit this. |
 | `talk.html` | **Present from this.** Self-contained, figures inlined, no network. |
 | `talk.pdf` | Full deck, 49 slides at 960×540pt. |
-| `talk-core.pdf` | The short talk — 21 slides, same source filtered. |
-| `poster.html` | **Poster source.** Hand-written HTML + inline SVG — not LaTeX. |
-| `poster.pdf` | **Send this to the printer.** True-size A1 (594×841mm), one page. |
-| `poster-24x36.pdf` | The same poster at 24×36in, for US shops (FedEx Office etc.) that stock that size rather than A1. Built from `poster.html` by `render.sh`. |
-| `render.sh` | Renders and preflights the poster. |
+| `talk-core.pdf` | The short talk — the same source filtered to the core slides. |
 | `render-deck.sh` | Builds `talk.html`, renders both deck PDFs, preflights them. |
 | `build.py` | Inlines the deck's figures into `talk.html` (called by `render-deck.sh`). |
-| `figures/` | `architecture.svg`, `biencoder2.svg`, `relabelling.svg` — **shared** by the poster and the deck — plus `qr-repo.svg` (repo, used by the deck) and `qr-site.svg` (project site, used by the poster). |
+| `poster.html` | **Poster source.** Hand-written HTML + SVG — not LaTeX. Edit this. |
+| `poster.pdf` | **Send this to the printer.** True-size 24×36in, one page. |
+| `render.sh` | Renders the PDF and preflights it. |
+| `figures/` | `architecture.svg`, `biencoder2.svg`, `relabelling.svg` (**shared** by the poster and the deck), and `qr-site.svg` — the QR code, pointing at the project site (`npatta01.github.io/music-crs-2026/`), which links the poster. `qr-repo.svg` points at the repo and is used by the deck. |
 
 ## Rebuilding
 
@@ -33,7 +37,7 @@ bash paper/talk/render.sh        # the poster
 bash paper/talk/render-deck.sh   # the deck, both cuts
 ```
 
-Both come from HTML rendered by headless Chrome — there is no LaTeX here.
+The PDF comes from HTML rendered by headless Chrome — there is no LaTeX here.
 Only `paper/main.tex` (the paper itself) is LaTeX, and every number on the
 poster traces to it.
 
@@ -48,7 +52,7 @@ is not cosmetic: Chrome emits Type 3 for fonts it cannot subset normally —
 variable fonts, and fallbacks pulled in for a handful of glyphs — and some print
 RIPs mishandle Type 3. Two real instances were caught this way: Inter, which is
 a variable font, and DejaVu Sans pulled in as a fallback for `★` and `∈`, which
-Lato does not contain. Both documents pin `Lato` / `DejaVu Sans Mono` and stay
+Lato does not contain. The poster pins `Lato` / `DejaVu Sans Mono` and stays
 inside those glyph sets.
 
 **If you add a character and the preflight starts failing**, that character is
@@ -85,13 +89,14 @@ ground-truth label repeats the artist the listener asked to move on from.
 
 The short talk is a **filter over that same source**, never a second file:
 
-- **`data-tier="core"`** marks the twenty core slides — twelve of content plus the eight
-  section dividers, which are cheap and keep the talk oriented.
+- **`data-tier="core"`** marks the seventeen core slides — twelve of content plus the
+  dividers for §4–§8. The §1–§3 dividers are optional, because the short talk
+  has no core content behind them.
 - **`C`** toggles core-only navigation while presenting — arrows skip the rest.
 - **`?core=1`** hides everything else, so `talk-core.pdf` is the slimmed deck.
 
 ```bash
-bash paper/talk/render-deck.sh      # talk.pdf (49) and talk-core.pdf (21)
+bash paper/talk/render-deck.sh      # talk.pdf (49) and talk-core.pdf (17)
 ```
 
 To move a slide in or out of the short talk, change its `data-tier`. Nothing
@@ -150,34 +155,30 @@ in the commit history for this file — both are short standalone scripts.
 
 ## The poster
 
-A1 portrait, 594×841mm. The layout is a header, a full-width architecture
-diagram, then two columns; the footer sits at the foot of the **left** column
-only, so the right column runs to the sheet edge.
+24×36in portrait (609.6×914.4mm). The layout is a header (title, three stats, the QR
+code), a full-width architecture diagram, then two equal columns: how the system
+reads a conversation and ranks on the left; how it scored, what is not ideal, and
+the training-label finding on the right. Each failure finding sits directly above
+the example turn that shows it.
 
-Print `poster.pdf` at 100% with no scaling. The PDF is fully vector (no raster
-images at all, including the QR code), fonts embedded and subset, no bleed
-needed because the background is white.
+Print at 100% with no scaling, on **matte paper** — glossy or satin photo paper
+glares under meeting-room lights. No lamination or mounting: the posters go on
+walls with painter's tape. The PDF is fully vector (no raster images at all,
+including the QR code), fonts embedded and subset, and needs no bleed because the
+background is white — a shop's unprintable margin just becomes a white border.
 
-**It is tuned for fabric and paper at once.** Dye-sublimation on cloth prints
-with softer blacks and less contrast than paper, so: card tints sit at 12–16%
-rather than 5–8% (lighter tints wash to white on fabric), hairlines are ~0.85mm
-and SVG strokes ~1mm (finer lines disappear into the weave), secondary text is
-`#4b5563` rather than a mid-grey, and the outer margin is ~18mm because fabric
-curls at the edges once hung. None of that hurts paper — it just reads a little
-bolder. Every text/background pair clears 4.5:1.
-
-**Keep the background white.** On fabric a fold or ripple catches light and
-reads as a visible line across a solid tone; on white it disappears. A white
-ground also needs no bleed, and gives the best text contrast.
-
-If ordering fabric: ask for polyester poplin or wrinkle-resistant poly, not
-satin — satin's sheen undoes the matte finish the RecSys accessibility guidance
-asks for. Sort out mounting too; the workshop puts posters on room walls with
-blue painter's tape, which does not hold fabric well.
+**It is tuned for paper.** Rules are ~0.4mm and diagram strokes ~0.6mm, the
+background is white with neutral greys (a flat tint over the whole sheet needs
+bleed and can band on large-format inkjet), and nothing in the body text is under
+~20pt. Colour is never the only carrier: every coloured bar has a written
+headline beside it, which the RecSys accessibility guidance asks for. Every
+text/background pair clears 4.5:1 (large bold text in tinted diagram boxes
+clears 3:1).
 
 To resize, change `--w` / `--h` and the `@page size` in `poster.html`; every
-dimension is in `cqw` so the whole layout rescales. Re-measure afterwards — both
-columns currently run to within ~25px of full.
+dimension is in `cqw` so the whole layout rescales — but a taller page leaves
+empty gaps, so re-fit the type afterwards rather than just swapping the size.
+Both columns end ~19mm above the bottom edge, the same as the side margins.
 
 ## Claims and where they come from
 
