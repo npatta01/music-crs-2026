@@ -241,9 +241,9 @@ section > .find{margin-bottom:1cqw}
     </div>
   </div>
   </div>
-  <div class="hqr"><img src="figures/qr-repo.svg" alt="QR code linking to github.com/npatta01/music-crs-2026">
-    <div class="t">Paper, code, models, data</div>
-    <div class="u">github.com/npatta01/<br>music-crs-2026</div></div>
+  <div class="hqr"><img src="figures/qr-site.svg" alt="QR code linking to npatta01.github.io/music-crs-2026">
+    <div class="t">Paper, poster, code, data</div>
+    <div class="u">npatta01.github.io/<br>music-crs-2026</div></div>
 </header>
 
 <div class="arch">
@@ -311,24 +311,24 @@ section > .find{margin-bottom:1cqw}
         <thead><tr><th>Official split</th><th>nDCG@20</th><th>Judge</th><th>Composite</th></tr></thead>
         <tbody>
           <tr><td>Blind-A · development phase</td><td>0.4380</td><td>4.70</td><td>0.5799</td></tr>
-          <tr class="hi"><td>Blind-B · final, 29th of 40</td><td>0.2537</td><td>3.30</td><td>0.3811</td></tr>
+          <tr class="hi"><td>Blind-B · final phase</td><td>0.2537</td><td>3.30</td><td>0.3811</td></tr>
         </tbody>
       </table>
     </section>
 
     <section>
       <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg><span>What is not ideal</span></h2>
-      <div class="find" style="--c:var(--red)"><b>The ranker was trained on the same 8,000 dev turns we evaluated it on offline.</b></div>
+      <div class="find" style="--c:var(--red)"><b>We trained and validated the ranker on the same dev turns.</b></div>
       <div class="gwhead ind"><span>The listener asked for</span><span></span><span>Our top pick</span></div>
       <div class="gotwrong">
         <div class="miss" style="--c:var(--blue)"><div class="mh">We extracted more than we used</div>
           <div class="gw"><span class="a">the Kamelot track<br>from <b>Silverthorn</b></span>
             <span class="ar">→</span>
-            <span class="b">Kamelot — Fallen Star,<br>from <b>Haven</b><span class="st">We extracted “Silverthorn” but never filtered on it; 3 of its tracks are in the catalog</span></span></div></div>
-        <div class="miss" style="--c:#6d28d9"><div class="mh">No tempo or key data to match on</div>
+            <span class="b">Kamelot — Fallen Star,<br>from <b>Haven</b><span class="st">We extracted “Silverthorn” but never filtered on it</span></span></div></div>
+        <div class="miss" style="--c:#6d28d9"><div class="mh">We used no data from outside the catalog</div>
           <div class="gw"><span class="a">exactly <b>126.70 bpm</b>,<br>in G minor</span>
             <span class="ar">→</span>
-            <span class="b">nothing in the catalog<br>records tempo or key</span></div></div>
+            <span class="b">the catalog has no tempo or key,<br>and we added no outside source</span></div></div>
         <div class="miss" style="--c:var(--amber)"><div class="mh">The reply said “Got it” for a track we did not have</div>
           <div class="gw"><span class="a"><b>“Watercolors”</b><br>by Pat Metheny</span>
             <span class="ar">→</span>

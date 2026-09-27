@@ -116,7 +116,7 @@
     <g transform="translate(1571,344) scale(1.7)">
       <path class="bg" d="M4 5h16v11H9l-5 4z" stroke="#1a56db"/></g>
     <text class="bt" x="1591" y="418" text-anchor="middle" fill="#1a56db">Response LLM</text>
-    <text class="bs" x="1591" y="446" text-anchor="middle">LLM · Qwen3-30B</text>
+    <text class="bs" x="1591" y="446" text-anchor="middle">Qwen3-30B</text>
 
     <!-- the state also conditions the reply -->
     <path d="M368,404 V550 H1591 V478" fill="none" stroke="#1a56db" stroke-width="2"

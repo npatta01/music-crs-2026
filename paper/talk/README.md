@@ -24,7 +24,7 @@ does not hold fabric well — sort out mounting in advance. See the
 | `render.sh` | Renders and preflights the poster. |
 | `render-deck.sh` | Builds `talk.html`, renders both deck PDFs, preflights them. |
 | `build.py` | Inlines the deck's figures into `talk.html` (called by `render-deck.sh`). |
-| `figures/` | `architecture.svg`, `biencoder2.svg`, `relabelling.svg` — **shared** by the poster and the deck — plus `qr-repo.svg`. |
+| `figures/` | `architecture.svg`, `biencoder2.svg`, `relabelling.svg` — **shared** by the poster and the deck — plus `qr-repo.svg` (repo, used by the deck) and `qr-site.svg` (project site, used by the poster). |
 
 ## Rebuilding
 
