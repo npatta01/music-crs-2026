@@ -21,8 +21,9 @@ print on plain matte paper with no lamination or mounting. See the
 | --- | --- |
 | `deck.html` | **Deck source.** The detailed record of the work — edit this. |
 | `talk.html` | **Present from this.** Self-contained, figures inlined, no network. |
-| `talk.pdf` | Full deck, 49 slides at 960×540pt. |
-| `talk-core.pdf` | The short talk — the same source filtered to the core slides. |
+| `deck-detailed.pdf` | **For someone new to this space.** Every slide (54), including a background primer — what a conversational recommender does, retrieve→rank→respond, reading nDCG@20, a glossary. Reads without a speaker. |
+| `talk-10min.pdf` | **The workshop talk.** 12 slides for the 14:50–15:00 slot (~7 min + Q&A), for an audience of competitors. Same source, core slides only. |
+| `DECK_PLAN.md` | The plan for both views: audiences, constraints, talk path, status. |
 | `render-deck.sh` | Builds `talk.html`, renders both deck PDFs, preflights them. |
 | `build.py` | Inlines the deck's figures into `talk.html` (called by `render-deck.sh`). |
 | `poster.html` | **Poster source.** Hand-written HTML + SVG — not LaTeX. Edit this. |
@@ -87,16 +88,16 @@ three shapes of retrieval failure with the track we served; four ways the reply
 went wrong with the judge's own verdict; and four training turns whose
 ground-truth label repeats the artist the listener asked to move on from.
 
-The short talk is a **filter over that same source**, never a second file:
+The talk is a **filter over that same source**, never a second file:
 
-- **`data-tier="core"`** marks the seventeen core slides — twelve of content plus the
-  dividers for §4–§8. The §1–§3 dividers are optional, because the short talk
-  has no core content behind them.
+- **`data-tier="core"`** marks the twelve talk slides. The talk has no section
+  dividers and no primer; it opens with "The short version", which also serves
+  as the detailed deck's executive summary.
 - **`C`** toggles core-only navigation while presenting — arrows skip the rest.
-- **`?core=1`** hides everything else, so `talk-core.pdf` is the slimmed deck.
+- **`?core=1`** hides everything else, so `talk-10min.pdf` is the talk.
 
 ```bash
-bash paper/talk/render-deck.sh      # talk.pdf (49) and talk-core.pdf (17)
+bash paper/talk/render-deck.sh      # deck-detailed.pdf (54) and talk-10min.pdf (12)
 ```
 
 To move a slide in or out of the short talk, change its `data-tier`. Nothing

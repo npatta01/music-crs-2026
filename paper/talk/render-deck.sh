@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Build talk.html from deck.html, render both PDFs, preflight them.
 #
-#   ./render-deck.sh          full deck + core-only cut
+#   ./render-deck.sh          detailed deck + 10-minute talk
 #
-# The core cut is the same source filtered by ?core=1, not a second deck.
+# The talk is the same source filtered by ?core=1, not a second deck.
 set -euo pipefail
 cd "$(dirname "$0")"
 PORT="${PORT:-8732}"
@@ -31,5 +31,5 @@ render() {
   [ "$t3" -eq 0 ] || { echo "  !! Type 3 font present" >&2; return 1; }
 }
 
-render "http://127.0.0.1:$PORT/talk.html"        talk.pdf
-render "http://127.0.0.1:$PORT/talk.html?core=1" talk-core.pdf
+render "http://127.0.0.1:$PORT/talk.html"        deck-detailed.pdf
+render "http://127.0.0.1:$PORT/talk.html?core=1" talk-10min.pdf
