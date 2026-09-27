@@ -318,18 +318,18 @@ section > .find{margin-bottom:1cqw}
 
     <section>
       <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg><span>What is not ideal</span></h2>
-      <div class="find" style="--c:var(--red)"><b>The ranker was trained on the same dev set we evaluated on.</b></div>
+      <div class="find" style="--c:var(--red)"><b>The ranker was trained on the same 8,000 dev turns we evaluated it on offline.</b></div>
       <div class="gwhead ind"><span>The listener asked for</span><span></span><span>Our top pick</span></div>
       <div class="gotwrong">
         <div class="miss" style="--c:var(--blue)"><div class="mh">We extracted more than we used</div>
           <div class="gw"><span class="a">the Kamelot track<br>from <b>Silverthorn</b></span>
             <span class="ar">→</span>
             <span class="b">Kamelot — Fallen Star,<br>from <b>Haven</b><span class="st">We extracted “Silverthorn” but never filtered on it; 3 of its tracks are in the catalog</span></span></div></div>
-        <div class="miss" style="--c:#6d28d9"><div class="mh">Nothing from outside the catalog</div>
+        <div class="miss" style="--c:#6d28d9"><div class="mh">No tempo or key data to match on</div>
           <div class="gw"><span class="a">exactly <b>126.70 bpm</b>,<br>in G minor</span>
             <span class="ar">→</span>
-            <span class="b">no tempo or key field<br>exists to match on</span></div></div>
-        <div class="miss" style="--c:var(--amber)"><div class="mh">The reply claimed a track we did not have</div>
+            <span class="b">nothing in the catalog<br>records tempo or key</span></div></div>
+        <div class="miss" style="--c:var(--amber)"><div class="mh">The reply said “Got it” for a track we did not have</div>
           <div class="gw"><span class="a"><b>“Watercolors”</b><br>by Pat Metheny</span>
             <span class="ar">→</span>
             <span class="b">Metheny — Alfie, with the reply<br><i>“Got it — here’s ‘Alfie’…”</i><span class="st">“Watercolors” is not in the catalog</span></span></div></div>
@@ -352,7 +352,7 @@ section > .find{margin-bottom:1cqw}
       </div>
       <p style="margin-top:.65cqw">The label is whatever played next in an LLM-generated session,
         even when the listener had just asked for something else.</p>
-      <h3 class="sub" style="margin-top:1.2cqw;margin-bottom:.2cqw">Our fix: two LLM judges re-score every training turn</h3>
+      <h3 class="sub" style="margin-top:1.2cqw;margin-bottom:.2cqw">Our fix: two LLM judges re-score the labels</h3>
       <div class="judges">
         <img class="judge-img" src="figures/relabelling.svg" alt="">
       </div>
