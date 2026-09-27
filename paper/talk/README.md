@@ -1,7 +1,8 @@
 # Conference poster — RecSys Challenge 2026
 
-A1 poster for our slot at the RecSys Challenge 2026 workshop, plus a 24×36in
-render of the same source for US print shops.
+24×36in poster for our slot at the RecSys Challenge 2026 workshop — the US stock
+size the print shops near the venue carry, and one of the two sizes the RecSys
+poster instructions recommend (the other is A1).
 
 **Slot:** Friday 2 October 2026 — our paper is at **14:50–15:00**, last of
 Session 3, and the **poster session runs 15:30–16:30**. Confirm with the
@@ -19,9 +20,8 @@ print on plain matte paper with no lamination or mounting. See the
 | File | What it is |
 | --- | --- |
 | `poster.html` | **The source.** Hand-written HTML + SVG — not LaTeX. Edit this. |
-| `poster.pdf` | True-size A1 (594×841mm), one page. |
-| `poster-24x36.pdf` | **Send this to a US shop** (FedEx Office etc.), which stock 24×36in rather than A1. Same source, page size swapped by `render.sh`. |
-| `render.sh` | Renders both PDFs and preflights them. |
+| `poster.pdf` | **Send this to the printer.** True-size 24×36in, one page. |
+| `render.sh` | Renders the PDF and preflights it. |
 | `figures/` | `architecture.svg`, `biencoder2.svg`, `relabelling.svg`, and `qr-site.svg` — the QR code, pointing at the project site (`npatta01.github.io/music-crs-2026/`), which links the poster. `qr-repo.svg` points at the repo. |
 
 ## Rebuilding
@@ -30,7 +30,7 @@ print on plain matte paper with no lamination or mounting. See the
 bash paper/talk/render.sh
 ```
 
-The PDFs come from HTML rendered by headless Chrome — there is no LaTeX here.
+The PDF comes from HTML rendered by headless Chrome — there is no LaTeX here.
 Only `paper/main.tex` (the paper itself) is LaTeX, and every number on the
 poster traces to it.
 
@@ -64,7 +64,7 @@ EOF
 
 ## The poster
 
-A1 portrait, 594×841mm. The layout is a header (title, three stats, the QR
+24×36in portrait (609.6×914.4mm). The layout is a header (title, three stats, the QR
 code), a full-width architecture diagram, then two equal columns: how the system
 reads a conversation and ranks on the left; how it scored, what is not ideal, and
 the training-label finding on the right. Each failure finding sits directly above
@@ -79,15 +79,15 @@ background is white — a shop's unprintable margin just becomes a white border.
 **It is tuned for paper.** Rules are ~0.4mm and diagram strokes ~0.6mm, the
 background is white with neutral greys (a flat tint over the whole sheet needs
 bleed and can band on large-format inkjet), and nothing in the body text is under
-~18pt at A1. Colour is never the only carrier: every coloured bar has a written
+~20pt. Colour is never the only carrier: every coloured bar has a written
 headline beside it, which the RecSys accessibility guidance asks for. Every
 text/background pair clears 4.5:1 (large bold text in tinted diagram boxes
 clears 3:1).
 
 To resize, change `--w` / `--h` and the `@page size` in `poster.html`; every
-dimension is in `cqw` so the whole layout rescales. That is how `render.sh` makes
-the 24×36 version; the taller page just widens the gaps between sections. Both
-columns end ~18mm above the bottom edge, the same as the side margins.
+dimension is in `cqw` so the whole layout rescales — but a taller page leaves
+empty gaps, so re-fit the type afterwards rather than just swapping the size.
+Both columns end ~19mm above the bottom edge, the same as the side margins.
 
 ## Claims and where they come from
 
