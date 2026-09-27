@@ -9,10 +9,11 @@
    36x48in is a change to --w / --h plus the @page rule. */
 :root{
   --w:594mm; --h:841mm;
-  --ink:#14161a; --ink-2:#2b3038; --ink-3:#4b5563;
-  --line:#aeb5c1; --line-2:#d6dae1;
+  --paper:#fff;
+  --ink:#16181C; --ink-2:#33373E; --ink-3:#5B6068; --muted:#5B6068;
+  --line:#C3C7CD; --line-2:#E3E5E8;
   --blue:#1a56db; --blue-soft:#d9e4fb;
-  --amber:#9c4708; --amber-soft:#fae4c3;
+  --amber:#A55A18; --amber-soft:#fae4c3;
   --red:#b42318; --red-soft:#fad6d2;
   --green:#0a7d55; --green-soft:#cfeadd;
   --mono:"DejaVu Sans Mono","Liberation Mono",monospace;
@@ -21,7 +22,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#3a3f47;font-family:var(--sans);color:var(--ink);
   display:flex;justify-content:center;padding:20px 0}
-#poster{width:var(--w);height:var(--h);background:#fff;container-type:size;
+#poster{width:var(--w);height:var(--h);background:var(--paper);container-type:size;
   display:flex;flex-direction:column;overflow:hidden}
 @media screen{
   body{align-items:flex-start}
@@ -29,25 +30,31 @@ body{background:#3a3f47;font-family:var(--sans);color:var(--ink);
     transform:scale(calc(min(96vw / 594, 92vh / 841) * 3.7795));}
 }
 
-h1{font-size:2.98cqw;line-height:1.06;letter-spacing:-.02em;font-weight:700;
-  text-wrap:normal}
-h2{font-size:1.62cqw;line-height:1.15;font-weight:700;letter-spacing:-.01em;
+h1{font-size:3.3cqw;line-height:1.08;letter-spacing:-.02em;font-weight:700;
+  text-wrap:balance}
+h2{font-size:1.78cqw;line-height:1.15;font-weight:700;letter-spacing:-.01em;
   margin-bottom:.7cqw;display:flex;align-items:center;gap:.62cqw}
 /* section glyphs: drawn at the cap height of the heading they sit beside */
-h2 .ic{width:1.5cqw;height:1.5cqw;flex:0 0 auto;stroke:var(--blue);stroke-width:1.7;
+h2 .ic{width:1.62cqw;height:1.62cqw;flex:0 0 auto;stroke:var(--blue);stroke-width:1.7;
   fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
 h3{font-size:1.03cqw;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
   color:var(--ink-3);margin-bottom:.55cqw}
 /* section sub-headings read as headings, not as labels */
 h3.sub{color:var(--ink);font-size:1.12cqw;letter-spacing:.06em}
-p,li{font-size:1.2cqw;line-height:1.46;color:var(--ink-2)}
-.small{font-size:.96cqw;line-height:1.42;color:var(--ink-3)}
-.tiny{font-size:.92cqw;line-height:1.35;color:var(--ink-3)}
+p,li{font-size:1.3cqw;line-height:1.46;color:var(--ink-2);text-wrap:pretty;hyphens:manual}
+.small{font-size:1.14cqw;line-height:1.42;color:var(--ink-3)}
+.tiny{font-size:1.14cqw;line-height:1.35;color:var(--ink-3)}
 strong{font-weight:700;color:var(--ink)}
 .mono,code{font-family:var(--mono);font-size:.93em}
 
 /* ---------- header ---------- */
-header{padding:1.9cqw 3.1cqw 1.35cqw;border-bottom:.26cqw solid var(--blue)}
+header{padding:1.9cqw 3.1cqw 1.35cqw;border-bottom:.2cqw solid var(--blue);
+  display:grid;grid-template-columns:1fr auto;gap:2.6cqw;align-items:center}
+.hqr{display:flex;flex-direction:column;align-items:center;text-align:center;gap:.35cqw;
+  padding-left:2.4cqw;border-left:.07cqw solid var(--line)}
+.hqr img{width:11cqw;height:11cqw;display:block;background:#fff;padding:.5cqw;border-radius:.4cqw}
+.hqr .t{font-size:1.07cqw;font-weight:700;color:var(--ink);margin-top:.2cqw}
+.hqr .u{font-family:var(--mono);font-size:1.05cqw;color:var(--blue);line-height:1.3}
 .eyebrow{font-size:.95cqw;font-weight:700;letter-spacing:.17em;text-transform:uppercase;
   color:var(--blue);margin-bottom:.85cqw}
 .hrow{display:flex;justify-content:space-between;align-items:flex-end;gap:2.4cqw;
@@ -56,28 +63,28 @@ header{padding:1.9cqw 3.1cqw 1.35cqw;border-bottom:.26cqw solid var(--blue)}
 .byline .aff{color:var(--ink-3);font-size:.9cqw}
 
 /* ---------- what it does ---------- */
-.premise{padding:1.35cqw 2.6cqw;background:#f1f3f6;border-bottom:.14cqw solid var(--line);
+.premise{padding:1.35cqw 2.6cqw;background:#f1f3f6;border-bottom:.07cqw solid var(--line);
   display:grid;grid-template-columns:1fr auto;gap:2.4cqw;align-items:center}
 .premise .say{font-size:1.4cqw;line-height:1.42;color:var(--ink)}
 .premise .say b{color:var(--blue)}
 .numbers{display:flex;gap:1.9cqw}
 .num{text-align:right}
 .num .v{font-size:1.85cqw;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
-.num .k{font-size:.76cqw;color:var(--ink-3);margin-top:.28cqw;font-weight:600}
+.num .k{font-size:.98cqw;color:var(--ink-3);margin-top:.28cqw;font-weight:600}
 
 /* ---------- architecture ---------- */
-.arch{padding:1.2cqw 3.1cqw 0.85cqw;border-bottom:.14cqw solid var(--line)}
-.arch svg{width:100%;height:auto;display:block}
+.arch{padding:1.2cqw 3.1cqw 0.85cqw;border-bottom:.07cqw solid var(--line)}
+.arch img{width:100%;height:auto;display:block}
 
 /* ---------- columns ---------- */
 .main{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:1fr 1fr;
   border-bottom:none}
-.col{padding:1.3cqw 2.05cqw;display:flex;flex-direction:column;gap:1.5cqw}
-.main > .col:first-child{padding-left:3.1cqw}
-.main > .col:last-child{padding-right:3.1cqw;padding-bottom:2.4cqw}
-.col + .col{border-left:.14cqw solid var(--line)}
+.col{padding:1.3cqw 2.05cqw;display:flex;flex-direction:column;gap:1.2cqw}
+.main > .col:first-child{padding-left:3.1cqw;padding-bottom:3.1cqw;justify-content:space-between}
+.main > .col:last-child{padding-right:3.1cqw;padding-bottom:3.1cqw;justify-content:space-between}
+.col + .col{border-left:.07cqw solid var(--line)}
 
-.card{border:.14cqw solid var(--line);border-radius:.5cqw;padding:1.1cqw 1.25cqw;background:#fff}
+.card{border:.07cqw solid var(--line);border-radius:.5cqw;padding:1.1cqw 1.25cqw;background:#fff}
 .card.blue{border-color:#93b0ec;background:var(--blue-soft)}
 .card.green{border-color:#7fc4a5;background:var(--green-soft)}
 .card h3{margin-bottom:.45cqw}
@@ -88,27 +95,32 @@ ul li{position:relative;padding-left:1.2cqw}
 ul li::before{content:"";position:absolute;left:.14cqw;top:.6em;width:.32cqw;height:.32cqw;
   border-radius:50%;background:var(--blue)}
 
-table{width:100%;border-collapse:collapse;font-size:1.06cqw;font-variant-numeric:tabular-nums}
-th,td{text-align:right;padding:.38cqw .5cqw;border-bottom:.14cqw solid var(--line-2)}
+table{width:100%;border-collapse:collapse;font-size:1.24cqw;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:.5cqw .6cqw;border-bottom:.07cqw solid var(--line-2)}
 th:first-child,td:first-child{text-align:left}
-thead th{font-size:.78cqw;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--ink-3);border-bottom:.14cqw solid var(--line)}
+thead th{font-size:.98cqw;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-3);border-bottom:.07cqw solid var(--line)}
 tbody tr.hi td{background:var(--blue-soft);font-weight:700;color:var(--ink)}
 tbody tr.dim td{color:var(--ink-3)}
+table.gain td{padding-top:.66cqw;padding-bottom:.66cqw}
 table.gain tbody tr.low td{color:var(--amber);font-weight:700}
 
 figure{display:flex;flex-direction:column;align-items:center;gap:.5cqw}
 figure img{width:84%;height:auto}
-figcaption{font-size:.74cqw;color:var(--ink-3);text-align:center;line-height:1.35}
+figcaption{font-size:1.0cqw;color:var(--ink-3);text-align:center;line-height:1.35}
 
-.state{font-family:var(--mono);font-size:1.03cqw;line-height:1.66;color:var(--ink-2)}
+.state{font-family:var(--sans);font-size:1.4cqw;line-height:1.55;color:var(--ink-2)}
+.state .k{font-family:var(--mono);font-size:.9em}
+.q{font-style:italic;color:var(--ink)}
+.state .ctx{color:var(--ink-3);margin-bottom:.35cqw}
+.state .src{color:var(--ink-3);font-size:.9em}
 .state .k{color:var(--blue);font-weight:700}
 .state .u{color:var(--ink);font-weight:700}
-.state .row{display:grid;grid-template-columns:9.4cqw minmax(0,1fr);gap:1.35cqw;
+.state .row{display:grid;grid-template-columns:10.6cqw minmax(0,1fr);gap:1.35cqw;
   align-items:baseline}
 .state .row + .row{margin-top:.28cqw}
 .statesep{display:flex;align-items:center;gap:.6cqw;margin:.75cqw 0 .55cqw;
-  font-family:var(--sans);font-size:.72cqw;font-weight:700;letter-spacing:.11em;
+  font-family:var(--sans);font-size:.92cqw;font-weight:700;letter-spacing:.11em;
   text-transform:uppercase;color:var(--muted);line-height:1}
 .statesep::after{content:"";flex:1;height:.06cqw;background:var(--line)}
 
@@ -122,30 +134,28 @@ figcaption{font-size:.74cqw;color:var(--ink-3);text-align:center;line-height:1.3
 
 
 
-/* learnings — a rule and a lead clause carry these better than a number column */
-.lrn{display:flex;flex-direction:column;gap:.98cqw}
-.lrn li{position:relative;padding:.14cqw 0 .14cqw 1.3cqw;font-size:1.18cqw;line-height:1.48}
-.lrn li::before{content:"";position:absolute;left:0;top:.22em;bottom:.22em;height:auto;width:.22cqw;
-  border-radius:.11cqw;background:var(--line)}
-.lrn li.a::before{background:var(--red)} .lrn li.b::before{background:var(--amber)}
-.lrn li.c::before{background:var(--blue)} .lrn li.d::before{background:#6d28d9}
-.lrn b{display:block;color:var(--ink);margin-bottom:.12cqw}
+/* findings — four claims as cards, the same shape the talk uses */
+.finds{display:grid;grid-template-columns:1fr 1fr;gap:.9cqw}
+.find{background:#fff;border:.07cqw solid var(--line);border-top:.42cqw solid var(--c);
+  border-radius:.5cqw;padding:1.05cqw 1.15cqw 1.15cqw;display:flex;align-items:center}
+.find b{display:block;font-size:1.44cqw;line-height:1.25;color:var(--ink)}
+.find p{font-size:1.07cqw;line-height:1.4}
 
 /* relabelling */
-.dlg{font-family:var(--mono);font-size:.9cqw;line-height:1.55;color:var(--ink-2)}
+.dlg{font-family:var(--sans);font-size:1.28cqw;line-height:1.5;color:var(--ink-2)}
 .dlg .u{color:var(--ink);font-weight:700}
 .dlg .g{color:var(--red);font-weight:700}
 .dlg .nt{color:var(--muted)}
 .split{display:grid;grid-template-columns:1fr 1fr;gap:.8cqw;margin-top:.7cqw}
-.tile{border:.14cqw solid var(--line);border-radius:.5cqw;padding:.62cqw .85cqw}
-.tile .v{font-size:1.72cqw;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
-.tile .k{font-size:.95cqw;color:var(--muted);margin-top:.2cqw;line-height:1.35}
+.tile{border:.07cqw solid var(--line);border-radius:.5cqw;padding:.8cqw 1cqw}
+.tile .v{font-size:2.3cqw;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
+.tile .k{font-size:1.07cqw;color:var(--muted);margin-top:.2cqw;line-height:1.35}
 .tile.w{border-color:#dcb069;background:var(--amber-soft)} .tile.w .v{color:var(--amber)}
 .tile.r{border-color:#e39a93;background:var(--red-soft)} .tile.r .v{color:var(--red)}
 .tower{margin-top:.75cqw}
-.tower svg{width:100%;height:auto;display:block}
+.tower img{width:100%;height:auto;display:block}
 .judges{margin-top:.55cqw}
-.judges svg{width:100%;height:auto;display:block}
+.judges img{width:100%;height:auto;display:block}
 
 
 /* recall funnel — the ceiling peers can benchmark their own pool against */
@@ -163,7 +173,7 @@ figcaption{font-size:.74cqw;color:var(--ink-3);text-align:center;line-height:1.3
 .callout{display:flex;gap:.6cqw;align-items:flex-start;margin-top:.7cqw;
   padding:.65cqw .8cqw;border-left:.22cqw solid var(--blue);background:var(--blue-soft);
   border-radius:0 .4cqw .4cqw 0}
-.callout p{font-size:1.02cqw;line-height:1.4;color:var(--ink)}
+.callout p{font-size:1.1cqw;line-height:1.4;color:var(--ink)}
 
 
 /* worked failures — the bit people quote back at you */
@@ -175,15 +185,27 @@ figcaption{font-size:.74cqw;color:var(--ink-3);text-align:center;line-height:1.3
 
 
 /* asked → got: the failures as a visual pair, not prose */
-.gotwrong{display:flex;flex-direction:column;gap:.5cqw;margin-top:.3cqw}
+.gotwrong{display:flex;flex-direction:column;gap:.7cqw;margin-top:.3cqw}
 .gw{display:grid;grid-template-columns:1fr 1.7cqw 1fr;gap:.55cqw;align-items:center}
-.gw .a,.gw .b{font-family:var(--mono);font-size:.92cqw;line-height:1.34;padding:.52cqw .7cqw;
+.gw .a,.gw .b{font-family:var(--sans);font-size:1.32cqw;line-height:1.34;padding:.8cqw 1cqw;
   border-radius:.4cqw}
-.gw .a{background:var(--blue-soft);color:var(--ink);border:.14cqw solid #93b0ec}
-.gw .b{background:var(--red-soft);color:var(--ink);border:.14cqw solid #e39a93}
+.gw .a{font-style:italic;background:var(--blue-soft);color:var(--ink);border:.07cqw solid #93b0ec}
+.gw .b{background:var(--red-soft);color:var(--ink);border:.07cqw solid #e39a93}
 .gw .ar{font-size:1.15cqw;color:var(--ink-3);text-align:center;font-weight:700}
-.gw .st{display:block;font-family:var(--sans);font-size:.76cqw;font-weight:700;
-  letter-spacing:.08em;text-transform:uppercase;color:var(--red);margin-top:.28cqw}
+.gw .st{display:block;font-family:var(--sans);font-size:1.07cqw;font-weight:700;
+  color:var(--red);margin-top:.35cqw;line-height:1.3}
+
+.lead{margin:-.2cqw 0 .55cqw}
+.gwhead{display:grid;grid-template-columns:1fr 1.7cqw 1fr;gap:.55cqw;margin-bottom:.3cqw;
+  font-size:.92cqw;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+
+
+/* findings tied to the turns that show them */
+.miss{border-left:.42cqw solid var(--c);padding:.1cqw 0 .1cqw .9cqw}
+.miss .mh{font-size:1.36cqw;font-weight:700;color:var(--ink);margin-bottom:.45cqw}
+.gotwrong{gap:1.1cqw}
+section > .find{margin-bottom:1cqw}
+.gwhead.ind{padding-left:1.32cqw;margin-bottom:.1cqw}
 
 /* composite decomposition */
 .decomp{display:flex;height:1.6cqw;border-radius:.3cqw;overflow:hidden;margin-top:.7cqw}
@@ -194,18 +216,10 @@ figcaption{font-size:.74cqw;color:var(--ink-3);text-align:center;line-height:1.3
 .dkey i::before{content:"";width:.62cqw;height:.62cqw;border-radius:.15cqw;background:var(--c)}
 .dkey b{color:var(--ink);font-variant-numeric:tabular-nums}
 
-/* ---------- footer ---------- */
-footer.incol{margin-top:auto;padding:1.15cqw 1.3cqw 0;display:grid;
-  grid-template-columns:auto 1fr;gap:1.35cqw;align-items:center;
-  border-top:.14cqw solid var(--line)}
-footer img{width:6.8cqw;height:6.8cqw;image-rendering:pixelated}
-footer .t{font-size:1.18cqw;font-weight:700;color:var(--ink);line-height:1.3}
-footer .u{font-family:var(--mono);font-size:.95cqw;color:var(--blue);margin-top:.3cqw}
-footer .d{font-size:.84cqw;color:var(--ink-3);margin-top:.4cqw;line-height:1.4}
 
 @page{size:594mm 841mm;margin:0}
 @media print{
-  body{background:#fff;padding:0;display:block}
+  body{background:var(--paper);padding:0;display:block}
   #poster{transform:none;width:594mm;height:841mm}
 }
 </style>
@@ -214,9 +228,9 @@ footer .d{font-size:.84cqw;color:var(--ink-3);margin-top:.4cqw;line-height:1.4}
 <div id="poster">
 
 <header>
+  <div class="htext">
   <div class="eyebrow">RecSys Challenge 2026 · Music-CRS · team npatta01</div>
-  <h1>State-Driven Retrieval and Learned Re-Ranking for
-Conversational Music Recommendation</h1>
+  <h1>State-Driven Retrieval and Learned Re-Ranking<br>for Conversational Music Recommendation</h1>
   <div class="hrow">
     <div class="byline">Nidhin Pattaniyil · Semih Yagli · Tanwir Zaman
       <div class="aff">Independent Researchers, Hoboken, New Jersey, USA</div></div>
@@ -226,128 +240,14 @@ Conversational Music Recommendation</h1>
       <div class="num"><div class="v">29<span style="font-size:.62em">/40</span></div><div class="k">where that finished</div></div>
     </div>
   </div>
+  </div>
+  <div class="hqr"><img src="figures/qr-site.svg" alt="QR code linking to npatta01.github.io/music-crs-2026">
+    <div class="t">Paper, poster, code, data</div>
+    <div class="u">npatta01.github.io/<br>music-crs-2026</div></div>
 </header>
 
 <div class="arch">
-  <svg viewBox="0 0 1700 620" xmlns="http://www.w3.org/2000/svg" role="img"
-       aria-label="System architecture. The conversation and the tracks already played go to an LLM that emits a typed state. Eleven retrieval branches query one LanceDB collection of 47,071 tracks. Their pooled candidates, capped at 500 per branch, are scored by a LambdaMART reranker with 146 features, which emits the top twenty tracks. A response model then writes a reply about the top track, conditioned on that track and the latest state. A weighted reciprocal-rank-fusion path is the untrained baseline and the fallback ranking.">
-    <defs>
-      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-        <path d="M0,0 L10,5 L0,10 z" fill="#4b5563"/></marker>
-      <marker id="arb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-        <path d="M0,0 L10,5 L0,10 z" fill="#1a56db"/></marker>
-      <marker id="ard" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-        <path d="M0,0 L10,5 L0,10 z" fill="#6f7785"/></marker>
-    </defs>
-    <style>
-      .bt{font:700 23px "Lato","Liberation Sans",sans-serif;fill:#14161a}
-      .bs{font:400 17px "Lato","Liberation Sans",sans-serif;fill:#4b5563}
-      .bm{font:700 15px "DejaVu Sans Mono",monospace;fill:#2b3038}
-      .an{font:700 17px "Lato","Liberation Sans",sans-serif;fill:#2b3038;letter-spacing:.04em}
-      .hd{font:700 16px "Lato","Liberation Sans",sans-serif;fill:#4b5563;letter-spacing:.12em}
-      .ch{font:700 19px "Lato","Liberation Sans",sans-serif}
-      .cs{font:400 16px "Lato","Liberation Sans",sans-serif;fill:#4b5563}
-      .bg{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
-    </style>
-
-    <rect x="8" y="238" width="196" height="124" rx="12" fill="#fff" stroke="#aeb5c1" stroke-width="3"/>
-    <text class="bt" x="106" y="282" text-anchor="middle">Conversation</text>
-    <text class="bs" x="106" y="310" text-anchor="middle">every turn so far</text>
-    <text class="bs" x="106" y="332" text-anchor="middle">+ tracks already played</text>
-    <line x1="208" y1="300" x2="248" y2="300" stroke="#4b5563" stroke-width="3.4" marker-end="url(#ar)"/>
-
-    <rect x="252" y="206" width="230" height="188" rx="12" fill="#d9e4fb" stroke="#93b0ec" stroke-width="3.4"/>
-    <text class="bt" x="367" y="246" text-anchor="middle" fill="#1a56db">Typed state</text>
-    <text class="bs" x="367" y="270" text-anchor="middle">LLM · DeepSeek-V4-Flash</text>
-    <text class="bm" x="272" y="302">anchors · rejections</text>
-    <text class="bm" x="272" y="326">hard filters · facets</text>
-    <text class="bm" x="272" y="350">intent · year range</text>
-    <text class="bs" x="367" y="378" text-anchor="middle">no goal labels are used</text>
-    <line x1="486" y1="300" x2="526" y2="300" stroke="#1a56db" stroke-width="3.4" marker-end="url(#arb)"/>
-
-    <rect x="530" y="10" width="452" height="560" rx="14" fill="#eceef2" stroke="#aeb5c1" stroke-width="3"/>
-    <text class="hd" x="756" y="44" text-anchor="middle">ELEVEN BRANCHES · ONE INDEX</text>
-
-    <rect x="552" y="60" width="408" height="62" rx="9" fill="#fae4c3" stroke="#dcb069" stroke-width="3"/>
-    <g transform="translate(570,77) scale(1.16)"><path class="bg" d="M4 5h16M4 10h16M4 15h10" stroke="#9c4708"/></g>
-    <text class="ch" x="606" y="88" fill="#9c4708">BM25 + tag resolver</text>
-    <text class="cs" x="606" y="110">lexical · state text and resolved tags</text>
-
-    <rect x="552" y="132" width="408" height="62" rx="9" fill="#d9e4fb" stroke="#93b0ec" stroke-width="3"/>
-    <g transform="translate(570,149) scale(1.16)"><path class="bg" d="M5 3h9l5 5v13H5z" stroke="#1a56db"/><path class="bg" d="M14 3v5h5" stroke="#1a56db"/></g>
-    <text class="ch" x="606" y="160" fill="#1a56db">Dense text × 3</text>
-    <text class="cs" x="606" y="182">Qwen3 views · lyrics, metadata, attributes</text>
-
-    <rect x="552" y="204" width="408" height="62" rx="9" fill="#e3d7fa" stroke="#b69cef" stroke-width="3"/>
-    <g transform="translate(570,221) scale(1.16)"><path class="bg" d="M2 12h3l2.5-7 3 14 3-10 2.5 3H22" stroke="#6d28d9"/></g>
-    <text class="ch" x="606" y="232" fill="#6d28d9">CLAP text → audio</text>
-    <text class="cs" x="606" y="254">audio · the sonic description</text>
-
-    <rect x="552" y="276" width="408" height="62" rx="9" fill="#f8d3e5" stroke="#e595bd" stroke-width="3"/>
-    <g transform="translate(570,293) scale(1.16)"><circle class="bg" cx="12" cy="12" r="8" stroke="#a21c63"/><circle cx="12" cy="12" r="2.6" fill="#a21c63"/></g>
-    <text class="ch" x="606" y="304" fill="#a21c63">Anchor centroids × 3</text>
-    <text class="cs" x="606" y="326">SigLIP-2 / CLAP / CF · from liked tracks</text>
-
-    <rect x="552" y="348" width="408" height="62" rx="9" fill="#cfeadd" stroke="#7fc4a5" stroke-width="3"/>
-    <g transform="translate(570,365) scale(1.16)"><circle class="bg" cx="12" cy="8" r="3.6" stroke="#0a7d55"/><path class="bg" d="M4.5 20c1.4-4 4.2-6 7.5-6s5.9 2 7.5 6" stroke="#0a7d55"/></g>
-    <text class="ch" x="606" y="376" fill="#0a7d55">User-CF centroid</text>
-    <text class="cs" x="606" y="398">BPR · this listener's own vector</text>
-
-    <rect x="552" y="420" width="408" height="62" rx="9" fill="#fff" stroke="#aeb5c1" stroke-width="3"/>
-    <g transform="translate(570,437) scale(1.16)"><ellipse class="bg" cx="12" cy="6" rx="8" ry="3" stroke="#2b3038"/><path class="bg" d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6" stroke="#2b3038"/><path class="bg" d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" stroke="#2b3038"/></g>
-    <text class="ch" x="606" y="448" fill="#2b3038">Catalog lookups × 2</text>
-    <text class="cs" x="606" y="470">discography · era popularity</text>
-
-    <text class="an" x="756" y="514" text-anchor="middle">one LanceDB collection · 47,071 tracks</text>
-    <text class="cs" x="756" y="540" text-anchor="middle">metadata + full-text index + six embedding families</text>
-
-    <path d="M964,91 C1006,91 1006,276 1042,276" fill="none" stroke="#6f7785" stroke-width="3"/>
-    <path d="M964,163 C1006,163 1006,282 1042,282" fill="none" stroke="#6f7785" stroke-width="3"/>
-    <path d="M964,235 C1006,235 1006,288 1042,288" fill="none" stroke="#6f7785" stroke-width="3"/>
-    <path d="M964,307 C1006,307 1006,300 1042,300" fill="none" stroke="#6f7785" stroke-width="3"/>
-    <path d="M964,379 C1006,379 1006,306 1042,306" fill="none" stroke="#6f7785" stroke-width="3"/>
-    <path d="M964,451 C1006,451 1006,312 1042,312" fill="none" stroke="#6f7785" stroke-width="3" marker-end="url(#ard)"/>
-
-    <rect x="1046" y="246" width="136" height="108" rx="12" fill="#fff" stroke="#aeb5c1" stroke-width="3"/>
-    <text class="bt" x="1114" y="290" text-anchor="middle">Pooled</text>
-    <text class="bs" x="1114" y="316" text-anchor="middle">≤ 500 per</text>
-    <text class="bs" x="1114" y="338" text-anchor="middle">branch</text>
-    <line x1="1186" y1="300" x2="1218" y2="300" stroke="#4b5563" stroke-width="3.4" marker-end="url(#ar)"/>
-
-    <rect x="1222" y="216" width="210" height="168" rx="12" fill="#d9e4fb" stroke="#93b0ec" stroke-width="3.4"/>
-    <g transform="translate(1303,248) scale(1.9)">
-      <path class="bg" d="M4 19V5" stroke="#1a56db"/><path class="bg" d="M4 19h16" stroke="#1a56db"/>
-      <path class="bg" d="M8 19v-4M13 19v-8M18 19v-11" stroke="#1a56db"/></g>
-    <text class="bt" x="1327" y="332" text-anchor="middle" fill="#1a56db">Reranker</text>
-    <text class="bs" x="1327" y="360" text-anchor="middle">gradient-boosted trees</text>
-    <path d="M1436,300 H1462 V210 H1486" fill="none" stroke="#4b5563" stroke-width="3.4" marker-end="url(#ar)"/>
-
-    <rect x="1490" y="160" width="202" height="100" rx="12" fill="#cfeadd" stroke="#7fc4a5" stroke-width="3.4"/>
-    <text class="bt" x="1591" y="200" text-anchor="middle" fill="#0a7d55">Top-20 tracks</text>
-    <text class="bs" x="1591" y="228" text-anchor="middle">what is scored for</text>
-    <text class="bs" x="1591" y="248" text-anchor="middle">nDCG@20</text>
-
-    <path d="M1591,264 V318" fill="none" stroke="#4b5563" stroke-width="3.4" marker-end="url(#ar)"/>
-    <text class="cs" x="1604" y="298">top-1</text>
-
-    <rect x="1462" y="322" width="230" height="150" rx="12" fill="#d9e4fb" stroke="#93b0ec" stroke-width="3.4"/>
-    <g transform="translate(1558,346) scale(1.7)">
-      <path class="bg" d="M4 5h16v11H9l-5 4z" stroke="#1a56db"/></g>
-    <text class="bt" x="1577" y="418" text-anchor="middle" fill="#1a56db">Response LLM</text>
-    <text class="bs" x="1577" y="446" text-anchor="middle">LLM · Qwen3-30B</text>
-
-    <path d="M367,398 V592 H1577 V478" fill="none" stroke="#1a56db" stroke-width="3"
-          stroke-dasharray="7 6" opacity=".72" marker-end="url(#arb)"/>
-    <text class="cs" x="980" y="584" text-anchor="middle" fill="#1a56db">the same state conditions the reply</text>
-
-    <path d="M986,470 H1014 V500 H1042" fill="none" stroke="#6f7785" stroke-width="3" stroke-dasharray="7 6"/>
-    <rect x="1046" y="470" width="330" height="62" rx="10" fill="#fff" stroke="#aeb5c1"
-          stroke-width="3" stroke-dasharray="7 6"/>
-    <text class="ch" x="1066" y="496" fill="#4b5563">Weighted RRF</text>
-    <text class="cs" x="1066" y="518">baseline and fallback ranking</text>
-    <path d="M1380,501 H1440 V210 H1486" fill="none" stroke="#6f7785" stroke-width="3"
-          stroke-dasharray="7 6" marker-end="url(#ard)"/>
-  </svg>
+  <img class="arch-img" src="figures/architecture.svg" alt="">
 </div>
 
 <div class="main">
@@ -359,11 +259,13 @@ Conversational Music Recommendation</h1>
       <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg><span>What the system reads off a conversation</span></h2>
       <div class="card" style="margin-bottom:.7cqw">
         <div class="state">
-          <div><span class="u">User:</span> “…subdued, female singer, a sense of place in
-            the lyrics, stark almost a cappella delivery… not it either.”</div>
+          <div class="ctx">Earlier turns: we played Neko Case’s “Calling Cards”
+            (<span class="q">“not quite the one”</span>), then “Man” (<span class="q">“not it either”</span>).</div>
+          <div><span class="u">User, now:</span> <span class="q">“…much more subdued… a specific sense of
+            place in the lyrics… a somewhat stark, almost a cappella delivery.”</span></div>
           <div class="statesep"><span>extracted state</span></div>
-          <div class="row"><span class="k">anchor artist</span><span>Neko Case (must use)</span></div>
-          <div class="row"><span class="k">rejected</span><span>“Calling Cards”, “Man”</span></div>
+          <div class="row"><span class="k">anchor artist</span><span>Neko Case (must use) <span class="src">· earlier turns</span></span></div>
+          <div class="row"><span class="k">rejected</span><span>“Calling Cards”, “Man” <span class="src">· earlier turns</span></span></div>
           <div class="row"><span class="k">facets</span><span>mood = subdued · theme = sense of place<br>sonic = stark, almost a cappella</span></div>
           <div class="row"><span class="k">request</span><span>hidden_target</span></div>
         </div>
@@ -391,167 +293,68 @@ Conversational Music Recommendation</h1>
         (turn, track) pair.</p>
       <h3 class="sub" style="margin-top:.9cqw;margin-bottom:.25cqw">The bi-encoder behind that top feature</h3>
       <div class="tower">
-        <svg viewBox="0 0 760 318" xmlns="http://www.w3.org/2000/svg" role="img"
-             aria-label="Two-tower bi-encoder. A conversation rendering (previous turn, current turn, previously played track) and a track card (artist, title and year, up to five cleaned tags, and a one-line LLM-written known-for description) each pass through the same fine-tuned Qwen3-Embedding-4B encoder. Last-token pooling and L2 normalisation give two 2560-dimensional unit vectors whose cosine is the reranker feature.">
-          <style>
-            .tt{font:700 20px "Lato","Liberation Sans",sans-serif;fill:#14161a}
-            .tx{font:400 16px "DejaVu Sans Mono",monospace;fill:#4b5563}
-            .tl{font:600 15px "Lato","Liberation Sans",sans-serif;fill:#4b5563}
-          </style>
-          <defs><marker id="ta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
-                markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="#6f7785"/></marker></defs>
-
-          <rect x="2" y="2" width="352" height="104" rx="10" fill="#d9e4fb" stroke="#93b0ec" stroke-width="3"/>
-          <text class="tt" x="178" y="28" text-anchor="middle" fill="#1a56db">The conversation</text>
-          <text class="tx" x="22" y="54">[prev]  user turn t−1</text>
-          <text class="tx" x="22" y="75">[now]   user turn t</text>
-          <text class="tx" x="22" y="96">[track] artist — title</text>
-
-          <rect x="406" y="2" width="352" height="104" rx="10" fill="#cfeadd" stroke="#7fc4a5" stroke-width="3"/>
-          <text class="tt" x="582" y="28" text-anchor="middle" fill="#0a7d55">A track card</text>
-          <text class="tx" x="426" y="54">artist — title (year)</text>
-          <text class="tx" x="426" y="75">up to 5 cleaned tags</text>
-          <text class="tx" x="426" y="96">known for: one LLM line</text>
-
-          <path d="M178,110 V138" fill="none" stroke="#6f7785" stroke-width="3" marker-end="url(#ta)"/>
-          <path d="M582,110 V138" fill="none" stroke="#6f7785" stroke-width="3" marker-end="url(#ta)"/>
-
-          <rect x="112" y="142" width="536" height="78" rx="10" fill="#eceef2" stroke="#aeb5c1" stroke-width="3.4"/>
-          <text class="tt" x="380" y="172" text-anchor="middle">Shared encoder</text>
-          <text class="tl" x="380" y="200" text-anchor="middle">Qwen3-Embedding-4B, fine-tuned · last-token pool · L2-norm</text>
-
-          <path d="M250,224 V250" fill="none" stroke="#6f7785" stroke-width="3"/>
-          <path d="M510,224 V250" fill="none" stroke="#6f7785" stroke-width="3"/>
-          <text class="tl" x="380" y="242" text-anchor="middle">two 2560-d unit vectors</text>
-          <path d="M250,250 H510" fill="none" stroke="#6f7785" stroke-width="3"/>
-          <path d="M380,250 V272" fill="none" stroke="#6f7785" stroke-width="3" marker-end="url(#ta)"/>
-
-          <rect x="222" y="278" width="316" height="34" rx="8" fill="#d9e4fb" stroke="#93b0ec" stroke-width="3"/>
-          <text class="tl" x="380" y="301" text-anchor="middle" fill="#1a56db">their cosine = the ranker's top feature</text>
-        </svg>
+        <img class="tower-img" src="figures/biencoder2.svg" alt="">
       </div>
     </section>
 
 
+
+
+
+  </div>
+
+  <!-- ══════ RIGHT: how it did, and what we learned ══════ -->
+  <div class="col">
     <section>
       <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.4"/><path d="M12 4v2M12 18v2M4 12h2M18 12h2"/></svg><span>How it scored</span></h2>
       <table>
         <thead><tr><th>Official split</th><th>nDCG@20</th><th>Judge</th><th>Composite</th></tr></thead>
         <tbody>
           <tr><td>Blind-A · development phase</td><td>0.4380</td><td>4.70</td><td>0.5799</td></tr>
-          <tr class="hi"><td>Blind-B · final, 29th of 40</td><td>0.2537</td><td>3.30</td><td>0.3811</td></tr>
+          <tr class="hi"><td>Blind-B · final phase</td><td>0.2537</td><td>3.30</td><td>0.3811</td></tr>
         </tbody>
       </table>
     </section>
 
-  <footer class="incol">
-    <img src="figures/qr-repo.svg" alt="QR code linking to github.com/npatta01/music-crs-2026">
-    <div>
-      <div class="t">Paper, code, trained models and data</div>
-      <div class="u">github.com/npatta01/music-crs-2026</div>
-    </div>
-  </footer>
-  </div>
-
-  <!-- ══════ RIGHT: how it did, and what we learned ══════ -->
-  <div class="col">
-
     <section>
       <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg><span>What is not ideal</span></h2>
-      <ul class="lrn">
-        <li class="a"><b>We tuned on what we measured.</b>The development set was both our
-          training and our evaluation data, and the response prompt was picked against the Blind-A
-          leaderboard: 4.70 there, 3.30 on Blind-B.</li>
-        <li class="c"><b>We extracted more than we used.</b>Most fields in the state never
-          reached retrieval or ranking at all.</li>
-        <li class="d"><b>Nothing from outside the catalog.</b>No outside source for what a track
-          or artist is known for, and no tempo, key or soundtrack. Past one CF vector, no
-          listening behaviour.</li>
-        <li class="b"><b>The reply was never checked.</b>Asked for a track we do not have, it
-          described another by the same artist.</li>
-      </ul>
-    </section>
-
-    <section>
-      <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/><path d="M8.6 8.6l4.8 4.8M13.4 8.6l-4.8 4.8"/></svg><span>Asked for, served</span></h2>
+      <div class="find" style="--c:var(--red)"><b>We trained and validated the ranker on the same dev turns.</b></div>
+      <div class="gwhead ind"><span>The listener asked for</span><span></span><span>Our top pick</span></div>
       <div class="gotwrong">
-        <div class="gw"><span class="a">the Kamelot track<br>from <b>Silverthorn</b></span>
-          <span class="ar">→</span>
-          <span class="b">Kamelot — Fallen Star,<br>from <b>Haven</b><span class="st">constraint never applied</span></span></div>
-        <div class="gw"><span class="a">exactly <b>126.70 bpm</b>,<br>in G minor</span>
-          <span class="ar">→</span>
-          <span class="b">no tempo or key field<br>exists to match on<span class="st">nothing in the catalog</span></span></div>
-        <div class="gw"><span class="a"><b>“Watercolors”</b><br>by Pat Metheny</span>
-          <span class="ar">→</span>
-          <span class="b">Metheny — Alfie,<br>described as if it were<span class="st">response LLM</span></span></div>
+        <div class="miss" style="--c:var(--blue)"><div class="mh">We extracted more than we used</div>
+          <div class="gw"><span class="a">the Kamelot track<br>from <b>Silverthorn</b></span>
+            <span class="ar">→</span>
+            <span class="b">Kamelot — Fallen Star,<br>from <b>Haven</b><span class="st">We extracted “Silverthorn” but never filtered on it</span></span></div></div>
+        <div class="miss" style="--c:#6d28d9"><div class="mh">We used no data from outside the catalog</div>
+          <div class="gw"><span class="a">exactly <b>126.70 bpm</b>,<br>in G minor</span>
+            <span class="ar">→</span>
+            <span class="b">the catalog has no tempo or key,<br>and we added no outside source</span></div></div>
+        <div class="miss" style="--c:var(--amber)"><div class="mh">The reply said “Got it” for a track we did not have</div>
+          <div class="gw"><span class="a"><b>“Watercolors”</b><br>by Pat Metheny</span>
+            <span class="ar">→</span>
+            <span class="b">Metheny — Alfie, with the reply<br><i>“Got it — here’s ‘Alfie’…”</i><span class="st">“Watercolors” is not in the catalog</span></span></div></div>
       </div>
     </section>
 
     <section>
-      <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 4H5v8.5L13 20l7-7z"/><circle cx="9" cy="8" r="1.3"/><path d="M15.5 14.5 19 18M19 14.5l-3.5 3.5"/></svg><span>The target often ignores the request</span></h2>
+      <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 4H5v8.5L13 20l7-7z"/><circle cx="9" cy="8" r="1.3"/><path d="M15.5 14.5 19 18M19 14.5l-3.5 3.5"/></svg><span>The training labels often ignore the request</span></h2>
       <div class="card">
         <div class="dlg">
-          <div><span class="u">User:</span> “…similar chill vibe, but <b>from a different
-            artist</b>?” <span class="nt">(just played: Bonobo)</span></div>
+          <div><span class="u">User:</span> <span class="q">“…similar chill vibe, but <b>from a different
+            artist</b>?”</span> <span class="nt">(just played: Bonobo)</span></div>
           <div><span class="u">Target:</span> <span class="g">Bonobo — “Jets”</span>
             <span class="nt">· annotated MOVES toward goal</span></div>
-          <div><span class="u">Next turn:</span> “…hoping for something <b>from a different
-            artist this time</b>…”</div>
+          <div><span class="u">Next turn:</span> <span class="q">“…hoping for something <b>from a different
+            artist this time</b>…”</span></div>
           <div><span class="u">Target:</span> <span class="g">Bonobo — “Pieces”</span>
             <span class="nt">· annotated MOVES toward goal</span></div>
         </div>
       </div>
-      <p style="margin-top:.65cqw">Ground truth is whatever played next in an LLM-generated
-        session, so we had every turn re-scored.</p>
-      <h3 class="sub" style="margin-top:1.2cqw;margin-bottom:.2cqw">How the LLM relabelling worked</h3>
-      <p class="tiny">Both judges score the same two axes: different artist asked for? does the
-        track fit?</p>
+      <p style="margin-top:.65cqw">The label is whatever played next in an LLM-generated session,
+        even when the listener had just asked for something else.</p>
+      <h3 class="sub" style="margin-top:1.2cqw;margin-bottom:.2cqw">Our fix: two LLM judges re-score the labels</h3>
       <div class="judges">
-        <svg viewBox="0 0 1000 210" xmlns="http://www.w3.org/2000/svg" role="img"
-             aria-label="Relabelling flow: every train and dev turn is scored by two LLM judges. Where they agree, about 80 percent of turns, that verdict becomes the re-judged label. Where they disagree, about 20 percent, Opus decides and its verdict becomes the label.">
-          <style>
-            .jt{font:700 21px "Lato","Liberation Sans",sans-serif;fill:#14161a}
-            .js{font:400 16px "Lato","Liberation Sans",sans-serif;fill:#4b5563}
-            .jl{font:600 15px "Lato","Liberation Sans",sans-serif;fill:#4b5563}
-          </style>
-          <defs><marker id="ja" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
-                markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="#6f7785"/></marker></defs>
-
-          <rect x="2" y="74" width="152" height="62" rx="10" fill="#fff" stroke="#aeb5c1" stroke-width="3"/>
-          <text class="jt" x="78" y="103" text-anchor="middle">Every turn</text>
-          <text class="js" x="78" y="125" text-anchor="middle">train + dev</text>
-          <line x1="158" y1="105" x2="192" y2="105" stroke="#6f7785" stroke-width="3" marker-end="url(#ja)"/>
-
-          <rect x="196" y="40" width="238" height="54" rx="10" fill="#d9e4fb" stroke="#93b0ec" stroke-width="3"/>
-          <text class="jt" x="315" y="74" text-anchor="middle" fill="#1a56db">Gemma-4-26B</text>
-          <rect x="196" y="116" width="238" height="54" rx="10" fill="#d9e4fb" stroke="#93b0ec" stroke-width="3"/>
-          <text class="jt" x="315" y="150" text-anchor="middle" fill="#1a56db">DeepSeek-V4-Flash</text>
-
-          <path d="M434,67 H492" fill="none" stroke="#6f7785" stroke-width="3"/>
-          <path d="M434,143 H492" fill="none" stroke="#6f7785" stroke-width="3"/>
-          <path d="M492,67 V143" fill="none" stroke="#6f7785" stroke-width="3"/>
-
-          <text class="jl" x="640" y="84" text-anchor="middle">agree · ~80%</text>
-          <path d="M492,95 H784" fill="none" stroke="#6f7785" stroke-width="3" marker-end="url(#ja)"/>
-
-          <path d="M492,120 V158 H539" fill="none" stroke="#6f7785" stroke-width="3" marker-end="url(#ja)"/>
-          <rect x="543" y="130" width="172" height="56" rx="10" fill="#fae4c3" stroke="#dcb069" stroke-width="3"/>
-          <text class="jt" x="629" y="165" text-anchor="middle" fill="#9c4708">Opus decides</text>
-          <text class="jl" x="629" y="204" text-anchor="middle">disagree · ~20%</text>
-          <path d="M719,158 H752 V120 H784" fill="none" stroke="#6f7785" stroke-width="3" marker-end="url(#ja)"/>
-
-          <rect x="788" y="80" width="208" height="58" rx="10" fill="#cfeadd" stroke="#7fc4a5" stroke-width="3"/>
-          <text class="jt" x="892" y="116" text-anchor="middle" fill="#0a7d55">re-judged label</text>
-        </svg>
-      </div>
-      <div class="split">
-        <div class="tile w"><div class="v">61%</div>
-          <div class="k">of training turns where the judges would not settle on the target
-            being a good fit</div></div>
-        <div class="tile r"><div class="v">17%</div>
-          <div class="k">keep the artist the listener had just rejected</div></div>
+        <img class="judge-img" src="figures/relabelling.svg" alt="">
       </div>
     </section>
   </div>
