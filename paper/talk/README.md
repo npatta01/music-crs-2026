@@ -20,6 +20,7 @@ does not hold fabric well — sort out mounting in advance. See the
 | `talk-core.pdf` | The short talk — 21 slides, same source filtered. |
 | `poster.html` | **Poster source.** Hand-written HTML + inline SVG — not LaTeX. |
 | `poster.pdf` | **Send this to the printer.** True-size A1 (594×841mm), one page. |
+| `poster-24x36.pdf` | The same poster at 24×36in, for US shops (FedEx Office etc.) that stock that size rather than A1. Built from `poster.html` by `render.sh`. |
 | `render.sh` | Renders and preflights the poster. |
 | `render-deck.sh` | Builds `talk.html`, renders both deck PDFs, preflights them. |
 | `build.py` | Inlines the deck's figures into `talk.html` (called by `render-deck.sh`). |
