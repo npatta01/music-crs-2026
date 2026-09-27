@@ -54,6 +54,25 @@ do differently · Everything is released  — 12 slides, ~35 s each.
 - [ ] Author rehearsal: time it aloud, trim if over 7:00
 - [ ] Deck PR (deck files + README + site links to both PDFs)
 
+## Round 2 (2026-09-27): detailed deck rebuilt for beginners
+
+Author feedback: too much information, too text-dense, score too early, issues
+before the approach is understood, not grounded enough. Rebuilt:
+
+- Main flow, 29 slides in 6 parts: the problem → where the data comes from
+  (TalkPlayData 2: real LFM-2b sessions, four Gemini 2.5 Flash agents, the
+  recommender agent never sees the goal and picks from a 16–32-track pool —
+  its pick is the answer key) → scoring (no score of ours) → approach, one step
+  per slide → results → lessons.
+- 28 deep-dive slides moved to the appendix; "what we would do differently" cut
+  from the flow; the close is QR + link only.
+- Grounding fixes: reply-example quote corrected ("Sorry, 'Cthulhu Dawn'…");
+  verdicts attributed to our LLM checker, not the organisers' judge; the
+  failure tally labelled as a rule-based trace check; "category diversity"
+  corrected to catalog diversity.
+- New tier `talk` (talk-only) so the talk keeps its slides without them
+  appearing in the beginner deck. Talk is 11 slides; revisit after the deck.
+
 ## Next action
 
 Author reviews both PDFs; then open the deck PR.

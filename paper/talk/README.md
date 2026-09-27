@@ -21,8 +21,8 @@ print on plain matte paper with no lamination or mounting. See the
 | --- | --- |
 | `deck.html` | **Deck source.** The detailed record of the work — edit this. |
 | `talk.html` | **Present from this.** Self-contained, figures inlined, no network. |
-| `deck-detailed.pdf` | **For someone new to this space.** Every slide (54), including a background primer — what a conversational recommender does, retrieve→rank→respond, reading nDCG@20, a glossary. Reads without a speaker. |
-| `talk-10min.pdf` | **The workshop talk.** 12 slides for the 14:50–15:00 slot (~7 min + Q&A), for an audience of competitors. Same source, core slides only. |
+| `deck-detailed.pdf` | **For someone new to this space.** A 29-slide main flow in six parts — the problem, how the organisers built the data, scoring, our approach step by step, results, lessons — then a 29-slide appendix with every deep dive. Visual-first; the score appears only in part five. |
+| `talk-10min.pdf` | **The workshop talk.** 11 slides for the 14:50–15:00 slot (~7 min + Q&A), for an audience of competitors. Same source, core slides only. |
 | `DECK_PLAN.md` | The plan for both views: audiences, constraints, talk path, status. |
 | `render-deck.sh` | Builds `talk.html`, renders both deck PDFs, preflights them. |
 | `build.py` | Inlines the deck's figures into `talk.html` (called by `render-deck.sh`). |
@@ -90,14 +90,15 @@ ground-truth label repeats the artist the listener asked to move on from.
 
 The talk is a **filter over that same source**, never a second file:
 
-- **`data-tier="core"`** marks the twelve talk slides. The talk has no section
+- **`data-tier`**: `core` slides are in both views, `optional` only in the detailed deck, `talk` only in the talk.
+- The talk marks eleven slides (core + talk). The talk has no section
   dividers and no primer; it opens with "The short version", which also serves
   as the detailed deck's executive summary.
 - **`C`** toggles core-only navigation while presenting — arrows skip the rest.
 - **`?core=1`** hides everything else, so `talk-10min.pdf` is the talk.
 
 ```bash
-bash paper/talk/render-deck.sh      # deck-detailed.pdf (54) and talk-10min.pdf (12)
+bash paper/talk/render-deck.sh      # deck-detailed.pdf (58) and talk-10min.pdf (11)
 ```
 
 To move a slide in or out of the short talk, change its `data-tier`. Nothing
