@@ -1355,11 +1355,12 @@ tbody tr.hi td{background:var(--hue-soft)}
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="optional" data-title="How the relabelling worked"
-  data-notes="&lt;b&gt;0:50.&lt;/b&gt; Two cheap judges scored every labelable turn on two axes: was a different artist asked for, and does the track fit. Where they agree, about 80% of turns, that verdict stands. Where they disagree, Opus arbitrates, blind to their verdicts.">
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; Two cheap judges scored every labelable turn on two axes: was a different artist asked for, and does the track fit. Where they agree, about 80% of training turns, that verdict stands. Where they disagree, Opus arbitrates, blind to their verdicts.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>How the LLM relabelling worked</h2><span class="tag">Analysis</span></div>
   <div class="small" style="margin-bottom:.6cqw">Both judges score the same two axes: was a
     different artist asked for, and does the track fit the request?</div>
-  <div class="diagram"><img src="figures/relabelling.svg" alt="Relabelling flow: every train and dev turn is scored by two LLM judges. Where they agree, about 80 percent of turns, that verdict becomes the re-judged label. Where they disagree, about 20 percent, Opus decides."></div>
+  <div class="diagram"><img src="figures/relabelling.svg" alt="Relabelling flow: every labelable train and dev turn is scored by two LLM judges, Gemma-4-26B and DeepSeek-V4-Flash. Where they agree, about 80 percent of training turns, that verdict becomes the re-judged label. Where they disagree, about 20 percent, Claude Opus decides."></div>
+  <div class="small" style="margin-top:.6cqw">Agreement split measured on the training turns.</div>
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="optional" data-title="What the relabelling found"
