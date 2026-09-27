@@ -1,38 +1,49 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg viewBox="0 34 1000 182" xmlns="http://www.w3.org/2000/svg" role="img"
-             aria-label="Relabelling flow: every train and dev turn is scored by two LLM judges. Where they agree, about 80 percent of turns, that verdict becomes the re-judged label. Where they disagree, about 20 percent, Opus decides and its verdict becomes the label.">
+<svg viewBox="0 40 1000 262" xmlns="http://www.w3.org/2000/svg" role="img"
+             aria-label="Relabelling flow: every labelable train and dev turn is scored by two LLM judges, Gemma-4-26B and DeepSeek-V4-Flash. Where they agree, about 80 percent of training turns, that verdict becomes the re-judged label. Where they disagree, about 20 percent, Claude Opus decides and its verdict becomes the label.">
           <style>
-            .jt{font:700 22px "Lato","Liberation Sans",sans-serif;fill:#16181C}
-            .js{font:400 19px "Lato","Liberation Sans",sans-serif;fill:#44484F}
-            .jl{font:600 19px "Lato","Liberation Sans",sans-serif;fill:#44484F}
+            .jt{font:700 28px "Lato","Liberation Sans",sans-serif;fill:#16181C}
+            .js{font:400 22px "Lato","Liberation Sans",sans-serif;fill:#44484F}
+            .jl{font:700 22px "Lato","Liberation Sans",sans-serif;fill:#44484F}
           </style>
           <defs><marker id="ja" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6"
                 markerHeight="6" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#737780"/></marker></defs>
 
-          <rect x="2" y="74" width="170" height="62" rx="10" fill="#fff" stroke="#BCC0C6" stroke-width="1.8"/>
-          <text class="jt" x="87" y="103" text-anchor="middle">Labelable turns</text>
-          <text class="js" x="87" y="125" text-anchor="middle">train + dev</text>
-          <line x1="174" y1="105" x2="192" y2="105" stroke="#737780" stroke-width="2" marker-end="url(#ja)"/>
+          <!-- input -->
+          <rect x="2" y="92" width="206" height="118" rx="12" fill="#fff" stroke="#BCC0C6" stroke-width="1.8"/>
+          <text class="jt" x="105" y="136" text-anchor="middle">Labelable</text>
+          <text class="jt" x="105" y="168" text-anchor="middle">turns</text>
+          <text class="js" x="105" y="196" text-anchor="middle">train + dev</text>
 
-          <rect x="196" y="40" width="238" height="54" rx="10" fill="#d9e4fb" stroke="#93b0ec" stroke-width="1.8"/>
-          <text class="jt" x="315" y="74" text-anchor="middle" fill="#1a56db">Gemma-4-26B</text>
-          <rect x="196" y="116" width="238" height="54" rx="10" fill="#d9e4fb" stroke="#93b0ec" stroke-width="1.8"/>
-          <text class="jt" x="315" y="150" text-anchor="middle" fill="#1a56db">DeepSeek-V4-Flash</text>
+          <!-- fan out to both judges -->
+          <path d="M212,151 H236" fill="none" stroke="#737780" stroke-width="2"/>
+          <path d="M236,95 V207" fill="none" stroke="#737780" stroke-width="2"/>
+          <path d="M236,95 H260" fill="none" stroke="#737780" stroke-width="2" marker-end="url(#ja)"/>
+          <path d="M236,207 H260" fill="none" stroke="#737780" stroke-width="2" marker-end="url(#ja)"/>
 
-          <path d="M434,67 H492" fill="none" stroke="#737780" stroke-width="2"/>
-          <path d="M434,143 H492" fill="none" stroke="#737780" stroke-width="2"/>
-          <path d="M492,67 V143" fill="none" stroke="#737780" stroke-width="2"/>
+          <rect x="264" y="60" width="300" height="70" rx="12" fill="#d9e4fb" stroke="#93b0ec" stroke-width="1.8"/>
+          <text class="jt" x="414" y="105" text-anchor="middle" fill="#1a56db">Gemma-4-26B</text>
+          <rect x="264" y="172" width="300" height="70" rx="12" fill="#d9e4fb" stroke="#93b0ec" stroke-width="1.8"/>
+          <text class="jt" x="414" y="217" text-anchor="middle" fill="#1a56db">DeepSeek-V4-Flash</text>
 
-          <text class="jl" x="640" y="84" text-anchor="middle">agree · ~80% of train</text>
-          <path d="M492,95 H784" fill="none" stroke="#737780" stroke-width="2" marker-end="url(#ja)"/>
+          <!-- compare -->
+          <path d="M564,95 H600" fill="none" stroke="#737780" stroke-width="2"/>
+          <path d="M564,207 H600" fill="none" stroke="#737780" stroke-width="2"/>
+          <path d="M600,95 V262" fill="none" stroke="#737780" stroke-width="2"/>
 
-          <path d="M492,120 V158 H539" fill="none" stroke="#737780" stroke-width="2" marker-end="url(#ja)"/>
-          <rect x="543" y="130" width="172" height="56" rx="10" fill="#fae4c3" stroke="#dcb069" stroke-width="1.8"/>
-          <text class="jt" x="629" y="165" text-anchor="middle" fill="#A55A18">Opus decides</text>
-          <text class="jl" x="629" y="210" text-anchor="middle">disagree · ~20% of train</text>
-          <path d="M719,158 H752 V120 H784" fill="none" stroke="#737780" stroke-width="2" marker-end="url(#ja)"/>
+          <!-- agree: straight to the label -->
+          <text class="jl" x="690" y="84" text-anchor="middle">agree · ~80%</text>
+          <path d="M600,95 H774" fill="none" stroke="#737780" stroke-width="2" marker-end="url(#ja)"/>
 
-          <rect x="788" y="80" width="208" height="58" rx="10" fill="#cfeadd" stroke="#7fc4a5" stroke-width="1.8"/>
-          <text class="jt" x="892" y="116" text-anchor="middle" fill="#0a7d55">re-judged label</text>
+          <!-- disagree: Opus arbitrates -->
+          <text class="jl" x="708" y="220" text-anchor="middle">disagree · ~20%</text>
+          <path d="M600,262 H614" fill="none" stroke="#737780" stroke-width="2" marker-end="url(#ja)"/>
+          <rect x="618" y="232" width="194" height="60" rx="12" fill="#fae4c3" stroke="#dcb069" stroke-width="1.8"/>
+          <text class="jt" x="715" y="272" text-anchor="middle" fill="#A55A18">Opus decides</text>
+          <path d="M812,262 H889 V178" fill="none" stroke="#737780" stroke-width="2" marker-end="url(#ja)"/>
+
+          <rect x="778" y="52" width="220" height="122" rx="12" fill="#cfeadd" stroke="#7fc4a5" stroke-width="1.8"/>
+          <text class="jt" x="888" y="106" text-anchor="middle" fill="#0a7d55">re-judged</text>
+          <text class="jt" x="888" y="140" text-anchor="middle" fill="#0a7d55">label</text>
         </svg>
