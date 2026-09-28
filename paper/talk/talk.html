@@ -662,6 +662,9 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 
 .before{font-size:1.9cqw} .kv{font-size:1.85cqw;grid-template-columns:7.5cqw 1fr} .incard h3{font-size:1.5cqw}
 .bigquote.mid{font-size:1.95cqw}
+
+.replygroups{display:flex;flex-direction:column;gap:1.3cqw;margin-block:auto}
+.rgh{font-size:1.55cqw;font-weight:750;color:var(--ink);margin-bottom:.55cqw}
 </style>
 </head>
 <body>
@@ -1202,33 +1205,35 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="optional" class="slide" data-title="Four ways the reply went wrong"
-  data-notes="&lt;b&gt;1:00.&lt;/b&gt; Four real Blind-B replies, labelled by our own LLM checker (DeepSeek-V4-Flash), not the organisers’ judge. It rated 15 of 80 replies bad and 11 weak. The generator ran once with no check, so it could claim compliance, describe cover art it never saw, defend a violation, or argue against its own pick.">
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; The two failures we name in the paper. When the track asked for is not in the catalog, the reply presents a substitute as if it were fine — Watercolors, Fallen. When we miss a constraint, the reply recommends the track anyway — another Ryan Adams, another Juanes. The generator ran once, with no check against the state.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/></svg></div><h2>The reply was never checked</h2>
     <span class="tag">What is not ideal</span></div>
-  <div class="tracks tight">
-    <div class="track bad"><div class="art">1</div>
-      <div class="meta"><div class="ask">“I wanted <b>‘Watercolors’</b> by Pat Metheny specifically.”</div>
-        <div class="l1">“Got it — here’s ‘Alfie’ by Pat Metheny…”</div>
-        <div class="l2">“Watercolors” is not in the catalog</div></div>
-      <div class="badge">claims it complied</div></div>
-    <div class="track bad"><div class="art">2</div>
-      <div class="meta"><div class="ask">“the album art is different from the futuristic, <b>dark blue/purple</b> style”</div>
-        <div class="l1">“…the album’s stark, moody visuals in deep blues and purples…”</div>
-        <div class="l2">Black Milk — describes cover art the model is never shown</div></div>
-      <div class="badge">invents facts</div></div>
-    <div class="track bad"><div class="art">3</div>
-      <div class="meta"><div class="ask">“something from a <b>different artist</b> this time”</div>
-        <div class="l1">“…while this track is by him, it’s from a different era and band…”</div>
-        <div class="l2">Ryan Adams &amp; The Cardinals, defended as if it counted</div></div>
-      <div class="badge">argues for a violation</div></div>
-    <div class="track warn"><div class="art">4</div>
-      <div class="meta"><div class="ask">“I’m after <b>electronic</b> ambient music, not rain sounds”</div>
-        <div class="l1">“…I’m sorry this one still misses the mark…”</div>
-        <div class="l2">about our own top pick, “Cozy Rain”</div></div>
-      <div class="badge">argues against its pick</div></div>
+  <div class="replygroups">
+    <div class="rg"><div class="rgh">The track they asked for is not in the catalog — the reply presents a substitute anyway</div>
+      <div class="tracks tight">
+        <div class="track bad"><div class="art">1</div>
+          <div class="meta"><div class="ask">“I wanted <b>‘Watercolors’</b> by Pat Metheny specifically.”</div>
+            <div class="l1">“Got it — here’s ‘Alfie’ by Pat Metheny…”</div></div>
+          <div class="badge">not flagged</div></div>
+        <div class="track bad"><div class="art">2</div>
+          <div class="meta"><div class="ask">“Could you please play Sarah McLachlan’s <b>‘Fallen’</b>?”</div>
+            <div class="l1">“You’re in the right place — ‘Hold On’ by Sarah McLachlan is a perfect match…”</div></div>
+          <div class="badge">not flagged</div></div>
+      </div></div>
+    <div class="rg"><div class="rgh">A constraint we did not meet — the reply recommends the track anyway</div>
+      <div class="tracks tight">
+        <div class="track warn"><div class="art">3</div>
+          <div class="meta"><div class="ask">“…something from a <b>different artist</b> this time”</div>
+            <div class="l1">“…while this track is by him, it’s from a different era and band…” — Ryan Adams again</div></div>
+          <div class="badge">not flagged</div></div>
+        <div class="track warn"><div class="art">4</div>
+          <div class="meta"><div class="ask">“…we’re still focusing on <b>Juanes</b>…”</div>
+            <div class="l1">“I know you’re looking to explore beyond Juanes, but ‘Me Enamoré De Ti’ is a standout…”</div></div>
+          <div class="badge">not flagged</div></div>
+      </div></div>
   </div>
-  <div class="takeaway">Our LLM checker rated <b>15 of 80</b> Blind-B replies bad and 11 weak. One pass, no check; the
-    prompt was chosen on Blind-A (judge 4.70 there, 3.30 on Blind-B).</div>
+  <div class="takeaway">One pass, no check: the reply could flag <b>neither unavailable tracks nor unmet constraints</b>.
+    The prompt was chosen on Blind-A (judge 4.70 there, 3.30 on Blind-B).</div>
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="talk" data-title="Asked for, served"
