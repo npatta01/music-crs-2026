@@ -22,12 +22,14 @@ print on plain matte paper with no lamination or mounting. See the
 | `deck.html` | **Deck source.** The detailed record of the work — edit this. |
 | `talk.html` | **Present from this.** Self-contained, figures inlined, no network. |
 | `deck-detailed.pdf` | **For someone new to this space.** A 39-slide main flow in six parts — the problem, how the organisers built the data, scoring, our approach step by step, results, what is not ideal — then an 18-slide appendix with every deep dive. Visual-first; the score appears only in part five. |
-| `talk-10min.pdf` | **The workshop talk.** 11 slides for the 14:50–15:00 slot (~7 min + Q&A), for an audience of competitors. Same source, core slides only. |
+| `talk-10min.pdf` | **The workshop talk.** 12 slides for the 14:50–15:00 slot (~7 min + Q&A), for an audience of competitors. Same source, core slides only. |
 | `DECK_PLAN.md` | The plan for both views: audiences, constraints, talk path, status. |
 | `render-deck.sh` | Builds `talk.html`, renders both deck PDFs, preflights them. |
 | `build.py` | Inlines the deck's figures into `talk.html` (called by `render-deck.sh`). |
 | `poster.html` | **Poster source.** Hand-written HTML + SVG — not LaTeX. Edit this. |
-| `poster.pdf` | **Send this to the printer.** True-size 24×36in, one page. |
+| `poster.pdf` | The poster, true-size 24×36in, one page — fully vector. |
+| `print/npatta01-poster-24x36-image.pdf` | **Send this to the printer.** The same poster as one 300-dpi image. FedEx Office could print this one and not the vector PDFs — see [Printing](#printing). |
+| `print/` | The three files sent to FedEx: the original upload, a transparency-free Ghostscript re-save, and the 300-dpi image version. |
 | `render.sh` | Renders the PDF and preflights it. |
 | `figures/` | `architecture.svg`, `biencoder2.svg`, `relabelling.svg` (**shared** by the poster and the deck), and `qr-site.svg` — the QR code, pointing at the project site (`npatta01.github.io/music-crs-2026/`), which links the poster. `qr-repo.svg` points at the repo and is used by the deck. |
 
@@ -176,6 +178,31 @@ bleed and can band on large-format inkjet), and nothing in the body text is unde
 headline beside it, which the RecSys accessibility guidance asks for. Every
 text/background pair clears 4.5:1 (large bold text in tinted diagram boxes
 clears 3:1).
+
+## Printing
+
+**Print the image version: `print/npatta01-poster-24x36-image.pdf`.** On
+2026-09-28, FedEx Office (store #0614, 80 S 8th St, Minneapolis) could not print
+the uploaded vector PDF. We sent three versions back:
+
+| File | Result |
+| --- | --- |
+| `npatta01-poster-24x36-original.pdf` — the first upload (Chrome/Skia PDF) | did not print |
+| `npatta01-poster-24x36.pdf` — transparency removed, re-saved with Ghostscript | not used |
+| `npatta01-poster-24x36-image.pdf` — one 300-dpi image (7200×10800px) | **printed** — FedEx confirmed this one works |
+
+We never learned what their system rejected in the vector files. The original had
+transparency groups, which is a common cause and is now fixed in the source (#219),
+but the store only confirmed the image version. If you need a new one after
+editing the poster, regenerate the image version from `poster.pdf`:
+
+```bash
+mutool draw -r 300 -o /tmp/poster-300.png paper/talk/poster.pdf
+python3 -c "from PIL import Image; Image.MAX_IMAGE_PIXELS=None; Image.open('/tmp/poster-300.png').convert('RGB').save('paper/talk/print/npatta01-poster-24x36-image.pdf','PDF',resolution=300.0)"
+```
+
+It prints slightly softer than vector but is sharp at poster viewing distance, and
+the QR code still scans.
 
 To resize, change `--w` / `--h` and the `@page size` in `poster.html`; every
 dimension is in `cqw` so the whole layout rescales — but a taller page leaves
