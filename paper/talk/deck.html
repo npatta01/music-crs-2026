@@ -639,6 +639,29 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 .slide.roomy .cols{gap:2cqw} .slide.roomy .card{padding:2.1cqw 2.2cqw}
 .chat.anchor .bub{font-size:2cqw}
 .bub .mv{font:700 1.2cqw/1 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:#257E3D;background:#E7F8EC;border-radius:1cqw;padding:.45cqw .8cqw;margin-left:.6cqw}
+
+/* round 5 */
+.before{display:flex;gap:1.4cqw;align-items:baseline;margin-top:2cqw;padding:1.1cqw 1.6cqw;border:.12cqw dashed var(--line);
+  border-radius:1cqw;font-size:1.65cqw;color:var(--ink-2);background:#fff}
+.before .bt{font:700 1.15cqw/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.replyin{display:grid;grid-template-columns:1fr 3.4cqw 1.35fr;gap:1.2cqw;align-items:center;margin-block:auto}
+.incard{background:#fff;border:.1cqw solid var(--line);border-radius:1cqw;padding:1.2cqw 1.5cqw}
+.incard h3{font-size:1.3cqw;margin-bottom:.6cqw}
+.kv{display:grid;grid-template-columns:6.5cqw 1fr;gap:.8cqw;font-size:1.55cqw;padding:.25cqw 0}
+.kv span{color:var(--ink-3)} .kv b{color:var(--ink);font-weight:650}
+.inarrow svg{width:2.8cqw;height:2.8cqw;stroke:var(--hue);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.bigquote.mid{font-size:1.75cqw;margin:0}
+
+.slide[data-title="Four ways the reply went wrong"] .tracks.tight{gap:.7cqw}
+.slide[data-title="Four ways the reply went wrong"] .track{padding:.7cqw 1.2cqw;grid-template-columns:3.4cqw 1fr auto}
+.slide[data-title="Four ways the reply went wrong"] .track .art{width:3.4cqw;height:3.4cqw}
+.slide[data-title="Four ways the reply went wrong"] .track .ask{font-size:1.35cqw;margin-bottom:.25cqw}
+.slide[data-title="Four ways the reply went wrong"] .track .meta .l1{font-size:1.55cqw}
+.slide[data-title="Four ways the reply went wrong"] .track .meta .l2{font-size:1.25cqw}
+.slide[data-title="Four ways the reply went wrong"] .takeaway{font-size:1.5cqw}
+
+.before{font-size:1.9cqw} .kv{font-size:1.85cqw;grid-template-columns:7.5cqw 1fr} .incard h3{font-size:1.5cqw}
+.bigquote.mid{font-size:1.95cqw}
 </style>
 </head>
 <body>
@@ -933,7 +956,10 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
     <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
     <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M9 20h6"/></svg></div><h4>Top 20</h4><p>the list that is scored</p></div>
   </div>
-  <div class="takeaway">One learned model decides the final order of <b>20 tracks</b>.</div></div>
+  <div class="before"><span class="bt">Before the ranker</span><span>weighted <b>RRF</b> — merge the eleven lists by
+    rank, no training. Dev nDCG@20: <b>0.149</b>, against <b>0.197–0.203</b> with the ranker.</span></div>
+  <div class="takeaway">One learned model decides the final order of <b>20 tracks</b>. The pool depths differ between the
+    two setups, so that gap is not a clean measure of the ranker alone.</div></div>
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-dense data-title="The reranker"
@@ -992,25 +1018,36 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Response generation"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Finally a second LLM, Qwen3-30B, writes one short reply about the top track, from that track’s details and the state. This is a real reply from the final test set that our own LLM checker rated good.">
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; A real Blind-B reply that our own LLM checker rated good. The words it uses — uplifting, cheerful, hopeful — come from the state and the track’s tags, as the next slide shows.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>Response generation</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="chat big">
-    <div class="bub me"><span class="tl">Listener</span>Can you find something with a bit more of that gritty, raw blues rock energy?</div>
-    <div class="bub sys reply"><span class="tl">Our reply</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span><span>“…if you’re craving that gritty, raw blues rock edge, this one’s got it: Quaker City Night Hawks bring a smoky, soul-drenched intensity to ‘Good Evening’…”</span></div>
+    <div class="bub me"><span class="tl">Listener</span>…it feels a bit too serious. I’m looking for something more uplifting and positive, really something to lift my spirits.</div>
+    <div class="bub sys reply"><span class="tl">Our reply</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span><span>“Perfect — ‘Happy Up Here’ by Röyksopp is exactly the kind of uplifting, cheerful electronic track you’re looking for. With its bright synths and hopeful groove, it’s designed to lift your spirits and make you smile.”</span></div>
   </div>
-  <div class="takeaway">A second LLM (<b>Qwen3-30B</b>) writes one short reply about the top track.</div></div>
+  <div class="takeaway">A second LLM (<b>Qwen3-30B</b>) writes one short reply about the top track. The next slide shows exactly what it was given.</div></div>
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="How the reply is written"
   data-notes="&lt;b&gt;0:40.&lt;/b&gt; The deployed instruction, in full. Qwen3-30B at temperature zero, one pass, given the top track and the latest state.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>How the reply is written</h2><span class="tag">Approach</span></div>
-  <div class="fill"><div class="bigquote">“Write 1–2 concise sentences about only the selected track. Prioritize the
-    latest user request and extracted state over older conversation history. If the track is reasonably aligned,
-    explain the fit with one specific supported reason. If it clearly conflicts with an explicit avoid/new-artist
-    constraint, do not oversell it or blame the system; briefly frame the limitation and the closest supported
-    reason.”</div>
+  <div class="fill"><div class="replyin">
+    <div class="stack">
+      <div class="incard"><h3>Latest state</h3>
+        <div class="kv"><span>Genre</span><b>electronic</b></div>
+        <div class="kv"><span>Mood</span><b>uplifting, positive, happy</b></div>
+        <div class="kv"><span>Avoid</span><b>serious</b></div></div>
+      <div class="incard"><h3>Top track</h3>
+        <div class="kv"><span>Track</span><b>Röyksopp — “Happy Up Here”</b></div>
+        <div class="kv"><span>Tags</span><b>cheerful, hopeful, experimental, Pop, 00s…</b></div></div>
+    </div>
+    <div class="inarrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="bigquote mid">“Write 1–2 concise sentences about only the selected track. Prioritize the latest user request
+      and extracted state over older conversation history. If the track is reasonably aligned, explain the fit with one
+      specific supported reason. If it clearly conflicts with an explicit avoid/new-artist constraint, do not oversell it
+      or blame the system; briefly frame the limitation and the closest supported reason.”</div>
+  </div>
   <div class="chips"><span>Qwen3-30B-A3B-Instruct</span><span>temperature 0</span><span>one pass</span>
-    <span>input: top track + latest state</span></div></div>
+    <span>output: the reply on the previous slide</span></div></div>
 </section>
 
 <section style="--hue:#257E3D;--hue-soft:#E7F8EC" class="slide divider" data-tier="optional" data-title="§5 · How it scored"
@@ -1101,26 +1138,26 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Failure 1 — extracted, then ignored"
   data-notes="&lt;b&gt;0:35.&lt;/b&gt; The most common shape, and the most embarrassing. In each of these the state correctly carried an avoid for the artist, and we served that same artist at rank 1. This is our own model doing exactly what the training labels do — anchoring on the just-played artist. The constraint features carry 0.7% of ranker gain, which is why nothing stopped it.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Extracted, then ignored</h2>
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Extracted, but the ranker did not act on it</h2>
     <span class="tag">Went wrong</span></div>
   <div class="tracks">
     <div class="track bad"><div class="art"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
       <div class="meta"><div class="ask">“I gotta break away from <b>Deltron</b> and <b>Del</b> completely”</div>
         <div class="l1">Dead Prez — Hip Hop</div>
         <div class="l2">state held both artists as avoid</div></div>
-      <div class="badge">ignored</div></div>
+      <div class="badge">not acted on</div></div>
     <div class="track bad"><div class="art"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
       <div class="meta"><div class="ask">“branching out to <b>other</b> singer-songwriter artists”</div>
         <div class="l1">Ryan Adams — When The Stars Go Blue</div>
         <div class="l2">state held Ryan Adams as avoid</div></div>
-      <div class="badge">ignored</div></div>
+      <div class="badge">not acted on</div></div>
     <div class="track bad"><div class="art"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
       <div class="meta"><div class="ask">“still focusing on <b>Juanes</b>… haven't found the depth I'm after”</div>
         <div class="l1">Juanes — Me Enamoré De Ti</div>
         <div class="l2">state held Juanes as rejected</div></div>
-      <div class="badge">ignored</div></div>
+      <div class="badge">not acted on</div></div>
   </div>
-  <div class="takeaway">The state recorded each request to move on; the ranker served that artist anyway. We think the labels taught it to: they often repeat the just-played artist, so rejections carried only <b>0.7%</b> of its decisions.</div>
+  <div class="takeaway">We wanted the ranker to use what the state recorded; it served that artist anyway. We think the labels taught it to: they often repeat the just-played artist, so rejections carried only <b>0.7%</b> of its decisions.</div>
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-dense data-title="Where the failures were"
@@ -1165,28 +1202,33 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="optional" class="slide" data-title="Four ways the reply went wrong"
-  data-notes="&lt;b&gt;1:15.&lt;/b&gt; All four are real Blind-B replies, with the judge&#x27;s own verdict. The first is the worst: &#x27;Got it&#x27; for a track we do not have. The second and third are the prompt working exactly as instructed — it was told to flag a conflict rather than oversell — and the result is a reply that argues against our own top pick. We optimised the prompt against the Blind-A judge and never checked what it did to the recommendation itself.">
+  data-notes="&lt;b&gt;1:00.&lt;/b&gt; Four real Blind-B replies, labelled by our own LLM checker (DeepSeek-V4-Flash), not the organisers’ judge. It rated 15 of 80 replies bad and 11 weak. The generator ran once with no check, so it could claim compliance, describe cover art it never saw, defend a violation, or argue against its own pick.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/></svg></div><h2>The reply was never checked</h2>
     <span class="tag">What is not ideal</span></div>
   <div class="tracks tight">
     <div class="track bad"><div class="art">1</div>
-      <div class="meta"><div class="l1">“<b>Got it</b> — here's <em>Alfie</em>…”</div>
-        <div class="l2">for a track we do not have</div></div>
-      <div class="badge">claims compliance</div></div>
+      <div class="meta"><div class="ask">“I wanted <b>‘Watercolors’</b> by Pat Metheny specifically.”</div>
+        <div class="l1">“Got it — here’s ‘Alfie’ by Pat Metheny…”</div>
+        <div class="l2">“Watercolors” is not in the catalog</div></div>
+      <div class="badge">claims it complied</div></div>
     <div class="track bad"><div class="art">2</div>
-      <div class="meta"><div class="l1">“<b>Sorry</b>, ‘Cthulhu Dawn’… doesn’t match your request…”</div>
-        <div class="l2">about our own rank-1 pick</div></div>
-      <div class="badge">argues against itself</div></div>
-    <div class="track warn"><div class="art">3</div>
-      <div class="meta"><div class="l1">Asked a question, given a recommendation</div>
-        <div class="l2">“is it the rhythm or the instrumentation?”</div></div>
-      <div class="badge">dodges</div></div>
+      <div class="meta"><div class="ask">“the album art is different from the futuristic, <b>dark blue/purple</b> style”</div>
+        <div class="l1">“…the album’s stark, moody visuals in deep blues and purples…”</div>
+        <div class="l2">Black Milk — describes cover art the model is never shown</div></div>
+      <div class="badge">invents facts</div></div>
+    <div class="track bad"><div class="art">3</div>
+      <div class="meta"><div class="ask">“something from a <b>different artist</b> this time”</div>
+        <div class="l1">“…while this track is by him, it’s from a different era and band…”</div>
+        <div class="l2">Ryan Adams &amp; The Cardinals, defended as if it counted</div></div>
+      <div class="badge">argues for a violation</div></div>
     <div class="track warn"><div class="art">4</div>
-      <div class="meta"><div class="l1">“hauntingly beautiful… raw emotion”</div>
-        <div class="l2">no evidence from the track or the conversation</div></div>
-      <div class="badge">generic</div></div>
+      <div class="meta"><div class="ask">“I’m after <b>electronic</b> ambient music, not rain sounds”</div>
+        <div class="l1">“…I’m sorry this one still misses the mark…”</div>
+        <div class="l2">about our own top pick, “Cozy Rain”</div></div>
+      <div class="badge">argues against its pick</div></div>
   </div>
-  <div class="takeaway">One pass, no check. We chose the prompt on the Blind-A leaderboard — judge <b>4.70</b> there, <b>3.30</b> on Blind-B. Labels are from our own LLM checker.</div>
+  <div class="takeaway">Our LLM checker rated <b>15 of 80</b> Blind-B replies bad and 11 weak. One pass, no check; the
+    prompt was chosen on Blind-A (judge 4.70 there, 3.30 on Blind-B).</div>
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="talk" data-title="Asked for, served"
