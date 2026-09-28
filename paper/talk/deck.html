@@ -568,6 +568,45 @@ tbody tr.hi td{background:var(--hue-soft)}
 .sk{font-size:1.45cqw;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--hue)}
 .sv{font-size:2cqw;font-weight:650;color:var(--ink)}
 
+
+/* ═══ round 3 ═══ */
+.bub .tl{display:block;font:700 1.1cqw/1 var(--sans);letter-spacing:.07em;text-transform:uppercase;opacity:.75;margin-bottom:.45cqw}
+.bub.sys{flex-wrap:wrap}
+.bub.sys .tl{width:100%;margin-bottom:.1cqw}
+.chat.big .bub{font-size:2.3cqw;line-height:1.35}
+.chat.big .bub.reply{max-width:92%}
+.knows.tight{margin-top:1.8cqw;gap:1.6cqw}
+.knows.tight .agent{padding:1.3cqw 1.8cqw;display:flex;align-items:center;gap:2cqw}
+.knows.tight .ahead{margin:0;flex:0 0 auto}
+.knows.tight ul{margin:0;flex-direction:row;flex-wrap:wrap;gap:.5cqw 1.6cqw}
+.knows.tight li{font-size:1.6cqw}
+.knows.tight h4{font-size:1.9cqw}
+table.idx{width:100%;border-collapse:collapse;font-size:1.55cqw}
+table.idx th{font-size:1.15cqw;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);text-align:left;
+  padding:.5cqw .6cqw;border-bottom:.1cqw solid var(--line)}
+table.idx td{padding:.72cqw .6cqw;border-bottom:.08cqw solid var(--line-2);color:var(--ink)}
+table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);font-weight:700}
+.bars.board .brow{grid-template-columns:22cqw 1fr 7cqw}
+.bars.board .brow .bl,.bars.board .brow .bv{font-size:1.9cqw}
+.bars.board .btrack{height:3cqw;border-radius:1.5cqw} .bars.board .bfill{border-radius:1.5cqw}
+.bfill.top{background:#257E3D} .bfill.mid{background:#8A8178} .bfill.us{background:#2063D9} .bfill.base{background:#C8BFB4}
+.devbars{margin-top:2cqw}
+.devbars .brow{grid-template-columns:20cqw 1fr 6.4cqw}
+.nicard{background:#fff;border:.1cqw solid var(--line);border-top:.45cqw solid var(--hue);border-radius:1cqw;
+  padding:1.1cqw 1.6cqw;font-size:1.9cqw;font-weight:650;color:var(--ink)}
+.mhead{display:grid;grid-template-columns:1fr 3cqw 1.15fr;gap:1cqw;margin:1.3cqw 0 .4cqw 1.6cqw;
+  font:700 1.1cqw/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.mrows{display:flex;flex-direction:column;gap:1cqw}
+.mrow{border-left:.45cqw solid var(--c);padding-left:1.2cqw}
+.mrow .mh{font-size:1.7cqw;font-weight:750;color:var(--ink);margin-bottom:.4cqw}
+.mpair{display:grid;grid-template-columns:1fr 3cqw 1.15fr;gap:1cqw;align-items:center}
+.ma,.mb{border-radius:.8cqw;padding:.7cqw 1.1cqw;font-size:1.5cqw;line-height:1.3;color:var(--ink)}
+.ma{background:#E4EDFB;font-style:italic} .mb{background:#F9E6E6}
+.mb .st{display:block;color:#B42318;font-weight:700;font-size:1.3cqw;margin-top:.25cqw;font-style:normal}
+.mar svg{width:2.2cqw;height:2.2cqw;stroke:var(--ink-3);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.slide .diagram.wide{flex:1 1 auto;display:block;margin-block:auto;width:100%}
+.slide .diagram.wide img{display:block;max-height:none;width:100%;height:auto}
+
 </style>
 </head>
 <body>
@@ -612,28 +651,28 @@ tbody tr.hi td{background:var(--hue-soft)}
 </section>
 
 <section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="Contents"
-  data-notes="Six parts. The first three explain the task from scratch; the score appears only in part five.">
+  data-notes="Six parts. The first three explain the task from scratch; our score appears only in part five.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".8"/><circle cx="4.5" cy="12" r=".8"/><circle cx="4.5" cy="18" r=".8"/></svg></div><h2>Contents</h2><span class="tag">six parts</span></div>
   <div class="fill"><div class="toc tight8">
-    <div class="tocrow"><span class="tn">1</span><span class="tt">The problem</span><span class="td">finding music by talking, and why it is hard</span></div>
+    <div class="tocrow"><span class="tn">1</span><span class="tt">The problem</span><span class="td">finding music by talking</span></div>
     <div class="tocrow"><span class="tn">2</span><span class="tt">Where the data comes from</span><span class="td">how the organisers built the conversations</span></div>
     <div class="tocrow"><span class="tn">3</span><span class="tt">How it is scored</span><span class="td">one right track per turn, plus a judged reply</span></div>
-    <div class="tocrow"><span class="tn">4</span><span class="tt">Our approach</span><span class="td">read the chat, search, rank, reply</span></div>
+    <div class="tocrow"><span class="tn">4</span><span class="tt">Our approach</span><span class="td">request understanding, retrieval, reranking, response generation</span></div>
     <div class="tocrow"><span class="tn">5</span><span class="tt">How it scored</span><span class="td">the official results</span></div>
-    <div class="tocrow"><span class="tn">6</span><span class="tt">What we learned</span><span class="td">four lessons, each with its evidence</span></div>
-    <div class="tocrow ax"><span class="tn">A</span><span class="tt">Appendix</span><span class="td">every detail: schema, branches, ranker, audits, relabelling</span></div>
+    <div class="tocrow"><span class="tn">6</span><span class="tt">What is not ideal</span><span class="td">four things, each with its evidence</span></div>
+    <div class="tocrow ax"><span class="tn">A</span><span class="tt">Appendix</span><span class="td">every other detail</span></div>
   </div></div>
 </section>
 
 <section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide divider" data-tier="optional" data-title="§1 · The problem"
-  data-notes="Part 1 of 6 — finding music by talking, and why it is hard.">
+  data-notes="Part 1 of 6 — finding music by talking.">
   <div class="divrail"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
   <div class="divicon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div>
   <div class="eq"><i style="height:22%"></i><i style="height:48%"></i><i style="height:30%"></i><i style="height:72%"></i><i style="height:40%"></i><i style="height:88%"></i><i style="height:34%"></i><i style="height:60%"></i><i style="height:26%"></i><i style="height:78%"></i><i style="height:44%"></i><i style="height:92%"></i><i style="height:36%"></i><i style="height:66%"></i><i style="height:28%"></i><i style="height:54%"></i><i style="height:38%"></i><i style="height:82%"></i><i style="height:30%"></i><i style="height:58%"></i><i style="height:24%"></i><i style="height:70%"></i><i style="height:42%"></i><i style="height:86%"></i><i style="height:32%"></i><i style="height:62%"></i><i style="height:26%"></i><i style="height:74%"></i><i style="height:46%"></i><i style="height:90%"></i></div>
   <div class="divwrap">
     <div class="divnum">1</div>
     <h1 class="divtitle">The problem</h1>
-    <div class="sub">finding music by talking, and why it is hard</div>
+    <div class="sub">finding music by talking</div>
   </div>
 </section>
 
@@ -651,16 +690,6 @@ tbody tr.hi td{background:var(--hue-soft)}
   <div class="tiny" style="margin-top:.8cqw">A real conversation from the challenge’s final test set.</div></div>
 </section>
 
-<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="Why it is hard"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Three things make this harder than search. The request is spread across turns. What the listener rejects has to stay rejected. And each turn has exactly one correct track among 47,071.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".6"/></svg></div><h2>Why it is hard</h2><span class="tag">The problem</span></div>
-  <div class="fill"><div class="icards c3">
-    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h4>It builds up</h4><p>Each turn refines the last: a mood, then a singer, then “more subdued”.</p></div>
-    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M9 9l6 6M15 9l-6 6"/></svg></div><h4>No means no</h4><p>A track or artist the listener turned down should stay out.</p></div>
-    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg></div><div class="big">47,071</div><h4>One right answer</h4><p>tracks in the catalog, and one of them is counted as correct.</p></div>
-  </div></div>
-</section>
-
 <section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide divider" data-tier="optional" data-title="§2 · Where the data comes from"
   data-notes="Part 2 of 6 — how the organisers built the conversations.">
   <div class="divrail"><span class="done"></span><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
@@ -673,36 +702,26 @@ tbody tr.hi td{background:var(--hue-soft)}
   </div>
 </section>
 
-<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="The conversations are simulated"
-  data-notes="&lt;b&gt;1:00.&lt;/b&gt; Nobody sat and chatted with a music bot. The organisers started from real listening sessions in the LFM-2b dataset, then had four Gemini 2.5 Flash agents play out each conversation: one writes a listener profile from five of that person’s tracks, one picks a goal from 44 templates (11 topics by 4 levels of specificity), and a listener agent and a recommender agent talk for eight turns. Source: TalkPlayData 2 (Doh et al., 2025), section 3.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h2>The conversations are simulated</h2><span class="tag">The data</span></div>
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="How the conversations were made"
+  data-notes="&lt;b&gt;1:15.&lt;/b&gt; Nobody chatted with a music bot. The organisers started from a real listening session in LFM-2b, then four Gemini 2.5 Flash agents played out each conversation: a profile agent writes a persona from five of that person’s tracks, a goal agent picks one of 44 goals, and a listener agent and a recommender agent talk for eight turns. The recommender never sees the goal and must pick from a pool of 16 to 32 tracks from the same session. Its pick becomes the answer the challenge scores you against. Source: TalkPlayData 2, section 3.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h2>How the conversations were made</h2><span class="tag">The data</span></div>
   <div class="fill"><div class="flow">
-    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4h4"/><path d="M12 8v4l3 2"/></svg></div><h4>A real listening session</h4><p>from LFM-2b, 2005–2020</p></div>
+    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4h4"/><path d="M12 8v4l3 2"/></svg></div><h4>A real listening session</h4><p>LFM-2b, 2005–2020</p></div>
     <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
-    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.4-4 4.2-6 7.5-6s5.9 2 7.5 6"/></svg></div><h4>Profile agent</h4><p>writes a listener persona from 5 of their tracks</p></div>
+    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.4-4 4.2-6 7.5-6s5.9 2 7.5 6"/></svg></div><h4>Profile agent</h4><p>a persona from 5 of their tracks</p></div>
     <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
-    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4h11l-2 4 2 4H5"/></svg></div><h4>Goal agent</h4><p>picks 1 of 44 goals — e.g. “find a song by its lyrics”</p></div>
+    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4h11l-2 4 2 4H5"/></svg></div><h4>Goal agent</h4><p>picks 1 of 44 goals</p></div>
     <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
-    <div class="fstep hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h4>Listener and recommender</h4><p>two agents talk for 8 turns</p></div>
+    <div class="fstep hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h4>Listener and recommender</h4><p>talk for 8 turns</p></div>
   </div>
-  <div class="takeaway">Every agent is <b>Gemini 2.5 Flash</b>. The conversations are written by LLMs,
-    on top of real listening histories.</div>
-  <div class="src">Source: TalkPlayData 2 (Doh et al., 2025), §3</div></div>
-</section>
-
-<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="Who knows what"
-  data-notes="&lt;b&gt;1:00.&lt;/b&gt; The detail that matters most later. The listener agent knows its goal. The recommender agent does not — it sees the listener profile and a pool of only 16 to 32 tracks from the same real session, and must pick from that pool. Whatever it picks becomes the correct answer for that turn. The listener then marks each pick as moving toward its goal or not.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div><h2>Who knows what</h2><span class="tag">The data</span></div>
-  <div class="fill"><div class="cols c2 knows">
+  <div class="cols c2 knows tight">
     <div class="agent"><div class="ahead"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.2"/><rect x="17" y="14" width="4" height="6" rx="1.2"/></svg></div><h4>Listener agent</h4></div>
-      <ul><li class="y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>the listener’s profile</span></li><li class="y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>the goal</span></li></ul>
-      <p>After each pick, marks it <b>MOVES</b> or <b>DOES NOT MOVE</b> toward the goal.</p></div>
+      <ul><li class="y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>the profile</span></li><li class="y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>the goal</span></li></ul></div>
     <div class="agent"><div class="ahead"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="8" width="14" height="11" rx="2.5"/><path d="M12 4v4"/><circle cx="9.5" cy="13.5" r="1"/><circle cx="14.5" cy="13.5" r="1"/></svg></div><h4>Recommender agent</h4></div>
-      <ul><li class="y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>the listener’s profile</span></li><li class="y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>a pool of 16–32 tracks</span></li><li class="n"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><path d="M4 4l16 16"/></svg><span>the goal</span></li></ul>
-      <p>Must pick one track from that pool each turn.</p></div>
+      <ul><li class="y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>the profile</span></li><li class="y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>a pool of 16–32 tracks</span></li><li class="n"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><path d="M4 4l16 16"/></svg><span>the goal</span></li></ul></div>
   </div>
-  <div class="takeaway">The recommender agent’s pick <b>is the answer key</b> the challenge scores you against.</div>
-  <div class="src">Source: TalkPlayData 2 (Doh et al., 2025), §3.2</div></div>
+  <div class="takeaway">All four agents are <b>Gemini 2.5 Flash</b>. The recommender’s pick <b>is the answer key</b>.</div>
+  <div class="src">Source: TalkPlayData 2 (Doh et al., 2025), §3</div></div>
 </section>
 
 <section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="What you get"
@@ -728,20 +747,6 @@ tbody tr.hi td{background:var(--hue-soft)}
   </div>
 </section>
 
-<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="Points for where you rank it"
-  data-notes="&lt;b&gt;0:45.&lt;/b&gt; Each turn has one correct track. You get a full point if it is first in your 20, about 0.63 if it is second, 0.29 at tenth, and nothing past twentieth. That is nDCG@20 with a single correct item. The leaderboard averages it over turns.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h2>Points for where you rank it</h2><span class="tag">Scoring</span></div>
-  <div class="fill"><div class="cols c2w">
-    <div class="bars"><div class="brow"><span class="bl">1st</span><div class="btrack"><div class="bfill" style="width:100%"></div></div><span class="bv">1.00</span></div><div class="brow"><span class="bl">2nd</span><div class="btrack"><div class="bfill" style="width:63%"></div></div><span class="bv">0.63</span></div><div class="brow"><span class="bl">3rd</span><div class="btrack"><div class="bfill" style="width:50%"></div></div><span class="bv">0.50</span></div><div class="brow"><span class="bl">5th</span><div class="btrack"><div class="bfill" style="width:39%"></div></div><span class="bv">0.39</span></div><div class="brow"><span class="bl">10th</span><div class="btrack"><div class="bfill" style="width:29%"></div></div><span class="bv">0.29</span></div><div class="brow"><span class="bl">20th</span><div class="btrack"><div class="bfill" style="width:23%"></div></div><span class="bv">0.23</span></div><div class="brow"><span class="bl">21st +</span><div class="btrack"><div class="bfill" style="width:0%"></div></div><span class="bv">0.00</span></div></div>
-    <div class="stack">
-      <div class="card"><h3>nDCG@20</h3><div class="small">One correct track per turn. Points depend only
-        on <b>where</b> you placed it in your 20.</div></div>
-      <div class="card accent"><h3>So</h3><div class="small">Second place costs a third of the point.
-        Outside the top 20 earns nothing.</div></div>
-    </div>
-  </div></div>
-</section>
-
 <section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="The final score"
   data-notes="&lt;b&gt;0:45.&lt;/b&gt; The leaderboard number mixes four things. Half is nDCG@20 — finding the right track. Thirty percent is an LLM judge rating the reply from 1 to 5. The last twenty percent rewards variety: catalog diversity is how many different tracks you recommend across all turns, and lexical diversity is how varied the wording of your replies is.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h2>The final score</h2><span class="tag">Scoring</span></div>
@@ -764,14 +769,14 @@ tbody tr.hi td{background:var(--hue-soft)}
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide divider" data-tier="optional" data-title="§4 · Our approach"
-  data-notes="Part 4 of 6 — read the chat, search, rank, reply.">
+  data-notes="Part 4 of 6 — request understanding, retrieval, reranking, response generation.">
   <div class="divrail"><span class="done"></span><span class="done"></span><span class="done"></span><span class="on"></span><span class=""></span><span class=""></span></div>
   <div class="divicon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v5M12 16v5M3 12h5M16 12h5"/></svg></div>
   <div class="eq"><i style="height:22%"></i><i style="height:48%"></i><i style="height:30%"></i><i style="height:72%"></i><i style="height:40%"></i><i style="height:88%"></i><i style="height:34%"></i><i style="height:60%"></i><i style="height:26%"></i><i style="height:78%"></i><i style="height:44%"></i><i style="height:92%"></i><i style="height:36%"></i><i style="height:66%"></i><i style="height:28%"></i><i style="height:54%"></i><i style="height:38%"></i><i style="height:82%"></i><i style="height:30%"></i><i style="height:58%"></i><i style="height:24%"></i><i style="height:70%"></i><i style="height:42%"></i><i style="height:86%"></i><i style="height:32%"></i><i style="height:62%"></i><i style="height:26%"></i><i style="height:74%"></i><i style="height:46%"></i><i style="height:90%"></i></div>
   <div class="divwrap">
     <div class="divnum">4</div>
     <h1 class="divtitle">Our approach</h1>
-    <div class="sub">read the chat, search, rank, reply</div>
+    <div class="sub">request understanding, retrieval, reranking, response generation</div>
   </div>
 </section>
 
@@ -779,59 +784,103 @@ tbody tr.hi td{background:var(--hue-soft)}
   data-notes="&lt;b&gt;0:50.&lt;/b&gt; An LLM compiles each conversation into a typed state. Eleven branches query ONE LanceDB table holding metadata, a full-text index and six embedding families. LambdaMART scores the pooled union and emits 20. A response model writes the reply, conditioned on the top track AND the same state. Note the families: two boxes are LLMs, the ranker is trees — people assume the Qwen model does the ranking.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h2>One state, eleven branches, one learned ranker</h2>
     <span class="tag">Approach</span></div>
-  <div class="diagram"><img src="figures/architecture.svg" alt="System architecture: conversation and played tracks go to an LLM state extractor; eleven retrieval branches query one LanceDB collection of 47,071 tracks; pooled candidates are scored by a LambdaMART reranker that emits twenty tracks; a response model writes a reply conditioned on the top track and the same state. A weighted reciprocal-rank-fusion path is the untrained baseline and fallback."></div>
+  <div class="diagram wide"><img src="figures/architecture.svg" alt="System architecture: conversation and played tracks go to an LLM state extractor; eleven retrieval branches query one LanceDB collection of 47,071 tracks; pooled candidates are scored by a LambdaMART reranker that emits twenty tracks; a response model writes a reply conditioned on the top track and the same state. A weighted reciprocal-rank-fusion path is the untrained baseline and fallback."></div>
+  <div class="src">Organisers supplied the audio (CLAP), cover-art (SigLIP-2), listening-data (BPR) and small text (Qwen3-0.6B) embeddings; we added Qwen3-8B text embeddings and our own bi-encoder.</div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Step 1 — read the chat into a state"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; First an LLM, DeepSeek-V4-Flash, reads the whole conversation and writes down what it understood as structured fields. Here: the artist to stay with, the two tracks already turned down, and three descriptions of the sound. Every later step reads these fields instead of the raw text.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h2>Step 1 — read the chat into a state</h2><span class="tag">Approach</span></div>
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Request understanding"
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; First an LLM, DeepSeek-V4-Flash, reads the whole conversation — every turn so far — and writes down what it understood as structured fields: the artist to stay with, the tracks already turned down, and how the listener describes the sound. Every later step reads these fields instead of the raw text.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h2>Request understanding</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="stateflow">
     <div class="chat mini">
-      <div class="bub sys"><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>“Calling Cards” — <i>not quite</i></div>
-      <div class="bub sys"><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>“Man” — <i>not it either</i></div>
-      <div class="bub me">Much more subdued… a sense of place in the lyrics… almost a cappella.</div>
+      <div class="bub sys"><span class="tl">Turn 1</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>“Calling Cards” — <i>not quite</i></div>
+      <div class="bub sys"><span class="tl">Turn 2</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>“Man” — <i>not it either</i></div>
+      <div class="bub me"><span class="tl">Turn 3 · now</span>Much more subdued… a sense of place in the lyrics… almost a cappella.</div>
     </div>
     <div class="sarrow"><span>LLM</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
-    <div class="scard">
-      <div class="srow"><span class="sk">Stay with</span><span class="sv">Neko Case</span></div>
-      <div class="srow"><span class="sk">Turned down</span><span class="sv">“Calling Cards”, “Man”</span></div>
-      <div class="srow"><span class="sk">Mood</span><span class="sv">subdued</span></div>
-      <div class="srow"><span class="sk">Lyrics</span><span class="sv">a sense of place</span></div>
-      <div class="srow"><span class="sk">Sound</span><span class="sv">stark, almost a cappella</span></div>
-    </div>
+    <div class="scard"><div class="srow"><span class="sk">Stay with</span><span class="sv">Neko Case</span></div><div class="srow"><span class="sk">Turned down</span><span class="sv">“Calling Cards”, “Man”</span></div><div class="srow"><span class="sk">Mood</span><span class="sv">subdued</span></div><div class="srow"><span class="sk">Lyrics</span><span class="sv">a sense of place</span></div><div class="srow"><span class="sk">Sound</span><span class="sv">stark, almost a cappella</span></div></div>
   </div>
-  <div class="takeaway">Every later step reads these fields, not the raw conversation.</div></div>
+  <div class="takeaway">The LLM reads <b>every turn so far</b> and writes structured fields; every later step reads those.</div></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Step 2 — search eleven ways"
-  data-notes="&lt;b&gt;0:50.&lt;/b&gt; The state drives eleven searches over one index of the catalog. Some match words, some match meaning, one matches how a track sounds, some look for tracks near the ones the listener liked, one uses this listener’s own history, and two are plain catalog lookups. Each returns up to 500 candidates; they are pooled into one list.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><h2>Step 2 — search eleven ways</h2><span class="tag">Approach</span></div>
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Understanding a lookup"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; A Blind-B turn. Two hard entities — an artist and an album — plus a soft phrase. The request type tells retrieval to run the exact catalog lookups.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h2>Understanding a lookup</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="stateflow">
+    <div class="chat mini"><div class="bub me"><span class="tl">Listener</span>Which song from Peter Doherty’s <i>Grace/Wastelands</i> was mentioned as one of the best tracks of 2009?</div>
+      <div class="bub sys"><span class="tl">We served</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Peter Doherty — “Arcady”, from <i>Grace/Wastelands</i></div></div>
+    <div class="sarrow"><span>LLM</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="scard"><div class="srow"><span class="sk">Request type</span><span class="sv">exact album</span></div><div class="srow"><span class="sk">Artist</span><span class="sv">Peter Doherty · must use</span></div><div class="srow"><span class="sk">Album</span><span class="sv">Grace/Wastelands · must use</span></div><div class="srow"><span class="sk">Also</span><span class="sv">“best tracks of 2009”</span></div></div>
+  </div>
+  <div class="takeaway">Two <b>hard</b> fields (artist, album) and one <b>soft</b> phrase. The request type switches on exact lookups.</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Understanding a visual request"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; A Blind-B turn where the listener only describes an album cover. The state carries three visual descriptions and a flag that switches on the cover-art search.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h2>Understanding a visual request</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="stateflow">
+    <div class="chat mini"><div class="bub me"><span class="tl">Listener</span>An album with a really striking, abstract cover art… bold colors and shapes, almost like a modern painting.</div>
+      </div>
+    <div class="sarrow"><span>LLM</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="scard"><div class="srow"><span class="sk">Request type</span><span class="sv">attribute search</span></div><div class="srow"><span class="sk">Cover art</span><span class="sv">striking, abstract</span></div><div class="srow"><span class="sk">Colours</span><span class="sv">bold colors and shapes</span></div><div class="srow"><span class="sk">Style</span><span class="sv">like a modern painting</span></div><div class="srow"><span class="sk">Flag</span><span class="sv">visual search</span></div></div>
+  </div>
+  <div class="takeaway">No artist, no title — only <b>descriptions</b>, plus a flag that turns on the cover-art search.</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Understanding “someone new”"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; A Blind-B turn where the listener likes the mood but wants a different artist. The state records the current artist as one to avoid, and keeps the mood and genre as things to search for.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h2>Understanding “someone new”</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="stateflow">
+    <div class="chat mini"><div class="bub me"><span class="tl">Listener</span>Can you suggest more tracks with that kind of emotional depth… from other singer-songwriter artists?</div>
+      </div>
+    <div class="sarrow"><span>LLM</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="scard"><div class="srow"><span class="sk">Request type</span><span class="sv">new artist</span></div><div class="srow"><span class="sk">Avoid</span><span class="sv">Ryan Adams &amp; The Cardinals</span></div><div class="srow"><span class="sk">Mood</span><span class="sv">introspective, emotional depth</span></div><div class="srow"><span class="sk">Sound</span><span class="sv">acoustic-driven</span></div><div class="srow"><span class="sk">Genre</span><span class="sv">singer-songwriter, alt-country</span></div></div>
+  </div>
+  <div class="takeaway">“Someone new” becomes an <b>artist to avoid</b>; the mood and genre carry over.</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Retrieval — eleven branches"
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; The state drives eleven retrieval branches over one index. BM25 matches keywords and resolved tags. Three dense-text branches use Qwen3 embeddings of lyrics, metadata and attributes. CLAP matches the sonic description against audio. Three anchor centroids search near tracks the listener liked, by cover art, audio and listening data. A user-CF centroid uses this listener’s own vector, and two catalog lookups cover discography and era popularity. Each returns its top 500; the pool is their union.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><h2>Retrieval — eleven branches</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="icards c3 compact">
-    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><div class="big">×1</div><h4>Words</h4><p>matching words in titles and tags</p></div>
-    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg></div><div class="big">×3</div><h4>Meaning</h4><p>similar descriptions, lyrics and metadata</p></div>
-    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h3l2.5-7 3 14 3-10 2.5 3H22"/></svg></div><div class="big">×1</div><h4>Sound</h4><p>what the track sounds like</p></div>
-    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></div><div class="big">×3</div><h4>Like these</h4><p>near the tracks the listener liked</p></div>
-    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.4-4 4.2-6 7.5-6s5.9 2 7.5 6"/></svg></div><div class="big">×1</div><h4>This listener</h4><p>their own listening history</p></div>
-    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6"/><path d="M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg></div><div class="big">×2</div><h4>Lookups</h4><p>the artist’s discography, hits from an era</p></div>
+    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><div class="big">×1</div><h4>BM25 + tag resolver</h4><p>keywords and resolved tags from the state</p></div>
+    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg></div><div class="big">×3</div><h4>Dense text</h4><p>Qwen3 embeddings of lyrics, metadata, attributes</p></div>
+    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h3l2.5-7 3 14 3-10 2.5 3H22"/></svg></div><div class="big">×1</div><h4>CLAP text → audio</h4><p>the sonic description, matched to audio</p></div>
+    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></div><div class="big">×3</div><h4>Anchor centroids</h4><p>near liked tracks: cover art, audio, listening</p></div>
+    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.4-4 4.2-6 7.5-6s5.9 2 7.5 6"/></svg></div><div class="big">×1</div><h4>User-CF centroid</h4><p>this listener’s own BPR vector</p></div>
+    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6"/><path d="M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg></div><div class="big">×2</div><h4>Catalog lookups</h4><p>the artist’s discography; era popularity</p></div>
   </div>
-  <div class="takeaway">Up to <b>500 candidates</b> from each search, pooled into one list.</div></div>
+  <div class="takeaway">Each branch returns its <b>top 500</b>; the ranker sees their union.</div></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Step 3 — rank the pool"
-  data-notes="&lt;b&gt;0:45.&lt;/b&gt; A learned ranker — gradient-boosted trees, LightGBM — scores every pooled candidate on 146 signals and keeps the top 20. Its single strongest signal is a similarity score from a model we fine-tuned to match conversations to tracks.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h2>Step 3 — rank the pool</h2><span class="tag">Approach</span></div>
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="One index"
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Everything about a track lives in one LanceDB table: metadata, a full-text index, and every embedding. The organisers supplied the audio, cover-art, listening-data and small text embeddings; we re-embedded metadata and attributes with the larger Qwen3 model and added our own bi-encoder vectors.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6"/><path d="M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg></div><h2>One index</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="cols c2w">
+    <table class="idx"><thead><tr><th>What it describes</th><th>Model</th><th>Source</th></tr></thead><tbody><tr><td>Lyrics</td><td>Qwen3-Embedding-0.6B</td><td class="src-org">organisers</td></tr><tr><td>Metadata text</td><td>Qwen3-Embedding-8B</td><td class="src-us">we built</td></tr><tr><td>Attributes text</td><td>Qwen3-Embedding-8B</td><td class="src-us">we built</td></tr><tr><td>Audio</td><td>LAION-CLAP</td><td class="src-org">organisers</td></tr><tr><td>Cover art</td><td>SigLIP-2</td><td class="src-org">organisers</td></tr><tr><td>Listening data</td><td>BPR collaborative filtering</td><td class="src-org">organisers</td></tr><tr><td>Conversation match</td><td>our fine-tuned bi-encoder</td><td class="src-us">we built</td></tr></tbody></table>
+    <div class="stack">
+      <div class="card"><h3>One LanceDB table</h3><div class="small">Metadata, a full-text index and every embedding
+        for all 47,071 tracks — each branch is a different query against the same table.</div></div>
+      <div class="card accent"><h3>Provided vs built</h3><div class="small">The organisers supplied four kinds of
+        embedding. We added larger text embeddings and our own bi-encoder.</div></div>
+    </div>
+  </div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Reranking"
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; A learned ranker — gradient-boosted trees in LightGBM — scores every pooled candidate on 146 features and keeps the top 20. The next two slides show what it relies on.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h2>Reranking</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="flow">
-    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".8"/><circle cx="4.5" cy="12" r=".8"/><circle cx="4.5" cy="18" r=".8"/></svg></div><h4>The pooled candidates</h4><p>up to 500 from each search</p></div>
+    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".8"/><circle cx="4.5" cy="12" r=".8"/><circle cx="4.5" cy="18" r=".8"/></svg></div><h4>The pooled candidates</h4><p>top 500 from each branch</p></div>
     <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
-    <div class="fstep hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h4>LightGBM ranker</h4><p>scores each on 146 signals</p></div>
+    <div class="fstep hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h4>LightGBM ranker</h4><p>146 features per candidate</p></div>
     <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
-    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M9 20h6"/></svg></div><h4>Top 20</h4><p>the list that gets scored</p></div>
+    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M9 20h6"/></svg></div><h4>Top 20</h4><p>the list that is scored</p></div>
   </div>
-  <div class="takeaway">Its strongest signal: a model we <b>fine-tuned</b> to score how well a track fits the
-    conversation.</div></div>
+  <div class="takeaway">One learned model decides the final order of <b>20 tracks</b>.</div></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="talk" data-dense data-title="The reranker"
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-dense data-title="The reranker"
   data-notes="&lt;b&gt;0:40.&lt;/b&gt; LightGBM LambdaMART over the union of branch pools. 146 features per (turn, track) pair, about 20.6M candidate rows. One feature — the bi-encoder cosine — carries 59% of split gain. Say the caveat: split gain describes the fit, not quality. And look at the bottom row: constraint features carry 0.7%, which is the main diagnostic.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-5M13 19v-9M18 19v-13"/></svg></div><h2>What the ranker leans on</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="cols c2w">
@@ -861,16 +910,47 @@ tbody tr.hi td{background:var(--hue-soft)}
   </div></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Step 4 — write the reply"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Finally a second LLM, Qwen3-30B, writes one short reply about the top track, using that track’s details and the state. This is a real reply from the final test set that our own LLM checker rated as good.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>Step 4 — write the reply</h2><span class="tag">Approach</span></div>
-  <div class="fill"><div class="chat">
-    <div class="bub me">Can you find something with a bit more of that gritty, raw blues rock energy?</div>
-    <div class="bub sys reply"><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span><span>“…if you’re craving that gritty, raw blues rock edge,
-      this one’s got it: Quaker City Night Hawks bring a smoky, soul-drenched intensity to ‘Good Evening’…”</span></div>
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-tier="optional" class="slide" data-title="The b1 bi-encoder"
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; Two towers, one shared encoder fine-tuned from Qwen3-Embedding-4B. The track card carries a one-line LLM-written &#x27;known for&#x27; description — the only world knowledge anywhere in the system. Document vectors precomputed for all 47,071 tracks; the conversation vector is encoded live with caching.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-5M13 19v-9M18 19v-13"/></svg></div><h2>The bi-encoder behind that top feature</h2>
+    <span class="tag">Approach</span></div>
+  <div class="diagram narrow"><img src="figures/biencoder2.svg" alt="Two-tower bi-encoder: a conversation rendering and a track card each pass through the same fine-tuned Qwen3-Embedding-4B encoder; last-token pooling and L2 normalisation give two 2560-dimensional unit vectors whose cosine is the reranker's top feature."></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Response generation"
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Finally a second LLM, Qwen3-30B, writes one short reply about the top track, from that track’s details and the state. This is a real reply from the final test set that our own LLM checker rated good.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>Response generation</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="chat big">
+    <div class="bub me"><span class="tl">Listener</span>Can you find something with a bit more of that gritty, raw blues rock energy?</div>
+    <div class="bub sys reply"><span class="tl">Our reply</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span><span>“…if you’re craving that gritty, raw blues rock edge, this one’s got it: Quaker City Night Hawks bring a smoky, soul-drenched intensity to ‘Good Evening’…”</span></div>
   </div>
-  <div class="takeaway">A second LLM (<b>Qwen3-30B</b>) writes one short reply about the top track, from its
-    details and the state.</div></div>
+  <div class="takeaway">A second LLM (<b>Qwen3-30B</b>) writes one short reply about the top track.</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-tier="optional" class="slide" data-dense data-title="Response generation"
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; Qwen3-30B-A3B-Instruct-2507 at temperature 0. One pass over the top-1 track as a delimited XML block plus the LATEST state only. Over a frozen Blind-A retrieval output we swept eight variants and reached 4.70 judge without changing any recommendation. No multi-draft sampling, no checking, no repair.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/></svg></div><h2>How the reply is written</h2>
+    <span class="tag">Approach</span></div>
+  <div class="fill"><div class="cols c2w">
+    <div class="card"><h3>The deployed style instruction</h3>
+      <div class="quote" style="font-size:1.3cqw;margin-top:.5cqw">“Write 1–2 concise sentences
+        about only the selected track. Prioritize the latest user request and extracted state over
+        older conversation history. If the track is reasonably aligned, explain the fit with one
+        specific supported reason. If it clearly conflicts with an explicit avoid/new-artist
+        constraint, do not oversell it or blame the system; briefly frame the limitation and the
+        closest supported reason.”</div></div>
+    <div class="stack">
+      <div class="card"><h3>Setup</h3>
+        <div class="small"><span class="mono">Qwen3-30B-A3B-Instruct-2507</span>, temperature 0.
+          One pass over the top-1 track as a delimited XML block (≤10 tags) plus the
+          <strong>latest</strong> state.</div></div>
+      <div class="card warn"><h3>How the prompt was chosen</h3>
+        <div class="small">Eight variants swept over a frozen Blind-A retrieval output → judge
+          <strong>4.70</strong>, no recommendations changed. Selected on the leaderboard score.</div></div>
+      <div class="card bad"><h3>Missing</h3>
+        <div class="small">No multi-draft sampling, no selection, no checking, no repair pass.</div></div>
+    </div>
+  </div></div>
 </section>
 
 <section style="--hue:#257E3D;--hue-soft:#E7F8EC" class="slide divider" data-tier="optional" data-title="§5 · How it scored"
@@ -893,7 +973,7 @@ tbody tr.hi td{background:var(--hue-soft)}
       <thead><tr><th>Official CodaBench split</th><th>nDCG@20</th><th>Cat.</th><th>Lex.</th><th>Judge</th><th>Composite</th></tr></thead>
       <tbody>
         <tr><td>Blind-A · development phase</td><td>0.4380</td><td>0.0313</td><td>0.8028</td><td>4.70</td><td>0.5799</td></tr>
-        <tr class="hi"><td>Blind-B · final, 29th of 40</td><td>0.2537</td><td>0.0315</td><td>0.7862</td><td>3.30</td><td>0.3811</td></tr>
+        <tr class="hi"><td>Blind-B · final</td><td>0.2537</td><td>0.0315</td><td>0.7862</td><td>3.30</td><td>0.3811</td></tr>
       </tbody>
     </table>
     <div class="cols c3" style="margin-top:2.4cqw">
@@ -910,38 +990,78 @@ tbody tr.hi td{background:var(--hue-soft)}
   </div>
 </section>
 
-<section style="--hue:#257E3D;--hue-soft:#E7F8EC" class="slide" data-tier="optional" data-title="Where our points came from"
-  data-notes="&lt;b&gt;0:45.&lt;/b&gt; Half nDCG@20, thirty percent an LLM judge rescaled from 1-5, ten each for catalog diversity and reply wording. Point at our decomposition: the judge term out-earned nDCG, and catalog diversity returned 0.003 of the 0.10 available.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h2>Where our points came from</h2><span class="tag">Results</span></div>
-  <div class="fill">
-    <div class="formula">0.50 · nDCG@20 &nbsp;+&nbsp; 0.10 · cat.div &nbsp;+&nbsp; 0.10 · lex.div &nbsp;+&nbsp; 0.30 · (judge − 1)/4</div>
-    <div class="cols c2" style="margin-top:2.4cqw">
-      <div class="card"><h3>Our Blind-B decomposition</h3>
-        <table class="tight"><tbody>
-          <tr><td>0.50 × nDCG@20 0.2537</td><td>0.1269</td></tr>
-          <tr><td>0.10 × cat. div. 0.0315</td><td>0.0032</td></tr>
-          <tr><td>0.10 × lex. div. 0.7862</td><td>0.0786</td></tr>
-          <tr><td>0.30 × (3.30−1)/4</td><td>0.1725</td></tr>
-          <tr class="hi"><td>Composite</td><td>0.3811</td></tr>
-        </tbody></table></div>
-      <div class="card accent"><h3>Where the score came from</h3>
-        <div class="small">The <strong>judge term out-earned nDCG</strong>, and category
-          diversity returned <strong>0.003</strong> of the 0.10 on offer. We optimised almost
-          entirely for relevance and left the diversity terms alone.</div></div>
-    </div>
-  </div>
+<section style="--hue:#257E3D;--hue-soft:#E7F8EC" class="slide" data-tier="optional" data-title="Where we placed"
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; On the final leaderboard we finished 29th with 0.381. The top team scored 0.689 and the median team about 0.47. The organisers’ BM25 baseline scored 0.162. Source: the official results table on the challenge site, which lists 41 teams and notes that verification is still in progress.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M9 20h6"/></svg></div><h2>Where we placed</h2><span class="tag">Results</span></div>
+  <div class="fill"><div class="bars board"><div class="brow"><span class="bl">#1 · hallucinated</span><div class="btrack"><div class="bfill top" style="width:95.7%"></div></div><span class="bv">0.689</span></div><div class="brow"><span class="bl">Median of 41 teams</span><div class="btrack"><div class="bfill mid" style="width:65.8%"></div></div><span class="bv">0.474</span></div><div class="brow"><span class="bl">#29 · npatta01 (us)</span><div class="btrack"><div class="bfill us" style="width:52.9%"></div></div><span class="bv">0.381</span></div><div class="brow"><span class="bl">Organisers’ BM25 baseline</span><div class="btrack"><div class="bfill base" style="width:22.5%"></div></div><span class="bv">0.162</span></div></div>
+  <div class="takeaway">29th: well above the baseline, below the median.</div>
+  <div class="src">Final (Blind-B) composite score. Source: official Music-CRS results table, nlp4musa.github.io/music-crs-challenge/results.html — 41 teams listed; verification in progress.</div></div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide divider" data-tier="optional" data-title="§6 · What we learned"
-  data-notes="Part 6 of 6 — four lessons, each with its evidence.">
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide divider" data-tier="optional" data-title="§6 · What is not ideal"
+  data-notes="Part 6 of 6 — four things, each with its evidence.">
   <div class="divrail"><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="on"></span></div>
   <div class="divicon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg></div>
   <div class="eq"><i style="height:22%"></i><i style="height:48%"></i><i style="height:30%"></i><i style="height:72%"></i><i style="height:40%"></i><i style="height:88%"></i><i style="height:34%"></i><i style="height:60%"></i><i style="height:26%"></i><i style="height:78%"></i><i style="height:44%"></i><i style="height:92%"></i><i style="height:36%"></i><i style="height:66%"></i><i style="height:28%"></i><i style="height:54%"></i><i style="height:38%"></i><i style="height:82%"></i><i style="height:30%"></i><i style="height:58%"></i><i style="height:24%"></i><i style="height:70%"></i><i style="height:42%"></i><i style="height:86%"></i><i style="height:32%"></i><i style="height:62%"></i><i style="height:26%"></i><i style="height:74%"></i><i style="height:46%"></i><i style="height:90%"></i></div>
   <div class="divwrap">
     <div class="divnum">6</div>
-    <h1 class="divtitle">What we learned</h1>
-    <div class="sub">four lessons, each with its evidence</div>
+    <h1 class="divtitle">What is not ideal</h1>
+    <div class="sub">four things, each with its evidence</div>
   </div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="optional" data-title="What is not ideal"
+  data-notes="&lt;b&gt;1:00.&lt;/b&gt; The four findings from our poster. The ranker was trained and validated on the same dev turns. The Kamelot turn: we extracted the album but never filtered on it. The tempo request: nothing in the catalog records tempo or key, and we added no outside data. The Metheny turn: the reply said “Got it” for a track that is not in the catalog.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg></div><h2>What is not ideal</h2><span class="tag">Lessons</span></div>
+  <div class="fill"><div class="nicard">We trained and validated the ranker on the <b>same dev turns</b>.</div>
+  <div class="mhead"><span>The listener asked for</span><span></span><span>Our top pick</span></div>
+  <div class="mrows">
+    <div class="mrow" style="--c:#2063D9"><div class="mh">We extracted more than we used</div><div class="mpair"><div class="ma">the Kamelot track from <b>Silverthorn</b></div><div class="mar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="mb">Kamelot — Fallen Star, from <b>Haven</b><span class="st">We extracted “Silverthorn” but never filtered on it</span></div></div></div>
+    <div class="mrow" style="--c:#7A3FB8"><div class="mh">We used no data from outside the catalog</div><div class="mpair"><div class="ma">exactly <b>126.70 bpm</b>, in G minor</div><div class="mar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="mb">the catalog has no tempo or key, and we added no outside source</div></div></div>
+    <div class="mrow" style="--c:#A55A18"><div class="mh">The reply said “Got it” for a track we did not have</div><div class="mpair"><div class="ma"><b>“Watercolors”</b> by Pat Metheny</div><div class="mar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="mb">Metheny — Alfie, with the reply <i>“Got it — here’s ‘Alfie’…”</i><span class="st">“Watercolors” is not in the catalog</span></div></div></div>
+  </div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="optional" data-title="Why we trained on the dev set"
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; Request understanding costs one paid LLM call per turn. Running it over the 121.6 thousand training turns was too expensive, so the ranker was trained on the 8,000 dev turns — the same turns we used to check it. We had no clean held-out set, and chose designs on replays of turns the model had already seen: 0.38 there, 0.25 on the blind test.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h2>Why we trained on the dev set</h2><span class="tag">Lessons</span></div>
+  <div class="fill"><div class="flow">
+    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h4>1 paid LLM call per turn</h4><p>to read each turn into a state</p></div>
+    <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h4>Too costly for 121.6k turns</h4><p>so no features on the training set</p></div>
+    <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="fstep hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h4>Trained on the 8,000 dev turns</h4><p>the same turns we checked it on</p></div>
+  </div>
+  <div class="bars devbars">
+    <div class="brow"><span class="bl">Dev, turns it trained on</span><div class="btrack"><div class="bfill warn" style="width:76.9%"></div></div><span class="bv">0.384</span></div>
+    <div class="brow"><span class="bl">Blind-B, official</span><div class="btrack"><div class="bfill" style="width:50.7%"></div></div><span class="bv">0.254</span></div>
+  </div>
+  <div class="src">nDCG@20. The dev row is an earlier model version, shown because it is the number we selected on. Source: paper §4.3, §5.3.</div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Failure 1 — extracted, then ignored"
+  data-notes="&lt;b&gt;0:35.&lt;/b&gt; The most common shape, and the most embarrassing. In each of these the state correctly carried an avoid for the artist, and we served that same artist at rank 1. This is our own model doing exactly what the training labels do — anchoring on the just-played artist. The constraint features carry 0.7% of ranker gain, which is why nothing stopped it.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Extracted, then ignored</h2>
+    <span class="tag">Went wrong</span></div>
+  <div class="tracks">
+    <div class="track bad"><div class="art"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+      <div class="meta"><div class="ask">“I gotta break away from <b>Deltron</b> and <b>Del</b> completely”</div>
+        <div class="l1">Dead Prez — Hip Hop</div>
+        <div class="l2">state held both artists as avoid</div></div>
+      <div class="badge">ignored</div></div>
+    <div class="track bad"><div class="art"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+      <div class="meta"><div class="ask">“branching out to <b>other</b> singer-songwriter artists”</div>
+        <div class="l1">Ryan Adams — When The Stars Go Blue</div>
+        <div class="l2">state held Ryan Adams as avoid</div></div>
+      <div class="badge">ignored</div></div>
+    <div class="track bad"><div class="art"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+      <div class="meta"><div class="ask">“still focusing on <b>Juanes</b>… haven't found the depth I'm after”</div>
+        <div class="l1">Juanes — Me Enamoré De Ti</div>
+        <div class="l2">state held Juanes as rejected</div></div>
+      <div class="badge">ignored</div></div>
+  </div>
+  <div class="takeaway">Three sessions, one failure: the listener asked to move on, the state
+    recorded it, and <b>the ranker served that artist anyway</b>.</div>
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-dense data-title="Where the failures were"
@@ -971,32 +1091,7 @@ tbody tr.hi td{background:var(--hue-soft)}
     downstream of understanding the conversation.</div></div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Failure 1 — extracted, then ignored"
-  data-notes="&lt;b&gt;0:35.&lt;/b&gt; The most common shape, and the most embarrassing. In each of these the state correctly carried an avoid for the artist, and we served that same artist at rank 1. This is our own model doing exactly what the training labels do — anchoring on the just-played artist. The constraint features carry 0.7% of ranker gain, which is why nothing stopped it.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Extracted, then ignored</h2>
-    <span class="tag">Went wrong</span></div>
-  <div class="tracks">
-    <div class="track bad"><div class="art"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
-      <div class="meta"><div class="ask">“I gotta break away from <b>Deltron</b> and <b>Del</b> completely”</div>
-        <div class="l1">Dead Prez — Hip Hop</div>
-        <div class="l2">state held both artists as avoid</div></div>
-      <div class="badge">ignored</div></div>
-    <div class="track bad"><div class="art"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
-      <div class="meta"><div class="ask">“branching out to <b>other</b> singer-songwriter artists”</div>
-        <div class="l1">Ryan Adams — When The Stars Go Blue</div>
-        <div class="l2">state held Ryan Adams as avoid</div></div>
-      <div class="badge">ignored</div></div>
-    <div class="track bad"><div class="art"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
-      <div class="meta"><div class="ask">“still focusing on <b>Juanes</b>… haven't found the depth I'm after”</div>
-        <div class="l1">Juanes — Me Enamoré De Ti</div>
-        <div class="l2">state held Juanes as rejected</div></div>
-      <div class="badge">ignored</div></div>
-  </div>
-  <div class="takeaway">Three sessions, one failure: the listener asked to move on, the state
-    recorded it, and <b>the ranker served that artist anyway</b>.</div>
-</section>
-
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Asked for, served"
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="talk" data-title="Asked for, served"
   data-notes="&lt;b&gt;0:40.&lt;/b&gt; Three real turns from the submitted Blind-B run. Each names the stage that broke. The Kamelot one stings: the album is in the catalog and we matched the artist but not the album. The Metheny one is a response failure, not retrieval.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Asked for, served</h2>
     <span class="tag">Went wrong</span></div>
@@ -1046,23 +1141,64 @@ tbody tr.hi td{background:var(--hue-soft)}
   <div class="src">Why: the answer is the simulated recommender’s pick from a 16–32-track pool, made without seeing the listener’s goal.</div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="optional" data-title="Lesson — we tuned on what we measured"
-  data-notes="&lt;b&gt;0:50.&lt;/b&gt; Our ranker was trained on the same 8,000 development turns we used to judge it. The number we chose designs by — a replay of turns the model had already seen — was 0.38. Held-out folds said about 0.20. The blind test came in between. We fooled ourselves with our own selection process.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h2>We tuned on what we measured</h2><span class="tag">Lesson</span></div>
-  <div class="fill"><div class="cols c2w">
-    <div class="bars">
-      <div class="brow"><span class="bl">Dev, turns it trained on</span><div class="btrack"><div class="bfill warn" style="width:76.9%"></div></div><span class="bv">0.384</span></div>
-      <div class="brow"><span class="bl">Blind-B, official</span><div class="btrack"><div class="bfill" style="width:50.7%"></div></div><span class="bv">0.254</span></div>
-      <div class="brow"><span class="bl">Dev, held-out folds</span><div class="btrack"><div class="bfill mute" style="width:40.6%"></div></div><span class="bv">0.203</span></div>
-    </div>
-    <div class="card accent"><h3>What happened</h3><div class="small">The ranker was trained <b>and</b>
-      checked on the same 8,000 dev turns. The number we steered by was a replay of turns it had already
-      seen.</div></div>
-  </div>
-  <div class="src">nDCG@20. The top row is an earlier model version, shown because it is the number we selected on. Source: paper, Table 3 and §5.3.</div></div>
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="optional" class="slide" data-title="How the relabelling worked"
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; Two cheap judges scored every labelable turn on two axes: was a different artist asked for, and does the track fit. Where they agree, about 80% of training turns, that verdict stands. Where they disagree, Opus arbitrates, blind to their verdicts.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>How the LLM relabelling worked</h2><span class="tag">Analysis</span></div>
+  <div class="small" style="margin-bottom:.6cqw">Both judges score the same two axes: was a
+    different artist asked for, and does the track fit the request?</div>
+  <div class="diagram"><img src="figures/relabelling.svg" alt="Relabelling flow: every labelable train and dev turn is scored by two LLM judges, Gemma-4-26B and DeepSeek-V4-Flash. Where they agree, about 80 percent of training turns, that verdict becomes the re-judged label. Where they disagree, about 20 percent, Claude Opus decides."></div>
+  <div class="small" style="margin-top:.6cqw">Agreement split measured on the training turns.</div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="optional" data-title="Four ways the reply went wrong"
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="optional" class="slide" data-title="What the relabelling found"
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; On 61% of training turns the judges would not settle on the played track being a good fit. 17% — 18,222 turns — keep the artist the listener had just rejected. We trained on the relabeled data and it scored lower against the original labels, so the submission kept the originals. Say the catch: that score is computed against the original labels, so it could not have favoured the relabeling.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>What the relabelling found</h2><span class="tag">Analysis</span></div>
+  <div class="fill"><div class="icards c3">
+    <div class="icard"><div class="big">113,393</div><h4>turns re-judged</h4><p>every labelable train and dev turn</p></div>
+    <div class="icard"><div class="big">61%</div><h4>not a good fit</h4><p>of training turns, the judges would not settle on the label fitting</p></div>
+    <div class="icard"><div class="big">17%</div><h4>keep the rejected artist</h4><p>18,222 training turns</p></div>
+  </div>
+  <div class="takeaway">Retrained on these labels, the ranker scored lower <b>against the original labels</b> — a test that could never favour the fix — so we kept the originals.</div></div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="core" data-title="Everything is released"
+  data-notes="&lt;b&gt;0:15.&lt;/b&gt; Paper, poster, slides, code, models and data are all linked from the project site. Thank you.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2h-2zM18 18h2v2h-2z"/></svg></div><h2>Everything is released</h2><span class="tag">Thank you</span></div>
+  <div class="fill center"><div class="qr big">
+    <img src="figures/qr-site.svg" alt="QR code for the project site, npatta01.github.io/music-crs-2026">
+    <div class="small"><strong>Paper, poster, slides, code, models, data</strong>
+      <div class="qrurl">npatta01.github.io/music-crs-2026</div></div></div></div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-appendix="0" data-title="Appendix index"
+  data-notes="Jump target. Type a number and press Enter from anywhere, or press G to search.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><h2>Appendix</h2><span class="tag">Type a number + Enter · or G to search</span></div>
+  <div class="fill"><div class="axgrid" id="axgrid"></div></div>
+</section>
+
+<section style="--hue:#257E3D;--hue-soft:#E7F8EC" data-appendix="1" class="slide" data-title="Where our points came from"
+  data-notes="&lt;b&gt;0:45.&lt;/b&gt; Half nDCG@20, thirty percent an LLM judge rescaled from 1-5, ten each for catalog diversity and reply wording. Point at our decomposition: the judge term out-earned nDCG, and catalog diversity returned 0.003 of the 0.10 available.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h2>Where our points came from</h2><span class="tag">Results</span></div>
+  <div class="fill">
+    <div class="formula">0.50 · nDCG@20 &nbsp;+&nbsp; 0.10 · cat.div &nbsp;+&nbsp; 0.10 · lex.div &nbsp;+&nbsp; 0.30 · (judge − 1)/4</div>
+    <div class="cols c2" style="margin-top:2.4cqw">
+      <div class="card"><h3>Our Blind-B decomposition</h3>
+        <table class="tight"><tbody>
+          <tr><td>0.50 × nDCG@20 0.2537</td><td>0.1269</td></tr>
+          <tr><td>0.10 × cat. div. 0.0315</td><td>0.0032</td></tr>
+          <tr><td>0.10 × lex. div. 0.7862</td><td>0.0786</td></tr>
+          <tr><td>0.30 × (3.30−1)/4</td><td>0.1725</td></tr>
+          <tr class="hi"><td>Composite</td><td>0.3811</td></tr>
+        </tbody></table></div>
+      <div class="card accent"><h3>Where the score came from</h3>
+        <div class="small">The <strong>judge term out-earned nDCG</strong>, and category
+          diversity returned <strong>0.003</strong> of the 0.10 on offer. We optimised almost
+          entirely for relevance and left the diversity terms alone.</div></div>
+    </div>
+  </div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="2" class="slide" data-title="Four ways the reply went wrong"
   data-notes="&lt;b&gt;1:15.&lt;/b&gt; All four are real Blind-B replies, with the judge&#x27;s own verdict. The first is the worst: &#x27;Got it&#x27; for a track we do not have. The second and third are the prompt working exactly as instructed — it was told to flag a conflict rather than oversell — and the result is a reply that argues against our own top pick. We optimised the prompt against the Blind-A judge and never checked what it did to the recommendation itself.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/></svg></div><h2>Four ways the reply went wrong</h2>
     <span class="tag">Response</span></div>
@@ -1087,22 +1223,7 @@ tbody tr.hi td{background:var(--hue-soft)}
   <div class="takeaway">Row 2 follows the prompt’s instruction <b>not to oversell</b> a weak match — so the reply argues against our own top pick.</div>
 </section>
 
-<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="core" data-title="Everything is released"
-  data-notes="&lt;b&gt;0:15.&lt;/b&gt; Paper, poster, slides, code, models and data are all linked from the project site. Thank you.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2h-2zM18 18h2v2h-2z"/></svg></div><h2>Everything is released</h2><span class="tag">Thank you</span></div>
-  <div class="fill center"><div class="qr big">
-    <img src="figures/qr-site.svg" alt="QR code for the project site, npatta01.github.io/music-crs-2026">
-    <div class="small"><strong>Paper, poster, slides, code, models, data</strong>
-      <div class="qrurl">npatta01.github.io/music-crs-2026</div></div></div></div>
-</section>
-
-<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-appendix="0" data-title="Appendix index"
-  data-notes="Jump target. Type a number and press Enter from anywhere, or press G to search.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><h2>Appendix</h2><span class="tag">Type a number + Enter · or G to search</span></div>
-  <div class="fill"><div class="axgrid" id="axgrid"></div></div>
-</section>
-
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="1" class="slide" data-title="The task"
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="3" class="slide" data-title="The task"
   data-notes="&lt;b&gt;0:45.&lt;/b&gt; Skip for a challenge audience — they built the same thing. Each assistant turn: return 20 tracks from a shared 47,071-track catalog and write a short reply presenting the top one. Training data is 15,199 LLM-generated sessions over TalkPlayData 2.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h2>The task</h2><span class="tag">Setup</span></div>
   <div class="fill"><div class="cols c2">
@@ -1133,13 +1254,13 @@ tbody tr.hi td{background:var(--hue-soft)}
   </div></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="2" class="slide" data-title="Glossary"
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="4" class="slide" data-title="Glossary"
   data-notes="&lt;b&gt;reference.&lt;/b&gt; The terms the rest of the deck uses without stopping to define. Skip when presenting.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg></div><h2>Glossary</h2><span class="tag">Background</span></div>
   <div class="fill"><div class="gloss"><div class="gterm"><b>Typed state</b><span>Structured fields an LLM reads off the conversation each turn: artists to anchor on, rejected tracks, filters, mood.</span></div><div class="gterm"><b>BM25</b><span>A classic keyword-search score over text fields.</span></div><div class="gterm"><b>Dense embedding</b><span>A vector from a neural model; texts with similar meaning land close together.</span></div><div class="gterm"><b>CLAP</b><span>A model that puts text and audio in one space, so a description can find a sound.</span></div><div class="gterm"><b>SigLIP-2</b><span>The same idea for text and images — here, album covers.</span></div><div class="gterm"><b>Collaborative filtering (BPR)</b><span>Vectors learned from who listened to what; BPR is the training method.</span></div><div class="gterm"><b>Centroid search</b><span>Average the vectors of tracks the listener liked, then search near that average.</span></div><div class="gterm"><b>RRF</b><span>Reciprocal-rank fusion: merge ranked lists by summing 1 / (k + rank) per track.</span></div><div class="gterm"><b>LambdaMART · LightGBM</b><span>Gradient-boosted decision trees trained to order a list; LightGBM is the library.</span></div><div class="gterm"><b>Bi-encoder</b><span>One model encodes the conversation and the track separately; relevance is the cosine of the two vectors.</span></div><div class="gterm"><b>LLM judge</b><span>An LLM that rates the reply 1–5; the organisers run it.</span></div><div class="gterm"><b>In-sample vs out-of-fold</b><span>Scoring on turns the model trained on, versus on held-out folds. In-sample overstates.</span></div></div></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="3" class="slide" data-title="State extraction"
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="5" class="slide" data-title="State extraction"
   data-notes="&lt;b&gt;0:50.&lt;/b&gt; DeepSeek-V4-Flash, schema-constrained, given the dialog and the IDs of tracks already played. Deliberately blind: no conversation goals, no goal progress, no user profile reach it — the state is whatever an LLM can read off the conversation itself. Cheaper extractors under-filled rejections and facets, so all final runs use this one.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>State extraction</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="cols c2">
@@ -1163,7 +1284,7 @@ tbody tr.hi td{background:var(--hue-soft)}
   </div></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="4" class="slide" data-title="The state schema"
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="6" class="slide" data-title="The state schema"
   data-notes="&lt;b&gt;0:40.&lt;/b&gt; Eleven field groups. The example on the next slide fills four of them. Worth pausing on how much is here versus how little reached retrieval — that is the main diagnostic.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>What the state can hold</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="cols c3">
@@ -1185,72 +1306,6 @@ tbody tr.hi td{background:var(--hue-soft)}
       <ul class="tight" style="margin-top:.4cqw"><li>release-year window</li>
         <li>process constraints</li></ul></div>
   </div></div>
-</section>
-
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="5" class="slide" data-dense data-title="State on a lookup turn"
-  data-notes="&lt;b&gt;0:45.&lt;/b&gt; A second shape. The listener names an artist and an album and asks a factual question about them. Both become must_use, the descriptive part becomes a facet, and the exact_entity_probe flag opens the catalog lookups. This is the easy case and the system gets it right — Arcady is from Grace/Wastelands.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>State on a lookup turn</h2><span class="tag">State</span></div>
-  <div class="fill"><div class="cols c2w">
-    <div class="card">
-      <div class="dialog" style="font-size:1.32cqw">
-        <div><span class="who">User:</span> “Can you tell me which song from Peter Doherty's
-          <em>Grace/Wastelands</em> was frequently mentioned as one of the best tracks of 2009?”</div>
-        <div style="height:.7cqw"></div>
-        <div><span class="who">Extracted state:</span></div>
-        <div>request_type: exact_album</div>
-        <div>intent_mode: refinement</div>
-        <div>artist: Peter Doherty (must_use)</div>
-        <div>album: Grace/Wastelands (must_use)</div>
-        <div>facet: "best tracks of 2009"</div>
-        <div>routing: exact_entity_probe = true</div>
-        <div style="height:.7cqw"></div>
-        <div><span class="who">We served:</span> Peter Doherty — “Arcady”</div>
-      </div>
-    </div>
-    <div class="stack">
-      <div class="card good"><h3>This one works</h3>
-        <div class="small">Two hard entities plus a soft facet. The probe flag opens the catalog
-          lookups, the album constrains the pool, and <em>Arcady</em> is genuinely from
-          <em>Grace/Wastelands</em>.</div></div>
-      <div class="card"><h3>Why it is easy</h3>
-        <div class="small">Everything the listener asked for is a field the catalog actually has.
-          Compare the next failures, where it is not.</div></div>
-    </div>
-  </div></div>
-</section>
-
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="6" class="slide" data-dense data-title="State on a request the catalog cannot answer"
-  data-notes="&lt;b&gt;0:50.&lt;/b&gt; A third shape, and the interesting one. The listener describes cover art. The extractor does the right thing — three visual facets and the image flag — which opens the gated SigLIP-2 cover-art branch. But the reranker carries no features for that branch, so whatever it returns cannot be weighed. Correct extraction, nowhere for it to go.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>State on a request the pipeline cannot use</h2>
-    <span class="tag">State</span></div>
-  <div class="fill"><div class="cols c2w">
-    <div class="card">
-      <div class="dialog" style="font-size:1.32cqw">
-        <div><span class="who">User:</span> “I'm looking for an album with a really striking,
-          abstract cover art. It had some bold colors and shapes, almost like a modern painting.”</div>
-        <div style="height:.7cqw"></div>
-        <div><span class="who">Extracted state:</span></div>
-        <div>request_type: attribute_search</div>
-        <div>facet: striking abstract cover art</div>
-        <div>facet: bold colors and shapes</div>
-        <div>facet: like a modern painting</div>
-        <div>routing: image_or_visual_search = true</div>
-        <div style="height:.7cqw"></div>
-        <div><span class="who">We served:</span> Frank Ocean — “Pink + White”</div>
-      </div>
-    </div>
-    <div class="stack">
-      <div class="card good"><h3>Extraction: right</h3>
-        <div class="small">Three visual facets and the image flag — exactly what the schema is
-          for.</div></div>
-      <div class="card bad"><h3>Pipeline: nowhere to put it</h3>
-        <div class="small">The flag opens the gated SigLIP-2 cover-art branch, but
-          <strong>the reranker has no features for that branch</strong>. Whatever it returns cannot
-          be weighed against anything else.</div></div>
-    </div>
-  </div>
-  <div class="takeaway">This is the gap in miniature: the state understood the request, and the
-    rest of the pipeline had no way to act on it.</div></div>
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="7" class="slide" data-dense data-title="Six request types, six shapes of state"
@@ -1362,34 +1417,7 @@ tbody tr.hi td{background:var(--hue-soft)}
   <div class="tiny" style="margin-top:1cqw">† Gated by intent mode: a pivot suppresses anchor centroids.</div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="11" class="slide" data-title="One index"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Everything lives in one LanceDB collection — metadata, a full-text index, and every embedding column. The goal was to express every filter in one space so retrieval could collapse into a single composed query. We never got there.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><h2>One LanceDB collection</h2><span class="tag">Approach</span></div>
-  <div class="fill"><div class="cols c2w">
-    <table class="tight">
-      <thead><tr><th>Column</th><th>Model</th><th>Dim</th></tr></thead>
-      <tbody>
-        <tr><td>Lyrics text</td><td>Qwen3-Embedding-0.6B</td><td>1024</td></tr>
-        <tr><td>Metadata text</td><td>Qwen3-Embedding-8B</td><td>—</td></tr>
-        <tr><td>Attributes text</td><td>Qwen3-Embedding-8B</td><td>—</td></tr>
-        <tr><td>Audio</td><td>LAION-CLAP</td><td>512</td></tr>
-        <tr><td>Cover art</td><td>SigLIP-2</td><td>768</td></tr>
-        <tr><td>Collaborative filtering</td><td>BPR</td><td>128</td></tr>
-        <tr class="hi"><td>Bi-encoder document</td><td>b1 (fine-tuned Qwen3-4B)</td><td>2560</td></tr>
-      </tbody>
-    </table>
-    <div class="stack">
-      <div class="card accent"><h3>The intent</h3>
-        <div class="small">Express every filter in one space, so retrieval could in principle
-          collapse into a single composed query.</div></div>
-      <div class="card bad"><h3>What happened</h3>
-        <div class="small">We never got there. Branches stayed separate and most state fields never
-          became query predicates at all.</div></div>
-    </div>
-  </div></div>
-</section>
-
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="12" class="slide" data-title="Fusion and fallback"
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="11" class="slide" data-title="Fusion and fallback"
   data-notes="&lt;b&gt;0:40.&lt;/b&gt; Weighted RRF, k=60, top-1000, plus multiplicative post-fusion adjustments. This is the untrained baseline AND the fallback if the learned ranker is unavailable. On the devset it scores nDCG@20 0.1492 against the learned ranker&#x27;s 0.1970 out-of-fold.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><h2>Weighted RRF — baseline and fallback</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="cols c2">
@@ -1413,14 +1441,7 @@ tbody tr.hi td{background:var(--hue-soft)}
   </div></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="13" class="slide" data-title="The b1 bi-encoder"
-  data-notes="&lt;b&gt;0:50.&lt;/b&gt; Two towers, one shared encoder fine-tuned from Qwen3-Embedding-4B. The track card carries a one-line LLM-written &#x27;known for&#x27; description — the only world knowledge anywhere in the system. Document vectors precomputed for all 47,071 tracks; the conversation vector is encoded live with caching.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-5M13 19v-9M18 19v-13"/></svg></div><h2>The bi-encoder behind that top feature</h2>
-    <span class="tag">Approach</span></div>
-  <div class="diagram narrow"><img src="figures/biencoder2.svg" alt="Two-tower bi-encoder: a conversation rendering and a track card each pass through the same fine-tuned Qwen3-Embedding-4B encoder; last-token pooling and L2 normalisation give two 2560-dimensional unit vectors whose cosine is the reranker's top feature."></div>
-</section>
-
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="14" class="slide" data-title="b1 training"
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="12" class="slide" data-title="b1 training"
   data-notes="&lt;b&gt;0:50.&lt;/b&gt; In-batch contrastive loss, temperature 1/20, four mined hard negatives per positive. Positives are conservative: only the 53,885 pairs whose NEXT turn&#x27;s goal-progress annotation says the recommendation moved the session forward. We tried it as a twelfth retrieval branch first — it added little to the union&#x27;s coverage, so it became a feature only. Its incremental effect on out-of-fold nDCG@20 was 0.1970 → 0.2032.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-5M13 19v-9M18 19v-13"/></svg></div><h2>How b1 was trained</h2><span class="tag">Approach</span></div>
   <div class="fill">
@@ -1442,7 +1463,7 @@ tbody tr.hi td{background:var(--hue-soft)}
   </div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="15" class="slide" data-title="Noisy-label down-weighting"
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="13" class="slide" data-title="Noisy-label down-weighting"
   data-notes="&lt;b&gt;0:40.&lt;/b&gt; Because we knew the labels were noisy, a turn is down-weighted when the NEXT turn contradicts it. Times 0.3 when the user rejects the labelled track or goal-progress says it did not help; times 0.6 when they reject only its artist; floored at 0.2. Chosen by hand, never tuned. Note the asymmetry: goal annotations shape training labels but are never features, because Blind-B removes them.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-5M13 19v-9M18 19v-13"/></svg></div><h2>Down-weighting contradicted turns</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="cols c2">
@@ -1461,33 +1482,7 @@ tbody tr.hi td{background:var(--hue-soft)}
   </div></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="16" class="slide" data-dense data-title="Response generation"
-  data-notes="&lt;b&gt;0:50.&lt;/b&gt; Qwen3-30B-A3B-Instruct-2507 at temperature 0. One pass over the top-1 track as a delimited XML block plus the LATEST state only. Over a frozen Blind-A retrieval output we swept eight variants and reached 4.70 judge without changing any recommendation. No multi-draft sampling, no checking, no repair.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/></svg></div><h2>Response generation — 30% of the composite</h2>
-    <span class="tag">Approach</span></div>
-  <div class="fill"><div class="cols c2w">
-    <div class="card"><h3>The deployed style instruction</h3>
-      <div class="quote" style="font-size:1.3cqw;margin-top:.5cqw">“Write 1–2 concise sentences
-        about only the selected track. Prioritize the latest user request and extracted state over
-        older conversation history. If the track is reasonably aligned, explain the fit with one
-        specific supported reason. If it clearly conflicts with an explicit avoid/new-artist
-        constraint, do not oversell it or blame the system; briefly frame the limitation and the
-        closest supported reason.”</div></div>
-    <div class="stack">
-      <div class="card"><h3>Setup</h3>
-        <div class="small"><span class="mono">Qwen3-30B-A3B-Instruct-2507</span>, temperature 0.
-          One pass over the top-1 track as a delimited XML block (≤10 tags) plus the
-          <strong>latest</strong> state.</div></div>
-      <div class="card warn"><h3>How the prompt was chosen</h3>
-        <div class="small">Eight variants swept over a frozen Blind-A retrieval output → judge
-          <strong>4.70</strong>, no recommendations changed. Selected on the leaderboard score.</div></div>
-      <div class="card bad"><h3>Missing</h3>
-        <div class="small">No multi-draft sampling, no selection, no checking, no repair pass.</div></div>
-    </div>
-  </div></div>
-</section>
-
-<section style="--hue:#257E3D;--hue-soft:#E7F8EC" data-appendix="17" class="slide" data-dense data-title="Development-split results"
+<section style="--hue:#257E3D;--hue-soft:#E7F8EC" data-appendix="14" class="slide" data-dense data-title="Development-split results"
   data-notes="&lt;b&gt;0:50.&lt;/b&gt; The numbers we actually steered on. The in-sample row is the one we selected against and it is a replay of turns the model trained on. Out-of-fold was 0.197–0.203. The blind score landed between them. Do not let anyone read 0.149 vs 0.197 as the value of learned re-ranking — the pool depths differ.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg></div><h2>Development split — what we steered on</h2>
     <span class="tag">Results</span></div>
@@ -1514,27 +1509,7 @@ tbody tr.hi td{background:var(--hue-soft)}
   </div></div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="18" class="slide" data-title="What is not ideal"
-  data-notes="&lt;b&gt;1:20.&lt;/b&gt; Four findings. One: we tuned on what we measured — the dev set was both training and evaluation data, and the response prompt was picked against the Blind-A leaderboard. Two: we extracted more than we used. Three: nothing from outside the catalog. Four: the reply was never checked. Say them plainly; they are findings, not apologies.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>What is not ideal</h2>
-    <span class="tag">Went wrong</span></div>
-  <div class="finds">
-    <div class="find c1"><div class="fic">1</div>
-      <h4>We tuned on what we measured</h4>
-      <p>The development set was both our training and our evaluation data.</p></div>
-    <div class="find c2"><div class="fic">2</div>
-      <h4>We extracted more than we used</h4>
-      <p>Most fields in the state never reached retrieval or ranking at all.</p></div>
-    <div class="find c3"><div class="fic">3</div>
-      <h4>Nothing from outside the catalog</h4>
-      <p>No tempo, key or soundtrack. Past one CF vector, no listening behaviour.</p></div>
-    <div class="find c4"><div class="fic">4</div>
-      <h4>The reply was never checked</h4>
-      <p>Asked for a track we did not have, it said “Got it” and offered another.</p></div>
-  </div>
-</section>
-
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="19" class="slide" data-dense data-title="Failure 2 — nothing in the data to match"
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="15" class="slide" data-dense data-title="Failure 2 — nothing in the data to match"
   data-notes="&lt;b&gt;0:55.&lt;/b&gt; A different shape: the extractor understood perfectly and there was simply nothing in the catalog to satisfy it. The Metheny case is the worst of the three — the track does not exist in the 47,071, and rather than say so the generator replied “Got it — here’s ‘Alfie’” as though the request had been met.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Failure 2 — nothing in the data to match</h2>
     <span class="tag">Analysis</span></div>
@@ -1559,7 +1534,7 @@ tbody tr.hi td{background:var(--hue-soft)}
     offer the nearest thing in its place.</div></div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="20" class="slide" data-dense data-title="Failure 3 — the better track was already in the pool"
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="16" class="slide" data-dense data-title="Failure 3 — the better track was already in the pool"
   data-notes="&lt;b&gt;0:55.&lt;/b&gt; This is the one that says the loss is in ranking, not retrieval. In each case a non-violating, better-fitting candidate was already in our own candidate pool, just below the top-20 we served. St Germain is nu-jazz and downtempo — literally what the user described — and it sat at pool rank 34 while we served the artist they had asked to avoid.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Failure 3 — the better track was already in our pool</h2>
     <span class="tag">Analysis</span></div>
@@ -1587,7 +1562,7 @@ tbody tr.hi td{background:var(--hue-soft)}
   </div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="21" class="slide" data-title="Label-free audit"
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="17" class="slide" data-title="Label-free audit"
   data-notes="&lt;b&gt;0:50.&lt;/b&gt; Two diagnostics on the submitted run, because Blind-B exposes no relevance labels. A single DeepSeek judge rated 78% of turns weak-or-bad. A deterministic trace audit found 43 diagnoses across 32 turns. These are audit categories, not measurements of what each cost us.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Auditing the submitted run</h2><span class="tag">Analysis</span></div>
   <div class="fill"><div class="cols c2">
@@ -1612,7 +1587,7 @@ tbody tr.hi td{background:var(--hue-soft)}
   </div></div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="22" class="slide" data-title="The target often ignores the request"
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="18" class="slide" data-title="The target often ignores the request"
   data-notes="&lt;b&gt;1:00.&lt;/b&gt; Ground truth is whatever played next, in a session an LLM wrote. Here the listener asks twice, explicitly, for a different artist — and the target stays on Bonobo both times, with the annotation calling both MOVES TOWARD GOAL. Our own model anchors on the just-played artist and we think it learns it here.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>The target often ignores the request</h2>
     <span class="tag">Analysis</span></div>
@@ -1636,38 +1611,7 @@ tbody tr.hi td{background:var(--hue-soft)}
   </div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="23" class="slide" data-title="How the relabelling worked"
-  data-notes="&lt;b&gt;0:50.&lt;/b&gt; Two cheap judges scored every labelable turn on two axes: was a different artist asked for, and does the track fit. Where they agree, about 80% of training turns, that verdict stands. Where they disagree, Opus arbitrates, blind to their verdicts.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>How the LLM relabelling worked</h2><span class="tag">Analysis</span></div>
-  <div class="small" style="margin-bottom:.6cqw">Both judges score the same two axes: was a
-    different artist asked for, and does the track fit the request?</div>
-  <div class="diagram"><img src="figures/relabelling.svg" alt="Relabelling flow: every labelable train and dev turn is scored by two LLM judges, Gemma-4-26B and DeepSeek-V4-Flash. Where they agree, about 80 percent of training turns, that verdict becomes the re-judged label. Where they disagree, about 20 percent, Claude Opus decides."></div>
-  <div class="small" style="margin-top:.6cqw">Agreement split measured on the training turns.</div>
-</section>
-
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="24" class="slide" data-title="What the relabelling found"
-  data-notes="&lt;b&gt;0:50.&lt;/b&gt; On 61% of training turns the judges would not settle on the played track being a good fit. 17% — 18,222 turns — keep the artist the listener had just rejected. We trained on the relabeled data and it scored lower against the original labels, so the submission kept the originals. Say the catch: that score is computed against the original labels, so it could not have favoured the relabeling.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>What the relabelling found</h2><span class="tag">Analysis</span></div>
-  <div class="cols c3" style="margin-bottom:2cqw">
-    <div class="card"><h3>Re-judged</h3><div class="stat sm">113,393</div>
-      <div class="small" style="margin-top:.5cqw">labelable train + dev turns</div></div>
-    <div class="card warn"><h3>Not settled as a good fit</h3><div class="stat sm" style="color:var(--warn)">61%</div>
-      <div class="small" style="margin-top:.5cqw">of the 106,393 training turns</div></div>
-    <div class="card bad"><h3>Outright anchoring</h3><div class="stat sm bad">18,222</div>
-      <div class="small" style="margin-top:.5cqw">17% — the label keeps the rejected artist</div></div>
-  </div>
-  <div class="cols c2">
-    <div class="card bad"><h3>What happened when we used them</h3>
-      <div class="body" style="font-size:1.7cqw;color:var(--ink)">A ranker trained on the re-judged
-        labels scored <strong>lower</strong> — so the submission kept the originals.</div></div>
-    <div class="card warn"><h3>The catch</h3>
-      <div class="small">That score is computed <strong>against the original labels</strong>, so it
-        could not have favoured the relabeling. We release the re-judged labels as evidence to
-        audit, not as a corrected benchmark.</div></div>
-  </div>
-</section>
-
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="25" class="slide" data-title="Limits of our own analysis"
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="19" class="slide" data-title="Limits of our own analysis"
   data-notes="&lt;b&gt;0:40.&lt;/b&gt; Volunteer these before anyone asks.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Limits of our own analysis</h2><span class="tag">Analysis</span></div>
   <div class="fill"><ul>
@@ -1681,7 +1625,7 @@ tbody tr.hi td{background:var(--hue-soft)}
   </ul></div>
 </section>
 
-<section style="--hue:#A55A18;--hue-soft:#FBEFE4" data-appendix="26" class="slide" data-title="What we would do differently"
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" data-appendix="20" class="slide" data-title="What we would do differently"
   data-notes="&lt;b&gt;0:35.&lt;/b&gt; Ordered by expected value, not effort. Point one is free and would have changed every decision we made. Point five is the honest one — we still have no principled answer.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><h2>What we would do differently</h2><span class="tag">Conclusion</span></div>
   <div class="fill"><ol>
@@ -1698,7 +1642,7 @@ tbody tr.hi td{background:var(--hue-soft)}
   </ol></div>
 </section>
 
-<section style="--hue:#A55A18;--hue-soft:#FBEFE4" data-appendix="27" class="slide" data-title="Related work"
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" data-appendix="21" class="slide" data-title="Related work"
   data-notes="The design combines four established lines rather than proposing a new method. What we report is how the combination behaved.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><h2>Related work — four established lines</h2><span class="tag">A1</span></div>
   <div class="fill"><div class="cols c2">
@@ -1722,7 +1666,7 @@ tbody tr.hi td{background:var(--hue-soft)}
   </div></div>
 </section>
 
-<section style="--hue:#A55A18;--hue-soft:#FBEFE4" data-appendix="28" class="slide" data-title="Reproducing the run"
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" data-appendix="22" class="slide" data-title="Reproducing the run"
   data-notes="How to actually re-run it.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><h2>Reproducing the run</h2><span class="tag">A2</span></div>
   <div class="fill"><div class="stack">

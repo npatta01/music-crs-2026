@@ -73,6 +73,25 @@ before the approach is understood, not grounded enough. Rebuilt:
 - New tier `talk` (talk-only) so the talk keeps its slides without them
   appearing in the beginner deck. Talk is 11 slides; revisit after the deck.
 
+## Round 3 (2026-09-27): 18 markup notes
+
+- Cut "Why it is hard" and the nDCG explainer; merged the two data slides into
+  "How the conversations were made" (pipeline + who knows what).
+- §4 steps renamed request understanding / retrieval / reranking / response
+  generation; request understanding labels each turn; three more real state
+  examples (Doherty lookup, Frank Ocean cover art, Ryan Adams "someone new").
+- Promoted from the appendix: retrieval (technical branch names) and one index
+  (with an organisers-vs-built column), what the ranker leans on, the
+  bi-encoder, how the reply is written, how the relabelling worked, and a
+  short "what the relabelling found".
+- System diagram now full width, footnoted with which embeddings the
+  organisers supplied (docs/data.md).
+- §5: "Where we placed" from the official results table (static/results.csv):
+  #1 0.689, median of 41 teams 0.474, us 29th 0.381, BM25 baseline 0.162.
+  Table lists 41 teams (paper/poster say 40); verification in progress.
+- §6 is "What is not ideal", led by the poster's four findings, then why we
+  trained on the dev set (state extraction cost one paid LLM call per turn).
+
 ## Next action
 
 Author reviews both PDFs; then open the deck PR.
