@@ -21,7 +21,7 @@ print on plain matte paper with no lamination or mounting. See the
 | --- | --- |
 | `deck.html` | **Deck source.** The detailed record of the work — edit this. |
 | `talk.html` | **Present from this.** Self-contained, figures inlined, no network. |
-| `deck-detailed.pdf` | **For someone new to this space.** A 34-slide main flow in six parts — the problem, how the organisers built the data, scoring, our approach step by step, results, what is not ideal — then a 23-slide appendix with every deep dive. Visual-first; the score appears only in part five. |
+| `deck-detailed.pdf` | **For someone new to this space.** A 39-slide main flow in six parts — the problem, how the organisers built the data, scoring, our approach step by step, results, what is not ideal — then an 18-slide appendix with every deep dive. Visual-first; the score appears only in part five. |
 | `talk-10min.pdf` | **The workshop talk.** 11 slides for the 14:50–15:00 slot (~7 min + Q&A), for an audience of competitors. Same source, core slides only. |
 | `DECK_PLAN.md` | The plan for both views: audiences, constraints, talk path, status. |
 | `render-deck.sh` | Builds `talk.html`, renders both deck PDFs, preflights them. |

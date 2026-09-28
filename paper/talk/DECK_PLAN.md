@@ -92,6 +92,19 @@ before the approach is understood, not grounded enough. Rebuilt:
 - §6 is "What is not ideal", led by the poster's four findings, then why we
   trained on the dev set (state extraction cost one paid LLM call per turn).
 
+## Round 4 (2026-09-28): 13 markup notes
+
+- Diagram edge-to-edge (it is width-bound at ~3:1); state-example, bi-encoder,
+  placed and weights slides enlarged to use the space.
+- "How the reply is written" is now the instruction, large, plus one setup line.
+- Main flow gains: the state schema; down-weighting as weights (every turn starts
+  at 1.0; ×0.6 artist rejected, ×0.3 track rejected or goal says no, floor 0.2);
+  the anchoring example as chat bubbles.
+- §6 has one slide per finding: dev-set training, extracted-then-ignored (with
+  why: labels taught it; rejections = 0.7% of gain), no outside data (tempo/key,
+  Breaking Bad soundtrack — both verified in the Blind-B audit), and "The reply
+  was never checked" (the four real replies, promoted).
+
 ## Next action
 
 Author reviews both PDFs; then open the deck PR.
