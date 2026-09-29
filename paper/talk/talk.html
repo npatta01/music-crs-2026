@@ -708,6 +708,9 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 .slide[data-title="Label example — “from a different artist”"] .chat .bub{font-size:1.6cqw;padding:.6cqw 1.2cqw}
 .slide[data-title="Label example — “from a different artist”"] .chat{gap:.5cqw}
 .slide[data-title="Label example — “from a different artist”"] .bub .tl{margin-bottom:.25cqw}
+
+/* talk: tier badges and the CORE PATH flag are never shown (skip cues live in the notes) */
+.tier,#coreflag,#coreflag.on{display:none!important}
 </style>
 </head>
 <body>
@@ -717,7 +720,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 <!-- ═══════════════ SPINE ═══════════════ -->
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide cover" data-tier="core" data-title="Title — 29th of 40"
-  data-notes="&lt;b&gt;0:15.&lt;/b&gt; Team npatta01, three independent researchers. This deck explains the challenge from scratch, then our system, and keeps the score for the end.">
+  data-notes="&lt;b&gt;0:10.&lt;/b&gt; Team npatta01, three independent researchers. This deck explains the challenge from scratch, then our system, and keeps the score for the end.">
   <div class="eq"><i style="height:18%"></i><i style="height:44%"></i><i style="height:26%"></i><i style="height:68%"></i><i style="height:36%"></i><i style="height:84%"></i><i style="height:30%"></i><i style="height:56%"></i><i style="height:22%"></i><i style="height:74%"></i><i style="height:40%"></i><i style="height:88%"></i><i style="height:32%"></i><i style="height:62%"></i><i style="height:24%"></i><i style="height:50%"></i><i style="height:34%"></i><i style="height:78%"></i><i style="height:28%"></i><i style="height:54%"></i><i style="height:20%"></i><i style="height:66%"></i><i style="height:38%"></i><i style="height:82%"></i><i style="height:28%"></i><i style="height:58%"></i><i style="height:22%"></i><i style="height:70%"></i><i style="height:42%"></i><i style="height:86%"></i></div>
   <div class="kicker">RecSys Challenge 2026 · Music-CRS</div>
   <h1>State-Driven Retrieval and<br>Learned Re-Ranking for<br>Conversational Music Recommendation</h1>
@@ -728,26 +731,6 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
     <div><div class="stat sm">11</div><div class="statlab">ways to search</div></div>
     <div><div class="stat sm">1</div><div class="statlab">learned ranker</div></div>
   </div>
-</section>
-
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide summary" data-tier="talk" data-title="The short version"
-  data-notes="&lt;b&gt;0:35.&lt;/b&gt; The whole talk in three lines. We built a state-driven pipeline, it finished 29th of 40, and when we audited all 80 final turns the failures were overwhelmingly downstream of understanding: 31 of 43 diagnoses were ranking, 3 were extraction. The system understood the conversation more often than it acted on it.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4l2.4 5 5.6.8-4 3.9.9 5.5L12 16.6 7.1 19.2l.9-5.5-4-3.9 5.6-.8z"/></svg></div><h2>The short version</h2><span class="tag">Summary</span></div>
-  <div class="fill"><div class="cols c3">
-    <div class="card"><h3>What we built</h3>
-      <div class="small">An LLM reads each turn into a <strong>typed state</strong>; eleven retrieval
-        branches search one index; a <strong>LightGBM</strong> ranker picks 20; an LLM writes the
-        reply.</div></div>
-    <div class="card"><h3>How it scored</h3>
-      <div class="stat">0.3811</div><div class="statlab">Blind-B · 29th of 40</div>
-      <div class="small" style="margin-top:.7cqw">nDCG@20 fell from 0.438 on Blind-A to 0.254.</div></div>
-    <div class="card bad"><h3>What we found</h3>
-      <div class="stat bad">31 <span style="font-size:.5em">of 43</span></div>
-      <div class="statlab">diagnosed failures were ranking</div>
-      <div class="small" style="margin-top:.7cqw">Extraction was <strong>3</strong>. The state was richer
-        than what the ranker used.</div></div>
-  </div>
-  <div class="takeaway">The system understood the conversation more often than it <b>acted on it</b>.</div></div>
 </section>
 
 <section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="Contents"
@@ -881,7 +864,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="The system in one picture"
-  data-notes="&lt;b&gt;0:50.&lt;/b&gt; An LLM compiles each conversation into a typed state. Eleven branches query ONE LanceDB table holding metadata, a full-text index and six embedding families. LambdaMART scores the pooled union and emits 20. A response model writes the reply, conditioned on the top track AND the same state. Note the families: two boxes are LLMs, the ranker is trees — people assume the Qwen model does the ranking.">
+  data-notes="&lt;b&gt;0:45.&lt;/b&gt; An LLM compiles each conversation into a typed state. Eleven branches query ONE LanceDB table holding metadata, a full-text index and six embedding families. LambdaMART scores the pooled union and emits 20. A response model writes the reply, conditioned on the top track AND the same state. Note the families: two boxes are LLMs, the ranker is trees — people assume the Qwen model does the ranking.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h2>One state, eleven branches, one learned ranker</h2>
     <span class="tag">Approach</span></div>
   <div class="diagram wide"><img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB2aWV3Qm94PSIwIDAgMTcwMCA1NjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgcm9sZT0iaW1nIgogICAgICAgYXJpYS1sYWJlbD0iU3lzdGVtIGFyY2hpdGVjdHVyZS4gVGhlIGNvbnZlcnNhdGlvbiBhbmQgdGhlIHRyYWNrcyBhbHJlYWR5IHBsYXllZCBnbyB0byBhbiBMTE0gdGhhdCBlbWl0cyBhIHR5cGVkIHN0YXRlLiBFbGV2ZW4gcmV0cmlldmFsIGJyYW5jaGVzIHF1ZXJ5IG9uZSBMYW5jZURCIGNvbGxlY3Rpb24gb2YgNDcsMDcxIHRyYWNrcy4gVGhlaXIgcG9vbGVkIGNhbmRpZGF0ZXMsIGNhcHBlZCBhdCA1MDAgcGVyIGJyYW5jaCwgYXJlIHNjb3JlZCBieSBhIExhbWJkYU1BUlQgcmVyYW5rZXIgd2l0aCAxNDYgZmVhdHVyZXMsIHdoaWNoIGVtaXRzIHRoZSB0b3AgdHdlbnR5IHRyYWNrcy4gQSByZXNwb25zZSBtb2RlbCB0aGVuIHdyaXRlcyBhIHJlcGx5IGFib3V0IHRoZSB0b3AgdHJhY2ssIGNvbmRpdGlvbmVkIG9uIHRoYXQgdHJhY2sgYW5kIHRoZSBsYXRlc3Qgc3RhdGUuIEEgd2VpZ2h0ZWQgcmVjaXByb2NhbC1yYW5rLWZ1c2lvbiBwYXRoIG92ZXIgdGhlIHNhbWUgcG9vbCBpcyB0aGUgdW50cmFpbmVkIGJhc2VsaW5lIGFuZCB0aGUgZmFsbGJhY2sgcmFua2luZy4iPgogICAgPGRlZnM+CiAgICAgIDxtYXJrZXIgaWQ9ImFyIiB2aWV3Qm94PSIwIDAgMTAgMTAiIHJlZlg9IjkiIHJlZlk9IjUiIG1hcmtlcldpZHRoPSI2IiBtYXJrZXJIZWlnaHQ9IjYiIG9yaWVudD0iYXV0by1zdGFydC1yZXZlcnNlIj4KICAgICAgICA8cGF0aCBkPSJNMCwwIEwxMCw1IEwwLDEwIHoiIGZpbGw9IiM1MDU0NUIiLz48L21hcmtlcj4KICAgICAgPG1hcmtlciBpZD0iYXJiIiB2aWV3Qm94PSIwIDAgMTAgMTAiIHJlZlg9IjkiIHJlZlk9IjUiIG1hcmtlcldpZHRoPSI2IiBtYXJrZXJIZWlnaHQ9IjYiIG9yaWVudD0iYXV0by1zdGFydC1yZXZlcnNlIj4KICAgICAgICA8cGF0aCBkPSJNMCwwIEwxMCw1IEwwLDEwIHoiIGZpbGw9IiMxYTU2ZGIiLz48L21hcmtlcj4KICAgICAgPG1hcmtlciBpZD0iYXJkIiB2aWV3Qm94PSIwIDAgMTAgMTAiIHJlZlg9IjkiIHJlZlk9IjUiIG1hcmtlcldpZHRoPSI2IiBtYXJrZXJIZWlnaHQ9IjYiIG9yaWVudD0iYXV0by1zdGFydC1yZXZlcnNlIj4KICAgICAgICA8cGF0aCBkPSJNMCwwIEwxMCw1IEwwLDEwIHoiIGZpbGw9IiM3Mzc3ODAiLz48L21hcmtlcj4KICAgIDwvZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmJ0e2ZvbnQ6NzAwIDI0cHggIkxhdG8iLCJMaWJlcmF0aW9uIFNhbnMiLHNhbnMtc2VyaWY7ZmlsbDojMTYxODFDfQogICAgICAuYnN7Zm9udDo0MDAgMThweCAiTGF0byIsIkxpYmVyYXRpb24gU2FucyIsc2Fucy1zZXJpZjtmaWxsOiM0NDQ4NEZ9CiAgICAgIC5ibXtmb250OjcwMCAxNnB4ICJEZWphVnUgU2FucyBNb25vIixtb25vc3BhY2U7ZmlsbDojNDQ0ODRGfQogICAgICAuYW57Zm9udDo3MDAgMThweCAiTGF0byIsIkxpYmVyYXRpb24gU2FucyIsc2Fucy1zZXJpZjtmaWxsOiMxNjE4MUM7bGV0dGVyLXNwYWNpbmc6LjAzZW19CiAgICAgIC5oZHtmb250OjcwMCAxN3B4ICJMYXRvIiwiTGliZXJhdGlvbiBTYW5zIixzYW5zLXNlcmlmO2ZpbGw6IzQ0NDg0RjtsZXR0ZXItc3BhY2luZzouMTJlbX0KICAgICAgLmNoe2ZvbnQ6NzAwIDIwcHggIkxhdG8iLCJMaWJlcmF0aW9uIFNhbnMiLHNhbnMtc2VyaWZ9CiAgICAgIC5jc3tmb250OjQwMCAxOHB4ICJMYXRvIiwiTGliZXJhdGlvbiBTYW5zIixzYW5zLXNlcmlmO2ZpbGw6IzQ0NDg0Rn0KICAgICAgLmJne2ZpbGw6bm9uZTtzdHJva2Utd2lkdGg6Mi4yO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZH0KICAgIDwvc3R5bGU+CgogICAgPCEtLSBjb252ZXJzYXRpb24gLT4gdHlwZWQgc3RhdGUgLS0+CiAgICA8cmVjdCB4PSI4IiB5PSIyMzgiIHdpZHRoPSIxOTYiIGhlaWdodD0iMTI0IiByeD0iMTIiIGZpbGw9IiNmZmYiIHN0cm9rZT0iI0JDQzBDNiIgc3Ryb2tlLXdpZHRoPSIxLjgiLz4KICAgIDx0ZXh0IGNsYXNzPSJidCIgeD0iMTA2IiB5PSIyODIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkNvbnZlcnNhdGlvbjwvdGV4dD4KICAgIDx0ZXh0IGNsYXNzPSJicyIgeD0iMTA2IiB5PSIzMTAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPmV2ZXJ5IHR1cm4gc28gZmFyPC90ZXh0PgogICAgPHRleHQgY2xhc3M9ImJzIiB4PSIxMDYiIHk9IjMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+KyB0cmFja3MgYWxyZWFkeSBwbGF5ZWQ8L3RleHQ+CiAgICA8bGluZSB4MT0iMjA4IiB5MT0iMzAwIiB4Mj0iMjQ4IiB5Mj0iMzAwIiBzdHJva2U9IiM1MDU0NUIiIHN0cm9rZS13aWR0aD0iMi42IiBtYXJrZXItZW5kPSJ1cmwoI2FyKSIvPgoKICAgIDxyZWN0IHg9IjI1MiIgeT0iMjAwIiB3aWR0aD0iMjMyIiBoZWlnaHQ9IjIwMCIgcng9IjEyIiBmaWxsPSIjZDllNGZiIiBzdHJva2U9IiM5M2IwZWMiIHN0cm9rZS13aWR0aD0iMS44Ii8+CiAgICA8dGV4dCBjbGFzcz0iYnQiIHg9IjM2OCIgeT0iMjQwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMWE1NmRiIj5UeXBlZCBzdGF0ZTwvdGV4dD4KICAgIDx0ZXh0IGNsYXNzPSJicyIgeD0iMzY4IiB5PSIyNjUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkxMTSDCtyBEZWVwU2Vlay1WNC1GbGFzaDwvdGV4dD4KICAgIDx0ZXh0IGNsYXNzPSJibSIgeD0iMjcwIiB5PSIyOTkiPmFuY2hvcnMgwrcgcmVqZWN0aW9uczwvdGV4dD4KICAgIDx0ZXh0IGNsYXNzPSJibSIgeD0iMjcwIiB5PSIzMjQiPmhhcmQgZmlsdGVycyDCtyBmYWNldHM8L3RleHQ+CiAgICA8dGV4dCBjbGFzcz0iYm0iIHg9IjI3MCIgeT0iMzQ5Ij5pbnRlbnQgwrcgeWVhciByYW5nZTwvdGV4dD4KICAgIDx0ZXh0IGNsYXNzPSJicyIgeD0iMzY4IiB5PSIzODIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPm5vIGdvYWwgbGFiZWxzIGFyZSB1c2VkPC90ZXh0PgogICAgPGxpbmUgeDE9IjQ4OCIgeTE9IjMwMCIgeDI9IjUyNiIgeTI9IjMwMCIgc3Ryb2tlPSIjMWE1NmRiIiBzdHJva2Utd2lkdGg9IjIuNiIgbWFya2VyLWVuZD0idXJsKCNhcmIpIi8+CgogICAgPCEtLSBlbGV2ZW4gYnJhbmNoZXMsIG9uZSBpbmRleCAtLT4KICAgIDxyZWN0IHg9IjUzMCIgeT0iMTAiIHdpZHRoPSI0NzAiIGhlaWdodD0iNTA2IiByeD0iMTQiIGZpbGw9IiNFRUYwRjIiIHN0cm9rZT0iI0JDQzBDNiIgc3Ryb2tlLXdpZHRoPSIxLjgiLz4KICAgIDx0ZXh0IGNsYXNzPSJoZCIgeD0iNzY1IiB5PSI0NCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+RUxFVkVOIEJSQU5DSEVTIMK3IE9ORSBJTkRFWDwvdGV4dD4KCiAgICA8cmVjdCB4PSI1NTAiIHk9IjU2IiB3aWR0aD0iNDMwIiBoZWlnaHQ9IjU4IiByeD0iOSIgZmlsbD0iI2ZhZTRjMyIgc3Ryb2tlPSIjZGNiMDY5IiBzdHJva2Utd2lkdGg9IjEuOCIvPgogICAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNTY2LDcxKSBzY2FsZSgxLjE2KSI+PHBhdGggY2xhc3M9ImJnIiBkPSJNNCA1aDE2TTQgMTBoMTZNNCAxNWgxMCIgc3Ryb2tlPSIjQTU1QTE4Ii8+PC9nPgogICAgPHRleHQgY2xhc3M9ImNoIiB4PSI2MDIiIHk9IjgyIiBmaWxsPSIjQTU1QTE4Ij5CTTI1ICsgdGFnIHJlc29sdmVyPC90ZXh0PgogICAgPHRleHQgY2xhc3M9ImNzIiB4PSI2MDIiIHk9IjEwNCI+bGV4aWNhbCDCtyBzdGF0ZSB0ZXh0IGFuZCByZXNvbHZlZCB0YWdzPC90ZXh0PgoKICAgIDxyZWN0IHg9IjU1MCIgeT0iMTIwIiB3aWR0aD0iNDMwIiBoZWlnaHQ9IjU4IiByeD0iOSIgZmlsbD0iI2Q5ZTRmYiIgc3Ryb2tlPSIjOTNiMGVjIiBzdHJva2Utd2lkdGg9IjEuOCIvPgogICAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNTY2LDEzNSkgc2NhbGUoMS4xNikiPjxwYXRoIGNsYXNzPSJiZyIgZD0iTTUgM2g5bDUgNXYxM0g1eiIgc3Ryb2tlPSIjMWE1NmRiIi8+PHBhdGggY2xhc3M9ImJnIiBkPSJNMTQgM3Y1aDUiIHN0cm9rZT0iIzFhNTZkYiIvPjwvZz4KICAgIDx0ZXh0IGNsYXNzPSJjaCIgeD0iNjAyIiB5PSIxNDYiIGZpbGw9IiMxYTU2ZGIiPkRlbnNlIHRleHQgw5cgMzwvdGV4dD4KICAgIDx0ZXh0IGNsYXNzPSJjcyIgeD0iNjAyIiB5PSIxNjgiPlF3ZW4zIHZpZXdzIMK3IGx5cmljcywgbWV0YWRhdGEsIGF0dHJpYnV0ZXM8L3RleHQ+CgogICAgPHJlY3QgeD0iNTUwIiB5PSIxODQiIHdpZHRoPSI0MzAiIGhlaWdodD0iNTgiIHJ4PSI5IiBmaWxsPSIjZTNkN2ZhIiBzdHJva2U9IiNiNjljZWYiIHN0cm9rZS13aWR0aD0iMS44Ii8+CiAgICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg1NjYsMTk5KSBzY2FsZSgxLjE2KSI+PHBhdGggY2xhc3M9ImJnIiBkPSJNMiAxMmgzbDIuNS03IDMgMTQgMy0xMCAyLjUgM0gyMiIgc3Ryb2tlPSIjNmQyOGQ5Ii8+PC9nPgogICAgPHRleHQgY2xhc3M9ImNoIiB4PSI2MDIiIHk9IjIxMCIgZmlsbD0iIzZkMjhkOSI+Q0xBUCB0ZXh0IOKGkiBhdWRpbzwvdGV4dD4KICAgIDx0ZXh0IGNsYXNzPSJjcyIgeD0iNjAyIiB5PSIyMzIiPmF1ZGlvIMK3IHRoZSBzb25pYyBkZXNjcmlwdGlvbjwvdGV4dD4KCiAgICA8cmVjdCB4PSI1NTAiIHk9IjI0OCIgd2lkdGg9IjQzMCIgaGVpZ2h0PSI1OCIgcng9IjkiIGZpbGw9IiNmOGQzZTUiIHN0cm9rZT0iI2U1OTViZCIgc3Ryb2tlLXdpZHRoPSIxLjgiLz4KICAgIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDU2NiwyNjMpIHNjYWxlKDEuMTYpIj48Y2lyY2xlIGNsYXNzPSJiZyIgY3g9IjEyIiBjeT0iMTIiIHI9IjgiIHN0cm9rZT0iI2EyMWM2MyIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjIuNiIgZmlsbD0iI2EyMWM2MyIvPjwvZz4KICAgIDx0ZXh0IGNsYXNzPSJjaCIgeD0iNjAyIiB5PSIyNzQiIGZpbGw9IiNhMjFjNjMiPkFuY2hvciBjZW50cm9pZHMgw5cgMzwvdGV4dD4KICAgIDx0ZXh0IGNsYXNzPSJjcyIgeD0iNjAyIiB5PSIyOTYiPlNpZ0xJUC0yIC8gQ0xBUCAvIENGIMK3IGZyb20gbGlrZWQgdHJhY2tzPC90ZXh0PgoKICAgIDxyZWN0IHg9IjU1MCIgeT0iMzEyIiB3aWR0aD0iNDMwIiBoZWlnaHQ9IjU4IiByeD0iOSIgZmlsbD0iI2NmZWFkZCIgc3Ryb2tlPSIjN2ZjNGE1IiBzdHJva2Utd2lkdGg9IjEuOCIvPgogICAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNTY2LDMyNykgc2NhbGUoMS4xNikiPjxjaXJjbGUgY2xhc3M9ImJnIiBjeD0iMTIiIGN5PSI4IiByPSIzLjYiIHN0cm9rZT0iIzBhN2Q1NSIvPjxwYXRoIGNsYXNzPSJiZyIgZD0iTTQuNSAyMGMxLjQtNCA0LjItNiA3LjUtNnM1LjkgMiA3LjUgNiIgc3Ryb2tlPSIjMGE3ZDU1Ii8+PC9nPgogICAgPHRleHQgY2xhc3M9ImNoIiB4PSI2MDIiIHk9IjMzOCIgZmlsbD0iIzBhN2Q1NSI+VXNlci1DRiBjZW50cm9pZDwvdGV4dD4KICAgIDx0ZXh0IGNsYXNzPSJjcyIgeD0iNjAyIiB5PSIzNjAiPkJQUiDCtyB0aGlzIGxpc3RlbmVyJ3Mgb3duIHZlY3RvcjwvdGV4dD4KCiAgICA8cmVjdCB4PSI1NTAiIHk9IjM3NiIgd2lkdGg9IjQzMCIgaGVpZ2h0PSI1OCIgcng9IjkiIGZpbGw9IiNmZmYiIHN0cm9rZT0iI0JDQzBDNiIgc3Ryb2tlLXdpZHRoPSIxLjgiLz4KICAgIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDU2NiwzOTEpIHNjYWxlKDEuMTYpIj48ZWxsaXBzZSBjbGFzcz0iYmciIGN4PSIxMiIgY3k9IjYiIHJ4PSI4IiByeT0iMyIgc3Ryb2tlPSIjNDQ0ODRGIi8+PHBhdGggY2xhc3M9ImJnIiBkPSJNNCA2djEyYzAgMS43IDMuNiAzIDggM3M4LTEuMyA4LTNWNiIgc3Ryb2tlPSIjNDQ0ODRGIi8+PHBhdGggY2xhc3M9ImJnIiBkPSJNNCAxMmMwIDEuNyAzLjYgMyA4IDNzOC0xLjMgOC0zIiBzdHJva2U9IiM0NDQ4NEYiLz48L2c+CiAgICA8dGV4dCBjbGFzcz0iY2giIHg9IjYwMiIgeT0iNDAyIiBmaWxsPSIjNDQ0ODRGIj5DYXRhbG9nIGxvb2t1cHMgw5cgMjwvdGV4dD4KICAgIDx0ZXh0IGNsYXNzPSJjcyIgeD0iNjAyIiB5PSI0MjQiPmRpc2NvZ3JhcGh5IMK3IGVyYSBwb3B1bGFyaXR5PC90ZXh0PgoKICAgIDx0ZXh0IGNsYXNzPSJhbiIgeD0iNzY1IiB5PSI0NjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPm9uZSBMYW5jZURCIGNvbGxlY3Rpb24gwrcgNDcsMDcxIHRyYWNrczwvdGV4dD4KICAgIDx0ZXh0IGNsYXNzPSJjcyIgeD0iNzY1IiB5PSI0OTIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPm1ldGFkYXRhICsgZnVsbC10ZXh0IGluZGV4ICsgc2l4IGVtYmVkZGluZyBmYW1pbGllczwvdGV4dD4KCiAgICA8IS0tIGJyYW5jaGVzIGZhbiBpbnRvIHRoZSBwb29sIC0tPgogICAgPHBhdGggZD0iTTk4NCw4NSBDMTAyNCw4NSAxMDI0LDI3NiAxMDU4LDI3NiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNzM3NzgwIiBzdHJva2Utd2lkdGg9IjIiLz4KICAgIDxwYXRoIGQ9Ik05ODQsMTQ5IEMxMDI0LDE0OSAxMDI0LDI4MiAxMDU4LDI4MiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNzM3NzgwIiBzdHJva2Utd2lkdGg9IjIiLz4KICAgIDxwYXRoIGQ9Ik05ODQsMjEzIEMxMDI0LDIxMyAxMDI0LDI4OCAxMDU4LDI4OCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNzM3NzgwIiBzdHJva2Utd2lkdGg9IjIiLz4KICAgIDxwYXRoIGQ9Ik05ODQsMjc3IEMxMDI0LDI3NyAxMDI0LDMwMCAxMDU4LDMwMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNzM3NzgwIiBzdHJva2Utd2lkdGg9IjIiLz4KICAgIDxwYXRoIGQ9Ik05ODQsMzQxIEMxMDI0LDM0MSAxMDI0LDMwNiAxMDU4LDMwNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNzM3NzgwIiBzdHJva2Utd2lkdGg9IjIiLz4KICAgIDxwYXRoIGQ9Ik05ODQsNDA1IEMxMDI0LDQwNSAxMDI0LDMxMiAxMDU4LDMxMiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNzM3NzgwIiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYXJkKSIvPgoKICAgIDxyZWN0IHg9IjEwNjIiIHk9IjI0NiIgd2lkdGg9IjEzMiIgaGVpZ2h0PSIxMDgiIHJ4PSIxMiIgZmlsbD0iI2ZmZiIgc3Ryb2tlPSIjQkNDMEM2IiBzdHJva2Utd2lkdGg9IjEuOCIvPgogICAgPHRleHQgY2xhc3M9ImJ0IiB4PSIxMTI4IiB5PSIyOTAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlBvb2xlZDwvdGV4dD4KICAgIDx0ZXh0IGNsYXNzPSJicyIgeD0iMTEyOCIgeT0iMzE2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7iiaQgNTAwIHBlcjwvdGV4dD4KICAgIDx0ZXh0IGNsYXNzPSJicyIgeD0iMTEyOCIgeT0iMzM4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5icmFuY2g8L3RleHQ+CiAgICA8bGluZSB4MT0iMTE5OCIgeTE9IjMwMCIgeDI9IjEyMjYiIHkyPSIzMDAiIHN0cm9rZT0iIzUwNTQ1QiIgc3Ryb2tlLXdpZHRoPSIyLjYiIG1hcmtlci1lbmQ9InVybCgjYXIpIi8+CgogICAgPCEtLSBsZWFybmVkIHJhbmtlciAtLT4KICAgIDxyZWN0IHg9IjEyMzAiIHk9IjIxNiIgd2lkdGg9IjE5OCIgaGVpZ2h0PSIxNjgiIHJ4PSIxMiIgZmlsbD0iI2Q5ZTRmYiIgc3Ryb2tlPSIjOTNiMGVjIiBzdHJva2Utd2lkdGg9IjEuOCIvPgogICAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTMwNiwyNDYpIHNjYWxlKDEuOSkiPgogICAgICA8cGF0aCBjbGFzcz0iYmciIGQ9Ik00IDE5VjUiIHN0cm9rZT0iIzFhNTZkYiIvPjxwYXRoIGNsYXNzPSJiZyIgZD0iTTQgMTloMTYiIHN0cm9rZT0iIzFhNTZkYiIvPgogICAgICA8cGF0aCBjbGFzcz0iYmciIGQ9Ik04IDE5di00TTEzIDE5di04TTE4IDE5di0xMSIgc3Ryb2tlPSIjMWE1NmRiIi8+PC9nPgogICAgPHRleHQgY2xhc3M9ImJ0IiB4PSIxMzI5IiB5PSIzMzIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiMxYTU2ZGIiPlJlcmFua2VyPC90ZXh0PgogICAgPHRleHQgY2xhc3M9ImJzIiB4PSIxMzI5IiB5PSIzNTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkxpZ2h0R0JNPC90ZXh0PgogICAgPHBhdGggZD0iTTE0MzIsMzAwIEgxNDYwIFYyMTAgSDE0ODYiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzUwNTQ1QiIgc3Ryb2tlLXdpZHRoPSIyLjYiIG1hcmtlci1lbmQ9InVybCgjYXIpIi8+CgogICAgPCEtLSB1bnRyYWluZWQgYmFzZWxpbmUgb3ZlciB0aGUgc2FtZSBwb29sLCBqb2luaW5nIHRoZSByYW5rZXIncyBvdXRwdXQgLS0+CiAgICA8cGF0aCBkPSJNMTEyOCwzNTggVjQ2NiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNzM3NzgwIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1kYXNoYXJyYXk9IjEwIDciIG1hcmtlci1lbmQ9InVybCgjYXJkKSIvPgogICAgPHJlY3QgeD0iMTA2MiIgeT0iNDcwIiB3aWR0aD0iMzMwIiBoZWlnaHQ9IjY0IiByeD0iMTAiIGZpbGw9IiNmZmYiIHN0cm9rZT0iI0JDQzBDNiIKICAgICAgICAgIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtZGFzaGFycmF5PSIxMCA3Ii8+CiAgICA8dGV4dCBjbGFzcz0iY2giIHg9IjEwODIiIHk9IjQ5NyIgZmlsbD0iIzQ0NDg0RiI+V2VpZ2h0ZWQgUlJGPC90ZXh0PgogICAgPHRleHQgY2xhc3M9ImNzIiB4PSIxMDgyIiB5PSI1MjEiPmJhc2VsaW5lIGFuZCBmYWxsYmFjayByYW5raW5nPC90ZXh0PgogICAgPHBhdGggZD0iTTEzOTIsNTAyIEgxNDYwIFYzMDQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzczNzc4MCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtZGFzaGFycmF5PSIxMCA3Ii8+CiAgICA8Y2lyY2xlIGN4PSIxNDYwIiBjeT0iMzAwIiByPSI1IiBmaWxsPSIjNTA1NDVCIi8+CgogICAgPCEtLSBvdXRwdXRzIC0tPgogICAgPHJlY3QgeD0iMTQ5MCIgeT0iMTYwIiB3aWR0aD0iMjAyIiBoZWlnaHQ9IjEwMCIgcng9IjEyIiBmaWxsPSIjY2ZlYWRkIiBzdHJva2U9IiM3ZmM0YTUiIHN0cm9rZS13aWR0aD0iMS44Ii8+CiAgICA8dGV4dCBjbGFzcz0iYnQiIHg9IjE1OTEiIHk9IjIxOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzBhN2Q1NSI+VG9wLTIwIHRyYWNrczwvdGV4dD4KCiAgICA8cGF0aCBkPSJNMTU5MSwyNjQgVjMxOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNTA1NDVCIiBzdHJva2Utd2lkdGg9IjIuNiIgbWFya2VyLWVuZD0idXJsKCNhcikiLz4KICAgIDx0ZXh0IGNsYXNzPSJjcyIgeD0iMTYwNCIgeT0iMjk4Ij50b3AtMTwvdGV4dD4KCiAgICA8cmVjdCB4PSIxNDkwIiB5PSIzMjIiIHdpZHRoPSIyMDIiIGhlaWdodD0iMTUwIiByeD0iMTIiIGZpbGw9IiNkOWU0ZmIiIHN0cm9rZT0iIzkzYjBlYyIgc3Ryb2tlLXdpZHRoPSIxLjgiLz4KICAgIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE1NzEsMzQ0KSBzY2FsZSgxLjcpIj4KICAgICAgPHBhdGggY2xhc3M9ImJnIiBkPSJNNCA1aDE2djExSDlsLTUgNHoiIHN0cm9rZT0iIzFhNTZkYiIvPjwvZz4KICAgIDx0ZXh0IGNsYXNzPSJidCIgeD0iMTU5MSIgeT0iNDE4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMWE1NmRiIj5SZXNwb25zZSBMTE08L3RleHQ+CiAgICA8dGV4dCBjbGFzcz0iYnMiIHg9IjE1OTEiIHk9IjQ0NiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+UXdlbjMtMzBCPC90ZXh0PgoKICAgIDwhLS0gdGhlIHN0YXRlIGFsc28gY29uZGl0aW9ucyB0aGUgcmVwbHkgLS0+CiAgICA8cGF0aCBkPSJNMzY4LDQwNCBWNTUwIEgxNTkxIFY0NzgiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzUzODFFNCIgc3Ryb2tlLXdpZHRoPSIyIgogICAgICAgICAgc3Ryb2tlLWRhc2hhcnJheT0iMTAgNyIgbWFya2VyLWVuZD0idXJsKCNhcmIpIi8+CiAgICA8dGV4dCBjbGFzcz0iY3MiIHg9IjM4NCIgeT0iNTMwIiBmaWxsPSIjMWE1NmRiIj50aGUgc2FtZSBzdGF0ZSBjb25kaXRpb25zIHRoZSByZXBseTwvdGV4dD4KICA8L3N2Zz4K" alt="System architecture: conversation and played tracks go to an LLM state extractor; eleven retrieval branches query one LanceDB collection of 47,071 tracks; pooled candidates are scored by a LambdaMART reranker that emits twenty tracks; a response model writes a reply conditioned on the top track and the same state. A weighted reciprocal-rank-fusion path is the untrained baseline and fallback."></div>
@@ -895,7 +878,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Request understanding"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; First an LLM, DeepSeek-V4-Flash, reads the whole conversation and writes down what it understood as structured fields. We had just played Ryan Adams &amp;amp; The Cardinals; the listener liked the mood but asked for other artists. The state keeps the mood and genre and marks that artist as one to avoid. Every later step reads these fields.">
+  data-notes="&lt;b&gt;0:35.&lt;/b&gt; First an LLM, DeepSeek-V4-Flash, reads the whole conversation and writes down what it understood as structured fields. We had just played Ryan Adams &amp;amp; The Cardinals; the listener liked the mood but asked for other artists. The state keeps the mood and genre and marks that artist as one to avoid. Every later step reads these fields.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h2>Request understanding</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="stateflow">
     <div class="chat mini"><div class="bub sys"><span class="tl">We had just played</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Ryan Adams &amp; The Cardinals — “Let Us Down Easy”</div>
@@ -962,7 +945,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Retrieval — eleven branches"
-  data-notes="&lt;b&gt;0:50.&lt;/b&gt; The state drives eleven retrieval branches over one index. BM25 matches keywords and resolved tags. Three dense-text branches use Qwen3 embeddings of lyrics, metadata and attributes. CLAP matches the sonic description against audio. Three anchor centroids search near tracks the listener liked, by cover art, audio and listening data. A user-CF centroid uses this listener’s own vector, and two catalog lookups cover discography and era popularity. Each returns its top 500; the pool is their union.">
+  data-notes="&lt;b&gt;0:25.&lt;/b&gt; The state drives eleven retrieval branches over one index. BM25 matches keywords and resolved tags. Three dense-text branches use Qwen3 embeddings of lyrics, metadata and attributes. CLAP matches the sonic description against audio. Three anchor centroids search near tracks the listener liked, by cover art, audio and listening data. A user-CF centroid uses this listener’s own vector, and two catalog lookups cover discography and era popularity. Each returns its top 500; the pool is their union.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><h2>Retrieval — eleven branches</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="icards c3 compact">
     <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><div class="big">×1</div><h4>BM25 + tag resolver</h4><p>keywords and resolved tags from the state</p></div>
@@ -995,8 +978,8 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   <div class="subwrap"><div class="subnum">4.3</div><h1 class="subtitle">Reranking</h1><div class="sub">one learned model picks the 20</div></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Reranking"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; A learned ranker — gradient-boosted trees in LightGBM — scores every pooled candidate on 146 features and keeps the top 20. The next two slides show what it relies on.">
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Reranking"
+  data-notes="&lt;b&gt;0:25.&lt;/b&gt; A learned ranker — gradient-boosted trees in LightGBM — scores every pooled candidate on 146 features and keeps the top 20. The next two slides show what it relies on.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h2>Reranking</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="flow">
     <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".8"/><circle cx="4.5" cy="12" r=".8"/><circle cx="4.5" cy="18" r=".8"/></svg></div><h4>The pooled candidates</h4><p>top 500 from each branch</p></div>
@@ -1012,7 +995,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-dense data-title="The reranker"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; LightGBM LambdaMART over the union of branch pools. 146 features per (turn, track) pair, about 20.6M candidate rows. One feature — the bi-encoder cosine — carries 59% of split gain. Say the caveat: split gain describes the fit, not quality. And look at the bottom row: constraint features carry 0.7%, which is the main diagnostic.">
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; &lt;b&gt;SKIP IF COVERED.&lt;/b&gt; LightGBM LambdaMART over the union of branch pools. 146 features per (turn, track) pair, about 20.6M candidate rows. One feature — the bi-encoder cosine — carries 59% of split gain. Say the caveat: split gain describes the fit, not quality. And look at the bottom row: constraint features carry 0.7%, which is the main diagnostic.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-5M13 19v-9M18 19v-13"/></svg></div><h2>What the ranker leans on</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="bars famb"><div class="brow"><span class="bl">Bi-encoder cosine <i>· 1 feature</i></span><div class="btrack"><div class="bfill" style="width:100.0%"></div></div><span class="bv">59.0%</span></div><div class="brow"><span class="bl">Per-branch rank and score <i>· 66 features</i></span><div class="btrack"><div class="bfill" style="width:19.5%"></div></div><span class="bv">11.5%</span></div><div class="brow"><span class="bl">Session and artist affinity <i>· 18 features</i></span><div class="btrack"><div class="bfill" style="width:18.1%"></div></div><span class="bv">10.7%</span></div><div class="brow"><span class="bl">Popularity · state · tags <i>· 31 features</i></span><div class="btrack"><div class="bfill" style="width:15.6%"></div></div><span class="bv">9.2%</span></div><div class="brow"><span class="bl">Other similarity cosines <i>· 17 features</i></span><div class="btrack"><div class="bfill" style="width:15.1%"></div></div><span class="bv">8.9%</span></div><div class="brow"><span class="bl">Constraints and rejections <i>· 13 features</i></span><div class="btrack"><div class="bfill warn" style="width:1.2%"></div></div><span class="bv">0.7%</span></div></div>
   <div class="takeaway">Share of the ranker’s split gain, by feature family. One signal — the bi-encoder cosine — carries
@@ -1050,14 +1033,14 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   <div class="subwrap"><div class="subnum">4.4</div><h1 class="subtitle">Response generation</h1><div class="sub">one short reply about the top track</div></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Response generation"
-  data-notes="&lt;b&gt;0:30.&lt;/b&gt; A real Blind-B reply that our own LLM checker rated good. The words it uses — uplifting, cheerful, hopeful — come from the state and the track’s tags, as the next slide shows.">
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Response generation"
+  data-notes="&lt;b&gt;0:25.&lt;/b&gt; A real Blind-B reply that our own LLM checker rated good. The words it uses — uplifting, cheerful, hopeful — come from the state and the track’s tags.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>Response generation</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="chat big">
     <div class="bub me"><span class="tl">Listener</span>…it feels a bit too serious. I’m looking for something more uplifting and positive, really something to lift my spirits.</div>
     <div class="bub sys reply"><span class="tl">Our reply</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span><span>“Perfect — ‘Happy Up Here’ by Röyksopp is exactly the kind of uplifting, cheerful electronic track you’re looking for. With its bright synths and hopeful groove, it’s designed to lift your spirits and make you smile.”</span></div>
   </div>
-  <div class="takeaway">A second LLM (<b>Qwen3-30B</b>) writes one short reply about the top track. The next slide shows exactly what it was given.</div></div>
+  <div class="takeaway">A second LLM (<b>Qwen3-30B</b>) writes one short reply about the top track, from its tags and the state.</div></div>
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="How the reply is written"
@@ -1096,7 +1079,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#257E3D;--hue-soft:#E7F8EC" class="slide" data-tier="core" data-title="Official results"
-  data-notes="&lt;b&gt;0:35.&lt;/b&gt; Blind-A, the development phase: 0.5799. Blind-B, the final: 0.3811, 29th of 40. nDCG nearly halved and the judge fell 1.4 points; the diversity terms barely moved. Blind-B also withholds the goal annotations, but our ranker was already goal-free at inference — so that is not the explanation.">
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; Blind-A, the development phase: 0.5799. Blind-B, the final: 0.3811, 29th of 40. nDCG nearly halved and the judge fell 1.4 points; the diversity terms barely moved. Blind-B also withholds the goal annotations, but our ranker was already goal-free at inference — so that is not the explanation.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg></div><h2>How it scored</h2><span class="tag">Results</span></div>
   <div class="fill">
     <table>
@@ -1163,8 +1146,8 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   <div class="takeaway">The answer key is whatever the simulated recommender picked from its small pool — here, <b>Arctic Monkeys again</b>.</div></div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="optional" data-title="Label example — “from a different artist”"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Another training session. After two Bonobo tracks the listener asks for a different artist; the answer key is Bonobo. They ask again; the answer key is Bonobo again — and both are annotated as moving toward the goal. Train on this and a model learns to repeat the artist. We think ours did.">
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Label example — “from a different artist”"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; &lt;b&gt;SKIP IF COVERED.&lt;/b&gt; Another training session. After two Bonobo tracks the listener asks for a different artist; the answer key is Bonobo. They ask again; the answer key is Bonobo again — and both are annotated as moving toward the goal. Train on this and a model learns to repeat the artist. We think ours did.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h2>Label example — “from a different artist”</h2><span class="tag">What is not ideal</span></div>
   <div class="fill"><div class="chat big anchor">
     <div class="bub sys"><span class="tl">Recommender agent played</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Bonobo — “Cirrus”</div>
@@ -1187,8 +1170,8 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   <div class="small" style="margin-top:.6cqw">Agreement split measured on the training turns.</div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="optional" class="slide" data-title="What the relabelling found"
-  data-notes="&lt;b&gt;0:50.&lt;/b&gt; On 61% of training turns the judges would not settle on the played track being a good fit. 17% — 18,222 turns — keep the artist the listener had just rejected. We trained on the relabeled data and it scored lower against the original labels, so the submission kept the originals. Say the catch: that score is computed against the original labels, so it could not have favoured the relabeling.">
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="core" class="slide" data-title="What the relabelling found"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; &lt;b&gt;SKIP IF COVERED.&lt;/b&gt; On 61% of training turns the judges would not settle on the played track being a good fit. 17% — 18,222 turns — keep the artist the listener had just rejected. We trained on the relabeled data and it scored lower against the original labels, so the submission kept the originals. Say the catch: that score is computed against the original labels, so it could not have favoured the relabeling.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>What the relabelling found</h2><span class="tag">Analysis</span></div>
   <div class="fill"><div class="relab">
     <div class="icard hero"><div class="big">17%</div><h4>of training turns keep the artist the listener had just asked to leave</h4>
@@ -1198,8 +1181,8 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   <div class="takeaway">Retrained on these labels, the ranker scored lower <b>against the original labels</b> — a test that could never favour the fix — so we kept the originals.</div></div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="optional" data-title="Why we trained on the dev set"
-  data-notes="&lt;b&gt;0:50.&lt;/b&gt; Request understanding costs one paid LLM call per turn. Running it over the 121.6 thousand training turns was too expensive, so the ranker was trained on the 8,000 dev turns — the same turns we used to check it. We had no clean held-out set, and chose designs on replays of turns the model had already seen: 0.38 there, 0.25 on the blind test.">
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Why we trained on the dev set"
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Request understanding costs one paid LLM call per turn. Running it over the 121.6 thousand training turns was too expensive, so the ranker was trained on the 8,000 dev turns — the same turns we used to check it. We had no clean held-out set, and chose designs on replays of turns the model had already seen: 0.38 there, 0.25 on the blind test.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h2>Why we trained on the dev set</h2><span class="tag">Lessons</span></div>
   <div class="fill"><div class="flow">
     <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h4>1 paid LLM call per turn</h4><p>to read each turn into a state</p></div>
@@ -1216,7 +1199,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Failure 1 — extracted, then ignored"
-  data-notes="&lt;b&gt;0:35.&lt;/b&gt; The most common shape, and the most embarrassing. In each of these the state correctly carried an avoid for the artist, and we served that same artist at rank 1. This is our own model doing exactly what the training labels do — anchoring on the just-played artist. The constraint features carry 0.7% of ranker gain, which is why nothing stopped it.">
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; The most common shape, and the most embarrassing. In each of these the state correctly carried an avoid for the artist, and we served that same artist at rank 1. This is our own model doing exactly what the training labels do — anchoring on the just-played artist. The constraint features carry 0.7% of ranker gain, which is why nothing stopped it.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Extracted, but the ranker did not act on it</h2>
     <span class="tag">Went wrong</span></div>
   <div class="tracks">
@@ -1253,8 +1236,8 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   <div class="takeaway">The state was right both times. The gap is <b>knowledge, not understanding</b>.</div></div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="optional" class="slide" data-title="Four ways the reply went wrong"
-  data-notes="&lt;b&gt;0:50.&lt;/b&gt; The two failures we name in the paper. When the track asked for is not in the catalog, the reply presents a substitute as if it were fine — Watercolors, Fallen. When we miss a constraint, the reply recommends the track anyway — another Ryan Adams, another Juanes. The generator ran once, with no check against the state.">
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="core" class="slide" data-title="Four ways the reply went wrong"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; &lt;b&gt;SKIP IF COVERED.&lt;/b&gt; The two failures we name in the paper. When the track asked for is not in the catalog, the reply presents a substitute as if it were fine — Watercolors, Fallen. When we miss a constraint, the reply recommends the track anyway — another Ryan Adams, another Juanes. The generator ran once, with no check against the state.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/></svg></div><h2>The reply was never checked</h2>
     <span class="tag">What is not ideal</span></div>
   <div class="replygroups">
@@ -1285,84 +1268,8 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
     The prompt was chosen on Blind-A (judge 4.70 there, 3.30 on Blind-B).</div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="talk" data-dense data-title="Where the failures were"
-  data-notes="&lt;b&gt;0:35.&lt;/b&gt; Our audit of the system trace on all 80 Blind-B turns. Ranking dominates: 31 turns where a better candidate sat in the pool. Extraction — the part people assume is the fragile bit — accounts for 3. That ordering is the whole diagnosis.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Where the failures were — all 80 Blind-B turns</h2>
-    <span class="tag">Analysis</span></div>
-  <div class="fill"><div class="cols c2w">
-    <table>
-      <thead><tr><th>Diagnosed gap</th><th>Turns</th><th style="text-align:left">Meaning</th></tr></thead>
-      <tbody>
-        <tr class="hi"><td>Ranking</td><td>31</td><td style="text-align:left">a better, non-violating candidate sat below our top-20</td></tr>
-        <tr><td>Constraint not applied</td><td>8</td><td style="text-align:left">an extracted filter never reached the pool</td></tr>
-        <tr><td>State extraction</td><td>3</td><td style="text-align:left">the extractor missed something the user said</td></tr>
-        <tr><td>Entity resolution</td><td>1</td><td style="text-align:left">a name never resolved to a catalog ID</td></tr>
-      </tbody>
-    </table>
-    <div class="stack">
-      <div class="card bad"><h3>Top-1 flagged</h3><div class="stat sm bad">17 / 80</div>
-        <div class="small" style="margin-top:.4cqw">the track we led with violated something the
-          state had recorded</div></div>
-      <div class="card warn"><h3>How this was counted</h3>
-        <div class="small">43 diagnoses across 32 distinct turns. Our audit of each turn’s system trace. Blind-B has no public answers.</div></div>
-    </div>
-  </div>
-  <div class="takeaway">Extraction is <b>3 of 43</b> diagnoses. The failure is overwhelmingly
-    downstream of understanding the conversation.</div></div>
-</section>
-
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="talk" data-title="Asked for, served"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Three real turns from the submitted Blind-B run. Each names the stage that broke. The Kamelot one stings: the album is in the catalog and we matched the artist but not the album. The Metheny one is a response failure, not retrieval.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Asked for, served</h2>
-    <span class="tag">Went wrong</span></div>
-  <div class="tracks">
-    <div class="track bad"><div class="art">1</div>
-      <div class="meta"><div class="ask">“the Kamelot track from <b>Silverthorn</b>”</div>
-        <div class="l1">Kamelot — Fallen Star</div>
-        <div class="l2">from <em>Haven</em>. We extracted “Silverthorn” but never filtered on it.</div></div>
-      <div class="badge">constraint</div></div>
-    <div class="track warn"><div class="art">2</div>
-      <div class="meta"><div class="ask">“exactly <b>126.70 bpm</b>, in G minor”</div>
-        <div class="l1">no tempo or key in the catalog</div>
-        <div class="l2">and we added no data from outside it</div></div>
-      <div class="badge">no data</div></div>
-    <div class="track bad"><div class="art">3</div>
-      <div class="meta"><div class="ask">“<b>‘Watercolors’</b> by Pat Metheny”</div>
-        <div class="l1">Pat Metheny — Alfie</div>
-        <div class="l2">reply: “Got it — here’s ‘Alfie’…” — “Watercolors” is not in the catalog</div></div>
-      <div class="badge">response</div></div>
-  </div>
-</section>
-
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="talk" data-title="What the training labels look like"
-  data-notes="&lt;b&gt;0:30.&lt;/b&gt; Four real training turns. In each the listener asks for something else and the ground-truth next track is the same artist again. Read the last column: the dataset&#x27;s own annotation says MOVES TOWARD GOAL on three of them. The Arctic Monkeys turn is the clearest — the listener names the exact track and artist they want, three times, and the label is another Arctic Monkeys song. A model trained on this learns to anchor, which is exactly what ours does.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>What the training labels look like</h2>
-    <span class="tag">Went wrong</span></div>
-  <div class="tracks tight">
-    <div class="track bad"><div class="art"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.6"/><circle cx="16.5" cy="16" r="2.6"/></svg></div>
-      <div class="meta"><div class="ask">“I keep asking for <b>Arcade Fire</b> — that's the only song I want”</div>
-        <div class="l1">label: Arctic Monkeys — This House is a Circus</div></div>
-      <div class="badge">does not</div></div>
-    <div class="track bad"><div class="art"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.6"/><circle cx="16.5" cy="16" r="2.6"/></svg></div>
-      <div class="meta"><div class="ask">“similar chill vibe, but <b>from a different artist</b>”</div>
-        <div class="l1">label: Bonobo — Jets</div></div>
-      <div class="badge">moves</div></div>
-    <div class="track bad"><div class="art"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.6"/><circle cx="16.5" cy="16" r="2.6"/></svg></div>
-      <div class="meta"><div class="ask">“what <b>other artists</b> fit this darkwave style?”</div>
-        <div class="l1">label: Tropic of Cancer — The Dull Age</div></div>
-      <div class="badge">moves</div></div>
-    <div class="track bad"><div class="art"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.6"/><circle cx="16.5" cy="16" r="2.6"/></svg></div>
-      <div class="meta"><div class="ask">“what <b>other</b> orchestral tracks would you recommend?”</div>
-        <div class="l1">label: Nick Phoenix — Kogan</div></div>
-      <div class="badge">moves</div></div>
-  </div>
-  <div class="takeaway">Three of four are annotated <b>MOVES TOWARD GOAL</b> — the dataset records
-    them as having helped. Train on this and the model learns to anchor. <b>Ours does.</b></div>
-  <div class="src">Why: the answer is the simulated recommender’s pick from a 16–32-track pool, made without seeing the listener’s goal.</div>
-</section>
-
 <section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="core" data-title="Everything is released"
-  data-notes="&lt;b&gt;0:15.&lt;/b&gt; Paper, poster, slides, code, models and data are all linked from the project site. Thank you.">
+  data-notes="&lt;b&gt;0:10.&lt;/b&gt; Paper, poster, slides, code, models and data are all linked from the project site. Thank you.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2h-2zM18 18h2v2h-2z"/></svg></div><h2>Everything is released</h2><span class="tag">Thank you</span></div>
   <div class="fill center"><div class="qr big">
     <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMyIgaGVpZ2h0PSIzMyIgY2xhc3M9InNlZ25vIj48cGF0aCBjbGFzcz0icXJsaW5lIiBzdHJva2U9IiMxMTEiIGQ9Ik0yIDIuNWg3bTEgMGgybTQgMGgybTIgMGgxbTMgMGg3bS0yOSAxaDFtNSAwaDFtMyAwaDRtMiAwaDRtMiAwaDFtNSAwaDFtLTI5IDFoMW0xIDBoM20xIDBoMW00IDBoMW0yIDBoMW0xIDBoMm0yIDBoMW0xIDBoMW0xIDBoM20xIDBoMW0tMjkgMWgxbTEgMGgzbTEgMGgxbTEgMGgybTIgMGgybTEgMGgxbTQgMGgxbTEgMGgxbTEgMGgzbTEgMGgxbS0yOSAxaDFtMSAwaDNtMSAwaDFtMSAwaDJtMSAwaDNtMSAwaDRtMyAwaDFtMSAwaDNtMSAwaDFtLTI5IDFoMW01IDBoMW0xIDBoMW0xIDBoM20xIDBoMW0yIDBoMW0xIDBoMm0xIDBoMW01IDBoMW0tMjkgMWg3bTEgMGgxbTEgMGgxbTEgMGgxbTEgMGgxbTEgMGgxbTEgMGgxbTEgMGgxbTEgMGg3bS0yMSAxaDJtMSAwaDFtNCAwaDJtLTE4IDFoMW0zIDBoMW0xIDBoM20xIDBoMW0zIDBoMW0xIDBoMm0yIDBoNm0yIDBoMW0tMjkgMWgxbTEgMGgxbTEgMGgxbTIgMGg0bTEgMGgybTEgMGg0bTIgMGg4bS0yOSAxaDNtMSAwaDFtMSAwaDZtMyAwaDFtMSAwaDFtNCAwaDJtNCAwaDFtLTI1IDFoMW02IDBoMm0zIDBoM20xIDBoM20yIDBoMW0xIDBoMm0tMjggMWg2bTIgMGgybTMgMGgxbTIgMGgxbTEgMGgxbTEgMGgxbTEgMGgxbTMgMGgxbS0yOCAxaDJtMSAwaDFtMSAwaDFtNCAwaDFtMSAwaDJtMSAwaDRtMyAwaDdtLTI4IDFoM20yIDBoMW0xIDBoMm0zIDBoMW0xIDBoMW0yIDBoMW0xIDBoM20yIDBoMm0xIDBoMW0tMjkgMWgxbTIgMGgxbTEgMGgxbTMgMGgybTQgMGgxbTEgMGgybTMgMGgybTMgMGgybS0yOSAxaDFtMSAwaDFtMSAwaDNtMSAwaDFtMSAwaDFtMyAwaDJtMSAwaDJtMSAwaDFtNiAwaDFtLTI4IDFoMW0xIDBoMW00IDBoMW0xIDBoMW0yIDBoMm0xIDBoMW0xIDBoMm0yIDBoNW0xIDBoMm0tMjYgMWg0bTMgMGgxbTIgMGgzbTIgMGgxbTEgMGg0bTIgMGgxbTEgMGgxbS0yNyAxaDRtMiAwaDFtMiAwaDJtMyAwaDhtMyAwaDJtLTI5IDFoMm0yIDBoMW0xIDBoM20yIDBoMW0yIDBoMW0yIDBoMW0xIDBoN20yIDBoMW0tMjEgMWgxbTEgMGgzbTEgMGg3bTMgMGgxbTMgMGgxbS0yOSAxaDdtMSAwaDJtMyAwaDNtMSAwaDRtMSAwaDFtMSAwaDNtMSAwaDFtLTI5IDFoMW01IDBoMW03IDBoN20zIDBoMW0yIDBoMW0tMjggMWgxbTEgMGgzbTEgMGgxbTEgMGgybTEgMGg1bTEgMGgxbTEgMGg3bTIgMGgxbS0yOSAxaDFtMSAwaDNtMSAwaDFtMyAwaDFtMiAwaDRtMiAwaDFtMyAwaDFtNCAwaDFtLTI5IDFoMW0xIDBoM20xIDBoMW00IDBoMW0xIDBoM20xIDBoNG00IDBoNG0tMjkgMWgxbTUgMGgxbTUgMGgybTIgMGgzbTEgMGg2bTEgMGgybS0yOSAxaDdtMSAwaDJtMSAwaDNtMiAwaDJtMSAwaDNtMSAwaDFtMSAwaDFtMSAwaDEiLz48L3N2Zz4K" alt="QR code for the project site, npatta01.github.io/music-crs-2026">

@@ -119,8 +119,22 @@ an inferred artist). Presenter badges never print.
 
 - [x] Detailed deck closed by the author (2026-09-29): 41-slide main flow,
       19-slide appendix, `deck-detailed.pdf` (60 pages).
-- [ ] 10-minute talk: not yet revised after the detailed-deck restructure.
+- [x] 10-minute talk rebuilt from the finished deck (14 slides, 4 skippable).
+
+## Talk (2026-09-29): 14 slides, 6:45 full, 4:45 with the skippable ones cut
+
+Architecture first (author's choice), one slide per piece, then the lessons;
+ends on the QR. No reference to other talks (their content is unknown).
+
+Title · system in one picture · request understanding · retrieval · reranking ·
+[what the ranker leans on] · response generation · how it scored ·
+[label example] · [what the relabelling found] · why we trained on the dev set ·
+extracted but not acted on · [the reply was never checked] · QR
+
+[bracketed] = SKIP IF COVERED — marked in the speaker notes only; each stands
+alone, so skipping never breaks the thread. Tier badges and the CORE PATH flag
+are hidden on screen and in print.
 
 ## Next action
 
-Revise the 10-minute talk (`talk-10min.pdf`) from the finished detailed deck.
+Author rehearses the talk aloud; trim if over 7:00.
