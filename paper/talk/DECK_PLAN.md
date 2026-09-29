@@ -105,6 +105,22 @@ before the approach is understood, not grounded enough. Rebuilt:
   Breaking Bad soundtrack — both verified in the Blind-B audit), and "The reply
   was never checked" (the four real replies, promoted).
 
+## Rounds 5–8 (2026-09-28/29)
+
+RRF before the ranker; reply inputs shown (Röyksopp example, grounded in its
+tags); reply failures limited to the paper's two (unavailable tracks,
+unmet constraints); §4 subsections 4.1–4.4; §6 in story order (labels →
+relabelling → dev-set training → ranker → outside data → reply); judge
+verdicts on the label examples; 17% anchoring as the relabelling headline;
+request understanding uses the Ryan Adams example (the Neko Case one relied on
+an inferred artist). Presenter badges never print.
+
+## Status
+
+- [x] Detailed deck closed by the author (2026-09-29): 41-slide main flow,
+      19-slide appendix, `deck-detailed.pdf` (60 pages).
+- [ ] 10-minute talk: not yet revised after the detailed-deck restructure.
+
 ## Next action
 
-Author reviews both PDFs; then open the deck PR.
+Revise the 10-minute talk (`talk-10min.pdf`) from the finished detailed deck.
