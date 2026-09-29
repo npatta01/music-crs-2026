@@ -895,19 +895,16 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Request understanding"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; First an LLM, DeepSeek-V4-Flash, reads the whole conversation — every turn so far — and writes down what it understood as structured fields: the artist to stay with, the tracks already turned down, and how the listener describes the sound. Every later step reads these fields instead of the raw text.">
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; First an LLM, DeepSeek-V4-Flash, reads the whole conversation and writes down what it understood as structured fields. We had just played Ryan Adams &amp;amp; The Cardinals; the listener liked the mood but asked for other artists. The state keeps the mood and genre and marks that artist as one to avoid. Every later step reads these fields.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h2>Request understanding</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="stateflow">
-    <div class="chat mini">
-      <div class="bub sys"><span class="tl">Turn 1 · we played</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Neko Case — “Calling Cards”</div>
-      <div class="bub me"><span class="tl">Turn 2 · listener</span>That’s a great <b>Neko Case</b> track, but it’s not quite the one I’m thinking of…</div>
-      <div class="bub sys"><span class="tl">Turn 2 · we played</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Neko Case — “Man”</div>
-      <div class="bub me"><span class="tl">Turn 3 · now</span>No, that’s not it either… much more subdued… almost a cappella.</div>
-    </div>
+    <div class="chat mini"><div class="bub sys"><span class="tl">We had just played</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Ryan Adams &amp; The Cardinals — “Let Us Down Easy”</div>
+      <div class="bub me"><span class="tl">Listener</span>…more tracks with that kind of emotional depth and acoustic focus, maybe branching out to other singer-songwriter or alt-country artists?</div>
+      </div>
     <div class="sarrow"><span>LLM</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
-    <div class="scard"><div class="srow"><span class="sk">Target artist</span><span class="sv">Neko Case <i class="why">from turn 2</i></span></div><div class="srow"><span class="sk">Turned down</span><span class="sv">“Calling Cards”, “Man”</span></div><div class="srow"><span class="sk">Mood</span><span class="sv">subdued</span></div><div class="srow"><span class="sk">Lyrics</span><span class="sv">a sense of place</span></div><div class="srow"><span class="sk">Sound</span><span class="sv">stark, almost a cappella</span></div></div>
+    <div class="scard"><div class="srow"><span class="sk">Request type</span><span class="sv">new artist</span></div><div class="srow"><span class="sk">Avoid</span><span class="sv">Ryan Adams &amp; The Cardinals</span></div><div class="srow"><span class="sk">Mood</span><span class="sv">introspective, emotional depth</span></div><div class="srow"><span class="sk">Sound</span><span class="sv">acoustic-driven</span></div><div class="srow"><span class="sk">Genre</span><span class="sv">singer-songwriter, alt-country</span></div></div>
   </div>
-  <div class="takeaway">The LLM reads <b>every turn so far</b>: “a great Neko Case track, but not the one” means the song is by Neko Case, and both tracks are out.</div></div>
+  <div class="takeaway">The LLM reads <b>every turn so far</b>: “other artists” after a Ryan Adams track becomes an artist to avoid, and the mood carries over.</div></div>
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-tier="optional" class="slide roomy" data-title="The state schema"
@@ -956,19 +953,6 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
     <div class="scard"><div class="srow"><span class="sk">Request type</span><span class="sv">attribute search</span></div><div class="srow"><span class="sk">Cover art</span><span class="sv">striking, abstract</span></div><div class="srow"><span class="sk">Colours</span><span class="sv">bold colors and shapes</span></div><div class="srow"><span class="sk">Style</span><span class="sv">like a modern painting</span></div><div class="srow"><span class="sk">Flag</span><span class="sv">visual search</span></div></div>
   </div>
   <div class="takeaway">No artist, no title — only <b>descriptions</b>, plus a flag that turns on the cover-art search.</div></div>
-</section>
-
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Understanding “someone new”"
-  data-notes="&lt;b&gt;0:30.&lt;/b&gt; A Blind-B turn where the listener likes the mood but wants a different artist. The state records the current artist as one to avoid, and keeps the mood and genre as things to search for.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h2>Understanding “someone new”</h2><span class="tag">Approach</span></div>
-  <div class="fill"><div class="stateflow">
-    <div class="chat mini"><div class="bub sys"><span class="tl">We had just played</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Ryan Adams &amp; The Cardinals — “Let Us Down Easy”</div>
-      <div class="bub me"><span class="tl">Listener</span>…more tracks with that kind of emotional depth and acoustic focus, maybe branching out to other singer-songwriter or alt-country artists?</div>
-      </div>
-    <div class="sarrow"><span>LLM</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
-    <div class="scard"><div class="srow"><span class="sk">Request type</span><span class="sv">new artist</span></div><div class="srow"><span class="sk">Avoid</span><span class="sv">Ryan Adams &amp; The Cardinals</span></div><div class="srow"><span class="sk">Mood</span><span class="sv">introspective, emotional depth</span></div><div class="srow"><span class="sk">Sound</span><span class="sv">acoustic-driven</span></div><div class="srow"><span class="sk">Genre</span><span class="sv">singer-songwriter, alt-country</span></div></div>
-  </div>
-  <div class="takeaway">“Someone new” becomes an <b>artist to avoid</b>; the mood and genre carry over.</div></div>
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide subdiv" data-tier="optional" data-title="4.2 · Retrieval"
