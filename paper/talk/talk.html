@@ -692,6 +692,22 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 
 .slide[data-title="Label example — “from a different artist”"] .chat .bub{font-size:1.72cqw;padding:.75cqw 1.3cqw}
 .slide[data-title="Label example — “from a different artist”"] .chat{gap:.75cqw}
+
+/* round 7 */
+.sv .why{font-style:normal;font-size:.62em;color:var(--ink-3);font-weight:500;margin-left:.5cqw}
+.bub .jv{display:inline-flex;align-items:center;gap:.4cqw;font:700 1.15cqw/1 var(--sans);border-radius:1cqw;padding:.45cqw .8cqw;margin-left:.6cqw}
+.bub .jv svg{width:1.4cqw;height:1.4cqw;fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.bub .jv.ok{color:#257E3D;background:#E7F8EC} .bub .jv.ok svg{stroke:#257E3D}
+.bub .jv.no{color:#B42318;background:#F9E6E6} .bub .jv.no svg{stroke:#B42318}
+.relab{display:grid;grid-template-columns:1.6fr 1fr;gap:2cqw;margin-block:auto}
+.icard.hero{border-color:var(--hue);border-width:.18cqw} .icard.hero .big{font-size:7cqw} .icard.hero h4{font-size:2.4cqw}
+.icard .big.sm{font-size:4cqw}
+.slide[data-title="Request understanding"] .chat.mini .bub{font-size:1.7cqw;padding:.7cqw 1.2cqw}
+.slide[data-title="Request understanding"] .chat.mini{gap:.7cqw}
+
+.slide[data-title="Label example — “from a different artist”"] .chat .bub{font-size:1.6cqw;padding:.6cqw 1.2cqw}
+.slide[data-title="Label example — “from a different artist”"] .chat{gap:.5cqw}
+.slide[data-title="Label example — “from a different artist”"] .bub .tl{margin-bottom:.25cqw}
 </style>
 </head>
 <body>
@@ -883,14 +899,15 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h2>Request understanding</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="stateflow">
     <div class="chat mini">
-      <div class="bub sys"><span class="tl">Turn 1</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Neko Case — “Calling Cards” — <i>not quite</i></div>
-      <div class="bub sys"><span class="tl">Turn 2</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Neko Case — “Man” — <i>not it either</i></div>
-      <div class="bub me"><span class="tl">Turn 3 · now</span>Much more subdued… a sense of place in the lyrics… almost a cappella.</div>
+      <div class="bub sys"><span class="tl">Turn 1 · we played</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Neko Case — “Calling Cards”</div>
+      <div class="bub me"><span class="tl">Turn 2 · listener</span>That’s a great <b>Neko Case</b> track, but it’s not quite the one I’m thinking of…</div>
+      <div class="bub sys"><span class="tl">Turn 2 · we played</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Neko Case — “Man”</div>
+      <div class="bub me"><span class="tl">Turn 3 · now</span>No, that’s not it either… much more subdued… almost a cappella.</div>
     </div>
     <div class="sarrow"><span>LLM</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
-    <div class="scard"><div class="srow"><span class="sk">Stay with</span><span class="sv">Neko Case</span></div><div class="srow"><span class="sk">Turned down</span><span class="sv">“Calling Cards”, “Man”</span></div><div class="srow"><span class="sk">Mood</span><span class="sv">subdued</span></div><div class="srow"><span class="sk">Lyrics</span><span class="sv">a sense of place</span></div><div class="srow"><span class="sk">Sound</span><span class="sv">stark, almost a cappella</span></div></div>
+    <div class="scard"><div class="srow"><span class="sk">Target artist</span><span class="sv">Neko Case <i class="why">from turn 2</i></span></div><div class="srow"><span class="sk">Turned down</span><span class="sv">“Calling Cards”, “Man”</span></div><div class="srow"><span class="sk">Mood</span><span class="sv">subdued</span></div><div class="srow"><span class="sk">Lyrics</span><span class="sv">a sense of place</span></div><div class="srow"><span class="sk">Sound</span><span class="sv">stark, almost a cappella</span></div></div>
   </div>
-  <div class="takeaway">The LLM reads <b>every turn so far</b> and writes structured fields; every later step reads those.</div></div>
+  <div class="takeaway">The LLM reads <b>every turn so far</b>: “a great Neko Case track, but not the one” means the song is by Neko Case, and both tracks are out.</div></div>
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-tier="optional" class="slide roomy" data-title="The state schema"
@@ -1157,7 +1174,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   <div class="fill"><div class="chat big anchor">
     <div class="bub sys"><span class="tl">Recommender agent played</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Arctic Monkeys — “Brianstorm”</div>
     <div class="bub me"><span class="tl">Listener, next turn</span>This is still Arctic Monkeys. I keep asking for <b>‘My Body Is a Cage’ by Arcade Fire</b>… That’s the only song I want to hear right now.</div>
-    <div class="bub sys key"><span class="tl">Answer key for that turn</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Arctic Monkeys — “This House is a Circus” <span class="mv no">DOES NOT move toward goal</span></div>
+    <div class="bub sys key"><span class="tl">Answer key for that turn</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Arctic Monkeys — “This House is a Circus” <span class="mv no">DOES NOT move toward goal</span><span class="jv ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Our judges agree: wrong — repeats the artist</span></div>
   </div>
   <div class="takeaway">The answer key is whatever the simulated recommender picked from its small pool — here, <b>Arctic Monkeys again</b>.</div></div>
 </section>
@@ -1168,11 +1185,11 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   <div class="fill"><div class="chat big anchor">
     <div class="bub sys"><span class="tl">Recommender agent played</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Bonobo — “Cirrus”</div>
     <div class="bub me"><span class="tl">Listener, next turn</span>…something with a similar chill, electronic vibe, maybe with a subtle beat, but <b>from a different artist</b>?</div>
-    <div class="bub sys key"><span class="tl">Answer key for that turn</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Bonobo — “Jets” <span class="mv ">MOVES toward goal</span></div>
+    <div class="bub sys key"><span class="tl">Answer key for that turn</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Bonobo — “Jets” <span class="mv ">MOVES toward goal</span><span class="jv no"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>Our judges: wrong — same artist</span></div>
     <div class="bub me"><span class="tl">Next turn</span>“Jets” is cool, but I was actually hoping for something <b>from a different artist this time</b>…</div>
-    <div class="bub sys key"><span class="tl">Answer key</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Bonobo — “Pieces” <span class="mv ">MOVES toward goal</span></div>
+    <div class="bub sys key"><span class="tl">Answer key</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Bonobo — “Pieces” <span class="mv ">MOVES toward goal</span><span class="jv no"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>Our judges: wrong — same artist</span></div>
   </div>
-  <div class="takeaway">Twice asked to leave Bonobo, and both answer keys are Bonobo — <b>annotated as helpful</b>.</div></div>
+  <div class="takeaway">Twice asked to leave Bonobo; both answer keys are Bonobo, <b>marked helpful</b>.</div></div>
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="optional" class="slide" data-title="How the relabelling worked"
@@ -1189,10 +1206,10 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="optional" class="slide" data-title="What the relabelling found"
   data-notes="&lt;b&gt;0:50.&lt;/b&gt; On 61% of training turns the judges would not settle on the played track being a good fit. 17% — 18,222 turns — keep the artist the listener had just rejected. We trained on the relabeled data and it scored lower against the original labels, so the submission kept the originals. Say the catch: that score is computed against the original labels, so it could not have favoured the relabeling.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>What the relabelling found</h2><span class="tag">Analysis</span></div>
-  <div class="fill"><div class="icards c3">
-    <div class="icard"><div class="big">113,393</div><h4>turns re-judged</h4><p>every labelable train and dev turn</p></div>
-    <div class="icard"><div class="big">61%</div><h4>not a good fit</h4><p>of training turns, the judges would not settle on the label fitting</p></div>
-    <div class="icard"><div class="big">17%</div><h4>keep the rejected artist</h4><p>18,222 training turns</p></div>
+  <div class="fill"><div class="relab">
+    <div class="icard hero"><div class="big">17%</div><h4>of training turns keep the artist the listener had just asked to leave</h4>
+      <p>18,222 turns — both judges or the arbiter marked the label as artist anchoring</p></div>
+    <div class="icard"><div class="big sm">113,393</div><h4>turns re-judged</h4><p>every labelable train and dev turn</p></div>
   </div>
   <div class="takeaway">Retrained on these labels, the ranker scored lower <b>against the original labels</b> — a test that could never favour the fix — so we kept the originals.</div></div>
 </section>
