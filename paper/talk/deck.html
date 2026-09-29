@@ -864,7 +864,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="The system in one picture"
-  data-notes="&lt;b&gt;0:45.&lt;/b&gt; An LLM compiles each conversation into a typed state. Eleven branches query ONE LanceDB table holding metadata, a full-text index and six embedding families. LambdaMART scores the pooled union and emits 20. A response model writes the reply, conditioned on the top track AND the same state. Note the families: two boxes are LLMs, the ranker is trees — people assume the Qwen model does the ranking.">
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; An LLM compiles each conversation into a typed state. Eleven branches query ONE LanceDB table holding metadata, a full-text index and six embedding families. LambdaMART scores the pooled union and emits 20. A response model writes the reply, conditioned on the top track AND the same state. Note the families: two boxes are LLMs, the ranker is trees — people assume the Qwen model does the ranking.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h2>One state, eleven branches, one learned ranker</h2>
     <span class="tag">Approach</span></div>
   <div class="diagram wide"><img src="figures/architecture.svg" alt="System architecture: conversation and played tracks go to an LLM state extractor; eleven retrieval branches query one LanceDB collection of 47,071 tracks; pooled candidates are scored by a LambdaMART reranker that emits twenty tracks; a response model writes a reply conditioned on the top track and the same state. A weighted reciprocal-rank-fusion path is the untrained baseline and fallback."></div>
@@ -878,7 +878,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Request understanding"
-  data-notes="&lt;b&gt;0:35.&lt;/b&gt; First an LLM, DeepSeek-V4-Flash, reads the whole conversation and writes down what it understood as structured fields. We had just played Ryan Adams &amp;amp; The Cardinals; the listener liked the mood but asked for other artists. The state keeps the mood and genre and marks that artist as one to avoid. Every later step reads these fields.">
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; First an LLM, DeepSeek-V4-Flash, reads the whole conversation and writes down what it understood as structured fields. We had just played Ryan Adams &amp;amp; The Cardinals; the listener liked the mood but asked for other artists. The state keeps the mood and genre and marks that artist as one to avoid. Every later step reads these fields.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h2>Request understanding</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="stateflow">
     <div class="chat mini"><div class="bub sys"><span class="tl">We had just played</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Ryan Adams &amp; The Cardinals — “Let Us Down Easy”</div>
@@ -890,8 +890,8 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   <div class="takeaway">The LLM reads <b>every turn so far</b>: “other artists” after a Ryan Adams track becomes an artist to avoid, and the mood carries over.</div></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-tier="optional" class="slide roomy" data-title="The state schema"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Eleven field groups. The example on the next slide fills four of them. Worth pausing on how much is here versus how little reached retrieval — that is the main diagnostic.">
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-tier="core" class="slide roomy" data-title="The state schema"
+  data-notes="&lt;b&gt;0:25.&lt;/b&gt; What the state can hold: the request type and routing flags, what the listener likes, what they ruled out, how it should sound, what it is about, and bounds like a release-year window. One LLM call fills all of it every turn.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>What the state can hold</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="cols c3">
     <div class="card"><h3>The request</h3>
@@ -945,7 +945,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Retrieval — eleven branches"
-  data-notes="&lt;b&gt;0:25.&lt;/b&gt; The state drives eleven retrieval branches over one index. BM25 matches keywords and resolved tags. Three dense-text branches use Qwen3 embeddings of lyrics, metadata and attributes. CLAP matches the sonic description against audio. Three anchor centroids search near tracks the listener liked, by cover art, audio and listening data. A user-CF centroid uses this listener’s own vector, and two catalog lookups cover discography and era popularity. Each returns its top 500; the pool is their union.">
+  data-notes="&lt;b&gt;0:20.&lt;/b&gt; The state drives eleven retrieval branches over one index. BM25 matches keywords and resolved tags. Three dense-text branches use Qwen3 embeddings of lyrics, metadata and attributes. CLAP matches the sonic description against audio. Three anchor centroids search near tracks the listener liked, by cover art, audio and listening data. A user-CF centroid uses this listener’s own vector, and two catalog lookups cover discography and era popularity. Each returns its top 500; the pool is their union.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><h2>Retrieval — eleven branches</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="icards c3 compact">
     <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><div class="big">×1</div><h4>BM25 + tag resolver</h4><p>keywords and resolved tags from the state</p></div>
@@ -979,7 +979,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Reranking"
-  data-notes="&lt;b&gt;0:25.&lt;/b&gt; A learned ranker — gradient-boosted trees in LightGBM — scores every pooled candidate on 146 features and keeps the top 20. The next two slides show what it relies on.">
+  data-notes="&lt;b&gt;0:20.&lt;/b&gt; A learned ranker — gradient-boosted trees in LightGBM — scores every pooled candidate on 146 features and keeps the top 20. The next two slides show what it relies on.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h2>Reranking</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="flow">
     <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".8"/><circle cx="4.5" cy="12" r=".8"/><circle cx="4.5" cy="18" r=".8"/></svg></div><h4>The pooled candidates</h4><p>top 500 from each branch</p></div>
@@ -1034,7 +1034,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Response generation"
-  data-notes="&lt;b&gt;0:25.&lt;/b&gt; A real Blind-B reply that our own LLM checker rated good. The words it uses — uplifting, cheerful, hopeful — come from the state and the track’s tags.">
+  data-notes="&lt;b&gt;0:20.&lt;/b&gt; A real Blind-B reply that our own LLM checker rated good. The words it uses — uplifting, cheerful, hopeful — come from the state and the track’s tags.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>Response generation</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="chat big">
     <div class="bub me"><span class="tl">Listener</span>…it feels a bit too serious. I’m looking for something more uplifting and positive, really something to lift my spirits.</div>
@@ -1182,7 +1182,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Why we trained on the dev set"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Request understanding costs one paid LLM call per turn. Running it over the 121.6 thousand training turns was too expensive, so the ranker was trained on the 8,000 dev turns — the same turns we used to check it. We had no clean held-out set, and chose designs on replays of turns the model had already seen: 0.38 there, 0.25 on the blind test.">
+  data-notes="&lt;b&gt;0:35.&lt;/b&gt; Request understanding costs one paid LLM call per turn. Running it over the 121.6 thousand training turns was too expensive, so the ranker was trained on the 8,000 dev turns — the same turns we used to check it. We had no clean held-out set, and chose designs on replays of turns the model had already seen: 0.38 there, 0.25 on the blind test.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h2>Why we trained on the dev set</h2><span class="tag">Lessons</span></div>
   <div class="fill"><div class="flow">
     <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h4>1 paid LLM call per turn</h4><p>to read each turn into a state</p></div>
@@ -1199,7 +1199,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Failure 1 — extracted, then ignored"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; The most common shape, and the most embarrassing. In each of these the state correctly carried an avoid for the artist, and we served that same artist at rank 1. This is our own model doing exactly what the training labels do — anchoring on the just-played artist. The constraint features carry 0.7% of ranker gain, which is why nothing stopped it.">
+  data-notes="&lt;b&gt;0:35.&lt;/b&gt; The most common shape, and the most embarrassing. In each of these the state correctly carried an avoid for the artist, and we served that same artist at rank 1. This is our own model doing exactly what the training labels do — anchoring on the just-played artist. The constraint features carry 0.7% of ranker gain, which is why nothing stopped it.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Extracted, but the ranker did not act on it</h2>
     <span class="tag">Went wrong</span></div>
   <div class="tracks">
@@ -1222,8 +1222,8 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   <div class="takeaway">We wanted the ranker to use what the state recorded; it served that artist anyway. We think the labels taught it to: they often repeat the just-played artist, so rejections carried only <b>0.7%</b> of its decisions.</div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="optional" data-title="No data from outside the catalog"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; The extractor read these requests correctly. There was simply nothing to match against: the catalog records no tempo or key and no film or TV links, and we added no outside source. The gap is knowledge, not understanding.">
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="No data from outside the catalog"
+  data-notes="&lt;b&gt;0:25.&lt;/b&gt; The extractor read these requests correctly. There was simply nothing to match against: the catalog records no tempo or key and no film or TV links, and we added no outside source. The gap is knowledge, not understanding.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6"/><path d="M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg></div><h2>No data from outside the catalog</h2><span class="tag">What is not ideal</span></div>
   <div class="fill"><div class="mrows big">
     <div class="mrow" style="--c:#7A3FB8"><div class="mh">A tempo and a key</div><div class="mpair">
