@@ -832,6 +832,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 :root[data-talk] .axgrid{counter-reset:ax}:root[data-talk] .axitem:not(.ax-detail){counter-increment:ax}
 :root[data-talk] .axitem .n{font-size:0}:root[data-talk] .axitem .n::before{content:counter(ax);font-size:1.6cqw}
 :root[data-talk] .axitem{font-size:1.6cqw}
+.rrgrid.one{flex:none;margin-top:.4cqw}.rrgrid.one .rrbox{padding:1.4cqw 1.8cqw}.rrgrid.one .bars{flex:none;gap:1.3cqw}
 </style>
 </head>
 <body>
@@ -1012,7 +1013,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Request understanding"
   data-notes="&lt;b&gt;0:30.&lt;/b&gt; First an LLM, DeepSeek-V4-Flash, reads the whole conversation and writes down what it understood as structured fields. We had just played Ryan Adams &amp;amp; The Cardinals; the listener liked the mood but asked for other artists. The state keeps the mood and genre and marks that artist as one to avoid. Every later step reads these fields.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h2>Request understanding</h2><span class="tag">Approach</span></div>
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h2>Request understanding → conversation state</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="stateflow">
     <div class="chat mini"><div class="bub sys"><span class="tl">We had just played</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Ryan Adams &amp; The Cardinals — “Let Us Down Easy”</div>
       <div class="bub me"><span class="tl">Listener</span>…more tracks with that kind of emotional depth and acoustic focus, maybe branching out to other singer-songwriter or alt-country artists?</div>
@@ -1121,7 +1122,8 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   data-notes="&lt;b&gt;0:35.&lt;/b&gt; A LightGBM ranker scores every pooled candidate on 146 features and keeps the top 20. One feature — the bi-encoder cosine between the conversation and the track card — carries 59% of split gain; constraint and rejection features carry 0.7%. Label weighting is in the appendix.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h2>Reranking</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="rrflow"><div class="rrs"><h4>Pooled candidates</h4><p>top 500 per branch</p></div><div class="rra"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="rrs hl"><h4>LightGBM ranker</h4><p>146 features per candidate</p></div><div class="rra"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="rrs"><h4>Top 20</h4><p>the scored list</p></div></div>
-  <div class="rrgrid one"><div class="rrbox"><div class="rgl">What it leans on · share of split gain</div><div class="bars famb"><div class="brow"><span class="bl">Bi-encoder cosine <i>· conversation vs track card</i></span><div class="btrack"><div class="bfill " style="width:100%"></div></div><span class="bv">59.0%</span></div><div class="brow"><span class="bl">Per-branch rank and score <i>· 66 features</i></span><div class="btrack"><div class="bfill " style="width:19.5%"></div></div><span class="bv">11.5%</span></div><div class="brow"><span class="bl">Constraints and rejections <i>· 13 features</i></span><div class="btrack"><div class="bfill warn" style="width:1.2%"></div></div><span class="bv">0.7%</span></div></div></div></div></div>
+  <div class="rrgrid one"><div class="rrbox"><div class="rgl">What it leans on · share of split gain</div><div class="bars famb"><div class="brow"><span class="bl">Bi-encoder cosine <i>· conversation vs track card</i></span><div class="btrack"><div class="bfill " style="width:100%"></div></div><span class="bv">59.0%</span></div><div class="brow"><span class="bl">Per-branch rank and score <i>· 66 features</i></span><div class="btrack"><div class="bfill " style="width:19.5%"></div></div><span class="bv">11.5%</span></div><div class="brow"><span class="bl">Constraints and rejections <i>· 13 features</i></span><div class="btrack"><div class="bfill warn" style="width:1.2%"></div></div><span class="bv">0.7%</span></div></div></div></div>
+  <div class="takeaway">One signal — the bi-encoder cosine — carries <b>59%</b>; constraints and rejections carry <b>0.7%</b>.</div></div>
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Reranking"
@@ -1440,7 +1442,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   <div class="fill"><div class="axgrid" id="axgrid"></div></div>
 </section>
 
-<section style="--hue:#257E3D;--hue-soft:#E7F8EC" data-appendix="1" class="slide talkax" data-title="Where our points came from"
+<section style="--hue:#257E3D;--hue-soft:#E7F8EC" data-appendix="1" class="slide" data-title="Where our points came from"
   data-notes="&lt;b&gt;0:45.&lt;/b&gt; Half nDCG@20, thirty percent an LLM judge rescaled from 1-5, ten each for catalog diversity and reply wording. Point at our decomposition: the judge term out-earned nDCG, and catalog diversity returned 0.003 of the 0.10 available.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h2>Where our points came from</h2><span class="tag">Results</span></div>
   <div class="fill">
@@ -1894,23 +1896,6 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
     <div class="bub sys"><span class="tl">Answer key</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Bonobo — “Pieces” <span class="mv">MOVES toward goal</span></div>
   </div>
   <div class="takeaway">The answer key repeats the artist the listener just asked to leave. Our ranker <b>anchors</b> the same way — we think it learns it here.</div></div>
-</section>
-
-<section style="--hue:#A55A18;--hue-soft:#FBEFE4" data-tier="talk" data-appendix="24" class="slide" data-title="What we would do differently"
-  data-notes="&lt;b&gt;0:35.&lt;/b&gt; Ordered by expected value, not effort. Point one is free and would have changed every decision we made. Point five is the honest one — we still have no principled answer.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><h2>What we would do differently</h2><span class="tag">Conclusion</span></div>
-  <div class="fill"><ol>
-    <li><strong>Hold out a clean split before touching anything.</strong> Free, and it would have
-      changed every selection decision we made.</li>
-    <li><strong>Make the state executable.</strong> Rejections and constraints carried 0.7% of model
-      gain — most of what the extractor understood never became a filter.</li>
-    <li><strong>Import knowledge the catalog lacks</strong> — tempo, key, soundtrack and film/TV
-      links — so requests naming them have something to match.</li>
-    <li><strong>Check the response against the state</strong> before emitting it: flag unavailable
-      tracks and unmet constraints instead of overselling a substitute.</li>
-    <li><strong>Decide what to do when the benchmark and your judgment disagree.</strong> We still
-      do not have a principled answer.</li>
-  </ol></div>
 </section>
 
 <div id="bar"></div>
