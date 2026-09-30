@@ -22,7 +22,7 @@ print on plain matte paper with no lamination or mounting. See the
 | `deck.html` | **Deck source.** The detailed record of the work — edit this. |
 | `talk.html` | **Present from this.** Self-contained, figures inlined, no network. |
 | `deck-detailed.pdf` | **For someone new to this space.** A 41-slide main flow in six parts, with 4.1–4.4 subsections for the approach — the problem, how the organisers built the data, scoring, our approach step by step, results, what is not ideal — then a 19-slide appendix with every deep dive. Visual-first; the score appears only in part five. |
-| `talk-10min.pdf` | **The workshop talk.** 18 talk slides for the 14:50–15:00 slot (8-minute talk + 2-minute Q&A per the organizers; contents, conclusion and a questions slide included), then a 24-page appendix for Q&A: about 7:05 in full by the note timings; the presenter trims live, and "SKIP IF COVERED" in the notes marks candidates. Same source, core slides only. |
+| `talk-10min.pdf` | **The workshop talk.** 18 talk slides for the 14:50–15:00 slot (8-minute talk + 2-minute Q&A per the organizers; contents, conclusion and a questions slide included), then a 12-page appendix for attendees (11 slides + index): about 7:05 in full by the note timings; the presenter trims live, and "SKIP IF COVERED" in the notes marks candidates. Same source, core slides only. |
 | `DECK_PLAN.md` | The plan for both views: audiences, constraints, talk path, status. |
 | `render-deck.sh` | Builds `talk.html`, renders both deck PDFs, preflights them. |
 | `build.py` | Inlines the deck's figures into `talk.html` (called by `render-deck.sh`). |
@@ -100,7 +100,7 @@ The talk is a **filter over that same source**, never a second file:
 - **`?core=1`** hides everything else, so `talk-10min.pdf` is the talk.
 
 ```bash
-bash paper/talk/render-deck.sh      # deck-detailed.pdf (61) and talk-10min.pdf (18 + 24 appendix)
+bash paper/talk/render-deck.sh      # deck-detailed.pdf (61) and talk-10min.pdf (18 + 12 appendix)
 ```
 
 To move a slide in or out of the short talk, change its `data-tier`. Nothing

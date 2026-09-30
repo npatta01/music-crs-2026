@@ -296,7 +296,8 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
 #jumpbuf.on{display:block}
 
 /* ?core=1 exports the short talk only — same source, filtered */
-:root[data-print="core"] .slide[data-tier="optional"]{display:none!important}
+:root[data-print="core"] .slide[data-tier="optional"],
+:root[data-print="core"] .slide[data-appendix]:not(.talkax):not([data-tier="talk"]):not([data-appendix="0"]){display:none!important}
 :root:not([data-print="core"]) .slide[data-tier="talk"]{display:none!important}
 
 @page{size:13.333in 7.5in;margin:0}
@@ -307,7 +308,8 @@ figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
   #stage{width:13.333in;height:auto;container-type:inline-size}
   .slide{display:flex!important;position:relative;width:13.333in;height:7.5in;
     break-after:page;page-break-after:always}
-  :root[data-print="core"] .slide[data-tier="optional"]{display:none!important}
+  :root[data-print="core"] .slide[data-tier="optional"],
+  :root[data-print="core"] .slide[data-appendix]:not(.talkax):not([data-tier="talk"]):not([data-appendix="0"]){display:none!important}
 :root:not([data-print="core"]) .slide[data-tier="talk"]{display:none!important}
   .slide.last-visible{break-after:auto;page-break-after:auto}
   .overlay,#timer,#notes,#bar,#jumpbuf{display:none!important}
@@ -826,6 +828,10 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 .slide[data-title="Four ways the reply went wrong"] .rgh{font-size:1.85cqw;margin-bottom:.8cqw}
 .slide[data-title="Four ways the reply went wrong"] .replygroups{gap:2.4cqw;margin-block:auto}
 :root[data-talk] .slide[data-title="Four ways the reply went wrong"] .track .ask{font-size:1.75cqw}
+:root[data-talk] .ax-detail{display:none}
+:root[data-talk] .axgrid{counter-reset:ax}:root[data-talk] .axitem:not(.ax-detail){counter-increment:ax}
+:root[data-talk] .axitem .n{font-size:0}:root[data-talk] .axitem .n::before{content:counter(ax);font-size:1.6cqw}
+:root[data-talk] .axitem{font-size:1.6cqw}
 </style>
 </head>
 <body>
@@ -1434,7 +1440,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   <div class="fill"><div class="axgrid" id="axgrid"></div></div>
 </section>
 
-<section style="--hue:#257E3D;--hue-soft:#E7F8EC" data-appendix="1" class="slide" data-title="Where our points came from"
+<section style="--hue:#257E3D;--hue-soft:#E7F8EC" data-appendix="1" class="slide talkax" data-title="Where our points came from"
   data-notes="&lt;b&gt;0:45.&lt;/b&gt; Half nDCG@20, thirty percent an LLM judge rescaled from 1-5, ten each for catalog diversity and reply wording. Point at our decomposition: the judge term out-earned nDCG, and catalog diversity returned 0.003 of the 0.10 available.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h2>Where our points came from</h2><span class="tag">Results</span></div>
   <div class="fill">
@@ -1551,7 +1557,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   </div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="6" class="slide" data-dense data-title="Routing flags decide which branches fire"
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="6" class="slide talkax" data-dense data-title="Routing flags decide which branches fire"
   data-notes="&lt;b&gt;0:45.&lt;/b&gt; Five boolean flags on the state. The visual one is the clearest case: it is the only thing that opens the twelfth, gated SigLIP-2 cover-art branch. Note the honest bit — the reranker carries no features for that branch, so even when it fires, the ranker cannot weigh it.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>Routing flags decide which branches fire</h2>
     <span class="tag">Approach</span></div>
@@ -1599,7 +1605,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   </div></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="8" class="slide" data-title="The eleven branches"
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="8" class="slide talkax" data-title="The eleven branches"
   data-notes="&lt;b&gt;0:50.&lt;/b&gt; All eleven query the same collection; each is a differently-shaped query against one table. A twelfth, SigLIP-2 text-to-cover-art, is configured but gated behind a visual-request flag and the reranker carries no features for it.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><h2>The eleven retrieval branches</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="cols c2w">
@@ -1624,6 +1630,39 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
     </div>
   </div></div>
   <div class="tiny" style="margin-top:1cqw">† Gated by intent mode: a pivot suppresses anchor centroids.</div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="talk" data-appendix="19" data-dense data-title="The reranker"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; &lt;b&gt;SKIP IF COVERED.&lt;/b&gt; LightGBM LambdaMART over the union of branch pools. 146 features per (turn, track) pair, about 20.6M candidate rows. One feature — the bi-encoder cosine — carries 59% of split gain. Say the caveat: split gain describes the fit, not quality. And look at the bottom row: constraint features carry 0.7%, which is the main diagnostic.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-5M13 19v-9M18 19v-13"/></svg></div><h2>What the ranker leans on</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="bars famb"><div class="brow"><span class="bl">Bi-encoder cosine <i>· 1 feature</i></span><div class="btrack"><div class="bfill" style="width:100.0%"></div></div><span class="bv">59.0%</span></div><div class="brow"><span class="bl">Per-branch rank and score <i>· 66 features</i></span><div class="btrack"><div class="bfill" style="width:19.5%"></div></div><span class="bv">11.5%</span></div><div class="brow"><span class="bl">Session and artist affinity <i>· 18 features</i></span><div class="btrack"><div class="bfill" style="width:18.1%"></div></div><span class="bv">10.7%</span></div><div class="brow"><span class="bl">Popularity · state · tags <i>· 31 features</i></span><div class="btrack"><div class="bfill" style="width:15.6%"></div></div><span class="bv">9.2%</span></div><div class="brow"><span class="bl">Other similarity cosines <i>· 17 features</i></span><div class="btrack"><div class="bfill" style="width:15.1%"></div></div><span class="bv">8.9%</span></div><div class="brow"><span class="bl">Constraints and rejections <i>· 13 features</i></span><div class="btrack"><div class="bfill warn" style="width:1.2%"></div></div><span class="bv">0.7%</span></div></div>
+  <div class="takeaway">Share of the ranker’s split gain, by feature family. One signal — the bi-encoder cosine — carries
+    <b>59%</b>; constraints and rejections carry <b>0.7%</b>.</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="talk" data-appendix="20" data-title="Down-weighting contradicted turns"
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Every training turn starts with weight 1. If the next turn contradicts the label, we trust it less: 0.6 if the listener rejects only the artist, 0.3 if they reject the track or the goal-progress note says it did not help, never below 0.2. Chosen by hand, never tuned.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h2>Down-weighting contradicted turns</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="cols" style="grid-template-columns:1.9fr 1fr">
+    <div class="bars wbars">
+      <div class="brow"><span class="bl">Every turn starts at</span><div class="btrack"><div class="bfill" style="width:100%"></div></div><span class="bv">1.0</span></div>
+      <div class="brow"><span class="bl">Next turn rejects the artist</span><div class="btrack"><div class="bfill" style="width:60%"></div></div><span class="bv">× 0.6</span></div>
+      <div class="brow"><span class="bl">Next turn rejects the track</span><div class="btrack"><div class="bfill warn" style="width:30%"></div></div><span class="bv">× 0.3</span></div>
+      <div class="brow"><span class="bl">Goal note: did not help</span><div class="btrack"><div class="bfill warn" style="width:30%"></div></div><span class="bv">× 0.3</span></div>
+      <div class="brow"><span class="bl">Never below</span><div class="btrack"><div class="bfill mute" style="width:20%"></div></div><span class="bv">0.2</span></div>
+    </div>
+    <div class="card accent"><h3>Why</h3><div class="small">The label is whatever played next. When the
+      <b>next</b> turn says it was wrong, that label counts for less in training.</div>
+      <div class="tiny" style="margin-top:.8cqw">Chosen by hand, never tuned. Goal notes shape these
+        weights but are never a ranker input.</div></div>
+  </div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-tier="talk" data-appendix="21" class="slide" data-title="The b1 bi-encoder"
+  data-notes="&lt;b&gt;0:25.&lt;/b&gt; Two towers, one shared encoder fine-tuned from Qwen3-Embedding-4B. The track card carries a one-line LLM-written &#x27;known for&#x27; description — the only world knowledge anywhere in the system. Document vectors precomputed for all 47,071 tracks; the conversation vector is encoded live with caching.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-5M13 19v-9M18 19v-13"/></svg></div><h2>The bi-encoder behind that top feature</h2>
+    <span class="tag">Approach</span></div>
+  <div class="diagram bienc"><img src="figures/biencoder2.svg" alt="Two-tower bi-encoder: a conversation rendering and a track card each pass through the same fine-tuned Qwen3-Embedding-4B encoder; last-token pooling and L2 normalisation give two 2560-dimensional unit vectors whose cosine is the reranker's top feature."></div>
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="9" class="slide" data-title="Fusion and fallback"
@@ -1699,7 +1738,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   </div></div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="12" class="slide" data-dense data-title="Failure 3 — the better track was already in the pool"
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="12" class="slide talkax" data-dense data-title="Failure 3 — the better track was already in the pool"
   data-notes="&lt;b&gt;0:55.&lt;/b&gt; This is the one that says the loss is in ranking, not retrieval. In each case a non-violating, better-fitting candidate was already in our own candidate pool, just below the top-20 we served. St Germain is nu-jazz and downtempo — literally what the user described — and it sat at pool rank 34 while we served the artist they had asked to avoid.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Failure 3 — the better track was already in our pool</h2>
     <span class="tag">Analysis</span></div>
@@ -1725,6 +1764,28 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
       was sitting in our own pool below the top-20 we served. Retrieval found it; ranking buried
       it.</div>
   </div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="talk" data-appendix="22" class="slide" data-title="How the relabelling worked"
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; Two cheap judges scored every labelable turn on two axes: was a different artist asked for, and does the track fit. Where they agree, about 80% of training turns, that verdict stands. Where they disagree, Opus arbitrates, blind to their verdicts.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>How the LLM relabelling worked</h2><span class="tag">Analysis</span></div>
+  <div class="lead2">The answer keys come from the simulated recommender’s picks. To see how often they actually fit
+    the request, we had <b>two LLM judges re-score every labelable turn</b>.</div>
+  <div class="small" style="margin-bottom:.6cqw">Both judges score the same two axes: was a
+    different artist asked for, and does the track fit the request?</div>
+  <div class="diagram"><img src="figures/relabelling.svg" alt="Relabelling flow: every labelable train and dev turn is scored by two LLM judges, Gemma-4-26B and DeepSeek-V4-Flash. Where they agree, about 80 percent of training turns, that verdict becomes the re-judged label. Where they disagree, about 20 percent, Claude Opus decides."></div>
+  <div class="small" style="margin-top:.6cqw">Agreement split measured on the training turns.</div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="talk" data-appendix="23" class="slide" data-title="What the relabelling found"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; &lt;b&gt;SKIP IF COVERED.&lt;/b&gt; On 61% of training turns the judges would not settle on the played track being a good fit. 17% — 18,222 turns — keep the artist the listener had just rejected. We trained on the relabeled data and it scored lower against the original labels, so the submission kept the originals. Say the catch: that score is computed against the original labels, so it could not have favoured the relabeling.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>What the relabelling found</h2><span class="tag">Analysis</span></div>
+  <div class="fill"><div class="relab">
+    <div class="icard hero"><div class="big">17%</div><h4>of training turns keep the artist the listener had just asked to leave</h4>
+      <p>18,222 turns — both judges or the arbiter marked the label as artist anchoring</p></div>
+    <div class="icard"><div class="big sm">113,393</div><h4>turns re-judged</h4><p>every labelable train and dev turn</p></div>
+  </div>
+  <div class="takeaway">Retrained on these labels, the ranker scored lower <b>against the original labels</b> — a test that could never favour the fix — so we kept the originals.</div></div>
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="13" class="slide" data-title="Label-free audit"
@@ -1822,7 +1883,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   </div></div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="18" class="slide" data-title="The target often ignores the request"
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="18" class="slide talkax" data-title="The target often ignores the request"
   data-notes="&lt;b&gt;1:00.&lt;/b&gt; Ground truth is whatever played next, in a session an LLM wrote. Here the listener asks twice, explicitly, for a different artist — and the target stays on Bonobo both times, with the annotation calling both MOVES TOWARD GOAL. Our own model anchors on the just-played artist and we think it learns it here.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>The target often ignores the request</h2>
     <span class="tag">Analysis</span></div>
@@ -1835,59 +1896,21 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   <div class="takeaway">The answer key repeats the artist the listener just asked to leave. Our ranker <b>anchors</b> the same way — we think it learns it here.</div></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="talk" data-appendix="19" data-dense data-title="The reranker"
-  data-notes="&lt;b&gt;0:30.&lt;/b&gt; &lt;b&gt;SKIP IF COVERED.&lt;/b&gt; LightGBM LambdaMART over the union of branch pools. 146 features per (turn, track) pair, about 20.6M candidate rows. One feature — the bi-encoder cosine — carries 59% of split gain. Say the caveat: split gain describes the fit, not quality. And look at the bottom row: constraint features carry 0.7%, which is the main diagnostic.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-5M13 19v-9M18 19v-13"/></svg></div><h2>What the ranker leans on</h2><span class="tag">Approach</span></div>
-  <div class="fill"><div class="bars famb"><div class="brow"><span class="bl">Bi-encoder cosine <i>· 1 feature</i></span><div class="btrack"><div class="bfill" style="width:100.0%"></div></div><span class="bv">59.0%</span></div><div class="brow"><span class="bl">Per-branch rank and score <i>· 66 features</i></span><div class="btrack"><div class="bfill" style="width:19.5%"></div></div><span class="bv">11.5%</span></div><div class="brow"><span class="bl">Session and artist affinity <i>· 18 features</i></span><div class="btrack"><div class="bfill" style="width:18.1%"></div></div><span class="bv">10.7%</span></div><div class="brow"><span class="bl">Popularity · state · tags <i>· 31 features</i></span><div class="btrack"><div class="bfill" style="width:15.6%"></div></div><span class="bv">9.2%</span></div><div class="brow"><span class="bl">Other similarity cosines <i>· 17 features</i></span><div class="btrack"><div class="bfill" style="width:15.1%"></div></div><span class="bv">8.9%</span></div><div class="brow"><span class="bl">Constraints and rejections <i>· 13 features</i></span><div class="btrack"><div class="bfill warn" style="width:1.2%"></div></div><span class="bv">0.7%</span></div></div>
-  <div class="takeaway">Share of the ranker’s split gain, by feature family. One signal — the bi-encoder cosine — carries
-    <b>59%</b>; constraints and rejections carry <b>0.7%</b>.</div></div>
-</section>
-
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="talk" data-appendix="20" data-title="Down-weighting contradicted turns"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Every training turn starts with weight 1. If the next turn contradicts the label, we trust it less: 0.6 if the listener rejects only the artist, 0.3 if they reject the track or the goal-progress note says it did not help, never below 0.2. Chosen by hand, never tuned.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h2>Down-weighting contradicted turns</h2><span class="tag">Approach</span></div>
-  <div class="fill"><div class="cols" style="grid-template-columns:1.9fr 1fr">
-    <div class="bars wbars">
-      <div class="brow"><span class="bl">Every turn starts at</span><div class="btrack"><div class="bfill" style="width:100%"></div></div><span class="bv">1.0</span></div>
-      <div class="brow"><span class="bl">Next turn rejects the artist</span><div class="btrack"><div class="bfill" style="width:60%"></div></div><span class="bv">× 0.6</span></div>
-      <div class="brow"><span class="bl">Next turn rejects the track</span><div class="btrack"><div class="bfill warn" style="width:30%"></div></div><span class="bv">× 0.3</span></div>
-      <div class="brow"><span class="bl">Goal note: did not help</span><div class="btrack"><div class="bfill warn" style="width:30%"></div></div><span class="bv">× 0.3</span></div>
-      <div class="brow"><span class="bl">Never below</span><div class="btrack"><div class="bfill mute" style="width:20%"></div></div><span class="bv">0.2</span></div>
-    </div>
-    <div class="card accent"><h3>Why</h3><div class="small">The label is whatever played next. When the
-      <b>next</b> turn says it was wrong, that label counts for less in training.</div>
-      <div class="tiny" style="margin-top:.8cqw">Chosen by hand, never tuned. Goal notes shape these
-        weights but are never a ranker input.</div></div>
-  </div></div>
-</section>
-
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-tier="talk" data-appendix="21" class="slide" data-title="The b1 bi-encoder"
-  data-notes="&lt;b&gt;0:25.&lt;/b&gt; Two towers, one shared encoder fine-tuned from Qwen3-Embedding-4B. The track card carries a one-line LLM-written &#x27;known for&#x27; description — the only world knowledge anywhere in the system. Document vectors precomputed for all 47,071 tracks; the conversation vector is encoded live with caching.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-5M13 19v-9M18 19v-13"/></svg></div><h2>The bi-encoder behind that top feature</h2>
-    <span class="tag">Approach</span></div>
-  <div class="diagram bienc"><img src="figures/biencoder2.svg" alt="Two-tower bi-encoder: a conversation rendering and a track card each pass through the same fine-tuned Qwen3-Embedding-4B encoder; last-token pooling and L2 normalisation give two 2560-dimensional unit vectors whose cosine is the reranker's top feature."></div>
-</section>
-
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="talk" data-appendix="22" class="slide" data-title="How the relabelling worked"
-  data-notes="&lt;b&gt;0:50.&lt;/b&gt; Two cheap judges scored every labelable turn on two axes: was a different artist asked for, and does the track fit. Where they agree, about 80% of training turns, that verdict stands. Where they disagree, Opus arbitrates, blind to their verdicts.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>How the LLM relabelling worked</h2><span class="tag">Analysis</span></div>
-  <div class="lead2">The answer keys come from the simulated recommender’s picks. To see how often they actually fit
-    the request, we had <b>two LLM judges re-score every labelable turn</b>.</div>
-  <div class="small" style="margin-bottom:.6cqw">Both judges score the same two axes: was a
-    different artist asked for, and does the track fit the request?</div>
-  <div class="diagram"><img src="figures/relabelling.svg" alt="Relabelling flow: every labelable train and dev turn is scored by two LLM judges, Gemma-4-26B and DeepSeek-V4-Flash. Where they agree, about 80 percent of training turns, that verdict becomes the re-judged label. Where they disagree, about 20 percent, Claude Opus decides."></div>
-  <div class="small" style="margin-top:.6cqw">Agreement split measured on the training turns.</div>
-</section>
-
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="talk" data-appendix="23" class="slide" data-title="What the relabelling found"
-  data-notes="&lt;b&gt;0:30.&lt;/b&gt; &lt;b&gt;SKIP IF COVERED.&lt;/b&gt; On 61% of training turns the judges would not settle on the played track being a good fit. 17% — 18,222 turns — keep the artist the listener had just rejected. We trained on the relabeled data and it scored lower against the original labels, so the submission kept the originals. Say the catch: that score is computed against the original labels, so it could not have favoured the relabeling.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>What the relabelling found</h2><span class="tag">Analysis</span></div>
-  <div class="fill"><div class="relab">
-    <div class="icard hero"><div class="big">17%</div><h4>of training turns keep the artist the listener had just asked to leave</h4>
-      <p>18,222 turns — both judges or the arbiter marked the label as artist anchoring</p></div>
-    <div class="icard"><div class="big sm">113,393</div><h4>turns re-judged</h4><p>every labelable train and dev turn</p></div>
-  </div>
-  <div class="takeaway">Retrained on these labels, the ranker scored lower <b>against the original labels</b> — a test that could never favour the fix — so we kept the originals.</div></div>
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" data-tier="talk" data-appendix="24" class="slide" data-title="What we would do differently"
+  data-notes="&lt;b&gt;0:35.&lt;/b&gt; Ordered by expected value, not effort. Point one is free and would have changed every decision we made. Point five is the honest one — we still have no principled answer.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><h2>What we would do differently</h2><span class="tag">Conclusion</span></div>
+  <div class="fill"><ol>
+    <li><strong>Hold out a clean split before touching anything.</strong> Free, and it would have
+      changed every selection decision we made.</li>
+    <li><strong>Make the state executable.</strong> Rejections and constraints carried 0.7% of model
+      gain — most of what the extractor understood never became a filter.</li>
+    <li><strong>Import knowledge the catalog lacks</strong> — tempo, key, soundtrack and film/TV
+      links — so requests naming them have something to match.</li>
+    <li><strong>Check the response against the state</strong> before emitting it: flag unavailable
+      tracks and unmet constraints instead of overselling a substitute.</li>
+    <li><strong>Decide what to do when the benchmark and your judgment disagree.</strong> We still
+      do not have a principled answer.</li>
+  </ol></div>
 </section>
 
 <div id="bar"></div>
@@ -1974,7 +1997,7 @@ appx.forEach(function(s){
   var a = s.getAttribute("data-appendix");
   if (a === "0") return;
   var d = document.createElement("div");
-  d.className = "axitem" + (s.getAttribute("data-tier") === "talk" ? " ax-talk" : "");
+  d.className = "axitem" + (s.getAttribute("data-tier") === "talk" ? " ax-talk" : (s.classList.contains("talkax") ? "" : " ax-detail"));
   d.innerHTML = '<span class="n">'+a+'</span><span>'+titleOf(s)+'</span>';
   d.addEventListener("click", function(){ go(slides.indexOf(s)); });
   ag.appendChild(d);
@@ -2006,7 +2029,10 @@ function go(i){
    optional promotions can sit in the main flow without being in the way. */
 var coreOnly = false;
 function skippable(s){
-  if (s.hasAttribute("data-appendix")) return !coreOnly && s.getAttribute("data-tier") === "talk";
+  if (s.hasAttribute("data-appendix")) {
+    var talkAx = s.getAttribute("data-tier") === "talk" || s.classList.contains("talkax") || s.getAttribute("data-appendix") === "0";
+    return coreOnly ? !talkAx : s.getAttribute("data-tier") === "talk";
+  }
   var t = s.getAttribute("data-tier");
   return coreOnly ? t === "optional" : t === "talk";
 }
@@ -2024,6 +2050,13 @@ function toggleCore(){
   if (coreOnly && skippable(slides[idx])) next();
 }
 function jumpAppendix(n){
+  if (coreOnly && n > 0) { /* the talk numbers its shorter appendix 1..k */
+    var k = 0;
+    for (var j=0;j<slides.length;j++){
+      if (slides[j].hasAttribute("data-appendix") && slides[j].getAttribute("data-appendix") !== "0" && !skippable(slides[j]) && ++k === n) { go(j); return true; }
+    }
+    return false;
+  }
   for (var i=0;i<slides.length;i++){
     if (slides[i].getAttribute("data-appendix") === String(n)) { go(i); return true; }
   }
