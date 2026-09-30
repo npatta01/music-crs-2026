@@ -891,6 +891,8 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 :root[data-talk] .xrows{gap:.8cqw;margin-top:.2cqw}:root[data-talk] .xst,:root[data-talk] .xask{padding:.8cqw 1.1cqw}:root[data-talk] .xweight{margin-top:1cqw;padding-top:.7cqw}
 .ab .nw{white-space:nowrap;font-size:1.5cqw}
 :root[data-talk] .archsimple{grid-template-columns:.85fr 2.2cqw 1.25fr 2.2cqw 1fr 2.2cqw 1.1fr 2.2cqw 1.1fr}
+:root[data-talk] .slide[data-title="Why we trained on the dev set"] .src{display:none}
+.incard.fromstate{border:.22cqw solid var(--hue);background:var(--hue-soft)}.incard.fromstate h3{color:var(--hue)}
 </style>
 </head>
 <body>
@@ -1178,11 +1180,11 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="talk" data-title="Reranking — one slide"
-  data-notes="&lt;b&gt;0:35.&lt;/b&gt; A LightGBM ranker scores every pooled candidate on 146 features and keeps the top 20. One feature — the bi-encoder cosine between the conversation and the track card — carries 59% of split gain; constraint and rejection features carry 0.7%. Label weighting is in the appendix.">
+  data-notes="&lt;b&gt;0:35.&lt;/b&gt; A LightGBM ranker scores every pooled candidate on 146 features and keeps the top 20. One feature — the bi-encoder cosine between the conversation and the track card — carries 59% of split gain; constraint and rejection features carry 0.7%. So at this stage the state did not really help: the order came from the bi-encoder. Label weighting is in the appendix.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h2>Reranking</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="rrflow"><div class="rrs"><h4>Pooled candidates</h4><p>top 500 per branch</p></div><div class="rra"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="rrs hl"><h4>LightGBM ranker</h4><p>146 features per candidate</p></div><div class="rra"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="rrs"><h4>Top 20</h4><p>the scored list</p></div></div>
-  <div class="rrgrid one"><div class="rrbox"><div class="rgl">What it leans on · share of split gain</div><div class="bars famb"><div class="brow"><span class="bl">Bi-encoder cosine <i>· conversation vs track card</i></span><div class="btrack"><div class="bfill " style="width:100%"></div></div><span class="bv">59.0%</span></div><div class="brow"><span class="bl">Per-branch rank and score <i>· 66 features</i></span><div class="btrack"><div class="bfill " style="width:19.5%"></div></div><span class="bv">11.5%</span></div><div class="brow"><span class="bl">Constraints and rejections <i>· 13 features</i></span><div class="btrack"><div class="bfill warn" style="width:1.2%"></div></div><span class="bv">0.7%</span></div></div></div></div>
-  <div class="takeaway">One signal — the bi-encoder cosine — carries <b>59%</b>; constraints and rejections carry <b>0.7%</b>.</div></div>
+  <div class="rrgrid one"><div class="rrbox"><div class="rgl">What it leans on · share of split gain</div><div class="bars famb"><div class="brow"><span class="bl">Bi-encoder cosine <i>· conversation vs track card</i></span><div class="btrack"><div class="bfill " style="width:100%"></div></div><span class="bv">59.0%</span></div><div class="brow"><span class="bl">Per-branch rank and score <i>· 66 features</i></span><div class="btrack"><div class="bfill " style="width:19.5%"></div></div><span class="bv">11.5%</span></div><div class="brow"><span class="bl">Popularity · state · tags <i>· 31 features</i></span><div class="btrack"><div class="bfill " style="width:15.6%"></div></div><span class="bv">9.2%</span></div><div class="brow"><span class="bl">Constraints and rejections <i>· 13 features</i></span><div class="btrack"><div class="bfill warn" style="width:1.2%"></div></div><span class="bv">0.7%</span></div></div></div></div>
+  <div class="takeaway">The state barely shaped the final order: the bi-encoder carries <b>59%</b>, the state’s constraints and rejections <b>0.7%</b>.</div></div>
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Reranking"
@@ -1241,12 +1243,12 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Response generation"
-  data-notes="&lt;b&gt;0:20.&lt;/b&gt; After ranking, one more model call writes the reply. It gets the conversation, the latest state, and the top track with up to ten of its tags. Qwen3-30B, temperature zero, one pass, one or two sentences about that track only. This is a real Blind-B reply our own LLM checker rated good.">
+  data-notes="&lt;b&gt;0:20.&lt;/b&gt; After ranking, one more model call writes the reply. It gets the conversation, the latest extracted state — here genre, mood and what to avoid — and the top track with up to ten of its tags. Qwen3-30B, temperature zero, one pass, one or two sentences about that track only. This is a real Blind-B reply our own LLM checker rated good.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>Response generation</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="rgen">
     <div class="rgin"><div class="rgl">Inputs</div>
       <div class="incard"><h3>Conversation</h3><div class="small">“…it feels a bit too serious. I’m looking for something more uplifting and positive…”</div></div>
-      <div class="incard"><h3>Latest state</h3><div class="kv"><span>Mood</span><b>uplifting, positive</b></div><div class="kv"><span>Avoid</span><b>serious</b></div></div>
+      <div class="incard fromstate"><h3>From the extracted state</h3><div class="kv"><span>Genre</span><b>electronic</b></div><div class="kv"><span>Mood</span><b>uplifting, positive</b></div><div class="kv"><span>Avoid</span><b>serious</b></div></div>
       <div class="incard"><h3>Top-ranked track</h3><div class="kv"><span>Track</span><b>Röyksopp — “Happy Up Here”</b></div><div class="kv"><span>Tags</span><b>cheerful, hopeful, electronic…</b></div></div>
     </div>
     <div class="inarrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
