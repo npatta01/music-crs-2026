@@ -885,6 +885,12 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 :root[data-talk] .archsimple{gap:.5cqw}
 .ab{min-height:21cqw;padding:2cqw 1cqw}.ab h4{font-size:2.5cqw}.ab p{font-size:1.75cqw}
 .ab .ico{width:4.6cqw;height:4.6cqw}.ab .ico svg{width:2.8cqw;height:2.8cqw}
+.ab h4{font-size:2.2cqw;hyphens:manual}
+.xw{display:block;font-size:1.4cqw;font-weight:500;color:var(--ink-2);margin-top:.3cqw;line-height:1.25}
+:root[data-talk] .xw{font-size:1.5cqw}
+:root[data-talk] .xrows{gap:.8cqw;margin-top:.2cqw}:root[data-talk] .xst,:root[data-talk] .xask{padding:.8cqw 1.1cqw}:root[data-talk] .xweight{margin-top:1cqw;padding-top:.7cqw}
+.ab .nw{white-space:nowrap;font-size:1.5cqw}
+:root[data-talk] .archsimple{grid-template-columns:.85fr 2.2cqw 1.25fr 2.2cqw 1fr 2.2cqw 1.1fr 2.2cqw 1.1fr}
 </style>
 </head>
 <body>
@@ -914,7 +920,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   <div class="fill"><div class="toc tight8 talktoc">
     <div class="tocrow"><span class="tn">1</span><span class="tt">How it works</span><span class="td">the state, retrieval, reranking, the reply</span></div>
     <div class="tocrow"><span class="tn">2</span><span class="tt">How it scored</span><span class="td">the official results</span></div>
-    <div class="tocrow"><span class="tn">3</span><span class="tt">Why we did not score higher</span><span class="td">labels, training, ranking, missing data, the reply</span></div>
+    <div class="tocrow"><span class="tn">3</span><span class="tt">Why we did not score higher</span><span class="td">training, missing data, labels, ranking, the reply</span></div>
     <div class="tocrow"><span class="tn">4</span><span class="tt">Conclusion</span><span class="td">what we showed, and questions</span></div>
   </div></div>
 </section>
@@ -1051,9 +1057,9 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="The system in one picture"
   data-notes="&lt;b&gt;0:35.&lt;/b&gt; An LLM compiles each conversation into a typed state. Eleven branches query ONE LanceDB table holding metadata, a full-text index and six embedding families. LambdaMART scores the pooled union and emits 20. A response model writes the reply, conditioned on the top track AND the same state. Note the families: two boxes are LLMs, the ranker is trees — people assume the Qwen model does the ranking.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h2>One state, eleven branches, one learned ranker</h2>
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h2>System overview</h2>
     <span class="tag">Approach</span></div>
-  <div class="archsimple"><div class="ab "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h4>Conversation</h4><p>every turn so far</p></div><div class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="ab hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h4>Typed state</h4><p>DeepSeek<br>V4-Flash</p></div><div class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="ab "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><h4>11 retrieval branches</h4><p>one catalog index · top 500 each</p></div><div class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="ab hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h4>Learned ranker</h4><p>LightGBM · 146 features</p></div><div class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="ab "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h4>Top 20 + reply</h4><p>Qwen3-30B writes the reply</p></div></div>
+  <div class="archsimple"><div class="ab "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h4>Conversation</h4><p>every turn so far</p></div><div class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="ab hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h4>Request understanding</h4><p>typed state<br><span class="nw">DeepSeek-V4-Flash</span></p></div><div class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="ab "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><h4>Retrieval</h4><p>11 branches<br>top 500 each</p></div><div class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="ab hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h4>Reranking</h4><p>LightGBM<br>146 features → top 20</p></div><div class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="ab "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h4>Response generation</h4><p>Qwen3-30B<br>writes the reply</p></div></div>
   <div class="diagram wide"><img src="figures/architecture.svg" alt="System architecture: conversation and played tracks go to an LLM state extractor; eleven retrieval branches query one LanceDB collection of 47,071 tracks; pooled candidates are scored by a LambdaMART reranker that emits twenty tracks; a response model writes a reply conditioned on the top track and the same state. A weighted reciprocal-rank-fusion path is the untrained baseline and fallback."></div>
   <div class="src">Organisers supplied the audio (CLAP), cover-art (SigLIP-2), listening-data (BPR) and small text (Qwen3-0.6B) embeddings; we added Qwen3-8B text embeddings and our own bi-encoder.</div>
 </section>
@@ -1342,6 +1348,49 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   </div></div>
 </section>
 
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="talk" data-title="Why we did not score higher"
+  data-notes="&lt;b&gt;0:15.&lt;/b&gt; Five reasons, in the order we go through them. First, how we trained: on the same turns we checked on.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".8"/><circle cx="4.5" cy="12" r=".8"/><circle cx="4.5" cy="18" r=".8"/></svg></div><h2>Why we did not score higher</h2><span class="tag">What is not ideal</span></div>
+  <div class="fill"><div class="toc tight8 talktoc whylist">
+    <div class="tocrow on"><span class="tn">1</span><span class="tt">Why we trained on the dev set</span><span class="td"></span></div>
+    <div class="tocrow"><span class="tn">2</span><span class="tt">No data from outside the catalog</span><span class="td"></span></div>
+    <div class="tocrow"><span class="tn">3</span><span class="tt">Inconsistent labels</span><span class="td"></span></div>
+    <div class="tocrow"><span class="tn">4</span><span class="tt">Extracted, but not acted on</span><span class="td"></span></div>
+    <div class="tocrow"><span class="tn">5</span><span class="tt">Gaps in our response generation</span><span class="td"></span></div>
+  </div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Why we trained on the dev set"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; Request understanding costs one paid LLM call per turn. Running it over the 121.6 thousand training turns was too expensive, so the ranker was trained on the 8,000 dev turns — the same turns we used to check it. We had no clean held-out set, and chose designs on replays of turns the model had already seen: 0.38 there, 0.25 on the blind test.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h2>Why we trained on the dev set</h2><span class="tag">Lessons</span></div>
+  <div class="fill"><div class="flow">
+    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h4>State extraction: 1 paid LLM call per turn</h4><p>to read each turn into a state</p></div>
+    <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h4>Too costly to extract state for 121.6k training turns</h4><p>so no ranker features there</p></div>
+    <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="fstep hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h4>Trained on the 8,000 dev turns</h4><p>the same turns we checked it on</p></div>
+  </div>
+  <div class="bars devbars">
+    <div class="brow"><span class="bl">Dev, turns it trained on</span><div class="btrack"><div class="bfill warn" style="width:76.9%"></div></div><span class="bv">0.384</span></div>
+    <div class="brow"><span class="bl">Blind-B, official</span><div class="btrack"><div class="bfill" style="width:50.7%"></div></div><span class="bv">0.254</span></div>
+  </div>
+  <div class="src">nDCG@20. The dev row is an earlier model version, shown because it is the number we selected on. Source: paper §4.3, §5.3.</div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="No data from outside the catalog"
+  data-notes="&lt;b&gt;0:20.&lt;/b&gt; The extractor read these requests correctly. There was simply nothing to match against: the catalog records no tempo or key and no film or TV links, and we added no outside source. The gap is knowledge, not understanding.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6"/><path d="M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg></div><h2>No data from outside the catalog</h2><span class="tag">What is not ideal</span></div>
+  <div class="fill"><div class="mrows big">
+    <div class="mrow" style="--c:#7A3FB8"><div class="mh">A tempo and a key</div><div class="mpair">
+      <div class="ma">“exactly <b>126.70 bpm</b>, in G minor”</div><div class="mar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+      <div class="mb">the catalog has no tempo or key field<span class="st">no branch can match on either</span></div></div></div>
+    <div class="mrow" style="--c:#7A3FB8"><div class="mh">A soundtrack</div><div class="mpair">
+      <div class="ma">“a specific 80s synth-pop song from the <b>Breaking Bad</b> soundtrack”</div><div class="mar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+      <div class="mb">we served Soft Cell — “Tainted Love”<span class="st">no film or TV links in the catalog</span></div></div></div>
+  </div>
+  <div class="takeaway">The state was right both times. The gap is <b>knowledge, not understanding</b>.</div></div>
+</section>
+
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="optional" data-title="Label example — “My Body Is a Cage”"
   data-notes="&lt;b&gt;0:40.&lt;/b&gt; A training session. The recommender agent has already played Arctic Monkeys. The listener asks, again, for one specific Arcade Fire song. The answer key for that turn is another Arctic Monkeys track — the listener agent itself marked it as not moving toward the goal, but it is still the label a model is scored and trained against.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h2>Label example — “My Body Is a Cage”</h2><span class="tag">What is not ideal</span></div>
@@ -1351,18 +1400,6 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
     <div class="bub sys key"><span class="tl">Answer key for that turn</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Arctic Monkeys — “This House is a Circus” <span class="mv no">DOES NOT move toward goal</span><span class="jv ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Our judges agree: wrong — repeats the artist</span></div>
   </div>
   <div class="takeaway">The answer key is whatever the simulated recommender picked from its small pool — here, <b>Arctic Monkeys again</b>.</div></div>
-</section>
-
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="talk" data-title="Why we did not score higher"
-  data-notes="&lt;b&gt;0:15.&lt;/b&gt; Five reasons, in the order we go through them. The first is the data itself: the labels are inconsistent.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".8"/><circle cx="4.5" cy="12" r=".8"/><circle cx="4.5" cy="18" r=".8"/></svg></div><h2>Why we did not score higher</h2><span class="tag">What is not ideal</span></div>
-  <div class="fill"><div class="toc tight8 talktoc whylist">
-    <div class="tocrow on"><span class="tn">1</span><span class="tt">Inconsistent labels</span><span class="td">they often keep the artist the listener just left</span></div>
-    <div class="tocrow"><span class="tn">2</span><span class="tt">Why we trained on the dev set</span><span class="td">no clean held-out set</span></div>
-    <div class="tocrow"><span class="tn">3</span><span class="tt">Extracted, but the ranker did not act on it</span><span class="td">rejections carried 0.7% of its decisions</span></div>
-    <div class="tocrow"><span class="tn">4</span><span class="tt">No data from outside the catalog</span><span class="td">no tempo, key or soundtrack links</span></div>
-    <div class="tocrow"><span class="tn">5</span><span class="tt">Gaps in our response generation</span><span class="td">the reply was never checked</span></div>
-  </div></div>
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Label example — “from a different artist”"
@@ -1401,42 +1438,11 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   <div class="takeaway">Retrained on these labels, the ranker scored lower <b>against the original labels</b> — a test that could never favour the fix — so we kept the originals.</div></div>
 </section>
 
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Why we trained on the dev set"
-  data-notes="&lt;b&gt;0:30.&lt;/b&gt; Request understanding costs one paid LLM call per turn. Running it over the 121.6 thousand training turns was too expensive, so the ranker was trained on the 8,000 dev turns — the same turns we used to check it. We had no clean held-out set, and chose designs on replays of turns the model had already seen: 0.38 there, 0.25 on the blind test.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h2>Why we trained on the dev set</h2><span class="tag">Lessons</span></div>
-  <div class="fill"><div class="flow">
-    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h4>State extraction: 1 paid LLM call per turn</h4><p>to read each turn into a state</p></div>
-    <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
-    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h4>Too costly to extract state for 121.6k training turns</h4><p>so no ranker features there</p></div>
-    <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
-    <div class="fstep hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h4>Trained on the 8,000 dev turns</h4><p>the same turns we checked it on</p></div>
-  </div>
-  <div class="bars devbars">
-    <div class="brow"><span class="bl">Dev, turns it trained on</span><div class="btrack"><div class="bfill warn" style="width:76.9%"></div></div><span class="bv">0.384</span></div>
-    <div class="brow"><span class="bl">Blind-B, official</span><div class="btrack"><div class="bfill" style="width:50.7%"></div></div><span class="bv">0.254</span></div>
-  </div>
-  <div class="src">nDCG@20. The dev row is an earlier model version, shown because it is the number we selected on. Source: paper §4.3, §5.3.</div></div>
-</section>
-
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Failure 1 — extracted, then ignored"
-  data-notes="&lt;b&gt;0:30.&lt;/b&gt; In each case the state got it right: it recorded the artists to avoid. Then look at what we served. Deltron and Del: ten of our top 20 are Deltron 3030, Del or Dan the Automator. Ryan Adams: ten of 20, including rank 1. Juanes: seven of 20, including rank 1. Why? The features that carry rejections got 0.7% of the ranker&#x27;s split gain; the bi-encoder cosine got 59%. We think the labels taught it that: they often repeat the just-played artist.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M9 9l6 6M15 9l-6 6"/></svg></div><h2>Extracted, but the ranker did not act on it</h2><span class="tag">Went wrong</span></div>
-  <div class="fill"><div class="xrows"><div class="xrow"><div class="xask">“I gotta break away from <b>Deltron</b> and <b>Del</b> completely”</div><div class="xst ok"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span><div><span class="xl">State extracted</span>avoid Deltron 3030, Del</div></div><div class="xst no"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></span><div><span class="xl">Our top 20</span><b>10 of 20</b> by them — from rank 6</div></div></div><div class="xrow"><div class="xask">“branching out to <b>other</b> singer-songwriter artists”</div><div class="xst ok"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span><div><span class="xl">State extracted</span>avoid Ryan Adams</div></div><div class="xst no"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></span><div><span class="xl">Our top 20</span><b>10 of 20</b> by Ryan Adams — <b>rank 1</b></div></div></div><div class="xrow"><div class="xask">“still focusing on <b>Juanes</b>… haven't found the depth I'm after”</div><div class="xst ok"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span><div><span class="xl">State extracted</span>rejected Juanes</div></div><div class="xst no"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></span><div><span class="xl">Our top 20</span><b>7 of 20</b> by Juanes — <b>rank 1</b></div></div></div></div>
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; In each case the state got it right: it recorded the artists to avoid. Then look at what we served. Deltron and Del: ten of our top 20 are Deltron 3030, Del or Dan the Automator. Ryan Adams: ten of 20, including rank 1. Juanes: seven of 20, including rank 1. Retrieval did not remove them either: the Deltron names resolved to the wrong catalog IDs, Ryan Adams was recorded as a prior artist to avoid rather than a rejection, and Juanes as a soft rejection, which only reaches the ranker as a feature. And the ranker did not act: The features that carry rejections got 0.7% of the ranker&#x27;s split gain; the bi-encoder cosine got 59%. We think the labels taught it that: they often repeat the just-played artist.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M9 9l6 6M15 9l-6 6"/></svg></div><h2>Extracted, but not acted on</h2><span class="tag">Went wrong</span></div>
+  <div class="fill"><div class="xrows"><div class="xrow"><div class="xask">“I gotta break away from <b>Deltron</b> and <b>Del</b> completely”</div><div class="xst ok"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span><div><span class="xl">State extracted</span>avoid Deltron 3030, Del</div></div><div class="xst no"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></span><div><span class="xl">Our top 20</span><b>10 of 20</b> by them — from rank 6<span class="xw">retrieval kept them: names resolved to the wrong catalog IDs</span></div></div></div><div class="xrow"><div class="xask">“branching out to <b>other</b> singer-songwriter artists”</div><div class="xst ok"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span><div><span class="xl">State extracted</span>avoid Ryan Adams &amp; The Cardinals</div></div><div class="xst no"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></span><div><span class="xl">Our top 20</span><b>10 of 20</b> by Ryan Adams — <b>rank 1</b><span class="xw">retrieval kept them: recorded as “avoid exact”, not a rejection</span></div></div></div><div class="xrow"><div class="xask">“still focusing on <b>Juanes</b>… haven't found the depth I'm after”</div><div class="xst ok"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span><div><span class="xl">State extracted</span>rejected Juanes</div></div><div class="xst no"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></span><div><span class="xl">Our top 20</span><b>7 of 20</b> by Juanes — <b>rank 1</b><span class="xw">retrieval kept them: a soft rejection only feeds ranker features</span></div></div></div></div>
   <div class="xweight"><span class="xwl">Ranker split gain</span><div class="brow"><span class="bl">Bi-encoder cosine</span><div class="btrack"><div class="bfill" style="width:100%"></div></div><span class="bv">59.0%</span></div><div class="brow"><span class="bl">Constraints and rejections</span><div class="btrack"><div class="bfill warn" style="width:1.2%"></div></div><span class="bv">0.7%</span></div></div></div>
-</section>
-
-<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="No data from outside the catalog"
-  data-notes="&lt;b&gt;0:20.&lt;/b&gt; The extractor read these requests correctly. There was simply nothing to match against: the catalog records no tempo or key and no film or TV links, and we added no outside source. The gap is knowledge, not understanding.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6"/><path d="M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg></div><h2>No data from outside the catalog</h2><span class="tag">What is not ideal</span></div>
-  <div class="fill"><div class="mrows big">
-    <div class="mrow" style="--c:#7A3FB8"><div class="mh">A tempo and a key</div><div class="mpair">
-      <div class="ma">“exactly <b>126.70 bpm</b>, in G minor”</div><div class="mar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
-      <div class="mb">the catalog has no tempo or key field<span class="st">no branch can match on either</span></div></div></div>
-    <div class="mrow" style="--c:#7A3FB8"><div class="mh">A soundtrack</div><div class="mpair">
-      <div class="ma">“a specific 80s synth-pop song from the <b>Breaking Bad</b> soundtrack”</div><div class="mar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
-      <div class="mb">we served Soft Cell — “Tainted Love”<span class="st">no film or TV links in the catalog</span></div></div></div>
-  </div>
-  <div class="takeaway">The state was right both times. The gap is <b>knowledge, not understanding</b>.</div></div>
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="core" class="slide" data-title="Four ways the reply went wrong"
@@ -1466,7 +1472,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 <section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="talk" data-title="Conclusion"
   data-notes="&lt;b&gt;0:30.&lt;/b&gt; What we built: a typed conversation state, one LLM call per turn, that drives eleven retrieval branches, a learned ranker and the reply. The gaps: inconsistent labels, training and checking on the same turns, a ranker that did not act on the state, no knowledge outside the catalog, and a reply that was never checked. The 113k re-judged labels are released.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg></div><h2>Conclusion</h2><span class="tag">What we showed</span></div>
-  <div class="fill"><div class="c2col"><div class="ccol"><div class="cpoint "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><div><h4>A typed conversation state</h4><ul class="cbul"><li>one LLM call per turn</li><li>request, likes, rejections, sound, bounds</li></ul></div></div><div class="cpoint "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><div><h4>Retrieval → ranking → reply</h4><ul class="cbul"><li>eleven retrieval branches</li><li>a learned ranker</li><li>a reply about the top track</li></ul></div></div></div><div class="cpoint gaps"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M9 9l6 6M15 9l-6 6"/></svg></div><div><h4>Gaps in our system</h4><ul class="cbul"><li>inconsistent labels — 17% keep a rejected artist</li><li>trained and checked on the same turns</li><li>the ranker did not act on the state</li><li>no knowledge outside the catalog</li><li>the reply was never checked</li></ul></div></div></div></div>
+  <div class="fill"><div class="c2col"><div class="ccol"><div class="cpoint "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><div><h4>A typed conversation state</h4><ul class="cbul"><li>one LLM call per turn</li><li>request, likes, rejections, sound, bounds</li></ul></div></div><div class="cpoint "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><div><h4>Retrieval → ranking → reply</h4><ul class="cbul"><li>eleven retrieval branches</li><li>a learned ranker</li><li>a reply about the top track</li></ul></div></div></div><div class="cpoint gaps"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M9 9l6 6M15 9l-6 6"/></svg></div><div><h4>Gaps in our system</h4><ul class="cbul"><li>inconsistent labels — 17% keep a rejected artist</li><li>trained and checked on the same turns</li><li>rejections not acted on</li><li>no knowledge outside the catalog</li><li>the reply was never checked</li></ul></div></div></div></div>
 </section>
 
 <section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="talk" data-title="Questions"
@@ -1578,7 +1584,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   </div></div>
 </section>
 
-<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="5" class="slide" data-dense data-title="Six request types, six shapes of state"
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="5" class="slide talkax" data-dense data-title="Six request types, six shapes of state"
   data-notes="&lt;b&gt;1:00.&lt;/b&gt; Every example here is a real Blind-B turn. The request type decides which branches fire and what the state has to carry: an exact_album needs artist AND album as must-use, an attribute_search carries only facets, a new_artist carries an avoid. Point out that the extractor got all six of these right — extraction was rarely the failure.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>Six request types, six shapes of state</h2>
     <span class="tag">Approach</span></div>
