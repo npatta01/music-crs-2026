@@ -149,3 +149,9 @@ Author rehearses the 18-slide talk (about 7:05 by note timings) against the 8-mi
 - One talk-only "Reranking" slide: flow, top three feature families, label weighting. The detailed deck keeps Reranking, The reranker, the bi-encoder, and down-weighting.
 - Bi-encoder and relabelling slides leave the talk (detailed deck unchanged). The 17% / LLM-judges headline sits on the label example in talk view only.
 - Label example retitled "Inconsistent labels — ‘from a different artist’"; why-list items match the titles of the slides that follow; conclusion in short bullets.
+
+## Talk round 4 (2026-09-29): 9 notes + appendix in the talk PDF
+- Talk PDF now ends with the appendix (index + 18 appendix slides + talk-only copies of the reranker features, label weighting, bi-encoder, and both relabelling slides): 42 pages.
+- Request understanding names DeepSeek-V4-Flash and labels the output "Conversation state". Why-list lost its side column. Reply gaps: one example each. Questions slide: name and email. Conclusion: what we built | gaps in our system.
+- "Extracted, but the ranker did not act on it" rebuilt from reports/blindset-b-prediction-audit/audit.json: state extracted → our top 20 (Deltron/Del 10 of 20 from rank 6; Ryan Adams 10 of 20, rank 1; Juanes 7 of 20, rank 1) + split-gain bars. The earlier version implied Deltron was served at rank 1; the rank-1 track there was Dead Prez.
+- Fixed a CSS leak from round 7 (`.card .hi` broke highlighted table rows); appendix "category" → "catalog" diversity.
