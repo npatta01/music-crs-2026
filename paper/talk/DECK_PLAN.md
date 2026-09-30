@@ -157,3 +157,8 @@ Author rehearses the 18-slide talk (about 7:05 by note timings) against the 8-mi
 - Fixed a CSS leak from round 7 (`.card .hi` broke highlighted table rows); appendix "category" → "catalog" diversity.
 - Revised same day: the talk appendix is for workshop attendees (challenge participants), so it is curated, not the full 18. Talk appendix (numbered 1–11 in the talk): points decomposition, routing flags, eleven branches, reranker features, label weighting, bi-encoder, failure 3 (better track in pool), relabelling how + found, target ignores the request, what we would do differently. Kept slides carry `talkax`; talk-only copies carry `data-tier="talk"`. Talk PDF: 30 pages.
 - Round 5: talk appendix drops the points decomposition and 'what we would do differently' (9 slides + index, 28 pages); Request understanding title names the conversation state; reranking feature box compacted with a one-line takeaway.
+
+## Projector pass (2026-09-30), talk view only
+- Darker text tokens and slide hues under `:root[data-talk]`; dimmed why-list rows now full-opacity dark grey; badges darkened; judge chips hidden on the label example (the 17% strip carries that point).
+- System slide: a talk-only 5-box flow (Conversation → Typed state → 11 branches → Learned ranker → Top 20 + reply) replaces the dense architecture SVG, which stays in the detailed deck and on the poster (file untouched).
+- Measured at 1920 px wide: every talk text node ≥ 7.2:1 contrast against its background; smallest text 27 px; no overflow on any of the 71 slides.

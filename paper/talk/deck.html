@@ -833,6 +833,58 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 :root[data-talk] .axitem .n{font-size:0}:root[data-talk] .axitem .n::before{content:counter(ax);font-size:1.6cqw}
 :root[data-talk] .axitem{font-size:1.6cqw}
 .rrgrid.one{flex:none;margin-top:.4cqw}.rrgrid.one .rrbox{padding:1.4cqw 1.8cqw}.rrgrid.one .bars{flex:none;gap:1.3cqw}
+
+/* projector pass (talk only): darker text and hues, nothing under ~30px */
+:root[data-talk]{--ink:#0F0D0B;--ink-2:#2B2621;--ink-3:#3F3832;--bad:#9A1B14;--accent:#1747A6}
+:root[data-talk] .slide[style*="#2063D9"]{--hue:#1747A6!important}
+:root[data-talk] .slide[style*="#C92C30"]{--hue:#A11D21!important}
+:root[data-talk] .slide[style*="#A55A18"]{--hue:#7A410E!important}
+:root[data-talk] .slide[style*="#257E3D"]{--hue:#1A5E2C!important}
+:root[data-talk] .bub .tl{opacity:1;font-size:1.5cqw}
+:root[data-talk] .whylist .tocrow{opacity:1}
+:root[data-talk] .whylist .tocrow:not(.on) .tt,:root[data-talk] .whylist .tocrow:not(.on) .tn{color:var(--ink-3)}
+:root[data-talk] .slide-head .tag{font-size:1.6cqw}
+:root[data-talk] .smchips span,:root[data-talk] .chips span{font-size:1.6cqw}
+:root[data-talk] .smk p,:root[data-talk] .rrs p,:root[data-talk] .rrbox .bl i,:root[data-talk] .icard p{font-size:1.6cqw}
+:root[data-talk] .incard h3,:root[data-talk] .rgl,:root[data-talk] .scap,:root[data-talk] .xl,:root[data-talk] .xwl{font-size:1.55cqw}
+:root[data-talk] .src,:root[data-talk] .tiny{font-size:1.55cqw}
+:root[data-talk] .track .badge,:root[data-talk] .bub .mv,:root[data-talk] .bub .jv{font-size:1.5cqw}
+:root[data-talk] .slide.cover .statlab,:root[data-talk] .slide.cover .kicker{font-size:1.6cqw}
+:root[data-talk] .qrurl{font-size:1.7cqw}
+:root[data-talk] .card h3{font-size:1.7cqw}
+:root[data-talk] .sarrow span{font-size:1.5cqw}
+
+:root[data-talk] .slide.cover .statlab{color:rgba(255,255,255,.88)}
+:root[data-talk] .bub .mv{color:#14532D}
+:root[data-talk] .bub .jv{color:#8F1B16}
+:root[data-talk] .track .badge,:root[data-talk] .track .art{color:#8F1B16}
+:root[data-talk] .track.warn .badge,:root[data-talk] .track.warn .art{color:#1747A6}
+:root[data-talk] .mb .st{color:#8F1B16}
+:root[data-talk] .labstat{gap:1.2cqw;padding-top:.5cqw;margin-top:.2cqw}
+:root[data-talk] .labstat .big{font-size:2.9cqw}
+:root[data-talk] .labstat h4{font-size:1.65cqw}
+:root[data-talk] .labstat p{font-size:1.5cqw;margin-top:0}
+:root[data-talk] .chat.anchor .bub{padding-top:.55cqw;padding-bottom:.55cqw}
+:root[data-talk] .chat.anchor .jv{display:none}
+:root[data-talk] .chat.anchor{gap:.9cqw;margin-top:.8cqw}
+:root[data-talk] .labstat .big{font-size:3.6cqw}:root[data-talk] .labstat h4{font-size:1.9cqw}
+
+.archsimple{display:none}
+:root[data-talk] .archsimple{display:grid;grid-template-columns:1fr 2.4cqw 1fr 2.4cqw 1.15fr 2.4cqw 1fr 2.4cqw 1fr;align-items:center;gap:.6cqw;margin-block:auto}
+:root[data-talk] .slide[data-title="The system in one picture"] .diagram.wide{display:none}
+.ab{background:#fff;border:.12cqw solid var(--line);border-radius:1.2cqw;padding:1.8cqw 1.2cqw;text-align:center;min-height:15cqw;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6cqw}
+.ab.hl{background:var(--hue-soft);border:.2cqw solid var(--hue)}
+.ab .ico{width:4cqw;height:4cqw;border-radius:1cqw;background:var(--hue-soft);color:var(--hue);display:flex;align-items:center;justify-content:center}
+.ab.hl .ico{background:#fff}
+.ab .ico svg{width:2.4cqw;height:2.4cqw;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.ab h4{font-size:2.2cqw;font-weight:760;color:var(--ink);line-height:1.15}
+.ab p{font-size:1.6cqw;color:var(--ink-2);line-height:1.3}
+.ar svg{width:2.4cqw;height:2.4cqw;fill:none;stroke:var(--hue);stroke-width:2.2}
+
+:root[data-talk] .slide[data-title="The system in one picture"] .src{display:none}
+:root[data-talk] .archsimple{gap:.5cqw}
+.ab{min-height:21cqw;padding:2cqw 1cqw}.ab h4{font-size:2.5cqw}.ab p{font-size:1.75cqw}
+.ab .ico{width:4.6cqw;height:4.6cqw}.ab .ico svg{width:2.8cqw;height:2.8cqw}
 </style>
 </head>
 <body>
@@ -1001,6 +1053,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   data-notes="&lt;b&gt;0:35.&lt;/b&gt; An LLM compiles each conversation into a typed state. Eleven branches query ONE LanceDB table holding metadata, a full-text index and six embedding families. LambdaMART scores the pooled union and emits 20. A response model writes the reply, conditioned on the top track AND the same state. Note the families: two boxes are LLMs, the ranker is trees — people assume the Qwen model does the ranking.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h2>One state, eleven branches, one learned ranker</h2>
     <span class="tag">Approach</span></div>
+  <div class="archsimple"><div class="ab "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h4>Conversation</h4><p>every turn so far</p></div><div class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="ab hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h4>Typed state</h4><p>DeepSeek<br>V4-Flash</p></div><div class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="ab "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><h4>11 retrieval branches</h4><p>one catalog index · top 500 each</p></div><div class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="ab hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h4>Learned ranker</h4><p>LightGBM · 146 features</p></div><div class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="ab "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h4>Top 20 + reply</h4><p>Qwen3-30B writes the reply</p></div></div>
   <div class="diagram wide"><img src="figures/architecture.svg" alt="System architecture: conversation and played tracks go to an LLM state extractor; eleven retrieval branches query one LanceDB collection of 47,071 tracks; pooled candidates are scored by a LambdaMART reranker that emits twenty tracks; a response model writes a reply conditioned on the top track and the same state. A weighted reciprocal-rank-fusion path is the untrained baseline and fallback."></div>
   <div class="src">Organisers supplied the audio (CLAP), cover-art (SigLIP-2), listening-data (BPR) and small text (Qwen3-0.6B) embeddings; we added Qwen3-8B text embeddings and our own bi-encoder.</div>
 </section>
