@@ -137,10 +137,15 @@ are hidden on screen and in print.
 
 ## Next action
 
-Author rehearses the 21-slide talk (about 8:10 by note timings) against the 8-minute slot and trims live; upload to the organizers' Drive only when the author says so.
+Author rehearses the 18-slide talk (about 7:05 by note timings) against the 8-minute slot and trims live; upload to the organizers' Drive only when the author says so.
 
 ## Talk round 2 (2026-09-29): 9 markup notes → 21 slides
 - Organizers: 8-minute talk + 2-minute Q&A; slides named after the paper title, uploaded to their Drive by 30 Sep evening (author uploads when ready).
 - Added: state→retrieval map (core, both decks), bi-encoder in the talk, reply inputs→model→reply, "Why we did not score higher" transition, one-slide relabelling (talk only).
 - Changed: schema icons with two emphasised groups, dev-set cost named as state extraction, reply slide retitled "Gaps in our response generation", conclusion = state, pipeline, gaps, labels.
 - Timing: ~8:10 by notes; author trims live, no further skip marking.
+
+## Talk round 3 (2026-09-29): 6 notes → 18 slides, ~7:05
+- One talk-only "Reranking" slide: flow, top three feature families, label weighting. The detailed deck keeps Reranking, The reranker, the bi-encoder, and down-weighting.
+- Bi-encoder and relabelling slides leave the talk (detailed deck unchanged). The 17% / LLM-judges headline sits on the label example in talk view only.
+- Label example retitled "Inconsistent labels — ‘from a different artist’"; why-list items match the titles of the slides that follow; conclusion in short bullets.
