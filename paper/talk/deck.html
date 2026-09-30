@@ -1,0 +1,2228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>State-Driven Retrieval and Learned Re-Ranking</title>
+<style>
+:root{
+  --ink:#14161a; --ink-2:#3d434d; --ink-3:#6b7280;
+  --bg:#ffffff; --surround:#0d0f12; --line:#d8dce3; --line-2:#eceef2;
+  --accent:#1a56db; --accent-soft:#eaf0fd;
+  --warn:#b45309; --warn-soft:#fdf3e3;
+  --bad:#b42318; --bad-soft:#fdeceb;
+  --good:#0a7d55; --good-soft:#e7f5ef;
+  --mono:"DejaVu Sans Mono","Liberation Mono",monospace;
+  --sans:"Lato","Liberation Sans",Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--surround);font-family:var(--sans);color:var(--ink);
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+
+/* ---------- stage: fixed 16:9, everything scales with container units ---------- */
+#stage{position:relative;width:min(100vw,177.78vh);height:min(56.25vw,100vh);
+  background:var(--bg);container-type:size;overflow:hidden}
+.slide{position:absolute;inset:0;padding:4.2cqw 5cqw 5.2cqw;display:none;
+  flex-direction:column;background:var(--bg)}
+.slide.active{display:flex}
+
+/* ---------- type scale (cqw = 1% of stage width) ---------- */
+h1{font-size:4.9cqw;line-height:1.08;letter-spacing:-.02em;font-weight:680}
+h2{font-size:3.3cqw;line-height:1.14;letter-spacing:-.018em;font-weight:660}
+.kicker{font-size:1.35cqw;font-weight:680;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:1.3cqw}
+.sub{font-size:2.05cqw;line-height:1.42;color:var(--ink-2);font-weight:420}
+.body{font-size:1.95cqw;line-height:1.5;color:var(--ink-2)}
+.small{font-size:1.72cqw;line-height:1.45;color:var(--ink-3)}
+.tiny{font-size:1.46cqw;line-height:1.4;color:var(--ink-3)}
+strong{font-weight:660;color:var(--ink)}
+code,.mono{font-family:var(--mono);font-size:1em}
+em{font-style:italic}
+
+/* ---------- headers / footers ---------- */
+.slide-head{display:flex;justify-content:space-between;align-items:baseline;
+  gap:2cqw;margin-bottom:2.3cqw;flex:0 0 auto}
+.slide-head .tag{font-size:1.4cqw;font-weight:660;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.slide-head .rt{display:flex;align-items:center;gap:.9cqw;white-space:nowrap}
+.tier{font-size:1.32cqw;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  padding:.2cqw .75cqw;border-radius:2cqw}
+.tier.core{background:var(--accent-soft);color:var(--accent)}
+.tier.optional{background:#eef0f4;color:var(--ink-3)}
+#coreflag{position:fixed;left:10px;top:10px;z-index:40;font-family:var(--mono);
+  font-size:clamp(11px,1.7vh,16px);font-weight:700;padding:.3em .7em;border-radius:.35em;
+  background:#1f4fd8;color:#fff;display:none;letter-spacing:.06em}
+#coreflag.on{display:block}
+.foot{position:absolute;left:5cqw;right:5cqw;bottom:1.9cqw;display:flex;
+  justify-content:space-between;align-items:center;font-size:1.12cqw;color:var(--ink-3)}
+#bar{position:absolute;left:0;bottom:0;height:.32cqw;background:var(--accent);
+  transition:width .18s ease;z-index:5}
+
+/* ---------- content helpers ---------- */
+.fill{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:center}
+.cols{display:grid;gap:2.6cqw}
+.c2{grid-template-columns:1fr 1fr}
+.c2w{grid-template-columns:1.35fr 1fr}
+.c3{grid-template-columns:repeat(3,1fr)}
+.stack{display:flex;flex-direction:column;gap:1.5cqw}
+.center{align-items:center;text-align:center}
+
+.card{border:.09cqw solid var(--line);border-radius:.9cqw;padding:1.7cqw 1.9cqw;background:#fff}
+.card.accent{border-color:#bfd2f7;background:var(--accent-soft)}
+.card.bad{border-color:#f3c2be;background:var(--bad-soft)}
+.card.good{border-color:#b9e0ce;background:var(--good-soft)}
+.card.warn{border-color:#f0d6a8;background:var(--warn-soft)}
+.card h3{font-size:1.66cqw;font-weight:680;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:.8cqw}
+.card.accent h3{color:var(--accent)} .card.bad h3{color:var(--bad)}
+.card.good h3{color:var(--good)} .card.warn h3{color:var(--warn)}
+
+.stat{font-size:5.4cqw;line-height:1;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.stat.sm{font-size:3.5cqw}
+.stat.bad{color:var(--bad)} .stat.good{color:var(--good)} .stat.accent{color:var(--accent)}
+.statlab{font-size:1.45cqw;color:var(--ink-3);margin-top:.5cqw;font-weight:560}
+
+ul{list-style:none;display:flex;flex-direction:column;gap:1.05cqw}
+ul li{position:relative;padding-left:1.9cqw;font-size:1.9cqw;line-height:1.42;color:var(--ink-2)}
+ul li::before{content:"";position:absolute;left:.25cqw;top:.62em;width:.55cqw;height:.55cqw;
+  border-radius:50%;background:var(--accent)}
+ol{list-style:none;counter-reset:n;display:flex;flex-direction:column;gap:1.05cqw}
+ol li{counter-increment:n;position:relative;padding-left:2.9cqw;font-size:1.85cqw;
+  line-height:1.4;color:var(--ink-2)}
+ol li::before{content:counter(n);position:absolute;left:0;top:.06em;width:1.9cqw;height:1.9cqw;
+  border-radius:50%;background:var(--accent);color:#fff;font-size:1.1cqw;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+ul.tight li,ol.tight li{font-size:1.55cqw}
+ul.tight,ol.tight{gap:.7cqw}
+
+table{width:100%;border-collapse:collapse;font-size:1.55cqw;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:.72cqw .85cqw;border-bottom:.07cqw solid var(--line-2)}
+th:first-child,td:first-child{text-align:left}
+thead th{font-size:1.4cqw;font-weight:680;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-3);border-bottom:.11cqw solid var(--line)}
+tbody tr.hi td{background:var(--accent-soft);font-weight:660;color:var(--ink)}
+tbody tr.dim td{color:var(--ink-3)}
+table.tight{font-size:1.5cqw} table.tight th,table.tight td{padding:.5cqw .7cqw}
+
+figure{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:1cqw}
+/* SVGs exported from the paper carry a small intrinsic size (508x95.5pt and
+   232x117pt), so max-width alone leaves them postage-stamp sized on a slide.
+   Drive the width explicitly per figure shape and let max-height letterbox. */
+figure img{max-width:100%;max-height:100%;object-fit:contain}
+figure.wide img{width:100%}
+figure.tall img{width:54cqw}
+figcaption{font-size:1.25cqw;color:var(--ink-3);text-align:center;max-width:78%}
+
+.quote{border-left:.32cqw solid var(--accent);padding:.5cqw 0 .5cqw 1.6cqw;
+  font-size:1.75cqw;line-height:1.45;color:var(--ink-2)}
+.dialog{font-family:var(--mono);font-size:1.55cqw;line-height:1.75;color:var(--ink-2)}
+.dialog .who{font-weight:700;color:var(--ink)}
+.dialog .gt{color:var(--bad);font-weight:700}
+.dialog .note{color:var(--ink-3)}
+.pill{display:inline-block;padding:.22cqw .8cqw;border-radius:2cqw;font-size:1.15cqw;
+  font-weight:660;background:var(--accent-soft);color:var(--accent)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.formula{font-family:var(--mono);font-size:1.7cqw;background:#f6f7f9;border-radius:.6cqw;
+  padding:1.2cqw 1.5cqw;color:var(--ink);text-align:center}
+.qr{display:flex;gap:1.6cqw;align-items:center}
+.qr img{width:9cqw;height:9cqw;image-rendering:pixelated}
+/* the closing QR has to scan from the back of a meeting room */
+.qr.big{flex-direction:column;gap:1.1cqw;text-align:center}
+.qr.big img{width:21cqw;height:21cqw;background:#fff;padding:1cqw;border-radius:1cqw}
+.qr.big .qrurl{font-family:var(--mono);font-size:1.35cqw;color:var(--hue);margin-top:.3cqw}
+
+
+/* Slides carrying a promoted appendix payload run ~10% over the content box;
+   flex centering hides that as overlap rather than scroll, so scale them down
+   explicitly instead of letting the title get sat on. */
+.slide[data-dense] .body,.slide[data-dense] ul li,.slide[data-dense] ol li{font-size:1.7cqw}
+.slide[data-dense] .small{font-size:1.56cqw}
+.slide[data-dense] .tiny{font-size:1.36cqw}
+.slide[data-dense] .card{padding:1.35cqw 1.5cqw}
+.slide[data-dense] .card h3{font-size:1.54cqw;margin-bottom:.6cqw}
+.slide[data-dense] .dialog{font-size:1.38cqw;line-height:1.6}
+.slide[data-dense] table{font-size:1.52cqw}
+.slide[data-dense] table.tight{font-size:1.44cqw}
+.slide[data-dense] th,.slide[data-dense] td{padding:.55cqw .7cqw}
+.slide[data-dense] .stat.sm{font-size:3cqw}
+.slide[data-dense] ul,.slide[data-dense] ol{gap:.78cqw}
+.slide[data-dense] .cols{gap:2cqw}
+.slide[data-dense] .row-stats{margin-bottom:1.35cqw!important}
+.slide[data-dense] .closing{font-size:1.62cqw;margin-top:1.15cqw!important}
+.slide[data-dense] .stack{gap:1.15cqw}
+
+
+/* ---------- diagrams carried over from the poster ---------- */
+.diagram{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center}
+.diagram img{width:100%;height:auto;max-height:100%;object-fit:contain}
+.diagram.narrow img{width:62%}
+
+/* ---------- asked for / served ---------- */
+.pairs{display:flex;flex-direction:column;gap:1.1cqw}
+.pair{display:grid;grid-template-columns:1fr 2.6cqw 1fr;gap:1.1cqw;align-items:center}
+.pair .a,.pair .b{font-family:var(--mono);font-size:1.35cqw;line-height:1.35;
+  padding:.9cqw 1.1cqw;border-radius:.6cqw}
+.pair .a{background:var(--accent-soft);color:var(--ink);border:.09cqw solid #bfd2f7}
+.pair .b{background:var(--bad-soft);color:var(--ink);border:.09cqw solid #f3c2be}
+.pair .ar{font-size:1.9cqw;color:var(--ink-3);text-align:center;font-weight:700}
+.pair .st{display:block;font-family:var(--sans);font-size:1.05cqw;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--bad);margin-top:.35cqw}
+
+/* ---------- findings list ---------- */
+.lrn{display:flex;flex-direction:column;gap:1.5cqw}
+.lrn li{position:relative;padding:.1cqw 0 .1cqw 1.6cqw;font-size:1.78cqw;line-height:1.45;
+  color:var(--ink-2)}
+.lrn li::before{content:"";position:absolute;left:0;top:.2em;bottom:.2em;height:auto;width:.3cqw;
+  border-radius:.15cqw;background:var(--line)}
+.lrn li.a::before{background:var(--bad)} .lrn li.b::before{background:var(--warn)}
+.lrn li.c::before{background:var(--accent)} .lrn li.d::before{background:#6d28d9}
+.lrn b{display:block;color:var(--ink);margin-bottom:.2cqw}
+.slide[data-dense] .lrn li{font-size:1.6cqw} .slide[data-dense] .lrn{gap:1.15cqw}
+
+
+/* ---------- worked examples: every slide readable without a speaker ---------- */
+.ex{display:grid;grid-template-columns:8.4cqw 1fr;gap:.55cqw 1.1cqw;align-items:baseline}
+.ex .k{font-size:1.3cqw;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);padding-top:.15cqw}
+.ex .said{font-size:1.62cqw;line-height:1.4;color:var(--ink-2);font-style:italic}
+.ex .got{font-family:var(--mono);font-size:1.5cqw;color:var(--bad);font-weight:700}
+.ex .want{font-family:var(--mono);font-size:1.5cqw;color:var(--good);font-weight:700}
+.ex .st{font-family:var(--mono);font-size:1.45cqw;color:var(--ink-2)}
+.ex .st b{color:var(--accent)}
+.exlist{display:flex;flex-direction:column;gap:1.25cqw}
+.exrow{border-left:.3cqw solid var(--line);padding-left:1.2cqw}
+.exrow.bad{border-left-color:var(--bad)}
+.exrow.warn{border-left-color:var(--warn)}
+.exrow.good{border-left-color:var(--good)}
+.takeaway{margin-top:auto;padding-top:1.1cqw;border-top:.09cqw solid var(--line);
+  font-size:1.82cqw;line-height:1.4;color:var(--ink)}
+.takeaway b{color:var(--bad)}
+.rtable td:first-child{font-family:var(--mono);font-size:.92em;color:var(--accent);font-weight:700}
+
+
+/* ---------- contents and section dividers ---------- */
+.toc{display:flex;flex-direction:column;gap:1.15cqw}
+.toc.tight8{gap:.62cqw}
+.toc.tight8 .tocrow{padding-bottom:.6cqw}
+.toc.tight8 .tt{font-size:1.85cqw}
+.toc.tight8 .td{font-size:1.35cqw}
+.tocrow{display:grid;grid-template-columns:3.4cqw 20cqw 1fr;gap:1.4cqw;align-items:baseline;
+  padding-bottom:1.05cqw;border-bottom:.09cqw solid var(--line-2)}
+.tocrow .tn{font-family:var(--mono);font-size:1.7cqw;font-weight:700;color:var(--accent)}
+.tocrow .tt{font-size:2.1cqw;font-weight:660;color:var(--ink);letter-spacing:-.01em}
+.tocrow .td{font-size:1.5cqw;color:var(--ink-3)}
+.tocrow.ax .tn,.tocrow.ax .tt{color:var(--ink-3)}
+
+.slide.divider{justify-content:space-between;padding:4.2cqw 5cqw 4.6cqw}
+.rail{display:flex;gap:.75cqw;align-items:stretch}
+.rail .stop{flex:1;display:flex;flex-direction:column;gap:.5cqw;
+  padding-top:.8cqw;border-top:.36cqw solid var(--line-2)}
+.rail .stop .n{font-family:var(--mono);font-size:1.15cqw;font-weight:700;color:var(--ink-3)}
+.rail .stop .t{font-size:1.15cqw;line-height:1.25;color:var(--ink-3)}
+.rail .stop.done{border-top-color:#9fb4e6}
+.rail .stop.done .n,.rail .stop.done .t{color:var(--ink-3)}
+.rail .stop.on{border-top-color:var(--accent)}
+.rail .stop.on .n{color:var(--accent)}
+.rail .stop.on .t{color:var(--ink);font-weight:660}
+.divbody{display:flex;align-items:baseline;gap:2.6cqw;padding-bottom:4cqw}
+.divnum{font-size:9cqw;line-height:.85;font-weight:700;color:var(--accent-soft);
+  letter-spacing:-.04em}
+.divtitle{font-size:5.2cqw;line-height:1.05;letter-spacing:-.025em;font-weight:680}
+.slide.divider .sub{margin-top:.9cqw}
+
+/* ---------- title slide ---------- */
+.slide.cover{justify-content:center}
+.slide.cover .rule{width:7cqw;height:.42cqw;background:var(--accent);margin:2.4cqw 0}
+.authors{font-size:1.85cqw;color:var(--ink-2);line-height:1.6}
+.venue{font-size:1.4cqw;color:var(--ink-3);margin-top:.5cqw}
+.resultbar{display:flex;gap:3.2cqw;margin-top:3cqw;padding-top:2.2cqw;
+  border-top:.09cqw solid var(--line)}
+
+/* ---------- appendix index ---------- */
+.axgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:.55cqw 2cqw}
+.axitem{display:flex;gap:.8cqw;align-items:baseline;font-size:1.32cqw;
+  color:var(--ink-2);cursor:pointer;padding:.3cqw .5cqw;border-radius:.4cqw}
+.axitem:hover{background:var(--accent-soft);color:var(--accent)}
+.axitem .n{font-family:var(--mono);font-weight:700;color:var(--accent);min-width:2.6cqw}
+
+/* ---------- overlays ---------- */
+.overlay{position:fixed;inset:0;background:rgba(10,12,15,.92);z-index:50;
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:4vh 4vw;color:#f2f4f7;font-size:clamp(13px,1.5vh,18px)}
+.overlay.on{display:flex}
+.overlay h3{font-size:1.9em;margin-bottom:1em;font-weight:680}
+#palette input{width:min(700px,84vw);font-size:1.5em;padding:.6em .8em;border-radius:.4em;
+  border:2px solid #3a4250;background:#171b21;color:#f2f4f7;
+  font-family:var(--sans);outline:none}
+#palette input:focus{border-color:#5b8def}
+#palette ul{margin-top:1em;width:min(700px,84vw);max-height:56vh;overflow:auto;gap:0}
+#palette li{padding:.55em .8em;border-radius:.35em;cursor:pointer;color:#c3c9d4;
+  font-size:1.05em;padding-left:.8em;display:flex;gap:.8em}
+#palette li::before{display:none}
+#palette li.sel{background:#1f4fd8;color:#fff}
+#palette li .n{font-family:var(--mono);color:#8fa6d8;min-width:3.2em}
+#palette li.sel .n{color:#cfe0ff}
+#help table{color:#dfe3ea;font-size:1.05em;width:min(620px,86vw)}
+#help th,#help td{border-color:#2a303a;padding:.45em .6em}
+#help td:first-child{font-family:var(--mono);color:#8fa6d8;width:9em}
+#help thead th{color:#8d97a6}
+#grid{overflow:auto;align-items:stretch;justify-content:flex-start}
+.gwrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+  gap:14px;width:100%}
+.gcell{background:#fff;color:var(--ink);border-radius:6px;padding:10px;cursor:pointer;
+  border:2px solid transparent;min-height:82px}
+.gcell:hover{border-color:#5b8def}
+.gcell .gn{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:700}
+.gcell .gt{font-size:13px;line-height:1.3;margin-top:4px;font-weight:600}
+
+/* ---------- timer + notes ---------- */
+#timer{position:fixed;right:10px;top:10px;z-index:40;font-family:var(--mono);
+  font-size:clamp(14px,2.4vh,26px);font-weight:700;padding:.3em .6em;border-radius:.35em;
+  background:rgba(13,15,18,.82);color:#9fb4d8;display:none;font-variant-numeric:tabular-nums}
+#timer.on{display:block}
+#timer.amber{color:#f5b855} #timer.red{color:#ff7a6e}
+#notes{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,15,18,.95);
+  color:#dfe3ea;padding:14px 20px;font-size:clamp(12px,1.9vh,17px);line-height:1.5;
+  display:none;max-height:34vh;overflow:auto;border-top:2px solid #2a303a}
+#notes.on{display:block}
+#notes b{color:#8fb4ff}
+#jumpbuf{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:45;
+  font-family:var(--mono);font-size:12vh;font-weight:700;color:#fff;
+  background:rgba(13,15,18,.86);padding:.1em .3em;border-radius:.1em;display:none}
+#jumpbuf.on{display:block}
+
+/* ?core=1 exports the short talk only — same source, filtered */
+:root[data-print="core"] .slide[data-tier="optional"],
+:root[data-print="core"] .slide[data-appendix]:not(.talkax):not([data-tier="talk"]):not([data-appendix="0"]){display:none!important}
+:root:not([data-print="core"]) .slide[data-tier="talk"]{display:none!important}
+
+@page{size:13.333in 7.5in;margin:0}
+@media print{
+  body{background:#fff;display:block;overflow:visible}
+  /* Keep the container query alive in print (inline-size only needs a definite
+     width) so every cqw-based size prints exactly as it renders on screen. */
+  #stage{width:13.333in;height:auto;container-type:inline-size}
+  .slide{display:flex!important;position:relative;width:13.333in;height:7.5in;
+    break-after:page;page-break-after:always}
+  :root[data-print="core"] .slide[data-tier="optional"],
+  :root[data-print="core"] .slide[data-appendix]:not(.talkax):not([data-tier="talk"]):not([data-appendix="0"]){display:none!important}
+:root:not([data-print="core"]) .slide[data-tier="talk"]{display:none!important}
+  .slide.last-visible{break-after:auto;page-break-after:auto}
+  .overlay,#timer,#notes,#bar,#jumpbuf{display:none!important}
+}
+
+/* ═══════════════ visual identity ═══════════════
+   Eight sections, eight hues. Every slide carries its section's colour in a
+   top bar with the section icon, so position is legible without reading. */
+:root{
+  --paper:#FBF8F4; --ink:#1A1714; --ink-2:#4A423B; --ink-3:#6B6259;
+  --line:#E4DCD1; --line-2:#F0EAE1;
+  --hue:#2063D9; --hue-soft:#E4EDFB;
+}
+body{background:#14110E}
+#stage{background:var(--paper)}
+.slide{background:var(--paper);padding:0}
+
+/* section colour bar + icon, on every content slide */
+.slide:not(.divider):not(.cover)::before{content:"";position:absolute;left:0;right:0;top:0;
+  height:.62cqw;background:var(--hue)}
+.slide:not(.divider):not(.cover){padding:3.5cqw 4.6cqw 4.2cqw}
+.slide-head{align-items:center;gap:1.4cqw;margin-bottom:2cqw}
+.slide-head .ic{width:3.1cqw;height:3.1cqw;flex:0 0 auto;border-radius:.9cqw;
+  background:var(--hue-soft);display:flex;align-items:center;justify-content:center}
+.slide-head .ic svg{width:1.9cqw;height:1.9cqw;stroke:var(--hue);stroke-width:2;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
+.slide-head h2{flex:1}
+.slide-head .tag{color:var(--hue);font-weight:700}
+.tier{background:transparent;border:.11cqw solid var(--line);color:var(--ink-3)}
+.tier.core{background:var(--hue);border-color:var(--hue);color:#fff}
+
+/* cards pick up the section hue */
+.card{border-color:var(--line);border-radius:1cqw}
+.card h3{color:var(--hue)}
+.card.accent{background:var(--hue-soft);border-color:var(--hue-soft)}
+h2{color:var(--ink)}
+.stat.accent{color:var(--hue)}
+ul li::before{background:var(--hue)}
+ol li::before{background:var(--hue)}
+tbody tr.hi td{background:var(--hue-soft)}
+.callout{border-left-color:var(--hue);background:var(--hue-soft)}
+.takeaway{border-top-color:var(--line)}
+
+/* ── dividers: full-bleed colour, big numeral, equaliser ── */
+.slide.divider{padding:0;background:var(--hue);justify-content:flex-end;overflow:hidden}
+.slide.divider::before{display:none}
+.divwrap{position:relative;z-index:2;padding:0 6cqw 7cqw}
+.divnum{font-size:13cqw;line-height:.8;font-weight:800;color:rgba(255,255,255,.26);
+  letter-spacing:-.05em;margin-bottom:-1.4cqw}
+.divtitle{font-size:6.4cqw;line-height:1.02;letter-spacing:-.03em;font-weight:800;color:#fff}
+.slide.divider .sub{color:rgba(255,255,255,.97);font-size:2.3cqw;margin-top:1.2cqw}
+.divicon{position:absolute;right:6cqw;top:7cqw;width:11cqw;height:11cqw;opacity:.22}
+.divicon svg{width:100%;height:100%;stroke:#fff;stroke-width:1.4;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
+/* equaliser bars along the foot — the deck's one recurring motif */
+.eq{position:absolute;left:0;right:0;bottom:0;height:9cqw;display:flex;align-items:flex-end;
+  gap:.5cqw;opacity:.16;z-index:1}
+.eq i{flex:1;background:#fff;border-radius:.3cqw .3cqw 0 0}
+.divrail{position:absolute;left:6cqw;right:6cqw;top:4.4cqw;display:flex;gap:.7cqw;z-index:2}
+.divrail span{flex:1;height:.42cqw;border-radius:.21cqw;background:rgba(255,255,255,.3)}
+.divrail span.done{background:rgba(255,255,255,.55)}
+.divrail span.on{background:#fff}
+
+/* ── cover ── */
+.slide.cover{background:var(--ink);padding:4.6cqw 6cqw;justify-content:center;overflow:hidden}
+.slide.cover::before{display:none}
+.slide.cover h1{color:#fff;font-size:4.9cqw;line-height:1.07;font-weight:800;letter-spacing:-.028em}
+.slide.cover .kicker{color:#FFB366}
+.slide.cover .authors{color:rgba(255,255,255,.9)}
+.slide.cover .venue{color:rgba(255,255,255,.55)}
+.slide.cover .rule{background:#FFB366;width:9cqw;height:.5cqw}
+.slide.cover .resultbar{border-top-color:rgba(255,255,255,.18);margin-top:2.4cqw;padding-top:1.8cqw}
+.slide.cover .stat{color:#fff} .slide.cover .statlab{color:rgba(255,255,255,.55)}
+.slide.cover .eq{opacity:.16;height:11cqw}
+
+/* ── track rows: examples look like a playlist, not a paragraph ── */
+.tracks{display:flex;flex-direction:column;gap:1.05cqw}
+.track{display:grid;grid-template-columns:4.2cqw 1fr auto;gap:1.5cqw;align-items:center;
+  background:#fff;border:.1cqw solid var(--line);border-radius:1cqw;padding:1.1cqw 1.4cqw}
+.track .art svg{width:2.1cqw;height:2.1cqw;stroke:currentColor;stroke-width:2.2;
+  fill:none;stroke-linecap:round;stroke-linejoin:round}
+.track .art{width:4.2cqw;height:4.2cqw;border-radius:.8cqw;background:var(--hue-soft);
+  display:flex;align-items:center;justify-content:center;font:800 1.7cqw/1 var(--sans);
+  color:var(--hue)}
+.track .meta .l1{font-size:1.92cqw;font-weight:700;color:var(--ink);line-height:1.25}
+.track .meta .l2{font-size:1.6cqw;color:var(--ink-3);margin-top:.2cqw;line-height:1.3}
+.track .badge{font-size:1.3cqw;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+  padding:.45cqw 1cqw;border-radius:2cqw;white-space:nowrap}
+.track.bad{border-color:#E9A9A9} .track.bad .art{background:#F9E6E6;color:#C92C30}
+.track.bad .badge{background:#F9E6E6;color:#C92C30}
+.track.good{border-color:#96CCA6} .track.good .art{background:#E7F8EC;color:#257E3D}
+.track.good .badge{background:#E7F8EC;color:#257E3D}
+.track.warn{border-color:#E0BE86} .track.warn .art{background:#E4EDFB;color:#2063D9}
+.track.warn .badge{background:#E4EDFB;color:#2063D9}
+
+
+/* ── finding cards: four claims, not four paragraphs ── */
+.finds{display:grid;grid-template-columns:1fr 1fr;gap:1.6cqw;flex:1 1 auto;align-content:center}
+.find{background:#fff;border:.1cqw solid var(--line);border-radius:1.2cqw;padding:2cqw 2.1cqw;
+  display:flex;flex-direction:column;gap:.85cqw}
+.find .fic{width:3.4cqw;height:3.4cqw;border-radius:.9cqw;display:flex;align-items:center;
+  justify-content:center;font:800 1.75cqw/1 var(--sans)}
+.find h4{font-size:2.05cqw;line-height:1.18;font-weight:750;letter-spacing:-.012em;color:var(--ink)}
+.find p{font-size:1.72cqw;line-height:1.4;color:var(--ink-3)}
+.find.c1 .fic{background:#F9E6E6;color:#C92C30} .find.c1{border-top:.42cqw solid #C92C30}
+.find.c2 .fic{background:#E4EDFB;color:#2063D9} .find.c2{border-top:.42cqw solid #2063D9}
+.find.c3 .fic{background:#E4EDFB;color:#2063D9} .find.c3{border-top:.42cqw solid #2063D9}
+.find.c4 .fic{background:#E4EDFB;color:#2063D9} .find.c4{border-top:.42cqw solid #2063D9}
+
+/* track rows carry a quote above the row when the ask matters */
+.track .ask{font-size:1.64cqw;color:var(--ink-2);font-style:italic;line-height:1.35;
+  margin-bottom:.55cqw}
+.tracks.tight{gap:.8cqw}
+.tracks.tight .track{padding:.9cqw 1.2cqw}
+.tracks.tight .track .meta .l1{font-size:1.76cqw}
+.tracks.tight .track .meta .l2{font-size:1.52cqw}
+
+
+/* ── accessibility ── */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+:focus-visible{outline:.3cqw solid var(--hue);outline-offset:.2cqw}
+
+/* ── fill the frame ── */
+.slide:not(.divider):not(.cover){padding:3.1cqw 4.2cqw 3.4cqw}
+.fill{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:center}
+.tracks{flex:1 1 auto;justify-content:space-evenly}
+.tracks .track{flex:0 0 auto}
+.finds{gap:2cqw}
+.find{padding:2.4cqw 2.4cqw;gap:1.05cqw}
+.find h4{font-size:2.3cqw}
+.find p{font-size:1.86cqw}
+.track{padding:1.5cqw 1.7cqw;grid-template-columns:4.8cqw 1fr auto;gap:1.8cqw}
+.track .art{width:4.8cqw;height:4.8cqw}
+.track .art svg{width:2.4cqw;height:2.4cqw}
+.track .meta .l1{font-size:2.05cqw}
+.track .meta .l2{font-size:1.7cqw}
+.track .ask{font-size:1.74cqw}
+.tracks.tight .track{padding:1.25cqw 1.5cqw}
+.tracks.tight .track .meta .l1{font-size:1.9cqw}
+.tracks.tight .track .meta .l2{font-size:1.62cqw}
+.takeaway{font-size:1.95cqw;padding-top:1.4cqw}
+.toc{flex:1 1 auto;justify-content:center}
+.divwrap{padding:0 5.4cqw 6cqw}
+
+/* column blocks sitting directly on a slide should grow, not float at the top */
+.slide:not(.divider):not(.cover) > .cols{flex:1 1 auto;align-content:stretch}
+.slide:not(.divider):not(.cover) > .cols > .card,
+.slide:not(.divider):not(.cover) > .cols > .stack{align-self:stretch}
+.slide:not(.divider):not(.cover) > .cols > .card{justify-content:center}
+.stack{justify-content:space-evenly}
+.card{display:flex;flex-direction:column}
+
+/* glossary: two columns of term + one-line definition */
+.gloss{display:grid;grid-template-columns:1fr 1fr;gap:.9cqw 2.4cqw;align-content:center}
+.gterm{display:grid;grid-template-columns:15cqw 1fr;gap:1.2cqw;align-items:baseline;
+  padding-bottom:.8cqw;border-bottom:.09cqw solid var(--line-2)}
+.gterm b{font-size:1.45cqw;color:var(--hue);line-height:1.2}
+.gterm span{font-size:1.3cqw;line-height:1.35;color:var(--ink-2)}
+
+
+/* the short version: three large cards, the slide the room reads longest */
+.slide.summary .cols{gap:2cqw}
+.slide.summary .card{padding:2.2cqw 2.2cqw 2.4cqw}
+.slide.summary .card h3{font-size:2cqw}
+.slide.summary .small{font-size:2.25cqw;line-height:1.38}
+.slide.summary .stat{font-size:7cqw;margin-top:.6cqw}
+.slide.summary .statlab{font-size:1.9cqw}
+.slide.summary .takeaway{font-size:2.3cqw}
+.slide.summary .fill{justify-content:flex-start}
+.slide.summary .fill > .cols{flex:1 1 auto;margin:1.2cqw 0 1.6cqw}
+.slide.summary .card{display:flex;flex-direction:column;justify-content:center}
+
+/* ═══ beginner deck components: icons first, few words ═══ */
+.icards{display:grid;gap:1.8cqw;align-content:center}
+.icards.c3{grid-template-columns:repeat(3,1fr)} .icards.c4{grid-template-columns:repeat(4,1fr)}
+.icard{background:#fff;border:.1cqw solid var(--line);border-radius:1.4cqw;padding:2.2cqw 2cqw;
+  display:flex;flex-direction:column;gap:.9cqw}
+.ico{width:5cqw;height:5cqw;border-radius:50%;background:var(--hue-soft);display:flex;
+  align-items:center;justify-content:center;flex:0 0 auto}
+.ico svg{width:2.8cqw;height:2.8cqw;stroke:var(--hue);stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.icard .big{font-size:3.6cqw;font-weight:800;color:var(--hue);line-height:1;letter-spacing:-.02em}
+.icard h4{font-size:2.1cqw;line-height:1.15;font-weight:750;color:var(--ink)}
+.icard p{font-size:1.6cqw;line-height:1.35;color:var(--ink-3)}
+.icards.compact{gap:1.3cqw}
+.icards.compact .icard{padding:1.3cqw 1.6cqw;gap:.4cqw;display:grid;grid-template-columns:auto 1fr;column-gap:1.2cqw;align-items:center}
+.icards.compact .ico{grid-row:span 3;width:4.4cqw;height:4.4cqw}
+.icards.compact .big{font-size:2.2cqw}
+.icards.compact h4{font-size:1.9cqw}
+.icards.compact p{font-size:1.45cqw}
+/* flows get the room they have: centred in the space above the takeaway */
+.fill > .flow,.fill > .knows,.fill > .icards,.fill > .stateflow,.fill > .chat{margin-block:auto}
+.flow .fstep{padding:2.4cqw 1.6cqw;gap:1.1cqw}
+.flow .fstep h4{font-size:2.05cqw}
+.flow .fstep p{font-size:1.65cqw}
+.flow .ico{width:6cqw;height:6cqw} .flow .ico svg{width:3.3cqw;height:3.3cqw}
+.knows li{font-size:2.05cqw} .knows p{font-size:1.75cqw} .knows .agent{padding:2.6cqw}
+.src{font-size:1.2cqw;color:var(--ink-3);margin-top:.9cqw}
+
+.chatwrap{display:flex;justify-content:center}
+.chat{display:flex;flex-direction:column;gap:1cqw;width:100%;max-width:72cqw;margin:0 auto}
+.bub{max-width:74%;padding:1cqw 1.5cqw;border-radius:1.5cqw;font-size:1.8cqw;line-height:1.35}
+.bub.me{align-self:flex-end;background:var(--hue);color:#fff;border-bottom-right-radius:.35cqw}
+.bub.sys{align-self:flex-start;background:#fff;border:.1cqw solid var(--line);color:var(--ink);
+  border-bottom-left-radius:.35cqw;display:flex;gap:1cqw;align-items:center}
+.bub.sys.next{border-style:dashed;color:var(--ink-2)}
+.bub .note svg.mn{width:1.8cqw;height:1.8cqw;stroke:var(--hue);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.bub .note{flex:0 0 auto;width:3cqw;height:3cqw;border-radius:.7cqw;background:var(--hue-soft);color:var(--hue);
+  display:flex;align-items:center;justify-content:center;font:800 1.6cqw/1 var(--sans)}
+.chat.mini{max-width:none;margin:0}
+.chat.mini .bub{font-size:1.6cqw;max-width:100%}
+.bub.reply{max-width:88%}
+
+.flow{display:flex;align-items:stretch}
+.fstep{flex:1;background:#fff;border:.1cqw solid var(--line);border-radius:1.3cqw;padding:1.8cqw 1.4cqw;
+  display:flex;flex-direction:column;align-items:center;text-align:center;gap:.9cqw}
+.fstep.hl{border-color:var(--hue);background:var(--hue-soft)}
+.fstep.hl .ico{background:#fff}
+.fstep h4{font-size:1.85cqw;line-height:1.2;font-weight:750;color:var(--ink)}
+.fstep p{font-size:1.5cqw;line-height:1.35;color:var(--ink-3)}
+.farrow{flex:0 0 3.2cqw;display:flex;align-items:center;justify-content:center}
+.farrow svg{width:2.4cqw;height:2.4cqw;stroke:var(--ink-3);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+.knows .agent{background:#fff;border:.1cqw solid var(--line);border-radius:1.4cqw;padding:2.2cqw}
+.knows .ahead{display:flex;align-items:center;gap:1.3cqw;margin-bottom:1.2cqw}
+.knows h4{font-size:2.3cqw;font-weight:750;color:var(--ink)}
+.knows ul{list-style:none;display:flex;flex-direction:column;gap:.8cqw;margin-bottom:1.3cqw;padding:0}
+.knows li{display:flex;align-items:center;gap:1cqw;font-size:1.85cqw;color:var(--ink)}
+.knows li::before{display:none}
+.knows li svg{width:2.4cqw;height:2.4cqw;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.knows li.y svg{stroke:#257E3D} .knows li.n{color:var(--ink-3)} .knows li.n svg{stroke:#C92C30}
+.knows li.n span{text-decoration:line-through}
+.knows p{font-size:1.55cqw;line-height:1.4;color:var(--ink-3)}
+
+.bars{display:flex;flex-direction:column;gap:1.1cqw;justify-content:center}
+.brow{display:grid;grid-template-columns:auto 1fr 6.4cqw;gap:1.3cqw;align-items:center}
+.brow .bl{font-size:1.7cqw;color:var(--ink);min-width:7cqw}
+.brow .bv{font-size:1.7cqw;font-weight:700;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+.btrack{height:2.3cqw;background:var(--line-2);border-radius:1.15cqw;overflow:hidden}
+.bfill{height:100%;background:var(--hue);border-radius:1.15cqw}
+.bfill.warn{background:#A55A18} .bfill.mute{background:#8A8178}
+
+.wbar{display:flex;height:9cqw;border-radius:1.2cqw;overflow:hidden;gap:.25cqw}
+.wseg{display:flex;flex-direction:column;justify-content:center;padding:0 1.3cqw;color:#fff;min-width:0}
+.wseg b{font-size:2.8cqw;line-height:1} .wseg span{font-size:1.35cqw;line-height:1.25;margin-top:.4cqw}
+.wseg.s1{background:#2063D9} .wseg.s2{background:#7A3FB8} .wseg.s3{background:#257E3D} .wseg.s4{background:#A55A18}
+.wseg.s3 span,.wseg.s4 span{font-size:1.15cqw}
+
+.stateflow{display:grid;grid-template-columns:1fr 7cqw 1.15fr;gap:1.4cqw;align-items:center}
+.sarrow{display:flex;flex-direction:column;align-items:center;gap:.4cqw;font:700 1.3cqw/1 var(--sans);color:var(--hue)}
+.sarrow svg{width:4cqw;height:4cqw;stroke:var(--hue);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.scard{background:#fff;border:.15cqw solid var(--hue);border-radius:1.4cqw;padding:1.6cqw 2cqw;display:flex;flex-direction:column;gap:.9cqw}
+.srow{display:grid;grid-template-columns:13cqw 1fr;gap:1.2cqw;align-items:baseline;padding-bottom:.8cqw;border-bottom:.09cqw solid var(--line-2)}
+.srow:last-child{border-bottom:0;padding-bottom:0}
+.sk{font-size:1.45cqw;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--hue)}
+.sv{font-size:2cqw;font-weight:650;color:var(--ink)}
+
+
+/* ═══ round 3 ═══ */
+.bub .tl{display:block;font:700 1.1cqw/1 var(--sans);letter-spacing:.07em;text-transform:uppercase;opacity:.75;margin-bottom:.45cqw}
+.bub.sys{flex-wrap:wrap}
+.bub.sys .tl{width:100%;margin-bottom:.1cqw}
+.chat.big .bub{font-size:2.3cqw;line-height:1.35}
+.chat.big .bub.reply{max-width:92%}
+.knows.tight{margin-top:1.8cqw;gap:1.6cqw}
+.knows.tight .agent{padding:1.3cqw 1.8cqw;display:flex;align-items:center;gap:2cqw}
+.knows.tight .ahead{margin:0;flex:0 0 auto}
+.knows.tight ul{margin:0;flex-direction:row;flex-wrap:wrap;gap:.5cqw 1.6cqw}
+.knows.tight li{font-size:1.6cqw}
+.knows.tight h4{font-size:1.9cqw}
+table.idx{width:100%;border-collapse:collapse;font-size:1.55cqw}
+table.idx th{font-size:1.15cqw;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);text-align:left;
+  padding:.5cqw .6cqw;border-bottom:.1cqw solid var(--line)}
+table.idx td{padding:.72cqw .6cqw;border-bottom:.08cqw solid var(--line-2);color:var(--ink)}
+table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);font-weight:700}
+.bars.board .brow{grid-template-columns:22cqw 1fr 7cqw}
+.bars.board .brow .bl,.bars.board .brow .bv{font-size:1.9cqw}
+.bars.board .btrack{height:3cqw;border-radius:1.5cqw} .bars.board .bfill{border-radius:1.5cqw}
+.bfill.top{background:#257E3D} .bfill.mid{background:#8A8178} .bfill.us{background:#2063D9} .bfill.base{background:#C8BFB4}
+.devbars{margin-top:2cqw}
+.devbars .brow{grid-template-columns:20cqw 1fr 6.4cqw}
+.nicard{background:#fff;border:.1cqw solid var(--line);border-top:.45cqw solid var(--hue);border-radius:1cqw;
+  padding:1.1cqw 1.6cqw;font-size:1.9cqw;font-weight:650;color:var(--ink)}
+.mhead{display:grid;grid-template-columns:1fr 3cqw 1.15fr;gap:1cqw;margin:1.3cqw 0 .4cqw 1.6cqw;
+  font:700 1.1cqw/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.mrows{display:flex;flex-direction:column;gap:1cqw}
+.mrow{border-left:.45cqw solid var(--c);padding-left:1.2cqw}
+.mrow .mh{font-size:1.7cqw;font-weight:750;color:var(--ink);margin-bottom:.4cqw}
+.mpair{display:grid;grid-template-columns:1fr 3cqw 1.15fr;gap:1cqw;align-items:center}
+.ma,.mb{border-radius:.8cqw;padding:.7cqw 1.1cqw;font-size:1.5cqw;line-height:1.3;color:var(--ink)}
+.ma{background:#E4EDFB;font-style:italic} .mb{background:#F9E6E6}
+.mb .st{display:block;color:#B42318;font-weight:700;font-size:1.3cqw;margin-top:.25cqw;font-style:normal}
+.mar svg{width:2.2cqw;height:2.2cqw;stroke:var(--ink-3);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.slide .diagram.wide{flex:1 1 auto;display:block;margin-block:auto;width:100%}
+.slide .diagram.wide img{display:block;max-height:none;width:100%;height:auto}
+
+
+/* ═══ round 4 ═══ */
+.slide .diagram.wide{margin-inline:-3.4cqw;width:calc(100% + 6.8cqw)}
+.stateflow{grid-template-columns:1fr 6cqw 1.2fr;gap:1.6cqw}
+.chat.mini .bub{font-size:2.05cqw}
+.bub .tl{font-size:1.25cqw}
+.scard{padding:2.1cqw 2.4cqw;gap:1.15cqw}
+.srow{grid-template-columns:15cqw 1fr;padding-bottom:1cqw}
+.sk{font-size:1.65cqw} .sv{font-size:2.35cqw}
+.diagram.bienc img{width:90%}
+.bigquote{font-size:2.35cqw;line-height:1.45;color:var(--ink);background:#fff;border:.1cqw solid var(--line);
+  border-left:.5cqw solid var(--hue);border-radius:1cqw;padding:2.2cqw 2.6cqw;margin-block:auto}
+.chips{display:flex;flex-wrap:wrap;gap:.8cqw;margin-top:1.8cqw}
+.chips span{font-size:1.5cqw;font-weight:650;color:var(--hue);background:var(--hue-soft);border-radius:2cqw;padding:.6cqw 1.3cqw}
+.fill > .bars{margin-block:auto}
+.bars.board{gap:2.2cqw}
+.bars.board .brow{grid-template-columns:27cqw 1fr 8cqw}
+.bars.board .brow .bl,.bars.board .brow .bv{font-size:2.3cqw}
+.bars.board .btrack{height:4.4cqw;border-radius:2.2cqw} .bars.board .bfill{border-radius:2.2cqw}
+.wbars{gap:1.5cqw} .wbars .brow{grid-template-columns:24cqw 1fr 6cqw} .wbars .bl,.wbars .bv{font-size:1.85cqw}
+.mrows.big{gap:2.4cqw;margin-block:auto}
+.mrows.big .mh{font-size:2.1cqw} .mrows.big .ma,.mrows.big .mb{font-size:1.95cqw;padding:1.2cqw 1.5cqw}
+.mrows.big .mb .st{font-size:1.55cqw}
+
+
+/* round 4b */
+.wbars{gap:2cqw} .wbars .brow{grid-template-columns:27cqw 1fr 6.5cqw} .wbars .bl,.wbars .bv{font-size:2.1cqw}
+.wbars .btrack{height:3cqw;border-radius:1.5cqw} .wbars .bfill{border-radius:1.5cqw}
+.slide.roomy .card h3{font-size:1.9cqw} .slide.roomy .card li{font-size:2cqw;line-height:1.5}
+.slide.roomy .cols{gap:2cqw} .slide.roomy .card{padding:2.1cqw 2.2cqw}
+.chat.anchor .bub{font-size:2cqw}
+.bub .mv{font:700 1.2cqw/1 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:#257E3D;background:#E7F8EC;border-radius:1cqw;padding:.45cqw .8cqw;margin-left:.6cqw}
+
+/* round 5 */
+.before{display:flex;gap:1.4cqw;align-items:baseline;margin-top:2cqw;padding:1.1cqw 1.6cqw;border:.12cqw dashed var(--line);
+  border-radius:1cqw;font-size:1.65cqw;color:var(--ink-2);background:#fff}
+.before .bt{font:700 1.15cqw/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.replyin{display:grid;grid-template-columns:1fr 3.4cqw 1.35fr;gap:1.2cqw;align-items:center;margin-block:auto}
+.incard{background:#fff;border:.1cqw solid var(--line);border-radius:1cqw;padding:1.2cqw 1.5cqw}
+.incard h3{font-size:1.3cqw;margin-bottom:.6cqw}
+.kv{display:grid;grid-template-columns:6.5cqw 1fr;gap:.8cqw;font-size:1.55cqw;padding:.25cqw 0}
+.kv span{color:var(--ink-3)} .kv b{color:var(--ink);font-weight:650}
+.inarrow svg{width:2.8cqw;height:2.8cqw;stroke:var(--hue);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.bigquote.mid{font-size:1.75cqw;margin:0}
+
+.slide[data-title="Four ways the reply went wrong"] .tracks.tight{gap:.7cqw}
+.slide[data-title="Four ways the reply went wrong"] .track{padding:.7cqw 1.2cqw;grid-template-columns:3.4cqw 1fr auto}
+.slide[data-title="Four ways the reply went wrong"] .track .art{width:3.4cqw;height:3.4cqw}
+.slide[data-title="Four ways the reply went wrong"] .track .ask{font-size:1.35cqw;margin-bottom:.25cqw}
+.slide[data-title="Four ways the reply went wrong"] .track .meta .l1{font-size:1.55cqw}
+.slide[data-title="Four ways the reply went wrong"] .track .meta .l2{font-size:1.25cqw}
+.slide[data-title="Four ways the reply went wrong"] .takeaway{font-size:1.5cqw}
+
+.before{font-size:1.9cqw} .kv{font-size:1.85cqw;grid-template-columns:7.5cqw 1fr} .incard h3{font-size:1.5cqw}
+.bigquote.mid{font-size:1.95cqw}
+
+.replygroups{display:flex;flex-direction:column;gap:1.3cqw;margin-block:auto}
+.rgh{font-size:1.55cqw;font-weight:750;color:var(--ink);margin-bottom:.55cqw}
+
+/* round 6: presenter-only markers never print */
+@media print{ .tier,#coreflag{display:none!important} }
+
+/* round 6 */
+.famb{gap:1.5cqw}
+.famb .brow{grid-template-columns:36cqw 1fr 7cqw}
+.famb .bl{font-size:1.9cqw} .famb .bl i{font-style:normal;color:var(--ink-3);font-size:.8em}
+.famb .bv{font-size:1.9cqw} .famb .btrack{height:2.8cqw;border-radius:1.4cqw} .famb .bfill{border-radius:1.4cqw}
+.bub.key{border-color:var(--hue);border-width:.18cqw}
+.bub .mv.no{color:#B42318;background:#F9E6E6}
+.lead2{font-size:1.75cqw;line-height:1.45;color:var(--ink-2);margin-bottom:1.2cqw}
+.slide.subdiv{padding:0;background:var(--paper);justify-content:center;overflow:hidden}
+.slide.subdiv::before{display:none}
+.srail{position:absolute;left:6cqw;right:6cqw;top:5cqw;display:grid;grid-template-columns:repeat(4,1fr);gap:1.2cqw}
+.srail-i{border-top:.5cqw solid var(--line);padding-top:1cqw;display:flex;flex-direction:column;gap:.3cqw}
+.srail-i b{font:800 1.5cqw/1 var(--sans);color:var(--ink-3)} .srail-i span{font-size:1.45cqw;color:var(--ink-3)}
+.srail-i.done{border-top-color:var(--hue-soft)}
+.srail-i.on{border-top-color:var(--hue)} .srail-i.on b{color:var(--hue)} .srail-i.on span{color:var(--ink);font-weight:700}
+.subwrap{padding:0 6cqw}
+.subnum{font:800 9cqw/1 var(--sans);color:var(--hue);letter-spacing:-.03em}
+.subtitle{font-size:5cqw;line-height:1.05;font-weight:800;color:var(--ink);letter-spacing:-.02em;margin-top:.6cqw}
+.slide.subdiv .sub{font-size:2.2cqw;color:var(--ink-3);margin-top:1cqw}
+
+
+.slide[data-title="Label example — “from a different artist”"] .chat .bub{font-size:1.72cqw;padding:.75cqw 1.3cqw}
+.slide[data-title="Label example — “from a different artist”"] .chat{gap:.75cqw}
+
+/* round 7 */
+.sv .why{font-style:normal;font-size:.62em;color:var(--ink-3);font-weight:500;margin-left:.5cqw}
+.bub .jv{display:inline-flex;align-items:center;gap:.4cqw;font:700 1.15cqw/1 var(--sans);border-radius:1cqw;padding:.45cqw .8cqw;margin-left:.6cqw}
+.bub .jv svg{width:1.4cqw;height:1.4cqw;fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.bub .jv.ok{color:#257E3D;background:#E7F8EC} .bub .jv.ok svg{stroke:#257E3D}
+.bub .jv.no{color:#B42318;background:#F9E6E6} .bub .jv.no svg{stroke:#B42318}
+.relab{display:grid;grid-template-columns:1.6fr 1fr;gap:2cqw;margin-block:auto}
+.icard.hero{border-color:var(--hue);border-width:.18cqw} .icard.hero .big{font-size:7cqw} .icard.hero h4{font-size:2.4cqw}
+.icard .big.sm{font-size:4cqw}
+.slide[data-title="Request understanding"] .chat.mini .bub{font-size:1.7cqw;padding:.7cqw 1.2cqw}
+.slide[data-title="Request understanding"] .chat.mini{gap:.7cqw}
+
+.slide[data-title="Label example — “from a different artist”"] .chat .bub{font-size:1.6cqw;padding:.6cqw 1.2cqw}
+.slide[data-title="Label example — “from a different artist”"] .chat{gap:.5cqw}
+.slide[data-title="Label example — “from a different artist”"] .bub .tl{margin-bottom:.25cqw}
+
+/* talk: tier badges and the CORE PATH flag are never shown (skip cues live in the notes) */
+.tier,#coreflag,#coreflag.on{display:none!important}
+
+/* talk additions */
+.slide.cover .venue{color:rgba(255,255,255,.72);font-size:1.7cqw;margin-top:.5cqw}
+.talktoc .tocrow .tt{font-size:3cqw} .talktoc .tocrow .td{font-size:2cqw} .talktoc .tocrow .tn{font-size:2.6cqw}
+.talktoc{gap:2cqw}
+.cpoints{display:grid;grid-template-columns:1fr 1fr;gap:2cqw;margin-block:auto}
+.cpoint{display:flex;gap:1.6cqw;align-items:flex-start;background:#fff;border:.1cqw solid var(--line);border-radius:1.4cqw;padding:2cqw}
+.cpoint h4{font-size:2.3cqw;font-weight:750;color:var(--ink);margin-bottom:.5cqw} .cpoint p{font-size:1.85cqw;line-height:1.4;color:var(--ink-2)}
+.qslide{flex-direction:column;gap:2cqw}
+.qhead{font-size:5cqw;font-weight:800;color:var(--ink);letter-spacing:-.02em}
+/* projector: nothing under ~26px at 1920 wide while presenting the talk */
+:root[data-talk] .src{font-size:1.4cqw}
+:root[data-talk] .bub .tl{font-size:1.35cqw}
+:root[data-talk] .bub .mv,:root[data-talk] .bub .jv{font-size:1.35cqw}
+:root[data-talk] .before .bt,:root[data-talk] .track .badge{font-size:1.35cqw}
+:root[data-talk] .track .ask{font-size:1.5cqw}
+:root[data-talk] .track .meta .l2{font-size:1.45cqw}
+:root[data-talk] .tiny{font-size:1.4cqw}
+:root[data-talk] .fstep p{font-size:1.6cqw}
+:root[data-talk] .slide.cover .statlab{font-size:1.4cqw}
+
+:root[data-talk] .slide[data-title="Label example — “from a different artist”"] .chat .bub{font-size:1.55cqw;padding:.5cqw 1.1cqw}
+.talktoc .tocrow{grid-template-columns:4cqw 34cqw 1fr;padding-bottom:1.6cqw}
+.cpoint h4{font-size:2.5cqw} .cpoint p{font-size:2cqw} .cpoint{padding:2.4cqw}
+
+/* talk round 7 */
+.card h3 .hi,.smk .hi{display:inline-flex;width:2.4cqw;height:2.4cqw;border-radius:.6cqw;background:var(--hue-soft);color:var(--hue);align-items:center;justify-content:center;margin-right:.7cqw;vertical-align:middle;flex:none}
+.card h3 .hi svg,.smk .hi svg{width:1.5cqw;height:1.5cqw;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.card.key{border:.22cqw solid var(--hue);box-shadow:0 .3cqw 1cqw rgba(32,99,217,.12)}
+.smap{display:flex;flex-direction:column;gap:1cqw;margin-block:auto}
+.smrow{display:grid;grid-template-columns:34% 3cqw 1fr;align-items:center;gap:1.2cqw;background:#fff;border:.1cqw solid var(--line);border-radius:1cqw;padding:1cqw 1.4cqw}
+.smk{display:flex;align-items:center}.smk h4{font-size:1.75cqw;font-weight:720;color:var(--ink)}.smk p{font-size:1.35cqw;color:var(--ink-2)}
+.smar svg{width:2.4cqw;height:2.4cqw;fill:none;stroke:var(--hue);stroke-width:2}
+.smv p{font-size:1.6cqw;color:var(--ink);margin-bottom:.45cqw}
+.smchips{display:flex;flex-wrap:wrap;gap:.5cqw}.smchips span{font-size:1.3cqw;font-weight:600;color:var(--hue);background:var(--hue-soft);border-radius:2cqw;padding:.25cqw .9cqw}
+.rgen{display:grid;grid-template-columns:1.15fr 3cqw .8fr 3cqw 1.35fr;align-items:center;gap:1cqw;margin-block:auto}
+.rgin{display:flex;flex-direction:column;gap:.8cqw}.rgl{font-size:1.3cqw;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.rgm{background:var(--hue-soft);border:.15cqw solid var(--hue);border-radius:1.2cqw;padding:1.6cqw;text-align:center}
+.rgm .ico{margin:0 auto .6cqw}.rgm h4{font-size:2cqw;font-weight:750;color:var(--ink)}.rgm p{font-size:1.4cqw;color:var(--ink-2);margin-top:.3cqw}
+.rgen .inarrow svg{width:2.6cqw;height:2.6cqw;fill:none;stroke:var(--hue);stroke-width:2}
+.rgout{font-size:1.65cqw;line-height:1.45;max-width:none}
+.whylist .tocrow{opacity:.55}.whylist .tocrow.on{opacity:1}
+.whylist .tocrow.on .tt{color:var(--hue)}
+.talktoc.whylist .tocrow .tt{font-size:2.5cqw}.talktoc.whylist .tocrow .td{font-size:1.7cqw}
+.relabd{max-height:40%;flex:none}.relabd img{max-height:14cqw}
+.relab.row2{display:grid;grid-template-columns:1.5fr 1fr;gap:1.4cqw;margin-top:1cqw}
+.relab.row2 .icard{display:flex;align-items:center;gap:1.4cqw;padding:1.2cqw 1.6cqw}
+.relab.row2 .big{font-size:4.4cqw;line-height:1}.relab.row2 .big.sm{font-size:3cqw}
+
+
+/* talk round 7b: projector sizes */
+.slide[data-title="The state schema"] .card h3{display:flex;align-items:center;font-size:1.5cqw;letter-spacing:.02em;white-space:nowrap}
+.smap{gap:1.1cqw}.smrow{grid-template-columns:36% 2.6cqw 1fr;padding:1cqw 1.4cqw}
+.smk h4{font-size:2.05cqw}.smk p{font-size:1.45cqw}
+.smv p{font-size:1.85cqw}.smchips span{font-size:1.45cqw}
+.rgen{grid-template-columns:1.2fr 2.6cqw .75fr 2.6cqw 1.3fr}
+.rgen .incard h3{font-size:1.45cqw}.rgen .small{font-size:1.5cqw}
+.rgen .kv{font-size:1.6cqw;grid-template-columns:5.2cqw 1fr}
+.rgl{font-size:1.4cqw}.rgm h4{font-size:2.3cqw}.rgm p{font-size:1.5cqw}
+.rgout{font-size:1.85cqw}
+.whylist .tocrow{grid-template-columns:3cqw 34cqw 1fr}
+.talktoc.whylist .tocrow .td{font-size:1.8cqw}
+.relabd img{max-height:19cqw}
+.relab.row2 h4{font-size:1.9cqw}.relab.row2 p{font-size:1.45cqw}
+
+
+/* talk round 8 */
+.rrflow{display:grid;grid-template-columns:1fr 2.6cqw 1fr 2.6cqw 1fr;align-items:center;gap:1cqw;margin-bottom:1.6cqw}
+.rrs{background:#fff;border:.1cqw solid var(--line);border-radius:1cqw;padding:1cqw 1.4cqw;text-align:center}
+.rrs.hl{background:var(--hue-soft);border:.15cqw solid var(--hue)}
+.rrs h4{font-size:1.9cqw;font-weight:720;color:var(--ink)}.rrs p{font-size:1.45cqw;color:var(--ink-2)}
+.rra svg{width:2.4cqw;height:2.4cqw;fill:none;stroke:var(--hue);stroke-width:2}
+.rrgrid{display:grid;grid-template-columns:1.45fr 1fr;gap:1.6cqw;flex:1;min-height:0}
+.rrbox{background:#fff;border:.1cqw solid var(--line);border-radius:1cqw;padding:1.3cqw 1.6cqw;display:flex;flex-direction:column;gap:.8cqw}
+.rrbox .bars{gap:1cqw}.rrbox .bl{font-size:1.5cqw}.rrbox .bl i{font-size:1.4cqw}.rrbox .bv{font-size:1.6cqw}
+.rrbox .wsm .brow{grid-template-columns:52% 1fr 5cqw}
+.rrn{font-size:1.4cqw;color:var(--ink-2);margin-top:auto}
+.labstat{display:flex;align-items:center;gap:1.6cqw;border-top:.1cqw solid var(--line);padding-top:1cqw;margin-top:.6cqw}
+.labstat .big{font-size:4.2cqw;font-weight:800;color:var(--hue);line-height:1}
+.labstat h4{font-size:1.8cqw;font-weight:720;color:var(--ink)}.labstat p{font-size:1.4cqw;color:var(--ink-2);margin-top:.2cqw}
+.cbul{margin-top:.4cqw;padding-left:1.4cqw}.cbul li{font-size:1.75cqw;line-height:1.4;color:var(--ink-2)}
+
+.chat.anchor{gap:.3cqw}.labstat h4{font-size:1.7cqw}.labstat{padding-top:.7cqw;margin-top:.3cqw}.labstat .big{font-size:3.6cqw}
+:root:not([data-talk]) .labstat{display:none} :root[data-talk] .dd-only{display:none} .labstat .big{font-size:3.3cqw}
+.rrbox .bars{display:flex;flex-direction:column;justify-content:space-evenly;flex:1;gap:1.2cqw}
+.rrbox .brow,.rrbox .wsm .brow{display:grid;grid-template-columns:46% 1fr 6cqw;align-items:center;gap:1.2cqw}
+.rrbox .btrack{height:1.6cqw}.rrbox .bl{font-size:1.75cqw;line-height:1.25}.rrbox .bl i{font-size:1.45cqw;display:block}.rrbox .bv{font-size:1.9cqw;text-align:right}
+.rrbox .rgl{font-size:1.45cqw}.rrn{font-size:1.5cqw}
+.whylist .tocrow{grid-template-columns:3cqw 1fr}.whylist .tocrow .td{display:none}
+.talktoc.whylist .tocrow .tt{font-size:2.8cqw}
+.scap{font-size:1.4cqw;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--hue);margin-bottom:.6cqw}
+.xrows{display:flex;flex-direction:column;gap:.9cqw}
+.xrow{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:1cqw;align-items:stretch}
+.xask{background:#fff;border:.1cqw solid var(--line);border-radius:.9cqw;padding:1.1cqw 1.3cqw;font-size:1.8cqw;line-height:1.35;font-style:italic;color:var(--ink);display:block;align-self:stretch}
+.xst{display:flex;gap:.8cqw;align-items:center;border-radius:.9cqw;padding:.9cqw 1.1cqw;font-size:1.6cqw;color:var(--ink)}
+.xst.ok{background:#E7F8EC;border:.1cqw solid #b9e4c6}.xst.no{background:var(--bad-soft,#F9E6E6);border:.1cqw solid #f3c2be}
+.xl{display:block;font-size:1.35cqw;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.xi{flex:none;width:2.4cqw;height:2.4cqw;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#fff}
+.xi svg{width:1.5cqw;height:1.5cqw;fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.xst.ok .xi svg{stroke:#257E3D}.xst.no .xi svg{stroke:#C92C30}
+.xweight{margin-top:1.3cqw;display:grid;grid-template-columns:auto 1fr 1fr;gap:1.6cqw;align-items:center;border-top:.1cqw solid var(--line);padding-top:1cqw}
+.xwl{font-size:1.4cqw;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.xweight .brow{grid-template-columns:auto 1fr 5.4cqw}.xweight .bl,.xweight .bv{font-size:1.5cqw}
+.qcontact{font-size:2cqw;color:var(--ink-2);margin-top:.4cqw}
+.c2col{display:grid;grid-template-columns:1fr 1fr;gap:1.8cqw;margin-block:auto}
+.ccol{display:flex;flex-direction:column;gap:1.8cqw}
+.cpoint.gaps{border-color:#f3c2be}.cpoint.gaps .ico{background:var(--bad-soft,#F9E6E6);color:#C92C30}
+.cpoint.gaps .cbul li{margin-bottom:.35cqw}
+.rrgrid.one{grid-template-columns:1fr}.rrgrid.one .rrbox .brow{grid-template-columns:38% 1fr 7cqw}
+:root:not([data-talk]) .ax-talk{display:none}
+.xrows{gap:1.2cqw;margin-top:1cqw}.xst{font-size:1.8cqw;line-height:1.3;padding:1.1cqw 1.2cqw}.xl{font-size:1.4cqw}
+.xweight{margin-top:2cqw}.xweight .bl,.xweight .bv{font-size:1.7cqw}.xwl{font-size:1.5cqw}
+.slide[data-title="Four ways the reply went wrong"] .track .ask{font-size:1.75cqw}
+.slide[data-title="Four ways the reply went wrong"] .track .l1{font-size:2cqw}
+.slide[data-title="Four ways the reply went wrong"] .rgh{font-size:1.85cqw;margin-bottom:.8cqw}
+.slide[data-title="Four ways the reply went wrong"] .replygroups{gap:2.4cqw;margin-block:auto}
+:root[data-talk] .slide[data-title="Four ways the reply went wrong"] .track .ask{font-size:1.75cqw}
+:root[data-talk] .ax-detail{display:none}
+:root[data-talk] .axgrid{counter-reset:ax}:root[data-talk] .axitem:not(.ax-detail){counter-increment:ax}
+:root[data-talk] .axitem .n{font-size:0}:root[data-talk] .axitem .n::before{content:counter(ax);font-size:1.6cqw}
+:root[data-talk] .axitem{font-size:1.6cqw}
+.rrgrid.one{flex:none;margin-top:.4cqw}.rrgrid.one .rrbox{padding:1.4cqw 1.8cqw}.rrgrid.one .bars{flex:none;gap:1.3cqw}
+
+/* projector pass (talk only): darker text and hues, nothing under ~30px */
+:root[data-talk]{--ink:#0F0D0B;--ink-2:#2B2621;--ink-3:#3F3832;--bad:#9A1B14;--accent:#1747A6}
+:root[data-talk] .slide[style*="#2063D9"]{--hue:#1747A6!important}
+:root[data-talk] .slide[style*="#C92C30"]{--hue:#A11D21!important}
+:root[data-talk] .slide[style*="#A55A18"]{--hue:#7A410E!important}
+:root[data-talk] .slide[style*="#257E3D"]{--hue:#1A5E2C!important}
+:root[data-talk] .bub .tl{opacity:1;font-size:1.5cqw}
+:root[data-talk] .whylist .tocrow{opacity:1}
+:root[data-talk] .whylist .tocrow:not(.on) .tt,:root[data-talk] .whylist .tocrow:not(.on) .tn{color:var(--ink-3)}
+:root[data-talk] .slide-head .tag{font-size:1.6cqw}
+:root[data-talk] .smchips span,:root[data-talk] .chips span{font-size:1.6cqw}
+:root[data-talk] .smk p,:root[data-talk] .rrs p,:root[data-talk] .rrbox .bl i,:root[data-talk] .icard p{font-size:1.6cqw}
+:root[data-talk] .incard h3,:root[data-talk] .rgl,:root[data-talk] .scap,:root[data-talk] .xl,:root[data-talk] .xwl{font-size:1.55cqw}
+:root[data-talk] .src,:root[data-talk] .tiny{font-size:1.55cqw}
+:root[data-talk] .track .badge,:root[data-talk] .bub .mv,:root[data-talk] .bub .jv{font-size:1.5cqw}
+:root[data-talk] .slide.cover .statlab,:root[data-talk] .slide.cover .kicker{font-size:1.6cqw}
+:root[data-talk] .qrurl{font-size:1.7cqw}
+:root[data-talk] .card h3{font-size:1.7cqw}
+:root[data-talk] .sarrow span{font-size:1.5cqw}
+
+:root[data-talk] .slide.cover .statlab{color:rgba(255,255,255,.88)}
+:root[data-talk] .bub .mv{color:#14532D}
+:root[data-talk] .bub .jv{color:#8F1B16}
+:root[data-talk] .track .badge,:root[data-talk] .track .art{color:#8F1B16}
+:root[data-talk] .track.warn .badge,:root[data-talk] .track.warn .art{color:#1747A6}
+:root[data-talk] .mb .st{color:#8F1B16}
+:root[data-talk] .labstat{gap:1.2cqw;padding-top:.5cqw;margin-top:.2cqw}
+:root[data-talk] .labstat .big{font-size:2.9cqw}
+:root[data-talk] .labstat h4{font-size:1.65cqw}
+:root[data-talk] .labstat p{font-size:1.5cqw;margin-top:0}
+:root[data-talk] .chat.anchor .bub{padding-top:.55cqw;padding-bottom:.55cqw}
+:root[data-talk] .chat.anchor .jv{display:none}
+:root[data-talk] .chat.anchor{gap:.9cqw;margin-top:.8cqw}
+:root[data-talk] .labstat .big{font-size:3.6cqw}:root[data-talk] .labstat h4{font-size:1.9cqw}
+
+.archsimple{display:none}
+:root[data-talk] .archsimple{display:grid;grid-template-columns:1fr 2.4cqw 1fr 2.4cqw 1.15fr 2.4cqw 1fr 2.4cqw 1fr;align-items:center;gap:.6cqw;margin-block:auto}
+:root[data-talk] .slide[data-title="The system in one picture"] .diagram.wide{display:none}
+.ab{background:#fff;border:.12cqw solid var(--line);border-radius:1.2cqw;padding:1.8cqw 1.2cqw;text-align:center;min-height:15cqw;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6cqw}
+.ab.hl{background:var(--hue-soft);border:.2cqw solid var(--hue)}
+.ab .ico{width:4cqw;height:4cqw;border-radius:1cqw;background:var(--hue-soft);color:var(--hue);display:flex;align-items:center;justify-content:center}
+.ab.hl .ico{background:#fff}
+.ab .ico svg{width:2.4cqw;height:2.4cqw;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.ab h4{font-size:2.2cqw;font-weight:760;color:var(--ink);line-height:1.15}
+.ab p{font-size:1.6cqw;color:var(--ink-2);line-height:1.3}
+.ar svg{width:2.4cqw;height:2.4cqw;fill:none;stroke:var(--hue);stroke-width:2.2}
+
+:root[data-talk] .slide[data-title="The system in one picture"] .src{display:none}
+:root[data-talk] .archsimple{gap:.5cqw}
+.ab{min-height:21cqw;padding:2cqw 1cqw}.ab h4{font-size:2.5cqw}.ab p{font-size:1.75cqw}
+.ab .ico{width:4.6cqw;height:4.6cqw}.ab .ico svg{width:2.8cqw;height:2.8cqw}
+.ab h4{font-size:2.2cqw;hyphens:manual}
+.xw{display:block;font-size:1.4cqw;font-weight:500;color:var(--ink-2);margin-top:.3cqw;line-height:1.25}
+:root[data-talk] .xw{font-size:1.5cqw}
+:root[data-talk] .xrows{gap:.8cqw;margin-top:.2cqw}:root[data-talk] .xst,:root[data-talk] .xask{padding:.8cqw 1.1cqw}:root[data-talk] .xweight{margin-top:1cqw;padding-top:.7cqw}
+.ab .nw{white-space:nowrap;font-size:1.5cqw}
+:root[data-talk] .archsimple{grid-template-columns:.85fr 2.2cqw 1.25fr 2.2cqw 1fr 2.2cqw 1.1fr 2.2cqw 1.1fr}
+:root[data-talk] .slide[data-title="Why we trained on the dev set"] .src{display:none}
+.incard.fromstate{border:.22cqw solid var(--hue);background:var(--hue-soft)}.incard.fromstate h3{color:var(--hue)}
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+<!-- ═══════════════ SPINE ═══════════════ -->
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide cover" data-tier="core" data-title="Title — 29th of 40"
+  data-notes="&lt;b&gt;0:10.&lt;/b&gt; Team npatta01, three independent researchers. How our system works, how it scored, and what we found.">
+  <div class="eq"><i style="height:18%"></i><i style="height:44%"></i><i style="height:26%"></i><i style="height:68%"></i><i style="height:36%"></i><i style="height:84%"></i><i style="height:30%"></i><i style="height:56%"></i><i style="height:22%"></i><i style="height:74%"></i><i style="height:40%"></i><i style="height:88%"></i><i style="height:32%"></i><i style="height:62%"></i><i style="height:24%"></i><i style="height:50%"></i><i style="height:34%"></i><i style="height:78%"></i><i style="height:28%"></i><i style="height:54%"></i><i style="height:20%"></i><i style="height:66%"></i><i style="height:38%"></i><i style="height:82%"></i><i style="height:28%"></i><i style="height:58%"></i><i style="height:22%"></i><i style="height:70%"></i><i style="height:42%"></i><i style="height:86%"></i></div>
+  <div class="kicker">ACM RecSys 2026 · RecSys Challenge Workshop</div>
+  <h1>State-Driven Retrieval and<br>Learned Re-Ranking for<br>Conversational Music Recommendation</h1>
+  <div class="rule"></div>
+  <div class="authors">Nidhin Pattaniyil · Semih Yagli · Tanwir Zaman</div>
+  <div class="venue">Minneapolis · 2 October 2026 · Music-CRS track, team npatta01</div>
+  <div class="resultbar">
+    <div><div class="stat sm">47,071</div><div class="statlab">tracks in the catalog</div></div>
+    <div><div class="stat sm">11</div><div class="statlab">ways to search</div></div>
+    <div><div class="stat sm">1</div><div class="statlab">learned ranker</div></div>
+  </div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="talk" data-title="Talk contents"
+  data-notes="&lt;b&gt;0:10.&lt;/b&gt; Three parts and a short conclusion.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".8"/><circle cx="4.5" cy="12" r=".8"/><circle cx="4.5" cy="18" r=".8"/></svg></div><h2>Contents</h2><span class="tag"></span></div>
+  <div class="fill"><div class="toc tight8 talktoc">
+    <div class="tocrow"><span class="tn">1</span><span class="tt">How it works</span><span class="td">the state, retrieval, reranking, the reply</span></div>
+    <div class="tocrow"><span class="tn">2</span><span class="tt">How it scored</span><span class="td">the official results</span></div>
+    <div class="tocrow"><span class="tn">3</span><span class="tt">What we found</span><span class="td">training, missing data, labels, ranking, the reply</span></div>
+    <div class="tocrow"><span class="tn">4</span><span class="tt">Conclusion</span><span class="td">what we showed, and questions</span></div>
+  </div></div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="Contents"
+  data-notes="Six parts. The first three explain the task from scratch; our score appears only in part five.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".8"/><circle cx="4.5" cy="12" r=".8"/><circle cx="4.5" cy="18" r=".8"/></svg></div><h2>Contents</h2><span class="tag">six parts</span></div>
+  <div class="fill"><div class="toc tight8">
+    <div class="tocrow"><span class="tn">1</span><span class="tt">The problem</span><span class="td">finding music by talking</span></div>
+    <div class="tocrow"><span class="tn">2</span><span class="tt">Where the data comes from</span><span class="td">how the organisers built the conversations</span></div>
+    <div class="tocrow"><span class="tn">3</span><span class="tt">How it is scored</span><span class="td">one right track per turn, plus a judged reply</span></div>
+    <div class="tocrow"><span class="tn">4</span><span class="tt">Our approach</span><span class="td">request understanding, retrieval, reranking, response generation</span></div>
+    <div class="tocrow"><span class="tn">5</span><span class="tt">How it scored</span><span class="td">the official results</span></div>
+    <div class="tocrow"><span class="tn">6</span><span class="tt">What is not ideal</span><span class="td">what went wrong, one finding per slide</span></div>
+    <div class="tocrow ax"><span class="tn">A</span><span class="tt">Appendix</span><span class="td">every other detail</span></div>
+  </div></div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide divider" data-tier="optional" data-title="§1 · The problem"
+  data-notes="Part 1 of 6 — finding music by talking.">
+  <div class="divrail"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
+  <div class="divicon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div>
+  <div class="eq"><i style="height:22%"></i><i style="height:48%"></i><i style="height:30%"></i><i style="height:72%"></i><i style="height:40%"></i><i style="height:88%"></i><i style="height:34%"></i><i style="height:60%"></i><i style="height:26%"></i><i style="height:78%"></i><i style="height:44%"></i><i style="height:92%"></i><i style="height:36%"></i><i style="height:66%"></i><i style="height:28%"></i><i style="height:54%"></i><i style="height:38%"></i><i style="height:82%"></i><i style="height:30%"></i><i style="height:58%"></i><i style="height:24%"></i><i style="height:70%"></i><i style="height:42%"></i><i style="height:86%"></i><i style="height:32%"></i><i style="height:62%"></i><i style="height:26%"></i><i style="height:74%"></i><i style="height:46%"></i><i style="height:90%"></i></div>
+  <div class="divwrap">
+    <div class="divnum">1</div>
+    <h1 class="divtitle">The problem</h1>
+    <div class="sub">finding music by talking</div>
+  </div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="Finding music by talking"
+  data-notes="&lt;b&gt;0:45.&lt;/b&gt; A real conversation from the final test set. The listener is trying to find one song. They describe it, turn down two suggestions, and narrow it down. A conversational recommender has to answer every turn with a list of tracks and a short reply, and carry everything said so far.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h2>Finding music by talking</h2><span class="tag">The problem</span></div>
+  <div class="fill"><div class="chatwrap"><div class="chat">
+    <div class="bub me">I’m trying to remember a song that feels like a quiet, personal story…</div>
+    <div class="bub sys"><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Neko Case — “Calling Cards”</div>
+    <div class="bub me">Not quite the one… it definitely had a female singer.</div>
+    <div class="bub sys"><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Neko Case — “Man”</div>
+    <div class="bub me">No, that’s not it either. Much more subdued… almost a cappella.</div>
+    <div class="bub sys next"><span class="note">?</span>Your system answers here: <b>20 tracks</b> and a <b>short reply</b></div>
+  </div></div>
+  <div class="tiny" style="margin-top:.8cqw">A real conversation from the challenge’s final test set.</div></div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide divider" data-tier="optional" data-title="§2 · Where the data comes from"
+  data-notes="Part 2 of 6 — how the organisers built the conversations.">
+  <div class="divrail"><span class="done"></span><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
+  <div class="divicon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div>
+  <div class="eq"><i style="height:22%"></i><i style="height:48%"></i><i style="height:30%"></i><i style="height:72%"></i><i style="height:40%"></i><i style="height:88%"></i><i style="height:34%"></i><i style="height:60%"></i><i style="height:26%"></i><i style="height:78%"></i><i style="height:44%"></i><i style="height:92%"></i><i style="height:36%"></i><i style="height:66%"></i><i style="height:28%"></i><i style="height:54%"></i><i style="height:38%"></i><i style="height:82%"></i><i style="height:30%"></i><i style="height:58%"></i><i style="height:24%"></i><i style="height:70%"></i><i style="height:42%"></i><i style="height:86%"></i><i style="height:32%"></i><i style="height:62%"></i><i style="height:26%"></i><i style="height:74%"></i><i style="height:46%"></i><i style="height:90%"></i></div>
+  <div class="divwrap">
+    <div class="divnum">2</div>
+    <h1 class="divtitle">Where the data comes from</h1>
+    <div class="sub">how the organisers built the conversations</div>
+  </div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="How the conversations were made"
+  data-notes="&lt;b&gt;1:15.&lt;/b&gt; Nobody chatted with a music bot. The organisers started from a real listening session in LFM-2b, then four Gemini 2.5 Flash agents played out each conversation: a profile agent writes a persona from five of that person’s tracks, a goal agent picks one of 44 goals, and a listener agent and a recommender agent talk for eight turns. The recommender never sees the goal and must pick from a pool of 16 to 32 tracks from the same session. Its pick becomes the answer the challenge scores you against. Source: TalkPlayData 2, section 3.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h2>How the conversations were made</h2><span class="tag">The data</span></div>
+  <div class="fill"><div class="flow">
+    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4h4"/><path d="M12 8v4l3 2"/></svg></div><h4>A real listening session</h4><p>LFM-2b, 2005–2020</p></div>
+    <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.4-4 4.2-6 7.5-6s5.9 2 7.5 6"/></svg></div><h4>Profile agent</h4><p>a persona from 5 of their tracks</p></div>
+    <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4h11l-2 4 2 4H5"/></svg></div><h4>Goal agent</h4><p>picks 1 of 44 goals</p></div>
+    <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="fstep hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h4>Listener and recommender</h4><p>talk for 8 turns</p></div>
+  </div>
+  <div class="cols c2 knows tight">
+    <div class="agent"><div class="ahead"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.2"/><rect x="17" y="14" width="4" height="6" rx="1.2"/></svg></div><h4>Listener agent</h4></div>
+      <ul><li class="y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>the profile</span></li><li class="y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>the goal</span></li></ul></div>
+    <div class="agent"><div class="ahead"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="8" width="14" height="11" rx="2.5"/><path d="M12 4v4"/><circle cx="9.5" cy="13.5" r="1"/><circle cx="14.5" cy="13.5" r="1"/></svg></div><h4>Recommender agent</h4></div>
+      <ul><li class="y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>the profile</span></li><li class="y"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>a pool of 16–32 tracks</span></li><li class="n"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><path d="M4 4l16 16"/></svg><span>the goal</span></li></ul></div>
+  </div>
+  <div class="takeaway">All four agents are <b>Gemini 2.5 Flash</b>. The recommender’s pick <b>is the answer key</b>.</div>
+  <div class="src">Source: TalkPlayData 2 (Doh et al., 2025), §3</div></div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="What you get"
+  data-notes="&lt;b&gt;0:45.&lt;/b&gt; Fifteen thousand simulated conversations to learn from, a thousand more with answers for checking yourself, two small blind test sets scored on the leaderboard, and one shared catalog of 47,071 tracks with metadata and precomputed embeddings.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6"/><path d="M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg></div><h2>What you get</h2><span class="tag">The data</span></div>
+  <div class="fill"><div class="icards c4">
+    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><div class="big">15,199</div><h4>training conversations</h4><p>8 turns each, with the answer for every turn</p></div>
+    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><div class="big">1,000</div><h4>development conversations</h4><p>with answers — for checking yourself</p></div>
+    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".6"/></svg></div><div class="big">2 × 80</div><h4>blind test conversations</h4><p>final turn only; scored on the leaderboard</p></div>
+    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg></div><div class="big">47,071</div><h4>tracks in the catalog</h4><p>title, artist, tags, plus text, audio and cover embeddings</p></div>
+  </div></div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide divider" data-tier="optional" data-title="§3 · How it is scored"
+  data-notes="Part 3 of 6 — one right track per turn, plus a judged reply.">
+  <div class="divrail"><span class="done"></span><span class="done"></span><span class="on"></span><span class=""></span><span class=""></span><span class=""></span></div>
+  <div class="divicon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div>
+  <div class="eq"><i style="height:22%"></i><i style="height:48%"></i><i style="height:30%"></i><i style="height:72%"></i><i style="height:40%"></i><i style="height:88%"></i><i style="height:34%"></i><i style="height:60%"></i><i style="height:26%"></i><i style="height:78%"></i><i style="height:44%"></i><i style="height:92%"></i><i style="height:36%"></i><i style="height:66%"></i><i style="height:28%"></i><i style="height:54%"></i><i style="height:38%"></i><i style="height:82%"></i><i style="height:30%"></i><i style="height:58%"></i><i style="height:24%"></i><i style="height:70%"></i><i style="height:42%"></i><i style="height:86%"></i><i style="height:32%"></i><i style="height:62%"></i><i style="height:26%"></i><i style="height:74%"></i><i style="height:46%"></i><i style="height:90%"></i></div>
+  <div class="divwrap">
+    <div class="divnum">3</div>
+    <h1 class="divtitle">How it is scored</h1>
+    <div class="sub">one right track per turn, plus a judged reply</div>
+  </div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="The final score"
+  data-notes="&lt;b&gt;0:45.&lt;/b&gt; The leaderboard number mixes four things. Half is nDCG@20 — finding the right track. Thirty percent is an LLM judge rating the reply from 1 to 5. The last twenty percent rewards variety: catalog diversity is how many different tracks you recommend across all turns, and lexical diversity is how varied the wording of your replies is.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h2>The final score</h2><span class="tag">Scoring</span></div>
+  <div class="fill">
+    <div class="wbar">
+      <div class="wseg s1" style="flex:50"><b>50%</b><span>right track · nDCG@20</span></div>
+      <div class="wseg s2" style="flex:30"><b>30%</b><span>reply quality · LLM judge, 1–5</span></div>
+      <div class="wseg s3" style="flex:10"><b>10%</b><span>catalog diversity</span></div>
+      <div class="wseg s4" style="flex:10"><b>10%</b><span>reply wording</span></div>
+    </div>
+    <div class="cols c3" style="margin-top:2.4cqw">
+      <div class="card"><h3>LLM judge</h3><div class="small">The organisers’ LLM reads the conversation and your
+        reply, and rates it 1–5.</div></div>
+      <div class="card"><h3>Catalog diversity</h3><div class="small">How many <b>different</b> tracks you
+        recommend across all turns, as a share of the catalog.</div></div>
+      <div class="card"><h3>Reply wording</h3><div class="small">Lexical diversity: how varied the words in
+        your replies are.</div></div>
+    </div>
+  </div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide divider" data-tier="optional" data-title="§4 · Our approach"
+  data-notes="Part 4 of 6 — request understanding, retrieval, reranking, response generation.">
+  <div class="divrail"><span class="done"></span><span class="done"></span><span class="done"></span><span class="on"></span><span class=""></span><span class=""></span></div>
+  <div class="divicon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v5M12 16v5M3 12h5M16 12h5"/></svg></div>
+  <div class="eq"><i style="height:22%"></i><i style="height:48%"></i><i style="height:30%"></i><i style="height:72%"></i><i style="height:40%"></i><i style="height:88%"></i><i style="height:34%"></i><i style="height:60%"></i><i style="height:26%"></i><i style="height:78%"></i><i style="height:44%"></i><i style="height:92%"></i><i style="height:36%"></i><i style="height:66%"></i><i style="height:28%"></i><i style="height:54%"></i><i style="height:38%"></i><i style="height:82%"></i><i style="height:30%"></i><i style="height:58%"></i><i style="height:24%"></i><i style="height:70%"></i><i style="height:42%"></i><i style="height:86%"></i><i style="height:32%"></i><i style="height:62%"></i><i style="height:26%"></i><i style="height:74%"></i><i style="height:46%"></i><i style="height:90%"></i></div>
+  <div class="divwrap">
+    <div class="divnum">4</div>
+    <h1 class="divtitle">Our approach</h1>
+    <div class="sub">request understanding, retrieval, reranking, response generation</div>
+  </div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="The system in one picture"
+  data-notes="&lt;b&gt;0:35.&lt;/b&gt; An LLM compiles each conversation into a typed state. Eleven branches query ONE LanceDB table holding metadata, a full-text index and six embedding families. LambdaMART scores the pooled union and emits 20. A response model writes the reply, conditioned on the top track AND the same state. Note the families: two boxes are LLMs, the ranker is trees — people assume the Qwen model does the ranking.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h2>System overview</h2>
+    <span class="tag">Approach</span></div>
+  <div class="archsimple"><div class="ab "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h4>Conversation</h4><p>every turn so far</p></div><div class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="ab hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h4>Request understanding</h4><p>typed state<br><span class="nw">DeepSeek-V4-Flash</span></p></div><div class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="ab "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><h4>Retrieval</h4><p>11 branches<br>top 500 each</p></div><div class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="ab hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h4>Reranking</h4><p>LightGBM<br>146 features → top 20</p></div><div class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="ab "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h4>Response generation</h4><p>Qwen3-30B<br>writes the reply</p></div></div>
+  <div class="diagram wide"><img src="figures/architecture.svg" alt="System architecture: conversation and played tracks go to an LLM state extractor; eleven retrieval branches query one LanceDB collection of 47,071 tracks; pooled candidates are scored by a LambdaMART reranker that emits twenty tracks; a response model writes a reply conditioned on the top track and the same state. A weighted reciprocal-rank-fusion path is the untrained baseline and fallback."></div>
+  <div class="src">Organisers supplied the audio (CLAP), cover-art (SigLIP-2), listening-data (BPR) and small text (Qwen3-0.6B) embeddings; we added Qwen3-8B text embeddings and our own bi-encoder.</div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide subdiv" data-tier="optional" data-title="4.1 · Request understanding"
+  data-notes="Part 4.1 — reading the conversation into a state.">
+  <div class="srail"><div class="srail-i on"><b>4.1</b><span>Request understanding</span></div><div class="srail-i"><b>4.2</b><span>Retrieval</span></div><div class="srail-i"><b>4.3</b><span>Reranking</span></div><div class="srail-i"><b>4.4</b><span>Response generation</span></div></div>
+  <div class="subwrap"><div class="subnum">4.1</div><h1 class="subtitle">Request understanding</h1><div class="sub">reading the conversation into a state</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Request understanding"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; First an LLM, DeepSeek-V4-Flash, reads the whole conversation and writes down what it understood as structured fields. We had just played Ryan Adams &amp;amp; The Cardinals; the listener liked the mood but asked for other artists. The state keeps the mood and genre and marks that artist as one to avoid. Every later step reads these fields.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h2>Request understanding → conversation state</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="stateflow">
+    <div class="chat mini"><div class="bub sys"><span class="tl">We had just played</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Ryan Adams &amp; The Cardinals — “Let Us Down Easy”</div>
+      <div class="bub me"><span class="tl">Listener</span>…more tracks with that kind of emotional depth and acoustic focus, maybe branching out to other singer-songwriter or alt-country artists?</div>
+      </div>
+    <div class="sarrow"><span>DeepSeek<br>V4-Flash</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="scard"><div class="scap">Conversation state</div><div class="srow"><span class="sk">Request type</span><span class="sv">new artist</span></div><div class="srow"><span class="sk">Avoid</span><span class="sv">Ryan Adams &amp; The Cardinals</span></div><div class="srow"><span class="sk">Mood</span><span class="sv">introspective, emotional depth</span></div><div class="srow"><span class="sk">Sound</span><span class="sv">acoustic-driven</span></div><div class="srow"><span class="sk">Genre</span><span class="sv">singer-songwriter, alt-country</span></div></div>
+  </div>
+  <div class="takeaway">DeepSeek-V4-Flash reads <b>every turn so far</b> and writes a typed <b>state</b>: “other artists” after a Ryan Adams track becomes an artist to avoid, and the mood carries over.</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-tier="core" class="slide roomy" data-title="The state schema"
+  data-notes="&lt;b&gt;0:25.&lt;/b&gt; What the state can hold: the request type and routing flags, what the listener likes, what they ruled out, how it should sound, what it is about, and bounds like a release-year window. One LLM call fills all of it every turn. The two outlined groups come back later: the routing flags pick branches, and the ruled-out group is what the ranker failed to act on.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>What the state can hold</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="cols c3">
+    <div class="card key"><h3><span class="hi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4h11l-2 4 2 4H5"/></svg></span>The request</h3>
+      <ul class="tight" style="margin-top:.4cqw"><li>request type</li><li>intent mode</li>
+        <li>routing flags</li></ul></div>
+    <div class="card"><h3><span class="hi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></span>What they like</h3>
+      <ul class="tight" style="margin-top:.4cqw"><li>anchors and pinned tracks</li>
+        <li>per-track feedback</li><li>mentioned entities</li></ul></div>
+    <div class="card key"><h3><span class="hi"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M9 9l6 6M15 9l-6 6"/></svg></span>What they ruled out</h3>
+      <ul class="tight" style="margin-top:.4cqw"><li>rejected tracks</li><li>rejected artists</li>
+        <li>hard filters</li></ul></div>
+    <div class="card"><h3><span class="hi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h3l2.5-7 3 14 3-10 2.5 3H22"/></svg></span>What it sounds like</h3>
+      <ul class="tight" style="margin-top:.4cqw"><li>mood facets</li><li>genre facets</li>
+        <li>sonic facets</li></ul></div>
+    <div class="card"><h3><span class="hi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span>What it is about</h3>
+      <ul class="tight" style="margin-top:.4cqw"><li>lyrical theme</li></ul></div>
+    <div class="card"><h3><span class="hi"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span>Bounds</h3>
+      <ul class="tight" style="margin-top:.4cqw"><li>release-year window</li>
+        <li>process constraints</li></ul></div>
+  </div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="How the state drives retrieval"
+  data-notes="&lt;b&gt;0:25.&lt;/b&gt; Each part of the state has a job. Routing flags decide which branches fire and how much they weigh. Liked tracks become centroids to search near. The descriptions become the text, audio and lyrics queries. Rejected tracks and artists are removed before ranking, when they match a catalog entry. The year window masks and boosts. Source: docs/architectures/session_state.md §2, §4.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h2>How the state drives retrieval</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="smap"><div class="smrow"><div class="smk"><span class="hi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4h11l-2 4 2 4H5"/></svg></span><div><h4>The request</h4><p>request type · intent mode · routing flags</p></div></div><div class="smar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="smv"><p>Which branches fire, and how much each one weighs in the merge</p><div class="smchips"><span>routing weights</span><span>pivot skips anchors</span><span>gates discography</span></div></div></div><div class="smrow"><div class="smk"><span class="hi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></span><div><h4>What they like</h4><p>liked tracks · named artists and tags</p></div></div><div class="smar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="smv"><p>Search near liked tracks; match named entities</p><div class="smchips"><span>anchor centroids ×3</span><span>BM25 fields</span><span>artist discography</span></div></div></div><div class="smrow"><div class="smk"><span class="hi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h3l2.5-7 3 14 3-10 2.5 3H22"/></svg></span><div><h4>What it sounds like · is about</h4><p>mood · genre · sonic · lyrical theme</p></div></div><div class="smar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="smv"><p>The text, audio and lyrics queries</p><div class="smchips"><span>dense text ×3</span><span>CLAP text→audio</span><span>lyrics view</span></div></div></div><div class="smrow"><div class="smk"><span class="hi"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M9 9l6 6M15 9l-6 6"/></svg></span><div><h4>What they ruled out</h4><p>rejected tracks and artists</p></div></div><div class="smar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="smv"><p>Removed before ranking, when matched to the catalog</p><div class="smchips"><span>hard drop</span><span>same-artist demote</span></div></div></div><div class="smrow"><div class="smk"><span class="hi"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span><div><h4>Bounds</h4><p>release-year window · date filters</p></div></div><div class="smar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="smv"><p>Mask out-of-range tracks; boost the era</p><div class="smchips"><span>candidate mask</span><span>era-popularity lookup</span></div></div></div></div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Understanding a lookup"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; A Blind-B turn. Two hard entities — an artist and an album — plus a soft phrase. The request type tells retrieval to run the exact catalog lookups.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h2>Understanding a lookup</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="stateflow">
+    <div class="chat mini"><div class="bub me"><span class="tl">Listener</span>Which song from Peter Doherty’s <i>Grace/Wastelands</i> was mentioned as one of the best tracks of 2009?</div>
+      <div class="bub sys"><span class="tl">We served</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Peter Doherty — “Arcady”, from <i>Grace/Wastelands</i></div></div>
+    <div class="sarrow"><span>LLM</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="scard"><div class="srow"><span class="sk">Request type</span><span class="sv">exact album</span></div><div class="srow"><span class="sk">Artist</span><span class="sv">Peter Doherty · must use</span></div><div class="srow"><span class="sk">Album</span><span class="sv">Grace/Wastelands · must use</span></div><div class="srow"><span class="sk">Also</span><span class="sv">“best tracks of 2009”</span></div></div>
+  </div>
+  <div class="takeaway">Two <b>hard</b> fields (artist, album) and one <b>soft</b> phrase. The request type switches on exact lookups.</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Understanding a visual request"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; A Blind-B turn where the listener only describes an album cover. The state carries three visual descriptions and a flag that switches on the cover-art search.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h2>Understanding a visual request</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="stateflow">
+    <div class="chat mini"><div class="bub me"><span class="tl">Listener</span>An album with a really striking, abstract cover art… bold colors and shapes, almost like a modern painting.</div>
+      </div>
+    <div class="sarrow"><span>LLM</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="scard"><div class="srow"><span class="sk">Request type</span><span class="sv">attribute search</span></div><div class="srow"><span class="sk">Cover art</span><span class="sv">striking, abstract</span></div><div class="srow"><span class="sk">Colours</span><span class="sv">bold colors and shapes</span></div><div class="srow"><span class="sk">Style</span><span class="sv">like a modern painting</span></div><div class="srow"><span class="sk">Flag</span><span class="sv">visual search</span></div></div>
+  </div>
+  <div class="takeaway">No artist, no title — only <b>descriptions</b>, plus a flag that turns on the cover-art search.</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide subdiv" data-tier="optional" data-title="4.2 · Retrieval"
+  data-notes="Part 4.2 — eleven searches over one index.">
+  <div class="srail"><div class="srail-i done"><b>4.1</b><span>Request understanding</span></div><div class="srail-i on"><b>4.2</b><span>Retrieval</span></div><div class="srail-i"><b>4.3</b><span>Reranking</span></div><div class="srail-i"><b>4.4</b><span>Response generation</span></div></div>
+  <div class="subwrap"><div class="subnum">4.2</div><h1 class="subtitle">Retrieval</h1><div class="sub">eleven searches over one index</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Retrieval — eleven branches"
+  data-notes="&lt;b&gt;0:15.&lt;/b&gt; The state drives eleven retrieval branches over one index. BM25 matches keywords and resolved tags. Three dense-text branches use Qwen3 embeddings of lyrics, metadata and attributes. CLAP matches the sonic description against audio. Three anchor centroids search near tracks the listener liked, by cover art, audio and listening data. A user-CF centroid uses this listener’s own vector, and two catalog lookups cover discography and era popularity. Each returns its top 500; the pool is their union.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><h2>Retrieval — eleven branches</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="icards c3 compact">
+    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><div class="big">×1</div><h4>BM25 + tag resolver</h4><p>keywords and resolved tags from the state</p></div>
+    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg></div><div class="big">×3</div><h4>Dense text</h4><p>Qwen3 embeddings of lyrics, metadata, attributes</p></div>
+    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h3l2.5-7 3 14 3-10 2.5 3H22"/></svg></div><div class="big">×1</div><h4>CLAP text → audio</h4><p>the sonic description, matched to audio</p></div>
+    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></div><div class="big">×3</div><h4>Anchor centroids</h4><p>near liked tracks: cover art, audio, listening</p></div>
+    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.4-4 4.2-6 7.5-6s5.9 2 7.5 6"/></svg></div><div class="big">×1</div><h4>User-CF centroid</h4><p>this listener’s own BPR vector</p></div>
+    <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6"/><path d="M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg></div><div class="big">×2</div><h4>Catalog lookups</h4><p>the artist’s discography; era popularity</p></div>
+  </div>
+  <div class="takeaway">Each branch returns its <b>top 500</b>; the ranker sees their union.</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="One index"
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Everything about a track lives in one LanceDB table: metadata, a full-text index, and every embedding. The organisers supplied the audio, cover-art, listening-data and small text embeddings; we re-embedded metadata and attributes with the larger Qwen3 model and added our own bi-encoder vectors.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6"/><path d="M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg></div><h2>One index</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="cols c2w">
+    <table class="idx"><thead><tr><th>What it describes</th><th>Model</th><th>Source</th></tr></thead><tbody><tr><td>Lyrics</td><td>Qwen3-Embedding-0.6B</td><td class="src-org">organisers</td></tr><tr><td>Metadata text</td><td>Qwen3-Embedding-8B</td><td class="src-us">we built</td></tr><tr><td>Attributes text</td><td>Qwen3-Embedding-8B</td><td class="src-us">we built</td></tr><tr><td>Audio</td><td>LAION-CLAP</td><td class="src-org">organisers</td></tr><tr><td>Cover art</td><td>SigLIP-2</td><td class="src-org">organisers</td></tr><tr><td>Listening data</td><td>BPR collaborative filtering</td><td class="src-org">organisers</td></tr><tr><td>Conversation match</td><td>our fine-tuned bi-encoder</td><td class="src-us">we built</td></tr></tbody></table>
+    <div class="stack">
+      <div class="card"><h3>One LanceDB table</h3><div class="small">Metadata, a full-text index and every embedding
+        for all 47,071 tracks — each branch is a different query against the same table.</div></div>
+      <div class="card accent"><h3>Provided vs built</h3><div class="small">The organisers supplied four kinds of
+        embedding. We added larger text embeddings and our own bi-encoder.</div></div>
+    </div>
+  </div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide subdiv" data-tier="optional" data-title="4.3 · Reranking"
+  data-notes="Part 4.3 — one learned model picks the 20.">
+  <div class="srail"><div class="srail-i done"><b>4.1</b><span>Request understanding</span></div><div class="srail-i done"><b>4.2</b><span>Retrieval</span></div><div class="srail-i on"><b>4.3</b><span>Reranking</span></div><div class="srail-i"><b>4.4</b><span>Response generation</span></div></div>
+  <div class="subwrap"><div class="subnum">4.3</div><h1 class="subtitle">Reranking</h1><div class="sub">one learned model picks the 20</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="talk" data-title="Reranking — one slide"
+  data-notes="&lt;b&gt;0:35.&lt;/b&gt; A LightGBM ranker scores every pooled candidate on 146 features and keeps the top 20. One feature — the bi-encoder cosine between the conversation and the track card — carries 59% of split gain; constraint and rejection features carry 0.7%. So at ranking the state carried little weight. Split gain describes the fit; we did no ablation. Label weighting is in the appendix.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h2>Reranking</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="rrflow"><div class="rrs"><h4>Pooled candidates</h4><p>top 500 per branch</p></div><div class="rra"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="rrs hl"><h4>LightGBM ranker</h4><p>146 features per candidate</p></div><div class="rra"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="rrs"><h4>Top 20</h4><p>the scored list</p></div></div>
+  <div class="rrgrid one"><div class="rrbox"><div class="rgl">What it leans on · share of split gain</div><div class="bars famb"><div class="brow"><span class="bl">Bi-encoder cosine <i>· conversation vs track card</i></span><div class="btrack"><div class="bfill " style="width:100%"></div></div><span class="bv">59.0%</span></div><div class="brow"><span class="bl">Per-branch rank and score <i>· 66 features</i></span><div class="btrack"><div class="bfill " style="width:19.5%"></div></div><span class="bv">11.5%</span></div><div class="brow"><span class="bl">Popularity · state · tags <i>· 31 features</i></span><div class="btrack"><div class="bfill " style="width:15.6%"></div></div><span class="bv">9.2%</span></div><div class="brow"><span class="bl">Constraints and rejections <i>· 13 features</i></span><div class="btrack"><div class="bfill warn" style="width:1.2%"></div></div><span class="bv">0.7%</span></div></div></div></div>
+  <div class="takeaway">At ranking, the state carried little weight: the bi-encoder carries <b>59%</b>, constraints and rejections <b>0.7%</b>.</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Reranking"
+  data-notes="&lt;b&gt;0:15.&lt;/b&gt; A learned ranker — gradient-boosted trees in LightGBM — scores every pooled candidate on 146 features and keeps the top 20. The next two slides show what it relies on.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h2>Reranking</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="flow">
+    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".8"/><circle cx="4.5" cy="12" r=".8"/><circle cx="4.5" cy="18" r=".8"/></svg></div><h4>The pooled candidates</h4><p>top 500 from each branch</p></div>
+    <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="fstep hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h4>LightGBM ranker</h4><p>146 features per candidate</p></div>
+    <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M9 20h6"/></svg></div><h4>Top 20</h4><p>the list that is scored</p></div>
+  </div>
+  <div class="before"><span class="bt">Before the ranker</span><span>weighted <b>RRF</b> — merge the eleven lists by rank, no training.<br>
+    Dev nDCG@20: <b>0.149</b>, against <b>0.197–0.203</b> with the ranker.</span></div>
+  <div class="takeaway">One learned model decides the final order of <b>20 tracks</b>. The pool depths differ between the
+    two setups, so that gap is not a clean measure of the ranker alone.</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-dense data-title="The reranker"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; &lt;b&gt;SKIP IF COVERED.&lt;/b&gt; LightGBM LambdaMART over the union of branch pools. 146 features per (turn, track) pair, about 20.6M candidate rows. One feature — the bi-encoder cosine — carries 59% of split gain. Say the caveat: split gain describes the fit, not quality. And look at the bottom row: constraint features carry 0.7%, which is the main diagnostic.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-5M13 19v-9M18 19v-13"/></svg></div><h2>What the ranker leans on</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="bars famb"><div class="brow"><span class="bl">Bi-encoder cosine <i>· 1 feature</i></span><div class="btrack"><div class="bfill" style="width:100.0%"></div></div><span class="bv">59.0%</span></div><div class="brow"><span class="bl">Per-branch rank and score <i>· 66 features</i></span><div class="btrack"><div class="bfill" style="width:19.5%"></div></div><span class="bv">11.5%</span></div><div class="brow"><span class="bl">Session and artist affinity <i>· 18 features</i></span><div class="btrack"><div class="bfill" style="width:18.1%"></div></div><span class="bv">10.7%</span></div><div class="brow"><span class="bl">Popularity · state · tags <i>· 31 features</i></span><div class="btrack"><div class="bfill" style="width:15.6%"></div></div><span class="bv">9.2%</span></div><div class="brow"><span class="bl">Other similarity cosines <i>· 17 features</i></span><div class="btrack"><div class="bfill" style="width:15.1%"></div></div><span class="bv">8.9%</span></div><div class="brow"><span class="bl">Constraints and rejections <i>· 13 features</i></span><div class="btrack"><div class="bfill warn" style="width:1.2%"></div></div><span class="bv">0.7%</span></div></div>
+  <div class="takeaway">Share of the ranker’s split gain, by feature family. One signal — the bi-encoder cosine — carries
+    <b>59%</b>; constraints and rejections carry <b>0.7%</b>.</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-tier="optional" class="slide" data-title="The b1 bi-encoder"
+  data-notes="&lt;b&gt;0:25.&lt;/b&gt; Two towers, one shared encoder fine-tuned from Qwen3-Embedding-4B. The track card carries a one-line LLM-written &#x27;known for&#x27; description — the only world knowledge anywhere in the system. Document vectors precomputed for all 47,071 tracks; the conversation vector is encoded live with caching.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-5M13 19v-9M18 19v-13"/></svg></div><h2>The bi-encoder behind that top feature</h2>
+    <span class="tag">Approach</span></div>
+  <div class="diagram bienc"><img src="figures/biencoder2.svg" alt="Two-tower bi-encoder: a conversation rendering and a track card each pass through the same fine-tuned Qwen3-Embedding-4B encoder; last-token pooling and L2 normalisation give two 2560-dimensional unit vectors whose cosine is the reranker's top feature."></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="Down-weighting contradicted turns"
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Every training turn starts with weight 1. If the next turn contradicts the label, we trust it less: 0.6 if the listener rejects only the artist, 0.3 if they reject the track or the goal-progress note says it did not help, never below 0.2. Chosen by hand, never tuned.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h2>Down-weighting contradicted turns</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="cols" style="grid-template-columns:1.9fr 1fr">
+    <div class="bars wbars">
+      <div class="brow"><span class="bl">Every turn starts at</span><div class="btrack"><div class="bfill" style="width:100%"></div></div><span class="bv">1.0</span></div>
+      <div class="brow"><span class="bl">Next turn rejects the artist</span><div class="btrack"><div class="bfill" style="width:60%"></div></div><span class="bv">× 0.6</span></div>
+      <div class="brow"><span class="bl">Next turn rejects the track</span><div class="btrack"><div class="bfill warn" style="width:30%"></div></div><span class="bv">× 0.3</span></div>
+      <div class="brow"><span class="bl">Goal note: did not help</span><div class="btrack"><div class="bfill warn" style="width:30%"></div></div><span class="bv">× 0.3</span></div>
+      <div class="brow"><span class="bl">Never below</span><div class="btrack"><div class="bfill mute" style="width:20%"></div></div><span class="bv">0.2</span></div>
+    </div>
+    <div class="card accent"><h3>Why</h3><div class="small">The label is whatever played next. When the
+      <b>next</b> turn says it was wrong, that label counts for less in training.</div>
+      <div class="tiny" style="margin-top:.8cqw">Chosen by hand, never tuned. Goal notes shape these
+        weights but are never a ranker input.</div></div>
+  </div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide subdiv" data-tier="optional" data-title="4.4 · Response generation"
+  data-notes="Part 4.4 — one short reply about the top track.">
+  <div class="srail"><div class="srail-i done"><b>4.1</b><span>Request understanding</span></div><div class="srail-i done"><b>4.2</b><span>Retrieval</span></div><div class="srail-i done"><b>4.3</b><span>Reranking</span></div><div class="srail-i on"><b>4.4</b><span>Response generation</span></div></div>
+  <div class="subwrap"><div class="subnum">4.4</div><h1 class="subtitle">Response generation</h1><div class="sub">one short reply about the top track</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Response generation"
+  data-notes="&lt;b&gt;0:20.&lt;/b&gt; After ranking, one more model call writes the reply. It gets the conversation, the latest extracted state — here genre, mood and what to avoid — and the top track with up to ten of its tags. Qwen3-30B, temperature zero, one pass, one or two sentences about that track only. This is a real Blind-B reply our own LLM checker rated good.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>Response generation</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="rgen">
+    <div class="rgin"><div class="rgl">Inputs</div>
+      <div class="incard"><h3>Conversation</h3><div class="small">“…it feels a bit too serious. I’m looking for something more uplifting and positive…”</div></div>
+      <div class="incard fromstate"><h3>From the extracted state</h3><div class="kv"><span>Genre</span><b>electronic</b></div><div class="kv"><span>Mood</span><b>uplifting, positive</b></div><div class="kv"><span>Avoid</span><b>serious</b></div></div>
+      <div class="incard"><h3>Top-ranked track</h3><div class="kv"><span>Track</span><b>Röyksopp — “Happy Up Here”</b></div><div class="kv"><span>Tags</span><b>cheerful, hopeful, electronic…</b></div></div>
+    </div>
+    <div class="inarrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="rgm"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="8" width="14" height="11" rx="2.5"/><path d="M12 4v4"/><circle cx="9.5" cy="13.5" r="1"/><circle cx="14.5" cy="13.5" r="1"/></svg></div><h4>Qwen3-30B</h4><p>temperature 0 · one pass</p><p>1–2 sentences about the top track only</p></div>
+    <div class="inarrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="bub sys reply rgout"><span class="tl">Our reply</span><span>“Perfect — ‘Happy Up Here’ by Röyksopp is exactly the kind of uplifting, cheerful electronic track you’re looking for. With its bright synths and hopeful groove, it’s designed to lift your spirits and make you smile.”</span></div>
+  </div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="optional" data-title="How the reply is written"
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; The deployed instruction, in full. Qwen3-30B at temperature zero, one pass, given the top track and the latest state.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>How the reply is written</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="replyin">
+    <div class="stack">
+      <div class="incard"><h3>Latest state</h3>
+        <div class="kv"><span>Genre</span><b>electronic</b></div>
+        <div class="kv"><span>Mood</span><b>uplifting, positive, happy</b></div>
+        <div class="kv"><span>Avoid</span><b>serious</b></div></div>
+      <div class="incard"><h3>Top track</h3>
+        <div class="kv"><span>Track</span><b>Röyksopp — “Happy Up Here”</b></div>
+        <div class="kv"><span>Tags</span><b>cheerful, hopeful, experimental, Pop, 00s…</b></div></div>
+    </div>
+    <div class="inarrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="bigquote mid">“Write 1–2 concise sentences about only the selected track. Prioritize the latest user request
+      and extracted state over older conversation history. If the track is reasonably aligned, explain the fit with one
+      specific supported reason. If it clearly conflicts with an explicit avoid/new-artist constraint, do not oversell it
+      or blame the system; briefly frame the limitation and the closest supported reason.”</div>
+  </div>
+  <div class="chips"><span>Qwen3-30B-A3B-Instruct</span><span>temperature 0</span><span>one pass</span>
+    <span>output: the reply on the previous slide</span></div></div>
+</section>
+
+<section style="--hue:#257E3D;--hue-soft:#E7F8EC" class="slide divider" data-tier="optional" data-title="§5 · How it scored"
+  data-notes="Part 5 of 6 — the official results.">
+  <div class="divrail"><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="on"></span><span class=""></span></div>
+  <div class="divicon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M9 20h6"/></svg></div>
+  <div class="eq"><i style="height:22%"></i><i style="height:48%"></i><i style="height:30%"></i><i style="height:72%"></i><i style="height:40%"></i><i style="height:88%"></i><i style="height:34%"></i><i style="height:60%"></i><i style="height:26%"></i><i style="height:78%"></i><i style="height:44%"></i><i style="height:92%"></i><i style="height:36%"></i><i style="height:66%"></i><i style="height:28%"></i><i style="height:54%"></i><i style="height:38%"></i><i style="height:82%"></i><i style="height:30%"></i><i style="height:58%"></i><i style="height:24%"></i><i style="height:70%"></i><i style="height:42%"></i><i style="height:86%"></i><i style="height:32%"></i><i style="height:62%"></i><i style="height:26%"></i><i style="height:74%"></i><i style="height:46%"></i><i style="height:90%"></i></div>
+  <div class="divwrap">
+    <div class="divnum">5</div>
+    <h1 class="divtitle">How it scored</h1>
+    <div class="sub">the official results</div>
+  </div>
+</section>
+
+<section style="--hue:#257E3D;--hue-soft:#E7F8EC" class="slide" data-tier="core" data-title="Official results"
+  data-notes="&lt;b&gt;0:25.&lt;/b&gt; Blind-A, the development phase: 0.5799. Blind-B, the final: 0.3811, 29th. nDCG nearly halved and the judge fell 1.4 points; the diversity terms barely moved. We cannot fully explain the drop.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg></div><h2>How it scored</h2><span class="tag">Results</span></div>
+  <div class="fill">
+    <table>
+      <thead><tr><th>Official CodaBench split</th><th>nDCG@20</th><th>Cat.</th><th>Lex.</th><th>Judge</th><th>Composite</th></tr></thead>
+      <tbody>
+        <tr><td>Blind-A · development phase</td><td>0.4380</td><td>0.0313</td><td>0.8028</td><td>4.70</td><td>0.5799</td></tr>
+        <tr class="hi"><td>Blind-B · final</td><td>0.2537</td><td>0.0315</td><td>0.7862</td><td>3.30</td><td>0.3811</td></tr>
+      </tbody>
+    </table>
+    <div class="cols c3" style="margin-top:2.4cqw">
+      <div class="card bad"><h3>nDCG@20</h3><div class="stat sm bad">−42%</div>
+        <div class="small" style="margin-top:.5cqw">0.4380 → 0.2537</div></div>
+      <div class="card bad"><h3>Judge (1–5)</h3><div class="stat sm bad">−1.40</div>
+        <div class="small" style="margin-top:.5cqw">4.70 → 3.30</div></div>
+      <div class="card"><h3>Diversity terms</h3><div class="stat sm">flat</div>
+        <div class="small" style="margin-top:.5cqw">catalog and reply-wording diversity barely moved</div></div>
+    </div>
+  </div>
+</section>
+
+<section style="--hue:#257E3D;--hue-soft:#E7F8EC" class="slide" data-tier="optional" data-title="Where we placed"
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; On the final leaderboard we finished 29th with 0.381. The top team scored 0.689 and the median team about 0.47. The organisers’ BM25 baseline scored 0.162. Source: the official results table on the challenge site, which lists 41 teams and notes that verification is still in progress.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M9 20h6"/></svg></div><h2>Where we placed</h2><span class="tag">Results</span></div>
+  <div class="fill"><div class="bars board"><div class="brow"><span class="bl">#1 · hallucinated</span><div class="btrack"><div class="bfill top" style="width:95.7%"></div></div><span class="bv">0.689</span></div><div class="brow"><span class="bl">Median of 41 teams</span><div class="btrack"><div class="bfill mid" style="width:65.8%"></div></div><span class="bv">0.474</span></div><div class="brow"><span class="bl">#29 · npatta01 (us)</span><div class="btrack"><div class="bfill us" style="width:52.9%"></div></div><span class="bv">0.381</span></div><div class="brow"><span class="bl">Organisers’ BM25 baseline</span><div class="btrack"><div class="bfill base" style="width:22.5%"></div></div><span class="bv">0.162</span></div></div>
+  <div class="takeaway">29th: well above the baseline, below the median.</div>
+  <div class="src">Final (Blind-B) composite score. Source: official Music-CRS results table, nlp4musa.github.io/music-crs-challenge/results.html — 41 teams listed; verification in progress.</div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide divider" data-tier="optional" data-title="§6 · What is not ideal"
+  data-notes="Part 6 of 6 — what went wrong, one finding per slide.">
+  <div class="divrail"><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="on"></span></div>
+  <div class="divicon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg></div>
+  <div class="eq"><i style="height:22%"></i><i style="height:48%"></i><i style="height:30%"></i><i style="height:72%"></i><i style="height:40%"></i><i style="height:88%"></i><i style="height:34%"></i><i style="height:60%"></i><i style="height:26%"></i><i style="height:78%"></i><i style="height:44%"></i><i style="height:92%"></i><i style="height:36%"></i><i style="height:66%"></i><i style="height:28%"></i><i style="height:54%"></i><i style="height:38%"></i><i style="height:82%"></i><i style="height:30%"></i><i style="height:58%"></i><i style="height:24%"></i><i style="height:70%"></i><i style="height:42%"></i><i style="height:86%"></i><i style="height:32%"></i><i style="height:62%"></i><i style="height:26%"></i><i style="height:74%"></i><i style="height:46%"></i><i style="height:90%"></i></div>
+  <div class="divwrap">
+    <div class="divnum">6</div>
+    <h1 class="divtitle">What is not ideal</h1>
+    <div class="sub">what went wrong, one finding per slide</div>
+  </div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="optional" data-title="What is not ideal"
+  data-notes="&lt;b&gt;1:00.&lt;/b&gt; The four findings from our poster. The ranker was trained and validated on the same dev turns. The Kamelot turn: we extracted the album but never filtered on it. The tempo request: nothing in the catalog records tempo or key, and we added no outside data. The Metheny turn: the reply said “Got it” for a track that is not in the catalog.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg></div><h2>What is not ideal</h2><span class="tag">Lessons</span></div>
+  <div class="fill"><div class="nicard">We trained and validated the ranker on the <b>same dev turns</b>.</div>
+  <div class="mhead"><span>The listener asked for</span><span></span><span>Our top pick</span></div>
+  <div class="mrows">
+    <div class="mrow" style="--c:#2063D9"><div class="mh">We extracted more than we used</div><div class="mpair"><div class="ma">the Kamelot track from <b>Silverthorn</b></div><div class="mar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="mb">Kamelot — Fallen Star, from <b>Haven</b><span class="st">We extracted “Silverthorn” but never filtered on it</span></div></div></div>
+    <div class="mrow" style="--c:#7A3FB8"><div class="mh">We used no data from outside the catalog</div><div class="mpair"><div class="ma">exactly <b>126.70 bpm</b>, in G minor</div><div class="mar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="mb">the catalog has no tempo or key, and we added no outside source</div></div></div>
+    <div class="mrow" style="--c:#A55A18"><div class="mh">The reply did not check our pick against the request</div><div class="mpair"><div class="ma"><b>“Watercolors”</b> by Pat Metheny</div><div class="mar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div><div class="mb">Metheny — Alfie, with the reply <i>“Got it — here’s ‘Alfie’…”</i><span class="st">“Watercolors” is not in the catalog</span></div></div></div>
+  </div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="talk" data-title="Why we did not score higher"
+  data-notes="&lt;b&gt;0:15.&lt;/b&gt; Five things our audit found; all of them were already true on Blind-A. First, how we trained: on the same turns we checked on.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".8"/><circle cx="4.5" cy="12" r=".8"/><circle cx="4.5" cy="18" r=".8"/></svg></div><h2>What we found</h2><span class="tag">What is not ideal</span></div>
+  <div class="fill"><div class="toc tight8 talktoc whylist">
+    <div class="tocrow on"><span class="tn">1</span><span class="tt">Why the reranker trained on the dev set</span><span class="td"></span></div>
+    <div class="tocrow"><span class="tn">2</span><span class="tt">No data from outside the catalog</span><span class="td"></span></div>
+    <div class="tocrow"><span class="tn">3</span><span class="tt">Inconsistent labels</span><span class="td"></span></div>
+    <div class="tocrow"><span class="tn">4</span><span class="tt">Extracted, but not acted on</span><span class="td"></span></div>
+    <div class="tocrow"><span class="tn">5</span><span class="tt">Gaps in our response generation</span><span class="td"></span></div>
+  </div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Why we trained on the dev set"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; State extraction is one expensive LLM call per turn, so we never ran it on the 121.6 thousand training turns. The reranker was trained on the 8,000 dev turns, the same turns we checked it on. Replaying those turns gave 0.38; five-fold cross-validation gave about 0.20; the blind test gave 0.25. We selected designs on the 0.38.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h2>Why the reranker trained on the dev set</h2><span class="tag">Lessons</span></div>
+  <div class="fill"><div class="flow">
+    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h4>State extraction: 1 paid LLM call per turn</h4><p>to read each turn into a state</p></div>
+    <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h4>Too expensive for the 121.6k training turns</h4><p>so they never got a state</p></div>
+    <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+    <div class="fstep hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h4>Reranker trained on the 8,000 dev turns</h4><p>the same turns we checked it on</p></div>
+  </div>
+  <div class="bars devbars">
+    <div class="brow"><span class="bl">Dev, turns it trained on</span><div class="btrack"><div class="bfill warn" style="width:76.9%"></div></div><span class="bv">0.38</span></div>
+    <div class="brow"><span class="bl">Dev, cross-validated</span><div class="btrack"><div class="bfill warn" style="width:40%"></div></div><span class="bv">0.20</span></div>
+    <div class="brow"><span class="bl">Blind-B, official</span><div class="btrack"><div class="bfill" style="width:50.7%"></div></div><span class="bv">0.25</span></div>
+  </div>
+  <div class="src">nDCG@20. The dev row is an earlier model version, shown because it is the number we selected on. Source: paper §4.3, §5.3.</div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="No data from outside the catalog"
+  data-notes="&lt;b&gt;0:20.&lt;/b&gt; The extractor read these requests correctly. There was simply nothing to match against: the catalog records no tempo or key and no film or TV links, and we added no outside source. The gap is knowledge, not understanding.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6"/><path d="M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg></div><h2>No data from outside the catalog</h2><span class="tag">What is not ideal</span></div>
+  <div class="fill"><div class="mrows big">
+    <div class="mrow" style="--c:#7A3FB8"><div class="mh">A tempo and a key</div><div class="mpair">
+      <div class="ma">“exactly <b>126.70 bpm</b>, in G minor”</div><div class="mar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+      <div class="mb">the catalog has no tempo or key field<span class="st">no branch can match on either</span></div></div></div>
+    <div class="mrow" style="--c:#7A3FB8"><div class="mh">A soundtrack</div><div class="mpair">
+      <div class="ma">“a specific 80s synth-pop song from the <b>Breaking Bad</b> soundtrack”</div><div class="mar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
+      <div class="mb">we served Soft Cell — “Tainted Love”<span class="st">no film or TV links in the catalog</span></div></div></div>
+  </div>
+  <div class="takeaway">The state was right both times. The gap is <b>knowledge, not understanding</b>.</div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="optional" data-title="Label example — “My Body Is a Cage”"
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; A training session. The recommender agent has already played Arctic Monkeys. The listener asks, again, for one specific Arcade Fire song. The answer key for that turn is another Arctic Monkeys track — the listener agent itself marked it as not moving toward the goal, but it is still the label a model is scored and trained against.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h2>Label example — “My Body Is a Cage”</h2><span class="tag">What is not ideal</span></div>
+  <div class="fill"><div class="chat big anchor">
+    <div class="bub sys"><span class="tl">Recommender agent played</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Arctic Monkeys — “Brianstorm”</div>
+    <div class="bub me"><span class="tl">Listener, next turn</span>This is still Arctic Monkeys. I keep asking for <b>‘My Body Is a Cage’ by Arcade Fire</b>… That’s the only song I want to hear right now.</div>
+    <div class="bub sys key"><span class="tl">Answer key for that turn</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Arctic Monkeys — “This House is a Circus” <span class="mv no">DOES NOT move toward goal</span><span class="jv ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Our judges agree: wrong — repeats the artist</span></div>
+  </div>
+  <div class="takeaway">The answer key is whatever the simulated recommender picked from its small pool — here, <b>Arctic Monkeys again</b>.</div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Label example — “from a different artist”"
+  data-notes="&lt;b&gt;0:35.&lt;/b&gt; Another training session. After two Bonobo tracks the listener asks for a different artist; the answer key is Bonobo. They ask again; the answer key is Bonobo again — and both are annotated as moving toward the goal. Train on this and a model learns to repeat the artist. We think ours did. Across all 113k labelable turns, two LLM judges (Opus breaking ties) found 17% of training turns keep the artist the listener had just asked to leave.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h2>Inconsistent labels — “from a different artist”</h2><span class="tag">What is not ideal</span></div>
+  <div class="fill"><div class="chat big anchor">
+    <div class="bub sys"><span class="tl">Recommender agent played</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Bonobo — “Cirrus”</div>
+    <div class="bub me"><span class="tl">Listener, next turn</span>…something with a similar chill, electronic vibe, maybe with a subtle beat, but <b>from a different artist</b>?</div>
+    <div class="bub sys key"><span class="tl">Answer key for that turn</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Bonobo — “Jets” <span class="mv ">MOVES toward goal</span><span class="jv no"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>Our judges: wrong — same artist</span></div>
+    <div class="bub me"><span class="tl">Next turn</span>“Jets” is cool, but I was actually hoping for something <b>from a different artist this time</b>…</div>
+    <div class="bub sys key"><span class="tl">Answer key</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Bonobo — “Pieces” <span class="mv ">MOVES toward goal</span><span class="jv no"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>Our judges: wrong — same artist</span></div>
+  </div>
+  <div class="takeaway dd-only">Twice asked to leave Bonobo; both answer keys are Bonobo, <b>marked helpful</b>.</div>
+  <div class="labstat"><div class="big">17%</div><div><h4>of training turns keep the artist the listener just asked to leave</h4><p>Two LLM judges re-scored all 113k labelable turns; Opus broke ties.</p></div></div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="optional" class="slide" data-title="How the relabelling worked"
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; Two cheap judges scored every labelable turn on two axes: was a different artist asked for, and does the track fit. Where they agree, about 80% of training turns, that verdict stands. Where they disagree, Opus arbitrates, blind to their verdicts.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>How the LLM relabelling worked</h2><span class="tag">Analysis</span></div>
+  <div class="lead2">The answer keys come from the simulated recommender’s picks. To see how often they actually fit
+    the request, we had <b>two LLM judges re-score every labelable turn</b>.</div>
+  <div class="small" style="margin-bottom:.6cqw">Both judges score the same two axes: was a
+    different artist asked for, and does the track fit the request?</div>
+  <div class="diagram"><img src="figures/relabelling.svg" alt="Relabelling flow: every labelable train and dev turn is scored by two LLM judges, Gemma-4-26B and DeepSeek-V4-Flash. Where they agree, about 80 percent of training turns, that verdict becomes the re-judged label. Where they disagree, about 20 percent, Claude Opus decides."></div>
+  <div class="small" style="margin-top:.6cqw">Agreement split measured on the training turns.</div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="optional" class="slide" data-title="What the relabelling found"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; &lt;b&gt;SKIP IF COVERED.&lt;/b&gt; On 61% of training turns the judges would not settle on the played track being a good fit. 17% — 18,222 turns — keep the artist the listener had just rejected. We trained on the relabeled data and it scored lower against the original labels, so the submission kept the originals. Say the catch: that score is computed against the original labels, so it could not have favoured the relabeling.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>What the relabelling found</h2><span class="tag">Analysis</span></div>
+  <div class="fill"><div class="relab">
+    <div class="icard hero"><div class="big">17%</div><h4>of training turns keep the artist the listener had just asked to leave</h4>
+      <p>18,222 turns — both judges or the arbiter marked the label as artist anchoring</p></div>
+    <div class="icard"><div class="big sm">113,393</div><h4>turns re-judged</h4><p>every labelable train and dev turn</p></div>
+  </div>
+  <div class="takeaway">Retrained on these labels, the ranker scored lower <b>against the original labels</b>, so we kept the originals.</div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Failure 1 — extracted, then ignored"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; In each case the state caught the intent: it recorded the artists to avoid. Then look at what we served. Deltron and Del: ten of our top 20 are Deltron 3030, Del or Dan the Automator. Ryan Adams: ten of 20, including rank 1. Juanes: seven of 20, including rank 1. Retrieval did not remove them either: the Deltron names resolved to the wrong catalog IDs, Ryan Adams was recorded as a prior artist to avoid rather than a rejection, and Juanes as a soft rejection, which only reaches the ranker as a feature. And the ranker did not act: The features that carry rejections got 0.7% of the ranker&#x27;s split gain; the bi-encoder cosine got 59%.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M9 9l6 6M15 9l-6 6"/></svg></div><h2>Extracted, but not acted on</h2><span class="tag">Went wrong</span></div>
+  <div class="fill"><div class="xrows"><div class="xrow"><div class="xask">“I gotta break away from <b>Deltron</b> and <b>Del</b> completely”</div><div class="xst ok"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span><div><span class="xl">State extracted</span>avoid Deltron 3030, Del</div></div><div class="xst no"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></span><div><span class="xl">Our top 20</span><b>10 of 20</b> by them — from rank 6<span class="xw">retrieval kept them: names resolved to the wrong catalog IDs</span></div></div></div><div class="xrow"><div class="xask">“branching out to <b>other</b> singer-songwriter artists”</div><div class="xst ok"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span><div><span class="xl">State extracted</span>avoid Ryan Adams &amp; The Cardinals</div></div><div class="xst no"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></span><div><span class="xl">Our top 20</span><b>10 of 20</b> by Ryan Adams — <b>rank 1</b><span class="xw">retrieval kept them: recorded as “avoid exact”, not a rejection</span></div></div></div><div class="xrow"><div class="xask">“still focusing on <b>Juanes</b>… haven't found the depth I'm after”</div><div class="xst ok"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span><div><span class="xl">State extracted</span>rejected Juanes</div></div><div class="xst no"><span class="xi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></span><div><span class="xl">Our top 20</span><b>7 of 20</b> by Juanes — <b>rank 1</b><span class="xw">retrieval kept them: a soft rejection only feeds ranker features</span></div></div></div></div>
+  <div class="xweight"><span class="xwl">Ranker split gain</span><div class="brow"><span class="bl">Bi-encoder cosine</span><div class="btrack"><div class="bfill" style="width:100%"></div></div><span class="bv">59.0%</span></div><div class="brow"><span class="bl">Constraints and rejections</span><div class="btrack"><div class="bfill warn" style="width:1.2%"></div></div><span class="bv">0.7%</span></div></div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="core" class="slide" data-title="Four ways the reply went wrong"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; &lt;b&gt;SKIP IF COVERED.&lt;/b&gt; The two failures we name in the paper. When the track asked for is not in the catalog, the reply presents a substitute as if it were fine — Watercolors. When we miss a constraint, the reply recommends the track anyway — another Ryan Adams. The generator ran once, with no check against the state.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/></svg></div><h2>Gaps in our response generation</h2>
+    <span class="tag">What is not ideal</span></div>
+  <div class="replygroups">
+    <div class="rg"><div class="rgh">The track is not in the catalog, so retrieval could not return it — the reply presents our substitute as if it were the request</div>
+      <div class="tracks tight">
+        <div class="track bad"><div class="art">1</div>
+          <div class="meta"><div class="ask">“I wanted <b>‘Watercolors’</b> by Pat Metheny specifically.”</div>
+            <div class="l1">“Got it — here’s ‘Alfie’ by Pat Metheny…”</div></div></div>
+      </div></div>
+    <div class="rg"><div class="rgh">Our pick broke the listener’s constraint — the reply recommends it anyway</div>
+      <div class="tracks tight">
+        <div class="track warn"><div class="art">2</div>
+          <div class="meta"><div class="ask">“…something from a <b>different artist</b> this time”</div>
+            <div class="l1">“…while this track is by him, it’s from a different era and band…” — Ryan Adams again</div></div></div>
+      </div></div>
+  </div>
+  <div class="takeaway">One pass, <b>no check against the state or the catalog</b>.
+    The prompt was chosen on Blind-A (judge 4.70 there, 3.30 on Blind-B).</div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="talk" data-title="Conclusion"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; What we built: a typed conversation state, one LLM call per turn, that drives eleven retrieval branches, a learned ranker and the reply. The gaps: inconsistent labels, training and checking on the same turns, a ranker that did not act on the state, no knowledge outside the catalog, and a reply that was never checked. The 113k re-judged labels are released.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg></div><h2>Conclusion</h2><span class="tag">What we found</span></div>
+  <div class="fill"><div class="c2col"><div class="ccol"><div class="cpoint "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><div><h4>A typed conversation state</h4><ul class="cbul"><li>one LLM call per turn</li><li>request, likes, rejections, sound, bounds</li></ul></div></div><div class="cpoint "><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><div><h4>Retrieval → ranking → reply</h4><ul class="cbul"><li>eleven retrieval branches</li><li>a learned ranker</li><li>a reply about the top track</li></ul></div></div></div><div class="cpoint gaps"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M9 9l6 6M15 9l-6 6"/></svg></div><div><h4>Gaps in our system</h4><ul class="cbul"><li>inconsistent labels — 17% keep a rejected artist</li><li>trained and checked on the same turns</li><li>rejections not acted on</li><li>no knowledge outside the catalog</li><li>the reply was never checked</li></ul></div></div></div></div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="talk" data-title="Questions"
+  data-notes="&lt;b&gt;0:05.&lt;/b&gt; Thank you. Everything is linked from the project site.">
+  <div class="fill center qslide">
+    <div class="qhead">Thank you — questions?</div>
+    <div class="qr big"><img src="figures/qr-site.svg" alt="QR code for the project site, npatta01.github.io/music-crs-2026">
+      <div class="small"><strong>Paper, poster, slides, code, models, data</strong>
+        <div class="qrurl">npatta01.github.io/music-crs-2026</div></div></div>
+    <div class="qcontact">Nidhin Pattaniyil · <span class="mono">npatta01@gmail.com</span></div>
+  </div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="Everything is released"
+  data-notes="&lt;b&gt;0:10.&lt;/b&gt; Paper, poster, slides, code, models and data are all linked from the project site. Thank you.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2h-2zM18 18h2v2h-2z"/></svg></div><h2>Everything is released</h2><span class="tag">Thank you</span></div>
+  <div class="fill center"><div class="qr big">
+    <img src="figures/qr-site.svg" alt="QR code for the project site, npatta01.github.io/music-crs-2026">
+    <div class="small"><strong>Paper, poster, slides, code, models, data</strong>
+      <div class="qrurl">npatta01.github.io/music-crs-2026</div></div></div></div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-appendix="0" data-title="Appendix index"
+  data-notes="Jump target. Type a number and press Enter from anywhere, or press G to search.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><h2>Appendix</h2><span class="tag">Type a number + Enter · or G to search</span></div>
+  <div class="fill"><div class="axgrid" id="axgrid"></div></div>
+</section>
+
+<section style="--hue:#257E3D;--hue-soft:#E7F8EC" data-appendix="1" class="slide" data-title="Where our points came from"
+  data-notes="&lt;b&gt;0:45.&lt;/b&gt; Half nDCG@20, thirty percent an LLM judge rescaled from 1-5, ten each for catalog diversity and reply wording. Point at our decomposition: the judge term out-earned nDCG, and catalog diversity returned 0.003 of the 0.10 available.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h2>Where our points came from</h2><span class="tag">Results</span></div>
+  <div class="fill">
+    <div class="formula">0.50 · nDCG@20 &nbsp;+&nbsp; 0.10 · cat.div &nbsp;+&nbsp; 0.10 · lex.div &nbsp;+&nbsp; 0.30 · (judge − 1)/4</div>
+    <div class="cols c2" style="margin-top:2.4cqw">
+      <div class="card"><h3>Our Blind-B decomposition</h3>
+        <table class="tight"><tbody>
+          <tr><td>0.50 × nDCG@20 0.2537</td><td>0.1269</td></tr>
+          <tr><td>0.10 × cat. div. 0.0315</td><td>0.0032</td></tr>
+          <tr><td>0.10 × lex. div. 0.7862</td><td>0.0786</td></tr>
+          <tr><td>0.30 × (3.30−1)/4</td><td>0.1725</td></tr>
+          <tr class="hi"><td>Composite</td><td>0.3811</td></tr>
+        </tbody></table></div>
+      <div class="card accent"><h3>Where the score came from</h3>
+        <div class="small">The <strong>judge term out-earned nDCG</strong>, and catalog
+          diversity returned <strong>0.003</strong> of the 0.10 on offer. We optimised almost
+          entirely for relevance and left the diversity terms alone.</div></div>
+    </div>
+  </div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="2" class="slide" data-title="The task"
+  data-notes="&lt;b&gt;0:45.&lt;/b&gt; Skip for a challenge audience — they built the same thing. Each assistant turn: return 20 tracks from a shared 47,071-track catalog and write a short reply presenting the top one. Training data is 15,199 LLM-generated sessions over TalkPlayData 2.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h2>The task</h2><span class="tag">Setup</span></div>
+  <div class="fill"><div class="cols c2">
+    <div class="stack">
+      <div class="card"><h3>Every assistant turn</h3>
+        <ul class="tight" style="margin-top:.4cqw">
+          <li>Retrieve <strong>20 tracks</strong> from a shared <strong>47,071-track</strong> catalog</li>
+          <li>Write a short reply presenting the top recommendation</li>
+        </ul></div>
+      <div class="card"><h3>Per-track metadata</h3>
+        <div class="small">Title, artist, album, a median of <strong>17</strong> genre/mood tags,
+          popularity, release date, plus precomputed text, audio, cover-art and
+          collaborative-filtering embeddings.</div></div>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>Splits</h3>
+        <table class="tight"><tbody>
+          <tr><td>Train</td><td>15,199 sessions (~121.6k turns)</td></tr>
+          <tr><td>Development</td><td>1,000 sessions × 8 turns = 8,000</td></tr>
+          <tr><td>Blind-A / Blind-B</td><td>80 sessions each, final turns</td></tr>
+        </tbody></table>
+        <div class="tiny" style="margin-top:.7cqw">Blind-B additionally withholds the
+          conversation-goal annotations present in training data.</div></div>
+      <div class="card accent"><h3>Built on</h3>
+        <div class="small">TalkPlayData 2. The conversations are <strong>LLM-generated</strong>,
+          not observed listening sessions — which matters later.</div></div>
+    </div>
+  </div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="3" class="slide" data-title="Glossary"
+  data-notes="&lt;b&gt;reference.&lt;/b&gt; The terms the rest of the deck uses without stopping to define. Skip when presenting.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg></div><h2>Glossary</h2><span class="tag">Background</span></div>
+  <div class="fill"><div class="gloss"><div class="gterm"><b>Typed state</b><span>Structured fields an LLM reads off the conversation each turn: artists to anchor on, rejected tracks, filters, mood.</span></div><div class="gterm"><b>BM25</b><span>A classic keyword-search score over text fields.</span></div><div class="gterm"><b>Dense embedding</b><span>A vector from a neural model; texts with similar meaning land close together.</span></div><div class="gterm"><b>CLAP</b><span>A model that puts text and audio in one space, so a description can find a sound.</span></div><div class="gterm"><b>SigLIP-2</b><span>The same idea for text and images — here, album covers.</span></div><div class="gterm"><b>Collaborative filtering (BPR)</b><span>Vectors learned from who listened to what; BPR is the training method.</span></div><div class="gterm"><b>Centroid search</b><span>Average the vectors of tracks the listener liked, then search near that average.</span></div><div class="gterm"><b>RRF</b><span>Reciprocal-rank fusion: merge ranked lists by summing 1 / (k + rank) per track.</span></div><div class="gterm"><b>LambdaMART · LightGBM</b><span>Gradient-boosted decision trees trained to order a list; LightGBM is the library.</span></div><div class="gterm"><b>Bi-encoder</b><span>One model encodes the conversation and the track separately; relevance is the cosine of the two vectors.</span></div><div class="gterm"><b>LLM judge</b><span>An LLM that rates the reply 1–5; the organisers run it.</span></div><div class="gterm"><b>In-sample vs out-of-fold</b><span>Scoring on turns the model trained on, versus on held-out folds. In-sample overstates.</span></div></div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="4" class="slide" data-title="State extraction"
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; DeepSeek-V4-Flash, schema-constrained, given the dialog and the IDs of tracks already played. Deliberately blind: no conversation goals, no goal progress, no user profile reach it — the state is whatever an LLM can read off the conversation itself. Cheaper extractors under-filled rejections and facets, so all final runs use this one.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>State extraction</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="cols c2">
+    <div class="stack">
+      <div class="card accent"><h3>The extractor</h3>
+        <div class="body" style="font-size:1.7cqw">DeepSeek-V4-Flash (build 0423),
+          schema-constrained, given the dialog so far and the IDs of tracks already played.</div></div>
+      <div class="card warn"><h3>Deliberately blind</h3>
+        <div class="small">No conversation goals, goal progress, or user profiles reach the
+          extractor. The state is whatever an LLM can read off the conversation.</div></div>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>Why this model</h3>
+        <div class="small">Cheaper extractors under-filled the optional fields — rejections and
+          facets especially — so every final run uses this one. Per-turn extraction is a paid API
+          call, which is what kept us off the training split.</div></div>
+      <div class="card"><h3>Prompt version</h3>
+        <div class="small">ConversationStateV1, projected to V0Plus for the downstream
+          contract.</div></div>
+    </div>
+  </div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="5" class="slide talkax" data-dense data-title="Six request types, six shapes of state"
+  data-notes="&lt;b&gt;1:00.&lt;/b&gt; Every example here is a real Blind-B turn. The request type decides which branches fire and what the state has to carry: an exact_album needs artist AND album as must-use, an attribute_search carries only facets, a new_artist carries an avoid. Point out that the extractor got all six of these right — extraction was rarely the failure.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>Six request types, six shapes of state</h2>
+    <span class="tag">Approach</span></div>
+  <div class="fill">
+    <table class="rtable tight">
+      <thead><tr><th>Request type</th><th style="text-align:left">A real turn</th><th style="text-align:left">What the extractor pulled out</th></tr></thead>
+      <tbody>
+        <tr><td>exact_track</td>
+          <td style="text-align:left">“I wanted <em>Watercolors</em> by Pat Metheny specifically.”</td>
+          <td style="text-align:left">track = Watercolors <b>must_use</b> · artist = Pat Metheny <b>must_use</b></td></tr>
+        <tr><td>exact_album</td>
+          <td style="text-align:left">“Which song from Peter Doherty's <em>Grace/Wastelands</em>…”</td>
+          <td style="text-align:left">artist + album <b>must_use</b> · facet “best tracks of 2009”</td></tr>
+        <tr><td>same_artist</td>
+          <td style="text-align:left">“Got another track known for his guitar work?”</td>
+          <td style="text-align:left">artist <b>must_use</b> · prior track <b>do_not_use</b> · facets: guitar work, melodic complexity</td></tr>
+        <tr><td>new_artist</td>
+          <td style="text-align:left">“…branching out to other singer-songwriter artists.”</td>
+          <td style="text-align:left">artist = Ryan Adams &amp; The Cardinals <b>do_not_use</b> · facets: acoustic, introspective</td></tr>
+        <tr><td>attribute_search</td>
+          <td style="text-align:left">“…a really striking, abstract cover art, bold colors and shapes.”</td>
+          <td style="text-align:left">three visual facets · routing flag <b>image_or_visual_search</b></td></tr>
+        <tr><td>hidden_target</td>
+          <td style="text-align:left">“A Lil Wayne song from an experimental phase.”</td>
+          <td style="text-align:left">artist <b>must_use</b> · facet “experimental” · flag <b>hidden_target_search</b></td></tr>
+      </tbody>
+    </table>
+    <div class="takeaway">The extractor read all six of these correctly. Across the whole Blind-B
+      run only <b>3 of 80 turns</b> were diagnosed as a state-extraction miss — reading the
+      conversation was almost never the problem.</div>
+  </div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="6" class="slide talkax" data-dense data-title="Routing flags decide which branches fire"
+  data-notes="&lt;b&gt;0:45.&lt;/b&gt; Five boolean flags on the state. The visual one is the clearest case: it is the only thing that opens the twelfth, gated SigLIP-2 cover-art branch. Note the honest bit — the reranker carries no features for that branch, so even when it fires, the ranker cannot weigh it.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>Routing flags decide which branches fire</h2>
+    <span class="tag">Approach</span></div>
+  <div class="fill"><div class="cols c2w">
+    <table class="tight">
+      <thead><tr><th>Flag</th><th style="text-align:left">Opens</th></tr></thead>
+      <tbody>
+        <tr><td><span class="mono">exact_entity_probe</span></td><td style="text-align:left">catalog lookups — discography, album</td></tr>
+        <tr><td><span class="mono">lyric_search</span></td><td style="text-align:left">the Qwen3 lyrics view</td></tr>
+        <tr><td><span class="mono">feature_articulation</span></td><td style="text-align:left">CLAP text→audio on the sonic description</td></tr>
+        <tr><td><span class="mono">image_or_visual_search</span></td><td style="text-align:left">the gated SigLIP-2 cover-art branch</td></tr>
+        <tr><td><span class="mono">hidden_target_search</span></td><td style="text-align:left">widens the pool; suppresses exact pins</td></tr>
+      </tbody>
+    </table>
+    <div class="stack">
+      <div class="card"><h3>A real visual request</h3>
+        <div class="small">“I'm looking for an album with a really striking, abstract cover art…
+          bold colors and shapes, almost like a modern painting.”</div>
+        <div class="tiny" style="margin-top:.6cqw">→ three visual facets,
+          <span class="mono">image_or_visual_search = true</span></div></div>
+      <div class="card bad"><h3>And the honest part</h3>
+        <div class="small">The reranker carries <strong>no features</strong> for that branch. Even
+          when the flag opens it, the ranker cannot weigh what it returns.</div></div>
+    </div>
+  </div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="7" class="slide" data-title="Entity resolution"
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Surface names have to become catalog IDs before anything can run. Fuzzy string match on artist and track names, keeping matches above 80/100. Free-text moods and genres go through a tiered tag resolver: exact, alias, substring, then an embedding nearest-neighbour fallback at cosine ≥ 0.6, top 3.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>Grounding names to the catalog</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="cols c2">
+    <div class="card"><h3>Names → IDs</h3>
+      <div class="body" style="font-size:1.7cqw">Fuzzy string matching of artist and track names
+        against the catalog name lists, keeping matches above <strong>80/100</strong>. Downstream
+        stages only ever see identifiers.</div></div>
+    <div class="card"><h3>Free text → tags</h3>
+      <ol class="tight" style="margin-top:.4cqw">
+        <li>Exact match against the tag vocabulary</li>
+        <li>Alias match</li>
+        <li>Substring match</li>
+        <li>Embedding nearest neighbour, cosine ≥ 0.6, top 3</li>
+      </ol>
+      <div class="tiny" style="margin-top:.7cqw">Used by the BM25 branch. Outside it, tag matching
+        falls back to exact strings — part of why so little of the state became executable.</div></div>
+  </div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="8" class="slide talkax" data-title="The eleven branches"
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; All eleven query the same collection; each is a differently-shaped query against one table. A twelfth, SigLIP-2 text-to-cover-art, is configured but gated behind a visual-request flag and the reranker carries no features for it.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><h2>The eleven retrieval branches</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="cols c2w">
+    <table>
+      <thead><tr><th>Branch</th><th style="text-align:left">Space</th><th style="text-align:left">Query</th></tr></thead>
+      <tbody>
+        <tr><td>BM25 (fielded)</td><td style="text-align:left">lexical</td><td style="text-align:left">state text + resolved tags</td></tr>
+        <tr><td>Dense text × 3</td><td style="text-align:left">Qwen3 views</td><td style="text-align:left">state-built strings</td></tr>
+        <tr><td>CLAP text→audio</td><td style="text-align:left">audio</td><td style="text-align:left">sonic description</td></tr>
+        <tr><td>Anchor centroids × 3</td><td style="text-align:left">SigLIP-2/CLAP/CF</td><td style="text-align:left">liked-track centroids †</td></tr>
+        <tr><td>User-CF centroid</td><td style="text-align:left">CF-BPR</td><td style="text-align:left">the listener's own vector</td></tr>
+        <tr><td>Lookups × 2</td><td style="text-align:left">catalog</td><td style="text-align:left">discography; era popularity</td></tr>
+      </tbody>
+    </table>
+    <div class="stack">
+      <div class="card warn"><h3>Gated twelfth</h3>
+        <div class="small">SigLIP-2 text→cover-art fires only on a visual request. The reranker
+          carries no features for it.</div></div>
+      <div class="card"><h3>Pool depth</h3>
+        <div class="small">Each branch truncated to its top 500 before the union reaches the
+          ranker.</div></div>
+    </div>
+  </div></div>
+  <div class="tiny" style="margin-top:1cqw">† Gated by intent mode: a pivot suppresses anchor centroids.</div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="talk" data-appendix="19" data-dense data-title="The reranker"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; &lt;b&gt;SKIP IF COVERED.&lt;/b&gt; LightGBM LambdaMART over the union of branch pools. 146 features per (turn, track) pair, about 20.6M candidate rows. One feature — the bi-encoder cosine — carries 59% of split gain. Say the caveat: split gain describes the fit, not quality. And look at the bottom row: constraint features carry 0.7%, which is the main diagnostic.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-5M13 19v-9M18 19v-13"/></svg></div><h2>What the ranker leans on</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="bars famb"><div class="brow"><span class="bl">Bi-encoder cosine <i>· 1 feature</i></span><div class="btrack"><div class="bfill" style="width:100.0%"></div></div><span class="bv">59.0%</span></div><div class="brow"><span class="bl">Per-branch rank and score <i>· 66 features</i></span><div class="btrack"><div class="bfill" style="width:19.5%"></div></div><span class="bv">11.5%</span></div><div class="brow"><span class="bl">Session and artist affinity <i>· 18 features</i></span><div class="btrack"><div class="bfill" style="width:18.1%"></div></div><span class="bv">10.7%</span></div><div class="brow"><span class="bl">Popularity · state · tags <i>· 31 features</i></span><div class="btrack"><div class="bfill" style="width:15.6%"></div></div><span class="bv">9.2%</span></div><div class="brow"><span class="bl">Other similarity cosines <i>· 17 features</i></span><div class="btrack"><div class="bfill" style="width:15.1%"></div></div><span class="bv">8.9%</span></div><div class="brow"><span class="bl">Constraints and rejections <i>· 13 features</i></span><div class="btrack"><div class="bfill warn" style="width:1.2%"></div></div><span class="bv">0.7%</span></div></div>
+  <div class="takeaway">Share of the ranker’s split gain, by feature family. One signal — the bi-encoder cosine — carries
+    <b>59%</b>; constraints and rejections carry <b>0.7%</b>.</div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="talk" data-appendix="20" data-title="Down-weighting contradicted turns"
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Every training turn starts with weight 1. If the next turn contradicts the label, we trust it less: 0.6 if the listener rejects only the artist, 0.3 if they reject the track or the goal-progress note says it did not help, never below 0.2. Chosen by hand, never tuned.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h2>Down-weighting contradicted turns</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="cols" style="grid-template-columns:1.9fr 1fr">
+    <div class="bars wbars">
+      <div class="brow"><span class="bl">Every turn starts at</span><div class="btrack"><div class="bfill" style="width:100%"></div></div><span class="bv">1.0</span></div>
+      <div class="brow"><span class="bl">Next turn rejects the artist</span><div class="btrack"><div class="bfill" style="width:60%"></div></div><span class="bv">× 0.6</span></div>
+      <div class="brow"><span class="bl">Next turn rejects the track</span><div class="btrack"><div class="bfill warn" style="width:30%"></div></div><span class="bv">× 0.3</span></div>
+      <div class="brow"><span class="bl">Goal note: did not help</span><div class="btrack"><div class="bfill warn" style="width:30%"></div></div><span class="bv">× 0.3</span></div>
+      <div class="brow"><span class="bl">Never below</span><div class="btrack"><div class="bfill mute" style="width:20%"></div></div><span class="bv">0.2</span></div>
+    </div>
+    <div class="card accent"><h3>Why</h3><div class="small">The label is whatever played next. When the
+      <b>next</b> turn says it was wrong, that label counts for less in training.</div>
+      <div class="tiny" style="margin-top:.8cqw">Chosen by hand, never tuned. Goal notes shape these
+        weights but are never a ranker input.</div></div>
+  </div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-tier="talk" data-appendix="21" class="slide" data-title="The b1 bi-encoder"
+  data-notes="&lt;b&gt;0:25.&lt;/b&gt; Two towers, one shared encoder fine-tuned from Qwen3-Embedding-4B. The track card carries a one-line LLM-written &#x27;known for&#x27; description — the only world knowledge anywhere in the system. Document vectors precomputed for all 47,071 tracks; the conversation vector is encoded live with caching.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-5M13 19v-9M18 19v-13"/></svg></div><h2>The bi-encoder behind that top feature</h2>
+    <span class="tag">Approach</span></div>
+  <div class="diagram bienc"><img src="figures/biencoder2.svg" alt="Two-tower bi-encoder: a conversation rendering and a track card each pass through the same fine-tuned Qwen3-Embedding-4B encoder; last-token pooling and L2 normalisation give two 2560-dimensional unit vectors whose cosine is the reranker's top feature."></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="9" class="slide" data-title="Fusion and fallback"
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Weighted RRF, k=60, top-1000, plus multiplicative post-fusion adjustments. This is the untrained baseline AND the fallback if the learned ranker is unavailable. On the devset it scores nDCG@20 0.1492 against the learned ranker&#x27;s 0.1970 out-of-fold.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><h2>Weighted RRF — baseline and fallback</h2><span class="tag">Approach</span></div>
+  <div class="fill"><div class="cols c2">
+    <div class="card"><h3>Fusion</h3>
+      <div class="body" style="font-size:1.7cqw">Weighted reciprocal-rank fusion,
+        <span class="mono">k = 60</span>, top-1000 across the branch pools.</div></div>
+    <div class="card"><h3>Post-fusion adjustments</h3>
+      <ul class="tight" style="margin-top:.4cqw">
+        <li>Drop rejected artists and tracks</li>
+        <li>Drop tracks already played</li>
+        <li>Promote / demote on exact tag membership</li>
+        <li>Year-range decay</li>
+      </ul></div>
+  </div>
+  <div class="cols c2" style="margin-top:2cqw">
+    <div class="card accent"><h3>As a baseline</h3><div class="stat sm accent">0.1492</div>
+      <div class="small" style="margin-top:.5cqw">devset nDCG@20, no training</div></div>
+    <div class="card"><h3>Still the fallback</h3>
+      <div class="small">If the learned ranker is unavailable, this order ships. It is the only
+        part of the ranking stack with no trained component.</div></div>
+  </div></div>
+</section>
+
+<section style="--hue:#2063D9;--hue-soft:#E4EDFB" data-appendix="10" class="slide" data-title="b1 training"
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; In-batch contrastive loss, temperature 1/20, four mined hard negatives per positive. Positives are conservative: only the 53,885 pairs whose NEXT turn&#x27;s goal-progress annotation says the recommendation moved the session forward. We tried it as a twelfth retrieval branch first — it added little to the union&#x27;s coverage, so it became a feature only. Its incremental effect on out-of-fold nDCG@20 was 0.1970 → 0.2032.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-5M13 19v-9M18 19v-13"/></svg></div><h2>How b1 was trained</h2><span class="tag">Approach</span></div>
+  <div class="fill">
+    <div class="formula" style="font-size:1.72cqw">L = −(1/B) Σ<sub>i</sub> log [ exp(v<sub>q<sub>i</sub></sub>ᵀ v<sub>d<sub>i</sub>+</sub> / τ) / Σ<sub>d in D<sub>i</sub></sub> exp(v<sub>q<sub>i</sub></sub>ᵀ v<sub>d</sub> / τ) ]  &nbsp;&nbsp; τ = 1/20</div>
+    <div class="cols c3" style="margin-top:2cqw">
+      <div class="card"><h3>Positives</h3><div class="stat sm">53,885</div>
+        <div class="small" style="margin-top:.5cqw">(turn, track) pairs whose <em>next</em> turn's
+          goal-progress says the recommendation moved the session forward</div></div>
+      <div class="card"><h3>Negatives</h3><div class="stat sm">4 + batch</div>
+        <div class="small" style="margin-top:.5cqw">four mined hard negatives per positive, plus
+          every in-batch document</div></div>
+      <div class="card warn"><h3>Retrieval vs ranking</h3>
+        <div class="small">As a twelfth <em>retrieval</em> branch it added little to the union's
+          coverage and was dropped. As a <em>ranking</em> feature it dominates the fit —
+          out-of-fold nDCG@20 0.1970 → 0.2032.</div></div>
+    </div>
+    <div class="tiny" style="margin-top:1.6cqw">Not isolated: which parts of the rendering matter,
+      and whether the effect carries to the blind splits.</div>
+  </div>
+</section>
+
+<section style="--hue:#257E3D;--hue-soft:#E7F8EC" data-appendix="11" class="slide" data-dense data-title="Development-split results"
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; The numbers we actually steered on. The in-sample row is the one we selected against and it is a replay of turns the model trained on. Out-of-fold was 0.197–0.203. The blind score landed between them. Do not let anyone read 0.149 vs 0.197 as the value of learned re-ranking — the pool depths differ.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg></div><h2>Development split — what we steered on</h2>
+    <span class="tag">Results</span></div>
+  <div class="fill"><div class="cols c2w">
+    <table>
+      <thead><tr><th>System (how measured)</th><th>nDCG@20</th></tr></thead>
+      <tbody>
+        <tr class="dim"><td>Weighted RRF fusion (no training)</td><td>0.1492</td></tr>
+        <tr><td>LambdaMART, out-of-fold CV</td><td>0.1970</td></tr>
+        <tr><td>&nbsp;&nbsp;+ <span class="mono">b1_cos</span> (deployed feature set)</td><td>0.2032</td></tr>
+        <tr class="dim"><td>Historical v10 LambdaMART, <strong>in-sample</strong></td><td>0.3844</td></tr>
+        <tr class="hi"><td>Official Blind-B</td><td>0.2537</td></tr>
+      </tbody>
+    </table>
+    <div class="stack">
+      <div class="card warn"><h3>Do not over-read the first gap</h3>
+        <div class="small">The fusion and learned-ranker configurations used <strong>different
+          candidate-pool depths</strong>, so 0.149 vs 0.197–0.203 does not isolate the effect of
+          learned re-ranking.</div></div>
+      <div class="card bad"><h3>The in-sample row</h3>
+        <div class="small">A historical goal-aware model without <span class="mono">b1_cos</span>.
+          Not directly comparable — shown because it is the number we were selecting on.</div></div>
+    </div>
+  </div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="12" class="slide talkax" data-dense data-title="Failure 3 — the better track was already in the pool"
+  data-notes="&lt;b&gt;0:55.&lt;/b&gt; This is the one that says the loss is in ranking, not retrieval. In each case a non-violating, better-fitting candidate was already in our own candidate pool, just below the top-20 we served. St Germain is nu-jazz and downtempo — literally what the user described — and it sat at pool rank 34 while we served the artist they had asked to avoid.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Failure 3 — the better track was already in our pool</h2>
+    <span class="tag">Analysis</span></div>
+  <div class="fill">
+    <table class="tight">
+      <thead><tr><th>What they asked for</th><th style="text-align:left">We served at rank 1</th><th style="text-align:left">Already in our pool</th><th>Pool rank</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left">nu-jazz, downtempo, female vocals — <em>not</em> Parov Stelar</td>
+          <td style="text-align:left" class="mono">Parov Stelar — Booty Swing</td>
+          <td style="text-align:left" class="mono">St Germain — What You Think About…</td><td>34</td></tr>
+        <tr><td style="text-align:left">new underground hip-hop, not Deltron</td>
+          <td style="text-align:left" class="mono">Dead Prez — Hip Hop</td>
+          <td style="text-align:left" class="mono">Souls Of Mischief — Make Your Mind Up</td><td>31</td></tr>
+        <tr><td style="text-align:left">hardcore, not classic hip-hop</td>
+          <td style="text-align:left" class="mono">Dead Prez — Hip Hop</td>
+          <td style="text-align:left" class="mono">Papa Roach — Getting Away With Murder</td><td>49</td></tr>
+        <tr><td style="text-align:left">that carol, but not Beegie Adair again</td>
+          <td style="text-align:left" class="mono">Beegie Adair — The Christmas Song</td>
+          <td style="text-align:left" class="mono">Frank Sinatra — Have Yourself A Merry Little Christmas</td><td>63</td></tr>
+      </tbody>
+    </table>
+    <div class="takeaway">On <b>31 of 80 Blind-B turns</b> a non-violating, better-fitting candidate
+      was sitting in our own pool below the top-20 we served. Retrieval found it; ranking buried
+      it.</div>
+  </div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="talk" data-appendix="22" class="slide" data-title="How the relabelling worked"
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; Two cheap judges scored every labelable turn on two axes: was a different artist asked for, and does the track fit. Where they agree, about 80% of training turns, that verdict stands. Where they disagree, Opus arbitrates, blind to their verdicts.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>How the LLM relabelling worked</h2><span class="tag">Analysis</span></div>
+  <div class="lead2">The answer keys come from the simulated recommender’s picks. To see how often they actually fit
+    the request, we had <b>two LLM judges re-score every labelable turn</b>.</div>
+  <div class="small" style="margin-bottom:.6cqw">Both judges score the same two axes: was a
+    different artist asked for, and does the track fit the request?</div>
+  <div class="diagram"><img src="figures/relabelling.svg" alt="Relabelling flow: every labelable train and dev turn is scored by two LLM judges, Gemma-4-26B and DeepSeek-V4-Flash. Where they agree, about 80 percent of training turns, that verdict becomes the re-judged label. Where they disagree, about 20 percent, Claude Opus decides."></div>
+  <div class="small" style="margin-top:.6cqw">Agreement split measured on the training turns.</div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-tier="talk" data-appendix="23" class="slide" data-title="What the relabelling found"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; &lt;b&gt;SKIP IF COVERED.&lt;/b&gt; On 61% of training turns the judges would not settle on the played track being a good fit. 17% — 18,222 turns — keep the artist the listener had just rejected. We trained on the relabeled data and it scored lower against the original labels, so the submission kept the originals. Say the catch: that score is computed against the original labels, so it could not have favoured the relabeling.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>What the relabelling found</h2><span class="tag">Analysis</span></div>
+  <div class="fill"><div class="relab">
+    <div class="icard hero"><div class="big">17%</div><h4>of training turns keep the artist the listener had just asked to leave</h4>
+      <p>18,222 turns — both judges or the arbiter marked the label as artist anchoring</p></div>
+    <div class="icard"><div class="big sm">113,393</div><h4>turns re-judged</h4><p>every labelable train and dev turn</p></div>
+  </div>
+  <div class="takeaway">Retrained on these labels, the ranker scored lower <b>against the original labels</b>, so we kept the originals.</div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="13" class="slide" data-title="Label-free audit"
+  data-notes="&lt;b&gt;0:50.&lt;/b&gt; Two diagnostics on the submitted run, because Blind-B exposes no relevance labels. A single DeepSeek judge rated 78% of turns weak-or-bad. A deterministic trace audit found 43 diagnoses across 32 turns. These are audit categories, not measurements of what each cost us.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Auditing the submitted run</h2><span class="tag">Analysis</span></div>
+  <div class="fill"><div class="cols c2">
+    <div class="stack">
+      <div class="card bad"><h3>Single-judge quality rating</h3><div class="stat sm bad">78%</div>
+        <div class="small" style="margin-top:.5cqw">of Blind-B turns rated weak-or-bad by one
+          DeepSeek-V4-Flash judge</div></div>
+      <div class="card warn"><h3>Read as</h3>
+        <div class="small">Diagnostic, not ground truth. Blind-B exposes no relevance labels, so
+          only the validation failure is actually <em>measured</em>.</div></div>
+    </div>
+    <div class="card"><h3>Deterministic trace audit — 43 diagnoses over 32 turns</h3>
+      <table class="tight" style="margin-top:.6cqw"><tbody>
+        <tr><td>Heuristic alternative below top-20</td><td>31</td></tr>
+        <tr><td>Under-applied constraint</td><td>8</td></tr>
+        <tr><td>State-extraction miss</td><td>3</td></tr>
+        <tr><td>Entity-resolution miss</td><td>1</td></tr>
+      </tbody></table>
+      <div class="tiny" style="margin-top:.8cqw">Categories overlap. The alternative was chosen by
+        positive-term metadata matches plus popularity — an audit heuristic, not a relevance
+        judgment.</div></div>
+  </div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="14" class="slide" data-title="Limits of our own analysis"
+  data-notes="&lt;b&gt;0:40.&lt;/b&gt; Volunteer these before anyone asks.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Limits of our own analysis</h2><span class="tag">Analysis</span></div>
+  <div class="fill"><ul>
+    <li>The relabeling was <strong>never checked against human judgments</strong>.</li>
+    <li>The Blind-B quality audit used a <strong>single</strong> LLM judge.</li>
+    <li>The trace audit was <strong>heuristic</strong>, not a relevance judgment.</li>
+    <li>The conversations are <strong>LLM-generated</strong>, not observed listening sessions.</li>
+    <li>Neither blind split exposes relevance labels — blind-set failure rates and relabeling rates
+      are <strong>diagnostic, not ground truth</strong>.</li>
+    <li>Development-split and leaderboard numbers are <strong>separate measurements</strong>.</li>
+  </ul></div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" data-appendix="15" class="slide" data-title="What we would do differently"
+  data-notes="&lt;b&gt;0:35.&lt;/b&gt; Ordered by expected value, not effort. Point one is free and would have changed every decision we made. Point five is the honest one — we still have no principled answer.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><h2>What we would do differently</h2><span class="tag">Conclusion</span></div>
+  <div class="fill"><ol>
+    <li><strong>Hold out a clean split before touching anything.</strong> Free, and it would have
+      changed every selection decision we made.</li>
+    <li><strong>Make the state executable.</strong> Rejections and constraints carried 0.7% of model
+      gain — most of what the extractor understood never became a filter.</li>
+    <li><strong>Import knowledge the catalog lacks</strong> — tempo, key, soundtrack and film/TV
+      links — so requests naming them have something to match.</li>
+    <li><strong>Check the response against the state</strong> before emitting it: flag unavailable
+      tracks and unmet constraints instead of overselling a substitute.</li>
+    <li><strong>Decide what to do when the benchmark and your judgment disagree.</strong> We still
+      do not have a principled answer.</li>
+  </ol></div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" data-appendix="16" class="slide" data-title="Related work"
+  data-notes="The design combines four established lines rather than proposing a new method. What we report is how the combination behaved.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><h2>Related work — four established lines</h2><span class="tag">A1</span></div>
+  <div class="fill"><div class="cols c2">
+    <div class="stack">
+      <div class="card"><h3>Conversational state tracking</h3>
+        <div class="small">CRS systems commonly track dialog state explicitly and condition
+          retrieval on it. We follow that, but compile the state with a <strong>prompted LLM</strong>
+          instead of a trained tracker.</div></div>
+      <div class="card"><h3>Retrieve-then-rerank at catalog scale</h3>
+        <div class="small">Pool multiple sources with reciprocal-rank fusion; rank with
+          LambdaMART.</div></div>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>Modality-specific music encoders</h3>
+        <div class="small">Contrastive language-audio pretraining (CLAP), vision-language over cover
+          art (SigLIP-2), collaborative filtering (BPR), general text embeddings (Qwen3).</div></div>
+      <div class="card accent"><h3>Our claim</h3>
+        <div class="small">What we report is <strong>how that combination behaved</strong> — not a
+          new technique.</div></div>
+    </div>
+  </div></div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" data-appendix="17" class="slide" data-title="Reproducing the run"
+  data-notes="How to actually re-run it.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><h2>Reproducing the run</h2><span class="tag">A2</span></div>
+  <div class="fill"><div class="stack">
+    <div class="card"><h3>Frozen replay — no credentials</h3>
+      <div class="small">Source the offline bundle's env and every LLM call is served from a
+        curated cache. A miss hard-fails rather than silently spending money.</div>
+      <div class="dialog" style="font-size:1.25cqw;margin-top:.8cqw">source .repro/scripts/activate_repro_env.sh</div></div>
+    <div class="card"><h3>Live re-run</h3>
+      <div class="dialog" style="font-size:1.25cqw">python run_experiment.py --backend modal --tid state_ranker_v10_lgbm_blindset_B --eval_dataset blindset_B</div></div>
+    <div class="card accent"><h3>Artifacts</h3>
+      <div class="small">Models and data: <span class="mono">hf.co/datasets/Npatta01/music-crs-repro-2026</span></div></div>
+  </div></div>
+</section>
+
+<section style="--hue:#C92C30;--hue-soft:#F9E6E6" data-appendix="18" class="slide talkax" data-title="The target often ignores the request"
+  data-notes="&lt;b&gt;1:00.&lt;/b&gt; Ground truth is whatever played next, in a session an LLM wrote. Here the listener asks twice, explicitly, for a different artist — and the target stays on Bonobo both times, with the annotation calling both MOVES TOWARD GOAL. Our own model anchors on the just-played artist and we think it learns it here.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>The target often ignores the request</h2>
+    <span class="tag">Analysis</span></div>
+  <div class="fill"><div class="chat big anchor">
+    <div class="bub me"><span class="tl">Listener · just played Bonobo</span>…something with a similar chill, electronic vibe, but <b>from a different artist</b>?</div>
+    <div class="bub sys"><span class="tl">Answer key</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Bonobo — “Jets” <span class="mv">MOVES toward goal</span></div>
+    <div class="bub me"><span class="tl">Next turn</span>“Jets” is cool, but I was hoping for something <b>from a different artist this time</b>…</div>
+    <div class="bub sys"><span class="tl">Answer key</span><span class="note"><svg viewBox="0 0 24 24" aria-hidden="true" class="mn"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Bonobo — “Pieces” <span class="mv">MOVES toward goal</span></div>
+  </div>
+  <div class="takeaway">The answer key repeats the artist the listener just asked to leave. Our ranker <b>anchors</b> the same way — we think it learns it here.</div></div>
+</section>
+
+<div id="bar"></div>
+</div>
+
+<div id="coreflag">CORE PATH</div>
+<div id="timer">0:00</div>
+<div id="jumpbuf"></div>
+<div id="notes"></div>
+
+<div class="overlay" id="palette">
+  <h3>Jump to a slide</h3>
+  <input id="pq" type="text" placeholder="Type to filter — Enter to go, Esc to close" autocomplete="off">
+  <ul id="pl"></ul>
+</div>
+
+<div class="overlay" id="grid"><div class="gwrap" id="gw"></div></div>
+
+<div class="overlay" id="help">
+  <h3>Keyboard</h3>
+  <table><tbody>
+    <tr><td>→ space</td><td>Next slide</td></tr>
+    <tr><td>←</td><td>Previous slide</td></tr>
+    <tr><td>A</td><td>Appendix index</td></tr>
+    <tr><td>digits, Enter</td><td>Jump to appendix number (0 = index)</td></tr>
+    <tr><td>G  /</td><td>Search all slides</td></tr>
+    <tr><td>O</td><td>Overview grid</td></tr>
+    <tr><td>B</td><td>Back to where you left the spine</td></tr>
+    <tr><td>C</td><td>Core path — walk only the six 7-minute slides</td></tr>
+    <tr><td>N</td><td>Speaker notes</td></tr>
+    <tr><td>T</td><td>Start / stop timer &nbsp; (R resets)</td></tr>
+    <tr><td>F</td><td>Fullscreen</td></tr>
+    <tr><td>Home / End</td><td>First / last slide</td></tr>
+    <tr><td>?</td><td>This help</td></tr>
+  </tbody></table>
+</div>
+
+<script>
+(function(){
+"use strict";
+var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+var spine  = slides.filter(function(s){return !s.hasAttribute("data-appendix");});
+var appx   = slides.filter(function(s){return s.hasAttribute("data-appendix");});
+var idx = 0, spineReturn = 0;
+var bar = document.getElementById("bar");
+var notesEl = document.getElementById("notes");
+var jumpEl = document.getElementById("jumpbuf");
+var buf = "";
+
+function titleOf(s){ return s.getAttribute("data-title") || "Untitled"; }
+function labelOf(s){
+  var a = s.getAttribute("data-appendix");
+  if (a === null) return String(spine.indexOf(s)+1);
+  return a === "0" ? "AX" : "A"+a;
+}
+
+/* ---- tier badges: which spine slides are the 7-minute path ---- */
+spine.forEach(function(s){
+  var head = s.querySelector(".slide-head");
+  if (!head) return;                       /* title slide has no head */
+  var tag = head.querySelector(".tag");
+  var tier = s.getAttribute("data-tier") || "optional";
+  var wrap = document.createElement("div");
+  wrap.className = "rt";
+  var b = document.createElement("span");
+  b.className = "tier " + tier;
+  b.textContent = tier === "core" ? "core" : (tier === "talk" ? "talk only" : "optional");
+  if (tag) { head.replaceChild(wrap, tag); wrap.appendChild(tag); }
+  else head.appendChild(wrap);
+  wrap.appendChild(b);
+});
+
+/* ---- appendix slides get a way back to the talk ---- */
+appx.forEach(function(s){
+  var f = document.createElement("div");
+  f.className = "foot";
+  f.innerHTML = '<span>Appendix</span><span>B — back to the talk &nbsp;·&nbsp; A — index &nbsp;·&nbsp; number + Enter — jump</span>';
+  s.appendChild(f);
+});
+
+/* ---- appendix index (auto-built) ---- */
+var ag = document.getElementById("axgrid");
+appx.forEach(function(s){
+  var a = s.getAttribute("data-appendix");
+  if (a === "0") return;
+  var d = document.createElement("div");
+  d.className = "axitem" + (s.getAttribute("data-tier") === "talk" ? " ax-talk" : (s.classList.contains("talkax") ? "" : " ax-detail"));
+  d.innerHTML = '<span class="n">'+a+'</span><span>'+titleOf(s)+'</span>';
+  d.addEventListener("click", function(){ go(slides.indexOf(s)); });
+  ag.appendChild(d);
+});
+
+/* ---- overview grid ---- */
+var gw = document.getElementById("gw");
+slides.forEach(function(s,i){
+  var c = document.createElement("div");
+  c.className = "gcell";
+  c.innerHTML = '<div class="gn">'+labelOf(s)+'</div><div class="gt">'+titleOf(s)+'</div>';
+  c.addEventListener("click", function(){ closeAll(); go(i); });
+  gw.appendChild(c);
+});
+
+function go(i){
+  if (i < 0 || i >= slides.length) return;
+  if (!slides[idx].hasAttribute("data-appendix")) spineReturn = idx;
+  slides[idx].classList.remove("active");
+  idx = i;
+  slides[idx].classList.add("active");
+  var inSpine = spine.indexOf(slides[idx]);
+  bar.style.width = inSpine >= 0 ? ((inSpine+1)/spine.length*100)+"%" : "100%";
+  bar.style.opacity = inSpine >= 0 ? "1" : "0.25";
+  notesEl.innerHTML = slides[idx].getAttribute("data-notes") || "<i>No notes.</i>";
+  try { history.replaceState(null,"","#"+labelOf(slides[idx])); } catch(e){}
+}
+/* Core mode walks only the six slides that make up the 7-minute path, so the
+   optional promotions can sit in the main flow without being in the way. */
+var coreOnly = false;
+function skippable(s){
+  if (s.hasAttribute("data-appendix")) {
+    var talkAx = s.getAttribute("data-tier") === "talk" || s.classList.contains("talkax") || s.getAttribute("data-appendix") === "0";
+    return coreOnly ? !talkAx : s.getAttribute("data-tier") === "talk";
+  }
+  var t = s.getAttribute("data-tier");
+  return coreOnly ? t === "optional" : t === "talk";
+}
+function step(dir){
+  var i = idx + dir;
+  while (i > 0 && i < slides.length-1 && skippable(slides[i])) i += dir;
+  go(Math.max(0, Math.min(i, slides.length-1)));
+}
+function next(){ step(1); }
+function prev(){ step(-1); }
+function toggleCore(){
+  coreOnly = !coreOnly;
+  document.documentElement.toggleAttribute("data-talk", coreOnly);
+  document.getElementById("coreflag").classList.toggle("on", coreOnly);
+  if (coreOnly && skippable(slides[idx])) next();
+}
+function jumpAppendix(n){
+  if (coreOnly && n > 0) { /* the talk numbers its shorter appendix 1..k */
+    var k = 0;
+    for (var j=0;j<slides.length;j++){
+      if (slides[j].hasAttribute("data-appendix") && slides[j].getAttribute("data-appendix") !== "0" && !skippable(slides[j]) && ++k === n) { go(j); return true; }
+    }
+    return false;
+  }
+  for (var i=0;i<slides.length;i++){
+    if (slides[i].getAttribute("data-appendix") === String(n)) { go(i); return true; }
+  }
+  return false;
+}
+
+/* ---- overlays ---- */
+var pal = document.getElementById("palette"), pq = document.getElementById("pq"),
+    pl = document.getElementById("pl"), grid = document.getElementById("grid"),
+    help = document.getElementById("help");
+var psel = 0, pitems = [];
+function closeAll(){ [pal,grid,help].forEach(function(o){o.classList.remove("on");}); }
+function anyOpen(){ return pal.classList.contains("on")||grid.classList.contains("on")||help.classList.contains("on"); }
+function renderPal(){
+  var q = pq.value.toLowerCase().trim();
+  pitems = [];
+  pl.innerHTML = "";
+  slides.forEach(function(s,i){
+    var t = titleOf(s), lab = labelOf(s);
+    if (q && (t+" "+lab).toLowerCase().indexOf(q) === -1) return;
+    var li = document.createElement("li");
+    li.innerHTML = '<span class="n">'+lab+'</span><span>'+t+'</span>';
+    li.addEventListener("click", function(){ closeAll(); go(i); });
+    pl.appendChild(li);
+    pitems.push({el:li, i:i});
+  });
+  psel = 0; markPal();
+}
+function markPal(){
+  pitems.forEach(function(p,k){ p.el.classList.toggle("sel", k===psel); });
+  if (pitems[psel]) pitems[psel].el.scrollIntoView({block:"nearest"});
+}
+function openPal(){ closeAll(); pal.classList.add("on"); pq.value=""; renderPal(); pq.focus(); }
+pq.addEventListener("input", renderPal);
+
+/* ---- timer ---- */
+var t0=null, tInt=null, tEl=document.getElementById("timer");
+function tick(){
+  var s = Math.floor((Date.now()-t0)/1000);
+  tEl.textContent = Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+  tEl.classList.toggle("amber", s>=360 && s<420);
+  tEl.classList.toggle("red", s>=420);
+}
+function toggleTimer(){
+  if (tInt){ clearInterval(tInt); tInt=null; }
+  else { if(!t0) t0=Date.now(); tEl.classList.add("on"); tick(); tInt=setInterval(tick,250); }
+}
+
+document.addEventListener("keydown", function(e){
+  var k = e.key;
+  if (anyOpen()){
+    if (k === "Escape"){ closeAll(); e.preventDefault(); return; }
+    if (pal.classList.contains("on")){
+      if (k === "ArrowDown"){ psel=Math.min(psel+1,pitems.length-1); markPal(); e.preventDefault(); return; }
+      if (k === "ArrowUp"){ psel=Math.max(psel-1,0); markPal(); e.preventDefault(); return; }
+      if (k === "Enter"){ if(pitems[psel]){ closeAll(); go(pitems[psel].i);} e.preventDefault(); return; }
+      return; /* let typing through */
+    }
+    if (k === "o" || k === "?" ){ closeAll(); e.preventDefault(); return; }
+    return;
+  }
+  if (k >= "0" && k <= "9"){ buf += k; jumpEl.textContent = buf; jumpEl.classList.add("on"); e.preventDefault(); return; }
+  if (k === "Enter" && buf){ jumpAppendix(parseInt(buf,10)); buf=""; jumpEl.classList.remove("on"); e.preventDefault(); return; }
+  if (k === "Escape" && buf){ buf=""; jumpEl.classList.remove("on"); e.preventDefault(); return; }
+  buf=""; jumpEl.classList.remove("on");
+
+  if (k === "ArrowRight" || k === " " || k === "PageDown"){ next(); e.preventDefault(); }
+  else if (k === "ArrowLeft" || k === "PageUp"){ prev(); e.preventDefault(); }
+  else if (k === "Home"){ go(0); e.preventDefault(); }
+  else if (k === "End"){ go(slides.length-1); e.preventDefault(); }
+  else if (k === "a" || k === "A"){ jumpAppendix(0); e.preventDefault(); }
+  else if (k === "b" || k === "B"){ go(spineReturn); e.preventDefault(); }
+  else if (k === "g" || k === "G" || k === "/"){ openPal(); e.preventDefault(); }
+  else if (k === "o" || k === "O"){ closeAll(); grid.classList.add("on"); e.preventDefault(); }
+  else if (k === "n" || k === "N"){ notesEl.classList.toggle("on"); e.preventDefault(); }
+  else if (k === "c" || k === "C"){ toggleCore(); e.preventDefault(); }
+  else if (k === "t" || k === "T"){ toggleTimer(); e.preventDefault(); }
+  else if (k === "r" || k === "R"){ t0=Date.now(); tick(); e.preventDefault(); }
+  else if (k === "f" || k === "F"){
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen();
+    e.preventDefault();
+  }
+  else if (k === "?"){ closeAll(); help.classList.add("on"); e.preventDefault(); }
+});
+
+/* click / tap to advance (ignore clicks on interactive bits) */
+document.getElementById("stage").addEventListener("click", function(e){
+  if (e.target.closest(".axitem")) return;
+  next();
+});
+
+/* detailed view: talk-only copies sit at the end of the file, so mark the real last page */
+if (!/(?:\?|&)core=1\b/.test(location.search)) {
+  for (var di = slides.length - 1; di >= 0; di--) {
+    if (slides[di].dataset.tier !== "talk") { slides[di].classList.add("last-visible"); break; }
+  }
+}
+/* ?core=1 — present or print only the core path */
+if (/(?:\?|&)core=1\b/.test(location.search)) {
+  document.documentElement.setAttribute("data-print", "core");
+  document.documentElement.setAttribute("data-talk", "");
+  coreOnly = true;
+  /* the last slide in the file is hidden in this mode, so its page break would
+     emit a blank trailing page — move the "no break" marker to the last one
+     that is actually shown. */
+  for (var ci = slides.length - 1; ci >= 0; ci--) {
+    if (slides[ci].dataset.tier !== "optional") {
+      slides[ci].classList.add("last-visible"); break;
+    }
+  }
+  document.getElementById("coreflag").classList.add("on");
+}
+
+/* restore from hash */
+(function(){
+  var h = (location.hash||"").replace("#","");
+  if (h){
+    for (var i=0;i<slides.length;i++){ if (labelOf(slides[i]) === h){ idx=i; break; } }
+  }
+  slides.forEach(function(s){s.classList.remove("active");});
+  go(idx);
+})();
+})();
+</script>
+</body>
+</html>

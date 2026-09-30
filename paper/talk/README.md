@@ -1,4 +1,4 @@
-# Conference poster — RecSys Challenge 2026
+# Talk deck and poster — RecSys Challenge 2026
 
 24×36in poster for our slot at the RecSys Challenge 2026 workshop — the US stock
 size the print shops near the venue carry, and one of the two sizes the RecSys
@@ -19,17 +19,25 @@ print on plain matte paper with no lamination or mounting. See the
 
 | File | What it is |
 | --- | --- |
-| `poster.html` | **The source.** Hand-written HTML + SVG — not LaTeX. Edit this. |
+| `deck.html` | **Deck source.** The detailed record of the work — edit this. |
+| `talk.html` | **Present from this.** Self-contained, figures inlined, no network. |
+| `deck-detailed.pdf` | **For someone new to this space.** A 41-slide main flow in six parts, with 4.1–4.4 subsections for the approach — the problem, how the organisers built the data, scoring, our approach step by step, results, what is not ideal — then a 19-slide appendix with every deep dive. Visual-first; the score appears only in part five. |
+| `talk-10min.pdf` | **The workshop talk.** 18 talk slides for the 14:50–15:00 slot (8-minute talk + 2-minute Q&A per the organizers; contents, conclusion and a questions slide included), then an 11-page appendix for attendees (10 slides + index): about 7:05 in full by the note timings; the presenter trims live, and "SKIP IF COVERED" in the notes marks candidates. Same source, core slides only. |
+| `DECK_PLAN.md` | The plan for both views: audiences, constraints, talk path, status. |
+| `render-deck.sh` | Builds `talk.html`, renders both deck PDFs, preflights them. |
+| `build.py` | Inlines the deck's figures into `talk.html` (called by `render-deck.sh`). |
+| `poster.html` | **Poster source.** Hand-written HTML + SVG — not LaTeX. Edit this. |
 | `poster.pdf` | The poster, true-size 24×36in, one page — fully vector. |
 | `print/npatta01-poster-24x36-image.pdf` | **Send this to the printer.** The same poster as one 300-dpi image. FedEx Office could print this one and not the vector PDFs — see [Printing](#printing). |
 | `print/` | The three files sent to FedEx: the original upload, a transparency-free Ghostscript re-save, and the 300-dpi image version. |
 | `render.sh` | Renders the PDF and preflights it. |
-| `figures/` | `architecture.svg`, `biencoder2.svg`, `relabelling.svg`, and `qr-site.svg` — the QR code, pointing at the project site (`npatta01.github.io/music-crs-2026/`), which links the poster. `qr-repo.svg` points at the repo. |
+| `figures/` | `architecture.svg`, `biencoder2.svg`, `relabelling.svg` (**shared** by the poster and the deck), and `qr-site.svg` — the QR code, pointing at the project site (`npatta01.github.io/music-crs-2026/`), which links the poster. `qr-repo.svg` points at the repo and is used by the deck. |
 
 ## Rebuilding
 
 ```bash
-bash paper/talk/render.sh
+bash paper/talk/render.sh        # the poster
+bash paper/talk/render-deck.sh   # the deck, both cuts
 ```
 
 The PDF comes from HTML rendered by headless Chrome — there is no LaTeX here.
@@ -63,6 +71,91 @@ cmap = set(TTFont(subprocess.run(['fc-match','-f','%{file}','Lato'],
 print([c for c in sorted(set(txt)) if ord(c) > 127 and ord(c) not in cmap])
 EOF
 ```
+
+## The deck
+
+**The deck is the detailed record of the work, not a conference cut.** It covers
+the system properly — state extraction, entity resolution, all eleven branches,
+the index, fusion, the ranker, the bi-encoder and its training, response
+generation — then results and the full analysis. Forty-nine slides in eight sections, with a contents slide and a divider before each. The
+approach is split into **state, retrieval, re-ranking and response generation** so each can
+be skipped independently.
+
+Slides are written to **stand alone**: each carries its own takeaway line, so a
+reader gets the point without the speaker. The worked examples are all real
+turns from the submitted Blind-B run, pulled from
+`reports/blindset-b-prediction-audit/audit.json` — three fully worked state
+examples plus six request types with the state the extractor actually produced;
+three shapes of retrieval failure with the track we served; four ways the reply
+went wrong with the judge's own verdict; and four training turns whose
+ground-truth label repeats the artist the listener asked to move on from.
+
+The talk is a **filter over that same source**, never a second file:
+
+- **`data-tier`**: `core` slides are in both views, `optional` only in the detailed deck, `talk` only in the talk.
+- The talk is the `core` slides plus `talk`-only ones (contents, conclusion, questions). The talk has no section
+  dividers and no primer; it opens with "The short version", which also serves
+  as the detailed deck's executive summary.
+- **`C`** toggles core-only navigation while presenting — arrows skip the rest.
+- **`?core=1`** hides everything else, so `talk-10min.pdf` is the talk.
+
+```bash
+bash paper/talk/render-deck.sh      # deck-detailed.pdf (61) and talk-10min.pdf (18 + 11 appendix)
+```
+
+To move a slide in or out of the short talk, change its `data-tier`. Nothing
+else needs touching and the two PDFs stay in step by construction.
+
+### Accessibility
+
+Checked numerically, not by eye, because the RecSys guidance asks for it and a
+conference room has people who need it.
+
+- **Four colours, each meaning something:** blue for how the system works
+  (sections 1–5), green for what it scored, red for what went wrong, amber for
+  what we would change. An earlier version used eight decorative hues; nobody
+  learns that teal means retrieval, and two pairs were hard to separate on a
+  weak projector.
+- **Contrast:** every text/background pair clears **4.5:1** (WCAG AA), lowest
+  4.50. The first palette failed 21 pairs — the vivid amber, teal and green
+  were far too light — so each hue was re-solved for the lightest shade that
+  still passes white-on-hue, hue-on-paper, hue-on-white and hue-on-tint.
+- **Greyscale:** all four sit at near-identical luminance, so in greyscale or
+  to a viewer with achromatopsia they read the same. That is survivable only
+  because nothing depends on the hue — see below — and it was checked by
+  rendering the dividers in greyscale.
+- **Type:** no content text below **12pt** at 960×540 (i.e. ~24pt on a
+  1920×1080 projection); body is ~20pt and headings ~32pt. The only smaller
+  glyphs are formula subscripts and the presenter-only CORE/OPTIONAL badges.
+- **Never colour alone:** section identity is colour **plus** a number, an icon
+  and a name; track status is colour **plus** a written badge; findings are
+  colour **plus** a number. A viewer who cannot separate the hues loses nothing
+  — confirmed by reading the greyscale renders.
+- **Frame use:** content fills a median **85%** of the vertical space, worst
+  case 74%, so nothing floats in a sea of white on a big screen.
+- **Motion:** `prefers-reduced-motion` disables all transitions.
+- **Focus:** a visible focus ring, so the deck is keyboard-navigable.
+- Decorative art (the equaliser bars, the big divider numeral, section icons)
+  is `aria-hidden`; the diagrams carry real `aria-label` descriptions.
+
+To re-check after changing a colour or size, the contrast and type probes are
+in the commit history for this file — both are short standalone scripts.
+
+### Driving it
+
+| Key | Action |
+| --- | --- |
+| `→` `space` / `←` | Next / previous |
+| — | Section dividers double as a progress rail: five stops, current one lit |
+| `C` | Core path — arrows skip the optional slides |
+| `A` | Appendix index |
+| digits then `Enter` | Jump to an appendix slide |
+| `B` | Back to where you left the spine |
+| `G` or `/` | Search every slide by title |
+| `O` | Overview grid |
+| `N` | Speaker notes (every slide has them, with a time budget) |
+| `T` / `R` | Start-stop the timer / reset — amber at 6:00, red at 7:00 |
+| `F` | Fullscreen |
 
 ## The poster
 
