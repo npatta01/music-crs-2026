@@ -1351,7 +1351,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
   data-notes="&lt;b&gt;0:15.&lt;/b&gt; Five things our audit found; all of them were already true on Blind-A. First, how we trained: on the same turns we checked on.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".8"/><circle cx="4.5" cy="12" r=".8"/><circle cx="4.5" cy="18" r=".8"/></svg></div><h2>What we found</h2><span class="tag">What is not ideal</span></div>
   <div class="fill"><div class="toc tight8 talktoc whylist">
-    <div class="tocrow on"><span class="tn">1</span><span class="tt">Why we trained on the dev set</span><span class="td"></span></div>
+    <div class="tocrow on"><span class="tn">1</span><span class="tt">Why the reranker trained on the dev set</span><span class="td"></span></div>
     <div class="tocrow"><span class="tn">2</span><span class="tt">No data from outside the catalog</span><span class="td"></span></div>
     <div class="tocrow"><span class="tn">3</span><span class="tt">Inconsistent labels</span><span class="td"></span></div>
     <div class="tocrow"><span class="tn">4</span><span class="tt">Extracted, but not acted on</span><span class="td"></span></div>
@@ -1360,14 +1360,14 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Why we trained on the dev set"
-  data-notes="&lt;b&gt;0:30.&lt;/b&gt; State extraction is one expensive LLM call per turn, so we never ran it on the 121.6 thousand training turns. The ranker was trained on the 8,000 dev turns, the same turns we checked it on. Replaying those turns gave 0.38; five-fold cross-validation gave about 0.20; the blind test gave 0.25. We selected designs on the 0.38.">
-  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h2>Why we trained on the dev set</h2><span class="tag">Lessons</span></div>
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; State extraction is one expensive LLM call per turn, so we never ran it on the 121.6 thousand training turns. The reranker was trained on the 8,000 dev turns, the same turns we checked it on. Replaying those turns gave 0.38; five-fold cross-validation gave about 0.20; the blind test gave 0.25. We selected designs on the 0.38.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h2>Why the reranker trained on the dev set</h2><span class="tag">Lessons</span></div>
   <div class="fill"><div class="flow">
     <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h4>State extraction: 1 paid LLM call per turn</h4><p>to read each turn into a state</p></div>
     <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
     <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><h4>Too expensive for the 121.6k training turns</h4><p>so they never got a state</p></div>
     <div class="farrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M14 7l5 5-5 5"/></svg></div>
-    <div class="fstep hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h4>Trained on the 8,000 dev turns</h4><p>the same turns we checked it on</p></div>
+    <div class="fstep hl"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h4>Reranker trained on the 8,000 dev turns</h4><p>the same turns we checked it on</p></div>
   </div>
   <div class="bars devbars">
     <div class="brow"><span class="bl">Dev, turns it trained on</span><div class="btrack"><div class="bfill warn" style="width:76.9%"></div></div><span class="bv">0.38</span></div>
