@@ -51,7 +51,7 @@ do differently · Everything is released  — 12 slides, ~35 s each.
 - [x] Outputs renamed (`deck-detailed.pdf` 54, `talk-10min.pdf` 12); render-deck.sh + README updated
 - [x] Rendered; no slide overflows its padding (54/54); 0 Type 3; closing QR → project site at 21cqw
 - [x] Speaker-note timings on the talk path sum to 6:40
-- [ ] Author rehearsal: time it aloud, trim if over 7:00
+- [ ] Author rehearsal: time it aloud against the 8-minute slot; author trims live
 - [ ] Deck PR (deck files + README + site links to both PDFs)
 
 ## Round 2 (2026-09-27): detailed deck rebuilt for beginners
@@ -137,4 +137,10 @@ are hidden on screen and in print.
 
 ## Next action
 
-Author rehearses the talk aloud; trim if over 7:00.
+Author rehearses the 21-slide talk (about 8:10 by note timings) against the 8-minute slot and trims live; upload to the organizers' Drive only when the author says so.
+
+## Talk round 2 (2026-09-29): 9 markup notes → 21 slides
+- Organizers: 8-minute talk + 2-minute Q&A; slides named after the paper title, uploaded to their Drive by 30 Sep evening (author uploads when ready).
+- Added: state→retrieval map (core, both decks), bi-encoder in the talk, reply inputs→model→reply, "Why we did not score higher" transition, one-slide relabelling (talk only).
+- Changed: schema icons with two emphasised groups, dev-set cost named as state extraction, reply slide retitled "Gaps in our response generation", conclusion = state, pipeline, gaps, labels.
+- Timing: ~8:10 by notes; author trims live, no further skip marking.
