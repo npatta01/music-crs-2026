@@ -711,6 +711,30 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 
 /* talk: tier badges and the CORE PATH flag are never shown (skip cues live in the notes) */
 .tier,#coreflag,#coreflag.on{display:none!important}
+
+/* talk additions */
+.slide.cover .venue{color:rgba(255,255,255,.72);font-size:1.7cqw;margin-top:.5cqw}
+.talktoc .tocrow .tt{font-size:3cqw} .talktoc .tocrow .td{font-size:2cqw} .talktoc .tocrow .tn{font-size:2.6cqw}
+.talktoc{gap:2cqw}
+.cpoints{display:grid;grid-template-columns:1fr 1fr;gap:2cqw;margin-block:auto}
+.cpoint{display:flex;gap:1.6cqw;align-items:flex-start;background:#fff;border:.1cqw solid var(--line);border-radius:1.4cqw;padding:2cqw}
+.cpoint h4{font-size:2.3cqw;font-weight:750;color:var(--ink);margin-bottom:.5cqw} .cpoint p{font-size:1.85cqw;line-height:1.4;color:var(--ink-2)}
+.qslide{flex-direction:column;gap:2cqw}
+.qhead{font-size:5cqw;font-weight:800;color:var(--ink);letter-spacing:-.02em}
+/* projector: nothing under ~26px at 1920 wide while presenting the talk */
+:root[data-talk] .src{font-size:1.4cqw}
+:root[data-talk] .bub .tl{font-size:1.35cqw}
+:root[data-talk] .bub .mv,:root[data-talk] .bub .jv{font-size:1.35cqw}
+:root[data-talk] .before .bt,:root[data-talk] .track .badge{font-size:1.35cqw}
+:root[data-talk] .track .ask{font-size:1.5cqw}
+:root[data-talk] .track .meta .l2{font-size:1.45cqw}
+:root[data-talk] .tiny{font-size:1.4cqw}
+:root[data-talk] .fstep p{font-size:1.6cqw}
+:root[data-talk] .slide.cover .statlab{font-size:1.4cqw}
+
+:root[data-talk] .slide[data-title="Label example — “from a different artist”"] .chat .bub{font-size:1.55cqw;padding:.5cqw 1.1cqw}
+.talktoc .tocrow{grid-template-columns:4cqw 34cqw 1fr;padding-bottom:1.6cqw}
+.cpoint h4{font-size:2.5cqw} .cpoint p{font-size:2cqw} .cpoint{padding:2.4cqw}
 </style>
 </head>
 <body>
@@ -722,15 +746,27 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide cover" data-tier="core" data-title="Title — 29th of 40"
   data-notes="&lt;b&gt;0:10.&lt;/b&gt; Team npatta01, three independent researchers. This deck explains the challenge from scratch, then our system, and keeps the score for the end.">
   <div class="eq"><i style="height:18%"></i><i style="height:44%"></i><i style="height:26%"></i><i style="height:68%"></i><i style="height:36%"></i><i style="height:84%"></i><i style="height:30%"></i><i style="height:56%"></i><i style="height:22%"></i><i style="height:74%"></i><i style="height:40%"></i><i style="height:88%"></i><i style="height:32%"></i><i style="height:62%"></i><i style="height:24%"></i><i style="height:50%"></i><i style="height:34%"></i><i style="height:78%"></i><i style="height:28%"></i><i style="height:54%"></i><i style="height:20%"></i><i style="height:66%"></i><i style="height:38%"></i><i style="height:82%"></i><i style="height:28%"></i><i style="height:58%"></i><i style="height:22%"></i><i style="height:70%"></i><i style="height:42%"></i><i style="height:86%"></i></div>
-  <div class="kicker">RecSys Challenge 2026 · Music-CRS</div>
+  <div class="kicker">ACM RecSys 2026 · RecSys Challenge Workshop</div>
   <h1>State-Driven Retrieval and<br>Learned Re-Ranking for<br>Conversational Music Recommendation</h1>
   <div class="rule"></div>
   <div class="authors">Nidhin Pattaniyil · Semih Yagli · Tanwir Zaman</div>
+  <div class="venue">Minneapolis · 2 October 2026 · Music-CRS track, team npatta01</div>
   <div class="resultbar">
     <div><div class="stat sm">47,071</div><div class="statlab">tracks in the catalog</div></div>
     <div><div class="stat sm">11</div><div class="statlab">ways to search</div></div>
     <div><div class="stat sm">1</div><div class="statlab">learned ranker</div></div>
   </div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="talk" data-title="Talk contents"
+  data-notes="&lt;b&gt;0:10.&lt;/b&gt; Three parts and a short conclusion.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".8"/><circle cx="4.5" cy="12" r=".8"/><circle cx="4.5" cy="18" r=".8"/></svg></div><h2>Contents</h2><span class="tag"></span></div>
+  <div class="fill"><div class="toc tight8 talktoc">
+    <div class="tocrow"><span class="tn">1</span><span class="tt">How it works</span><span class="td">the system, the state, retrieval, reranking, the reply</span></div>
+    <div class="tocrow"><span class="tn">2</span><span class="tt">How it scored</span><span class="td">the official results</span></div>
+    <div class="tocrow"><span class="tn">3</span><span class="tt">What did not transfer</span><span class="td">training, ranking, missing data, labels, the reply</span></div>
+    <div class="tocrow"><span class="tn">4</span><span class="tt">Conclusion</span><span class="td">what we showed, and questions</span></div>
+  </div></div>
 </section>
 
 <section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="Contents"
@@ -864,7 +900,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="The system in one picture"
-  data-notes="&lt;b&gt;0:40.&lt;/b&gt; An LLM compiles each conversation into a typed state. Eleven branches query ONE LanceDB table holding metadata, a full-text index and six embedding families. LambdaMART scores the pooled union and emits 20. A response model writes the reply, conditioned on the top track AND the same state. Note the families: two boxes are LLMs, the ranker is trees — people assume the Qwen model does the ranking.">
+  data-notes="&lt;b&gt;0:35.&lt;/b&gt; An LLM compiles each conversation into a typed state. Eleven branches query ONE LanceDB table holding metadata, a full-text index and six embedding families. LambdaMART scores the pooled union and emits 20. A response model writes the reply, conditioned on the top track AND the same state. Note the families: two boxes are LLMs, the ranker is trees — people assume the Qwen model does the ranking.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h2>One state, eleven branches, one learned ranker</h2>
     <span class="tag">Approach</span></div>
   <div class="diagram wide"><img src="figures/architecture.svg" alt="System architecture: conversation and played tracks go to an LLM state extractor; eleven retrieval branches query one LanceDB collection of 47,071 tracks; pooled candidates are scored by a LambdaMART reranker that emits twenty tracks; a response model writes a reply conditioned on the top track and the same state. A weighted reciprocal-rank-fusion path is the untrained baseline and fallback."></div>
@@ -945,7 +981,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Retrieval — eleven branches"
-  data-notes="&lt;b&gt;0:20.&lt;/b&gt; The state drives eleven retrieval branches over one index. BM25 matches keywords and resolved tags. Three dense-text branches use Qwen3 embeddings of lyrics, metadata and attributes. CLAP matches the sonic description against audio. Three anchor centroids search near tracks the listener liked, by cover art, audio and listening data. A user-CF centroid uses this listener’s own vector, and two catalog lookups cover discography and era popularity. Each returns its top 500; the pool is their union.">
+  data-notes="&lt;b&gt;0:15.&lt;/b&gt; The state drives eleven retrieval branches over one index. BM25 matches keywords and resolved tags. Three dense-text branches use Qwen3 embeddings of lyrics, metadata and attributes. CLAP matches the sonic description against audio. Three anchor centroids search near tracks the listener liked, by cover art, audio and listening data. A user-CF centroid uses this listener’s own vector, and two catalog lookups cover discography and era popularity. Each returns its top 500; the pool is their union.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/></svg></div><h2>Retrieval — eleven branches</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="icards c3 compact">
     <div class="icard"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><div class="big">×1</div><h4>BM25 + tag resolver</h4><p>keywords and resolved tags from the state</p></div>
@@ -979,7 +1015,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Reranking"
-  data-notes="&lt;b&gt;0:20.&lt;/b&gt; A learned ranker — gradient-boosted trees in LightGBM — scores every pooled candidate on 146 features and keeps the top 20. The next two slides show what it relies on.">
+  data-notes="&lt;b&gt;0:15.&lt;/b&gt; A learned ranker — gradient-boosted trees in LightGBM — scores every pooled candidate on 146 features and keeps the top 20. The next two slides show what it relies on.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 19v-4M13 19v-8M18 19v-11"/></svg></div><h2>Reranking</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="flow">
     <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".8"/><circle cx="4.5" cy="12" r=".8"/><circle cx="4.5" cy="18" r=".8"/></svg></div><h4>The pooled candidates</h4><p>top 500 from each branch</p></div>
@@ -1034,7 +1070,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#2063D9;--hue-soft:#E4EDFB" class="slide" data-tier="core" data-title="Response generation"
-  data-notes="&lt;b&gt;0:20.&lt;/b&gt; A real Blind-B reply that our own LLM checker rated good. The words it uses — uplifting, cheerful, hopeful — come from the state and the track’s tags.">
+  data-notes="&lt;b&gt;0:15.&lt;/b&gt; A real Blind-B reply that our own LLM checker rated good. The words it uses — uplifting, cheerful, hopeful — come from the state and the track’s tags.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4v12h4v4l5-4h7z"/><path d="M8 9h8M8 12.5h5"/></svg></div><h2>Response generation</h2><span class="tag">Approach</span></div>
   <div class="fill"><div class="chat big">
     <div class="bub me"><span class="tl">Listener</span>…it feels a bit too serious. I’m looking for something more uplifting and positive, really something to lift my spirits.</div>
@@ -1079,7 +1115,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#257E3D;--hue-soft:#E7F8EC" class="slide" data-tier="core" data-title="Official results"
-  data-notes="&lt;b&gt;0:30.&lt;/b&gt; Blind-A, the development phase: 0.5799. Blind-B, the final: 0.3811, 29th of 40. nDCG nearly halved and the judge fell 1.4 points; the diversity terms barely moved. Blind-B also withholds the goal annotations, but our ranker was already goal-free at inference — so that is not the explanation.">
+  data-notes="&lt;b&gt;0:25.&lt;/b&gt; Blind-A, the development phase: 0.5799. Blind-B, the final: 0.3811, 29th of 40. nDCG nearly halved and the judge fell 1.4 points; the diversity terms barely moved. Blind-B also withholds the goal annotations, but our ranker was already goal-free at inference — so that is not the explanation.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg></div><h2>How it scored</h2><span class="tag">Results</span></div>
   <div class="fill">
     <table>
@@ -1182,7 +1218,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Why we trained on the dev set"
-  data-notes="&lt;b&gt;0:35.&lt;/b&gt; Request understanding costs one paid LLM call per turn. Running it over the 121.6 thousand training turns was too expensive, so the ranker was trained on the 8,000 dev turns — the same turns we used to check it. We had no clean held-out set, and chose designs on replays of turns the model had already seen: 0.38 there, 0.25 on the blind test.">
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; Request understanding costs one paid LLM call per turn. Running it over the 121.6 thousand training turns was too expensive, so the ranker was trained on the 8,000 dev turns — the same turns we used to check it. We had no clean held-out set, and chose designs on replays of turns the model had already seen: 0.38 there, 0.25 on the blind test.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><h2>Why we trained on the dev set</h2><span class="tag">Lessons</span></div>
   <div class="fill"><div class="flow">
     <div class="fstep"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h4>1 paid LLM call per turn</h4><p>to read each turn into a state</p></div>
@@ -1199,7 +1235,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="Failure 1 — extracted, then ignored"
-  data-notes="&lt;b&gt;0:35.&lt;/b&gt; The most common shape, and the most embarrassing. In each of these the state correctly carried an avoid for the artist, and we served that same artist at rank 1. This is our own model doing exactly what the training labels do — anchoring on the just-played artist. The constraint features carry 0.7% of ranker gain, which is why nothing stopped it.">
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; The most common shape, and the most embarrassing. In each of these the state correctly carried an avoid for the artist, and we served that same artist at rank 1. This is our own model doing exactly what the training labels do — anchoring on the just-played artist. The constraint features carry 0.7% of ranker gain, which is why nothing stopped it.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 21 19.5H3z"/><path d="M12 10v4M12 16.6v.1"/></svg></div><h2>Extracted, but the ranker did not act on it</h2>
     <span class="tag">Went wrong</span></div>
   <div class="tracks">
@@ -1223,7 +1259,7 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
 </section>
 
 <section style="--hue:#C92C30;--hue-soft:#F9E6E6" class="slide" data-tier="core" data-title="No data from outside the catalog"
-  data-notes="&lt;b&gt;0:25.&lt;/b&gt; The extractor read these requests correctly. There was simply nothing to match against: the catalog records no tempo or key and no film or TV links, and we added no outside source. The gap is knowledge, not understanding.">
+  data-notes="&lt;b&gt;0:20.&lt;/b&gt; The extractor read these requests correctly. There was simply nothing to match against: the catalog records no tempo or key and no film or TV links, and we added no outside source. The gap is knowledge, not understanding.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6"/><path d="M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg></div><h2>No data from outside the catalog</h2><span class="tag">What is not ideal</span></div>
   <div class="fill"><div class="mrows big">
     <div class="mrow" style="--c:#7A3FB8"><div class="mh">A tempo and a key</div><div class="mpair">
@@ -1268,7 +1304,23 @@ table.idx td.src-org{color:var(--ink-3)} table.idx td.src-us{color:var(--hue);fo
     The prompt was chosen on Blind-A (judge 4.70 there, 3.30 on Blind-B).</div>
 </section>
 
-<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="core" data-title="Everything is released"
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="talk" data-title="Conclusion"
+  data-notes="&lt;b&gt;0:30.&lt;/b&gt; What we showed. One LLM call turns each conversation into a typed state that drives eleven retrieval branches and a learned ranker. Our gains did not transfer — 0.58 on Blind-A, 0.38 on Blind-B. The reasons: we trained and validated on the same dev turns, the ranker did not act on what the state recorded, and there was no data from outside the catalog. And the labels anchor — we release 113k re-judged labels.">
+  <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg></div><h2>Conclusion</h2><span class="tag">What we showed</span></div>
+  <div class="fill"><div class="cpoints"><div class="cpoint"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><div><h4>A typed conversation state</h4><p>One LLM call per turn drives eleven retrieval branches and a learned ranker.</p></div></div><div class="cpoint"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M9 20h6"/></svg></div><div><h4>Our gains did not transfer</h4><p>0.58 on Blind-A, 0.38 on Blind-B — 29th on the final leaderboard.</p></div></div><div class="cpoint"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></div><div><h4>Why</h4><p>Trained and validated on the same dev turns; the ranker did not act on the state; no data from outside the catalog.</p></div></div><div class="cpoint"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></div><div><h4>The labels anchor</h4><p>17% of training turns repeat a rejected artist — we release 113k re-judged labels.</p></div></div></div></div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="talk" data-title="Questions"
+  data-notes="&lt;b&gt;0:05.&lt;/b&gt; Thank you. Everything is linked from the project site.">
+  <div class="fill center qslide">
+    <div class="qhead">Thank you — questions?</div>
+    <div class="qr big"><img src="figures/qr-site.svg" alt="QR code for the project site, npatta01.github.io/music-crs-2026">
+      <div class="small"><strong>Paper, poster, slides, code, models, data</strong>
+        <div class="qrurl">npatta01.github.io/music-crs-2026</div></div></div>
+  </div>
+</section>
+
+<section style="--hue:#A55A18;--hue-soft:#FBEFE4" class="slide" data-tier="optional" data-title="Everything is released"
   data-notes="&lt;b&gt;0:10.&lt;/b&gt; Paper, poster, slides, code, models and data are all linked from the project site. Thank you.">
   <div class="slide-head"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2h-2zM18 18h2v2h-2z"/></svg></div><h2>Everything is released</h2><span class="tag">Thank you</span></div>
   <div class="fill center"><div class="qr big">
@@ -1813,6 +1865,7 @@ function next(){ step(1); }
 function prev(){ step(-1); }
 function toggleCore(){
   coreOnly = !coreOnly;
+  document.documentElement.toggleAttribute("data-talk", coreOnly);
   document.getElementById("coreflag").classList.toggle("on", coreOnly);
   if (coreOnly && skippable(slides[idx])) next();
 }
@@ -1912,6 +1965,7 @@ document.getElementById("stage").addEventListener("click", function(e){
 /* ?core=1 — present or print only the core path */
 if (/(?:\?|&)core=1\b/.test(location.search)) {
   document.documentElement.setAttribute("data-print", "core");
+  document.documentElement.setAttribute("data-talk", "");
   coreOnly = true;
   /* the last slide in the file is hidden in this mode, so its page break would
      emit a blank trailing page — move the "no break" marker to the last one
